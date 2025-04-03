@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Ranobe Novel Enhancer Settings</title>
+		<link rel="stylesheet" href="options.css" />
+	</head>
+	<body>
+		<div class="container">
+			<h1>Ranobe Novel Enhancer Settings</h1>
+
+			<div class="panel">
+				<h2>API Configuration</h2>
+				<div class="settings-group">
+					<label for="apiKey">Gemini API Key:</label>
+					<div class="input-group">
+						<input
+							type="password"
+							id="apiKey"
+							placeholder="Enter your Gemini API key"
+						/>
+						<button id="showApiKey" class="small-button">
+							Show
+						</button>
+						<button
+							id="testApiKey"
+							class="small-button test-button"
+						>
+							Test Key
+						</button>
+					</div>
+					<div class="description">
+						You need a Google API key with access to the Gemini API.
+						<a
+							href="https://ai.google.dev/tutorials/setup"
+							target="_blank"
+							>Get your API key here</a
+						>.
+					</div>
+				</div>
+
+				<div class="settings-group">
+					<label for="model">Model:</label>
+					<select id="model">
+						<option value="gemini-1.5-pro">
+							Gemini 1.5 Pro (Best quality)
+						</option>
+						<option value="gemini-1.5-flash">
+							Gemini 1.5 Flash (Faster)
+						</option>
+					</select>
+				</div>
+
+				<h2>Content Processing</h2>
+				<div class="settings-group">
+					<label for="prompt">Default Prompt:</label>
+					<textarea id="prompt" rows="4"></textarea>
+					<div class="description">
+						This instruction tells Gemini how to process the novel
+						text.
+					</div>
+				</div>
+
+				<h2>Advanced Settings</h2>
+				<div class="settings-group">
+					<label for="temperature">Temperature:</label>
+					<input
+						type="range"
+						id="temperature"
+						min="0"
+						max="1"
+						step="0.1"
+						value="0.7"
+					/>
+					<span id="temperatureValue">0.7</span>
+					<div class="description">
+						Controls creativity (0 = deterministic, 1 = more
+						creative)
+					</div>
+				</div>
+
+				<div class="settings-group">
+					<label for="debugMode">Debug Mode:</label>
+					<input type="checkbox" id="debugMode" />
+					<div class="description">
+						Logs API requests and responses to the console for
+						debugging
+					</div>
+				</div>
+
+				<div class="button-group">
+					<button id="saveButton">Save Settings</button>
+					<button id="restoreButton">Restore Defaults</button>
+				</div>
+
+				<div id="statusMessage" class="status-message"></div>
+			</div>
+
+			<div class="panel">
+				<h2>About</h2>
+				<p>
+					Ranobe Novel Enhancer uses Google's Gemini AI to improve the
+					quality of web novels by fixing grammar, improving flow, and
+					making the text more readable.
+				</p>
+				<p>Version: 1.0.0</p>
+			</div>
+		</div>
+
+		<script src="options.js"></script>
+	</body>
+</html>

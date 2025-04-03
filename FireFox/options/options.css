@@ -1,0 +1,188 @@
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	margin: 0;
+	padding: 20px;
+	background-color: #f5f5f5;
+	color: #333;
+	line-height: 1.5;
+}
+
+.container {
+	max-width: 800px;
+	margin: 0 auto;
+}
+
+h1 {
+	color: #4285f4;
+	margin-bottom: 20px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+h2 {
+	color: #5f6368;
+	margin-top: 30px;
+	margin-bottom: 15px;
+	font-size: 18px;
+}
+
+.panel {
+	background-color: white;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.settings-group {
+	margin-bottom: 20px;
+}
+
+label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+	width: 100%;
+	padding: 10px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-size: 14px;
+	margin-bottom: 5px;
+	box-sizing: border-box;
+}
+
+input[type="range"] {
+	width: calc(100% - 40px);
+	vertical-align: middle;
+}
+
+#temperatureValue {
+	display: inline-block;
+	width: 30px;
+	text-align: right;
+	margin-left: 5px;
+}
+
+.description {
+	color: #666;
+	font-size: 13px;
+	margin-top: 5px;
+}
+
+.button-group {
+	margin-top: 30px;
+	display: flex;
+	gap: 10px;
+}
+
+button {
+	background-color: #4285f4;
+	color: white;
+	border: none;
+	padding: 10px 20px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	transition: background-color 0.2s;
+}
+
+button:hover {
+	background-color: #3367d6;
+}
+
+#restoreButton {
+	background-color: #f8f9fa;
+	color: #3c4043;
+	border: 1px solid #dadce0;
+}
+
+#restoreButton:hover {
+	background-color: #f1f3f4;
+}
+
+.small-button {
+	padding: 5px 10px;
+	font-size: 12px;
+	margin-left: 5px;
+}
+
+.status-message {
+	margin-top: 20px;
+	padding: 10px;
+	border-radius: 4px;
+	display: none;
+}
+
+.status-message.success {
+	background-color: #e6f4ea;
+	color: #137333;
+	display: block;
+}
+
+.status-message.error {
+	background-color: #fce8e6;
+	color: #c5221f;
+	display: block;
+}
+
+a {
+	color: #4285f4;
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+.input-group {
+	display: flex;
+	align-items: center;
+	margin-bottom: 5px;
+}
+
+.input-group input[type="text"],
+.input-group input[type="password"] {
+	flex: 1;
+	margin-bottom: 0;
+}
+
+.test-button {
+	background-color: #34a853;
+}
+
+.test-button:hover {
+	background-color: #2d9249;
+}
+
+.status-message.info {
+	background-color: #e8f0fe;
+	color: #1a73e8;
+	display: block;
+}
+
+/* Highlight animation for input fields */
+@keyframes highlightPulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7);
+	}
+
+	70% {
+		box-shadow: 0 0 0 8px rgba(66, 133, 244, 0);
+	}
+
+	100% {
+		box-shadow: 0 0 0 0 rgba(66, 133, 244, 0);
+	}
+}
+
+.highlight-input {
+	animation: highlightPulse 1.5s infinite;
+	border-color: #4285f4 !important;
+}

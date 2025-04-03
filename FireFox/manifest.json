@@ -1,0 +1,50 @@
+{
+	"manifest_version": 2,
+	"name": "Ranobe Novel Enhancer",
+	"version": "1.0.0",
+	"description": "Enhances reading experience for web novels using Gemini AI",
+	"icons": {
+		"48": "icons/icon-48.png",
+		"96": "icons/icon-96.png"
+	},
+	"permissions": [
+		"activeTab",
+		"storage",
+		"tabs",
+		"<all_urls>"
+	],
+	"browser_action": {
+		"default_icon": {
+			"19": "icons/icon-19.png",
+			"38": "icons/icon-38.png"
+		},
+		"default_title": "Ranobe Enhancer",
+		"default_popup": "popup/popup.html"
+	},
+	"background": {
+		"scripts": [
+			"background/background.js"
+		],
+		"persistent": false
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"*://*.ranobes.top/*",
+				"*://*.wuxiaworld.com/*",
+				"*://*.webnovel.com/*"
+			],
+			"js": [
+				"content/content.js"
+			],
+			"css": [
+				"content/content.css"
+			],
+			"run_at": "document_idle"
+		}
+	],
+	"web_accessible_resources": [
+		"icons/*.png",
+		"config/*.js"
+	]
+}

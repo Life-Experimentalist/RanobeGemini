@@ -1,0 +1,176 @@
+.gemini-enhance-btn {
+	/* Native style: transparent background, matching text color, simple border */
+	padding: 10px 15px;
+	margin: 15px 0;
+	background-color: transparent;
+	color: #bab9a0;
+	border: 1px solid #bab9a0;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: bold;
+	z-index: 1000;
+	display: inline-block;
+	font-size: 14px;
+	transition: background-color 0.2s, border-color 0.2s;
+}
+
+.gemini-enhance-btn:hover {
+	background-color: rgba(66, 133, 244, 0.1);
+	border-color: #4285f4;
+}
+
+.gemini-enhance-btn:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+.gemini-indicator {
+	font-size: 12px;
+	color: #666;
+	margin: 10px 0;
+	padding: 8px;
+	border-left: 3px solid #4285f4;
+	background-color: #f8f9fa;
+}
+
+/* Page header watermark */
+.gemini-page-watermark {
+	width: 100%;
+	text-align: center;
+	padding: 8px;
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+}
+
+.gemini-page-watermark-light {
+	background-color: rgba(66, 133, 244, 0.1);
+	border-bottom: 1px solid rgba(66, 133, 244, 0.2);
+}
+
+.gemini-page-watermark-dark {
+	background-color: rgba(32, 33, 36, 0.8);
+	border-bottom: 1px solid rgba(138, 180, 248, 0.3);
+}
+
+.watermark-badge {
+	display: inline-flex;
+	align-items: center;
+	font-size: 14px;
+	font-weight: 500;
+	color: #4285f4;
+	padding: 4px 12px;
+	border-radius: 20px;
+	background-color: rgba(66, 133, 244, 0.1);
+}
+
+.watermark-icon {
+	margin-right: 8px;
+	font-size: 16px;
+}
+
+/* Chapter content watermark */
+.gemini-chapter-watermark {
+	margin: 20px 0;
+	padding: 10px 0;
+	text-align: center;
+	border-top: 1px dashed rgba(66, 133, 244, 0.4);
+	border-bottom: 1px dashed rgba(66, 133, 244, 0.4);
+}
+
+.watermark-content {
+	display: inline-flex;
+	align-items: center;
+	padding: 5px 15px;
+	border-radius: 20px;
+	background-color: rgba(66, 133, 244, 0.1);
+	color: #4285f4;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.gemini-enhanced-content {
+	margin-top: 15px;
+}
+
+/* Status message */
+.gemini-status-message {
+	position: fixed;
+	top: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 12px 20px;
+	border-radius: 5px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	z-index: 10000;
+	transition: opacity 0.5s;
+}
+
+.gemini-status-message.success {
+	background-color: #d4edda;
+	color: #155724;
+}
+
+.gemini-status-message.error {
+	background-color: #f8d7da;
+	color: #721c24;
+}
+
+/* Dark mode adjustments */
+body.reading_fullwidth .watermark-content,
+body.reading_fullwidth .watermark-badge {
+	background-color: rgba(66, 133, 244, 0.15);
+	color: #8ab4f8;
+}
+
+/* Ranobe Enhancer Content Styles */
+
+.gemini-processed-notice {
+	/* Use a transparent background and subtle blue border to mimic ranobes.top headlines */
+	background-color: transparent;
+	color: #bab9a0;
+	border-left: 4px solid #4285f4;
+	padding: 10px;
+	margin-bottom: 20px;
+	font-style: italic;
+	border-radius: 2px;
+}
+
+.gemini-processed-notice button {
+	/* Adjust button to be minimal – matching native colors */
+	float: right;
+	background: transparent;
+	color: #bab9a0;
+	border: 1px solid #bab9a0;
+	padding: 3px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.gemini-processed-notice button:hover {
+	background-color: rgba(66, 133, 244, 0.1);
+}
+
+.extraction-message {
+	/* Status messages set to blend into a native dark background */
+	background-color: transparent;
+	color: #bab9a0;
+	padding: 15px;
+	margin: 15px 0;
+	border-radius: 4px;
+	font-weight: bold;
+	text-align: center;
+	position: fixed;
+	top: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10000;
+	box-shadow: none;
+	max-width: 80%;
+	border: 1px solid #bab9a0;
+}
+
+.extraction-message.error {
+	background-color: rgba(98, 32, 32, 0.5);
+}

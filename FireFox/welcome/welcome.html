@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Welcome to Ranobe Novel Enhancer</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #f9f9f9;
+				color: #333;
+			}
+
+			h1 {
+				color: #4285f4;
+				text-align: center;
+			}
+
+			.container {
+				background-color: white;
+				border-radius: 8px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+				padding: 30px;
+				margin-top: 20px;
+			}
+
+			.step {
+				margin-bottom: 30px;
+				border-left: 4px solid #4285f4;
+				padding-left: 15px;
+			}
+
+			h2 {
+				color: #333;
+			}
+
+			input[type="password"] {
+				width: 100%;
+				padding: 10px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				margin-top: 10px;
+				font-size: 16px;
+			}
+
+			button {
+				background-color: #4285f4;
+				color: white;
+				border: none;
+				padding: 12px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-weight: bold;
+				font-size: 16px;
+				margin-top: 15px;
+				display: block;
+				width: 100%;
+				transition: background-color 0.3s;
+			}
+
+			button:hover {
+				background-color: #3367d6;
+			}
+
+			button:disabled {
+				background-color: #cccccc;
+				cursor: not-allowed;
+			}
+
+			.status {
+				margin-top: 15px;
+				padding: 10px;
+				border-radius: 4px;
+				font-weight: bold;
+				text-align: center;
+				opacity: 0;
+				animation: fadeIn 0.5s forwards;
+			}
+
+			@keyframes fadeIn {
+				from {
+					opacity: 0;
+				}
+				to {
+					opacity: 1;
+				}
+			}
+
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+			}
+
+			.error {
+				background-color: #f8d7da;
+				color: #721c24;
+			}
+
+			.hidden {
+				display: none;
+			}
+
+			.api-link {
+				display: inline-block;
+				margin-top: 10px;
+				color: #4285f4;
+				text-decoration: underline;
+				padding: 8px 16px;
+				background-color: #e8f0fe;
+				border-radius: 4px;
+				font-weight: bold;
+			}
+
+			.note {
+				background-color: #fff3cd;
+				border-left: 4px solid #ffc107;
+				padding: 10px 15px;
+				margin: 20px 0;
+			}
+
+			.faq-section {
+				margin-top: 30px;
+			}
+
+			.faq-item {
+				margin-bottom: 15px;
+			}
+
+			.faq-question {
+				font-weight: bold;
+				margin-bottom: 5px;
+			}
+
+			.faq-answer {
+				margin-left: 10px;
+			}
+
+			/* Loading animation for button */
+			.loading-indicator::after {
+				content: "";
+				animation: dots 1.5s infinite;
+			}
+
+			@keyframes dots {
+				0% {
+					content: "";
+				}
+				25% {
+					content: ".";
+				}
+				50% {
+					content: "..";
+				}
+				75% {
+					content: "...";
+				}
+				100% {
+					content: "";
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Welcome to Ranobe Novel Enhancer</h1>
+
+		<div class="container">
+			<div class="step">
+				<h2>Step 1: Get Your Gemini API Key</h2>
+				<p>
+					To enhance your novel translations, you need a Google Gemini
+					API key. Gemini API is <strong>free</strong> to use with
+					generous limits!
+				</p>
+				<ol>
+					<li>
+						Visit the
+						<a
+							href="https://makersuite.google.com/app/apikey"
+							target="_blank"
+							>Google AI Studio</a
+						>
+					</li>
+					<li>Sign in with your Google account</li>
+					<li>Create an API key (Click "Create API Key")</li>
+					<li>Copy your new API key</li>
+				</ol>
+				<a
+					href="https://makersuite.google.com/app/apikey"
+					target="_blank"
+					class="api-link"
+					>Get Your Free Gemini API Key Here</a
+				>
+			</div>
+
+			<div class="step">
+				<h2>Step 2: Enter Your API Key</h2>
+				<p>
+					Enter your Gemini API key below. We'll verify that it works
+					before saving it.
+				</p>
+
+				<div class="note">
+					<p>
+						<strong>Privacy Note:</strong> Your API key and novel
+						content never leave your browser except to communicate
+						directly with Google's Gemini API. We never collect or
+						store your data.
+					</p>
+				</div>
+
+				<input
+					type="password"
+					id="api-key"
+					placeholder="Paste your Gemini API key here"
+				/>
+				<button id="save-key">Save API Key & Continue</button>
+				<div id="status" class="status hidden"></div>
+			</div>
+
+			<div class="faq-section">
+				<h2>Frequently Asked Questions</h2>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						How much does the Gemini API cost?
+					</div>
+					<div class="faq-answer">
+						The Gemini API offers a free tier with generous usage
+						limits that are sufficient for personal use. You don't
+						need to provide payment information to get started.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Is my API key secure?</div>
+					<div class="faq-answer">
+						Yes, your API key is stored only in your browser's local
+						storage and is only sent directly to Google's servers
+						when processing content. We never see or store your API
+						key on our servers.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						What happens if I don't provide an API key?
+					</div>
+					<div class="faq-answer">
+						The extension requires a valid Gemini API key to
+						function. Without one, you won't be able to enhance
+						novel translations.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						Can I change my API key later?
+					</div>
+					<div class="faq-answer">
+						Yes, you can update your API key at any time through the
+						extension's popup interface.
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="welcome.js"></script>
+	</body>
+</html>
