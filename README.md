@@ -1,8 +1,8 @@
-# Ranobe Novel Enhancer
+# Ranobe Gemini
 
 A cross-browser extension that enhances web novel translations using Google's Gemini AI. The project currently offers a Firefox version with plans to support Chrome and Edge in future releases.
 
-![Ranobe Novel Enhancer Logo](FireFox/icons/icon-96.png)
+![Ranobe Gemini Logo](FireFox/icons/logo-light-96.png)
 
 ## Features
 
@@ -19,7 +19,7 @@ A cross-browser extension that enhances web novel translations using Google's Ge
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Life-Experimentalist/RanobesGemini.git
+   git clone https://github.com/Life-Experimentalist/RanobeGemini.git
    ```
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on" and select any file from the `FireFox` directory

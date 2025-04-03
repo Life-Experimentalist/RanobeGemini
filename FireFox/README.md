@@ -1,6 +1,6 @@
-# Ranobe Novel Enhancer – Firefox Version
+# Ranobe Gemini – Firefox Version
 
-This is the Firefox extension for Ranobe Novel Enhancer. It uses Google's Gemini AI to improve web novel translations by correcting errors and enhancing readability.
+This is the Firefox extension for Ranobe Gemini. It uses Google's Gemini AI to improve web novel translations by correcting errors and enhancing readability.
 
 ## Features
 

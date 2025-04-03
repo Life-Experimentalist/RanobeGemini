@@ -3,6 +3,8 @@ body {
 	margin: 0;
 	padding: 0;
 	background-color: #f5f5f5;
+	color: #333;
+		background-color: #f8f9fa;
 }
 
 .container {
@@ -257,4 +259,52 @@ button:hover {
 
 .invalid {
 	color: #dc3545;
+}
+/* Icon visibility control */
+.light-mode-icon {
+	display: block;
+}
+
+.dark-mode-icon {
+	display: none;
+}
+
+/* Dark mode support using prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+	body {
+		color: #e8eaed;
+		background-color: #292a2d;
+	}
+
+	/* Switch icons for dark mode */
+	.light-mode-icon {
+		display: none;
+	}
+
+	.dark-mode-icon {
+		display: block;
+	}
+
+	/* Additional dark mode styles */
+	.popup-header {
+		border-bottom-color: #3c4043;
+	}
+
+	button {
+		background-color: #3c4043;
+		color: #e8eaed;
+		border-color: #5f6368;
+	}
+
+	button:hover {
+		background-color: #5f6368;
+	}
+
+	input,
+	textarea,
+	select {
+		background-color: #202124;
+		color: #e8eaed;
+		border-color: #5f6368;
+	}
 }

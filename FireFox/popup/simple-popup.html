@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Ranobe Gemini</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				width: 300px;
+				padding: 15px;
+				margin: 0;
+				background-color: #f5f5f5;
+			}
+			.header {
+				display: flex;
+				align-items: center;
+				margin-bottom: 15px;
+			}
+			.header img {
+				width: 32px;
+				height: 32px;
+				margin-right: 10px;
+			}
+			h1 {
+				font-size: 18px;
+				margin: 0;
+				color: #4285f4;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+			}
+			input[type="text"],
+			input[type="password"] {
+				width: 100%;
+				padding: 8px;
+				box-sizing: border-box;
+				margin-bottom: 15px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+			}
+			button {
+				background-color: #4285f4;
+				color: white;
+				border: none;
+				padding: 8px 15px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-weight: bold;
+			}
+			button:hover {
+				background-color: #3367d6;
+			}
+			.button-group {
+				display: flex;
+				justify-content: space-between;
+			}
+			#status {
+				margin-top: 15px;
+				padding: 8px;
+				border-radius: 4px;
+				font-size: 14px;
+			}
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+			}
+			.error {
+				background-color: #f8d7da;
+				color: #721c24;
+			}
+			.info {
+				margin-top: 15px;
+				font-size: 12px;
+				color: #666;
+			}
+			.actions {
+				margin-top: 15px;
+				border-top: 1px solid #ddd;
+				padding-top: 15px;
+			}
+			.light-mode-icon {
+				display: inline-block;
+			}
+			.dark-mode-icon {
+				display: none;
+			}
+			@media (prefers-color-scheme: dark) {
+				body {
+					background-color: #292a2d;
+					color: #e8eaed;
+				}
+				input[type="text"],
+				input[type="password"] {
+					background-color: #202124;
+					color: #e8eaed;
+					border-color: #5f6368;
+				}
+				.info {
+					color: #9aa0a6;
+				}
+				.light-mode-icon {
+					display: none;
+				}
+				.dark-mode-icon {
+					display: inline-block;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<img
+				src="../icons/logo-light-32.png"
+				alt="Ranobe Gemini"
+				class="light-mode-icon"
+			/>
+			<img
+				src="../icons/logo-dark-32.png"
+				alt="Ranobe Gemini"
+				class="dark-mode-icon"
+			/>
+			<h1>Ranobe Gemini</h1>
+		</div>
+
+		<div class="settings">
+			<label for="apiKey">Gemini API Key:</label>
+			<input
+				type="password"
+				id="apiKey"
+				placeholder="Enter your API key"
+			/>
+
+			<div class="button-group">
+				<button id="saveApiKey">Save Key</button>
+				<button id="testApiKey">Test Key</button>
+			</div>
+		</div>
+
+		<div id="status"></div>
+
+		<div class="info">
+			<p>
+				This extension uses Google's Gemini AI to enhance novel
+				translations.
+			</p>
+			<p>
+				You need a valid Gemini API key to use this extension.
+				<a href="#" id="getKeyLink">Get a free key</a>
+			</p>
+		</div>
+
+		<div class="actions">
+			<button id="enhancePageBtn">Enhance Current Page</button>
+		</div>
+
+		<script src="simple-popup.js"></script>
+	</body>
+</html>

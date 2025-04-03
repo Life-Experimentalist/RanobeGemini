@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
 	maxOutputTokens: 8192,
 	debugMode: false,
 	modelEndpoint:
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+		"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
 };
 
 // Load configuration from storage
@@ -21,14 +21,14 @@ async function loadConfig() {
 	try {
 		const data = await browser.storage.local.get();
 		const config = { ...DEFAULT_CONFIG, ...data };
-		// If no apiKey is stored in storage, set it from the environment
-		if (!config.apiKey && ENV.GEMINI_API_KEY) {
-			config.apiKey = ENV.GEMINI_API_KEY;
-		}
+
+		// Try to find an API key from environment if not in storage
+		// This is now directly handled in storage mechanism
+
 		return config;
 	} catch (error) {
 		console.error("Error loading configuration:", error);
-		return { ...DEFAULT_CONFIG, apiKey: ENV.GEMINI_API_KEY || "" };
+		return { ...DEFAULT_CONFIG };
 	}
 }
 
@@ -43,7 +43,7 @@ async function saveConfig(config) {
 			}
 		}
 
-		// Save directly to storage, not through an intermediary function
+		// Save directly to storage
 		await browser.storage.local.set(cleanConfig);
 		return true;
 	} catch (error) {

@@ -954,3 +954,308 @@ document.addEventListener("DOMContentLoaded", async () => {
 		}
 	});
 });
+
+// Simple popup script for Ranobe Gemini extension
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Tab switching functionality
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Add active class to clicked button
+            button.classList.add('active');
+
+            // Show corresponding content
+            const tabId = button.getAttribute('data-tab');
+            document.getElementById(tabId).classList.add('active');
+        });
+    });
+
+    // Load settings from storage
+    try {
+        const settings = await browser.storage.local.get();
+
+        // API Key field
+        const apiKeyField = document.getElementById('apiKey');
+        if (apiKeyField && settings.apiKey) {
+            apiKeyField.value = settings.apiKey;
+        }
+
+        // Basic settings
+        const modelSelect = document.getElementById('modelSelect');
+        const promptTemplate = document.getElementById('promptTemplate');
+        const debugMode = document.getElementById('debugMode');
+        const autoNavigate = document.getElementById('autoNavigate');
+        const showWatermarks = document.getElementById('showWatermarks');
+        const showPageWatermark = document.getElementById('showPageWatermark');
+        const showChapterWatermark = document.getElementById('showChapterWatermark');
+
+        // Populate model select
+        if (modelSelect) {
+            modelSelect.innerHTML = `
+                <option value="gemini-1.5-flash" ${settings.modelEndpoint?.includes('flash') ? 'selected' : ''}>Gemini 1.5 Flash (Faster)</option>
+                <option value="gemini-1.5-pro" ${settings.modelEndpoint?.includes('pro') ? 'selected' : ''}>Gemini 1.5 Pro (Higher quality)</option>
+            `;
+        }
+
+        // Set prompt template
+        if (promptTemplate && settings.defaultPrompt) {
+            promptTemplate.value = settings.defaultPrompt;
+        }
+
+        // Set boolean checkboxes
+        if (debugMode) debugMode.checked = settings.debugMode || false;
+        if (autoNavigate) autoNavigate.checked = settings.autoNavigate || false;
+        if (showWatermarks) showWatermarks.checked = settings.showWatermarks || false;
+        if (showPageWatermark) showPageWatermark.checked = settings.showPageWatermark || false;
+        if (showChapterWatermark) showChapterWatermark.checked = settings.showChapterWatermark || false;
+
+        // Advanced settings
+        const temperature = document.getElementById('temperature');
+        const temperatureValue = document.getElementById('temperatureValue');
+        const topK = document.getElementById('topK');
+        const topKValue = document.getElementById('topKValue');
+        const topP = document.getElementById('topP');
+        const topPValue = document.getElementById('topPValue');
+        const maxTokens = document.getElementById('maxTokens');
+        const maxTokensValue = document.getElementById('maxTokensValue');
+        const contentSelectors = document.getElementById('contentSelectors');
+
+        // Set slider values
+        if (temperature) {
+            temperature.value = settings.temperature || 0.7;
+            temperatureValue.textContent = temperature.value;
+
+            temperature.addEventListener('input', () => {
+                temperatureValue.textContent = temperature.value;
+            });
+        }
+
+        if (topK) {
+            topK.value = settings.topK || 40;
+            topKValue.textContent = topK.value;
+
+            topK.addEventListener('input', () => {
+                topKValue.textContent = topK.value;
+            });
+        }
+
+        if (topP) {
+            topP.value = settings.topP || 0.95;
+            topPValue.textContent = topP.value;
+
+            topP.addEventListener('input', () => {
+                topPValue.textContent = topP.value;
+            });
+        }
+
+        if (maxTokens) {
+            maxTokens.value = settings.maxOutputTokens || 8192;
+            maxTokensValue.textContent = maxTokens.value;
+
+            maxTokens.addEventListener('input', () => {
+                maxTokensValue.textContent = maxTokens.value;
+            });
+        }
+
+        if (contentSelectors && settings.contentSelectors) {
+            contentSelectors.value = Array.isArray(settings.contentSelectors)
+                ? settings.contentSelectors.join('\n')
+                : settings.contentSelectors;
+        }
+
+        // Toggle watermark options based on showWatermarks checkbox
+        if (showWatermarks) {
+            const watermarkOptions = document.getElementById('watermarkOptions');
+
+            function toggleWatermarkOptions() {
+                if (watermarkOptions) {
+                    watermarkOptions.classList.toggle('disabled', !showWatermarks.checked);
+                }
+            }
+
+            showWatermarks.addEventListener('change', toggleWatermarkOptions);
+            toggleWatermarkOptions(); // Initial state
+        }
+
+    } catch (error) {
+        console.error("Error loading settings:", error);
+        showStatus("Failed to load settings: " + error.message, "error");
+    }
+
+    // Save basic settings
+    const saveBasicBtn = document.getElementById('saveBasicSettings');
+    if (saveBasicBtn) {
+        saveBasicBtn.addEventListener('click', async () => {
+            try {
+                const apiKey = document.getElementById('apiKey').value;
+                const model = document.getElementById('modelSelect').value;
+                const promptTemplate = document.getElementById('promptTemplate').value;
+                const debugMode = document.getElementById('debugMode').checked;
+                const autoNavigate = document.getElementById('autoNavigate').checked;
+                const showWatermarks = document.getElementById('showWatermarks').checked;
+                const showPageWatermark = document.getElementById('showPageWatermark').checked;
+                const showChapterWatermark = document.getElementById('showChapterWatermark').checked;
+
+                // Determine model endpoint based on selection
+                const modelEndpoint = model === 'gemini-1.5-pro'
+                    ? "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+                    : "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
+                await browser.storage.local.set({
+                    apiKey,
+                    modelEndpoint,
+                    defaultPrompt: promptTemplate,
+                    debugMode,
+                    autoNavigate,
+                    showWatermarks,
+                    showPageWatermark,
+                    showChapterWatermark
+                });
+
+                showStatus("Settings saved successfully", "success");
+            } catch (error) {
+                console.error("Error saving settings:", error);
+                showStatus("Failed to save settings: " + error.message, "error");
+            }
+        });
+    }
+
+    // Save advanced settings
+    const saveAdvancedBtn = document.getElementById('saveAdvancedSettings');
+    if (saveAdvancedBtn) {
+        saveAdvancedBtn.addEventListener('click', async () => {
+            try {
+                const temperature = parseFloat(document.getElementById('temperature').value);
+                const topK = parseInt(document.getElementById('topK').value);
+                const topP = parseFloat(document.getElementById('topP').value);
+                const maxOutputTokens = parseInt(document.getElementById('maxTokens').value);
+                const contentSelectorsText = document.getElementById('contentSelectors').value;
+
+                // Convert selectors text to array
+                const contentSelectors = contentSelectorsText
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                await browser.storage.local.set({
+                    temperature,
+                    topK,
+                    topP,
+                    maxOutputTokens,
+                    contentSelectors
+                });
+
+                showStatus("Advanced settings saved successfully", "success");
+            } catch (error) {
+                console.error("Error saving advanced settings:", error);
+                showStatus("Failed to save advanced settings: " + error.message, "error");
+            }
+        });
+    }
+
+    // Reset prompt to default
+    const resetPromptBtn = document.getElementById('resetPrompt');
+    if (resetPromptBtn) {
+        resetPromptBtn.addEventListener('click', () => {
+            const defaultPrompt = "Please review and enhance the following novel chapter translation. Correct grammatical, punctuation, and spelling errors; improve narrative flow and readability; maintain the original tone, style, and plot; ensure consistent gender pronouns; and streamline overly verbose sections. Format your response with proper HTML paragraph tags (<p>) for each paragraph. Do not use markdown formatting at all. Preserve the original meaning while producing a polished version suitable for a high-quality reading experience.";
+
+            const promptTemplate = document.getElementById('promptTemplate');
+            if (promptTemplate) {
+                promptTemplate.value = defaultPrompt;
+                showStatus("Prompt reset to default", "success");
+            }
+        });
+    }
+
+    // Reset advanced settings to default
+    const resetAdvancedBtn = document.getElementById('resetAdvancedSettings');
+    if (resetAdvancedBtn) {
+        resetAdvancedBtn.addEventListener('click', () => {
+            // Reset sliders to default values
+            const temperature = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperatureValue');
+            if (temperature) {
+                temperature.value = 0.7;
+                temperatureValue.textContent = "0.7";
+            }
+
+            const topK = document.getElementById('topK');
+            const topKValue = document.getElementById('topKValue');
+            if (topK) {
+                topK.value = 40;
+                topKValue.textContent = "40";
+            }
+
+            const topP = document.getElementById('topP');
+            const topPValue = document.getElementById('topPValue');
+            if (topP) {
+                topP.value = 0.95;
+                topPValue.textContent = "0.95";
+            }
+
+            const maxTokens = document.getElementById('maxTokens');
+            const maxTokensValue = document.getElementById('maxTokensValue');
+            if (maxTokens) {
+                maxTokens.value = 8192;
+                maxTokensValue.textContent = "8192";
+            }
+
+            // Reset selectors to default
+            const contentSelectors = document.getElementById('contentSelectors');
+            if (contentSelectors) {
+                contentSelectors.value = "#arrticle\n.text-chapter\n.chapter-content\n.novel-content\n.story\n.chapter-inner\n.article-content\n.post-content";
+            }
+
+            showStatus("Advanced settings reset to defaults", "success");
+        });
+    }
+
+    // External links handlers
+    const getApiKeyLink = document.getElementById('get-api-key-link');
+    if (getApiKeyLink) {
+        getApiKeyLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            browser.tabs.create({ url: "https://makersuite.google.com/app/apikey" });
+        });
+    }
+
+    const viewReadmeLink = document.getElementById('viewReadme');
+    if (viewReadmeLink) {
+        viewReadmeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            browser.tabs.create({ url: "https://github.com/Life-Experimentalist/RanobesGemini" });
+        });
+    }
+
+    const viewTodoLink = document.getElementById('viewTodo');
+    if (viewTodoLink) {
+        viewTodoLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            browser.tabs.create({ url: "https://github.com/Life-Experimentalist/RanobesGemini/blob/main/TODO.md" });
+        });
+    }
+});
+
+// Helper for showing status messages
+function showStatus(message, type) {
+    const statusElement = document.getElementById('status');
+    if (!statusElement) return;
+
+    statusElement.textContent = message;
+    statusElement.className = 'status ' + type;
+
+    // Clear after 3 seconds if success message
+    if (type === 'success') {
+        setTimeout(() => {
+            statusElement.textContent = '';
+            statusElement.className = 'status';
+        }, 3000);
+    }
+}

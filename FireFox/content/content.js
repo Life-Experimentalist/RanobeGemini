@@ -1,5 +1,5 @@
 // Simplified content script to extract chapter content without relying on imports
-console.log("Ranobe Novel Enhancer: Content script loaded");
+console.log("Ranobe Gemini: Content script loaded");
 
 // Add Ranobes.top specific selector to our content selectors
 const CONTENT_SELECTORS = [
@@ -22,7 +22,7 @@ let hasExtractButton = false;
 let autoExtracted = false;
 
 function initialize() {
-	console.log("Ranobe Novel Enhancer: Initializing content script");
+	console.log("Ranobe Gemini: Initializing content script");
 
 	// Create extract button if it doesn't exist
 	if (!hasExtractButton) {
@@ -85,27 +85,36 @@ function createExtractButton() {
 
 	console.log("Creating extract button");
 
-	// Create button
+	// Create button with icons for both light and dark mode
 	const enhanceButton = document.createElement("button");
 	enhanceButton.className = "gemini-enhance-btn";
-	enhanceButton.textContent = "Enhance with Gemini";
+	enhanceButton.innerHTML = `
+        <img src="${browser.runtime.getURL(
+			"icons/logo-light-16.png"
+		)}" class="light-mode-icon" alt="">
+        <img src="${browser.runtime.getURL(
+			"icons/logo-dark-16.png"
+		)}" class="dark-mode-icon" alt="">
+        Enhance with Gemini
+    `;
 
 	// Style to match the sample page buttons
 	enhanceButton.style.cssText = `
-    padding: 10px 15px;
-    margin: 15px 0;
-    background-color: #222;
-    color: #bab9a0;
-    border: 1px solid #ffffff21;
-    box-shadow: inset 0 0 0 1px #5a5a5a4d;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    z-index: 1000;
-    display: inline-block;
-    font-size: 14px;
-  `;
-
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 15px;
+        margin: 15px 0;
+        background-color: #222;
+        color: #bab9a0;
+        border: 1px solid #ffffff21;
+        box-shadow: inset 0 0 0 1px #5a5a5a4d;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 1000;
+    `;
 	enhanceButton.addEventListener("click", processWithGemini);
 	enhanceButton.addEventListener("mouseover", () => {
 		enhanceButton.style.backgroundColor = "#333";
@@ -113,13 +122,12 @@ function createExtractButton() {
 	enhanceButton.addEventListener("mouseout", () => {
 		enhanceButton.style.backgroundColor = "#222";
 	});
-
 	// Insert button before the content area
 	contentArea.parentNode.insertBefore(enhanceButton, contentArea);
 	hasExtractButton = true;
 }
 
-// Automatically extract content
+// Automatically extract content once the page is loaded
 function autoExtractContent() {
 	const contentArea = findContentArea();
 
@@ -149,23 +157,19 @@ function extractContent() {
 		if (element) {
 			foundContent = true;
 			sourceSelector = selector;
-
 			// Extract title if available
 			chapterTitle =
 				document.querySelector("h1.title, .story-title, .chapter-title")
 					?.innerText ||
 				document.title ||
 				"Unknown Title";
-
 			// Get clean text content - preserve full text
 			chapterText = element.innerText
 				.trim()
 				.replace(/\n\s+/g, "\n") // Preserve paragraph breaks but remove excess whitespace
 				.replace(/\s{2,}/g, " "); // Replace multiple spaces with a single space
-
 			// Log the entire text
 			console.log(`FULL CHAPTER TEXT: ${chapterText.length} characters`);
-
 			break; // Stop after finding the first valid content
 		}
 	}
@@ -178,7 +182,6 @@ function extractContent() {
 			chapterText = Array.from(paragraphs)
 				.map((p) => p.innerText)
 				.join("\n\n");
-
 			foundContent = chapterText.length > 200; // Only consider it found if we have substantial text
 			sourceSelector = "p tags";
 		}
@@ -197,7 +200,6 @@ async function processWithGemini() {
 	showStatusMessage("Extracting content and sending to Gemini...");
 
 	const extractedContent = extractContent();
-
 	if (!extractedContent.found) {
 		showStatusMessage("No content found to process", "error");
 		return;
@@ -207,6 +209,7 @@ async function processWithGemini() {
 	console.log("EXTRACTED CHAPTER FOR GEMINI:");
 	console.log("===========================================");
 	console.log("TITLE: " + extractedContent.title);
+	console.log("===========================================");
 	console.log(
 		"CONTENT LENGTH: " + extractedContent.text.length + " characters"
 	);
@@ -231,6 +234,25 @@ async function processWithGemini() {
 		button.textContent = "Processing...";
 		button.disabled = true;
 
+		// First ping the background script to ensure it's alive
+		let pingResult;
+		try {
+			pingResult = await browser.runtime.sendMessage({ action: "ping" });
+			console.log("Ping result:", pingResult);
+		} catch (pingError) {
+			console.error("Error pinging background script:", pingError);
+			// If ping fails, try reloading the extension
+			showStatusMessage(
+				"Connection error. Please reload the page or extension.",
+				"error"
+			);
+			if (button) {
+				button.textContent = originalText;
+				button.disabled = false;
+			}
+			return;
+		}
+
 		const response = await browser.runtime.sendMessage({
 			action: "processWithGemini",
 			title: extractedContent.title,
@@ -249,15 +271,13 @@ async function processWithGemini() {
 			console.log("===========================================");
 			console.log(response.result);
 			console.log("===========================================");
-
 			// Show success message
 			showStatusMessage("Successfully processed with Gemini!");
-
+			console.log("===========================================");
 			// Replace content with enhanced version
 			await replaceContentWithEnhancedVersion(response.result);
 		} else {
 			const errorMessage = response?.error || "Unknown error";
-
 			// Special handling for missing API key
 			if (errorMessage.includes("API key is missing")) {
 				showStatusMessage(
@@ -273,16 +293,22 @@ async function processWithGemini() {
 		}
 	} catch (error) {
 		console.error("Error communicating with background script:", error);
-
 		// Restore button state
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (button) {
 			button.textContent = "Enhance with Gemini";
 			button.disabled = false;
 		}
-
-		// Special handling for missing API key
-		if (error.message && error.message.includes("API key is missing")) {
+		// Special handling for connection errors
+		if (error.message && error.message.includes("does not exist")) {
+			showStatusMessage(
+				"Connection to extension failed. Please reload the page and try again.",
+				"error"
+			);
+		} else if (
+			error.message &&
+			error.message.includes("API key is missing")
+		) {
 			showStatusMessage(
 				"API key is missing. Please set it in the options page that has opened.",
 				"error"
@@ -308,7 +334,6 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
 
 	// Process the HTML received from Gemini - check if it already has HTML tags
 	let processedHtml = enhancedText;
-
 	// If there are no paragraph tags, convert newlines to paragraph tags
 	if (!/<p>|<div>|<span>/.test(processedHtml)) {
 		processedHtml = enhancedText
@@ -328,6 +353,14 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
       font-style: italic;
       color: #bab9a0;
     ">
+      <img src="${browser.runtime.getURL("icons/logo-light-16.png")}"
+           class="light-mode-icon"
+           alt=""
+           style="vertical-align: middle; margin-right: 6px;">
+      <img src="${browser.runtime.getURL("icons/logo-dark-16.png")}"
+           class="dark-mode-icon"
+           alt=""
+           style="vertical-align: middle; margin-right: 6px;">
       This content has been enhanced by Gemini AI
       <button id="restore-original" style="
         float: right;

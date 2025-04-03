@@ -174,3 +174,88 @@ body.reading_fullwidth .watermark-badge {
 .extraction-message.error {
 	background-color: rgba(98, 32, 32, 0.5);
 }
+/* Icon visibility control */
+.light-mode-icon {
+	display: inline-block;
+}
+
+.dark-mode-icon {
+	display: none;
+}
+
+/* Dark mode detection */
+@media (prefers-color-scheme: dark) {
+	.light-mode-icon {
+		display: none;
+	}
+
+	.dark-mode-icon {
+		display: inline-block;
+	}
+}
+
+/* Site-specific dark mode */
+body.dark-theme .light-mode-icon,
+.reading_fullwidth .light-mode-icon,
+[data-theme="dark"] .light-mode-icon {
+	display: none;
+}
+
+body.dark-theme .dark-mode-icon,
+.reading_fullwidth .dark-mode-icon,
+[data-theme="dark"] .dark-mode-icon {
+	display: inline-block;
+}
+
+/* Icon visibility control - improved implementation */
+.light-mode-icon {
+	display: inline-block;
+}
+
+.dark-mode-icon {
+	display: none;
+}
+
+/* Dark mode detection - improved with more specific selectors */
+@media (prefers-color-scheme: dark) {
+	.light-mode-icon {
+		display: none;
+	}
+
+	.dark-mode-icon {
+		display: inline-block;
+	}
+}
+
+/* Site-specific dark mode detection - expanded for more sites */
+body.dark-theme .light-mode-icon,
+.reading_fullwidth .light-mode-icon,
+[data-theme="dark"] .light-mode-icon,
+.dark-mode .light-mode-icon,
+html[data-darkreader-mode] .light-mode-icon {
+	display: none;
+}
+
+body.dark-theme .dark-mode-icon,
+.reading_fullwidth .dark-mode-icon,
+[data-theme="dark"] .dark-mode-icon,
+.dark-mode .dark-mode-icon,
+html[data-darkreader-mode] .dark-mode-icon {
+	display: inline-block;
+}
+
+/* Enhanced button styling with icon spacing */
+.gemini-enhance-btn img {
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+	margin-right: 6px;
+}
+
+/* Enhanced notice styling for icons */
+.gemini-processed-notice img {
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+	margin-right: 8px;
+}

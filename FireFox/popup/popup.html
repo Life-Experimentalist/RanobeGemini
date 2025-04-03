@@ -3,12 +3,19 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Ranobe Novel Enhancer</title>
+		<title>RanobeGemini</title>
 		<link rel="stylesheet" href="popup.css" />
+		<!-- Preload both light and dark icons for better performance -->
+		<link rel="preload" href="../icons/logo-light-48.png" as="image">
+		<link rel="preload" href="../icons/logo-dark-48.png" as="image">
 	</head>
 	<body>
 		<div class="container">
-			<h1>Ranobe Novel Enhancer</h1>
+			<header class="popup-header">
+				<img src="../icons/logo-light-48.png" alt="Ranobe Gemini Logo" class="light-mode-icon">
+				<img src="../icons/logo-dark-48.png" alt="Ranobe Gemini Logo" class="dark-mode-icon">
+				<h1>RanobeGemini</h1>
+			</header>
 
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="basic">

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Ranobe Novel Enhancer extension will be documented in this file.
+All notable changes to the Ranobe Gemini extension will be documented in this file.
 
 ## [1.0.0] - 2023-06-15
 
@@ -15,4 +15,3 @@ All notable changes to the Ranobe Novel Enhancer extension will be documented in
 ### Fixed
 - Content detection on dynamically loaded pages
 - API error handling for invalid keys
-```
