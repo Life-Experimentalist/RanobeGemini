@@ -1242,20 +1242,3 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 });
-
-// Helper for showing status messages
-function showStatus(message, type) {
-    const statusElement = document.getElementById('status');
-    if (!statusElement) return;
-
-    statusElement.textContent = message;
-    statusElement.className = 'status ' + type;
-
-    // Clear after 3 seconds if success message
-    if (type === 'success') {
-        setTimeout(() => {
-            statusElement.textContent = '';
-            statusElement.className = 'status';
-        }, 3000);
-    }
-}

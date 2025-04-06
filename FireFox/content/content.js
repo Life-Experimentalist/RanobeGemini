@@ -21,6 +21,12 @@ window.addEventListener("load", initialize); // Backup init in case DOMContentLo
 let hasExtractButton = false;
 let autoExtracted = false;
 
+// Add a minimal HTML sanitizer to remove script tags (adjust as needed)
+function sanitizeHTML(html) {
+	// Remove any <script>...</script> elements.
+	return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+}
+
 function initialize() {
 	console.log("Ranobe Gemini: Initializing content script");
 
@@ -88,7 +94,8 @@ function createExtractButton() {
 	// Create button with icons for both light and dark mode
 	const enhanceButton = document.createElement("button");
 	enhanceButton.className = "gemini-enhance-btn";
-	enhanceButton.innerHTML = `
+	// Instead of directly setting innerHTML, wrap the HTML through sanitizeHTML
+	const btnHTML = `
         <img src="${browser.runtime.getURL(
 			"icons/logo-light-16.png"
 		)}" class="light-mode-icon" alt="">
@@ -97,6 +104,10 @@ function createExtractButton() {
 		)}" class="dark-mode-icon" alt="">
         Enhance with Gemini
     `;
+	// Instead of directly assigning innerHTML, create a safe fragment
+	const fragment = document.createRange().createContextualFragment(sanitizeHTML(btnHTML));
+	enhanceButton.textContent = ""; // Clear any text
+	enhanceButton.appendChild(fragment);
 
 	// Style to match the sample page buttons
 	enhanceButton.style.cssText = `
@@ -253,6 +264,30 @@ async function processWithGemini() {
 			return;
 		}
 
+		// Get approximate token count (rough estimate: 4 chars per token)
+		const estimatedTokenCount = Math.ceil(extractedContent.text.length / 4);
+		console.log(`Estimated token count: ${estimatedTokenCount}`);
+
+		// Get model max context size from the background script
+		const modelInfoResponse = await browser.runtime.sendMessage({
+			action: "getModelInfo",
+		});
+
+		const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
+		console.log(`Model max context size: ${maxContextSize}`);
+
+		// If the content is too large, split it into parts
+		if (estimatedTokenCount > maxContextSize * 0.7) {
+			// Use 70% of max as safety margin
+			return await processLargeContentInParts(
+				extractedContent,
+				button,
+				originalText,
+				maxContextSize
+			);
+		}
+
+		// For normal-sized content, process as usual
 		const response = await browser.runtime.sendMessage({
 			action: "processWithGemini",
 			title: extractedContent.title,
@@ -324,6 +359,136 @@ async function processWithGemini() {
 	}
 }
 
+// Process large content by splitting into parts
+async function processLargeContentInParts(
+	extractedContent,
+	button,
+	originalButtonText,
+	maxContextSize
+) {
+	// Show split processing notification
+	showStatusMessage(
+		"Content is large, processing in multiple parts...",
+		"info"
+	);
+
+	// Approximately how many characters per part (rough estimate: 4 chars per token)
+	const charsPerPart = Math.floor(maxContextSize * 0.7 * 4); // 70% of max tokens
+
+	// Split content into paragraphs first
+	const paragraphs = extractedContent.text.split(/\n\n+/);
+
+	// Initialize parts
+	const parts = [];
+	let currentPart = "";
+
+	// Group paragraphs into parts
+	for (const paragraph of paragraphs) {
+		// If adding this paragraph would exceed the limit, start a new part
+		if (
+			(currentPart + paragraph).length > charsPerPart &&
+			currentPart.length > 0
+		) {
+			parts.push(currentPart);
+			currentPart = paragraph;
+		} else {
+			// Otherwise, add to current part
+			currentPart += (currentPart ? "\n\n" : "") + paragraph;
+		}
+	}
+
+	// Add the last part if it's not empty
+	if (currentPart.trim()) {
+		parts.push(currentPart);
+	}
+
+	console.log(`Split content into ${parts.length} parts`);
+
+	// Process each part sequentially
+	let allProcessedContent = "";
+	let currentPartNum = 1;
+
+	for (const part of parts) {
+		// Update button text to show progress
+		if (button) {
+			button.textContent = `Processing part ${currentPartNum}/${parts.length}...`;
+		}
+
+		// Display progress
+		showStatusMessage(
+			`Processing part ${currentPartNum} of ${parts.length}...`,
+			"info"
+		);
+
+		// Create a part-specific title
+		const partTitle = `${extractedContent.title} (Part ${currentPartNum}/${parts.length})`;
+
+		try {
+			// Process this part
+			const response = await browser.runtime.sendMessage({
+				action: "processWithGemini",
+				title: partTitle,
+				content: part,
+				isPart: true,
+				partInfo: {
+					current: currentPartNum,
+					total: parts.length,
+				},
+			});
+
+			if (response && response.success) {
+				console.log(
+					`Successfully processed part ${currentPartNum}/${parts.length}`
+				);
+
+				// Add this processed part to our accumulated result
+				allProcessedContent +=
+					(allProcessedContent ? "\n\n" : "") + response.result;
+			} else {
+				throw new Error(response?.error || "Failed to process part");
+			}
+		} catch (error) {
+			console.error(`Error processing part ${currentPartNum}:`, error);
+			showStatusMessage(
+				`Error processing part ${currentPartNum}: ${error.message}`,
+				"error"
+			);
+
+			// Restore button state
+			if (button) {
+				button.textContent = originalButtonText;
+				button.disabled = false;
+			}
+
+			return;
+		}
+
+		currentPartNum++;
+	}
+
+	// Restore button state
+	if (button) {
+		button.textContent = originalButtonText;
+		button.disabled = false;
+	}
+
+	if (allProcessedContent) {
+		console.log("===========================================");
+		console.log("ALL PARTS PROCESSED SUCCESSFULLY");
+		console.log("===========================================");
+
+		// Show success message
+		showStatusMessage(`Successfully processed all ${parts.length} parts!`);
+
+		// Replace content with enhanced version
+		await replaceContentWithEnhancedVersion(allProcessedContent);
+		return true;
+	} else {
+		showStatusMessage("Failed to process content in parts", "error");
+		return false;
+	}
+}
+
 // Function to replace page content with enhanced version
 async function replaceContentWithEnhancedVersion(enhancedText) {
 	const contentArea = findContentArea();
@@ -375,8 +540,10 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
     ${processedHtml}
   `;
 
-	// Replace content
-	contentArea.innerHTML = processedHtml;
+	// Use createContextualFragment for safe insertion
+	const safeFragment = document.createRange().createContextualFragment(sanitizeHTML(processedHtml));
+	contentArea.innerHTML = "";
+	contentArea.appendChild(safeFragment);
 
 	// Add event listener to restore button
 	document
@@ -430,7 +597,7 @@ function showStatusMessage(message, type = "info") {
 
 // Listen for messages from the extension popup or background
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-	console.log("Received message:", message);
+	console.log("Content script received message:", message);
 
 	if (message.action === "ping") {
 		sendResponse({ success: true, message: "Content script is alive" });
@@ -443,23 +610,28 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			success: true,
 			foundContent: result.found,
 			title: result.title,
-			text: result.text,
-		});
-		return true;
-	}
-
-	if (message.action === "getRawText") {
-		const result = extractContent();
-		sendResponse({
-			success: result.found,
-			text: result.text,
-			title: result.title,
+			text: result.text.substring(0, 100) + "...", // Show only start for test
 		});
 		return true;
 	}
 
 	if (message.action === "processWithGemini") {
-		processWithGemini();
+		processWithGemini()
+			.then(() => {
+				sendResponse({ success: true });
+			})
+			.catch((error) => {
+				sendResponse({
+					success: false,
+					error: error.message || "Unknown error processing content",
+				});
+			});
+		return true;
+	}
+
+	if (message.action === "settingsUpdated") {
+		// Update any local settings
+		console.log("Settings updated:", message);
 		sendResponse({ success: true });
 		return true;
 	}

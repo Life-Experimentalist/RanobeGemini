@@ -3,17 +3,21 @@
  */
 
 import ENV from "../env.js";
+import {
+	DEFAULT_PROMPT,
+	DEFAULT_MODEL_ENDPOINT,
+	DEFAULT_MODEL_ID,
+} from "../utils/constants.js";
 
 // Default configuration values
 const DEFAULT_CONFIG = {
 	apiKey: "", // will be auto-set from ENV if not stored
-	defaultPrompt:
-		"Please review and enhance the following novel chapter translation. Correct grammatical, punctuation, and spelling errors; improve narrative flow and readability; maintain the original tone, style, and plot; ensure consistent gender pronouns; and streamline overly verbose sections. Format your response with proper HTML paragraph tags (<p>) for each paragraph. Do not use markdown formatting at all. Preserve the original meaning while producing a polished version suitable for a high-quality reading experience.",
+	defaultPrompt: DEFAULT_PROMPT,
 	temperature: 0.7,
 	maxOutputTokens: 8192,
 	debugMode: false,
-	modelEndpoint:
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+	modelEndpoint: DEFAULT_MODEL_ENDPOINT,
+	selectedModelId: DEFAULT_MODEL_ID,
 };
 
 // Load configuration from storage

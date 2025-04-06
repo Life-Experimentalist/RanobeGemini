@@ -1,27 +1,31 @@
+/* Styles for the Ranobe Gemini content script */
+
+/* Enhancement button */
 .gemini-enhance-btn {
-	/* Native style: transparent background, matching text color, simple border */
-	padding: 10px 15px;
-	margin: 15px 0;
-	background-color: transparent;
-	color: #bab9a0;
-	border: 1px solid #bab9a0;
-	border-radius: 4px;
-	cursor: pointer;
-	font-weight: bold;
-	z-index: 1000;
-	display: inline-block;
+	display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 10px 15px;
+		margin: 15px 0;
+	background-color: #222;
+		color: #bab9a0;
+	border: 1px solid rgba(255, 255, 255, 0.13);
+		box-shadow: inset 0 0 0 1px rgba(90, 90, 90, 0.3);
+		border-radius: 4px;
+		cursor: pointer;
+		font-weight: bold;
 	font-size: 14px;
-	transition: background-color 0.2s, border-color 0.2s;
+	z-index: 1000;
+		transition: background-color 0.2s;
 }
 
 .gemini-enhance-btn:hover {
-	background-color: rgba(66, 133, 244, 0.1);
-	border-color: #4285f4;
+	background-color: #333;
 }
 
 .gemini-enhance-btn:disabled {
 	opacity: 0.7;
-	cursor: wait;
+		cursor: wait;
 }
 
 .gemini-indicator {
@@ -134,6 +138,8 @@ body.reading_fullwidth .watermark-badge {
 	margin-bottom: 20px;
 	font-style: italic;
 	border-radius: 2px;
+	display: flex;
+		align-items: center;
 }
 
 .gemini-processed-notice button {
@@ -141,11 +147,11 @@ body.reading_fullwidth .watermark-badge {
 	float: right;
 	background: transparent;
 	color: #bab9a0;
-	border: 1px solid #bab9a0;
+	border: 1px solid rgba(255, 255, 255, 0.13);
 	padding: 3px 8px;
 	border-radius: 4px;
 	cursor: pointer;
-	transition: background-color 0.2s;
+	margin-left: auto;
 }
 
 .gemini-processed-notice button:hover {
@@ -154,7 +160,7 @@ body.reading_fullwidth .watermark-badge {
 
 .extraction-message {
 	/* Status messages set to blend into a native dark background */
-	background-color: transparent;
+	background-color: rgba(44, 73, 79, 0.9);
 	color: #bab9a0;
 	padding: 15px;
 	margin: 15px 0;
@@ -166,13 +172,13 @@ body.reading_fullwidth .watermark-badge {
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 10000;
-	box-shadow: none;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 	max-width: 80%;
-	border: 1px solid #bab9a0;
+	border: 1px solid rgba(255, 255, 255, 0.13);
 }
 
 .extraction-message.error {
-	background-color: rgba(98, 32, 32, 0.5);
+	background-color: rgba(98, 32, 32, 0.9);
 }
 /* Icon visibility control */
 .light-mode-icon {

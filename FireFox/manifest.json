@@ -1,14 +1,14 @@
 {
-	"manifest_version": 2,
+	"manifest_version": 3,
 	"name": "Ranobe Gemini",
 	"version": "1.0.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"icons": {
-			"16": "icons/logo-light-16.png",
-			"32": "icons/logo-light-32.png",
-			"48": "icons/logo-light-48.png",
-			"96": "icons/logo-light-96.png",
-			"128": "icons/logo-light-128.png"
+		"16": "icons/logo-light-16.png",
+		"32": "icons/logo-light-32.png",
+		"48": "icons/logo-light-48.png",
+		"96": "icons/logo-light-96.png",
+		"128": "icons/logo-light-128.png"
 	},
 	"permissions": [
 		"activeTab",
@@ -19,22 +19,17 @@
 	"browser_action": {
 		"default_icon": {
 			"16": "icons/logo-light-16.png",
-			"19": "icons/logo-light-19.png",
 			"32": "icons/logo-light-32.png",
 			"48": "icons/logo-light-48.png"
 		},
 		"default_title": "Ranobe Gemini",
 		"default_popup": "popup/simple-popup.html",
+		"browser_style": false,
 		"theme_icons": [
 			{
 				"light": "icons/logo-light-16.png",
 				"dark": "icons/logo-dark-16.png",
 				"size": 16
-			},
-			{
-				"light": "icons/logo-light-19.png",
-				"dark": "icons/logo-dark-19.png",
-				"size": 19
 			},
 			{
 				"light": "icons/logo-light-32.png",
@@ -52,7 +47,7 @@
 		"scripts": [
 			"background/background.js"
 		],
-		"persistent": false
+		"type": "module"
 	},
 	"content_scripts": [
 		{
@@ -71,6 +66,7 @@
 		}
 	],
 	"web_accessible_resources": [
-		"icons/*.png"
+		"icons/*.png",
+		"utils/*.js"
 	]
 }

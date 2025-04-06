@@ -1,0 +1,17 @@
+def xor_decrypt(encrypted_hex, key_hex):
+    encrypted_bytes = bytes.fromhex(encrypted_hex)
+    key_bytes = bytes.fromhex(key_hex)
+
+    decrypted = ''.join(chr(e ^ k) for e, k in zip(encrypted_bytes, key_bytes))
+    return decrypted
+
+# Encrypted username (from memory dump)
+encrypted_username_hex = "1E08051C040B100112121709"
+
+# XOR key ("nevergonnagiveyouup")
+key_hex = "6E6576676572676F6E6E6167"
+
+# Decrypt the username
+decrypted_username = xor_decrypt(encrypted_username_hex, key_hex)
+
+print("Decrypted Username:", decrypted_username)
