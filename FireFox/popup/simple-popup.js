@@ -9,12 +9,17 @@ const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the f
 4. Make dialogue sound more natural and conversational
 5. Refine descriptions to be more vivid and engaging
 6. Maintain the original plot points, character development, and story elements exactly
-7. Format paragraphs properly with HTML paragraph tags (<p>) for each paragraph
-8. Handle dialogue formatting with appropriate punctuation and paragraph breaks
-9. Streamline overly verbose sections while preserving important details
-10. Ensure proper transitioning between scenes and ideas
+7. Streamline overly verbose sections while preserving important details
+8. Ensure proper transitioning between scenes and ideas
 
-Do not use markdown formatting in your response. Present the enhanced text using only HTML paragraph tags. Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
+Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
+
+// Define default summary prompt
+const DEFAULT_SUMMARY_PROMPT = `Summarize the following chapter by highlighting the main plot points, key character interactions, and significant events. Keep the summary concise, clear, and easy to understand.`;
+
+// Define default permanent prompt
+const DEFAULT_PERMANENT_PROMPT =
+	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 document.addEventListener("DOMContentLoaded", async function () {
 	// DOM elements
@@ -27,6 +32,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const modelSelect = document.getElementById("modelSelect");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const resetPromptBtn = document.getElementById("resetPrompt");
+	const summaryPrompt = document.getElementById("summaryPrompt"); // Get summary prompt textarea
+	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt"); // Get summary prompt reset button
+	const permanentPrompt = document.getElementById("permanentPrompt"); // Get permanent prompt textarea
+	const resetPermanentPromptBtn = document.getElementById(
+		"resetPermanentPrompt"
+	); // Get permanent prompt reset button
 	const debugModeCheckbox = document.getElementById("debugMode");
 	const saveSettingsBtn = document.getElementById("saveSettings");
 	const tabButtons = document.querySelectorAll(".tab-btn");
@@ -261,6 +272,38 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	});
 
+	// FAQ functionality
+	const faqQuestions = document.querySelectorAll(".faq-question");
+	faqQuestions.forEach((question) => {
+		question.addEventListener("click", () => {
+			// Toggle active class on the question
+			question.classList.toggle("active");
+
+			// Toggle active class on the answer
+			const answer = question.nextElementSibling;
+			answer.classList.toggle("active");
+
+			// Close other open FAQs (optional, uncomment if you want accordion behavior)
+			// faqQuestions.forEach(q => {
+			//   if (q !== question && q.classList.contains('active')) {
+			//     q.classList.remove('active');
+			//     q.nextElementSibling.classList.remove('active');
+			//   }
+			// });
+		});
+	});
+
+	// Make FAQ "Get API key" link work the same as the main one
+	const faqGetKeyLink = document.getElementById("faqGetKeyLink");
+	if (faqGetKeyLink) {
+		faqGetKeyLink.addEventListener("click", (e) => {
+			e.preventDefault();
+			browser.tabs.create({
+				url: "https://makersuite.google.com/app/apikey",
+			});
+		});
+	}
+
 	// First ping the background script to ensure it's running
 	try {
 		console.log("Pinging background script...");
@@ -298,6 +341,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// Always set the prompt template - this fixes the empty box issue
 		promptTemplate.value = data.defaultPrompt || DEFAULT_PROMPT;
 
+		// Load summary prompt
+		summaryPrompt.value = data.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+		// Load permanent prompt
+		permanentPrompt.value =
+			data.permanentPrompt || DEFAULT_PERMANENT_PROMPT;
+
 		// Set model selection based on saved endpoint
 		if (data.modelEndpoint) {
 			if (data.modelEndpoint.includes("gemini-2.0-flash")) {
@@ -325,6 +375,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// If settings fail to load, at least set the default prompt
 		if (promptTemplate && !promptTemplate.value) {
 			promptTemplate.value = DEFAULT_PROMPT;
+		}
+		// Set default summary prompt on error
+		if (summaryPrompt && !summaryPrompt.value) {
+			summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
+		}
+		// Set default permanent prompt on error
+		if (permanentPrompt && !permanentPrompt.value) {
+			permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
 		}
 	}
 
@@ -387,7 +445,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 	});
 
-	// Save all settings including model selection
+	// Save all settings including model selection and permanent prompt
 	saveSettingsBtn.addEventListener("click", async () => {
 		const apiKey = apiKeyInput.value.trim();
 		const selectedModelId = modelSelect.value;
@@ -422,6 +480,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 			await browser.storage.local.set({
 				apiKey: apiKey,
 				defaultPrompt: promptTemplate.value,
+				summaryPrompt: summaryPrompt.value, // Save summary prompt
+				permanentPrompt: permanentPrompt.value, // Save permanent prompt
 				modelEndpoint: modelEndpoint,
 				selectedModelId: selectedModelId,
 				debugMode: debugModeCheckbox.checked,
@@ -440,7 +500,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Reset prompt to default
 	resetPromptBtn.addEventListener("click", () => {
 		promptTemplate.value = DEFAULT_PROMPT;
-		showStatus("Prompt reset to default", "info");
+		showStatus("Enhancement prompt reset to default", "info");
+	});
+
+	// Reset summary prompt to default
+	resetSummaryPromptBtn.addEventListener("click", () => {
+		summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
+		showStatus("Summary prompt reset to default", "info");
+	});
+
+	// Reset permanent prompt to default
+	resetPermanentPromptBtn.addEventListener("click", () => {
+		permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
+		showStatus("Permanent prompt reset to default", "info");
 	});
 
 	// Enhance current page

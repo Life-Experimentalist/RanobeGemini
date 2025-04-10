@@ -5,7 +5,12 @@ try {
 	const constantsModule = await import(
 		browser.runtime.getURL("utils/constants.js")
 	);
-	const { DEFAULT_PROMPT, DEFAULT_MODEL_ENDPOINT } = constantsModule;
+	const {
+		DEFAULT_PROMPT,
+		DEFAULT_MODEL_ENDPOINT,
+		DEFAULT_PERMANENT_PROMPT,
+		DEFAULT_SUMMARY_PROMPT,
+	} = constantsModule;
 
 	console.log("Ranobe Gemini: Background script loaded");
 
@@ -20,6 +25,9 @@ try {
 			return {
 				apiKey: data.apiKey || "",
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
+				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT, // Load summary prompt
+				permanentPrompt:
+					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT, // Load permanent prompt
 				temperature: data.temperature || 0.7,
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
@@ -31,6 +39,8 @@ try {
 				apiKey: "",
 				defaultPrompt:
 					"Please fix grammar and improve readability of this text while maintaining original meaning.",
+				summaryPrompt: DEFAULT_SUMMARY_PROMPT, // Default summary prompt on error
+				permanentPrompt: DEFAULT_PERMANENT_PROMPT, // Default permanent prompt on error
 				temperature: 0.7,
 				maxOutputTokens: 8192,
 			};
@@ -93,6 +103,40 @@ try {
 				});
 
 			return true; // Indicates we'll send a response asynchronously
+		}
+
+		if (message.action === "summarizeWithGemini") {
+			summarizeContentWithGemini(message.title, message.content)
+				.then((summary) => {
+					sendResponse({ success: true, summary: summary });
+				})
+				.catch((error) => {
+					console.error("Error summarizing with Gemini:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		// Handle request to open the popup window
+		if (message.action === "openPopup") {
+			browser.windows
+				.create({
+					url: browser.runtime.getURL("popup/simple-popup.html"),
+					type: "popup",
+					width: 400,
+					height: 550,
+				})
+				.catch((error) => {
+					console.error("Error opening popup:", error);
+				});
+			// Send response
+			sendResponse({ success: true });
+			return true;
 		}
 
 		return false;
@@ -189,14 +233,15 @@ try {
 				promptPrefix += `\n\nNote: This is part ${partInfo.current} of ${partInfo.total} parts. Please enhance this part while maintaining consistency with other parts.`;
 			}
 
-			const fullPrompt = `${promptPrefix}\n\nTitle: ${title}\n\n${content}`;
+			// Combine base prompt, permanent prompt, title, and content
+			const fullPrompt = `${promptPrefix}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\n${content}`;
 
 			const requestBody = {
 				contents: [
 					{
 						parts: [
 							{
-								text: fullPrompt,
+								text: fullPrompt, // Use the combined prompt
 							},
 						],
 					},
@@ -263,6 +308,97 @@ try {
 		}
 	}
 
+	// Summarize content with Gemini API
+	async function summarizeContentWithGemini(title, content) {
+		try {
+			// Load latest config
+			currentConfig = await initConfig();
+
+			if (!currentConfig.apiKey) {
+				throw new Error(
+					"API key is missing. Please set it in the extension popup."
+				);
+			}
+
+			console.log(
+				`Summarizing "${title}" with Gemini (${content.length} characters)`
+			);
+
+			const modelEndpoint =
+				currentConfig.modelEndpoint ||
+				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+
+			// Use the summary prompt from settings
+			const summarizationBasePrompt =
+				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// Combine base summarization prompt, permanent prompt, title, and content
+			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
+
+			const requestBody = {
+				contents: [
+					{
+						parts: [
+							{
+								text: fullSummarizationPrompt, // Use the combined prompt
+							},
+						],
+					},
+				],
+				generationConfig: {
+					temperature: 0.5, // Lower temperature for more focused summary
+					maxOutputTokens: 512, // Limit summary length
+					topP: 0.95,
+					topK: 40,
+				},
+			};
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Summarization Request:", {
+					url: modelEndpoint,
+					requestBody: JSON.parse(JSON.stringify(requestBody)),
+				});
+			}
+
+			const response = await fetch(
+				`${modelEndpoint}?key=${currentConfig.apiKey}`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(requestBody),
+				}
+			);
+
+			const responseData = await response.json();
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Summarization Response:", responseData);
+			}
+
+			if (!response.ok) {
+				const errorMessage =
+					responseData.error?.message ||
+					`API Error: ${response.status} ${response.statusText}`;
+				throw new Error(errorMessage);
+			}
+
+			if (responseData.candidates && responseData.candidates.length > 0) {
+				const generatedSummary =
+					responseData.candidates[0].content?.parts[0]?.text;
+				if (generatedSummary) {
+					return generatedSummary;
+				}
+			}
+
+			throw new Error("No valid summary returned from Gemini API");
+		} catch (error) {
+			console.error("Gemini API summarization error:", error);
+			throw error;
+		}
+	}
+
 	// Listen for storage changes to ensure our config is always up-to-date
 	browser.storage.onChanged.addListener(async (changes) => {
 		// Refresh our configuration when storage changes
@@ -275,12 +411,19 @@ try {
 	});
 
 	// Setup browser action (icon) click handler
-	browser.browserAction.onClicked.addListener(() => {
+	browser.action.onClicked.addListener(() => {
 		console.log("Browser action clicked");
-		// This is a fallback in case the popup doesn't open
-		browser.runtime.openOptionsPage().catch((error) => {
-			console.error("Error opening options page:", error);
-		});
+		// Open the simple popup directly if popup doesn't open
+		browser.windows
+			.create({
+				url: browser.runtime.getURL("popup/simple-popup.html"),
+				type: "popup",
+				width: 400,
+				height: 550,
+			})
+			.catch((error) => {
+				console.error("Error opening popup:", error);
+			});
 	});
 
 	// Initialize when background script loads
@@ -305,6 +448,8 @@ try {
 	const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the following improvements: [...]`;
 	const DEFAULT_MODEL_ENDPOINT =
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+	const DEFAULT_PERMANENT_PROMPT = `Ensure the translation maintains cultural nuances and original tone.`;
+	const DEFAULT_SUMMARY_PROMPT = `Please provide a concise summary of the following novel chapter content. Focus on the main plot points and character interactions. Keep the summary brief and easy to understand.`;
 
 	console.log("Ranobe Gemini: Background script loaded");
 
@@ -319,6 +464,9 @@ try {
 			return {
 				apiKey: data.apiKey || "",
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
+				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT, // Load summary prompt
+				permanentPrompt:
+					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT, // Load permanent prompt
 				temperature: data.temperature || 0.7,
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
@@ -330,6 +478,8 @@ try {
 				apiKey: "",
 				defaultPrompt:
 					"Please fix grammar and improve readability of this text while maintaining original meaning.",
+				summaryPrompt: DEFAULT_SUMMARY_PROMPT, // Default summary prompt on error
+				permanentPrompt: DEFAULT_PERMANENT_PROMPT, // Default permanent prompt on error
 				temperature: 0.7,
 				maxOutputTokens: 8192,
 			};
@@ -392,6 +542,40 @@ try {
 				});
 
 			return true; // Indicates we'll send a response asynchronously
+		}
+
+		if (message.action === "summarizeWithGemini") {
+			summarizeContentWithGemini(message.title, message.content)
+				.then((summary) => {
+					sendResponse({ success: true, summary: summary });
+				})
+				.catch((error) => {
+					console.error("Error summarizing with Gemini:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		// Handle request to open the popup window
+		if (message.action === "openPopup") {
+			browser.windows
+				.create({
+					url: browser.runtime.getURL("popup/simple-popup.html"),
+					type: "popup",
+					width: 400,
+					height: 550,
+				})
+				.catch((error) => {
+					console.error("Error opening popup:", error);
+				});
+			// Send response
+			sendResponse({ success: true });
+			return true;
 		}
 
 		return false;
@@ -488,14 +672,15 @@ try {
 				promptPrefix += `\n\nNote: This is part ${partInfo.current} of ${partInfo.total} parts. Please enhance this part while maintaining consistency with other parts.`;
 			}
 
-			const fullPrompt = `${promptPrefix}\n\nTitle: ${title}\n\n${content}`;
+			// Combine base prompt, permanent prompt, title, and content
+			const fullPrompt = `${promptPrefix}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\n${content}`;
 
 			const requestBody = {
 				contents: [
 					{
 						parts: [
 							{
-								text: fullPrompt,
+								text: fullPrompt, // Use the combined prompt
 							},
 						],
 					},
@@ -562,6 +747,97 @@ try {
 		}
 	}
 
+	// Summarize content with Gemini API
+	async function summarizeContentWithGemini(title, content) {
+		try {
+			// Load latest config
+			currentConfig = await initConfig();
+
+			if (!currentConfig.apiKey) {
+				throw new Error(
+					"API key is missing. Please set it in the extension popup."
+				);
+			}
+
+			console.log(
+				`Summarizing "${title}" with Gemini (${content.length} characters)`
+			);
+
+			const modelEndpoint =
+				currentConfig.modelEndpoint ||
+				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+
+			// Use the summary prompt from settings
+			const summarizationBasePrompt =
+				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// Combine base summarization prompt, permanent prompt, title, and content
+			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
+
+			const requestBody = {
+				contents: [
+					{
+						parts: [
+							{
+								text: fullSummarizationPrompt, // Use the combined prompt
+							},
+						],
+					},
+				],
+				generationConfig: {
+					temperature: 0.5, // Lower temperature for more focused summary
+					maxOutputTokens: 512, // Limit summary length
+					topP: 0.95,
+					topK: 40,
+				},
+			};
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Summarization Request:", {
+					url: modelEndpoint,
+					requestBody: JSON.parse(JSON.stringify(requestBody)),
+				});
+			}
+
+			const response = await fetch(
+				`${modelEndpoint}?key=${currentConfig.apiKey}`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(requestBody),
+				}
+			);
+
+			const responseData = await response.json();
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Summarization Response:", responseData);
+			}
+
+			if (!response.ok) {
+				const errorMessage =
+					responseData.error?.message ||
+					`API Error: ${response.status} ${response.statusText}`;
+				throw new Error(errorMessage);
+			}
+
+			if (responseData.candidates && responseData.candidates.length > 0) {
+				const generatedSummary =
+					responseData.candidates[0].content?.parts[0]?.text;
+				if (generatedSummary) {
+					return generatedSummary;
+				}
+			}
+
+			throw new Error("No valid summary returned from Gemini API");
+		} catch (error) {
+			console.error("Gemini API summarization error:", error);
+			throw error;
+		}
+	}
+
 	// Listen for storage changes to ensure our config is always up-to-date
 	browser.storage.onChanged.addListener(async (changes) => {
 		// Refresh our configuration when storage changes
@@ -574,12 +850,19 @@ try {
 	});
 
 	// Setup browser action (icon) click handler
-	browser.browserAction.onClicked.addListener(() => {
+	browser.action.onClicked.addListener(() => {
 		console.log("Browser action clicked");
-		// This is a fallback in case the popup doesn't open
-		browser.runtime.openOptionsPage().catch((error) => {
-			console.error("Error opening options page:", error);
-		});
+		// Open the simple popup directly if popup doesn't open
+		browser.windows
+			.create({
+				url: browser.runtime.getURL("popup/simple-popup.html"),
+				type: "popup",
+				width: 400,
+				height: 550,
+			})
+			.catch((error) => {
+				console.error("Error opening popup:", error);
+			});
 	});
 
 	// Initialize when background script loads

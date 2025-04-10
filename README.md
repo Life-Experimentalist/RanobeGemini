@@ -7,11 +7,13 @@ A cross-browser extension that enhances web novel translations using Google's Ge
 ## Features
 
 - **One-Click Enhancement**: Transform poorly translated or low-quality web novels with a single click
+- **Chapter Summarization**: Generate concise summaries of chapter content with key plot points
 - **HTML-Aware Output**: Produces properly formatted paragraphs with HTML tags
-- **Multiple Site Support**: Works with popular novel sites like Ranobes.top, WuxiaWorld, and Webnovel
+- **Large Chapter Support**: Automatically splits and processes lengthy chapters
 - **Customizable AI Prompts**: Configure exactly how you want Gemini to enhance your content
+- **Permanent Prompts**: Add formatting rules that apply to all requests
 - **Restore Original**: Easily switch back to the original text if needed
-- **Auto-Detection**: Automatically finds novel content on supported pages
+- **Dark Mode Support**: Seamless experience in both light and dark themes
 
 ## Installation
 
@@ -30,16 +32,19 @@ The extension will soon be available in the Chrome and Edge Web Stores. Stay tun
 
 ## Usage
 
-1. Navigate to a supported novel site.
-2. Click the "Enhance with Gemini" button that the extension adds to the page.
-3. Wait for the enhanced version to appear.
+1. Navigate to ranobes.top.
+2. You'll see new buttons added to the page:
+   - "Enhance with Gemini" - Improves the text quality and readability
+   - "Summarize Chapter" - Creates a concise summary of the chapter
+3. Wait for the processing to complete.
 4. Use the "Restore Original" button if required.
 
 ## Configuration
 
 - Click the extension icon in your browser toolbar.
 - Enter your Gemini API key (get one from [Google AI Studio](https://ai.google.dev/)).
-- Adjust the AI prompt and advanced settings via the settings page.
+- Adjust the enhancement prompt, summary prompt, and permanent prompt in the Settings tab.
+- Choose between different Gemini models based on your needs.
 
 ## Development
 
@@ -50,6 +55,10 @@ The extension will soon be available in the Chrome and Edge Web Stores. Stay tun
 
 - `FireFox/` – Firefox extension files (current implementation)
 - Other directories pertain to shared code and future implementations.
+
+## Version History
+
+For a complete list of changes, see the [CHANGELOG](CHANGELOG.md).
 
 ## License
 

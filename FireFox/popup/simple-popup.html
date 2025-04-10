@@ -252,6 +252,111 @@
 			}
 			.icon-button:hover {
 				background-color: #e0e0e0;
+				border-color: #bbb;
+			}
+			/* FAQ styling */
+			.faq-item {
+				margin-bottom: 15px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				overflow: hidden;
+			}
+
+			.faq-question {
+				padding: 10px 15px;
+				background-color: #f0f0f0;
+				font-weight: bold;
+				cursor: pointer;
+				position: relative;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.faq-question:after {
+				content: "+";
+				font-size: 18px;
+				transition: transform 0.3s;
+			}
+
+			.faq-question.active:after {
+				content: "−";
+				transform: rotate(0deg);
+			}
+
+			.faq-answer {
+				padding: 0;
+				max-height: 0;
+				overflow: hidden;
+				transition: all 0.3s ease;
+				background-color: #ffffff;
+			}
+
+			.faq-answer.active {
+				padding: 15px;
+				max-height: 500px;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				.faq-question {
+					background-color: #3c4043;
+					color: #e8eaed;
+				}
+
+				.faq-answer {
+					background-color: #292a2d;
+				}
+			}
+
+			/* About page styling */
+			.about-section {
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid #eaeaea;
+			}
+
+			.about-section:last-child {
+				border-bottom: none;
+			}
+
+			.about-section h4 {
+				color: #4285f4;
+				margin-bottom: 10px;
+				font-size: 16px;
+			}
+
+			.about-section ul, .about-section ol {
+				padding-left: 20px;
+				margin-top: 5px;
+				margin-bottom: 10px;
+			}
+
+			.about-section li {
+				margin-bottom: 5px;
+				line-height: 1.5;
+			}
+
+			.about-section a {
+				color: #4285f4;
+				text-decoration: none;
+			}
+
+			.about-section a:hover {
+				text-decoration: underline;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				.about-section {
+					border-color: #3c4043;
+				}
+
+				.about-section a {
+					color: #8ab4f8;
+				}
+
+				.about-section h4 {
+					color: #8ab4f8;
+				}
 			}
 		</style>
 	</head>
@@ -274,6 +379,7 @@
 			<!-- Simple tab navigation -->
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="settings">Settings</button>
+				<button class="tab-btn" data-tab="faq">FAQ</button>
 				<button class="tab-btn" data-tab="about">About</button>
 			</div>
 
@@ -314,6 +420,21 @@
 				</div>
 
 				<div class="setting">
+					<label for="summaryPrompt">Summary Prompt:</label>
+					<textarea
+						id="summaryPrompt"
+						placeholder="Instructions for summarization..."
+					></textarea>
+					<button id="resetSummaryPrompt" style="margin-top: 5px;">Reset to Default</button>
+				</div>
+
+				<div class="setting">
+						<label for="permanentPrompt">Permanent Prompt (Appended to all requests):</label>
+						<textarea id="permanentPrompt" rows="4"></textarea>
+						<button id="resetPermanentPrompt" style="margin-top: 5px;">Reset to Default</button>
+				</div>
+
+				<div class="setting">
 					<label>
 						<input type="checkbox" id="debugMode" />
 						Debug mode (console logging)
@@ -338,24 +459,190 @@
 
 			<!-- About Tab -->
 			<div id="about" class="tab-content">
-				<h3>Ranobe Gemini v1.0</h3>
-				<p>
-					This extension uses Google's Gemini AI to enhance novel translations,
-					making them more readable and natural.
+				<h3>Ranobe Gemini v1.1.0</h3>
+
+				<div class="about-section">
+					<h4>Overview</h4>
+					<p>
+						Ranobe Gemini is a browser extension that uses Google's Gemini AI to enhance web novel translations,
+						making them more readable and natural while preserving the original story.
+					</p>
+					<p>
+						The extension integrates directly with novel pages on ranobes.top, offering instant enhancement
+						and summarization of chapter content.
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Key Features</h4>
+					<ul>
+						<li><strong>Translation Enhancement:</strong> Improves grammar, flow, and readability of machine-translated novels</li>
+						<li><strong>Chapter Summarization:</strong> Creates concise summaries focusing on key plot points</li>
+						<li><strong>Customizable Prompts:</strong> Fine-tune how Gemini processes your content</li>
+						<li><strong>Large Chapter Handling:</strong> Automatically splits and processes lengthy chapters</li>
+						<li><strong>Multiple Gemini Models:</strong> Choose between different Gemini models based on your needs</li>
+						<li><strong>Dark Mode Support:</strong> Seamless experience in both light and dark themes</li>
+					</ul>
+				</div>
+
+				<div class="about-section">
+					<h4>Getting Started</h4>
+					<ol>
+						<li><a href="#" id="getKeyLink">Get a free Gemini API key</a> from Google AI Studio</li>
+						<li>Enter your API key in the Settings tab</li>
+						<li>Navigate to any chapter on ranobes.top</li>
+						<li>Click "Enhance with Gemini" or "Summarize Chapter" on the page</li>
+					</ol>
+				</div>
+
+				<div class="about-section">
+					<h4>Recommended Settings</h4>
+					<ul>
+						<li><strong>Model:</strong> Gemini 2.0 Flash offers the best balance of speed and quality</li>
+						<li><strong>Chunking:</strong> Keep "Split large chapters automatically" enabled for best results</li>
+						<li><strong>Permanent Prompt:</strong> Use this for formatting instructions that apply to all requests</li>
+					</ul>
+				</div>
+
+				<div class="about-section">
+					<h4>Version History</h4>
+					<p><strong>v1.1.0</strong> (April 2025):</p>
+					<ul>
+						<li>Added chapter summarization feature</li>
+						<li>Introduced permanent prompt for consistent formatting</li>
+						<li>Improved support for Gemini 2.0 models</li>
+						<li>Enhanced dark mode support</li>
+						<li>Fixed HTML formatting issues</li>
+					</ul>
+					<p><strong>v1.0.0</strong> (Initial Release):</p>
+					<ul>
+						<li>Basic enhancement functionality</li>
+						<li>Support for ranobes.top</li>
+						<li>Content extraction and processing</li>
+						<li>Customizable enhancement prompts</li>
+					</ul>
+					<p>
+						<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/CHANGELOG.md" target="_blank">View complete changelog on GitHub</a>
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Privacy & Data Usage</h4>
+					<p>
+						Ranobe Gemini only sends novel content to Google's Gemini API for processing.
+						Your API key and settings are stored locally in your browser.
+						The extension doesn't collect any usage data or personal information.
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Credits & Attribution</h4>
+					<p>
+						Developed by <a href="https://github.com/Life-Experimentalist" target="_blank">Life-Experimentalist</a><br>
+						Powered by <a href="https://ai.google.dev/" target="_blank">Google Gemini API</a>
+					</p>
+					<p>
+						Extension icons and graphics created specifically for Ranobe Gemini.
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Support & Feedback</h4>
+					<p>
+						If you encounter any issues or have suggestions for improvement, please report them on
+						<a href="https://github.com/Life-Experimentalist/RanobeGemini/issues" target="_blank">GitHub Issues</a>.
+					</p>
+				</div>
+
+				<p style="margin-top: 20px; font-size: 12px; text-align: center; color: #666;">
+					©2025 Ranobe Gemini • <a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/LICENSE" target="_blank">License</a>
 				</p>
-				<p>
-					You need a valid Gemini API key to use this extension.
-					<a href="#" id="getKeyLink">Get a free key</a>
-				</p>
-				<p>Usage:</p>
-				<ol>
-					<li>Navigate to a novel chapter</li>
-					<li>Click the "Enhance with Gemini" button on the page</li>
-					<li>The enhanced text will replace the original content</li>
-				</ol>
-				<p style="margin-top: 15px; font-size: 12px;">
-					©2025 <a href="https://github.com/VKrishna04">VKrishna04</a>
-				</p>
+			</div>
+
+			<!-- FAQ Tab -->
+			<div id="faq" class="tab-content">
+				<h3>Frequently Asked Questions</h3>
+
+				<div class="faq-item">
+					<div class="faq-question">What is Ranobe Gemini?</div>
+					<div class="faq-answer">
+						Ranobe Gemini is a browser extension that uses Google's Gemini AI to enhance novel translations, making them more readable and natural.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Do I need an API key?</div>
+					<div class="faq-answer">
+						Yes, you need a Gemini API key to use this extension. You can get a free API key from <a href="#" id="faqGetKeyLink">Google AI Studio</a>.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">How do I use the extension?</div>
+					<div class="faq-answer">
+						<ol>
+							<li>Enter your API key in the Settings tab</li>
+							<li>Navigate to a novel chapter on ranobes.top</li>
+							<li>Click the "Enhance with Gemini" button that appears on the page</li>
+							<li>Wait for the enhanced text to replace the original content</li>
+						</ol>
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">What does the "Summarize Chapter" button do?</div>
+					<div class="faq-answer">
+						It generates a concise summary of the current chapter, focusing on main plot points and character interactions.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Can I customize the enhancement or summary?</div>
+					<div class="faq-answer">
+						Yes! You can modify the enhancement prompt, summary prompt, and permanent prompt in the Settings tab to control how Gemini processes content.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Which websites are supported?</div>
+					<div class="faq-answer">
+						Currently, the extension only works with ranobes.top.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">What should I do if enhancement fails?</div>
+					<div class="faq-answer">
+						<ul>
+							<li>Check that your API key is correctly entered in the Settings tab</li>
+							<li>Make sure you're on a supported website (ranobes.top)</li>
+							<li>Try reloading the page and trying again</li>
+							<li>If processing large chapters, enable the "Split large chapters automatically" option</li>
+							<li>Check the browser console for error messages (Ctrl+Shift+J)</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">What does "Permanent Prompt" do?</div>
+					<div class="faq-answer">
+						The Permanent Prompt contains instructions that are added to every request sent to Gemini, both for enhancement and summarization. It's useful for formatting instructions and other consistent requirements.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Is my data sent to Google?</div>
+					<div class="faq-answer">
+						The extension sends novel content to Google's Gemini API for processing. Your API key and prompts are stored locally in your browser. No other data is collected by the extension.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Which Gemini model should I use?</div>
+					<div class="faq-answer">
+						Gemini 2.0 Flash is recommended for most users as it offers a good balance of speed and quality. For longer chapters, Gemini 1.5 Pro has a larger context window but may be slower.
+					</div>
+				</div>
 			</div>
 
 			<div id="status"></div>

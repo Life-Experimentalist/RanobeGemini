@@ -24,7 +24,7 @@ let autoExtracted = false;
 // Add a minimal HTML sanitizer to remove script tags (adjust as needed)
 function sanitizeHTML(html) {
 	// Remove any <script>...</script> elements.
-	return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+	return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 }
 
 function initialize() {
@@ -32,7 +32,7 @@ function initialize() {
 
 	// Create extract button if it doesn't exist
 	if (!hasExtractButton) {
-		createExtractButton();
+		injectUI();
 
 		// Also look for content periodically in case the page loads dynamically
 		const checkInterval = setInterval(() => {
@@ -41,7 +41,7 @@ function initialize() {
 
 			if (contentArea && !button) {
 				console.log("Content area found in interval check");
-				createExtractButton();
+				injectUI();
 				clearInterval(checkInterval);
 			}
 		}, 2000);
@@ -77,21 +77,18 @@ function findContentArea() {
 	return null;
 }
 
-// Create a button styled like the ones in the sample page
-function createExtractButton() {
-	// Find the chapter content area
-	const contentArea = findContentArea();
+// Function to create the Summarize button
+function createSummarizeButton() {
+	const button = document.createElement("button");
+	button.id = "summarize-button";
+	button.textContent = "Summarize Chapter";
+	button.classList.add("gemini-button"); // Use the same class for styling
+	button.addEventListener("click", handleSummarizeClick);
+	return button;
+}
 
-	if (!contentArea) {
-		console.log(
-			"Chapter content area not found. This might not be a chapter page."
-		);
-		return;
-	}
-
-	console.log("Creating extract button");
-
-	// Create button with icons for both light and dark mode
+// Function to create the Enhance button
+function createEnhanceButton() {
 	const enhanceButton = document.createElement("button");
 	enhanceButton.className = "gemini-enhance-btn";
 	// Instead of directly setting innerHTML, wrap the HTML through sanitizeHTML
@@ -105,7 +102,9 @@ function createExtractButton() {
         Enhance with Gemini
     `;
 	// Instead of directly assigning innerHTML, create a safe fragment
-	const fragment = document.createRange().createContextualFragment(sanitizeHTML(btnHTML));
+	const fragment = document
+		.createRange()
+		.createContextualFragment(sanitizeHTML(btnHTML));
 	enhanceButton.textContent = ""; // Clear any text
 	enhanceButton.appendChild(fragment);
 
@@ -126,16 +125,59 @@ function createExtractButton() {
         font-size: 14px;
         z-index: 1000;
     `;
-	enhanceButton.addEventListener("click", processWithGemini);
+	enhanceButton.addEventListener("click", handleEnhanceClick);
 	enhanceButton.addEventListener("mouseover", () => {
 		enhanceButton.style.backgroundColor = "#333";
 	});
 	enhanceButton.addEventListener("mouseout", () => {
 		enhanceButton.style.backgroundColor = "#222";
 	});
-	// Insert button before the content area
-	contentArea.parentNode.insertBefore(enhanceButton, contentArea);
-	hasExtractButton = true;
+	return enhanceButton;
+}
+
+// Function to inject UI elements (buttons, status area)
+function injectUI() {
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		console.warn(
+			"Ranobe Gemini: Target element for UI injection not found."
+		);
+		return;
+	}
+
+	// Check if UI already injected
+	if (document.getElementById("gemini-controls")) {
+		console.log("Ranobe Gemini: UI already injected.");
+		return;
+	}
+
+	const controlsContainer = document.createElement("div");
+	controlsContainer.id = "gemini-controls";
+	controlsContainer.style.marginBottom = "10px"; // Add some space below buttons
+
+	const enhanceButton = createEnhanceButton();
+	const summarizeButton = createSummarizeButton();
+	const statusDiv = document.createElement("div");
+	statusDiv.id = "gemini-status";
+	statusDiv.style.marginTop = "5px";
+
+	const summaryDisplay = document.createElement("div");
+	summaryDisplay.id = "summary-display";
+	summaryDisplay.style.marginTop = "10px";
+	summaryDisplay.style.padding = "10px";
+	summaryDisplay.style.border = "1px solid #ccc";
+	summaryDisplay.style.display = "none"; // Initially hidden
+
+	controlsContainer.appendChild(enhanceButton);
+	controlsContainer.appendChild(summarizeButton);
+	controlsContainer.appendChild(statusDiv);
+
+	// Insert controls before the content area
+	contentArea.parentNode.insertBefore(controlsContainer, contentArea);
+	// Insert summary display before the content area as well
+	contentArea.parentNode.insertBefore(summaryDisplay, contentArea);
+
+	console.log("Ranobe Gemini: UI injected successfully.");
 }
 
 // Automatically extract content once the page is loaded
@@ -168,17 +210,67 @@ function extractContent() {
 		if (element) {
 			foundContent = true;
 			sourceSelector = selector;
+
 			// Extract title if available
+			const titleElement = document.querySelector(
+				"h1.title, .story-title, .chapter-title"
+			);
 			chapterTitle =
-				document.querySelector("h1.title, .story-title, .chapter-title")
-					?.innerText ||
-				document.title ||
-				"Unknown Title";
+				titleElement?.innerText || document.title || "Unknown Title";
+
+			// Create a deep clone of the content element to manipulate
+			const contentClone = element.cloneNode(true);
+
+			// Remove title elements from the content if they exist
+			const titlesToRemove = contentClone.querySelectorAll(
+				"h1, h2, h3.title, .story-title, .chapter-title"
+			);
+			titlesToRemove.forEach((title) => {
+				title.remove();
+			});
+
 			// Get clean text content - preserve full text
-			chapterText = element.innerText
+			chapterText = contentClone.innerText
 				.trim()
 				.replace(/\n\s+/g, "\n") // Preserve paragraph breaks but remove excess whitespace
 				.replace(/\s{2,}/g, " "); // Replace multiple spaces with a single space
+
+			// Additional cleaning - ONLY check the first 5 lines for titles
+			const titleParts = chapterTitle.split(/[:\-–—]/);
+			const lines = chapterText.split("\n");
+			const headLines = lines.slice(0, 5); // Only look at first 5 lines
+			const filteredHeadLines = headLines.filter((line) => {
+				const trimmedLine = line.trim();
+				// Skip empty lines
+				if (trimmedLine === "") return true;
+
+				// Check if line is just the title or part of the title
+				for (const titlePart of titleParts) {
+					const cleanTitlePart = titlePart.trim();
+					if (
+						cleanTitlePart.length > 3 && // Avoid filtering out lines with short matches
+						(trimmedLine === cleanTitlePart ||
+							trimmedLine.startsWith(`${cleanTitlePart}:`) ||
+							trimmedLine.startsWith(`${cleanTitlePart} -`))
+					) {
+						return false;
+					}
+				}
+
+				// Check for common book name patterns at the start of content
+				if (
+					document.location.hostname.includes("ranobes") &&
+					/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(trimmedLine)
+				) {
+					return false;
+				}
+
+				return true;
+			});
+
+			// Recombine the filtered head lines with the rest of the content
+			chapterText = [...filteredHeadLines, ...lines.slice(5)].join("\n");
+
 			// Log the entire text
 			console.log(`FULL CHAPTER TEXT: ${chapterText.length} characters`);
 			break; // Stop after finding the first valid content
@@ -206,8 +298,67 @@ function extractContent() {
 	};
 }
 
-// Process the content with Gemini
-async function processWithGemini() {
+// Handle click event for Summarize button
+async function handleSummarizeClick() {
+	const summarizeButton = document.getElementById("summarize-button");
+	const summaryDisplay = document.getElementById("summary-display");
+	const statusDiv = document.getElementById("gemini-status");
+
+	if (!summarizeButton || !summaryDisplay || !statusDiv) return;
+
+	try {
+		summarizeButton.disabled = true;
+		summarizeButton.textContent = "Summarizing...";
+		statusDiv.textContent = "Extracting content for summary...";
+		summaryDisplay.style.display = "block"; // Show the display area
+		summaryDisplay.textContent = "Generating summary...";
+
+		const { title, text: content } = extractContent();
+
+		if (!content) {
+			throw new Error("Could not extract chapter content.");
+		}
+
+		statusDiv.textContent =
+			"Sending content to Gemini for summarization...";
+
+		// Send message to background script for summarization
+		const response = await browser.runtime.sendMessage({
+			action: "summarizeWithGemini",
+			title: title,
+			content: content,
+		});
+
+		if (response && response.success) {
+			summaryDisplay.innerHTML = `<h3>Chapter Summary:</h3><p>${response.summary.replace(
+				/\n/g,
+				"<br>"
+			)}</p><br>`; // Display summary with a break tag for spacing
+			statusDiv.textContent = "Summary generated successfully!";
+		} else {
+			throw new Error(
+				response?.error ||
+					"Failed to get summary from background script."
+			);
+		}
+	} catch (error) {
+		console.error("Error during summarization:", error);
+		statusDiv.textContent = `Error: ${error.message}`;
+		summaryDisplay.textContent = "Failed to generate summary.";
+		summaryDisplay.style.display = "block"; // Keep display visible to show error
+	} finally {
+		summarizeButton.disabled = false;
+		summarizeButton.textContent = "Summarize Chapter";
+		// Optionally hide status message after a delay
+		setTimeout(() => {
+			if (statusDiv.textContent.includes("Summary generated"))
+				statusDiv.textContent = "";
+		}, 5000);
+	}
+}
+
+// Handle click event for Enhance button
+async function handleEnhanceClick() {
 	showStatusMessage("Extracting content and sending to Gemini...");
 
 	const extractedContent = extractContent();
@@ -316,9 +467,11 @@ async function processWithGemini() {
 			// Special handling for missing API key
 			if (errorMessage.includes("API key is missing")) {
 				showStatusMessage(
-					"API key is missing. Please set it in the options page that has opened.",
+					"API key is missing. Opening settings page...",
 					"error"
 				);
+				// Open popup for API key input
+				browser.runtime.sendMessage({ action: "openPopup" });
 			} else {
 				showStatusMessage(
 					"Error processing with Gemini: " + errorMessage,
@@ -345,9 +498,11 @@ async function processWithGemini() {
 			error.message.includes("API key is missing")
 		) {
 			showStatusMessage(
-				"API key is missing. Please set it in the options page that has opened.",
+				"API key is missing. Opening settings page...",
 				"error"
 			);
+			// Open popup for API key input
+			browser.runtime.sendMessage({ action: "openPopup" });
 		} else {
 			showStatusMessage(
 				`Error communicating with Gemini: ${
@@ -497,11 +652,31 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
 	// Save original content
 	const originalContent = contentArea.innerHTML;
 
-	// Process the HTML received from Gemini - check if it already has HTML tags
+	// Clean up Markdown artifacts
 	let processedHtml = enhancedText;
+
+	// Remove code block syntax
+	processedHtml = processedHtml.replace(
+		/```(?:html|javascript|css|js|)\n?/g,
+		""
+	);
+	processedHtml = processedHtml.replace(/```/g, "");
+
+	// Remove inline code backticks
+	processedHtml = processedHtml.replace(/`([^`]+)`/g, "$1");
+
+	// Remove markdown heading syntax
+	processedHtml = processedHtml.replace(/^#+\s+(.+)$/gm, "$1");
+
+	// Remove markdown bold/italic syntax
+	processedHtml = processedHtml.replace(/\*\*([^*]+)\*\*/g, "$1");
+	processedHtml = processedHtml.replace(/\*([^*]+)\*/g, "$1");
+	processedHtml = processedHtml.replace(/__([^_]+)__/g, "$1");
+	processedHtml = processedHtml.replace(/_([^_]+)_/g, "$1");
+
 	// If there are no paragraph tags, convert newlines to paragraph tags
 	if (!/<p>|<div>|<span>/.test(processedHtml)) {
-		processedHtml = enhancedText
+		processedHtml = processedHtml
 			.split("\n\n")
 			.filter((paragraph) => paragraph.trim() !== "")
 			.map((paragraph) => `<p>${paragraph}</p>`)
@@ -541,7 +716,9 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
   `;
 
 	// Use createContextualFragment for safe insertion
-	const safeFragment = document.createRange().createContextualFragment(sanitizeHTML(processedHtml));
+	const safeFragment = document
+		.createRange()
+		.createContextualFragment(sanitizeHTML(processedHtml));
 	contentArea.innerHTML = "";
 	contentArea.appendChild(safeFragment);
 
@@ -616,7 +793,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	}
 
 	if (message.action === "processWithGemini") {
-		processWithGemini()
+		handleEnhanceClick()
 			.then(() => {
 				sendResponse({ success: true });
 			})
@@ -633,6 +810,20 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		// Update any local settings
 		console.log("Settings updated:", message);
 		sendResponse({ success: true });
+		return true;
+	}
+
+	if (message.action === "summarizeWithGemini") {
+		handleSummarizeClick()
+			.then(() => {
+				sendResponse({ success: true });
+			})
+			.catch((error) => {
+				sendResponse({
+					success: false,
+					error: error.message || "Unknown error summarizing content",
+				});
+			});
 		return true;
 	}
 
