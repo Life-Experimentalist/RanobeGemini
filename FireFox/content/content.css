@@ -338,3 +338,163 @@ html[data-darkreader-mode] .dark-mode-icon {
 	font-style: italic;
 	color: #aaa;
 }
+/* Base styles for the RanobesGemini extension UI */
+.ranobes-gemini-container {
+	position: fixed;
+	top: 10px;
+	right: 10px;
+	width: 400px;
+	max-height: 80vh;
+	background-color: #fff;
+	border-radius: 8px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	z-index: 9999;
+	overflow: hidden;
+	font-family: Arial, sans-serif;
+	display: flex;
+	flex-direction: column;
+}
+
+.ranobes-gemini-header {
+	padding: 10px;
+	background-color: #4a90e2;
+	color: white;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	user-select: none;
+}
+
+.ranobes-gemini-header h2 {
+	margin: 0;
+	font-size: 18px;
+}
+
+.ranobes-gemini-close-btn,
+.ranobes-gemini-minimize-btn {
+	background: none;
+	border: none;
+	color: white;
+	cursor: pointer;
+	font-size: 16px;
+	padding: 0 5px;
+}
+
+.ranobes-gemini-content {
+	padding: 15px;
+	overflow-y: auto;
+	flex-grow: 1;
+	max-height: 60vh;
+}
+
+.ranobes-gemini-footer {
+	padding: 10px;
+	background-color: #f5f5f5;
+	border-top: 1px solid #ddd;
+	text-align: right;
+}
+
+button.ranobes-gemini-btn {
+	background-color: #4a90e2;
+	color: white;
+	border: none;
+	padding: 8px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	margin-left: 5px;
+}
+
+button.ranobes-gemini-btn:hover {
+	background-color: #3a80d2;
+}
+
+button.ranobes-gemini-btn:disabled {
+	background-color: #a9a9a9;
+	cursor: not-allowed;
+}
+
+.ranobes-gemini-status {
+	padding: 10px;
+	color: #555;
+	font-style: italic;
+}
+
+.ranobes-gemini-settings {
+	padding: 10px;
+	border-top: 1px solid #ddd;
+}
+
+.ranobes-gemini-settings label {
+	display: block;
+	margin-bottom: 5px;
+}
+
+.ranobes-gemini-loading {
+	text-align: center;
+	padding: 20px;
+	color: #555;
+}
+
+.ranobes-gemini-spinner {
+	border: 3px solid #f3f3f3;
+	border-top: 3px solid #3498db;
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	animation: spin 1s linear infinite;
+	margin: 0 auto 10px;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.ranobes-gemini-minimized {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.ranobes-gemini-minimized-icon {
+	font-size: 20px;
+	color: white;
+}
+
+.ranobes-gemini-hidden {
+	display: none !important;
+}
+
+/* Summary text specific styling */
+.summary-text-content {
+	white-space: pre-wrap;
+	line-height: 1.5;
+	text-align: left;
+	font-size: 14px;
+	padding: 10px;
+	border-radius: 4px;
+	background-color: #f9f9f9;
+	border-left: 3px solid #4a90e2;
+	margin-top: 10px;
+}
+
+.summary-text-content p {
+	margin-bottom: 15px;
+}
+
+/* Tag and entity cleanup specific styles */
+.clean-text {
+	font-family: Arial, sans-serif;
+	color: #333;
+}

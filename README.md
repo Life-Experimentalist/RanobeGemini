@@ -1,69 +1,65 @@
 # Ranobe Gemini
 
-A cross-browser extension that enhances web novel translations using Google's Gemini AI. The project currently offers a Firefox version with plans to support Chrome and Edge in future releases.
-
 ![Ranobe Gemini Logo](FireFox/icons/logo-light-96.png)
+
+A Firefox browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, currently supporting ranobes.top and fanfiction.net.
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Features
 
-- **One-Click Enhancement**: Transform poorly translated or low-quality web novels with a single click
-- **Chapter Summarization**: Generate concise summaries of chapter content with key plot points
-- **HTML-Aware Output**: Produces properly formatted paragraphs with HTML tags
-- **Large Chapter Support**: Automatically splits and processes lengthy chapters
-- **Customizable AI Prompts**: Configure exactly how you want Gemini to enhance your content
-- **Permanent Prompts**: Add formatting rules that apply to all requests
-- **Restore Original**: Easily switch back to the original text if needed
-- **Dark Mode Support**: Seamless experience in both light and dark themes
+*   **AI-Powered Enhancement**: Improves grammar, flow, and readability of translated text using Gemini AI.
+*   **Chapter Summarization**: Generates concise summaries of chapters, highlighting key plot points.
+*   **Website Support**: Currently works on `ranobes.top` and `fanfiction.net`.
+*   **Customizable Prompts**: Tailor the enhancement, summarization, and permanent prompts to control AI output.
+*   **Large Chapter Handling**: Automatically splits long chapters to avoid API limits.
+*   **Multiple Gemini Models**: Choose the best Gemini model for your needs (e.g., Flash for speed, Pro for quality).
+*   **User-Friendly Interface**: Simple popup for settings and an integrated FAQ.
+*   **Restore Original**: Easily revert to the original chapter text.
+*   **Dark Mode Support**: Adapts to your browser's theme.
 
-## Installation
+## Installation (Firefox)
 
-### Firefox (Current Release)
+1.  **Download**: Go to the [Releases page](https://github.com/Life-Experimentalist/RanobeGemini/releases) and download the latest `RanobeGemini_vX.X.X.zip` file.
+2.  **Install**: Open Firefox, navigate to `about:addons`, click the gear icon, select "Install Add-on From File...", and choose the downloaded ZIP file.
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/Life-Experimentalist/RanobeGemini.git
-   ```
+*Alternatively, for development:*
+1. Clone the repository: `git clone https://github.com/Life-Experimentalist/RanobeGemini.git`
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on" and select any file from the `FireFox` directory
-
-### Chrome/Edge (Coming Soon)
-
-The extension will soon be available in the Chrome and Edge Web Stores. Stay tuned for further instructions.
+3. Click "Load Temporary Add-on..." and select the `manifest.json` file inside the `FireFox` directory.
 
 ## Usage
 
-1. Navigate to ranobes.top.
-2. You'll see new buttons added to the page:
-   - "Enhance with Gemini" - Improves the text quality and readability
-   - "Summarize Chapter" - Creates a concise summary of the chapter
-3. Wait for the processing to complete.
-4. Use the "Restore Original" button if required.
+1.  **Configure API Key**: Click the Ranobe Gemini icon in your Firefox toolbar. Go to the "Settings" tab and enter your Gemini API key. You can get a free key from [Google AI Studio](https://makersuite.google.com/app/apikey).
+2.  **Navigate**: Go to a chapter page on a supported website (`ranobes.top` or `fanfiction.net`).
+3.  **Enhance/Summarize**: Click the "Enhance with Gemini" or "Summarize Chapter" buttons that appear near the chapter content.
+4.  **View Results**: Wait for the processing to complete. The enhanced text will replace the original, or the summary will appear.
+5.  **Restore**: Use the "Restore Original" button if needed.
 
 ## Configuration
 
-- Click the extension icon in your browser toolbar.
-- Enter your Gemini API key (get one from [Google AI Studio](https://ai.google.dev/)).
-- Adjust the enhancement prompt, summary prompt, and permanent prompt in the Settings tab.
-- Choose between different Gemini models based on your needs.
+Access the extension's settings via the toolbar icon:
 
-## Development
+*   **API Key**: Essential for the extension to function.
+*   **Gemini Model**: Select the desired AI model.
+*   **Prompts**: Customize the Enhancement, Summary, and Permanent prompts.
+*   **Chunking**: Enable/disable automatic splitting of large chapters.
+*   **Debug Mode**: Enable console logging for troubleshooting.
 
-- See the [Project Structure](#project-structure) for details.
-- The repository contains a Firefox-specific implementation; Chrome/Edge versions will follow.
+## Adding New Website Support
 
-### Project Structure
+Please refer to the [ADDING_NEW_WEBSITES.md](ADDING_NEW_WEBSITES.md) guide for instructions on how to extend the extension to support more websites.
 
-- `FireFox/` – Firefox extension files (current implementation)
-- Other directories pertain to shared code and future implementations.
+## Contributing
 
-## Version History
-
-For a complete list of changes, see the [CHANGELOG](CHANGELOG.md).
+Contributions are welcome! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines.
 
 ## License
 
-MIT License – See LICENSE for details.
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+
+Copyright 2025 VKrishna04
 
 ## Acknowledgements
 
-- [Google Gemini API](https://ai.google.dev/)
+*   Powered by the [Google Gemini API](https://ai.google.dev/)

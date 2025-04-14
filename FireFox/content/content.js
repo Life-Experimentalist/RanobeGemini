@@ -1,23 +1,11 @@
 // Simplified content script to extract chapter content without relying on imports
 console.log("Ranobe Gemini: Content script loaded");
 
-// Add Ranobes.top specific selector to our content selectors
-const CONTENT_SELECTORS = [
-	"#arrticle", // Ranobes.top specific main content area
-	".text-chapter",
-	".chapter-content",
-	".novel-content",
-	".story",
-	".chapter-inner", // Additional common selectors
-	".article-content",
-	".post-content",
-];
+// Note: Import statements need to be modified since content scripts don't support direct ES6 imports
+// We'll need to dynamically load our handler modules
 
-// Initialize when DOM is fully loaded
-window.addEventListener("DOMContentLoaded", initialize);
-window.addEventListener("load", initialize); // Backup init in case DOMContentLoaded was missed
-
-// Global state
+// Initial constants and global state
+let currentHandler = null; // Will store the website-specific handler
 let hasExtractButton = false;
 let autoExtracted = false;
 
@@ -27,8 +15,172 @@ function sanitizeHTML(html) {
 	return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 }
 
-function initialize() {
+/**
+ * Thoroughly strips all HTML tags and properly decodes HTML entities from text
+ * @param {string} html - The HTML string to clean
+ * @returns {string} - Clean text with all HTML tags removed and entities decoded
+ */
+function stripHtmlTags(html) {
+    if (!html) return '';
+
+    console.log("[StripTags Final] Input:", html);
+
+    // Step 1: Use regex to remove all HTML tags before DOM parsing
+    let text = html.replace(/<\/?[^>]+(>|$)/g, "");
+
+    console.log("[StripTags Final] After initial regex:", text);
+
+    // Step 2: Create a temporary div element to use the browser's HTML parsing
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+
+    // Step 3: Extract text content which automatically removes all HTML tags
+    let textOnly = tempDiv.textContent || tempDiv.innerText || '';
+
+    console.log("[StripTags Final] After textContent:", textOnly);
+
+    // Step 4: Additional regex replacement to catch any potential leftover tags
+    textOnly = textOnly.replace(/<[^>]*>/g, '');
+
+    // Step 5: Properly decode common HTML entities
+    textOnly = textOnly.replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>')
+                       .replace(/&quot;/g, '"')
+                       .replace(/&#039;/g, "'")
+                       .replace(/&nbsp;/g, ' ');
+
+    console.log("[StripTags Final] After entity decoding:", textOnly);
+
+    // Step 6: Clean up any consecutive whitespace but preserve paragraph breaks
+    textOnly = textOnly.replace(/\s+/g, ' ').trim();
+
+    console.log("[StripTags Final] Final output:", textOnly);
+
+    return textOnly;
+}
+
+// Initialize when DOM is fully loaded
+window.addEventListener("DOMContentLoaded", initialize);
+window.addEventListener("load", initialize); // Backup init in case DOMContentLoaded was missed
+
+// Load handler modules dynamically
+async function loadHandlers() {
+	try {
+		// Import the base handler code
+		const baseHandlerUrl = browser.runtime.getURL("utils/website-handlers/base-handler.js");
+		const baseHandlerModule = await import(baseHandlerUrl);
+
+		// Import specific handlers
+		const ranobesHandlerUrl = browser.runtime.getURL("utils/website-handlers/ranobes-handler.js");
+		const fanfictionHandlerUrl = browser.runtime.getURL("utils/website-handlers/fanfiction-handler.js");
+		const handlerManagerUrl = browser.runtime.getURL("utils/website-handlers/handler-manager.js");
+
+		// Don't wait for these imports now, we'll use them later when needed
+		console.log("Handler URLs loaded:",
+			{ baseHandlerUrl, ranobesHandlerUrl, fanfictionHandlerUrl, handlerManagerUrl });
+
+		return {
+			baseHandlerUrl,
+			ranobesHandlerUrl,
+			fanfictionHandlerUrl,
+			handlerManagerUrl
+		};
+	} catch (error) {
+		console.error("Error loading handlers:", error);
+		return null;
+	}
+}
+
+// Get the appropriate handler for the current site
+async function getHandlerForCurrentSite() {
+	try {
+		const handlerUrls = await loadHandlers();
+		if (!handlerUrls) return null;
+
+		const handlerManagerModule = await import(handlerUrls.handlerManagerUrl);
+		if (handlerManagerModule && handlerManagerModule.getHandlerForCurrentSite) {
+			return handlerManagerModule.getHandlerForCurrentSite();
+		}
+		return null;
+	} catch (error) {
+		console.error("Error getting handler for current site:", error);
+		return null;
+	}
+}
+
+// Generic content extraction that works across different websites
+// This serves as a fallback when no specific handler is available
+function extractContentGeneric() {
+	// Find paragraphs - works on most novel/fiction sites
+	const paragraphs = document.querySelectorAll('p');
+	if (paragraphs.length > 5) {
+		// Get all paragraphs text
+		const chapterText = Array.from(paragraphs)
+			.map(p => p.innerText)
+			.join('\n\n');
+
+		return {
+			found: chapterText.length > 200, // Only consider it found if we have substantial text
+			title: document.title || "Unknown Title",
+			text: chapterText,
+			selector: "generic paragraph extractor"
+		};
+	}
+
+	// Try to find main content using common article selectors
+	const contentSelectors = [
+		'article',
+		'.article',
+		'.content',
+		'.story-content',
+		'.entry-content',
+		'#content',
+		'.main-content',
+		'.post-content',
+		'#storytext',          // fanfiction.net
+		'#arrticle',           // Ranobes.top
+		'.text-chapter',
+		'.chapter-content',
+		'.novel-content',
+		'.story',
+		'.chapter-inner'
+	];
+
+	for (const selector of contentSelectors) {
+		const element = document.querySelector(selector);
+		if (element) {
+			return {
+				found: true,
+				title: document.title || "Unknown Title",
+				text: element.innerText.trim(),
+				selector: `generic selector: ${selector}`
+			};
+		}
+	}
+
+	// Nothing found
+	return {
+		found: false,
+		title: "",
+		text: "",
+		selector: ""
+	};
+}
+
+async function initialize() {
 	console.log("Ranobe Gemini: Initializing content script");
+
+	// Get the appropriate handler for this website
+	currentHandler = await getHandlerForCurrentSite();
+
+	if (currentHandler) {
+		console.log(`Using specific handler for ${window.location.hostname}`);
+	} else {
+		console.log(
+			"No specific handler found, using generic extraction methods"
+		);
+	}
 
 	// Create extract button if it doesn't exist
 	if (!hasExtractButton) {
@@ -55,22 +207,34 @@ function initialize() {
 	}
 }
 
-// Find the content area using various possible selectors
+// Find the content area using handlers or generic approach
 function findContentArea() {
-	for (const selector of CONTENT_SELECTORS) {
-		const element = document.querySelector(selector);
-		if (element) {
-			console.log(`Content area found using selector: ${selector}`);
-			return element;
-		}
+	if (currentHandler) {
+		return currentHandler.findContentArea();
 	}
 
-	// If standard selectors don't work, try a fallback approach for ranobes.top
-	if (window.location.hostname.includes("ranobes")) {
-		const storyContainer = document.querySelector(".story");
-		if (storyContainer) {
-			console.log("Found story container via fallback method");
-			return storyContainer;
+	// Generic fallback approach - try common content selectors
+	const commonSelectors = [
+		"#storytext", // fanfiction.net
+		"#arrticle", // Ranobes.top
+		".text-chapter",
+		".chapter-content",
+		".novel-content",
+		".story",
+		".chapter-inner",
+		".article-content",
+		".post-content",
+		"article",
+		".content",
+	];
+
+	for (const selector of commonSelectors) {
+		const element = document.querySelector(selector);
+		if (element) {
+			console.log(
+				`Generic: Content area found using selector: ${selector}`
+			);
+			return element;
 		}
 	}
 
@@ -91,22 +255,22 @@ function createSummarizeButton() {
 function createEnhanceButton() {
 	const enhanceButton = document.createElement("button");
 	enhanceButton.className = "gemini-enhance-btn";
-	// Instead of directly setting innerHTML, wrap the HTML through sanitizeHTML
-	const btnHTML = `
-        <img src="${browser.runtime.getURL(
-			"icons/logo-light-16.png"
-		)}" class="light-mode-icon" alt="">
-        <img src="${browser.runtime.getURL(
-			"icons/logo-dark-16.png"
-		)}" class="dark-mode-icon" alt="">
-        Enhance with Gemini
-    `;
-	// Instead of directly assigning innerHTML, create a safe fragment
-	const fragment = document
-		.createRange()
-		.createContextualFragment(sanitizeHTML(btnHTML));
-	enhanceButton.textContent = ""; // Clear any text
-	enhanceButton.appendChild(fragment);
+
+	// Create elements safely instead of using innerHTML or createContextualFragment
+	const lightModeImg = document.createElement("img");
+	lightModeImg.src = browser.runtime.getURL("icons/logo-light-16.png");
+	lightModeImg.className = "light-mode-icon";
+	lightModeImg.alt = "";
+
+	const darkModeImg = document.createElement("img");
+	darkModeImg.src = browser.runtime.getURL("icons/logo-dark-16.png");
+	darkModeImg.className = "dark-mode-icon";
+	darkModeImg.alt = "";
+
+	// Add image elements + text to button using DOM methods
+	enhanceButton.appendChild(lightModeImg);
+	enhanceButton.appendChild(darkModeImg);
+	enhanceButton.appendChild(document.createTextNode(" Enhance with Gemini"));
 
 	// Style to match the sample page buttons
 	enhanceButton.style.cssText = `
@@ -172,10 +336,39 @@ function injectUI() {
 	controlsContainer.appendChild(summarizeButton);
 	controlsContainer.appendChild(statusDiv);
 
-	// Insert controls before the content area
-	contentArea.parentNode.insertBefore(controlsContainer, contentArea);
-	// Insert summary display before the content area as well
-	contentArea.parentNode.insertBefore(summaryDisplay, contentArea);
+	// Get optimal insertion point based on the handler
+	let insertionPoint = contentArea;
+	let insertionPosition = "before";
+
+	if (currentHandler) {
+		const uiInfo = currentHandler.getUIInsertionPoint(contentArea);
+		insertionPoint = uiInfo.element || contentArea;
+		insertionPosition = uiInfo.position || "before";
+	}
+
+	// Insert elements based on the recommended position
+	if (insertionPosition === "before") {
+		insertionPoint.parentNode.insertBefore(
+			controlsContainer,
+			insertionPoint
+		);
+		insertionPoint.parentNode.insertBefore(summaryDisplay, insertionPoint);
+	} else if (insertionPosition === "after") {
+		insertionPoint.parentNode.insertBefore(
+			controlsContainer,
+			insertionPoint.nextSibling
+		);
+		insertionPoint.parentNode.insertBefore(
+			summaryDisplay,
+			controlsContainer.nextSibling
+		);
+	} else if (insertionPosition === "prepend") {
+		insertionPoint.prepend(controlsContainer);
+		insertionPoint.prepend(summaryDisplay);
+	} else if (insertionPosition === "append") {
+		insertionPoint.appendChild(controlsContainer);
+		insertionPoint.appendChild(summaryDisplay);
+	}
 
 	console.log("Ranobe Gemini: UI injected successfully.");
 }
@@ -197,105 +390,15 @@ function autoExtractContent() {
 	}
 }
 
-// Extract content and log the entire chapter text
+// Extract content using the appropriate handler
 function extractContent() {
-	let foundContent = false;
-	let chapterText = "";
-	let chapterTitle = "";
-	let sourceSelector = "";
-
-	// Try each selector
-	for (const selector of CONTENT_SELECTORS) {
-		const element = document.querySelector(selector);
-		if (element) {
-			foundContent = true;
-			sourceSelector = selector;
-
-			// Extract title if available
-			const titleElement = document.querySelector(
-				"h1.title, .story-title, .chapter-title"
-			);
-			chapterTitle =
-				titleElement?.innerText || document.title || "Unknown Title";
-
-			// Create a deep clone of the content element to manipulate
-			const contentClone = element.cloneNode(true);
-
-			// Remove title elements from the content if they exist
-			const titlesToRemove = contentClone.querySelectorAll(
-				"h1, h2, h3.title, .story-title, .chapter-title"
-			);
-			titlesToRemove.forEach((title) => {
-				title.remove();
-			});
-
-			// Get clean text content - preserve full text
-			chapterText = contentClone.innerText
-				.trim()
-				.replace(/\n\s+/g, "\n") // Preserve paragraph breaks but remove excess whitespace
-				.replace(/\s{2,}/g, " "); // Replace multiple spaces with a single space
-
-			// Additional cleaning - ONLY check the first 5 lines for titles
-			const titleParts = chapterTitle.split(/[:\-–—]/);
-			const lines = chapterText.split("\n");
-			const headLines = lines.slice(0, 5); // Only look at first 5 lines
-			const filteredHeadLines = headLines.filter((line) => {
-				const trimmedLine = line.trim();
-				// Skip empty lines
-				if (trimmedLine === "") return true;
-
-				// Check if line is just the title or part of the title
-				for (const titlePart of titleParts) {
-					const cleanTitlePart = titlePart.trim();
-					if (
-						cleanTitlePart.length > 3 && // Avoid filtering out lines with short matches
-						(trimmedLine === cleanTitlePart ||
-							trimmedLine.startsWith(`${cleanTitlePart}:`) ||
-							trimmedLine.startsWith(`${cleanTitlePart} -`))
-					) {
-						return false;
-					}
-				}
-
-				// Check for common book name patterns at the start of content
-				if (
-					document.location.hostname.includes("ranobes") &&
-					/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(trimmedLine)
-				) {
-					return false;
-				}
-
-				return true;
-			});
-
-			// Recombine the filtered head lines with the rest of the content
-			chapterText = [...filteredHeadLines, ...lines.slice(5)].join("\n");
-
-			// Log the entire text
-			console.log(`FULL CHAPTER TEXT: ${chapterText.length} characters`);
-			break; // Stop after finding the first valid content
-		}
+	// If we have a specific handler for this website, use it
+	if (currentHandler) {
+		return currentHandler.extractContent();
 	}
 
-	// Try to find content another way if nothing was found
-	if (!foundContent) {
-		const paragraphs = document.querySelectorAll("p");
-		if (paragraphs.length > 5) {
-			// Get all paragraphs text
-			chapterText = Array.from(paragraphs)
-				.map((p) => p.innerText)
-				.join("\n\n");
-			foundContent = chapterText.length > 200; // Only consider it found if we have substantial text
-			sourceSelector = "p tags";
-		}
-	}
-
-	return {
-		found: foundContent,
-		title: chapterTitle,
-		text: chapterText,
-		selector: sourceSelector,
-	};
+	// Otherwise use generic extraction method
+	return extractContentGeneric();
 }
 
 // Handle click event for Summarize button
@@ -313,36 +416,108 @@ async function handleSummarizeClick() {
 		summaryDisplay.style.display = "block"; // Show the display area
 		summaryDisplay.textContent = "Generating summary...";
 
-		const { title, text: content } = extractContent();
+		const extractedContent = extractContent();
+		const { title, text: content } = extractedContent;
 
 		if (!content) {
 			throw new Error("Could not extract chapter content.");
 		}
 
+		console.log(`Extracted ${content.length} characters for summarization`);
 		statusDiv.textContent =
 			"Sending content to Gemini for summarization...";
 
-		// Send message to background script for summarization
-		const response = await browser.runtime.sendMessage({
-			action: "summarizeWithGemini",
-			title: title,
-			content: content,
+		// Get model info to determine if we need to split the content
+		const modelInfoResponse = await browser.runtime.sendMessage({
+			action: "getModelInfo",
 		});
 
-		if (response && response.success) {
-			summaryDisplay.innerHTML = `<h3>Chapter Summary:</h3><p>${response.summary.replace(
-				/\n/g,
-				"<br>"
-			)}</p><br>`; // Display summary with a break tag for spacing
+		const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
+		console.log(
+			`Model max context size for summarization: ${maxContextSize}`
+		);
+
+		// Get approximate token count (rough estimate: 4 chars per token)
+		const estimatedTokenCount = Math.ceil(content.length / 4);
+		console.log(
+			`Estimated token count for summarization: ${estimatedTokenCount}`
+		);
+
+		let summary = "";
+
+		// Check if content exceeds 60% of the model's context size (leaving room for prompts)
+		if (estimatedTokenCount > maxContextSize * 0.6) {
+			// Process large content in parts
+			summary = await summarizeLargeContentInParts(
+				title,
+				content,
+				maxContextSize,
+				statusDiv
+			);
+		} else {
+			// Process as a single chunk
+			const response = await browser.runtime.sendMessage({
+				action: "summarizeWithGemini",
+				title: title,
+				content: content,
+			});
+
+			if (response && response.success && response.summary) {
+				summary = response.summary;
+			} else {
+				throw new Error(
+					response?.error || "Failed to generate summary."
+				);
+			}
+		}
+
+		// Display the summary
+		if (summary) {
+			// Clear the summary display area
+			while (summaryDisplay.firstChild) {
+				summaryDisplay.removeChild(summaryDisplay.firstChild);
+			}
+
+			const summaryHeader = document.createElement("h3");
+			summaryHeader.textContent = "Chapter Summary:";
+			summaryDisplay.appendChild(summaryHeader);
+
+			// Create a container for the summary text
+			const summaryContentContainer = document.createElement("div");
+			summaryContentContainer.className = "summary-text-content";
+
+			// Apply our enhanced HTML tag stripping
+			const cleanSummary = stripHtmlTags(summary);
+			console.log("[Render] Clean summary to display:", cleanSummary);
+
+			// Enhanced paragraph handling - properly preserve line breaks
+			summaryContentContainer.style.whiteSpace = "pre-wrap";
+
+			// Split by double newlines to create paragraphs
+			const paragraphs = cleanSummary.split(/\n\n+/);
+			if (paragraphs.length > 1) {
+				// Multiple paragraphs - render each as a separate element
+				paragraphs.forEach((paragraph) => {
+					if (paragraph.trim()) {
+						const p = document.createElement("p");
+						// Handle any single line breaks within paragraphs
+						p.textContent = paragraph.replace(/\n/g, " ");
+						p.style.marginBottom = "1em";
+						summaryContentContainer.appendChild(p);
+					}
+				});
+			} else {
+				// Single block - preserve all line breaks
+				summaryContentContainer.textContent = cleanSummary;
+			}
+
+			summaryDisplay.appendChild(summaryContentContainer);
 			statusDiv.textContent = "Summary generated successfully!";
 		} else {
-			throw new Error(
-				response?.error ||
-					"Failed to get summary from background script."
-			);
+			throw new Error("Failed to generate summary.");
 		}
 	} catch (error) {
-		console.error("Error during summarization:", error);
+		console.error("Error in handleSummarizeClick:", error);
 		statusDiv.textContent = `Error: ${error.message}`;
 		summaryDisplay.textContent = "Failed to generate summary.";
 		summaryDisplay.style.display = "block"; // Keep display visible to show error
@@ -354,6 +529,155 @@ async function handleSummarizeClick() {
 			if (statusDiv.textContent.includes("Summary generated"))
 				statusDiv.textContent = "";
 		}, 5000);
+	}
+}
+
+// Process large content by splitting into parts for summarization
+async function summarizeLargeContentInParts(
+	title,
+	content,
+	maxContextSize,
+	statusDiv
+) {
+	console.log("Content is large, summarizing in multiple parts...");
+	if (statusDiv) {
+		statusDiv.textContent =
+			"Content is large, summarizing in multiple parts...";
+	}
+
+	// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
+	const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
+
+	// Split content into paragraphs
+	const paragraphs = content.split(/\n\n+/);
+	console.log(`Split content into ${paragraphs.length} paragraphs`);
+
+	// Initialize parts
+	const parts = [];
+	let currentPart = "";
+
+	// Group paragraphs into parts
+	for (const paragraph of paragraphs) {
+		// If adding this paragraph would exceed the limit, start a new part
+		if (
+			(currentPart + paragraph).length > charsPerPart &&
+			currentPart.length > 0
+		) {
+			parts.push(currentPart);
+			currentPart = paragraph;
+		} else {
+			// Otherwise, add to current part
+			currentPart += (currentPart ? "\n\n" : "") + paragraph;
+		}
+	}
+
+	// Add the last part if it's not empty
+	if (currentPart.trim()) {
+		parts.push(currentPart);
+	}
+
+	console.log(`Split content into ${parts.length} parts for summarization`);
+
+	// Process each part sequentially
+	let allPartSummaries = [];
+	let currentPartNum = 1;
+
+	for (const part of parts) {
+		// Update status
+		if (statusDiv) {
+			statusDiv.textContent = `Summarizing part ${currentPartNum} of ${parts.length}...`;
+		}
+
+		console.log(
+			`Summarizing part ${currentPartNum}/${parts.length} (${part.length} characters)`
+		);
+
+		// Create a part-specific title
+		const partTitle = `${title} (Part ${currentPartNum}/${parts.length})`;
+
+		try {
+			// Process this part
+			const response = await browser.runtime.sendMessage({
+				action: "summarizeWithGemini",
+				title: partTitle,
+				content: part,
+				isPart: true,
+				partInfo: {
+					current: currentPartNum,
+					total: parts.length,
+				},
+			});
+
+			if (response && response.success && response.summary) {
+				console.log(
+					`Successfully summarized part ${currentPartNum}/${parts.length}`
+				);
+				allPartSummaries.push(response.summary);
+			} else {
+				console.error(
+					`Error summarizing part ${currentPartNum}:`,
+					response?.error || "Unknown error"
+				);
+				// Continue with other parts even if one fails
+			}
+		} catch (error) {
+			console.error(`Error summarizing part ${currentPartNum}:`, error);
+			// Continue with other parts even if one fails
+		}
+
+		currentPartNum++;
+	}
+
+	// If we have multiple part summaries, combine them
+	if (allPartSummaries.length > 1) {
+		// Try to combine the summaries with an additional API call
+		try {
+			if (statusDiv) {
+				statusDiv.textContent = "Combining part summaries...";
+			}
+
+			// Join the part summaries with clear separators
+			const combinedPartSummaries = allPartSummaries
+				.map((summary, index) => {
+					return `Part ${index + 1} summary:\n${summary}`;
+				})
+				.join("\n\n");
+
+			// Make a final API call to combine the summaries
+			const finalResponse = await browser.runtime.sendMessage({
+				action: "combinePartialSummaries",
+				title: title,
+				partSummaries: combinedPartSummaries,
+				partCount: parts.length,
+			});
+
+			if (
+				finalResponse &&
+				finalResponse.success &&
+				finalResponse.combinedSummary
+			) {
+				return finalResponse.combinedSummary;
+			} else {
+				// If the combination failed, just join the summaries with separators
+				console.log("Using fallback approach to combine summaries");
+				return (
+					`Complete summary of "${title}":\n\n` +
+					allPartSummaries.join("\n\n")
+				);
+			}
+		} catch (error) {
+			// If there's an error combining, just join them
+			console.error("Error combining summaries:", error);
+			return (
+				`Complete summary of "${title}":\n\n` +
+				allPartSummaries.join("\n\n")
+			);
+		}
+	} else if (allPartSummaries.length === 1) {
+		// Just return the single summary if there's only one part
+		return allPartSummaries[0];
+	} else {
+		throw new Error("Failed to generate any part summaries");
 	}
 }
 
@@ -382,7 +706,7 @@ async function handleEnhanceClick() {
 	);
 	console.log("===========================================");
 	// Log the extracted content
-	console.log("CONTENT: " + extractedContent.text);
+	console.log("CONTENT: " + extractedContent.text.substring(0, 300) + "..."); // Log just a preview
 	console.log("===========================================");
 	// Log the source selector
 	console.log("SOURCE: " + extractedContent.selector);
@@ -455,7 +779,7 @@ async function handleEnhanceClick() {
 			console.log("===========================================");
 			console.log("GEMINI PROCESSED RESULT:");
 			console.log("===========================================");
-			console.log(response.result);
+			console.log(response.result.substring(0, 300) + "..."); // Log just a preview
 			console.log("===========================================");
 			// Show success message
 			showStatusMessage("Successfully processed with Gemini!");
@@ -649,7 +973,7 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
 	const contentArea = findContentArea();
 	if (!contentArea) return;
 
-	// Save original content
+	// Save original content for restoration
 	const originalContent = contentArea.innerHTML;
 
 	// Clean up Markdown artifacts
@@ -674,61 +998,95 @@ async function replaceContentWithEnhancedVersion(enhancedText) {
 	processedHtml = processedHtml.replace(/__([^_]+)__/g, "$1");
 	processedHtml = processedHtml.replace(/_([^_]+)_/g, "$1");
 
-	// If there are no paragraph tags, convert newlines to paragraph tags
-	if (!/<p>|<div>|<span>/.test(processedHtml)) {
-		processedHtml = processedHtml
-			.split("\n\n")
-			.filter((paragraph) => paragraph.trim() !== "")
-			.map((paragraph) => `<p>${paragraph}</p>`)
-			.join("");
+	// Clear existing content
+	while (contentArea.firstChild) {
+		contentArea.removeChild(contentArea.firstChild);
 	}
 
-	// Add a notice converting to enhanced content
-	processedHtml = `
-    <div class="gemini-processed-notice" style="
-      background-color: transparent;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-left: 4px solid #4285f4;
-      font-style: italic;
-      color: #bab9a0;
-    ">
-      <img src="${browser.runtime.getURL("icons/logo-light-16.png")}"
-           class="light-mode-icon"
-           alt=""
-           style="vertical-align: middle; margin-right: 6px;">
-      <img src="${browser.runtime.getURL("icons/logo-dark-16.png")}"
-           class="dark-mode-icon"
-           alt=""
-           style="vertical-align: middle; margin-right: 6px;">
-      This content has been enhanced by Gemini AI
-      <button id="restore-original" style="
-        float: right;
-        background: transparent;
-        color: #bab9a0;
-        border: 1px solid #bab9a0;
-        padding: 3px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-      ">Restore Original</button>
-    </div>
-    ${processedHtml}
-  `;
+	// Create the notification container using DOM methods instead of innerHTML
+	const noticeContainer = document.createElement("div");
+	noticeContainer.className = "gemini-processed-notice";
+	noticeContainer.style.cssText = `
+		background-color: transparent;
+		padding: 10px;
+		margin-bottom: 20px;
+		border-left: 4px solid #4285f4;
+		font-style: italic;
+		color: #bab9a0;
+	`;
 
-	// Use createContextualFragment for safe insertion
-	const safeFragment = document
-		.createRange()
-		.createContextualFragment(sanitizeHTML(processedHtml));
-	contentArea.innerHTML = "";
-	contentArea.appendChild(safeFragment);
+	// Add images
+	const lightModeImg = document.createElement("img");
+	lightModeImg.src = browser.runtime.getURL("icons/logo-light-16.png");
+	lightModeImg.className = "light-mode-icon";
+	lightModeImg.alt = "";
+	lightModeImg.style.cssText = "vertical-align: middle; margin-right: 6px;";
+
+	const darkModeImg = document.createElement("img");
+	darkModeImg.src = browser.runtime.getURL("icons/logo-dark-16.png");
+	darkModeImg.className = "dark-mode-icon";
+	darkModeImg.alt = "";
+	darkModeImg.style.cssText = "vertical-align: middle; margin-right: 6px;";
+
+	// Add text
+	const noticeText = document.createTextNode(
+		"This content has been enhanced by Gemini AI"
+	);
+
+	// Create restore button
+	const restoreBtn = document.createElement("button");
+	restoreBtn.id = "restore-original";
+	restoreBtn.textContent = "Restore Original";
+	restoreBtn.style.cssText = `
+		float: right;
+		background: transparent;
+		color: #bab9a0;
+		border: 1px solid #bab9a0;
+		padding: 3px 8px;
+		border-radius: 4px;
+		cursor: pointer;
+	`;
 
 	// Add event listener to restore button
-	document
-		.getElementById("restore-original")
-		?.addEventListener("click", () => {
-			contentArea.innerHTML = originalContent;
-			showStatusMessage("Original content restored");
+	restoreBtn.addEventListener("click", () => {
+		contentArea.innerHTML = originalContent;
+		showStatusMessage("Original content restored");
+	});
+
+	// Assemble notice
+	noticeContainer.appendChild(lightModeImg);
+	noticeContainer.appendChild(darkModeImg);
+	noticeContainer.appendChild(noticeText);
+	noticeContainer.appendChild(restoreBtn);
+
+	// Add notice to content area
+	contentArea.appendChild(noticeContainer);
+
+	// Process content
+	if (!/<p>|<div>|<span>/.test(processedHtml)) {
+		// If there are no HTML tags, convert newlines to paragraph elements
+		const paragraphs = processedHtml.split("\n\n");
+		paragraphs.forEach((paragraph) => {
+			if (paragraph.trim() !== "") {
+				const p = document.createElement("p");
+				p.textContent = paragraph;
+				contentArea.appendChild(p);
+			}
 		});
+	} else {
+		// For HTML content, use a parser to safely extract and add each element
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(processedHtml, "text/html");
+
+		// Remove any script tags from the parsed content for security
+		const scripts = doc.querySelectorAll("script");
+		scripts.forEach((script) => script.remove());
+
+		// Append each child from the body to our content area
+		Array.from(doc.body.childNodes).forEach((node) => {
+			contentArea.appendChild(node.cloneNode(true));
+		});
+	}
 
 	showStatusMessage("Content enhanced with Gemini AI");
 }

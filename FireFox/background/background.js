@@ -106,7 +106,12 @@ try {
 		}
 
 		if (message.action === "summarizeWithGemini") {
-			summarizeContentWithGemini(message.title, message.content)
+			summarizeContentWithGemini(
+				message.title,
+				message.content,
+				message.isPart,
+				message.partInfo
+			)
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
 				})
@@ -117,6 +122,27 @@ try {
 						error:
 							error.message ||
 							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		if (message.action === "combinePartialSummaries") {
+			combinePartialSummaries(
+				message.title,
+				message.partSummaries,
+				message.partCount
+			)
+				.then((summary) => {
+					sendResponse({ success: true, combinedSummary: summary });
+				})
+				.catch((error) => {
+					console.error("Error combining summaries:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error combining summaries",
 					});
 				});
 			return true; // Indicates we'll send a response asynchronously
@@ -309,7 +335,12 @@ try {
 	}
 
 	// Summarize content with Gemini API
-	async function summarizeContentWithGemini(title, content) {
+	async function summarizeContentWithGemini(
+		title,
+		content,
+		isPart = false,
+		partInfo = null
+	) {
 		try {
 			// Load latest config
 			currentConfig = await initConfig();
@@ -320,9 +351,15 @@ try {
 				);
 			}
 
-			console.log(
-				`Summarizing "${title}" with Gemini (${content.length} characters)`
-			);
+			if (isPart && partInfo) {
+				console.log(
+					`Summarizing "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${content.length} characters)`
+				);
+			} else {
+				console.log(
+					`Summarizing "${title}" with Gemini (${content.length} characters)`
+				);
+			}
 
 			const modelEndpoint =
 				currentConfig.modelEndpoint ||
@@ -331,6 +368,11 @@ try {
 			// Use the summary prompt from settings
 			const summarizationBasePrompt =
 				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// If processing a part, add special instructions
+			if (isPart && partInfo) {
+				summarizationBasePrompt += `\n\nNote: This is part ${partInfo.current} of ${partInfo.total} parts. Please summarize this part while maintaining consistency with other parts.`;
+			}
 
 			// Combine base summarization prompt, permanent prompt, title, and content
 			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
@@ -395,6 +437,103 @@ try {
 			throw new Error("No valid summary returned from Gemini API");
 		} catch (error) {
 			console.error("Gemini API summarization error:", error);
+			throw error;
+		}
+	}
+
+	// Combine partial summaries into a single summary
+	async function combinePartialSummaries(title, partSummaries, partCount) {
+		try {
+			// Load latest config
+			currentConfig = await initConfig();
+
+			if (!currentConfig.apiKey) {
+				throw new Error(
+					"API key is missing. Please set it in the extension popup."
+				);
+			}
+
+			console.log(
+				`Combining ${partCount} partial summaries for "${title}" with Gemini`
+			);
+
+			const modelEndpoint =
+				currentConfig.modelEndpoint ||
+				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+
+			// Use the summary prompt from settings
+			const combinationBasePrompt =
+				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// Combine base combination prompt, permanent prompt, title, and partial summaries
+			const fullCombinationPrompt = `${combinationBasePrompt}\n\n${
+				currentConfig.permanentPrompt
+			}\n\nTitle: ${title}\n\nPartial Summaries:\n${partSummaries.join(
+				"\n\n"
+			)}`;
+
+			const requestBody = {
+				contents: [
+					{
+						parts: [
+							{
+								text: fullCombinationPrompt, // Use the combined prompt
+							},
+						],
+					},
+				],
+				generationConfig: {
+					temperature: 0.5, // Lower temperature for more focused summary
+					maxOutputTokens: 512, // Limit summary length
+					topP: 0.95,
+					topK: 40,
+				},
+			};
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Combination Request:", {
+					url: modelEndpoint,
+					requestBody: JSON.parse(JSON.stringify(requestBody)),
+				});
+			}
+
+			const response = await fetch(
+				`${modelEndpoint}?key=${currentConfig.apiKey}`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(requestBody),
+				}
+			);
+
+			const responseData = await response.json();
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Combination Response:", responseData);
+			}
+
+			if (!response.ok) {
+				const errorMessage =
+					responseData.error?.message ||
+					`API Error: ${response.status} ${response.statusText}`;
+				throw new Error(errorMessage);
+			}
+
+			if (responseData.candidates && responseData.candidates.length > 0) {
+				const combinedSummary =
+					responseData.candidates[0].content?.parts[0]?.text;
+				if (combinedSummary) {
+					return combinedSummary;
+				}
+			}
+
+			throw new Error(
+				"No valid combined summary returned from Gemini API"
+			);
+		} catch (error) {
+			console.error("Gemini API combination error:", error);
 			throw error;
 		}
 	}
@@ -545,7 +684,12 @@ try {
 		}
 
 		if (message.action === "summarizeWithGemini") {
-			summarizeContentWithGemini(message.title, message.content)
+			summarizeContentWithGemini(
+				message.title,
+				message.content,
+				message.isPart,
+				message.partInfo
+			)
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
 				})
@@ -556,6 +700,27 @@ try {
 						error:
 							error.message ||
 							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		if (message.action === "combinePartialSummaries") {
+			combinePartialSummaries(
+				message.title,
+				message.partSummaries,
+				message.partCount
+			)
+				.then((summary) => {
+					sendResponse({ success: true, combinedSummary: summary });
+				})
+				.catch((error) => {
+					console.error("Error combining summaries:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error combining summaries",
 					});
 				});
 			return true; // Indicates we'll send a response asynchronously
@@ -748,7 +913,12 @@ try {
 	}
 
 	// Summarize content with Gemini API
-	async function summarizeContentWithGemini(title, content) {
+	async function summarizeContentWithGemini(
+		title,
+		content,
+		isPart = false,
+		partInfo = null
+	) {
 		try {
 			// Load latest config
 			currentConfig = await initConfig();
@@ -759,9 +929,15 @@ try {
 				);
 			}
 
-			console.log(
-				`Summarizing "${title}" with Gemini (${content.length} characters)`
-			);
+			if (isPart && partInfo) {
+				console.log(
+					`Summarizing "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${content.length} characters)`
+				);
+			} else {
+				console.log(
+					`Summarizing "${title}" with Gemini (${content.length} characters)`
+				);
+			}
 
 			const modelEndpoint =
 				currentConfig.modelEndpoint ||
@@ -770,6 +946,11 @@ try {
 			// Use the summary prompt from settings
 			const summarizationBasePrompt =
 				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// If processing a part, add special instructions
+			if (isPart && partInfo) {
+				summarizationBasePrompt += `\n\nNote: This is part ${partInfo.current} of ${partInfo.total} parts. Please summarize this part while maintaining consistency with other parts.`;
+			}
 
 			// Combine base summarization prompt, permanent prompt, title, and content
 			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
@@ -834,6 +1015,103 @@ try {
 			throw new Error("No valid summary returned from Gemini API");
 		} catch (error) {
 			console.error("Gemini API summarization error:", error);
+			throw error;
+		}
+	}
+
+	// Combine partial summaries into a single summary
+	async function combinePartialSummaries(title, partSummaries, partCount) {
+		try {
+			// Load latest config
+			currentConfig = await initConfig();
+
+			if (!currentConfig.apiKey) {
+				throw new Error(
+					"API key is missing. Please set it in the extension popup."
+				);
+			}
+
+			console.log(
+				`Combining ${partCount} partial summaries for "${title}" with Gemini`
+			);
+
+			const modelEndpoint =
+				currentConfig.modelEndpoint ||
+				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+
+			// Use the summary prompt from settings
+			const combinationBasePrompt =
+				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+			// Combine base combination prompt, permanent prompt, title, and partial summaries
+			const fullCombinationPrompt = `${combinationBasePrompt}\n\n${
+				currentConfig.permanentPrompt
+			}\n\nTitle: ${title}\n\nPartial Summaries:\n${partSummaries.join(
+				"\n\n"
+			)}`;
+
+			const requestBody = {
+				contents: [
+					{
+						parts: [
+							{
+								text: fullCombinationPrompt, // Use the combined prompt
+							},
+						],
+					},
+				],
+				generationConfig: {
+					temperature: 0.5, // Lower temperature for more focused summary
+					maxOutputTokens: 512, // Limit summary length
+					topP: 0.95,
+					topK: 40,
+				},
+			};
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Combination Request:", {
+					url: modelEndpoint,
+					requestBody: JSON.parse(JSON.stringify(requestBody)),
+				});
+			}
+
+			const response = await fetch(
+				`${modelEndpoint}?key=${currentConfig.apiKey}`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(requestBody),
+				}
+			);
+
+			const responseData = await response.json();
+
+			if (currentConfig.debugMode) {
+				console.log("Gemini Combination Response:", responseData);
+			}
+
+			if (!response.ok) {
+				const errorMessage =
+					responseData.error?.message ||
+					`API Error: ${response.status} ${response.statusText}`;
+				throw new Error(errorMessage);
+			}
+
+			if (responseData.candidates && responseData.candidates.length > 0) {
+				const combinedSummary =
+					responseData.candidates[0].content?.parts[0]?.text;
+				if (combinedSummary) {
+					return combinedSummary;
+				}
+			}
+
+			throw new Error(
+				"No valid combined summary returned from Gemini API"
+			);
+		} catch (error) {
+			console.error("Gemini API combination error:", error);
 			throw error;
 		}
 	}

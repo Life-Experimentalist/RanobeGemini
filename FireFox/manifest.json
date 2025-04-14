@@ -1,8 +1,13 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "1.1.0",
+	"version": "2.1.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "{33b0347d-8e94-40d6-a169-249716997cc6}"
+		}
+	},
 	"icons": {
 		"16": "icons/logo-light-16.png",
 		"32": "icons/logo-light-32.png",
@@ -13,7 +18,8 @@
 	"permissions": [
 		"activeTab",
 		"storage",
-		"tabs"
+		"tabs",
+		"notifications"
 	],
 	"action": {
 		"default_icon": {
@@ -51,7 +57,8 @@
 	"content_scripts": [
 		{
 			"matches": [
-				"*://*.ranobes.top/*"
+				"*://*.ranobes.top/*",
+				"*://*.fanfiction.net/*"
 			],
 			"js": [
 				"content/content.js"
@@ -66,10 +73,12 @@
 		{
 			"resources": [
 				"icons/*.png",
-				"utils/*.js"
+				"utils/*.js",
+				"utils/website-handlers/*.js"
 			],
 			"matches": [
-				"*://*.ranobes.top/*"
+				"*://*.ranobes.top/*",
+				"*://*.fanfiction.net/*"
 			]
 		}
 	]

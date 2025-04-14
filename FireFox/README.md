@@ -53,7 +53,7 @@ Upon activation, Ranobe Gemini scans the webpage for targeted content areas usin
 ## Version History
 
 - **v1.1.0** (April 10, 2025): Added chapter summarization, permanent prompts, and improved UI
-- **v1.0.0** (June 15, 2023): Initial release with basic enhancement functionality
+- **v1.0.0** (April 15, 2023): Initial release with basic enhancement functionality
 
 For a complete list of changes, see the [CHANGELOG](../CHANGELOG.md).
 
