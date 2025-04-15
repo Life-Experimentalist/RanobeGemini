@@ -13,7 +13,10 @@
 		"32": "icons/logo-light-32.png",
 		"48": "icons/logo-light-48.png",
 		"96": "icons/logo-light-96.png",
-		"128": "icons/logo-light-128.png"
+		"128": "icons/logo-light-128.png",
+		"256": "icons/logo-light-256.png",
+		"512": "icons/logo-light-512.png",
+		"1024": "icons/logo-light-1024.png"
 	},
 	"permissions": [
 		"activeTab",
@@ -32,19 +35,39 @@
 		"browser_style": false,
 		"theme_icons": [
 			{
-				"light": "icons/logo-light-16.png",
 				"dark": "icons/logo-dark-16.png",
+				"light": "icons/logo-light-16.png",
 				"size": 16
 			},
 			{
-				"light": "icons/logo-light-32.png",
 				"dark": "icons/logo-dark-32.png",
+				"light": "icons/logo-light-32.png",
 				"size": 32
 			},
 			{
-				"light": "icons/logo-light-48.png",
 				"dark": "icons/logo-dark-48.png",
+				"light": "icons/logo-light-48.png",
 				"size": 48
+			},
+			{
+				"dark": "icons/logo-dark-128.png",
+				"light": "icons/logo-light-128.png",
+				"size": 128
+			},
+			{
+				"dark": "icons/logo-dark-256.png",
+				"light": "icons/logo-light-256.png",
+				"size": 256
+			},
+			{
+				"dark": "icons/logo-dark-512.png",
+				"light": "icons/logo-light-512.png",
+				"size": 512
+			},
+			{
+				"dark": "icons/logo-dark-1024.png",
+				"light": "icons/logo-light-1024.png",
+				"size": 1024
 			}
 		]
 	},
