@@ -1,6 +1,6 @@
 # Ranobe Gemini
 
-![Ranobe Gemini Logo](FireFox/icons/logo-light-96.png)
+![Ranobe Gemini Logo](src/icons/logo-light-96.png)
 
 A Firefox browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, currently supporting ranobes.top and fanfiction.net.
 
@@ -26,7 +26,7 @@ A Firefox browser extension that enhances web novel translations using Google's 
 *Alternatively, for development:*
 1. Clone the repository: `git clone https://github.com/Life-Experimentalist/RanobeGemini.git`
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-3. Click "Load Temporary Add-on..." and select the `manifest.json` file inside the `FireFox` directory.
+3. Click "Load Temporary Add-on..." and select the `manifest.json` file inside the `src` directory.
 
 ## Usage
 

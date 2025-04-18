@@ -9,6 +9,28 @@ let currentHandler = null; // Will store the website-specific handler
 let hasExtractButton = false;
 let autoExtracted = false;
 
+// Device detection for responsive design
+let isMobileDevice = false;
+
+// Function to detect if user is on a mobile device
+function detectMobileDevice() {
+	// Check if using a mobile device based on user agent
+	const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+	if (
+		/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(
+			userAgent
+		) ||
+		/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
+			userAgent.substr(0, 4)
+		)
+	) {
+		return true;
+	}
+
+	// Check viewport width as an additional indicator
+	return window.innerWidth <= 768;
+}
+
 // Add a minimal HTML sanitizer to remove script tags (adjust as needed)
 function sanitizeHTML(html) {
 	// Remove any <script>...</script> elements.
@@ -21,70 +43,130 @@ function sanitizeHTML(html) {
  * @returns {string} - Clean text with all HTML tags removed and entities decoded
  */
 function stripHtmlTags(html) {
-    if (!html) return '';
+	if (!html) return "";
 
-    console.log("[StripTags Final] Input:", html);
+	console.log("[StripTags Final] Input:", html);
 
-    // Step 1: Use regex to remove all HTML tags before DOM parsing
-    let text = html.replace(/<\/?[^>]+(>|$)/g, "");
+	// Step 1: Use regex to remove all HTML tags before DOM parsing
+	let text = html.replace(/<\/?[^>]+(>|$)/g, "");
 
-    console.log("[StripTags Final] After initial regex:", text);
+	console.log("[StripTags Final] After initial regex:", text);
 
-    // Step 2: Create a temporary div element to use the browser's HTML parsing
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = text;
+	// Step 2: Create a temporary div element to use the browser's HTML parsing
+	const tempDiv = document.createElement("div");
+	tempDiv.innerHTML = text;
 
-    // Step 3: Extract text content which automatically removes all HTML tags
-    let textOnly = tempDiv.textContent || tempDiv.innerText || '';
+	// Step 3: Extract text content which automatically removes all HTML tags
+	let textOnly = tempDiv.textContent || tempDiv.innerText || "";
 
-    console.log("[StripTags Final] After textContent:", textOnly);
+	console.log("[StripTags Final] After textContent:", textOnly);
 
-    // Step 4: Additional regex replacement to catch any potential leftover tags
-    textOnly = textOnly.replace(/<[^>]*>/g, '');
+	// Step 4: Additional regex replacement to catch any potential leftover tags
+	textOnly = textOnly.replace(/<[^>]*>/g, "");
 
-    // Step 5: Properly decode common HTML entities
-    textOnly = textOnly.replace(/&amp;/g, '&')
-                       .replace(/&lt;/g, '<')
-                       .replace(/&gt;/g, '>')
-                       .replace(/&quot;/g, '"')
-                       .replace(/&#039;/g, "'")
-                       .replace(/&nbsp;/g, ' ');
+	// Step 5: Properly decode common HTML entities
+	textOnly = textOnly
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#039;/g, "'")
+		.replace(/&nbsp;/g, " ");
 
-    console.log("[StripTags Final] After entity decoding:", textOnly);
+	console.log("[StripTags Final] After entity decoding:", textOnly);
 
-    // Step 6: Clean up any consecutive whitespace but preserve paragraph breaks
-    textOnly = textOnly.replace(/\s+/g, ' ').trim();
+	// Step 6: Clean up any consecutive whitespace but preserve paragraph breaks
+	textOnly = textOnly.replace(/\s+/g, " ").trim();
 
-    console.log("[StripTags Final] Final output:", textOnly);
+	console.log("[StripTags Final] Final output:", textOnly);
 
-    return textOnly;
+	return textOnly;
 }
 
 // Initialize when DOM is fully loaded
-window.addEventListener("DOMContentLoaded", initialize);
-window.addEventListener("load", initialize); // Backup init in case DOMContentLoaded was missed
+window.addEventListener("DOMContentLoaded", initializeWithDeviceDetection);
+window.addEventListener("load", initializeWithDeviceDetection); // Backup init in case DOMContentLoaded was missed
+window.addEventListener("resize", handleResize); // Handle orientation changes
+
+// Handle window resize events to adjust UI for orientation changes
+function handleResize() {
+	const wasMobile = isMobileDevice;
+	isMobileDevice = detectMobileDevice();
+
+	// If device type changed (e.g., tablet rotation), update UI
+	if (wasMobile !== isMobileDevice) {
+		adjustUIForDeviceType();
+	}
+}
+
+// Initialize with device detection
+function initializeWithDeviceDetection() {
+	isMobileDevice = detectMobileDevice();
+	console.log(
+		`Ranobe Gemini: Initializing for ${
+			isMobileDevice ? "mobile" : "desktop"
+		} device`
+	);
+	initialize();
+}
+
+// Adjust UI based on device type
+function adjustUIForDeviceType() {
+	const controlsContainer = document.getElementById("gemini-controls");
+	const summaryDisplay = document.getElementById("summary-display");
+
+	if (!controlsContainer) return;
+
+	if (isMobileDevice) {
+		// Mobile-specific adjustments
+		controlsContainer.classList.add("mobile-view");
+
+		if (summaryDisplay) {
+			summaryDisplay.classList.add("mobile-view");
+		}
+	} else {
+		// Desktop-specific adjustments
+		controlsContainer.classList.remove("mobile-view");
+
+		if (summaryDisplay) {
+			summaryDisplay.classList.remove("mobile-view");
+		}
+	}
+}
 
 // Load handler modules dynamically
 async function loadHandlers() {
 	try {
 		// Import the base handler code
-		const baseHandlerUrl = browser.runtime.getURL("utils/website-handlers/base-handler.js");
+		const baseHandlerUrl = browser.runtime.getURL(
+			"utils/website-handlers/base-handler.js"
+		);
 		const baseHandlerModule = await import(baseHandlerUrl);
 
 		// Import specific handlers
-		const ranobesHandlerUrl = browser.runtime.getURL("utils/website-handlers/ranobes-handler.js");
-		const fanfictionHandlerUrl = browser.runtime.getURL("utils/website-handlers/fanfiction-handler.js");
-		const handlerManagerUrl = browser.runtime.getURL("utils/website-handlers/handler-manager.js");
+		const ranobesHandlerUrl = browser.runtime.getURL(
+			"utils/website-handlers/ranobes-handler.js"
+		);
+		const fanfictionHandlerUrl = browser.runtime.getURL(
+			"utils/website-handlers/fanfiction-handler.js"
+		);
+		const handlerManagerUrl = browser.runtime.getURL(
+			"utils/website-handlers/handler-manager.js"
+		);
 
 		// Don't wait for these imports now, we'll use them later when needed
-		console.log("Handler URLs loaded:",
-			{ baseHandlerUrl, ranobesHandlerUrl, fanfictionHandlerUrl, handlerManagerUrl });
+		console.log("Handler URLs loaded:", {
+			baseHandlerUrl,
+			ranobesHandlerUrl,
+			fanfictionHandlerUrl,
+			handlerManagerUrl,
+		});
 
 		return {
 			baseHandlerUrl,
 			ranobesHandlerUrl,
 			fanfictionHandlerUrl,
-			handlerManagerUrl
+			handlerManagerUrl,
 		};
 	} catch (error) {
 		console.error("Error loading handlers:", error);
@@ -98,8 +180,13 @@ async function getHandlerForCurrentSite() {
 		const handlerUrls = await loadHandlers();
 		if (!handlerUrls) return null;
 
-		const handlerManagerModule = await import(handlerUrls.handlerManagerUrl);
-		if (handlerManagerModule && handlerManagerModule.getHandlerForCurrentSite) {
+		const handlerManagerModule = await import(
+			handlerUrls.handlerManagerUrl
+		);
+		if (
+			handlerManagerModule &&
+			handlerManagerModule.getHandlerForCurrentSite
+		) {
 			return handlerManagerModule.getHandlerForCurrentSite();
 		}
 		return null;
@@ -113,38 +200,38 @@ async function getHandlerForCurrentSite() {
 // This serves as a fallback when no specific handler is available
 function extractContentGeneric() {
 	// Find paragraphs - works on most novel/fiction sites
-	const paragraphs = document.querySelectorAll('p');
+	const paragraphs = document.querySelectorAll("p");
 	if (paragraphs.length > 5) {
 		// Get all paragraphs text
 		const chapterText = Array.from(paragraphs)
-			.map(p => p.innerText)
-			.join('\n\n');
+			.map((p) => p.innerText)
+			.join("\n\n");
 
 		return {
 			found: chapterText.length > 200, // Only consider it found if we have substantial text
 			title: document.title || "Unknown Title",
 			text: chapterText,
-			selector: "generic paragraph extractor"
+			selector: "generic paragraph extractor",
 		};
 	}
 
 	// Try to find main content using common article selectors
 	const contentSelectors = [
-		'article',
-		'.article',
-		'.content',
-		'.story-content',
-		'.entry-content',
-		'#content',
-		'.main-content',
-		'.post-content',
-		'#storytext',          // fanfiction.net
-		'#arrticle',           // Ranobes.top
-		'.text-chapter',
-		'.chapter-content',
-		'.novel-content',
-		'.story',
-		'.chapter-inner'
+		"article",
+		".article",
+		".content",
+		".story-content",
+		".entry-content",
+		"#content",
+		".main-content",
+		".post-content",
+		"#storytext", // fanfiction.net
+		"#arrticle", // Ranobes.top
+		".text-chapter",
+		".chapter-content",
+		".novel-content",
+		".story",
+		".chapter-inner",
 	];
 
 	for (const selector of contentSelectors) {
@@ -154,7 +241,7 @@ function extractContentGeneric() {
 				found: true,
 				title: document.title || "Unknown Title",
 				text: element.innerText.trim(),
-				selector: `generic selector: ${selector}`
+				selector: `generic selector: ${selector}`,
 			};
 		}
 	}
@@ -164,7 +251,7 @@ function extractContentGeneric() {
 		found: false,
 		title: "",
 		text: "",
-		selector: ""
+		selector: "",
 	};
 }
 
@@ -319,6 +406,11 @@ function injectUI() {
 	controlsContainer.id = "gemini-controls";
 	controlsContainer.style.marginBottom = "10px"; // Add some space below buttons
 
+	// Apply mobile-specific class if on a mobile device
+	if (isMobileDevice) {
+		controlsContainer.classList.add("mobile-view");
+	}
+
 	const enhanceButton = createEnhanceButton();
 	const summarizeButton = createSummarizeButton();
 	const statusDiv = document.createElement("div");
@@ -329,8 +421,12 @@ function injectUI() {
 	summaryDisplay.id = "summary-display";
 	summaryDisplay.style.marginTop = "10px";
 	summaryDisplay.style.padding = "10px";
-	summaryDisplay.style.border = "1px solid #ccc";
 	summaryDisplay.style.display = "none"; // Initially hidden
+
+	// Apply mobile-specific class if on a mobile device
+	if (isMobileDevice) {
+		summaryDisplay.classList.add("mobile-view");
+	}
 
 	controlsContainer.appendChild(enhanceButton);
 	controlsContainer.appendChild(summarizeButton);
@@ -370,7 +466,11 @@ function injectUI() {
 		insertionPoint.appendChild(summaryDisplay);
 	}
 
-	console.log("Ranobe Gemini: UI injected successfully.");
+	console.log(
+		`Ranobe Gemini: UI injected successfully for ${
+			isMobileDevice ? "mobile" : "desktop"
+		} view.`
+	);
 }
 
 // Automatically extract content once the page is loaded
@@ -465,9 +565,24 @@ async function handleSummarizeClick() {
 			if (response && response.success && response.summary) {
 				summary = response.summary;
 			} else {
-				throw new Error(
-					response?.error || "Failed to generate summary."
-				);
+				// Check for API key missing error
+				const errorMessage =
+					response?.error || "Failed to generate summary.";
+				if (errorMessage.includes("API key is missing")) {
+					showStatusMessage(
+						"API key is missing. Opening settings page...",
+						"error"
+					);
+					// Open popup for API key input
+					browser.runtime.sendMessage({ action: "openPopup" });
+
+					// Clear the summary display area and show appropriate message
+					summaryDisplay.textContent =
+						"API key is missing. Please add your Gemini API key in the settings.";
+					throw new Error("API key is missing");
+				} else {
+					throw new Error(errorMessage);
+				}
 			}
 		}
 
@@ -518,16 +633,29 @@ async function handleSummarizeClick() {
 		}
 	} catch (error) {
 		console.error("Error in handleSummarizeClick:", error);
-		statusDiv.textContent = `Error: ${error.message}`;
-		summaryDisplay.textContent = "Failed to generate summary.";
-		summaryDisplay.style.display = "block"; // Keep display visible to show error
+
+		// Special handling for API key missing error - already handled above
+		if (error.message && error.message.includes("API key is missing")) {
+			// Skip adding another error message since we already showed one
+			statusDiv.textContent =
+				"API key is missing. Please check the settings.";
+		} else {
+			// For other errors, display the error message
+			statusDiv.textContent = `Error: ${error.message}`;
+			summaryDisplay.textContent = "Failed to generate summary.";
+			summaryDisplay.style.display = "block"; // Keep display visible to show error
+		}
 	} finally {
 		summarizeButton.disabled = false;
 		summarizeButton.textContent = "Summarize Chapter";
-		// Optionally hide status message after a delay
+		// Optionally hide status message after a delay (except for API key missing)
 		setTimeout(() => {
-			if (statusDiv.textContent.includes("Summary generated"))
+			if (
+				statusDiv.textContent.includes("Summary generated") &&
+				!statusDiv.textContent.includes("API key is missing")
+			) {
 				statusDiv.textContent = "";
+			}
 		}, 5000);
 	}
 }
@@ -1189,4 +1317,4 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Run initialization immediately in case the page is already loaded
-initialize();
+initializeWithDeviceDetection();

@@ -1,4 +1,5 @@
 history/
 analysis_log.md
 sample.html
-.vscode/
+node_modules/
+package-lock.json

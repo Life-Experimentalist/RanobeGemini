@@ -1,0 +1,14 @@
+{
+    "scripts": {
+        "package": "node package-firefox.js",
+        "prepare": "npm run package"
+    },
+    "devDependencies": {
+        "archiver": "^5.3.2"
+    },
+    "files": [
+        "src/",
+        "releases/",
+        "package-firefox.js"
+    ]
+}

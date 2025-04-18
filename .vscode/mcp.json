@@ -1,0 +1,12 @@
+{
+    "servers": {
+        "git-helper": {
+            "command": "uvx",
+            "args": [
+                "mcp-server-git",
+                "--repository",
+                "."
+            ]
+        }
+    }
+}

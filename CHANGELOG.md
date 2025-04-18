@@ -2,6 +2,35 @@
 
 All notable changes to the Ranobe Gemini extension will be documented in this file.
 
+## [2.2.0] - 2023-05-25
+
+### Summary
+Version 2.2.0 delivers a significant user experience upgrade focusing on improved theme integration, responsive design, and streamlined API key handling. This update ensures the extension works seamlessly across both desktop and mobile devices while maintaining visual consistency with website themes and popular browser extensions like Dark Reader.
+
+### Added
+- Comprehensive theme integration for summary windows with automatic light/dark mode detection
+- Fully responsive design with optimized layouts for both mobile and desktop devices
+- Intelligent device type detection for automatic UI adjustment
+- Enhanced Dark Reader extension compatibility with proper variable handling
+- Better integration with various site-specific dark mode implementations
+- Memory-efficient content processing for improved performance on mobile devices
+
+### Changed
+- Completely redesigned summary display area to match site theming
+- Improved mobile experience with touch-optimized controls and spacing
+- Enhanced UI layout with better element positioning on smaller screens
+- Unified API key handling between enhance and summarize functions
+- Simplified user feedback for API key configuration
+- Improved error messaging with clearer instructions
+
+### Fixed
+- Summary window theming inconsistencies between dark and light modes
+- API key handling discrepancies between summarize and enhance features
+- UI rendering issues on mobile devices with various screen sizes
+- Theme compatibility issues with Dark Reader and other dark mode extensions
+- Visual glitches when transitioning between light and dark modes
+- Contrast issues with text on certain background colors
+
 ## [2.1.0] - 2025-04-15
 
 ### Summary
