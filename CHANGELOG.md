@@ -2,7 +2,7 @@
 
 All notable changes to the Ranobe Gemini extension will be documented in this file.
 
-## [2.2.0] - 2023-05-25
+## [2.2.0] - 2025-05-25
 
 ### Summary
 Version 2.2.0 delivers a significant user experience upgrade focusing on improved theme integration, responsive design, and streamlined API key handling. This update ensures the extension works seamlessly across both desktop and mobile devices while maintaining visual consistency with website themes and popular browser extensions like Dark Reader.
@@ -107,7 +107,7 @@ Version 2.0.0 is a major update that introduces a completely redesigned interfac
 - Improved token count estimation
 - Addressed compatibility issues with Firefox 120+
 
-## [1.0.0] - 2023-06-15
+## [1.0.0] - 2025-06-15
 
 ### Added
 - Initial release

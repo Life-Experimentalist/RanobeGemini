@@ -35,12 +35,6 @@ graph TD
         F
     end
 
-    classDef browser fill:#f9d5e5,stroke:#333;
-    classDef content fill:#eeeeee,stroke:#333;
-    classDef processing fill:#b5ead7,stroke:#333;
-    classDef external fill:#ffdac1,stroke:#333;
-    classDef config fill:#c7ceea,stroke:#333;
-
     class A browser;
     class B,C content;
     class D,G processing;

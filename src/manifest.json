@@ -16,7 +16,7 @@
 		"128": "icons/logo-light-128.png",
 		"256": "icons/logo-light-256.png",
 		"512": "icons/logo-light-512.png",
-		"1024": "icons/logo-dark-1024.png"
+		"1024": "icons/logo-light-1024.png"
 	},
 	"permissions": [
 		"activeTab",
@@ -63,6 +63,11 @@
 				"dark": "icons/logo-dark-512.png",
 				"light": "icons/logo-light-512.png",
 				"size": 512
+			},
+			{
+				"dark": "icons/logo-dark-1024.png",
+				"light": "icons/logo-light-1024.png",
+				"size": 1024
 			}
 		]
 	},
@@ -92,7 +97,10 @@
 			"resources": [
 				"icons/*.png",
 				"utils/*.js",
-				"utils/website-handlers/*.js"
+				"utils/website-handlers/*.js",
+				"content/content.js",
+				"content/content.css",
+				"config/config.js"
 			],
 			"matches": [
 				"*://*.ranobes.top/*",
