@@ -115,4 +115,46 @@ export class BaseWebsiteHandler {
 			position: "before",
 		};
 	}
+
+	// Get site-specific prompt for this handler
+	// This can be overridden by website-specific handlers
+	getSiteSpecificPrompt() {
+		// Get stored prompt for this site if it exists
+		const hostname = window.location.hostname;
+		const storedPrompt = this.getStoredSitePrompt(hostname);
+
+		if (storedPrompt) {
+			return storedPrompt;
+		}
+
+		// Return the default prompt for this handler
+		return this.getDefaultPrompt();
+	}
+
+	// Get default prompt for this site (to be overridden by specific handlers)
+	getDefaultPrompt() {
+		// Base implementation returns empty string
+		return "";
+	}
+
+	// Get stored site-specific prompt
+	getStoredSitePrompt(hostname) {
+		try {
+			// Try to get stored site prompts from localStorage
+			const storedPrompts = localStorage.getItem("siteSpecificPrompts");
+			if (storedPrompts) {
+				const promptsObj = JSON.parse(storedPrompts);
+				return promptsObj[hostname] || "";
+			}
+		} catch (error) {
+			console.error("Error retrieving stored site prompt:", error);
+		}
+		return "";
+	}
+
+	// Get site identifier for the prompt UI
+	getSiteIdentifier() {
+		// Default implementation returns hostname
+		return window.location.hostname;
+	}
 }

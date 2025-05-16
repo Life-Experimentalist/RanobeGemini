@@ -82,7 +82,7 @@ The background script runs persistently in the extension context.
 
 The browser action popup provides user configuration options.
 
-- **simple-popup.html/js**: The user interface for:
+- **popup.html/js**: The user interface for:
   - API key configuration
   - Model selection
   - Customizing enhancement and summary prompts

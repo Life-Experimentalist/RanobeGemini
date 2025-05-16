@@ -472,6 +472,40 @@ async function handleSummarizeButtonClick(event) {
 	}
 }
 
+// Function to add initial word count display below the buttons
+function addInitialWordCountDisplay(contentArea) {
+	if (!contentArea) return;
+
+	const originalContent = contentArea.innerText || contentArea.textContent;
+	const wordCount = countWords(originalContent);
+
+	// Create word count container
+	const wordCountContainer = document.createElement("div");
+	wordCountContainer.className = "gemini-word-count";
+	wordCountContainer.style.cssText = `
+		margin: 10px 0 15px 0;
+		color: #bab9a0;
+		font-size: 14px;
+		text-align: left;
+	`;
+
+	wordCountContainer.innerHTML = `
+		<strong>Word Count:</strong> ${wordCount} words
+	`;
+
+	// Insert right after the controls container
+	const controlsContainer = document.getElementById("gemini-controls");
+	if (controlsContainer) {
+		controlsContainer.parentNode.insertBefore(
+			wordCountContainer,
+			controlsContainer.nextSibling
+		);
+	} else {
+		// Fallback: insert at the top of the content area
+		contentArea.insertBefore(wordCountContainer, contentArea.firstChild);
+	}
+}
+
 // Function to inject UI elements (buttons, status area)
 function injectUI() {
 	const contentArea = findContentArea();
@@ -557,6 +591,9 @@ function injectUI() {
 			isMobileDevice ? "mobile" : "desktop"
 		} view.`
 	);
+
+	// Add the initial word count display
+	addInitialWordCountDisplay(contentArea);
 }
 
 // Automatically extract content once the page is loaded
@@ -903,9 +940,9 @@ async function summarizeLargeContentInParts(
 
 // Handle click event for Enhance button
 async function handleEnhanceClick() {
-	showStatusMessage("Extracting content and sending to Gemini...");
-
-	if (!isBackgroundScriptReady) {
+	if (isBackgroundScriptReady) {
+		showStatusMessage("Extracting content and sending to Gemini...");
+	} else {
 		showStatusMessage(
 			"Background script is not ready. Please reload the page.",
 			"error"
@@ -1001,6 +1038,9 @@ async function handleEnhanceClick() {
 			action: "processWithGemini",
 			title: extractedContent.title,
 			content: extractedContent.text,
+			siteSpecificPrompt: currentHandler
+				? currentHandler.getSiteSpecificPrompt()
+				: "",
 		});
 
 		// Restore button state
@@ -1555,6 +1595,9 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 		// Add word count display at the top of the content
 		addWordCountDisplay(contentArea, originalWordCount, newWordCount);
 
+		// Add the processed notice banner
+		addGeminiProcessedNotice(contentArea);
+
 		// Restore scroll position
 		window.scrollTo(0, scrollPosition);
 
@@ -1578,6 +1621,26 @@ function countWords(text) {
 
 // Function to add word count display to the content
 function addWordCountDisplay(contentArea, originalCount, newCount) {
+	// Check if there's already a word count display and update it
+	const existingWordCount = document.querySelector(".gemini-word-count");
+	if (existingWordCount) {
+		// Calculate percentage change
+		const percentChange = (
+			((newCount - originalCount) / originalCount) *
+			100
+		).toFixed(1);
+		const changeText =
+			percentChange >= 0
+				? `+${percentChange}% increase`
+				: `${percentChange}% decrease`;
+
+		existingWordCount.innerHTML = `
+			<strong>Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
+		`;
+		return;
+	}
+
+	// If no existing display, create a new one
 	// Create word count container
 	const wordCountContainer = document.createElement("div");
 	wordCountContainer.className = "gemini-word-count";
@@ -1632,6 +1695,40 @@ function applyDefaultFormatting(contentArea) {
 	});
 }
 
+// Function to add the Gemini processed notice banner
+function addGeminiProcessedNotice(contentArea) {
+	// Check if notice already exists
+	if (contentArea.querySelector(".gemini-processed-notice")) {
+		return; // Don't add duplicate notices
+	}
+
+	// Create the notice container
+	const noticeContainer = document.createElement("div");
+	noticeContainer.className = "gemini-processed-notice";
+
+	// Add the notice text
+	const noticeText = document.createTextNode(
+		"This content has been enhanced by Gemini AI"
+	);
+	noticeContainer.appendChild(noticeText);
+
+	// Add a restore button to revert to original content if needed
+	const restoreButton = document.createElement("button");
+	restoreButton.textContent = "Restore Original";
+	restoreButton.addEventListener("click", () => {
+		// Add functionality to restore original content
+		// This would need implementation of content backup and restore logic
+		showStatusMessage(
+			"Original content restoration is not implemented yet",
+			"info"
+		);
+	});
+	noticeContainer.appendChild(restoreButton);
+
+	// Insert at the beginning of the content area
+	contentArea.insertBefore(noticeContainer, contentArea.firstChild);
+}
+
 // Shows a status message on the page
 function showStatusMessage(message, type = "info") {
 	// Create message element
@@ -1677,6 +1774,22 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 	if (message.action === "ping") {
 		sendResponse({ success: true, message: "Content script is alive" });
+		return true;
+	}
+
+	if (message.action === "getSiteHandlerInfo") {
+		let response = { success: true, hasHandler: false };
+
+		// If we have a handler, get information about it
+		if (currentHandler) {
+			response.hasHandler = true;
+			response.siteIdentifier = currentHandler.getSiteIdentifier();
+			response.defaultPrompt = currentHandler.getDefaultPrompt();
+			response.siteSpecificPrompt =
+				currentHandler.getSiteSpecificPrompt();
+		}
+
+		sendResponse(response);
 		return true;
 	}
 

@@ -4,7 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RanobeGemini</title>
-		<link rel="stylesheet" href="simple-popup.css">
+		<link rel="stylesheet" href="popup.css">
 	</head>
 	<body>
 		<div class="container">
@@ -26,6 +26,7 @@
 				<div class="tabs">
 					<button class="tab-btn active" data-tab="settings">Settings</button>
 					<button class="tab-btn" data-tab="novels">Novels</button>
+					<button class="tab-btn" data-tab="prompts">Prompts</button>
 					<button class="tab-btn" data-tab="advanced">Advanced</button>
 					<button class="tab-btn" data-tab="faq">FAQ</button>
 					<button class="tab-btn" data-tab="about">About</button>
@@ -147,8 +148,8 @@
 						</div>
 					</div>
 
-				<!-- Advanced Tab -->
-				<div id="advanced" class="tab-content">
+				<!-- Prompts Tab -->
+				<div id="prompts" class="tab-content">
 					<div class="setting">
 						<label for="promptTemplate">Enhancement Prompt:</label>
 						<textarea
@@ -168,43 +169,91 @@
 					</div>
 
 					<div class="setting">
+						<label for="siteSpecificPrompts">Site-Specific Prompts:</label>
+						<div id="siteSpecificPromptsContainer" class="site-specific-prompts">
+							<!-- Site-specific prompts will be loaded dynamically -->
+							<div class="no-site-prompts" id="noSitePrompts">No site-specific prompts available.</div>
+						</div>
+						<div class="site-prompt-template" style="display: none;">
+							<div class="site-prompt-item">
+								<div class="site-prompt-header">
+									<input type="text" class="site-name" placeholder="Site name">
+									<button class="remove-site-prompt">✕</button>
+								</div>
+								<textarea class="site-prompt-content" rows="3" placeholder="Enter site-specific prompt"></textarea>
+							</div>
+						</div>
+						<button id="addSitePrompt" style="margin-top: 5px;">Add Site Prompt</button>
+						<div class="description">These prompts are automatically provided by website handlers and can be customized. They help Gemini understand the specific formatting and style of each site.</div>
+					</div>
+
+					<div class="setting">
 						<label for="permanentPrompt">Permanent Prompt (Appended to all requests):</label>
 						<textarea id="permanentPrompt" rows="4"></textarea>
 						<button id="resetPermanentPrompt" style="margin-top: 5px;">Reset to Default</button>
 					</div>
 
-					<div class="advanced-settings">
-						<button class="advanced-toggle" id="toggleAdvancedParams">Advanced Parameters</button>
-						<div class="advanced-content" id="advancedParamsContent">
-							<div class="slider-container">
-								<label for="topPSlider">
-									Top-P
-									<span class="slider-value" id="topPValue">0.95</span>
-								</label>
-								<input type="range" min="0" max="1" step="0.05" value="0.95" class="slider" id="topPSlider">
-								<div class="description">Controls diversity of output (lower = more focused)</div>
-							</div>
+					<div class="actions">
+						<button id="resetAllPrompts" style="background-color: #db4437;">Reset All Prompts</button>
+						<button id="savePrompts" style="float: right; background-color: #34a853;">Save Prompts</button>
+					</div>
+				</div>
 
-							<div class="slider-container">
-								<label for="topKSlider">
-									Top-K
-									<span class="slider-value" id="topKValue">40</span>
-								</label>
-								<input type="range" min="1" max="100" step="1" value="40" class="slider" id="topKSlider">
-								<div class="description">Limits token selection pool (lower = more deterministic)</div>
-							</div>
+				<!-- Advanced Tab -->
+				<div id="advanced" class="tab-content">
+					<div class="setting">
+						<div class="slider-container">
+							<label for="temperatureSlider">
+								Temperature
+								<span class="slider-value" id="temperatureValue">0.7</span>
+							</label>
+							<input type="range" min="0" max="1" step="0.1" value="0.7" class="slider" id="temperatureSlider">
+							<div class="description">Controls creativity (0 = deterministic, 1 = creative)</div>
+						</div>
 
-							<div class="setting">
-								<label for="customEndpoint">Custom Model Endpoint (Advanced):</label>
-								<input
-									type="text"
-									id="customEndpoint"
-									placeholder="https://generativelanguage.googleapis.com/v1beta/models/..."
-								/>
-								<div class="description">
-									For advanced users only. Leave blank to use standard endpoints.
-								</div>
-							</div>
+						<div class="slider-container">
+							<label for="topPSlider">
+								Top-P
+								<span class="slider-value" id="topPValue">0.95</span>
+							</label>
+							<input type="range" min="0" max="1" step="0.05" value="0.95" class="slider" id="topPSlider">
+							<div class="description">Controls diversity of output (lower = more focused)</div>
+						</div>
+
+						<div class="slider-container">
+							<label for="topKSlider">
+								Top-K
+								<span class="slider-value" id="topKValue">40</span>
+							</label>
+							<input type="range" min="1" max="100" step="1" value="40" class="slider" id="topKSlider">
+							<div class="description">Limits token selection pool (lower = more deterministic)</div>
+						</div>
+					</div>
+
+					<div class="setting">
+						<label for="maxOutputTokens">Maximum Output Length (tokens):</label>
+						<input
+							type="number"
+							id="maxOutputTokens"
+							min="1000"
+							max="32768"
+							step="512"
+							value="8192"
+						/>
+						<div class="description">
+							Controls maximum length of generated text (higher = longer outputs)
+						</div>
+					</div>
+
+					<div class="setting">
+						<label for="customEndpoint">Custom Model Endpoint (Advanced):</label>
+						<input
+							type="text"
+							id="customEndpoint"
+							placeholder="https://generativelanguage.googleapis.com/v1beta/models/..."
+						/>
+						<div class="description">
+							For advanced users only. Leave blank to use standard endpoints.
 						</div>
 					</div>
 
@@ -225,7 +274,7 @@
 							making them more readable and natural while preserving the original story.
 						</p>
 						<p>
-							The extension integrates directly with novel pages on ranobes.net, offering instant enhancement
+							The extension integrates with supported novel websites, offering instant enhancement
 							and summarization of chapter content.
 						</p>
 					</div>
@@ -248,7 +297,7 @@
 						<ol>
 							<li><a href="#" id="getKeyLink">Get a free Gemini API key</a> from Google AI Studio</li>
 							<li>Enter your API key in the Settings tab</li>
-							<li>Navigate to any chapter on ranobes.net</li>
+							<li>Navigate to any chapter on a supported novel website</li>
 							<li>Click "Enhance with Gemini" or "Summarize Chapter" on the page</li>
 						</ol>
 					</div>
@@ -298,7 +347,7 @@
 						<div class="faq-answer">
 							<ol>
 								<li>Enter your API key in the Settings tab</li>
-								<li>Navigate to a novel chapter on ranobes.net</li>
+								<li>Navigate to a novel chapter on a supported website</li>
 								<li>Click the "Enhance with Gemini" button that appears on the page</li>
 								<li>Wait for the enhanced text to replace the original content</li>
 							</ol>
@@ -369,6 +418,6 @@
 				<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
 			</div>
 
-			<script src="simple-popup.js" type="module"></script>
+			<script src="popup.js" type="module"></script>
 		</body>
 	</html>

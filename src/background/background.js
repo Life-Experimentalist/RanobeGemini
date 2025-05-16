@@ -53,6 +53,29 @@ try {
 		}
 	}
 
+	// Helper function to combine prompts for Gemini
+	function combinePrompts(
+		mainPrompt,
+		permanentPrompt,
+		siteSpecificPrompt = ""
+	) {
+		let combinedPrompt = mainPrompt;
+
+		// Add site-specific prompt if available
+		if (siteSpecificPrompt && siteSpecificPrompt.length > 0) {
+			combinedPrompt +=
+				"\n\n## Site-Specific Context:\n" + siteSpecificPrompt;
+		}
+
+		// Add permanent prompt if available
+		if (permanentPrompt && permanentPrompt.length > 0) {
+			combinedPrompt +=
+				"\n\n## Always Follow These Instructions:\n" + permanentPrompt;
+		}
+
+		return combinedPrompt;
+	}
+
 	// Handle messages from content script
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		console.log("Background received message:", message);
@@ -159,7 +182,7 @@ try {
 		if (message.action === "openPopup") {
 			browser.windows
 				.create({
-					url: browser.runtime.getURL("popup/simple-popup.html"),
+					url: browser.runtime.getURL("popup/popup.html"),
 					type: "popup",
 					width: 400,
 					height: 550,
@@ -260,9 +283,12 @@ try {
 			console.log(`Using model: ${modelName}`);
 
 			// Get emoji setting - from parameter or config
-			const shouldUseEmoji = useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
+			const shouldUseEmoji =
+				useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
 			if (shouldUseEmoji) {
-				console.log("Emoji mode is enabled - adding emojis to dialogue");
+				console.log(
+					"Emoji mode is enabled - adding emojis to dialogue"
+				);
 			}
 
 			// Prepare the request for Gemini API with the latest prompt from settings
@@ -279,7 +305,11 @@ try {
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
-			const fullPrompt = `${promptPrefix}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\n${content}`;
+			const fullPrompt = combinePrompts(
+				promptPrefix,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -394,7 +424,11 @@ try {
 			}
 
 			// Combine base summarization prompt, permanent prompt, title, and content
-			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
+			const fullSummarizationPrompt = combinePrompts(
+				summarizationBasePrompt,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -485,11 +519,11 @@ try {
 				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
 
 			// Combine base combination prompt, permanent prompt, title, and partial summaries
-			const fullCombinationPrompt = `${combinationBasePrompt}\n\n${
-				currentConfig.permanentPrompt
-			}\n\nTitle: ${title}\n\nPartial Summaries:\n${partSummaries.join(
-				"\n\n"
-			)}`;
+			const fullCombinationPrompt = combinePrompts(
+				combinationBasePrompt,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -574,7 +608,7 @@ try {
 		// Open the simple popup directly if popup doesn't open
 		browser.windows
 			.create({
-				url: browser.runtime.getURL("popup/simple-popup.html"),
+				url: browser.runtime.getURL("popup/popup.html"),
 				type: "popup",
 				width: 400,
 				height: 550,
@@ -650,6 +684,29 @@ try {
 		}
 	}
 
+	// Helper function to combine prompts for Gemini
+	function combinePrompts(
+		mainPrompt,
+		permanentPrompt,
+		siteSpecificPrompt = ""
+	) {
+		let combinedPrompt = mainPrompt;
+
+		// Add site-specific prompt if available
+		if (siteSpecificPrompt && siteSpecificPrompt.length > 0) {
+			combinedPrompt +=
+				"\n\n## Site-Specific Context:\n" + siteSpecificPrompt;
+		}
+
+		// Add permanent prompt if available
+		if (permanentPrompt && permanentPrompt.length > 0) {
+			combinedPrompt +=
+				"\n\n## Always Follow These Instructions:\n" + permanentPrompt;
+		}
+
+		return combinedPrompt;
+	}
+
 	// Handle messages from content script
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		console.log("Background received message:", message);
@@ -756,7 +813,7 @@ try {
 		if (message.action === "openPopup") {
 			browser.windows
 				.create({
-					url: browser.runtime.getURL("popup/simple-popup.html"),
+					url: browser.runtime.getURL("popup/popup.html"),
 					type: "popup",
 					width: 400,
 					height: 550,
@@ -857,9 +914,12 @@ try {
 			console.log(`Using model: ${modelName}`);
 
 			// Get emoji setting - from parameter or config
-			const shouldUseEmoji = useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
+			const shouldUseEmoji =
+				useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
 			if (shouldUseEmoji) {
-				console.log("Emoji mode is enabled - adding emojis to dialogue");
+				console.log(
+					"Emoji mode is enabled - adding emojis to dialogue"
+				);
 			}
 
 			// Prepare the request for Gemini API with the latest prompt from settings
@@ -876,7 +936,11 @@ try {
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
-			const fullPrompt = `${promptPrefix}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\n${content}`;
+			const fullPrompt = combinePrompts(
+				promptPrefix,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -991,7 +1055,11 @@ try {
 			}
 
 			// Combine base summarization prompt, permanent prompt, title, and content
-			const fullSummarizationPrompt = `${summarizationBasePrompt}\n\n${currentConfig.permanentPrompt}\n\nTitle: ${title}\n\nContent:\n${content}`;
+			const fullSummarizationPrompt = combinePrompts(
+				summarizationBasePrompt,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -1082,11 +1150,11 @@ try {
 				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
 
 			// Combine base combination prompt, permanent prompt, title, and partial summaries
-			const fullCombinationPrompt = `${combinationBasePrompt}\n\n${
-				currentConfig.permanentPrompt
-			}\n\nTitle: ${title}\n\nPartial Summaries:\n${partSummaries.join(
-				"\n\n"
-			)}`;
+			const fullCombinationPrompt = combinePrompts(
+				combinationBasePrompt,
+				currentConfig.permanentPrompt,
+				"" // Site-specific prompt can be added here if needed
+			);
 
 			const requestBody = {
 				contents: [
@@ -1171,7 +1239,7 @@ try {
 		// Open the simple popup directly if popup doesn't open
 		browser.windows
 			.create({
-				url: browser.runtime.getURL("popup/simple-popup.html"),
+				url: browser.runtime.getURL("popup/popup.html"),
 				type: "popup",
 				width: 400,
 				height: 550,

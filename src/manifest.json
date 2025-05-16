@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.3.0",
+	"version": "2.4.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -31,7 +31,7 @@
 			"48": "icons/logo-light-48.png"
 		},
 		"default_title": "Ranobe Gemini",
-		"default_popup": "popup/simple-popup.html",
+		"default_popup": "popup/popup.html",
 		"browser_style": false,
 		"theme_icons": [
 			{

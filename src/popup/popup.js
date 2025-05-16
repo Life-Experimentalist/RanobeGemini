@@ -13,6 +13,9 @@ const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the f
 6. Maintain the original plot points, character development, and story elements exactly
 7. Streamline overly verbose sections while preserving important details
 8. Ensure proper transitioning between scenes and ideas
+9. Add bold section headings at scene changes, POV shifts, or topic transitions. If the original text already has section headings, incorporate them seamlessly and consistently
+10. Format game-like status windows, skill descriptions, or similar content into HTML boxes with proper line breaks to preserve readability and structure
+11. Remove any advertising code snippets or irrelevant promotional content
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
 
@@ -1184,6 +1187,398 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	}
 
+	// Function to get site-specific prompt from current handler
+	function getSiteSpecificPrompt(currentHandler) {
+		if (
+			currentHandler &&
+			typeof currentHandler.getSiteSpecificPrompt === "function"
+		) {
+			return currentHandler.getSiteSpecificPrompt();
+		}
+		return "";
+	}
+
+	// Helper function to update the UI with the current site-specific prompt
+	function updateSiteSpecificPromptUI() {
+		const currentSite = getCurrentSiteIdentifier();
+		const currentHandler = handlerManager.getHandlerForCurrentSite();
+
+		if (currentHandler) {
+			const sitePrompt = getSiteSpecificPrompt(currentHandler);
+			// Create or update site-specific prompt UI
+			const container = document.getElementById(
+				"siteSpecificPromptsContainer"
+			);
+
+			if (container) {
+				const existingSitePrompt = container.querySelector(
+					`[data-site="${currentSite}"]`
+				);
+
+				if (sitePrompt && sitePrompt.length > 0) {
+					if (existingSitePrompt) {
+						// Update existing prompt
+						existingSitePrompt.querySelector(
+							".prompt-text"
+						).textContent = sitePrompt;
+					} else {
+						// Create new prompt element
+						const sitePromptEl = document.createElement("div");
+						sitePromptEl.className = "site-prompt";
+						sitePromptEl.dataset.site = currentSite;
+
+						const siteName = document.createElement("strong");
+						siteName.textContent =
+							getSiteDisplayName(currentSite) + ":";
+
+						const promptText = document.createElement("div");
+						promptText.className = "prompt-text";
+						promptText.textContent = sitePrompt;
+
+						sitePromptEl.appendChild(siteName);
+						sitePromptEl.appendChild(promptText);
+						container.appendChild(sitePromptEl);
+					}
+				}
+			}
+		}
+	}
+
+	// Helper function to get a display name for a site
+	function getSiteDisplayName(siteIdentifier) {
+		const siteMappings = {
+			ranobes: "Ranobes",
+			fanfiction: "FanFiction.net",
+			// Add more mappings as needed
+		};
+
+		// Extract domain from identifier if it's a full URL
+		let domain = siteIdentifier;
+		if (domain.includes(".")) {
+			domain = domain.split(".")[0].toLowerCase();
+		}
+
+		return (
+			siteMappings[domain] ||
+			domain.charAt(0).toUpperCase() + domain.slice(1)
+		);
+	}
+
+	// Function to load site-specific prompts
+	async function loadSiteHandlerPrompts() {
+		try {
+			// Get active tab
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (!tabs || tabs.length === 0) {
+				console.log("No active tab found");
+				return;
+			}
+
+			// Try to send message to content script
+			try {
+				// Send message to get site handler info
+				const response = await browser.tabs.sendMessage(tabs[0].id, {
+					action: "getSiteHandlerInfo",
+				});
+
+				// Check if we got a valid response with a handler
+				if (response && response.success && response.hasHandler) {
+					console.log("Found site handler:", response.siteIdentifier);
+
+					// Update the site-specific prompts container
+					const container = document.getElementById(
+						"siteSpecificPromptsContainer"
+					);
+					const noPromptsElement =
+						document.getElementById("noSitePrompts");
+
+					if (container) {
+						// Hide the "no prompts" message
+						if (noPromptsElement) {
+							noPromptsElement.style.display = "none";
+						}
+
+						// Add or update the site-specific prompt
+						let sitePromptElement = container.querySelector(
+							`[data-site="${response.siteIdentifier}"]`
+						);
+
+						if (!sitePromptElement) {
+							// Create new site prompt element from template
+							const template = document.querySelector(
+								".site-prompt-template"
+							);
+							if (template) {
+								// Clone the template
+								sitePromptElement = template
+									.querySelector(".site-prompt-item")
+									.cloneNode(true);
+								sitePromptElement.setAttribute(
+									"data-site",
+									response.siteIdentifier
+								);
+
+								// Set site name
+								const siteNameElement =
+									sitePromptElement.querySelector(
+										".site-name"
+									);
+								if (siteNameElement) {
+									siteNameElement.textContent =
+										response.siteIdentifier;
+								}
+
+								// Set prompt content
+								const textarea =
+									sitePromptElement.querySelector(
+										".site-prompt-content"
+									);
+								if (textarea) {
+									textarea.value =
+										response.siteSpecificPrompt ||
+										response.defaultPrompt ||
+										"";
+								}
+
+								// Add remove button functionality
+								const removeButton =
+									sitePromptElement.querySelector(
+										".remove-site-prompt"
+									);
+								if (removeButton) {
+									removeButton.addEventListener(
+										"click",
+										function () {
+											sitePromptElement.remove();
+											if (
+												container.querySelectorAll(
+													".site-prompt-item"
+												).length === 0
+											) {
+												if (noPromptsElement) {
+													noPromptsElement.style.display =
+														"block";
+												}
+											}
+										}
+									);
+								}
+
+								container.appendChild(sitePromptElement);
+							}
+						} else {
+							// Update existing site prompt
+							const textarea = sitePromptElement.querySelector(
+								".site-prompt-content"
+							);
+							if (textarea) {
+								textarea.value =
+									response.siteSpecificPrompt ||
+									response.defaultPrompt ||
+									"";
+							}
+						}
+					}
+				} else {
+					console.log("No site handler found for current page");
+				}
+			} catch (error) {
+				console.log("Error communicating with content script:", error);
+				// This might happen if the content script isn't loaded on this page
+				// Load any saved site-specific prompts instead
+				loadSavedSitePrompts();
+			}
+		} catch (error) {
+			console.error("Error loading site handler prompts:", error);
+		}
+	}
+
+	// Load saved site-specific prompts from localStorage
+	function loadSavedSitePrompts() {
+		try {
+			const savedPrompts = localStorage.getItem("siteSpecificPrompts");
+			if (!savedPrompts) return;
+
+			const promptsObj = JSON.parse(savedPrompts);
+			const container = document.getElementById(
+				"siteSpecificPromptsContainer"
+			);
+			const noPromptsElement = document.getElementById("noSitePrompts");
+
+			if (container && Object.keys(promptsObj).length > 0) {
+				// Hide the "no prompts" message
+				if (noPromptsElement) {
+					noPromptsElement.style.display = "none";
+				}
+
+				// Clear existing prompts
+				const existingPrompts =
+					container.querySelectorAll(".site-prompt-item");
+				existingPrompts.forEach((item) => {
+					if (!item.closest(".site-prompt-template")) {
+						item.remove();
+					}
+				});
+
+				// Add each saved prompt
+				Object.entries(promptsObj).forEach(([site, prompt]) => {
+					const template = document.querySelector(
+						".site-prompt-template"
+					);
+					if (template) {
+						// Clone the template
+						const promptItem = template
+							.querySelector(".site-prompt-item")
+							.cloneNode(true);
+
+						promptItem.setAttribute("data-site", site);
+
+						// Set site name
+						const siteNameElement =
+							promptItem.querySelector(".site-name");
+						if (siteNameElement) {
+							siteNameElement.textContent = site;
+						}
+
+						// Set prompt content
+						const textarea = promptItem.querySelector(
+							".site-prompt-content"
+						);
+						if (textarea) {
+							textarea.value = prompt;
+						}
+
+						// Add remove button functionality
+						const removeButton = promptItem.querySelector(
+							".remove-site-prompt"
+						);
+						if (removeButton) {
+							removeButton.addEventListener("click", function () {
+								promptItem.remove();
+								if (
+									container.querySelectorAll(
+										".site-prompt-item"
+									).length === 0
+								) {
+									if (noPromptsElement) {
+										noPromptsElement.style.display =
+											"block";
+									}
+								}
+							});
+						}
+
+						container.appendChild(promptItem);
+					}
+				});
+			}
+		} catch (error) {
+			console.error("Error loading saved site prompts:", error);
+		}
+	}
+
+	// Add site prompt button functionality
+	document
+		.getElementById("addSitePrompt")
+		.addEventListener("click", function () {
+			const container = document.getElementById(
+				"siteSpecificPromptsContainer"
+			);
+			const noPromptsElement = document.getElementById("noSitePrompts");
+			const template = document.querySelector(".site-prompt-template");
+
+			if (container && template) {
+				// Hide the "no prompts" message
+				if (noPromptsElement) {
+					noPromptsElement.style.display = "none";
+				}
+
+				// Clone the template
+				const newPrompt = template
+					.querySelector(".site-prompt-item")
+					.cloneNode(true);
+
+				// Make site name editable
+				const siteNameInput = newPrompt.querySelector(".site-name");
+				if (siteNameInput) {
+					siteNameInput.contentEditable = "true";
+					siteNameInput.focus();
+				}
+
+				// Add remove button functionality
+				const removeButton = newPrompt.querySelector(
+					".remove-site-prompt"
+				);
+				if (removeButton) {
+					removeButton.addEventListener("click", function () {
+						newPrompt.remove();
+						if (
+							container.querySelectorAll(".site-prompt-item")
+								.length === 0
+						) {
+							if (noPromptsElement) {
+								noPromptsElement.style.display = "block";
+							}
+						}
+					});
+				}
+
+				container.appendChild(newPrompt);
+			}
+		});
+
+	// Modify the savePrompts function to include site-specific prompts
+	document
+		.getElementById("savePrompts")
+		.addEventListener("click", function () {
+			// Save enhancement prompt
+			const promptTemplate =
+				document.getElementById("promptTemplate").value;
+			localStorage.setItem("geminiPromptTemplate", promptTemplate);
+
+			// Save summary prompt
+			const summaryPrompt =
+				document.getElementById("summaryPrompt").value;
+			localStorage.setItem("geminiSummaryPrompt", summaryPrompt);
+
+			// Save permanent prompt
+			const permanentPrompt =
+				document.getElementById("permanentPrompt").value;
+			localStorage.setItem("permanentPrompt", permanentPrompt);
+
+			// Save site-specific prompts
+			saveSiteHandlerPrompts();
+
+			showStatus("Prompts saved successfully!", "success");
+
+			// Notify content script about updated prompts
+			browser.tabs
+				.query({ active: true, currentWindow: true })
+				.then((tabs) => {
+					if (tabs[0]) {
+						browser.tabs.sendMessage(tabs[0].id, {
+							action: "settingsUpdated",
+						});
+					}
+				});
+		});
+
 	// Log that the popup is initialized
-	console.log("Ranobe Gemini popup initialized");
+	console.log("RanobeGemini popup initialized");
+
+	// Load site-specific prompts
+	loadSiteHandlerPrompts();
+
+	// Add tab change listener to update prompts when switching to the prompts tab
+	document.querySelectorAll(".tab-btn").forEach(function (button) {
+		button.addEventListener("click", function () {
+			if (button.getAttribute("data-tab") === "prompts") {
+				// Reload site-specific prompts when prompts tab is selected
+				loadSiteHandlerPrompts();
+			}
+		});
+	});
 });

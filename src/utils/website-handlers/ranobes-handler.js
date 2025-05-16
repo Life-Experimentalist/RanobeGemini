@@ -17,43 +17,73 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		};
 	}
 
+	// Return true if this handler can handle the current website
 	canHandle() {
-		return window.location.hostname.includes("ranobes");
+		return (
+			window.location.hostname.includes("ranobes.net") ||
+			window.location.hostname.includes("ranobes.com")
+		);
 	}
 
-	findContentArea() {
-		// Try each content selector
+	// Check if current page is a chapter page (not a listing/index page)
+	isChapterPage() {
+		// Check if URL contains chapter indicators
+		if (
+			window.location.pathname.includes("/chapter-") ||
+			window.location.pathname.includes("/read-")
+		) {
+			return true;
+		}
+
+		// Check if page has content elements typical for chapter pages
 		for (const selector of this.selectors.content) {
 			const element = document.querySelector(selector);
-			if (element) {
-				console.log(
-					`Ranobes: Content area found using selector: ${selector}`
-				);
-				return element;
+			// Content element exists and has substantial text (not just a listing)
+			if (element && element.innerText.trim().length > 1000) {
+				return true;
 			}
 		}
 
-		// Fallback method
-		const storyContainer = document.querySelector(".story");
-		if (storyContainer) {
-			console.log("Ranobes: Found story container via fallback method");
-			return storyContainer;
-		}
-
-		return null;
-	}
-
-	extractTitle() {
-		// Try each title selector
+		// Check if page has title elements typical for chapter pages
 		for (const selector of this.selectors.title) {
 			const titleElement = document.querySelector(selector);
 			if (titleElement && titleElement.innerText.trim()) {
-				return titleElement.innerText.trim();
+				// Check if the title indicates a chapter
+				const titleText = titleElement.innerText.toLowerCase();
+				if (
+					titleText.includes("chapter") ||
+					titleText.includes("volume")
+				) {
+					return true;
+				}
 			}
 		}
 
-		// Fallback to document title
-		return document.title || "Unknown Title";
+		// Page doesn't match chapter page criteria
+		return false;
+	}
+
+	// Find the content area on Ranobes
+	findContentArea() {
+		// Look for the main content element
+		const contentElement = document.querySelector(".text-chapter");
+		if (contentElement) {
+			return contentElement;
+		}
+
+		// Fallback to the base implementation
+		return super.findContentArea();
+	}
+
+	extractTitle() {
+		// Try to find the title from the heading
+		const heading = document.querySelector("h1.title");
+		if (heading) {
+			return heading.textContent.trim();
+		}
+
+		// Fallback to the default title extraction (page title)
+		return document.title;
 	}
 
 	extractContent() {
@@ -128,31 +158,84 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		};
 	}
 
+	// Get chapter navigation info (previous, next, current chapter number)
 	getChapterNavigation() {
-		// Try to find previous and next chapter links
-		const prevLink = document.querySelector(
-			'.chapter-nav a.prev, a[rel="prev"]'
-		);
-		const nextLink = document.querySelector(
-			'.chapter-nav a.next, a[rel="next"]'
-		);
+		try {
+			// Try to find current chapter number
+			const breadcrumbs = document.querySelector(".options-left");
+			if (breadcrumbs) {
+				const chapterText = breadcrumbs.textContent;
+				const chapterMatch = chapterText.match(/Chapter (\d+)/i);
 
-		// Try to determine current chapter from URL or breadcrumbs
-		let currentChapter = 1;
-		let totalChapters = 1;
+				// Try to find navigation links
+				const prevLink = document.querySelector(".prev-chap");
+				const nextLink = document.querySelector(".next-chap");
 
-		// Attempt to extract chapter number from URL
-		const chapterMatch = window.location.pathname.match(/chapter-(\d+)/i);
-		if (chapterMatch && chapterMatch[1]) {
-			currentChapter = parseInt(chapterMatch[1], 10);
+				if (chapterMatch) {
+					const currentChapter = parseInt(chapterMatch[1], 10);
+					return {
+						hasPrevious: prevLink !== null,
+						hasNext: nextLink !== null,
+						currentChapter: currentChapter,
+						totalChapters: 0, // Total unknown
+					};
+				}
+			}
+		} catch (error) {
+			console.error("Error getting chapter navigation:", error);
 		}
 
-		return {
-			hasPrevious: !!prevLink,
-			hasNext: !!nextLink,
-			currentChapter,
-			totalChapters,
-		};
+		// Fallback to default
+		return super.getChapterNavigation();
+	}
+
+	// Get ideal insertion point for UI controls
+	getUIInsertionPoint(contentArea) {
+		// Look for a better insertion point - we want to insert before the content
+		// but after the title and possibly other elements
+		const textChapter = document.querySelector(".text-chapter");
+		if (textChapter) {
+			return {
+				element: textChapter,
+				position: "before",
+			};
+		}
+
+		// Fallback to default behavior
+		return super.getUIInsertionPoint(contentArea);
+	}
+
+	// Format content after enhancement
+	formatAfterEnhancement(contentArea) {
+		// Apply site-specific styling for Ranobes
+		if (contentArea) {
+			// Use the site's own style for paragraphs
+			contentArea.querySelectorAll("p").forEach((p) => {
+				p.style.marginBottom = "1em";
+				p.style.lineHeight = "1.7";
+				p.style.color = "#bab9a0";
+			});
+		}
+	}
+
+	// Implement site-specific default prompt for Ranobes
+	getDefaultPrompt() {
+		return "This is a machine-translated web novel from a Russian novel site. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Russian and Chinese names should be properly transliterated.";
+	}
+
+	// Get a readable site name for the UI
+	getSiteIdentifier() {
+		return "Ranobes.net";
+	}
+
+	// Get site-specific prompt for Ranobes
+	getSiteSpecificPrompt() {
+		return (
+			"This is a machine-translated web novel from a Russian novel site. " +
+			"Please improve the translation while maintaining the original meaning and flow. " +
+			"Keep any special formatting like section breaks. " +
+			"Russian and Chinese names should be properly transliterated."
+		);
 	}
 }
 

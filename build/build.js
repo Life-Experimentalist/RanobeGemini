@@ -54,12 +54,12 @@ function copyFilesToDist() {
 		},
 		{ from: path.join(srcDir, "icons"), to: path.join(distDir, "icons") },
 		{
-			from: path.join(srcDir, "popup", "simple-popup.html"),
-			to: path.join(distDir, "popup", "simple-popup.html"),
+			from: path.join(srcDir, "popup", "popup.html"),
+			to: path.join(distDir, "popup", "popup.html"),
 		},
 		{
-			from: path.join(srcDir, "popup", "simple-popup.js"),
-			to: path.join(distDir, "popup", "simple-popup.js"),
+			from: path.join(srcDir, "popup", "popup.js"),
+			to: path.join(distDir, "popup", "popup.js"),
 		},
 		{
 			from: path.join(srcDir, "popup", "popup.js"),
