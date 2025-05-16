@@ -4,7 +4,605 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RanobeGemini</title>
-		<link rel="stylesheet" href="simple-popup.css">
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				min-width: 320px;
+				width: 100%;
+				padding: 15px;
+				margin: 0;
+				background-color: #f5f5f5;
+				overflow-y: auto;
+				box-sizing: border-box;
+				resize: both;
+				position: relative;
+				min-height: 400px;
+			}
+			.container {
+				max-width: 800px;
+				margin: 0 auto;
+				overflow: visible;
+			}
+			.header {
+				display: flex;
+				align-items: center;
+				margin-bottom: 15px;
+			}
+			.header img {
+				width: 32px;
+				height: 32px;
+				margin-right: 10px;
+			}
+			h1 {
+				font-size: 18px;
+				margin: 0;
+				color: #4285f4;
+			}
+			.tabs {
+				display: flex;
+				margin-bottom: 10px;
+				border-bottom: 1px solid #ddd;
+			}
+			.tab-btn {
+				background: none;
+				border: none;
+				padding: 8px 12px;
+				cursor: pointer;
+				font-size: 14px;
+				color: #666;
+			}
+			.tab-btn.active {
+				background-color: #4285f4;
+				color: white;
+				border-radius: 4px 4px 0 0;
+			}
+			.tab-content {
+				display: none;
+				padding: 5px 0;
+			}
+			.tab-content.active {
+				display: block;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+			}
+			input[type="text"],
+			input[type="password"],
+			select,
+			textarea {
+				width: 100%;
+				padding: 8px;
+				box-sizing: border-box;
+				margin-bottom: 12px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+			}
+			.setting {
+				margin-bottom: 12px;
+			}
+			textarea {
+				height: 100px;
+				resize: vertical;
+			}
+			button {
+				background-color: #4285f4;
+				color: white;
+				border: none;
+				padding: 8px 15px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-weight: bold;
+			}
+			button:hover {
+				background-color: #3367d6;
+			}
+			.button-group {
+				display: flex;
+				justify-content: space-between;
+				margin-bottom: 15px;
+			}
+			#status {
+				margin-top: 15px;
+				padding: 8px;
+				border-radius: 4px;
+				font-size: 14px;
+			}
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+			}
+			.error {
+				background-color: #f8d7da;
+				color: #721c24;
+			}
+			.info {
+				background-color: #e8f0fe;
+				color: #1a73e8;
+			}
+			.help-text {
+				margin-top: 15px;
+				font-size: 12px;
+				color: #666;
+			}
+			.actions {
+				margin-top: 15px;
+				border-top: 1px solid #ddd;
+				padding-top: 15px;
+			}
+			.light-mode-icon {
+				display: inline-block;
+			}
+			.dark-mode-icon {
+				display: none;
+			}
+			/* Resizable area styles */
+			.resize-handle {
+				position: absolute;
+				bottom: 0;
+				right: 0;
+				width: 20px;
+				height: 20px;
+				cursor: nwse-resize;
+				background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path d="M8 2v6H2V2h6m2-2H0v10h10V0z" fill="rgba(0, 0, 0, 0.3)"/></svg>');
+				background-repeat: no-repeat;
+				background-position: center;
+				padding: 3px;
+				z-index: 1000;
+				opacity: 0.7;
+				transition: opacity 0.2s;
+			}
+			.resize-handle:hover {
+				opacity: 1;
+			}
+			/* Custom scrollbar for better resize experience */
+			::-webkit-scrollbar {
+				width: 8px;
+				height: 8px;
+			}
+			::-webkit-scrollbar-track {
+				background: rgba(0, 0, 0, 0.05);
+			}
+			::-webkit-scrollbar-thumb {
+				background: rgba(0, 0, 0, 0.2);
+				border-radius: 4px;
+			}
+			/* Size indicator that appears during resize */
+			.size-indicator {
+				position: fixed;
+				bottom: 25px;
+				right: 25px;
+				background: rgba(0, 0, 0, 0.7);
+				color: white;
+				padding: 4px 8px;
+				border-radius: 4px;
+				font-size: 11px;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.3s;
+				z-index: 1001;
+			}
+			.size-indicator.visible {
+				opacity: 1;
+			}
+			@media (prefers-color-scheme: dark) {
+				body {
+					background-color: #292a2d;
+					color: #e8eaed;
+				}
+				input[type="text"],
+				input[type="password"],
+				select,
+				textarea {
+					background-color: #202124;
+					color: #e8eaed;
+					border-color: #5f6368;
+				}
+				.help-text {
+					color: #9aa0a6;
+				}
+				.tab-btn {
+					color: #e8eaed;
+				}
+				.light-mode-icon {
+					display: none;
+				}
+				.dark-mode-icon {
+					display: inline-block;
+				}
+				.icon-button {
+					background-color: #3c4043;
+					color: #e8eaed;
+					border-color: #5f6368;
+				}
+				.icon-button:hover {
+					background-color: #5f6368;
+				}
+				.resize-handle {
+					background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path d="M8 2v6H2V2h6m2-2H0v10h10V0z" fill="rgba(255, 255, 255, 0.3)"/></svg>');
+				}
+				::-webkit-scrollbar-track {
+					background: rgba(255, 255, 255, 0.05);
+				}
+				::-webkit-scrollbar-thumb {
+					background: rgba(255, 255, 255, 0.2);
+				}
+				.size-indicator {
+					background: rgba(255, 255, 255, 0.2);
+					color: #e8eaed;
+					}
+				.slider-container .slider::-webkit-slider-thumb {
+					background: #8ab4f8;
+				}
+				.slider-container .slider::-moz-range-thumb {
+					background: #8ab4f8;
+				}
+			}
+			.model-select-container {
+				display: flex;
+				gap: 5px;
+			}
+			.model-select-container select {
+				flex-grow: 1;
+			}
+			.icon-button {
+				padding: 4px 8px;
+				font-size: 14px;
+				background-color: #f0f0f0;
+				color: #333;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+			}
+			.icon-button:hover {
+				background-color: #e0e0e0;
+				border-color: #bbb;
+			}
+			/* FAQ styling */
+			.faq-item {
+				margin-bottom: 15px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				overflow: hidden;
+			}
+
+			.faq-question {
+				padding: 10px 15px;
+				background-color: #f0f0f0;
+				font-weight: bold;
+				cursor: pointer;
+				position: relative;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.faq-question:after {
+				content: "+";
+				font-size: 18px;
+				transition: transform 0.3s;
+			}
+
+			.faq-question.active:after {
+				content: "−";
+				transform: rotate(0deg);
+			}
+
+			.faq-answer {
+				padding: 0;
+				max-height: 0;
+				overflow: hidden;
+				transition: all 0.3s ease;
+				background-color: #ffffff;
+			}
+
+			.faq-answer.active {
+				padding: 15px;
+				max-height: 500px;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				.faq-question {
+					background-color: #3c4043;
+					color: #e8eaed;
+				}
+
+				.faq-answer {
+					background-color: #292a2d;
+				}
+			}
+
+			/* About page styling */
+			.about-section {
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid #eaeaea;
+			}
+
+			.about-section:last-child {
+				border-bottom: none;
+			}
+
+			.about-section h4 {
+				color: #4285f4;
+				margin-bottom: 10px;
+				font-size: 16px;
+			}
+
+			.about-section ul, .about-section ol {
+				padding-left: 20px;
+				margin-top: 5px;
+				margin-bottom: 10px;
+			}
+
+			.about-section li {
+				margin-bottom: 5px;
+				line-height: 1.5;
+			}
+
+			.about-section a {
+				color: #4285f4;
+				text-decoration: none;
+			}
+
+			.about-section a:hover {
+				text-decoration: underline;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				.about-section {
+					border-color: #3c4043;
+				}
+
+				.about-section a {
+					color: #8ab4f8;
+				}
+
+				.about-section h4 {
+					color: #8ab4f8;
+				}
+			}
+
+			/* Slider styling */
+			.slider-container {
+				width: 100%;
+				margin-bottom: 15px;
+			}
+
+			.slider-container label {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 8px;
+			}
+
+			.slider-value {
+				font-size: 14px;
+				color: #666;
+				font-weight: normal;
+			}
+
+			.slider {
+				-webkit-appearance: none;
+				appearance: none;
+				width: 100%;
+				height: 8px;
+				border-radius: 5px;
+				background: #d3d3d3;
+				outline: none;
+				margin: 8px 0;
+			}
+
+			.slider::-webkit-slider-thumb {
+				-webkit-appearance: none;
+				appearance: none;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background: #4285f4;
+				cursor: pointer;
+			}
+
+			.slider::-moz-range-thumb {
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background: #4285f4;
+				cursor: pointer;
+			}
+
+			.description {
+				font-size: 12px;
+				color: #666;
+				margin-top: 5px;
+			}
+
+			.advanced-settings {
+				margin-top: 15px;
+				border-top: 1px solid #ddd;
+				padding-top: 10px;
+			}
+
+			.advanced-toggle {
+				background: none;
+				border: none;
+				color: #4285f4;
+				cursor: pointer;
+				font-weight: bold;
+				padding: 5px;
+				display: flex;
+				align-items: center;
+			}
+
+			.advanced-toggle:after {
+				content: "▼";
+				font-size: 10px;
+				margin-left: 5px;
+				transition: transform 0.3s;
+			}
+
+			.advanced-toggle.active:after {
+				transform: rotate(180deg);
+			}
+
+			.advanced-content {
+				display: none;
+				padding: 10px;
+				background-color: #f9f9f9;
+				border-radius: 4px;
+				margin-top: 10px;
+			}
+
+			.advanced-content.active {
+				display: block;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				.slider-value {
+					color: #e8eaed;
+				}
+				.slider {
+					background: #3c4043;
+				}
+				.description {
+					color: #9aa0a6;
+				}
+				.advanced-content {
+					background-color: #202124;
+				}
+			}
+
+			/* Novels tab styling */
+			.novels-list {
+				max-height: 500px;
+				overflow-y: auto;
+			}
+			.novel-item {
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				padding: 12px;
+				margin-bottom: 12px;
+				background-color: #fff;
+			}
+			.novel-title {
+				font-size: 16px;
+				font-weight: bold;
+				margin-bottom: 8px;
+				color: #4285f4;
+			}
+			.novel-info {
+				font-size: 13px;
+				margin-bottom: 8px;
+				color: #666;
+			}
+			.novel-actions {
+				display: flex;
+				gap: 8px;
+				margin-top: 10px;
+			}
+			.novel-source {
+				display: inline-block;
+				padding: 2px 6px;
+				background-color: #e8f0fe;
+				border-radius: 10px;
+				font-size: 12px;
+				color: #1967d2;
+				margin-right: 8px;
+			}
+			.novel-meta {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 5px;
+			}
+			.novel-last-read {
+				font-size: 12px;
+				color: #5f6368;
+			}
+			.no-novels {
+				padding: 30px;
+				text-align: center;
+				color: #666;
+				font-style: italic;
+			}
+			.tab-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 15px;
+			}
+			.novel-chapters-toggle {
+				background: none;
+				border: none;
+				color: #4285f4;
+				font-size: 14px;
+				cursor: pointer;
+				padding: 2px 4px;
+			}
+			.novel-chapters {
+				margin-top: 8px;
+				max-height: 0;
+				overflow: hidden;
+				transition: max-height 0.3s ease;
+				background-color: #f9f9f9;
+				border-radius: 4px;
+			}
+			.novel-chapters.active {
+				max-height: 200px;
+				padding: 8px;
+				margin-top: 8px;
+				overflow-y: auto;
+			}
+			.chapter-item {
+				padding: 4px 8px;
+				border-bottom: 1px solid #eee;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+			.chapter-item:last-child {
+				border-bottom: none;
+			}
+			.chapter-link {
+				color: #1a73e8;
+				text-decoration: none;
+				font-size: 13px;
+				flex-grow: 1;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.chapter-date {
+				font-size: 12px;
+				color: #5f6368;
+				margin-left: 8px;
+			}
+			@media (prefers-color-scheme: dark) {
+				.novel-item {
+					background-color: #292a2d;
+					border-color: #3c4043;
+				}
+				.novel-source {
+					background-color: #3c4043;
+					color: #8ab4f8;
+				}
+				.novel-chapters {
+					background-color: #202124;
+				}
+				.chapter-item {
+					border-color: #3c4043;
+				}
+				.chapter-link {
+					color: #8ab4f8;
+				}
+				.novel-last-read, .chapter-date {
+					color: #9aa0a6;
+				}
+				.no-novels {
+					color: #9aa0a6;
+				}
+			}
+		</style>
 	</head>
 	<body>
 		<div class="container">

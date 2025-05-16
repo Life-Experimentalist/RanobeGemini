@@ -13,9 +13,6 @@ const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the f
 6. Maintain the original plot points, character development, and story elements exactly
 7. Streamline overly verbose sections while preserving important details
 8. Ensure proper transitioning between scenes and ideas
-9. Add bold section headings at scene changes, POV shifts, or topic transitions. If the original text already has section headings, incorporate them seamlessly and consistently
-10. Format game-like status windows, skill descriptions, or similar content into HTML boxes with proper line breaks to preserve readability and structure
-11. Remove any advertising code snippets or irrelevant promotional content
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
 

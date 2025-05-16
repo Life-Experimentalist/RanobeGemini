@@ -2,7 +2,7 @@
 
 ![Ranobe Gemini Logo](src/icons/logo-light-96.png)
 
-A Firefox browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, currently supporting ranobes.top and fanfiction.net.
+A Firefox browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, currently supporting ranobes.net and fanfiction.net.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -10,7 +10,7 @@ A Firefox browser extension that enhances web novel translations using Google's 
 
 *   **AI-Powered Enhancement**: Improves grammar, flow, and readability of translated text using Gemini AI.
 *   **Chapter Summarization**: Generates concise summaries of chapters, highlighting key plot points.
-*   **Website Support**: Currently works on `ranobes.top` and `fanfiction.net`.
+*   **Website Support**: Currently works on `ranobes.net` and `fanfiction.net`.
 *   **Customizable Prompts**: Tailor the enhancement, summarization, and permanent prompts to control AI output.
 *   **Large Chapter Handling**: Automatically splits long chapters to avoid API limits.
 *   **Multiple Gemini Models**: Choose the best Gemini model for your needs (e.g., Flash for speed, Pro for quality).
@@ -31,7 +31,7 @@ A Firefox browser extension that enhances web novel translations using Google's 
 ## Usage
 
 1.  **Configure API Key**: Click the Ranobe Gemini icon in your Firefox toolbar. Go to the "Settings" tab and enter your Gemini API key. You can get a free key from [Google AI Studio](https://makersuite.google.com/app/apikey).
-2.  **Navigate**: Go to a chapter page on a supported website (`ranobes.top` or `fanfiction.net`).
+2.  **Navigate**: Go to a chapter page on a supported website (`ranobes.net` or `fanfiction.net`).
 3.  **Enhance/Summarize**: Click the "Enhance with Gemini" or "Summarize Chapter" buttons that appear near the chapter content.
 4.  **View Results**: Wait for the processing to complete. The enhanced text will replace the original, or the summary will appear.
 5.  **Restore**: Use the "Restore Original" button if needed.

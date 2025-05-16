@@ -947,13 +947,7 @@ async function handleEnhanceClick() {
 		const originalText = button.textContent;
 		button.textContent = "Processing...";
 		button.disabled = true;
-		showStatusMessage("Processing content with Gemini...", "info");
-		console.log("Sending content to Gemini for processing...");
-		// Show status message
-		showStatusMessage(
-			"Sending content to Gemini for processing...",
-			"info"
-		);
+
 		// First ping the background script to ensure it's alive
 		let pingResult;
 		try {
@@ -1528,18 +1522,9 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 		// Save the scroll position
 		const scrollPosition = window.scrollY;
 
-		// Save original word count for display
-		const originalContent =
-			contentArea.innerText || contentArea.textContent;
-		const originalWordCount = countWords(originalContent);
-
 		// Replace the content
 		console.log("Replacing content area with Gemini-enhanced version...");
 		contentArea.innerHTML = sanitizeHTML(enhancedContent);
-
-		// Calculate new word count
-		const newContent = contentArea.innerText || contentArea.textContent;
-		const newWordCount = countWords(newContent);
 
 		// Apply site-specific formatting if needed
 		if (
@@ -1552,66 +1537,19 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 			applyDefaultFormatting(contentArea);
 		}
 
-		// Add word count display at the top of the content
-		addWordCountDisplay(contentArea, originalWordCount, newWordCount);
-
 		// Restore scroll position
 		window.scrollTo(0, scrollPosition);
+
+		// Don't show a duplicate success message here as it's already shown
+		// after processing in the handleEnhanceClick function
+		// Remove or comment out the success message to prevent duplication:
+		// showStatusMessage("Successfully enhanced with Gemini!");
 
 		return true;
 	} catch (error) {
 		console.error("Error replacing content:", error);
 		showStatusMessage(`Error replacing content: ${error.message}`, "error");
 		return false;
-	}
-}
-
-// Function to count words in text
-function countWords(text) {
-	if (!text) return 0;
-	// Remove extra whitespace and count words
-	return text
-		.trim()
-		.split(/\s+/)
-		.filter((word) => word.length > 0).length;
-}
-
-// Function to add word count display to the content
-function addWordCountDisplay(contentArea, originalCount, newCount) {
-	// Create word count container
-	const wordCountContainer = document.createElement("div");
-	wordCountContainer.className = "gemini-word-count";
-	wordCountContainer.style.cssText = `
-		margin: 10px 0 15px 0;
-		color: #bab9a0;
-		font-size: 14px;
-		text-align: left;
-	`;
-
-	// Calculate percentage change
-	const percentChange = (
-		((newCount - originalCount) / originalCount) *
-		100
-	).toFixed(1);
-	const changeText =
-		percentChange >= 0
-			? `+${percentChange}% increase`
-			: `${percentChange}% decrease`;
-
-	wordCountContainer.innerHTML = `
-		<strong>Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
-	`;
-
-	// Insert right after the controls container
-	const controlsContainer = document.getElementById("gemini-controls");
-	if (controlsContainer) {
-		controlsContainer.parentNode.insertBefore(
-			wordCountContainer,
-			controlsContainer.nextSibling
-		);
-	} else {
-		// Fallback: insert at the top of the content area
-		contentArea.insertBefore(wordCountContainer, contentArea.firstChild);
 	}
 }
 

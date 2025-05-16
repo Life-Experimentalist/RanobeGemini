@@ -2,7 +2,27 @@
 
 All notable changes to the Ranobe Gemini extension will be documented in this file.
 
-## [2.2.0] - 2025-05-25
+## [2.2.1] - 2025-04-26
+
+### Summary
+Version 2.2.1 addresses the domain transition from ranobes.top to ranobes.net, ensuring continued compatibility while maintaining support for all known Ranobes domains. This update clarifies domain documentation and improves site selectors to work reliably across all supported domains.
+
+### Added
+- Enhanced domain handling to prioritize ranobes.net as the primary domain
+- Improved debugging information for domain detection
+- Expanded domain compatibility verification for all known Ranobes domains
+
+### Changed
+- Updated documentation to reference ranobes.net as the primary domain instead of ranobes.top
+- Refactored content selectors for better cross-domain compatibility
+- Enhanced domain detection logic for more reliable site recognition
+
+### Fixed
+- Selector issues affecting content identification on some Ranobes domains
+- Documentation references to deprecated domain names
+- UI references to specific domains in the interface
+
+## [2.2.0] - 2025-04-19
 
 ### Summary
 Version 2.2.0 delivers a significant user experience upgrade focusing on improved theme integration, responsive design, and streamlined API key handling. This update ensures the extension works seamlessly across both desktop and mobile devices while maintaining visual consistency with website themes and popular browser extensions like Dark Reader.

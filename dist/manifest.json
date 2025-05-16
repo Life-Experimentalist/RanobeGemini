@@ -1,7 +1,6 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.3.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {

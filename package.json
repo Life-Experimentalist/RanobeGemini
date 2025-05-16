@@ -1,7 +1,9 @@
 {
     "scripts": {
         "package": "node package-firefox.js",
-        "prepare": "npm run package"
+		"prepare": "npm run package",
+		"build": "node build/build.js && npx webpack --config webpack.config.js",
+		"update-version": "node build/build.js"
     },
     "devDependencies": {
         "archiver": "^5.3.2"
