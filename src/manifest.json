@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.4.0",
+	"version": "2.5.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -73,7 +73,8 @@
 	},
 	"background": {
 		"scripts": [
-			"background/background.js"
+			"background/background.js",
+			"background/"
 		],
 		"type": "module"
 	},
@@ -83,13 +84,6 @@
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.top/*",
-				"*://*.ranobes.org/*",
-				"*://*.ranobes.me/*",
-				"*://*.ranobes.to/*",
-				"*://*.ranobes.co/*",
-				"*://*.ranobes.cc/*",
-				"*://*.ranobes.ru/*",
-				"*://*.ranobes.io/*",
 				"*://*.fanfiction.net/*"
 			],
 			"js": [
@@ -99,6 +93,17 @@
 				"content/content.css"
 			],
 			"run_at": "document_idle"
+		},
+		{
+			"matches": [
+				"*://*/*"
+			],
+			"js": [
+				"content/content.js"
+			],
+			"css": [
+				"content/gemini-styles.css"
+			]
 		}
 	],
 	"web_accessible_resources": [
@@ -116,13 +121,6 @@
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.top/*",
-				"*://*.ranobes.org/*",
-				"*://*.ranobes.me/*",
-				"*://*.ranobes.to/*",
-				"*://*.ranobes.co/*",
-				"*://*.ranobes.cc/*",
-				"*://*.ranobes.ru/*",
-				"*://*.ranobes.io/*",
 				"*://*.fanfiction.net/*"
 			]
 		}

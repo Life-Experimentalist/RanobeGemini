@@ -1,0 +1,66 @@
+/* Game Stats Box styling */
+.game-stats-box {
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin: 15px 0;
+    font-family: monospace;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode styling for game stats box */
+@media (prefers-color-scheme: dark) {
+    .game-stats-box {
+        background-color: #2d2d2d;
+        border-color: #444;
+        color: #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* Rate limit warning banner */
+.ranobe-rate-limit-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* Continuation button */
+.ranobe-continue-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    margin: 10px 0;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.ranobe-continue-button:hover {
+    background-color: #0069d9;
+}
+
+/* Toggle original/enhanced button */
+.ranobe-toggle-button {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: 5px 0;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.ranobe-toggle-button:hover {
+    background-color: #5a6268;
+}

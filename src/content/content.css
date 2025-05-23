@@ -587,6 +587,94 @@ button.ranobes-gemini-btn:disabled {
 	color: #333;
 }
 
+/* Game stats box styling - used for RPG-style status windows */
+.game-stats-box {
+	font-family: monospace;
+	background-color: rgba(35, 35, 35, 0.9);
+	border: 1px solid rgba(85, 85, 85, 0.8);
+	border-radius: 4px;
+	padding: 12px 15px;
+	margin: 15px 0;
+	white-space: pre-wrap;
+	color: #d4d4d4;
+	font-size: 14px;
+	line-height: 1.5;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	position: relative;
+	overflow-x: auto;
+}
+
+/* Light mode variant for game stats box */
+@media (prefers-color-scheme: light) {
+	.game-stats-box {
+		background-color: #f0f0f0;
+		color: #333;
+		border: 1px solid #ccc;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+}
+
+/* Enhanced game stats box styling for better UX */
+.game-stats-box {
+	position: relative;
+	display: inline-block;
+	min-width: 300px;
+	width: auto;
+	margin: 20px auto;
+	font-family: 'Courier New', monospace;
+	background-color: rgba(35, 35, 35, 0.95);
+	border: 1px solid rgba(100, 100, 100, 0.8);
+	border-radius: 6px;
+	padding: 15px 18px;
+	white-space: pre-wrap;
+	color: #e8e8e8;
+	font-size: 14px;
+	line-height: 1.6;
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+	overflow-x: auto;
+}
+
+/* Additional styling for common RPG status elements inside game-stats-box */
+.game-stats-box strong,
+.game-stats-box b {
+	color: #8ab4f8;
+}
+
+/* Responsive styling for game stats box on mobile */
+@media screen and (max-width: 768px) {
+	.game-stats-box {
+		font-size: 12px;
+		padding: 12px;
+		margin: 15px 0;
+		max-width: 100%;
+	}
+}
+
+/* Site-specific dark mode support for game stats box */
+body.dark-theme .game-stats-box,
+.reading_fullwidth .game-stats-box,
+[data-theme="dark"] .game-stats-box,
+.dark-mode .game-stats-box,
+html[data-darkreader-mode] .game-stats-box {
+	background-color: rgba(30, 30, 30, 0.95);
+	color: #e8e8e8;
+	border-color: rgba(100, 100, 100, 0.8);
+}
+
+/* Light mode variant for game stats box with better styling */
+@media (prefers-color-scheme: light) {
+	.game-stats-box {
+		background-color: rgba(240, 240, 240, 0.95);
+		color: #333;
+		border: 1px solid #ccc;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.game-stats-box strong,
+	.game-stats-box b {
+		color: #1a73e8;
+	}
+}
 /* Mobile and responsive design adjustments */
 @media screen and (max-width: 768px) {
 
@@ -632,6 +720,14 @@ button.ranobes-gemini-btn:disabled {
 		margin-top: 8px;
 		width: 100%;
 	}
+/* Make game stats boxes responsive on small screens */
+.game-stats-box {
+	width: fit-content;
+	max-width: 100%;
+	overflow-x: auto;
+	padding: 10px;
+	font-size: 13px;
+}
 }
 
 /* Additional tweaks for very small screens */
@@ -647,4 +743,22 @@ button.ranobes-gemini-btn:disabled {
 	.extraction-message {
 		width: 95%;
 	}
+}
+/* Preserved images container styling */
+.preserved-images-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 10px;
+	margin: 20px 0;
+	padding: 10px;
+	background-color: rgba(0, 0, 0, 0.02);
+	border-radius: 5px;
+}
+
+.preserved-images-container img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 4px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

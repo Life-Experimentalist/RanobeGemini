@@ -99,6 +99,222 @@ async function verifyBackgroundConnection() {
 	}
 }
 
+// Function to identify and protect game stats boxes
+function preserveGameStatsBoxes(content) {
+    // Replace game stats boxes with placeholders to protect them
+    let preservedBoxes = [];
+
+    // Regex patterns for common game status box formats
+    const patterns = [
+        // Format with multiple status lines:
+        /(\[(?:Status|Attributes|Skills|Stats|Name|Level|HP|MP|SP|Mana|Energy|Class|Strength|Agility|Intelligence|Wisdom|Vitality|Luck|Fame|Title|Achievement)[\s\S]*?\][\s\S]*?(?=\n\n|\n\[|$))/gi,
+
+        // Format with brackets:
+        /(\[[\s\S]*?Name:[\s\S]*?Level:[\s\S]*?\])/gi,
+
+        // Format with asterisks or equals signs as borders:
+        /((?:\*{3,}|={3,})[\s\S]*?(?:Status|Stats|Attributes|Skills)[\s\S]*?(?:\*{3,}|={3,}))/gi,
+
+        // Format with just indentation:
+        /((?:^|\n)[ \t]+Status:[\s\S]*?(?:\n\n|$))/gi
+    ];
+
+    // Check for each pattern
+    let modifiedContent = content;
+
+    patterns.forEach(pattern => {
+        modifiedContent = modifiedContent.replace(pattern, (match) => {
+            const placeholder = `[GAME_STATS_BOX_${preservedBoxes.length}]`;
+            preservedBoxes.push(match);
+            return placeholder;
+        });
+    });
+
+    return {
+        modifiedContent,
+        preservedBoxes
+    };
+}
+
+// Function to restore game stats boxes after enhancement
+function restoreGameStatsBoxes(content, preservedBoxes) {
+    let restoredContent = content;
+
+    // Replace each placeholder with the original game stats box
+    preservedBoxes.forEach((box, index) => {
+        const placeholder = `[GAME_STATS_BOX_${index}]`;
+
+        // Get the number of lines to help with sizing
+        const lineCount = box.split('\n').length;
+        const longestLine = getLongestLineLength(box);
+
+        // Replace placeholder with a styled game stats box
+        restoredContent = restoredContent.replace(placeholder,
+            `<div class="game-stats-box" style="width: auto; min-width: ${Math.min(Math.max(longestLine * 8, 300), 800)}px;">${box}</div>`
+        );
+    });
+
+    return restoredContent;
+}
+
+// Helper function to get the length of the longest line in a text block
+function getLongestLineLength(text) {
+    if (!text) return 0;
+    const lines = text.split('\n');
+    let maxLength = 0;
+
+    lines.forEach(line => {
+        const lineLength = line.length;
+        if (lineLength > maxLength) {
+            maxLength = lineLength;
+        }
+    });
+
+    return maxLength;
+}
+
+// Function to preserve images and other HTML elements
+function preserveHtmlElements(content) {
+    const preservedElements = [];
+
+    // First preserve images with all attributes
+    let processedContent = content.replace(
+        /<img\s+[^>]*?src=['"]([^'"]*)['"](.*?)?>/gi,
+        (match) => {
+            const placeholder = `[PRESERVED_IMAGE_${preservedElements.length}]`;
+            preservedElements.push(match);
+            return placeholder;
+        }
+    );
+
+    // Then preserve figure elements with any nested images
+    processedContent = processedContent.replace(
+        /<figure\b[^>]*>[\s\S]*?<\/figure>/gi,
+        (match) => {
+            const placeholder = `[PRESERVED_FIGURE_${preservedElements.length}]`;
+            preservedElements.push(match);
+            return placeholder;
+        }
+    );
+
+    // Preserve other media elements and game stats boxes
+    processedContent = processedContent.replace(
+        /<(iframe|video|audio|source)\s+[^>]*>|<div class="game-stats-box">[\s\S]*?<\/div>/gi,
+        (match) => {
+            const placeholder = `[PRESERVED_ELEMENT_${preservedElements.length}]`;
+            preservedElements.push(match);
+            return placeholder;
+        }
+    );
+
+    console.log(`Preserved ${preservedElements.length} HTML elements (images, figures, and other elements)`);
+
+    return {
+        modifiedContent: processedContent,
+        preservedElements: preservedElements
+    };
+}
+
+// Function to restore preserved HTML elements
+function restoreHtmlElements(content, preservedElements) {
+    if (!preservedElements || preservedElements.length === 0) {
+        return content;
+    }
+
+    let restoredContent = content;
+
+    // Restore preserved elements
+    preservedElements.forEach((element, index) => {
+        // Restore images
+        restoredContent = restoredContent.replace(
+            new RegExp(`\\[PRESERVED_IMAGE_${index}\\]`, 'g'),
+            element
+        );
+
+        // Restore figures
+        restoredContent = restoredContent.replace(
+            new RegExp(`\\[PRESERVED_FIGURE_${index}\\]`, 'g'),
+            element
+        );
+
+        // Restore other elements
+        restoredContent = restoredContent.replace(
+            new RegExp(`\\[PRESERVED_ELEMENT_${index}\\]`, 'g'),
+            element
+        );
+    });
+
+    return restoredContent;
+}
+
+// Create an enhanced banner with word count comparison
+function createEnhancedBanner(originalContent, enhancedContent) {
+    // Calculate word counts
+    const originalWordCount = countWords(originalContent);
+    const enhancedWordCount = countWords(enhancedContent);
+
+    // Calculate percentage change
+    const wordDifference = enhancedWordCount - originalWordCount;
+    const percentChange = originalWordCount > 0
+        ? Math.round((wordDifference / originalWordCount) * 100)
+        : 0;
+
+    // Determine if it's an increase or decrease
+    const changeDirection = wordDifference >= 0 ? 'increase' : 'decrease';
+    const changeSymbol = wordDifference >= 0 ? '+' : '';
+    const changeClass = wordDifference >= 0 ? 'word-count-increase' : 'word-count-decrease';
+
+    const banner = document.createElement("div");
+    banner.className = "gemini-enhanced-banner";
+    banner.style.cssText = `
+        margin: 15px 0;
+        padding: 15px;
+        background-color: #f7f7f7;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    `;
+
+    // Support dark mode
+    if (document.querySelector('.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth') ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        banner.style.backgroundColor = '#2c2c2c';
+        banner.style.borderColor = '#444';
+        banner.style.color = '#e0e0e0';
+    }
+
+    banner.innerHTML = `
+        <div style="display: flex; flex-direction: column; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 5px;">✨</span>
+                    <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">Enhanced with Ranobe Gemini</span>
+                </div>
+                <button class="gemini-toggle-btn" style="padding: 6px 12px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Show Original</button>
+            </div>
+            <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
+                <span style="font-family: monospace;">
+                    Words: ${originalWordCount.toLocaleString()} → ${enhancedWordCount.toLocaleString()}
+                    <span style="color: ${wordDifference >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">
+                        (${changeSymbol}${wordDifference.toLocaleString()}, ${wordDifference >= 0 ? '' : '-'}${changeSymbol}${Math.abs(percentChange)}%)
+                    </span>
+                </span>
+            </div>
+        </div>
+    `;
+
+    return banner;
+}
+
+// Function to remove the original word count element
+function removeOriginalWordCount() {
+    const originalWordCount = document.querySelector(".gemini-word-count");
+    if (originalWordCount) {
+        console.log("Removing original word count display");
+        originalWordCount.parentNode.removeChild(originalWordCount);
+    }
+}
+
 // Initialize when DOM is fully loaded
 window.addEventListener("DOMContentLoaded", initializeWithDeviceDetection);
 window.addEventListener("load", initializeWithDeviceDetection); // Backup init in case DOMContentLoaded was missed
@@ -939,43 +1155,13 @@ async function summarizeLargeContentInParts(
 }
 
 // Handle click event for Enhance button
-async function handleEnhanceClick() {
-	if (isBackgroundScriptReady) {
-		showStatusMessage("Extracting content and sending to Gemini...");
-	} else {
-		showStatusMessage(
-			"Background script is not ready. Please reload the page.",
-			"error"
-		);
-		return;
-	}
-
+function handleEnhanceClick() {
+	// Extract content
 	const extractedContent = extractContent();
 	if (!extractedContent.found) {
 		showStatusMessage("No content found to process", "error");
 		return;
 	}
-
-	console.log("===========================================");
-	console.log("EXTRACTED CHAPTER FOR GEMINI:");
-	console.log("===========================================");
-	console.log("TITLE: " + extractedContent.title);
-	console.log("===========================================");
-	console.log(
-		"CONTENT LENGTH: " + extractedContent.text.length + " characters"
-	);
-	console.log(
-		"CONTENT WORD COUNT: " +
-			extractedContent.text.split(/\s+/).length +
-			" words"
-	);
-	console.log("===========================================");
-	// Log the extracted content
-	console.log("CONTENT: " + extractedContent.text.substring(0, 300) + "..."); // Log just a preview
-	console.log("===========================================");
-	// Log the source selector
-	console.log("SOURCE: " + extractedContent.selector);
-	console.log("===========================================");
 
 	// Send to background script to process with Gemini
 	try {
@@ -984,576 +1170,157 @@ async function handleEnhanceClick() {
 		const originalText = button.textContent;
 		button.textContent = "Processing...";
 		button.disabled = true;
-		showStatusMessage("Processing content with Gemini...", "info");
-		console.log("Sending content to Gemini for processing...");
-		// Show status message
-		showStatusMessage(
-			"Sending content to Gemini for processing...",
-			"info"
-		);
+
+		// Show a status message to indicate processing
+		showStatusMessage("Processing content with Gemini AI...", "info");
+
 		// First ping the background script to ensure it's alive
-		let pingResult;
-		try {
-			pingResult = await browser.runtime.sendMessage({ action: "ping" });
-			console.log("Ping result:", pingResult);
-		} catch (pingError) {
-			console.error("Error pinging background script:", pingError);
-			// If ping fails, try reloading the extension
-			showStatusMessage(
-				"Connection error. Please reload the page or extension.",
-				"error"
-			);
-			if (button) {
-				button.textContent = originalText;
-				button.disabled = false;
-			}
-			return;
-		}
+		browser.runtime
+			.sendMessage({ action: "ping" })
+			.then((pingResponse) => {
+				console.log("Ping result: ", pingResponse);
 
-		// Get approximate token count (rough estimate: 4 chars per token)
-		const estimatedTokenCount = Math.ceil(extractedContent.text.length / 4);
-		console.log(`Estimated token count: ${estimatedTokenCount}`);
-
-		// Get model max context size from the background script
-		const modelInfoResponse = await browser.runtime.sendMessage({
-			action: "getModelInfo",
-		});
-
-		const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
-		console.log(`Model max context size: ${maxContextSize}`);
-
-		// If the content is too large, split it into parts
-		if (estimatedTokenCount > maxContextSize * 0.7) {
-			// Use 70% of max as safety margin
-			return await processLargeContentInParts(
-				extractedContent,
-				button,
-				originalText,
-				maxContextSize
-			);
-		}
-
-		// For normal-sized content, process as usual
-		const response = await browser.runtime.sendMessage({
-			action: "processWithGemini",
-			title: extractedContent.title,
-			content: extractedContent.text,
-			siteSpecificPrompt: currentHandler
-				? currentHandler.getSiteSpecificPrompt()
-				: "",
-		});
-
-		// Restore button state
-		if (button) {
-			button.textContent = originalText;
-			button.disabled = false;
-		}
-
-		if (response && response.success) {
-			console.log("===========================================");
-			console.log("GEMINI PROCESSED RESULT:");
-			console.log("===========================================");
-			console.log(response.result.substring(0, 300) + "..."); // Log just a preview
-			console.log("===========================================");
-			// Show success message
-			showStatusMessage("Successfully processed with Gemini!");
-			console.log("===========================================");
-			// Replace content with enhanced version
-			await replaceContentWithEnhancedVersion(response.result);
-		} else {
-			const errorMessage = response?.error || "Unknown error";
-			// Special handling for missing API key
-			if (errorMessage.includes("API key is missing")) {
-				showStatusMessage(
-					"API key is missing. Opening settings page...",
-					"error"
+				// Get model info to check token limits
+				return browser.runtime.sendMessage({ action: "getModelInfo" });
+			})
+			.then((modelInfo) => {
+				// Estimate token count based on character count
+				const estimatedTokens = Math.ceil(
+					extractedContent.text.length / 4
 				);
-				// Open popup for API key input
-				browser.runtime.sendMessage({ action: "openPopup" });
-			} else {
-				showStatusMessage(
-					"Error processing with Gemini: " + errorMessage,
-					"error"
+				console.log(`Estimated token count: ${estimatedTokens}`);
+				console.log(
+					`Model max context size: ${modelInfo.maxContextSize}`
 				);
-			}
-		}
+
+				// Send content to background script for processing
+				return browser.runtime.sendMessage({
+					action: "processWithGemini",
+					title: extractedContent.title,
+					content: extractedContent.text,
+					siteSpecificPrompt: currentHandler
+						? currentHandler.getSiteSpecificPrompt()
+						: "",
+				});
+			})
+			.then((response) => {
+				// Restore button state
+				if (button) {
+					button.textContent = originalText;
+					button.disabled = false;
+				}
+
+				if (response && response.success) {
+					console.log("===========================================");
+					console.log("GEMINI PROCESSED RESULT:");
+					console.log("===========================================");
+
+					// Safely extract the enhanced content from response
+					if (
+						response.result &&
+						typeof response.result === "object" &&
+						response.result.enhancedContent
+					) {
+						// Object format with enhancedContent property
+						console.log("Using enhancedContent from result object");
+						replaceContentWithEnhancedVersion(
+							response.result.enhancedContent
+						);
+					} else if (
+						response.result &&
+						typeof response.result === "string"
+					) {
+						// Direct string result
+						console.log("Using string result directly");
+						replaceContentWithEnhancedVersion(response.result);
+					} else {
+						// Handle unexpected format gracefully
+						console.error(
+							"Unexpected response format:",
+							response.result
+						);
+						throw new Error(
+							"Unexpected response format from Gemini API"
+						);
+					}
+
+					console.log("===========================================");
+				} else {
+					const errorMessage = response?.error || "Unknown error";
+					// Special handling for missing API key
+					if (errorMessage.includes("API key is missing")) {
+						showStatusMessage(
+							"API key is missing. Opening settings page...",
+							"error"
+						);
+						// Open popup for API key input
+						browser.runtime.sendMessage({ action: "openPopup" });
+					} else {
+						showStatusMessage(
+							"Error processing with Gemini: " + errorMessage,
+							"error"
+						);
+					}
+				}
+			})
+			.catch((error) => {
+				console.error(
+					"Error communicating with background script:",
+					error
+				);
+				// Restore button state
+				if (button) {
+					button.textContent = "Enhance with Gemini";
+					button.disabled = false;
+				}
+
+				// Special handling for connection errors
+				if (error.message && error.message.includes("does not exist")) {
+					showStatusMessage(
+						"Connection to extension failed. Please reload the page and try again.",
+						"error"
+					);
+				} else if (
+					error.message &&
+					error.message.includes("API key is missing")
+				) {
+					showStatusMessage(
+						"API key is missing. Opening settings page...",
+						"error"
+					);
+					// Open popup for API key input
+					browser.runtime.sendMessage({ action: "openPopup" });
+				} else if (
+					error.message &&
+					error.message.includes("substring is not a function")
+				) {
+					showStatusMessage(
+						"Error processing response format. Please try again.",
+						"error"
+					);
+				} else {
+					showStatusMessage(
+						`Error communicating with Gemini: ${
+							error.message || "Connection error"
+						}`,
+						"error"
+					);
+				}
+			});
 	} catch (error) {
-		console.error("Error communicating with background script:", error);
+		console.error("Error in handleEnhanceClick:", error);
+		showStatusMessage(`Error: ${error.message}`, "error");
+
 		// Restore button state
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (button) {
 			button.textContent = "Enhance with Gemini";
 			button.disabled = false;
 		}
-		// Special handling for connection errors
-		if (error.message && error.message.includes("does not exist")) {
-			showStatusMessage(
-				"Connection to extension failed. Please reload the page and try again.",
-				"error"
-			);
-		} else if (
-			error.message &&
-			error.message.includes("API key is missing")
-		) {
-			showStatusMessage(
-				"API key is missing. Opening settings page...",
-				"error"
-			);
-			// Open popup for API key input
-			browser.runtime.sendMessage({ action: "openPopup" });
-		} else {
-			showStatusMessage(
-				`Error communicating with Gemini: ${
-					error.message || "Connection error"
-				}`,
-				"error"
-			);
-		}
 	}
 }
 
-// Process large content by splitting into parts
-async function processLargeContentInParts(
-	extractedContent,
-	button,
-	originalButtonText,
-	maxContextSize
-) {
-	// Show split processing notification
-	showStatusMessage(
-		"Content is large, processing in multiple parts...",
-		"info"
-	);
-
-	try {
-		// Get configuration settings
-		const config = await browser.runtime.sendMessage({
-			action: "getConfig",
-		});
-
-		// Get chunk size from settings, with fallbacks
-		const chunkSizeChars = config?.chunkSize || 12000;
-		console.log(`Using chunk size of ${chunkSizeChars} characters`);
-
-		// Split content into paragraphs first
-		const paragraphs = extractedContent.text.split(/\n\n+/);
-		console.log(`Content split into ${paragraphs.length} paragraphs`);
-
-		// Initialize parts with smarter paragraph grouping
-		const parts = [];
-		let currentPart = "";
-
-		// Group paragraphs into parts, ensuring we don't split in the middle of important sections
-		for (const paragraph of paragraphs) {
-			// If adding this paragraph would exceed the limit and we already have content, start a new part
-			if (
-				(currentPart + paragraph).length > chunkSizeChars &&
-				currentPart.length > 0
-			) {
-				parts.push(currentPart);
-				currentPart = paragraph;
-			} else {
-				// Otherwise, add to current part
-				currentPart += (currentPart ? "\n\n" : "") + paragraph;
-			}
-		}
-
-		// Add the last part if it's not empty
-		if (currentPart.trim()) {
-			parts.push(currentPart);
-		}
-
-		console.log(`Split content into ${parts.length} parts for processing`);
-
-		// Process each part sequentially
-		let allProcessedContent = "";
-		let currentPartNum = 1;
-		const contentArea = findContentArea(); // Store this once to avoid multiple calls
-
-		// Create a temporary container for incremental updates
-		let tempContentContainer = null;
-
-		// Save original content for potential restoration
-		const originalContent = contentArea ? contentArea.innerHTML : null;
-
-		// Create a progress bar for visual feedback
-		const progressBarContainer = document.createElement("div");
-		progressBarContainer.style.cssText = `
-			width: 100%;
-			margin: 15px 0;
-			border: 1px solid #555;
-			border-radius: 4px;
-			background-color: #222;
-			height: 20px;
-			position: relative;
-			overflow: hidden;
-		`;
-
-		const progressBarInner = document.createElement("div");
-		progressBarInner.style.cssText = `
-			height: 100%;
-			background-color: #4285f4;
-			width: 0%;
-			transition: width 0.5s ease-in-out;
-			`;
-
-		const progressText = document.createElement("div");
-		progressText.textContent = "Processing...";
-		progressText.style.cssText = `
-			position: absolute;
-			top: 0;
-			left: 0;
-			right: 0;
-			text-align: center;
-			color: #bab9a0;
-			line-height: 20px;
-			font-size: 12px;
-			`;
-
-		progressBarContainer.appendChild(progressBarInner);
-		progressBarContainer.appendChild(progressText);
-
-		// Add progress bar to page if content area exists
-		if (contentArea) {
-			// Create temporary container for incremental updates
-			tempContentContainer = document.createElement("div");
-			tempContentContainer.className =
-				"gemini-processed-content-container";
-			tempContentContainer.style.cssText = `
-				margin-top: 15px;
-				line-height: 1.6;
-				`;
-
-			// Add the progress bar and container to the content area
-			contentArea.innerHTML = "";
-			contentArea.appendChild(progressBarContainer);
-			contentArea.appendChild(tempContentContainer);
-		}
-
-		// Check if we have emoji mode enabled
-		const emojiConfig = await browser.runtime.sendMessage({
-			action: "getConfig",
-		});
-		const useEmoji = emojiConfig?.useEmoji === true;
-
-		// Process each part with retry mechanism
-		const maxRetries = 2;
-
-		for (let i = 0; i < parts.length; i++) {
-			currentPartNum = i + 1;
-			const part = parts[i];
-			let success = false;
-			let retryCount = 0;
-
-			while (!success && retryCount <= maxRetries) {
-				// Update button text to show progress
-				if (button) {
-					button.textContent = `Processing part ${currentPartNum} of ${
-						parts.length
-					}${retryCount > 0 ? ` (Retry ${retryCount})` : ""}...`;
-				}
-
-				// Update progress bar
-				const progress = Math.round(
-					((currentPartNum - 1) / parts.length) * 100
-				);
-				progressBarInner.style.width = `${progress}%`;
-				progressText.textContent = `Processing part ${currentPartNum} of ${
-					parts.length
-				} (${progress}%)${
-					retryCount > 0 ? ` - Retry ${retryCount}` : ""
-				}`;
-
-				// Display progress
-				showStatusMessage(
-					`Processing part ${currentPartNum} of ${parts.length}${
-						retryCount > 0 ? ` (Retry ${retryCount})` : ""
-					}...`,
-					"info"
-				);
-
-				// Create a part-specific title
-				const partTitle = `${extractedContent.title} (Part ${currentPartNum}/${parts.length})`;
-
-				try {
-					// Make sure the background script is still alive with a ping before processing
-					try {
-						const pingResponse = await browser.runtime.sendMessage({
-							action: "ping",
-						});
-						if (!pingResponse || !pingResponse.success) {
-							throw new Error(
-								"Background script not responding properly"
-							);
-						}
-					} catch (pingError) {
-						console.error(
-							"Lost connection to background script:",
-							pingError
-						);
-						throw new Error(
-							"Lost connection to background script. Please reload the page and try again."
-						);
-					}
-
-					// Add a small delay between parts to prevent rate limiting and give UI time to update
-					if (currentPartNum > 1) {
-						await new Promise((resolve) =>
-							setTimeout(resolve, 1000)
-						);
-					}
-
-					// Process this part
-					const response = await browser.runtime.sendMessage({
-						action: "processWithGemini",
-						title: partTitle,
-						content: part,
-						isPart: true,
-						partInfo: {
-							current: currentPartNum,
-							total: parts.length,
-						},
-						useEmoji: useEmoji,
-					});
-
-					if (response && response.success && response.result) {
-						console.log(
-							`Successfully processed part ${currentPartNum}/${parts.length}`
-						);
-
-						// Add this processed part to our accumulated result
-						allProcessedContent +=
-							(allProcessedContent ? "\n\n" : "") +
-							response.result;
-
-						// If we're doing incremental updates, show this part immediately
-						if (tempContentContainer) {
-							// Process and display this part
-							const processedPart = response.result;
-
-							// Create a part separator if this isn't the first part
-							if (currentPartNum > 1) {
-								const separator = document.createElement("hr");
-								separator.style.cssText =
-									"border: 0; border-top: 1px dashed #666; margin: 20px 0;";
-								tempContentContainer.appendChild(separator);
-							}
-
-							// Add a part indicator
-							const partIndicator = document.createElement("div");
-							partIndicator.textContent = `Part ${currentPartNum} of ${parts.length}`;
-							partIndicator.style.cssText =
-								"font-size: 0.8em; color: #888; margin-bottom: 10px; font-style: italic;";
-							tempContentContainer.appendChild(partIndicator);
-
-							// Add the content based on whether it contains HTML or is plain text
-							if (!/<p>|<div>|<span>/.test(processedPart)) {
-								// For text content, convert newlines to paragraphs
-								const paragraphs = processedPart.split(/\n\n+/);
-								paragraphs.forEach((paragraph) => {
-									if (paragraph.trim()) {
-										const p = document.createElement("p");
-										p.textContent = paragraph;
-										tempContentContainer.appendChild(p);
-									}
-								});
-							} else {
-								// For HTML content, use a parser
-								try {
-									const parser = new DOMParser();
-									const doc = parser.parseFromString(
-										processedPart,
-										"text/html"
-									);
-
-									// Remove any script tags for security
-									const scripts =
-										doc.querySelectorAll("script");
-									scripts.forEach((script) =>
-										script.remove()
-									);
-
-									// Append each child
-									Array.from(doc.body.childNodes).forEach(
-										(node) => {
-											tempContentContainer.appendChild(
-												node.cloneNode(true)
-											);
-										}
-									);
-								} catch (parseError) {
-									// Fallback if parsing fails
-									console.error(
-										"Error parsing HTML content:",
-										parseError
-									);
-									const div = document.createElement("div");
-									div.textContent = processedPart;
-									tempContentContainer.appendChild(div);
-								}
-							}
-
-							// Scroll to show progress, but not too aggressively
-							if (currentPartNum > 1) {
-								tempContentContainer.scrollIntoView({
-									behavior: "smooth",
-									block: "end",
-									inline: "nearest",
-								});
-							}
-						}
-
-						// Mark as successful to continue to next part
-						success = true;
-					} else {
-						throw new Error(
-							response?.error || "Failed to process part"
-						);
-					}
-				} catch (error) {
-					console.error(
-						`Error processing part ${currentPartNum}:`,
-						error
-					);
-					retryCount++;
-
-					// Handle different error types
-					if (
-						error.message &&
-						(error.message.includes("rate limit") ||
-							error.message.includes("quota") ||
-							error.message.includes("too many requests"))
-					) {
-						const waitTimeMs = Math.min(retryCount * 60000, 300000); // Increase wait time with each retry, max 5 minutes
-						const waitTimeMin = waitTimeMs / 60000;
-
-						showStatusMessage(
-							`Rate limit reached. Waiting ${waitTimeMin} minute(s) before retrying...`,
-							"info"
-						);
-
-						if (progressText) {
-							progressText.textContent = `Rate limit reached. Waiting ${waitTimeMin} minute(s)...`;
-						}
-
-						// Wait for the specified time
-						await new Promise((resolve) =>
-							setTimeout(resolve, waitTimeMs)
-						);
-
-						// Update progress message
-						showStatusMessage(
-							`Retrying part ${currentPartNum} after waiting...`,
-							"info"
-						);
-
-						// Continue to retry this part
-					} else if (
-						error.message &&
-						error.message.includes("Lost connection")
-					) {
-						// Connection error - show clear message and stop processing
-						showStatusMessage(
-							"Lost connection to extension. Please reload the page and try again.",
-							"error"
-						);
-
-						// If we have a temp container with partial results, keep it displayed
-						if (
-							!tempContentContainer ||
-							tempContentContainer.childNodes.length === 0
-						) {
-							// If no partial content, restore original
-							if (contentArea && originalContent) {
-								contentArea.innerHTML = originalContent;
-							}
-						}
-
-						// Restore button state
-						if (button) {
-							button.textContent = originalButtonText;
-							button.disabled = false;
-						}
-
-						return false;
-					} else if (retryCount > maxRetries) {
-						// We've exceeded max retries, show error and continue to next part
-						showStatusMessage(
-							`Failed to process part ${currentPartNum} after ${maxRetries} retries. Continuing with next part...`,
-							"warning"
-						);
-
-						// Add an error note to the displayed content
-						if (tempContentContainer) {
-							const errorNote = document.createElement("div");
-							errorNote.textContent = `⚠️ Error processing part ${currentPartNum}. Some content may be missing.`;
-							errorNote.style.cssText =
-								"color: #ff6b6b; margin: 10px 0; font-style: italic;";
-							tempContentContainer.appendChild(errorNote);
-						}
-
-						// Continue to the next part
-						break;
-					} else {
-						// For other errors, wait a bit and retry
-						const waitTime = 3000 * retryCount; // Progressively wait longer
-						showStatusMessage(
-							`Error processing part ${currentPartNum}. Retrying in ${
-								waitTime / 1000
-							} seconds...`,
-							"warning"
-						);
-						await new Promise((resolve) =>
-							setTimeout(resolve, waitTime)
-						);
-					}
-				}
-			}
-		}
-
-		// Restore button state
-		if (button) {
-			button.textContent = originalButtonText;
-			button.disabled = false;
-		}
-
-		// Remove progress bar
-		if (progressBarContainer && progressBarContainer.parentNode) {
-			progressBarContainer.parentNode.removeChild(progressBarContainer);
-		}
-
-		if (allProcessedContent) {
-			console.log("===========================================");
-			console.log("ALL PARTS PROCESSED SUCCESSFULLY");
-			console.log("===========================================");
-
-			// Show success message
-			showStatusMessage(
-				`Successfully processed all ${parts.length} parts!`
-			);
-
-			// Replace content with enhanced version
-			await replaceContentWithEnhancedVersion(allProcessedContent);
-			return true;
-		} else {
-			showStatusMessage("Failed to process content in parts", "error");
-			return false;
-		}
-	} catch (mainError) {
-		console.error("Error in processLargeContentInParts:", mainError);
-		showStatusMessage(`Error: ${mainError.message}`, "error");
-
-		// Restore button state
-		if (button) {
-			button.textContent = originalButtonText;
-			button.disabled = false;
-		}
-
-		return false;
-	}
-}
-
-// Function to replace content with Gemini-enhanced version
+// Updated function to replace content with Gemini-enhanced version
 async function replaceContentWithEnhancedVersion(enhancedContent) {
 	const contentArea = findContentArea();
 	if (!contentArea) {
@@ -1568,18 +1335,68 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 		// Save the scroll position
 		const scrollPosition = window.scrollY;
 
-		// Save original word count for display
-		const originalContent =
-			contentArea.innerText || contentArea.textContent;
-		const originalWordCount = countWords(originalContent);
+		// Save original content
+		const originalContent = contentArea.innerHTML;
+
+		// Extract the original text for word count
+		const originalText = contentArea.innerText || contentArea.textContent;
 
 		// Replace the content
 		console.log("Replacing content area with Gemini-enhanced version...");
-		contentArea.innerHTML = sanitizeHTML(enhancedContent);
 
-		// Calculate new word count
+		// Step 1: Extract and preserve images from the original content
+		// We do this because we want to keep the original images
+		const {
+			modifiedContent: originalWithoutImages,
+			preservedElements: originalImages,
+		} = preserveHtmlElements(originalContent);
+
+		console.log(
+			`Preserved ${originalImages.length} images from original content`
+		);
+
+		// Step 2: Preserve any game stats boxes in the enhanced content
+		const { modifiedContent: contentWithPreservedStats, preservedBoxes } =
+			preserveGameStatsBoxes(enhancedContent);
+
+		// Step 3: First restore the game stats boxes with proper formatting
+		let contentToDisplay = contentWithPreservedStats;
+		if (preservedBoxes.length > 0) {
+			console.log(`Restoring ${preservedBoxes.length} game stats boxes`);
+			contentToDisplay = restoreGameStatsBoxes(
+				contentToDisplay,
+				preservedBoxes
+			);
+		}
+
+		// Step 4: Restore the original images from step 1
+		if (originalImages.length > 0) {
+			console.log(
+				`Restoring ${originalImages.length} images from original content`
+			);
+			// Add a container for all the images at the beginning of the enhanced content
+			const imageContainer = document.createElement("div");
+			imageContainer.className = "preserved-images-container";
+			imageContainer.style.cssText = `
+				margin: 10px 0;
+				text-align: center;
+			`;
+
+			originalImages.forEach((img) => {
+				if (img.includes("<img")) {
+					imageContainer.innerHTML += img;
+				}
+			});
+
+			// Insert preserved images at the beginning of the content
+			contentToDisplay = imageContainer.outerHTML + contentToDisplay;
+		}
+
+		// Set the processed content
+		contentArea.innerHTML = sanitizeHTML(contentToDisplay);
+
+		// Calculate new word count from the processed content
 		const newContent = contentArea.innerText || contentArea.textContent;
-		const newWordCount = countWords(newContent);
 
 		// Apply site-specific formatting if needed
 		if (
@@ -1592,20 +1409,215 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 			applyDefaultFormatting(contentArea);
 		}
 
-		// Add word count display at the top of the content
-		addWordCountDisplay(contentArea, originalWordCount, newWordCount);
+		// Store original and enhanced content for toggling
+		contentArea.setAttribute("data-original-content", originalContent);
+		contentArea.setAttribute(
+			"data-enhanced-content",
+			contentArea.innerHTML
+		);
+		contentArea.setAttribute("data-showing-enhanced", "true");
 
-		// Add the processed notice banner
-		addGeminiProcessedNotice(contentArea);
+		// Create enhanced banner with word count statistics
+		const banner = createEnhancedBanner(originalText, newContent);
+
+		// Remove the original word count element
+		removeOriginalWordCount();
+
+		// Get the toggle button from the banner
+		const toggleButton = banner.querySelector(".gemini-toggle-btn");
+		if (toggleButton) {
+			toggleButton.addEventListener("click", function () {
+				const isShowingEnhanced =
+					contentArea.getAttribute("data-showing-enhanced") ===
+					"true";
+
+				if (isShowingEnhanced) {
+					// Switch to original
+					contentArea.innerHTML = originalContent;
+					toggleButton.textContent = "Show Enhanced";
+					contentArea.setAttribute("data-showing-enhanced", "false");
+				} else {
+					// Switch to enhanced
+					contentArea.innerHTML = contentArea.getAttribute(
+						"data-enhanced-content"
+					);
+					toggleButton.textContent = "Show Original";
+					contentArea.setAttribute("data-showing-enhanced", "true");
+
+					// Reapply formatting
+					if (
+						currentHandler &&
+						typeof currentHandler.formatAfterEnhancement ===
+							"function"
+					) {
+						currentHandler.formatAfterEnhancement(contentArea);
+					} else {
+						applyDefaultFormatting(contentArea);
+					}
+				}
+
+				// Re-add the banner as the first element
+				if (contentArea.firstChild) {
+					contentArea.insertBefore(banner, contentArea.firstChild);
+				} else {
+					contentArea.appendChild(banner);
+				}
+			});
+		}
+
+		// Add banner to the top of content area
+		if (contentArea.firstChild) {
+			contentArea.insertBefore(banner, contentArea.firstChild);
+		} else {
+			contentArea.appendChild(banner);
+		}
 
 		// Restore scroll position
 		window.scrollTo(0, scrollPosition);
+
+		// Show success message
+		showStatusMessage("Content successfully enhanced with Gemini!");
 
 		return true;
 	} catch (error) {
 		console.error("Error replacing content:", error);
 		showStatusMessage(`Error replacing content: ${error.message}`, "error");
 		return false;
+	}
+}
+
+// Function to display enhanced content with toggle ability
+function displayEnhancedContent(originalContent, enhancedContent) {
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		showStatusMessage(
+			"Unable to find content area for replacement",
+			"error"
+		);
+		return false;
+	}
+
+	try {
+		// Save the scroll position
+		const scrollPosition = window.scrollY;
+
+		// Store original content for toggling
+		contentArea.setAttribute("data-original-content", originalContent);
+		contentArea.setAttribute("data-enhanced-content", enhancedContent);
+		contentArea.setAttribute("data-showing-enhanced", "true");
+
+		// Replace the content
+		console.log("Replacing content area with Gemini-enhanced version...");
+		contentArea.innerHTML = sanitizeHTML(enhancedContent);
+
+		// Apply site-specific formatting if needed
+		if (
+			currentHandler &&
+			typeof currentHandler.formatAfterEnhancement === "function"
+		) {
+			currentHandler.formatAfterEnhancement(contentArea);
+		} else {
+			// Default formatting for all sites
+			applyDefaultFormatting(contentArea);
+		}
+
+		// Create enhanced banner with word count comparison
+		const banner = createEnhancedBanner(originalContent, enhancedContent);
+
+		// Remove the original word count element
+		removeOriginalWordCount();
+
+		// Get the toggle button from the banner
+		const toggleButton = banner.querySelector(".gemini-toggle-btn");
+		if (toggleButton) {
+			toggleButton.addEventListener("click", function () {
+				const isShowingEnhanced =
+					contentArea.getAttribute("data-showing-enhanced") ===
+					"true";
+
+				if (isShowingEnhanced) {
+					// Switch to original
+					contentArea.innerHTML = sanitizeHTML(originalContent);
+					toggleButton.textContent = "Show Enhanced";
+					contentArea.setAttribute("data-showing-enhanced", "false");
+				} else {
+					// Switch to enhanced
+					contentArea.innerHTML = sanitizeHTML(enhancedContent);
+					toggleButton.textContent = "Show Original";
+					contentArea.setAttribute("data-showing-enhanced", "true");
+
+					// Reapply formatting
+					if (
+						currentHandler &&
+						typeof currentHandler.formatAfterEnhancement ===
+							"function"
+					) {
+						currentHandler.formatAfterEnhancement(contentArea);
+					} else {
+						applyDefaultFormatting(contentArea);
+					}
+				}
+
+				// Re-add the banner as the first element
+				if (contentArea.firstChild) {
+					contentArea.insertBefore(banner, contentArea.firstChild);
+				} else {
+					contentArea.appendChild(banner);
+				}
+			});
+		}
+
+		// Add banner to the top of content area
+		if (contentArea.firstChild) {
+			contentArea.insertBefore(banner, contentArea.firstChild);
+		} else {
+			contentArea.appendChild(banner);
+		}
+
+		// Restore scroll position
+		window.scrollTo(0, scrollPosition);
+
+		// Show success message
+		showStatusMessage("Content successfully enhanced with Gemini!");
+
+		return true;
+	} catch (error) {
+		console.error("Error displaying enhanced content:", error);
+		showStatusMessage(`Error: ${error.message}`, "error");
+		return false;
+	}
+}
+
+// Function to display an error message when processing fails
+function showProcessingError(errorMessage) {
+	console.error("Processing error:", errorMessage);
+
+	const contentArea = findContentArea();
+	if (!contentArea) return;
+
+	// Create error box
+	const errorBox = document.createElement("div");
+	errorBox.className = "gemini-error-box";
+	errorBox.style.cssText = `
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+    `;
+
+	errorBox.innerHTML = `
+        <strong>Error processing content with Gemini:</strong>
+        <p>${errorMessage}</p>
+        <p>Please try again or check your API key and settings.</p>
+    `;
+
+	// Insert at the beginning of content area
+	if (contentArea.firstChild) {
+		contentArea.insertBefore(errorBox, contentArea.firstChild);
+	} else {
+		contentArea.appendChild(errorBox);
 	}
 }
 
@@ -1841,6 +1853,63 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 	return false;
 });
+
+// Test function for game status boxes (can be triggered from the console for verification)
+window.testGameStatsBox = async function () {
+	console.log("Testing game stats box functionality...");
+
+	// Create a sample div to show the test results
+	const testContainer = document.createElement("div");
+	testContainer.style.padding = "20px";
+	testContainer.style.margin = "20px";
+	testContainer.style.border = "1px solid #ccc";
+	testContainer.style.borderRadius = "5px";
+	testContainer.innerHTML =
+		"<h3>Testing Game Stats Box Formatting</h3><p>Sending request to background script...</p>";
+
+	// Insert into page for visibility
+	const contentArea = findContentArea();
+	if (contentArea) {
+		contentArea.parentNode.insertBefore(testContainer, contentArea);
+	} else {
+		document.body.appendChild(testContainer);
+	}
+
+	try {
+		// Request a test from the background script
+		const response = await browser.runtime.sendMessage({
+			action: "testGameStatsBox",
+		});
+
+		if (response && response.success) {
+			console.log("Game stats box test successful:", response);
+			testContainer.innerHTML = `
+				<h3>Game Stats Box Test Results:</h3>
+				<p>Test completed. Game stats box preserved: ${
+					response.preservedGameStatsBox ? "✅ Yes" : "❌ No"
+				}</p>
+				<div style="margin-top: 20px;">
+					<h4>Processed Content:</h4>
+					${response.result.enhancedContent}
+				</div>
+			`;
+		} else {
+			console.error("Game stats box test failed:", response);
+			testContainer.innerHTML = `
+				<h3>Game Stats Box Test Failed</h3>
+				<p>Error: ${response?.error || "Unknown error"}</p>
+			`;
+		}
+	} catch (error) {
+		console.error("Error testing game stats box:", error);
+		testContainer.innerHTML = `
+			<h3>Game Stats Box Test Error</h3>
+			<p>Error: ${error.message}</p>
+		`;
+	}
+
+	return "Test initiated. Check the page for results.";
+};
 
 // Run initialization immediately in case the page is already loaded
 initializeWithDeviceDetection();
