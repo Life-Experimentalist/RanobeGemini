@@ -588,20 +588,37 @@ button.ranobes-gemini-btn:disabled {
 }
 
 /* Game stats box styling - used for RPG-style status windows */
+.game-stats-box-container {
+	display: block;
+	width: 100%;
+	margin: 15px 0;
+}
+
+/* Updated game stats box styling */
 .game-stats-box {
 	font-family: monospace;
-	background-color: rgba(35, 35, 35, 0.9);
-	border: 1px solid rgba(85, 85, 85, 0.8);
-	border-radius: 4px;
-	padding: 12px 15px;
-	margin: 15px 0;
-	white-space: pre-wrap;
-	color: #d4d4d4;
-	font-size: 14px;
-	line-height: 1.5;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-	position: relative;
-	overflow-x: auto;
+	white-space: pre;
+		background-color: rgba(35, 35, 35, 0.95);
+		border: 1px solid rgba(100, 100, 100, 0.8);
+		border-radius: 6px;
+		padding: 0px 10px 10px 10px;
+		/* No top padding */
+		margin: 20px 0;
+		/* Add vertical margin to separate boxes */
+		overflow-x: auto;
+	line-height: 1.4;
+		font-size: 0.9em;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		clear: both;
+		/* Ensure boxes don't float next to each other */
+		width: 100%;
+		/* Make box take full width to ensure it's on its own line */
+		box-sizing: border-box;
+		/* Ensure padding doesn't affect width */
+		color: #e8e8e8;
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
 }
 
 /* Light mode variant for game stats box */

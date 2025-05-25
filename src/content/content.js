@@ -33,10 +33,23 @@ function detectMobileDevice() {
 	return window.innerWidth <= 768;
 }
 
-// Add a minimal HTML sanitizer to remove script tags (adjust as needed)
+// Add a minimal HTML sanitizer to remove script tags and code block markers
 function sanitizeHTML(html) {
-	// Remove any <script>...</script> elements.
-	return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+	if (!html) return html;
+
+	// Remove any <script>...</script> elements
+	let sanitized = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+
+	// Remove code block markers like ```html, ```javascript, etc.
+	sanitized = sanitized.replace(
+		/```(?:html|javascript|css|js|xml|json|md|markdown|)\s*\n?/gi,
+		""
+	);
+
+	// Remove closing code block markers ```
+	sanitized = sanitized.replace(/```\s*\n?/g, "");
+
+	return sanitized;
 }
 
 /**
@@ -101,172 +114,185 @@ async function verifyBackgroundConnection() {
 
 // Function to identify and protect game stats boxes
 function preserveGameStatsBoxes(content) {
-    // Replace game stats boxes with placeholders to protect them
-    let preservedBoxes = [];
+	// Replace game stats boxes with placeholders to protect them
+	let preservedBoxes = [];
 
-    // Regex patterns for common game status box formats
-    const patterns = [
-        // Format with multiple status lines:
-        /(\[(?:Status|Attributes|Skills|Stats|Name|Level|HP|MP|SP|Mana|Energy|Class|Strength|Agility|Intelligence|Wisdom|Vitality|Luck|Fame|Title|Achievement)[\s\S]*?\][\s\S]*?(?=\n\n|\n\[|$))/gi,
+	// Regex patterns for common game status box formats
+	const patterns = [
+		// Format with multiple status lines:
+		/(\[(?:Status|Attributes|Skills|Stats|Name|Level|HP|MP|SP|Mana|Energy|Class|Strength|Agility|Intelligence|Wisdom|Vitality|Luck|Fame|Title|Achievement)[\s\S]*?\][\s\S]*?(?=\n\n|\n\[|$))/gi,
 
-        // Format with brackets:
-        /(\[[\s\S]*?Name:[\s\S]*?Level:[\s\S]*?\])/gi,
+		// Format with brackets:
+		/(\[[\s\S]*?Name:[\s\S]*?Level:[\s\S]*?\])/gi,
 
-        // Format with asterisks or equals signs as borders:
-        /((?:\*{3,}|={3,})[\s\S]*?(?:Status|Stats|Attributes|Skills)[\s\S]*?(?:\*{3,}|={3,}))/gi,
+		// Format with asterisks or equals signs as borders:
+		/((?:\*{3,}|={3,})[\s\S]*?(?:Status|Stats|Attributes|Skills)[\s\S]*?(?:\*{3,}|={3,}))/gi,
 
-        // Format with just indentation:
-        /((?:^|\n)[ \t]+Status:[\s\S]*?(?:\n\n|$))/gi
-    ];
+		// Format with just indentation:
+		/((?:^|\n)[ \t]+Status:[\s\S]*?(?:\n\n|$))/gi,
+	];
 
-    // Check for each pattern
-    let modifiedContent = content;
+	// Check for each pattern
+	let modifiedContent = content;
 
-    patterns.forEach(pattern => {
-        modifiedContent = modifiedContent.replace(pattern, (match) => {
-            const placeholder = `[GAME_STATS_BOX_${preservedBoxes.length}]`;
-            preservedBoxes.push(match);
-            return placeholder;
-        });
-    });
+	patterns.forEach((pattern) => {
+		modifiedContent = modifiedContent.replace(pattern, (match) => {
+			const placeholder = `[GAME_STATS_BOX_${preservedBoxes.length}]`;
+			// Trim the match and remove leading/trailing empty lines
+			const cleanedMatch = match
+				.trim()
+				.replace(/^\s*[\r\n]+/gm, "")
+				.replace(/[\r\n]+\s*$/gm, "");
+			preservedBoxes.push(cleanedMatch);
+			return placeholder;
+		});
+	});
 
-    return {
-        modifiedContent,
-        preservedBoxes
-    };
+	return {
+		modifiedContent,
+		preservedBoxes,
+	};
 }
 
 // Function to restore game stats boxes after enhancement
 function restoreGameStatsBoxes(content, preservedBoxes) {
-    let restoredContent = content;
+	let restoredContent = content;
 
-    // Replace each placeholder with the original game stats box
-    preservedBoxes.forEach((box, index) => {
-        const placeholder = `[GAME_STATS_BOX_${index}]`;
+	// Replace each placeholder with the original game stats box
+	preservedBoxes.forEach((box, index) => {
+		const placeholder = `[GAME_STATS_BOX_${index}]`;
 
-        // Get the number of lines to help with sizing
-        const lineCount = box.split('\n').length;
-        const longestLine = getLongestLineLength(box);
+		// Get the number of lines to help with sizing
+		// Thoroughly clean the box content - trim and remove any empty lines at beginning and end
+		const cleanedBox = box
+			.trim()
+			.replace(/^\s*[\r\n]+/gm, "")
+			.replace(/[\r\n]+\s*$/gm, "");
 
-        // Replace placeholder with a styled game stats box
-        restoredContent = restoredContent.replace(placeholder,
-            `<div class="game-stats-box" style="width: auto; min-width: ${Math.min(Math.max(longestLine * 8, 300), 800)}px;">${box}</div>`
-        );
-    });
+		const lineCount = cleanedBox.split("\n").length;
+		const longestLine = getLongestLineLength(cleanedBox);
 
-    return restoredContent;
+		// Replace placeholder with a properly styled game stats box
+		// Using display: flex and justify-content: center for vertical alignment
+		// Wrap in a container div to ensure each box is on its own line
+		restoredContent = restoredContent.replace(
+			placeholder,
+			`<div class="game-stats-box-container"><div class="game-stats-box" style="padding-top: 0px; margin-top: 0px; width: auto; min-width: ${Math.min(
+				Math.max(longestLine * 8, 300),
+				800
+			)}px; display: flex; flex-direction: column; justify-content: center;">${cleanedBox}</div></div>`
+		);
+	});
+
+	return restoredContent;
 }
 
 // Helper function to get the length of the longest line in a text block
 function getLongestLineLength(text) {
-    if (!text) return 0;
-    const lines = text.split('\n');
-    let maxLength = 0;
+	if (!text) return 0;
+	const lines = text.split("\n");
+	let maxLength = 0;
 
-    lines.forEach(line => {
-        const lineLength = line.length;
-        if (lineLength > maxLength) {
-            maxLength = lineLength;
-        }
-    });
+	lines.forEach((line) => {
+		const lineLength = line.length;
+		if (lineLength > maxLength) {
+			maxLength = lineLength;
+		}
+	});
 
-    return maxLength;
+	return maxLength;
 }
 
 // Function to preserve images and other HTML elements
 function preserveHtmlElements(content) {
-    const preservedElements = [];
+	const preservedElements = [];
 
-    // First preserve images with all attributes
-    let processedContent = content.replace(
-        /<img\s+[^>]*?src=['"]([^'"]*)['"](.*?)?>/gi,
-        (match) => {
-            const placeholder = `[PRESERVED_IMAGE_${preservedElements.length}]`;
-            preservedElements.push(match);
-            return placeholder;
-        }
-    );
+	// First preserve images with all attributes
+	let processedContent = content.replace(
+		/<img\s+[^>]*?src=['"]([^'"]*)['"](.*?)?>/gi,
+		(match) => {
+			const placeholder = `[PRESERVED_IMAGE_${preservedElements.length}]`;
+			preservedElements.push(match);
+			return placeholder;
+		}
+	);
 
-    // Then preserve figure elements with any nested images
-    processedContent = processedContent.replace(
-        /<figure\b[^>]*>[\s\S]*?<\/figure>/gi,
-        (match) => {
-            const placeholder = `[PRESERVED_FIGURE_${preservedElements.length}]`;
-            preservedElements.push(match);
-            return placeholder;
-        }
-    );
+	// Then preserve figure elements with any nested images
+	processedContent = processedContent.replace(
+		/<figure\b[^>]*>[\s\S]*?<\/figure>/gi,
+		(match) => {
+			const placeholder = `[PRESERVED_FIGURE_${preservedElements.length}]`;
+			preservedElements.push(match);
+			return placeholder;
+		}
+	);
 
-    // Preserve other media elements and game stats boxes
-    processedContent = processedContent.replace(
-        /<(iframe|video|audio|source)\s+[^>]*>|<div class="game-stats-box">[\s\S]*?<\/div>/gi,
-        (match) => {
-            const placeholder = `[PRESERVED_ELEMENT_${preservedElements.length}]`;
-            preservedElements.push(match);
-            return placeholder;
-        }
-    );
+	// Preserve other media elements and game stats boxes
+	processedContent = processedContent.replace(
+		/<(iframe|video|audio|source)\s+[^>]*>|<div class="game-stats-box">[\s\S]*?<\/div>/gi,
+		(match) => {
+			const placeholder = `[PRESERVED_ELEMENT_${preservedElements.length}]`;
+			preservedElements.push(match);
+			return placeholder;
+		}
+	);
 
-    console.log(`Preserved ${preservedElements.length} HTML elements (images, figures, and other elements)`);
+	console.log(
+		`Preserved ${preservedElements.length} HTML elements (images, figures, and other elements)`
+	);
 
-    return {
-        modifiedContent: processedContent,
-        preservedElements: preservedElements
-    };
+	return {
+		modifiedContent: processedContent,
+		preservedElements: preservedElements,
+	};
 }
 
 // Function to restore preserved HTML elements
 function restoreHtmlElements(content, preservedElements) {
-    if (!preservedElements || preservedElements.length === 0) {
-        return content;
-    }
+	if (!preservedElements || preservedElements.length === 0) {
+		return content;
+	}
 
-    let restoredContent = content;
+	let restoredContent = content;
 
-    // Restore preserved elements
-    preservedElements.forEach((element, index) => {
-        // Restore images
-        restoredContent = restoredContent.replace(
-            new RegExp(`\\[PRESERVED_IMAGE_${index}\\]`, 'g'),
-            element
-        );
+	// Replace each placeholder with the original preserved element
+	preservedElements.forEach((element, index) => {
+		const placeholder = `[PRESERVED_ELEMENT_${index}]`;
+		restoredContent = restoredContent.replace(
+			new RegExp(placeholder, "g"),
+			element
+		);
+	});
 
-        // Restore figures
-        restoredContent = restoredContent.replace(
-            new RegExp(`\\[PRESERVED_FIGURE_${index}\\]`, 'g'),
-            element
-        );
-
-        // Restore other elements
-        restoredContent = restoredContent.replace(
-            new RegExp(`\\[PRESERVED_ELEMENT_${index}\\]`, 'g'),
-            element
-        );
-    });
-
-    return restoredContent;
+	return restoredContent;
 }
 
-// Create an enhanced banner with word count comparison
-function createEnhancedBanner(originalContent, enhancedContent) {
-    // Calculate word counts
-    const originalWordCount = countWords(originalContent);
-    const enhancedWordCount = countWords(enhancedContent);
+// Create an enhanced banner with word count comparison and model info
+function createEnhancedBanner(originalContent, enhancedContent, modelInfo) {
+	// Calculate word counts
+	const originalWordCount = countWords(originalContent);
+	const enhancedWordCount = countWords(enhancedContent);
 
-    // Calculate percentage change
-    const wordDifference = enhancedWordCount - originalWordCount;
-    const percentChange = originalWordCount > 0
-        ? Math.round((wordDifference / originalWordCount) * 100)
-        : 0;
+	// Calculate percentage change
+	const wordDifference = enhancedWordCount - originalWordCount;
+	const percentChange =
+		originalWordCount > 0
+			? Math.round((wordDifference / originalWordCount) * 100)
+			: 0;
 
-    // Determine if it's an increase or decrease
-    const changeDirection = wordDifference >= 0 ? 'increase' : 'decrease';
-    const changeSymbol = wordDifference >= 0 ? '+' : '';
-    const changeClass = wordDifference >= 0 ? 'word-count-increase' : 'word-count-decrease';
+	// Determine if it's an increase or decrease
+	const changeSymbol = wordDifference >= 0 ? "+" : "-";
 
-    const banner = document.createElement("div");
-    banner.className = "gemini-enhanced-banner";
-    banner.style.cssText = `
+	// Get model name and provider from modelInfo if available
+	const modelName = modelInfo?.name || "AI";
+	const modelProvider = modelInfo?.provider || "Ranobe Gemini";
+	const modelDisplay = `Enhanced with ${modelProvider}${
+		modelName ? ` (${modelName})` : ""
+	} by Ranobe Gemini`;
+
+	const banner = document.createElement("div");
+	banner.className = "gemini-enhanced-banner";
+	banner.style.cssText = `
         margin: 15px 0;
         padding: 15px;
         background-color: #f7f7f7;
@@ -275,44 +301,52 @@ function createEnhancedBanner(originalContent, enhancedContent) {
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     `;
 
-    // Support dark mode
-    if (document.querySelector('.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth') ||
-        window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        banner.style.backgroundColor = '#2c2c2c';
-        banner.style.borderColor = '#444';
-        banner.style.color = '#e0e0e0';
-    }
+	// Support dark mode
+	if (
+		document.querySelector(
+			'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+		) ||
+		window.matchMedia("(prefers-color-scheme: dark)").matches
+	) {
+		banner.style.backgroundColor = "#2c2c2c";
+		banner.style.borderColor = "#444";
+		banner.style.color = "#e0e0e0";
+	}
 
-    banner.innerHTML = `
+	banner.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                 <div style="display: flex; align-items: center;">
                     <span style="font-size: 18px; margin-right: 5px;">✨</span>
-                    <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">Enhanced with Ranobe Gemini</span>
+                    <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
                 </div>
                 <button class="gemini-toggle-btn" style="padding: 6px 12px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Show Original</button>
             </div>
             <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
                 <span style="font-family: monospace;">
                     Words: ${originalWordCount.toLocaleString()} → ${enhancedWordCount.toLocaleString()}
-                    <span style="color: ${wordDifference >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">
-                        (${changeSymbol}${wordDifference.toLocaleString()}, ${wordDifference >= 0 ? '' : '-'}${changeSymbol}${Math.abs(percentChange)}%)
+                    <span style="color: ${
+						wordDifference >= 0 ? "#28a745" : "#dc3545"
+					}; font-weight: bold;">
+                        (${changeSymbol}${wordDifference.toLocaleString()}, ${changeSymbol}${Math.abs(
+		percentChange
+	)}%)
                     </span>
                 </span>
             </div>
         </div>
     `;
 
-    return banner;
+	return banner;
 }
 
 // Function to remove the original word count element
 function removeOriginalWordCount() {
-    const originalWordCount = document.querySelector(".gemini-word-count");
-    if (originalWordCount) {
-        console.log("Removing original word count display");
-        originalWordCount.parentNode.removeChild(originalWordCount);
-    }
+	const originalWordCount = document.querySelector(".gemini-word-count");
+	if (originalWordCount) {
+		console.log("Removing original word count display");
+		originalWordCount.parentNode.removeChild(originalWordCount);
+	}
 }
 
 // Initialize when DOM is fully loaded
@@ -374,6 +408,9 @@ async function loadHandlers() {
 			"utils/website-handlers/base-handler.js"
 		);
 		const baseHandlerModule = await import(baseHandlerUrl);
+		const handlerManagerUrl = browser.runtime.getURL(
+			"utils/website-handlers/handler-manager.js"
+		);
 
 		// Import specific handlers
 		const ranobesHandlerUrl = browser.runtime.getURL(
@@ -381,9 +418,6 @@ async function loadHandlers() {
 		);
 		const fanfictionHandlerUrl = browser.runtime.getURL(
 			"utils/website-handlers/fanfiction-handler.js"
-		);
-		const handlerManagerUrl = browser.runtime.getURL(
-			"utils/website-handlers/handler-manager.js"
 		);
 
 		// Don't wait for these imports now, we'll use them later when needed
@@ -458,7 +492,7 @@ function extractContentGeneric() {
 		".main-content",
 		".post-content",
 		"#storytext", // fanfiction.net
-		"#arrticle", // Ranobes.top
+		"#arrticle", // Ranobes.net
 		".text-chapter",
 		".chapter-content",
 		".novel-content",
@@ -538,7 +572,7 @@ function findContentArea() {
 	// Generic fallback approach - try common content selectors
 	const commonSelectors = [
 		"#storytext", // fanfiction.net
-		"#arrticle", // Ranobes.top
+		"#arrticle", // Ranobes.net
 		".text-chapter",
 		".chapter-content",
 		".novel-content",
@@ -840,6 +874,78 @@ function extractContent() {
 	return extractContentGeneric();
 }
 
+// Function to intelligently split content for large chapters
+function splitContentForProcessing(content, maxChunkSize = 10000) {
+	// If content is already small enough, return it as a single chunk
+	if (content.length <= maxChunkSize) {
+		return [content];
+	}
+
+	console.log(
+		`Content is large (${content.length} chars), splitting into chunks...`
+	);
+
+	// First try to split at natural paragraph boundaries
+	const paragraphs = content.split(/\n\n+/);
+	const chunks = [];
+	let currentChunk = "";
+
+	// Group paragraphs into chunks that don't exceed maxChunkSize
+	for (const paragraph of paragraphs) {
+		// If adding this paragraph would exceed the limit, start a new chunk
+		if (
+			currentChunk.length + paragraph.length > maxChunkSize &&
+			currentChunk.length > 0
+		) {
+			chunks.push(currentChunk);
+			currentChunk = paragraph;
+		} else {
+			// Otherwise, add to current chunk
+			currentChunk += (currentChunk ? "\n\n" : "") + paragraph;
+		}
+	}
+
+	// Add the last chunk if it has content
+	if (currentChunk.length > 0) {
+		chunks.push(currentChunk);
+	}
+
+	// If we still have any chunks that are too large, split them at sentence boundaries
+	const finalChunks = [];
+
+	for (const chunk of chunks) {
+		if (chunk.length <= maxChunkSize) {
+			finalChunks.push(chunk);
+			continue;
+		}
+
+		// Split this chunk at sentence boundaries
+		const sentences = chunk.match(/[^.!?]+[.!?]+/g) || [chunk];
+		let sentenceChunk = "";
+
+		for (const sentence of sentences) {
+			if (
+				sentenceChunk.length + sentence.length > maxChunkSize &&
+				sentenceChunk.length > 0
+			) {
+				finalChunks.push(sentenceChunk);
+				sentenceChunk = sentence;
+			} else {
+				sentenceChunk += sentence;
+			}
+		}
+
+		if (sentenceChunk.length > 0) {
+			finalChunks.push(sentenceChunk);
+		}
+	}
+
+	console.log(
+		`Split content into ${finalChunks.length} chunks for processing`
+	);
+	return finalChunks;
+}
+
 // Handle click event for Summarize button
 async function handleSummarizeClick() {
 	const summarizeButton = document.getElementById("summarize-button");
@@ -1021,34 +1127,8 @@ async function summarizeLargeContentInParts(
 	// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
 	const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
 
-	// Split content into paragraphs
-	const paragraphs = content.split(/\n\n+/);
-	console.log(`Split content into ${paragraphs.length} paragraphs`);
-
-	// Initialize parts
-	const parts = [];
-	let currentPart = "";
-
-	// Group paragraphs into parts
-	for (const paragraph of paragraphs) {
-		// If adding this paragraph would exceed the limit, start a new part
-		if (
-			(currentPart + paragraph).length > charsPerPart &&
-			currentPart.length > 0
-		) {
-			parts.push(currentPart);
-			currentPart = paragraph;
-		} else {
-			// Otherwise, add to current part
-			currentPart += (currentPart ? "\n\n" : "") + paragraph;
-		}
-	}
-
-	// Add the last part if it's not empty
-	if (currentPart.trim()) {
-		parts.push(currentPart);
-	}
-
+	// Use our improved content splitting function
+	const parts = splitContentForProcessing(content, charsPerPart);
 	console.log(`Split content into ${parts.length} parts for summarization`);
 
 	// Process each part sequentially
@@ -1223,9 +1303,7 @@ function handleEnhanceClick() {
 					) {
 						// Object format with enhancedContent property
 						console.log("Using enhancedContent from result object");
-						replaceContentWithEnhancedVersion(
-							response.result.enhancedContent
-						);
+						replaceContentWithEnhancedVersion(response.result);
 					} else if (
 						response.result &&
 						typeof response.result === "string"
@@ -1341,11 +1419,26 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 		// Extract the original text for word count
 		const originalText = contentArea.innerText || contentArea.textContent;
 
+		// Get model info if it was included in the response
+		const modelInfo =
+			typeof enhancedContent === "object" && enhancedContent.modelInfo
+				? enhancedContent.modelInfo
+				: null;
+
+		// Use the enhanced content text, handling if it was passed as an object
+		const enhancedContentText =
+			typeof enhancedContent === "object" &&
+			enhancedContent.enhancedContent
+				? enhancedContent.enhancedContent
+				: enhancedContent;
+
+		// Clean up any code block markers and sanitize HTML
+		const sanitizedContent = sanitizeHTML(enhancedContentText);
+
 		// Replace the content
 		console.log("Replacing content area with Gemini-enhanced version...");
 
 		// Step 1: Extract and preserve images from the original content
-		// We do this because we want to keep the original images
 		const {
 			modifiedContent: originalWithoutImages,
 			preservedElements: originalImages,
@@ -1357,7 +1450,7 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 
 		// Step 2: Preserve any game stats boxes in the enhanced content
 		const { modifiedContent: contentWithPreservedStats, preservedBoxes } =
-			preserveGameStatsBoxes(enhancedContent);
+			preserveGameStatsBoxes(sanitizedContent);
 
 		// Step 3: First restore the game stats boxes with proper formatting
 		let contentToDisplay = contentWithPreservedStats;
@@ -1417,8 +1510,12 @@ async function replaceContentWithEnhancedVersion(enhancedContent) {
 		);
 		contentArea.setAttribute("data-showing-enhanced", "true");
 
-		// Create enhanced banner with word count statistics
-		const banner = createEnhancedBanner(originalText, newContent);
+		// Create enhanced banner with word count statistics and model info
+		const banner = createEnhancedBanner(
+			originalText,
+			newContent,
+			modelInfo
+		);
 
 		// Remove the original word count element
 		removeOriginalWordCount();
@@ -1503,12 +1600,16 @@ function displayEnhancedContent(originalContent, enhancedContent) {
 
 		// Store original content for toggling
 		contentArea.setAttribute("data-original-content", originalContent);
+
+		// Clean up any code block markers
+		enhancedContent = sanitizeHTML(enhancedContent);
+
 		contentArea.setAttribute("data-enhanced-content", enhancedContent);
 		contentArea.setAttribute("data-showing-enhanced", "true");
 
 		// Replace the content
 		console.log("Replacing content area with Gemini-enhanced version...");
-		contentArea.innerHTML = sanitizeHTML(enhancedContent);
+		contentArea.innerHTML = enhancedContent;
 
 		// Apply site-specific formatting if needed
 		if (

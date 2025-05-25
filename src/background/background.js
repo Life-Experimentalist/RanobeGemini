@@ -536,6 +536,78 @@ try {
 		return chunks;
 	}
 
+	// Function to split content for processing large chapters
+	function splitContentForProcessing(content, maxChunkSize) {
+		// If content is already small enough, return it as a single chunk
+		if (content.length <= maxChunkSize) {
+			return [content];
+		}
+
+		console.log(
+			`Content is large (${content.length} chars), splitting into chunks...`
+		);
+
+		// First try to split at natural paragraph boundaries
+		const paragraphs = content.split(/\n\n+/);
+		const chunks = [];
+		let currentChunk = "";
+
+		// Group paragraphs into chunks that don't exceed maxChunkSize
+		for (const paragraph of paragraphs) {
+			// If adding this paragraph would exceed the limit, start a new chunk
+			if (
+				currentChunk.length + paragraph.length > maxChunkSize &&
+				currentChunk.length > 0
+			) {
+				chunks.push(currentChunk);
+				currentChunk = paragraph;
+			} else {
+				// Otherwise, add to current chunk
+				currentChunk += (currentChunk ? "\n\n" : "") + paragraph;
+			}
+		}
+
+		// Add the last chunk if it has content
+		if (currentChunk.length > 0) {
+			chunks.push(currentChunk);
+		}
+
+		// If we still have any chunks that are too large, split them at sentence boundaries
+		const finalChunks = [];
+
+		for (const chunk of chunks) {
+			if (chunk.length <= maxChunkSize) {
+				finalChunks.push(chunk);
+				continue;
+			}
+
+			// Split this chunk at sentence boundaries
+			const sentences = chunk.match(/[^.!?]+[.!?]+/g) || [chunk];
+			let sentenceChunk = "";
+
+			for (const sentence of sentences) {
+				if (
+					sentenceChunk.length + sentence.length > maxChunkSize &&
+					sentenceChunk.length > 0
+				) {
+					finalChunks.push(sentenceChunk);
+					sentenceChunk = sentence;
+				} else {
+					sentenceChunk += sentence;
+				}
+			}
+
+			if (sentenceChunk.length > 0) {
+				finalChunks.push(sentenceChunk);
+			}
+		}
+
+		console.log(
+			`Split content into ${finalChunks.length} chunks for processing`
+		);
+		return finalChunks;
+	}
+
 	// Process content in chunks, handling one at a time with rate limit awareness
 	async function processContentInChunks(title, content, useEmoji = false) {
 		try {
@@ -574,11 +646,8 @@ try {
 				);
 			}
 
-			// Split content at natural boundaries
-			const contentChunks = splitContentAtNaturalBoundaries(
-				content,
-				chunkSize
-			);
+			// Split content for processing
+			const contentChunks = splitContentForProcessing(content, chunkSize);
 			const totalChunks = contentChunks.length;
 
 			console.log(`Processing content in ${totalChunks} chunks`);
@@ -818,6 +887,16 @@ try {
 				modelEndpoint.split("/").pop().split(":")[0];
 			console.log(`Using model: ${modelName}`);
 
+			// Store model info to pass back to content script
+			const modelInfo = {
+				name: modelName,
+				provider: modelName.includes("gemini")
+					? "Google Gemini"
+					: modelName.includes("gpt")
+					? "OpenAI"
+					: "AI",
+			};
+
 			// Get emoji setting - from parameter or config
 			const shouldUseEmoji =
 				useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
@@ -936,6 +1015,7 @@ try {
 					return {
 						originalContent: content,
 						enhancedContent: generatedText,
+						modelInfo: modelInfo, // Include model info in the response
 					};
 				}
 			}
@@ -1665,289 +1745,6 @@ try {
 				maxContextSize: 16000,
 				maxOutputTokens: 8192,
 			};
-		}
-	}
-
-	// Function to split content at natural paragraph boundaries
-	function splitContentAtNaturalBoundaries(content, maxChunkSize) {
-		// Start by trying to split at paragraph tags
-		const paragraphs = content.split(
-			/<\/(p|div|section|article|header|h[1-6])>\s*(?=<)/i
-		);
-
-		let chunks = [];
-		let currentChunk = "";
-
-		for (let i = 0; i < paragraphs.length; i++) {
-			const paragraph = paragraphs[i];
-
-			// Skip empty paragraphs
-			if (!paragraph.trim()) continue;
-
-			// If adding this paragraph would exceed the chunk size and we already have content,
-			// finalize the current chunk and start a new one
-			if (
-				currentChunk.length + paragraph.length > maxChunkSize &&
-				currentChunk.length > 0
-			) {
-				chunks.push(currentChunk);
-				currentChunk = paragraph;
-			} else {
-				// Otherwise, add this paragraph to the current chunk
-				currentChunk += paragraph;
-			}
-
-			// If this is not the last paragraph, add the closing tag back
-			if (i < paragraphs.length - 1) {
-				currentChunk += "</p>";
-			}
-		}
-
-		// Add the last chunk if it has content
-		if (currentChunk.length > 0) {
-			chunks.push(currentChunk);
-		}
-
-		// If we couldn't make multiple chunks with paragraph boundaries, try sentence boundaries
-		if (chunks.length <= 1 && content.length > maxChunkSize) {
-			chunks = [];
-			currentChunk = "";
-
-			// Split by sentences (roughly)
-			const sentences = content.split(/(?<=[.!?])\s+/);
-
-			for (const sentence of sentences) {
-				// If adding this sentence would exceed the chunk size and we already have content,
-				// finalize the current chunk and start a new one
-				if (
-					currentChunk.length + sentence.length > maxChunkSize &&
-					currentChunk.length > 0
-				) {
-					chunks.push(currentChunk);
-					currentChunk = sentence;
-				} else {
-					// Otherwise, add this sentence to the current chunk
-					if (currentChunk.length > 0) {
-						currentChunk += " ";
-					}
-					currentChunk += sentence;
-				}
-			}
-
-			// Add the last chunk if it has content
-			if (currentChunk.length > 0) {
-				chunks.push(currentChunk);
-			}
-		}
-
-		console.log(
-			`Split content into ${chunks.length} chunks at natural boundaries`
-		);
-		return chunks;
-	}
-
-	// Process content in chunks, handling one at a time with rate limit awareness
-	async function processContentInChunks(title, content, useEmoji = false) {
-		try {
-			// Load latest config directly from storage for most up-to-date settings
-			currentConfig = await initConfig();
-
-			// Check if chunking is enabled
-			if (!currentConfig.chunkingEnabled) {
-				console.log(
-					"Chunking is disabled. Processing content as a single piece."
-				);
-				return await processContentWithGemini(
-					title,
-					content,
-					false,
-					null,
-					useEmoji
-				);
-			}
-
-			// Get or use default chunk size (in characters)
-			const chunkSize = currentConfig.chunkSize || 12000;
-			console.log(`Using chunk size of ${chunkSize} characters`);
-
-			// Only split if content exceeds the chunk size
-			if (content.length <= chunkSize) {
-				console.log(
-					"Content is small enough to process as a single piece."
-				);
-				return await processContentWithGemini(
-					title,
-					content,
-					false,
-					null,
-					useEmoji
-				);
-			}
-
-			// Split content at natural boundaries
-			const contentChunks = splitContentAtNaturalBoundaries(
-				content,
-				chunkSize
-			);
-			const totalChunks = contentChunks.length;
-
-			console.log(`Processing content in ${totalChunks} chunks`);
-
-			// Array to store results for each chunk
-			let results = [];
-			let failedChunks = [];
-
-			// Process each chunk one by one
-			for (let i = 0; i < totalChunks; i++) {
-				try {
-					console.log(`Processing chunk ${i + 1}/${totalChunks}`);
-
-					// Wait a bit between chunks to avoid rate limiting
-					if (i > 0) {
-						const delay = 500; // 500ms delay between chunks
-						await new Promise((resolve) =>
-							setTimeout(resolve, delay)
-						);
-					}
-
-					// Process this chunk
-					const chunk = contentChunks[i];
-					const partInfo = { current: i + 1, total: totalChunks };
-
-					// Process with Gemini
-					const result = await processContentWithGemini(
-						title,
-						chunk,
-						true,
-						partInfo,
-						useEmoji
-					);
-
-					// Store the result for this chunk
-					results.push({
-						originalContent: chunk,
-						enhancedContent: result.enhancedContent,
-						chunkIndex: i,
-						processed: true,
-					});
-
-					// Immediately send this processed chunk back to the content script
-					browser.runtime
-						.sendMessage({
-							action: "chunkProcessed",
-							chunkIndex: i,
-							totalChunks: totalChunks,
-							result: {
-								originalContent: chunk,
-								enhancedContent: result.enhancedContent,
-								isResumed: false,
-							},
-							isComplete:
-								i === totalChunks - 1 &&
-								failedChunks.length === 0,
-						})
-						.catch((error) =>
-							console.error("Error sending chunk result:", error)
-						);
-				} catch (error) {
-					console.error(
-						`Error processing chunk ${i + 1}/${totalChunks}:`,
-						error
-					);
-
-					// Store information about the failed chunk
-					failedChunks.push({
-						originalContent: contentChunks[i],
-						chunkIndex: i,
-						error: error.message || "Unknown error",
-						processed: false,
-					});
-
-					// Check if this is a rate limit error
-					const isRateLimitError =
-						error.message &&
-						(error.message.includes("rate limit") ||
-							error.message.includes("quota") ||
-							error.message.includes("429"));
-
-					if (isRateLimitError) {
-						console.log("Rate limit detected. Pausing processing.");
-
-						// Notify the content script about the rate limit
-						browser.runtime
-							.sendMessage({
-								action: "chunkError",
-								chunkIndex: i,
-								totalChunks: totalChunks,
-								error: error.message,
-								isRateLimit: true,
-								remainingChunks: totalChunks - i,
-								unprocessedChunks: contentChunks.slice(i),
-								isResumed: false,
-							})
-							.catch((error) =>
-								console.error(
-									"Error sending rate limit notification:",
-									error
-								)
-							);
-
-						// Stop processing remaining chunks
-						break;
-					} else {
-						// For other errors, notify but continue processing
-						browser.runtime
-							.sendMessage({
-								action: "chunkError",
-								chunkIndex: i,
-								totalChunks: totalChunks,
-								error: error.message,
-								isRateLimit: false,
-								isResumed: false,
-							})
-							.catch((error) =>
-								console.error(
-									"Error sending chunk error notification:",
-									error
-								)
-							);
-					}
-				}
-			}
-
-			// Notify that all possible processing is complete
-			browser.runtime
-				.sendMessage({
-					action: "allChunksProcessed",
-					totalProcessed: results.length,
-					totalFailed: failedChunks.length,
-					totalChunks: totalChunks,
-					failedChunks: failedChunks.map((chunk) => chunk.chunkIndex),
-				})
-				.catch((error) =>
-					console.error(
-						"Error sending completion notification:",
-						error
-					)
-				);
-
-			// Combine results and return
-			const combinedResult = {
-				originalContent: content,
-				enhancedContent: results.map((r) => r.enhancedContent).join(""),
-				processedChunks: results.length,
-				totalChunks: totalChunks,
-				failedChunks: failedChunks.length,
-				isComplete: failedChunks.length === 0,
-				unprocessedContent: failedChunks
-					.map((f) => f.originalContent)
-					.join(""),
-			};
-
-			return combinedResult;
-		} catch (error) {
-			console.error("Error in chunk processing:", error);
-			throw error;
 		}
 	}
 }
