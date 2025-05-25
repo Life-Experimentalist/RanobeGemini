@@ -73,8 +73,7 @@
 	},
 	"background": {
 		"scripts": [
-			"background/background.js",
-			"background/"
+			"background/background.js"
 		],
 		"type": "module"
 	},

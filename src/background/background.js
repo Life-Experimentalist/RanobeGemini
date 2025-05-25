@@ -537,79 +537,65 @@ try {
 	}
 
 	// Function to split content for processing large chapters
-	function splitContentForProcessing(content, maxChunkSize) {
-		// If content is already small enough, return it as a single chunk
-		if (content.length <= maxChunkSize) {
-			return [content];
-		}
-
-		console.log(
-			`Content is large (${content.length} chars), splitting into chunks...`
-		);
-
-		// First try to split at natural paragraph boundaries
-		const paragraphs = content.split(/\n\n+/);
-		const chunks = [];
+	function splitContentForProcessing(content, maxChunkSize = 12000) {
+		// First try to split on paragraph markers
+		let chunks = [];
+		let paragraphs = content.split(/\n\s*\n/);
 		let currentChunk = "";
 
-		// Group paragraphs into chunks that don't exceed maxChunkSize
+		// Aim for chunks of approximately 4000 words (~20,000 characters)
+		const targetWordCount = 4000;
+		const approxCharsPerWord = 5;
+		const targetChunkSize = targetWordCount * approxCharsPerWord;
+
+		// Use either the target size or the provided max size, whichever is smaller
+		const effectiveMaxSize = Math.min(maxChunkSize, targetChunkSize);
+
+		console.log(
+			`Splitting content with target size of ~${effectiveMaxSize} characters (${targetWordCount} words)`
+		);
+
 		for (const paragraph of paragraphs) {
-			// If adding this paragraph would exceed the limit, start a new chunk
+			// If adding this paragraph would exceed the limit, finalize the current chunk
 			if (
-				currentChunk.length + paragraph.length > maxChunkSize &&
+				currentChunk.length + paragraph.length + 2 > effectiveMaxSize &&
 				currentChunk.length > 0
 			) {
 				chunks.push(currentChunk);
 				currentChunk = paragraph;
 			} else {
-				// Otherwise, add to current chunk
-				currentChunk += (currentChunk ? "\n\n" : "") + paragraph;
+				// Otherwise add it to the current chunk
+				if (currentChunk.length > 0) {
+					currentChunk += "\n\n" + paragraph;
+				} else {
+					currentChunk = paragraph;
+				}
 			}
 		}
 
-		// Add the last chunk if it has content
+		// Add the final chunk if there's anything left
 		if (currentChunk.length > 0) {
 			chunks.push(currentChunk);
 		}
 
-		// If we still have any chunks that are too large, split them at sentence boundaries
-		const finalChunks = [];
-
-		for (const chunk of chunks) {
-			if (chunk.length <= maxChunkSize) {
-				finalChunks.push(chunk);
-				continue;
-			}
-
-			// Split this chunk at sentence boundaries
-			const sentences = chunk.match(/[^.!?]+[.!?]+/g) || [chunk];
-			let sentenceChunk = "";
-
-			for (const sentence of sentences) {
-				if (
-					sentenceChunk.length + sentence.length > maxChunkSize &&
-					sentenceChunk.length > 0
-				) {
-					finalChunks.push(sentenceChunk);
-					sentenceChunk = sentence;
-				} else {
-					sentenceChunk += sentence;
-				}
-			}
-
-			if (sentenceChunk.length > 0) {
-				finalChunks.push(sentenceChunk);
-			}
+		// If we have no chunks or only one chunk, return the original content
+		if (chunks.length <= 1) {
+			return [content];
 		}
 
 		console.log(
-			`Split content into ${finalChunks.length} chunks for processing`
+			`Split content into ${chunks.length} chunks for processing`
 		);
-		return finalChunks;
+		return chunks;
 	}
 
 	// Process content in chunks, handling one at a time with rate limit awareness
-	async function processContentInChunks(title, content, useEmoji = false) {
+	async function processContentInChunks(
+		title,
+		content,
+		useEmoji = false,
+		siteSpecificPrompt = ""
+	) {
 		try {
 			// Load latest config directly from storage for most up-to-date settings
 			currentConfig = await initConfig();
@@ -624,7 +610,9 @@ try {
 					content,
 					false,
 					null,
-					useEmoji
+					useEmoji,
+					null,
+					siteSpecificPrompt
 				);
 			}
 
@@ -642,11 +630,13 @@ try {
 					content,
 					false,
 					null,
-					useEmoji
+					useEmoji,
+					null,
+					siteSpecificPrompt
 				);
 			}
 
-			// Split content for processing
+			// Split content for processing - improved method with better chunking
 			const contentChunks = splitContentForProcessing(content, chunkSize);
 			const totalChunks = contentChunks.length;
 
@@ -656,125 +646,206 @@ try {
 			let results = [];
 			let failedChunks = [];
 
+			// For maintaining conversation context between chunks
+			let conversationHistory = null;
+
 			// Process each chunk one by one
 			for (let i = 0; i < totalChunks; i++) {
-				try {
-					console.log(`Processing chunk ${i + 1}/${totalChunks}`);
+				let retryCount = 0;
+				let processed = false;
 
-					// Wait a bit between chunks to avoid rate limiting
-					if (i > 0) {
-						const delay = 500; // 500ms delay between chunks
-						await new Promise((resolve) =>
-							setTimeout(resolve, delay)
+				while (!processed && retryCount < 3) {
+					try {
+						console.log(`Processing chunk ${i + 1}/${totalChunks}`);
+
+						// Wait a bit between chunks to avoid rate limiting
+						if (i > 0 || retryCount > 0) {
+							const delay = 1000 * (retryCount + 1); // Increased delay between retries
+							console.log(
+								`Waiting ${delay}ms before processing next chunk...`
+							);
+							await new Promise((resolve) =>
+								setTimeout(resolve, delay)
+							);
+						}
+
+						// Process this chunk
+						const chunk = contentChunks[i];
+						const partInfo = { current: i + 1, total: totalChunks };
+
+						// Process with Gemini, passing conversation history for context
+						const result = await processContentWithGemini(
+							title,
+							chunk,
+							true,
+							partInfo,
+							useEmoji,
+							conversationHistory,
+							siteSpecificPrompt
 						);
-					}
 
-					// Process this chunk
-					const chunk = contentChunks[i];
-					const partInfo = { current: i + 1, total: totalChunks };
-
-					// Process with Gemini
-					const result = await processContentWithGemini(
-						title,
-						chunk,
-						true,
-						partInfo,
-						useEmoji
-					);
-
-					// Store the result for this chunk
-					results.push({
-						originalContent: chunk,
-						enhancedContent: result.enhancedContent,
-						chunkIndex: i,
-						processed: true,
-					});
-
-					// Immediately send this processed chunk back to the content script
-					browser.runtime
-						.sendMessage({
-							action: "chunkProcessed",
+						// Store the result for this chunk
+						results.push({
+							originalContent: chunk,
+							enhancedContent: result.enhancedContent,
 							chunkIndex: i,
-							totalChunks: totalChunks,
-							result: {
-								originalContent: chunk,
-								enhancedContent: result.enhancedContent,
-								isResumed: false,
-							},
-							isComplete:
-								i === totalChunks - 1 &&
-								failedChunks.length === 0,
-						})
-						.catch((error) =>
-							console.error("Error sending chunk result:", error)
+							processed: true,
+						});
+
+						// Update conversation history for next chunk
+						conversationHistory = result.conversationHistory;
+
+						// Immediately send this processed chunk back to the content script
+						// Include streaming information for progressive updates
+						browser.runtime
+							.sendMessage({
+								action: "chunkProcessed",
+								chunkIndex: i,
+								totalChunks: totalChunks,
+								result: {
+									originalContent: chunk,
+									enhancedContent: result.enhancedContent,
+									isResumed: retryCount > 0,
+									modelInfo: result.modelInfo,
+								},
+								isComplete:
+									i === totalChunks - 1 &&
+									failedChunks.length === 0,
+								progressPercent: Math.round(
+									((i + 1) / totalChunks) * 100
+								),
+							})
+							.catch((error) =>
+								console.error(
+									"Error sending chunk result:",
+									error
+								)
+							);
+
+						processed = true;
+					} catch (error) {
+						console.error(
+							`Error processing chunk ${
+								i + 1
+							}/${totalChunks} (attempt ${retryCount + 1}):`,
+							error
 						);
-				} catch (error) {
-					console.error(
-						`Error processing chunk ${i + 1}/${totalChunks}:`,
-						error
-					);
 
-					// Store information about the failed chunk
-					failedChunks.push({
-						originalContent: contentChunks[i],
-						chunkIndex: i,
-						error: error.message || "Unknown error",
-						processed: false,
-					});
+						// Check if this is a rate limit error
+						const isRateLimitError =
+							error.message &&
+							(error.message.includes("rate limit") ||
+								error.message.includes("quota") ||
+								error.message.includes("429"));
 
-					// Check if this is a rate limit error
-					const isRateLimitError =
-						error.message &&
-						(error.message.includes("rate limit") ||
-							error.message.includes("quota") ||
-							error.message.includes("429"));
+						if (isRateLimitError) {
+							// Parse retry time from error message if available
+							let waitTime = 60000; // Default 1 minute
+							const timeMatch =
+								error.message.match(/(\d+) seconds/);
+							if (timeMatch && timeMatch[1]) {
+								waitTime = parseInt(timeMatch[1]) * 1000;
+							}
 
-					if (isRateLimitError) {
-						console.log("Rate limit detected. Pausing processing.");
-
-						// Notify the content script about the rate limit
-						browser.runtime
-							.sendMessage({
-								action: "chunkError",
-								chunkIndex: i,
-								totalChunks: totalChunks,
-								error: error.message,
-								isRateLimit: true,
-								remainingChunks: totalChunks - i,
-								unprocessedChunks: contentChunks.slice(i),
-								isResumed: false,
-							})
-							.catch((error) =>
-								console.error(
-									"Error sending rate limit notification:",
-									error
-								)
+							console.log(
+								`Rate limit detected. Waiting ${
+									waitTime / 1000
+								} seconds before retrying...`
 							);
 
-						// Stop processing remaining chunks
-						break;
-					} else {
-						// For other errors, notify but continue processing
-						browser.runtime
-							.sendMessage({
-								action: "chunkError",
-								chunkIndex: i,
-								totalChunks: totalChunks,
-								error: error.message,
-								isRateLimit: false,
-								isResumed: false,
-							})
-							.catch((error) =>
-								console.error(
-									"Error sending chunk error notification:",
-									error
-								)
+							// Notify the content script about the rate limit and wait
+							browser.runtime
+								.sendMessage({
+									action: "chunkError",
+									chunkIndex: i,
+									totalChunks: totalChunks,
+									error: error.message,
+									isRateLimit: true,
+									waitTime: waitTime,
+									retryCount: retryCount,
+								})
+								.catch((error) =>
+									console.error(
+										"Error sending rate limit notification:",
+										error
+									)
+								);
+
+							// Wait for the specified time
+							await new Promise((resolve) =>
+								setTimeout(resolve, waitTime)
 							);
+
+							// Increment retry count and try again
+							retryCount++;
+						} else if (retryCount < 2) {
+							// For non-rate limit errors, retry with exponential backoff
+							const backoffTime = Math.pow(2, retryCount) * 3000;
+							console.log(
+								`Error processing chunk. Retrying in ${
+									backoffTime / 1000
+								} seconds...`
+							);
+
+							// Notify content script
+							browser.runtime
+								.sendMessage({
+									action: "chunkError",
+									chunkIndex: i,
+									totalChunks: totalChunks,
+									error: error.message,
+									isRateLimit: false,
+									retryCount: retryCount,
+								})
+								.catch((error) =>
+									console.error(
+										"Error sending chunk error notification:",
+										error
+									)
+								);
+
+							// Wait and retry
+							await new Promise((resolve) =>
+								setTimeout(resolve, backoffTime)
+							);
+							retryCount++;
+						} else {
+							// If we've exhausted retries, mark as failed and move on
+							failedChunks.push({
+								originalContent: contentChunks[i],
+								chunkIndex: i,
+								error: error.message || "Unknown error",
+								processed: false,
+							});
+
+							// Notify content script about failure
+							browser.runtime
+								.sendMessage({
+									action: "chunkError",
+									chunkIndex: i,
+									totalChunks: totalChunks,
+									error: error.message,
+									isRateLimit: false,
+									isResumed: false,
+									finalFailure: true,
+								})
+								.catch((error) =>
+									console.error(
+										"Error sending chunk error notification:",
+										error
+									)
+								);
+
+							processed = true; // Move on to next chunk
+						}
 					}
 				}
 			}
 
-			// Notify that all possible processing is complete
+			// Notify that all processing is complete
+			console.log("All chunks processed. Notifying content script.");
+
+			// Send complete notification to content script
 			browser.runtime
 				.sendMessage({
 					action: "allChunksProcessed",
@@ -782,6 +853,7 @@ try {
 					totalFailed: failedChunks.length,
 					totalChunks: totalChunks,
 					failedChunks: failedChunks.map((chunk) => chunk.chunkIndex),
+					hasPartialContent: results.length > 0,
 				})
 				.catch((error) =>
 					console.error(
@@ -816,7 +888,9 @@ try {
 		content,
 		isPart = false,
 		partInfo = null,
-		useEmoji = false
+		useEmoji = false,
+		conversationHistory = null,
+		siteSpecificPrompt = ""
 	) {
 		try {
 			// Add debugging to verify content is received
@@ -923,22 +997,52 @@ try {
 			const fullPrompt = combinePrompts(
 				promptPrefix,
 				currentConfig.permanentPrompt,
-				"" // Site-specific prompt can be added here if needed
+				siteSpecificPrompt // Use the site-specific prompt parameter
 			);
 
-			// Create the full text to send to Gemini - prompt followed by the actual content
-			const promptWithContent = `${fullPrompt}\n\n### Title:\n${title}\n\n### Content to Enhance:\n${contentWithPlaceholders}`;
+			// Create the full system instruction
+			const systemInstruction = `${fullPrompt}\n\n### Title:\n${title}`;
 
-			const requestBody = {
-				contents: [
+			// Create request body with proper system instruction format for Gemini
+			let requestContents = [];
+
+			// If we have conversation history, use it to maintain context
+			if (conversationHistory && conversationHistory.length > 0) {
+				requestContents = conversationHistory;
+
+				// Add the current content as a new user message
+				requestContents.push({
+					role: "user",
+					parts: [
+						{
+							text: `### Content to Enhance:\n${contentWithPlaceholders}`,
+						},
+					],
+				});
+			} else {
+				// Start a new conversation with proper user message
+				requestContents = [
 					{
+						role: "user",
 						parts: [
 							{
-								text: promptWithContent, // Use the combined prompt with the content with placeholders
+								text: `### Content to Enhance:\n${contentWithPlaceholders}`,
 							},
 						],
 					},
-				],
+				];
+			}
+
+			// Create the request body with system_instruction separate from contents
+			const requestBody = {
+				system_instruction: {
+					parts: [
+						{
+							text: systemInstruction,
+						},
+					],
+				},
+				contents: requestContents,
 				generationConfig: {
 					temperature: currentConfig.temperature || 0.7,
 					maxOutputTokens: currentConfig.maxOutputTokens || 8192,
@@ -975,7 +1079,27 @@ try {
 				console.log("Gemini API Response:", responseData);
 			}
 
-			// Handle API errors
+			// Check for rate limiting
+			if (response.status === 429) {
+				const retryAfter = response.headers.get("retry-after");
+				const waitTime = retryAfter
+					? parseInt(retryAfter) * 1000
+					: 60000; // Default to 1 minute if no header
+
+				console.log(
+					`Rate limit hit. Will retry after ${
+						waitTime / 1000
+					} seconds.`
+				);
+
+				throw new Error(
+					`Rate limit reached. Please try again in ${Math.ceil(
+						waitTime / 1000
+					)} seconds.`
+				);
+			}
+
+			// Handle other API errors
 			if (!response.ok) {
 				const errorMessage =
 					responseData.error?.message ||
@@ -987,6 +1111,18 @@ try {
 			if (responseData.candidates && responseData.candidates.length > 0) {
 				let generatedText =
 					responseData.candidates[0].content?.parts[0]?.text;
+
+				// Capture conversation history for future chunks
+				const updatedConversationHistory = [...requestContents];
+
+				// Add the assistant response to conversation history
+				if (generatedText) {
+					updatedConversationHistory.push({
+						role: "assistant",
+						parts: [{ text: generatedText }],
+					});
+				}
+
 				if (generatedText) {
 					// Restore preserved HTML elements if they exist
 					if (preservedElements && preservedElements.length > 0) {
@@ -1016,6 +1152,8 @@ try {
 						originalContent: content,
 						enhancedContent: generatedText,
 						modelInfo: modelInfo, // Include model info in the response
+						conversationHistory:
+							updatedConversationHistory.slice(-4), // Keep last 4 messages for context
 					};
 				}
 			}
@@ -1076,19 +1214,27 @@ try {
 				"" // Site-specific prompt can be added here if needed
 			);
 
-			// Combine prompt with title and content
-			const promptWithContent = `${fullSummarizationPrompt}\n\n### Title:\n${title}\n\n### Content to Summarize:\n${content}`;
+			// Create proper role-based content for summarization
+			const requestContents = [
+				{
+					role: "user",
+					parts: [
+						{
+							text: `### Content to Summarize:\n${content}`,
+						},
+					],
+				},
+			];
 
 			const requestBody = {
-				contents: [
-					{
-						parts: [
-							{
-								text: promptWithContent, // Include content to be summarized
-							},
-						],
-					},
-				],
+				system_instruction: {
+					parts: [
+						{
+							text: `${fullSummarizationPrompt}\n\n### Title:\n${title}`,
+						},
+					],
+				},
+				contents: requestContents,
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
 					maxOutputTokens: 512, // Limit summary length
@@ -1182,19 +1328,27 @@ try {
 				)
 				.join("\n\n");
 
-			// Combine prompt with title and content
-			const promptWithContent = `${fullCombinationPrompt}\n\n### Title:\n${title}\n\n### Partial Summaries:\n${allPartSummaries}`;
+			// Create proper role-based content for summary combination
+			const requestContents = [
+				{
+					role: "user",
+					parts: [
+						{
+							text: `### Partial Summaries:\n${allPartSummaries}`,
+						},
+					],
+				},
+			];
 
 			const requestBody = {
-				contents: [
-					{
-						parts: [
-							{
-								text: promptWithContent,
-							},
-						],
-					},
-				],
+				system_instruction: {
+					parts: [
+						{
+							text: `${fullCombinationPrompt}\n\n### Title:\n${title}`,
+						},
+					],
+				},
+				contents: requestContents,
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
 					maxOutputTokens: 512, // Limit summary length

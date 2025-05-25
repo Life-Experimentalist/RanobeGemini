@@ -697,18 +697,26 @@ html[data-darkreader-mode] .game-stats-box {
 
 	/* Adjust controls for smaller screens */
 	#gemini-controls {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 8px;
+		display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 10px;
+			padding: 5px;
 	}
 
-	/* Make buttons full width on mobile */
+		/* Make buttons more compact and attractive on mobile */
 	.gemini-button,
 	.gemini-enhance-btn {
-		width: 100%;
+		width: auto;
+			min-width: 120px;
+			max-width: 45%;
 		justify-content: center;
-		padding: 12px 15px;
-		margin: 3px 0;
+		padding: 10px 15px;
+			margin: 5px;
+			border-radius: 6px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			font-size: 13px;
 	}
 
 	/* Adjust summary display for mobile */
@@ -737,19 +745,75 @@ html[data-darkreader-mode] .game-stats-box {
 		margin-top: 8px;
 		width: 100%;
 	}
-/* Make game stats boxes responsive on small screens */
-.game-stats-box {
-	width: fit-content;
-	max-width: 100%;
-	overflow-x: auto;
-	padding: 10px;
+
+		/* Make game stats boxes responsive on small screens */
+		.game-stats-box {
+			width: fit-content;
+			max-width: 100%;
+			overflow-x: auto;
+			padding: 10px;
+			font-size: 13px;
+		}
+/* Mobile styles for enhanced banner and toggle button */
+.gemini-enhanced-banner {
+	padding: 10px !important;
+}
+
+.gemini-toggle-btn {
+	padding: 8px 10px;
 	font-size: 13px;
+	border-radius: 5px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Adjust layout of banner contents on mobile */
+.gemini-enhanced-banner>div {
+	flex-direction: column;
+}
+
+.gemini-enhanced-banner>div>div:first-child {
+	margin-bottom: 10px;
+	width: 100%;
+	justify-content: space-between;
+}
+
+/* Mobile styles for work-in-progress and error banners */
+.gemini-wip-banner,
+.gemini-error-banner {
+	padding: 12px !important;
+	margin: 10px 0 !important;
+}
+
+.gemini-wip-banner>div:first-child,
+.gemini-error-banner>div:first-child {
+	margin-bottom: 12px;
+}
+
+/* Progress bar enhancements for mobile */
+.gemini-wip-banner>div:nth-child(2) {
+	height: 12px !important;
+	border-radius: 6px !important;
+	margin: 12px 0 !important;
 }
 }
 
 /* Additional tweaks for very small screens */
 @media screen and (max-width: 480px) {
 
+	/* Adjust button sizing for very small screens */
+		.gemini-button,
+		.gemini-enhance-btn {
+			min-width: 100px;
+			font-size: 12px;
+			padding: 8px 12px;
+		}
+
+		/* Active state for better touch feedback */
+		.gemini-button:active,
+		.gemini-enhance-btn:active {
+			transform: translateY(1px);
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+		}
 	/* Further reduce padding to maximize content space */
 	#summary-display,
 	.summary-text-content {
@@ -760,6 +824,24 @@ html[data-darkreader-mode] .game-stats-box {
 	.extraction-message {
 		width: 95%;
 	}
+}
+/* Styling for enhanced banner toggle button */
+.gemini-toggle-btn {
+	padding: 6px 12px;
+	background: #4285f4;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.2s, transform 0.1s;
+}
+
+.gemini-toggle-btn:hover {
+	background: #3367d6;
+}
+
+.gemini-toggle-btn:active {
+	transform: translateY(1px);
 }
 /* Preserved images container styling */
 .preserved-images-container {

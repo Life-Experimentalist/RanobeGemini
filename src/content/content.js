@@ -315,13 +315,13 @@ function createEnhancedBanner(originalContent, enhancedContent, modelInfo) {
 
 	banner.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <div style="display: flex; align-items: center;">
-                    <span style="font-size: 18px; margin-right: 5px;">✨</span>
-                    <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
+			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 18px; margin-right: 5px;">✨</span>
+                        <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
+                    </div>
+                    <button class="gemini-toggle-btn">Show Original</button>
                 </div>
-                <button class="gemini-toggle-btn" style="padding: 6px 12px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Show Original</button>
-            </div>
             <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
                 <span style="font-family: monospace;">
                     Words: ${originalWordCount.toLocaleString()} → ${enhancedWordCount.toLocaleString()}
@@ -340,6 +340,134 @@ function createEnhancedBanner(originalContent, enhancedContent, modelInfo) {
 	return banner;
 }
 
+// Function to create a work-in-progress banner
+function createWorkInProgressBanner(currentChunk, totalChunks) {
+	const progressPercent = Math.round((currentChunk / totalChunks) * 100);
+
+	const banner = document.createElement("div");
+	banner.className = "gemini-wip-banner";
+	banner.style.cssText = `
+        margin: 15px 0;
+        padding: 15px;
+        background-color: #fffbea;
+        border-radius: 8px;
+        border: 1px solid #f0e0a2;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    `;
+
+	// Support dark mode
+	if (
+		document.querySelector(
+			'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+		) ||
+		window.matchMedia("(prefers-color-scheme: dark)").matches
+	) {
+		banner.style.backgroundColor = "#3a3a2c";
+		banner.style.borderColor = "#5a5a40";
+		banner.style.color = "#e0e0e0";
+	}
+
+	banner.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 18px; margin-right: 10px;">⏳</span>
+            <span style="font-weight: bold; font-size: 16px;">Enhancing Content: Work in Progress</span>
+        </div>
+        <div style="width: 100%; margin: 10px 0; background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
+            <div style="width: ${progressPercent}%; background: #4285f4; height: 100%;"></div>
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            Processing chunk ${currentChunk} of ${totalChunks} (${progressPercent}% complete). Please wait while the content is being enhanced...
+        </div>
+    `;
+
+	return banner;
+}
+
+// Function to create an error disclaimer banner
+function createErrorDisclaimerBanner(error, hasPartialContent = false) {
+	const banner = document.createElement("div");
+	banner.className = "gemini-error-banner";
+	banner.style.cssText = `
+        margin: 15px 0;
+        padding: 15px;
+        background-color: #feeced;
+        border-radius: 8px;
+        border: 1px solid #f5c2c7;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    `;
+
+	// Support dark mode
+	if (
+		document.querySelector(
+			'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+		) ||
+		window.matchMedia("(prefers-color-scheme: dark)").matches
+	) {
+		banner.style.backgroundColor = "#3a2c2d";
+		banner.style.borderColor = "#5a3f3f";
+		banner.style.color = "#e0e0e0";
+	}
+
+	// Create different message depending on if we have partial content
+	const messageText = hasPartialContent
+		? "An error occurred during processing, but some content was successfully enhanced. The original content was preserved for the sections that couldn't be processed."
+		: "An error occurred during processing. The content below is the original text.";
+
+	const iconClass = hasPartialContent ? "⚠️" : "❌";
+	const bannerTitle = hasPartialContent
+		? "Partial Content Available"
+		: "Processing Error";
+
+	banner.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 18px; margin-right: 10px;">${iconClass}</span>
+            <span style="font-weight: bold; font-size: 16px;">${bannerTitle}</span>
+        </div>
+        <div style="font-size: 14px; margin-bottom: 8px;">
+            ${messageText}
+        </div>
+        <div style="font-size: 13px; color: #842029; background: rgba(220, 53, 69, 0.1); padding: 8px; border-radius: 4px;">
+            Error details: ${error}
+        </div>
+    `;
+
+	return banner;
+}
+
+// Function to update the work-in-progress banner with real-time progress
+function updateWorkInProgressBanner(
+	currentChunk,
+	totalChunks,
+	progressPercent = null
+) {
+	let banner = document.querySelector(".gemini-wip-banner");
+
+	if (!progressPercent) {
+		progressPercent = Math.round((currentChunk / totalChunks) * 100);
+	}
+
+	if (banner) {
+		// Update existing banner
+		const progressBar = banner.querySelector(
+			"div > div:nth-child(2) > div"
+		);
+		if (progressBar) {
+			progressBar.style.width = `${progressPercent}%`;
+		}
+
+		const statusText = banner.querySelector("div:nth-child(3)");
+		if (statusText) {
+			statusText.textContent = `Processing chunk ${currentChunk} of ${totalChunks} (${progressPercent}% complete). Please wait while the content is being enhanced...`;
+		}
+	} else {
+		if (contentArea && contentArea.firstChild) {
+			contentArea.insertBefore(banner, contentArea.firstChild);
+		}
+	}
+
+	return banner;
+}
+
 // Function to remove the original word count element
 function removeOriginalWordCount() {
 	const originalWordCount = document.querySelector(".gemini-word-count");
@@ -347,6 +475,318 @@ function removeOriginalWordCount() {
 		console.log("Removing original word count display");
 		originalWordCount.parentNode.removeChild(originalWordCount);
 	}
+}
+
+// Handler for processed chunks from the background script
+function handleChunkProcessed(message) {
+	console.log(
+		`Received processed chunk ${message.chunkIndex + 1}/${
+			message.totalChunks
+		}`
+	);
+
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		console.error(
+			"Unable to find content area for displaying processed chunk"
+		);
+		return;
+	}
+
+	// First time? Create a special container for progressive updates
+	let progressiveContentContainer = document.getElementById(
+		"gemini-progressive-content"
+	);
+	if (!progressiveContentContainer) {
+		// Preserve original content
+		const originalContent = contentArea.innerHTML;
+		contentArea.setAttribute("data-original-content", originalContent);
+
+		// Create container for progressive updates
+		progressiveContentContainer = document.createElement("div");
+		progressiveContentContainer.id = "gemini-progressive-content";
+
+		// Clear content area and add our container
+		contentArea.innerHTML = "";
+		contentArea.appendChild(progressiveContentContainer);
+
+		// Add the work in progress banner
+		const wipBanner = createWorkInProgressBanner(
+			message.chunkIndex + 1,
+			message.totalChunks
+		);
+		contentArea.insertBefore(wipBanner, progressiveContentContainer);
+	} else {
+		// Update the existing work in progress banner
+		updateWorkInProgressBanner(message.chunkIndex + 1, message.totalChunks);
+	}
+
+	// Extract and process the chunk's content
+	const chunkResult = message.result;
+	if (chunkResult && chunkResult.enhancedContent) {
+		// Clean up any code block markers and sanitize HTML
+		const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
+
+		// Create a container for this chunk
+		const chunkContainer = document.createElement("div");
+		chunkContainer.className = "gemini-chunk";
+		chunkContainer.setAttribute("data-chunk-index", message.chunkIndex);
+		chunkContainer.innerHTML = sanitizedContent;
+
+		// Add to our progressive content container
+		progressiveContentContainer.appendChild(chunkContainer);
+
+		// Check if all chunks are processed
+		if (message.isComplete) {
+			// Remove the WIP banner
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
+
+			// Create the final enhanced banner
+			finalizePrefixEnhancedContent(chunkResult.modelInfo);
+		}
+	}
+}
+
+// Handler for chunk processing errors
+function handleChunkError(message) {
+	console.log(
+		`Error processing chunk ${message.chunkIndex + 1}/${
+			message.totalChunks
+		}:`,
+		message.error
+	);
+
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		console.error("Unable to find content area for displaying error");
+		return;
+	}
+
+	// Check if we have any processed content
+	const hasPartialContent =
+		document.getElementById("gemini-progressive-content") !== null &&
+		document.querySelector(".gemini-chunk") !== null;
+
+	// Update or create the WIP banner to reflect the error
+	const wipBanner = document.querySelector(".gemini-wip-banner");
+	if (wipBanner) {
+		// Replace with error banner
+		const errorBanner = createErrorDisclaimerBanner(
+			message.error,
+			hasPartialContent
+		);
+		wipBanner.replaceWith(errorBanner);
+	} else {
+		// Create new error banner
+		const errorBanner = createErrorDisclaimerBanner(
+			message.error,
+			hasPartialContent
+		);
+		contentArea.insertBefore(errorBanner, contentArea.firstChild);
+	}
+
+	// If it's a rate limit error, update the banner with waiting information and allow retry
+	if (message.isRateLimit) {
+		let waitTimeSeconds = 60; // Default wait time
+		if (message.waitTime) {
+			waitTimeSeconds = Math.ceil(message.waitTime / 1000);
+		}
+
+		// Show status message with retry information
+		showStatusMessage(
+			`Rate limit reached. Waiting ${waitTimeSeconds} seconds before continuing...`,
+			"warning"
+		);
+
+		// Create a retry button for rate limit errors
+		if (hasPartialContent) {
+			const errorBanner = document.querySelector(".gemini-error-banner");
+			if (errorBanner) {
+				const retryButton = document.createElement("button");
+				retryButton.textContent = "Retry Processing";
+				retryButton.style.cssText = `
+					margin-top: 10px;
+					padding: 6px 12px;
+					background: #4285f4;
+					color: white;
+					border: none;
+					border-radius: 4px;
+					cursor: pointer;
+				`;
+				retryButton.addEventListener("click", () => {
+					// Replace error banner with WIP banner
+					const wipBanner = createWorkInProgressBanner(
+						message.chunkIndex + 1,
+						message.totalChunks
+					);
+					errorBanner.replaceWith(wipBanner);
+
+					// Request resuming processing from where it left off
+					browser.runtime
+						.sendMessage({
+							action: "resumeProcessing",
+							startChunkIndex: message.chunkIndex,
+							totalChunks: message.totalChunks,
+							remainingChunks: message.unprocessedChunks || [],
+						})
+						.catch((error) => {
+							console.error(
+								"Error requesting to resume processing:",
+								error
+							);
+							showStatusMessage(
+								"Failed to resume processing. Please try again later.",
+								"error"
+							);
+						});
+				});
+
+				// Add retry button to error banner
+				errorBanner.appendChild(retryButton);
+			}
+		}
+	}
+}
+
+// Handler for all chunks processed notification
+function handleAllChunksProcessed(message) {
+	console.log(
+		`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`
+	);
+
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		console.error("Unable to find content area for finalizing content");
+		return;
+	}
+
+	// If there were failures, show an error banner
+	if (message.failedChunks && message.failedChunks.length > 0) {
+		const hasPartialContent = message.totalProcessed > 0;
+		const errorMessage = `Failed to process ${message.failedChunks.length} out of ${message.totalChunks} chunks.`;
+
+		// Remove any existing WIP banner
+		const wipBanner = document.querySelector(".gemini-wip-banner");
+		if (wipBanner) {
+			const errorBanner = createErrorDisclaimerBanner(
+				errorMessage,
+				hasPartialContent
+			);
+			wipBanner.replaceWith(errorBanner);
+		} else {
+			// Create error banner if none exists
+			const errorBanner = createErrorDisclaimerBanner(
+				errorMessage,
+				hasPartialContent
+			);
+			contentArea.insertBefore(errorBanner, contentArea.firstChild);
+		}
+	} else {
+		// Everything processed successfully, finalize the content
+		finalizePrefixEnhancedContent();
+	}
+
+	// Show status message with detailed information
+	if (message.totalProcessed === message.totalChunks) {
+		showStatusMessage(
+			`Content successfully enhanced with Gemini! (${message.totalProcessed} chunks processed)`,
+			"success"
+		);
+	} else {
+		// Calculate percentage of successful chunks
+		const successPercentage = Math.round(
+			(message.totalProcessed / message.totalChunks) * 100
+		);
+		showStatusMessage(
+			`Partially enhanced ${message.totalProcessed} of ${message.totalChunks} chunks (${successPercentage}% complete).`,
+			"warning"
+		);
+	}
+
+	// If we have a progressive content container, add a class to indicate completion
+	const progressiveContainer = document.getElementById(
+		"gemini-progressive-content"
+	);
+	if (progressiveContainer) {
+		progressiveContainer.classList.add("gemini-processing-complete");
+	}
+}
+
+// Helper function to finalize the progressive content display
+function finalizePrefixEnhancedContent(modelInfo) {
+	const contentArea = findContentArea();
+	if (!contentArea) return;
+
+	const progressiveContainer = document.getElementById(
+		"gemini-progressive-content"
+	);
+	if (!progressiveContainer) return;
+
+	// Calculate word counts for banner
+	const originalContent = contentArea.getAttribute("data-original-content");
+	const originalText = stripHtmlTags(originalContent);
+	const enhancedText = stripHtmlTags(progressiveContainer.innerHTML);
+
+	// Create enhanced banner with word count statistics and model info
+	const banner = createEnhancedBanner(originalText, enhancedText, modelInfo);
+
+	// Get the toggle button from the banner
+	const toggleButton = banner.querySelector(".gemini-toggle-btn");
+	if (toggleButton) {
+		toggleButton.addEventListener("click", function () {
+			const isShowingEnhanced =
+				contentArea.getAttribute("data-showing-enhanced") === "true";
+
+			if (isShowingEnhanced) {
+				// Switch to original
+				contentArea.innerHTML = originalContent;
+				toggleButton.textContent = "Show Enhanced";
+				contentArea.setAttribute("data-showing-enhanced", "false");
+
+				// Show status message
+				showStatusMessage(
+					"Showing original content. Click 'Show Enhanced' to view the improved version."
+				);
+			} else {
+				// Switch back to enhanced
+				// Recreate content structure
+				contentArea.innerHTML = "";
+				contentArea.appendChild(progressiveContainer);
+				contentArea.insertBefore(banner, progressiveContainer);
+				toggleButton.textContent = "Show Original";
+				contentArea.setAttribute("data-showing-enhanced", "true");
+
+				// Show status message
+				showStatusMessage(
+					"Showing enhanced content. Click 'Show Original' to view the original version."
+				);
+			}
+		});
+	}
+
+	// Store state for toggling
+	contentArea.setAttribute("data-showing-enhanced", "true");
+
+	// Add banner to the top of content area
+	contentArea.insertBefore(banner, progressiveContainer);
+
+	// Remove any existing WIP banner
+	const wipBanner = document.querySelector(".gemini-wip-banner");
+	if (wipBanner) {
+		wipBanner.remove();
+	}
+
+	// Remove any existing error banners since we're done
+	const errorBanner = document.querySelector(".gemini-error-banner");
+	if (errorBanner) {
+		errorBanner.remove();
+	}
+
+	// Add a class to indicate processing is complete
+	progressiveContainer.classList.add("gemini-processing-complete");
 }
 
 // Initialize when DOM is fully loaded
@@ -1890,6 +2330,27 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		return true;
 	}
 
+	// Handle chunk processing results (new handlers for progressive display)
+	if (message.action === "chunkProcessed") {
+		handleChunkProcessed(message);
+		sendResponse({ success: true });
+		return true;
+	}
+
+	// Handle chunk processing errors
+	if (message.action === "chunkError") {
+		handleChunkError(message);
+		sendResponse({ success: true });
+		return true;
+	}
+
+	// Handle all chunks processing completion
+	if (message.action === "allChunksProcessed") {
+		handleAllChunksProcessed(message);
+		sendResponse({ success: true });
+		return true;
+	}
+
 	if (message.action === "getSiteHandlerInfo") {
 		let response = { success: true, hasHandler: false };
 
@@ -1954,6 +2415,79 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 	return false;
 });
+
+// Handler for processed chunks from the background script
+function handleChunkProcessed(message) {
+	console.log(
+		`Received processed chunk ${message.chunkIndex + 1}/${
+			message.totalChunks
+		}`
+	);
+
+	const contentArea = findContentArea();
+	if (!contentArea) {
+		console.error(
+			"Unable to find content area for displaying processed chunk"
+		);
+		return;
+	}
+
+	// First time? Create a special container for progressive updates
+	let progressiveContentContainer = document.getElementById(
+		"gemini-progressive-content"
+	);
+	if (!progressiveContentContainer) {
+		// Preserve original content
+		const originalContent = contentArea.innerHTML;
+		contentArea.setAttribute("data-original-content", originalContent);
+
+		// Create container for progressive updates
+		progressiveContentContainer = document.createElement("div");
+		progressiveContentContainer.id = "gemini-progressive-content";
+
+		// Clear content area and add our container
+		contentArea.innerHTML = "";
+		contentArea.appendChild(progressiveContentContainer);
+
+		// Add the work in progress banner
+		const wipBanner = createWorkInProgressBanner(
+			message.chunkIndex + 1,
+			message.totalChunks
+		);
+		contentArea.insertBefore(wipBanner, progressiveContentContainer);
+	} else {
+		// Update the existing work in progress banner
+		updateWorkInProgressBanner(message.chunkIndex + 1, message.totalChunks);
+	}
+
+	// Extract and process the chunk's content
+	const chunkResult = message.result;
+	if (chunkResult && chunkResult.enhancedContent) {
+		// Clean up any code block markers and sanitize HTML
+		const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
+
+		// Create a container for this chunk
+		const chunkContainer = document.createElement("div");
+		chunkContainer.className = "gemini-chunk";
+		chunkContainer.setAttribute("data-chunk-index", message.chunkIndex);
+		chunkContainer.innerHTML = sanitizedContent;
+
+		// Add to our progressive content container
+		progressiveContentContainer.appendChild(chunkContainer);
+
+		// Check if all chunks are processed
+		if (message.isComplete) {
+			// Remove the WIP banner
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
+
+			// Create the final enhanced banner
+			finalizePrefixEnhancedContent(chunkResult.modelInfo);
+		}
+	}
+}
 
 // Test function for game status boxes (can be triggered from the console for verification)
 window.testGameStatsBox = async function () {
