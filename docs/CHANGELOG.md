@@ -2,6 +2,93 @@
 
 All notable changes to the Ranobe Gemini extension will be documented in this file.
 
+## [2.8.0] - 2025-11-25
+
+### Summary
+Version 2.8.0 is a major architectural update introducing multi-site support, dynamic domain management, and comprehensive documentation improvements. This release adds support for Archive of Our Own (AO3) and WebNovel.com with infinite scroll handling, while implementing a future-proof domain system that eliminates manual maintenance across multiple files.
+
+### Added
+- **New Website Support**:
+  - Archive of Our Own (AO3) - archiveofourown.org and ao3.org domains
+  - WebNovel.com - with infinite scroll chapter support and per-chapter button injection
+- **Dynamic Domain Management System**:
+  - Automatic domain collection from handler static properties
+  - Wildcard domain support (*.domain.com) for subdomain handling
+  - Automated manifest.json generation via `npm run update-domains`
+  - Single source of truth for domains in handler files
+- **Documentation**:
+  - Comprehensive Mermaid diagrams in all documentation files
+  - Detailed component tables for every diagram
+  - GitHub community files (CODE_OF_CONDUCT.md, CONTRIBUTING.md)
+  - Issue templates (bug report, feature request, website support)
+  - Pull request template with detailed checklist
+  - FUNDING.yml for sponsor support
+  - DYNAMIC_DOMAINS.md explaining the new domain system
+- **Build System**:
+  - Automated domain update script runs before packaging
+  - Firefox Add-on badges on README (version, users, downloads, rating)
+  - Theme-aware logo support for light/dark mode
+  - Validation fixes documentation (VALIDATION_FIXES.md)
+
+### Changed
+- **Architecture**:
+  - Handler classes now export static SUPPORTED_DOMAINS and DEFAULT_SITE_PROMPT
+  - Handlers support both explicit domains and wildcard patterns for edge cases
+  - Manifest patterns generated automatically from handler domains
+  - Reduced from 20+ explicit domains to 15 explicit + 13 wildcards
+- **WebNovel Handler**:
+  - Per-chapter button injection instead of page-level
+  - MutationObserver for dynamic chapter loading
+  - Custom events for chapter-specific enhancement/summarization
+  - ProcessedChapters Set to prevent duplicate button injection
+- **Word Counting**:
+  - Optimized AO3 word count to use direct string operations
+  - Removed redundant DOM element creation for counting
+  - Improved performance with textContent.trim().split() method
+- **README**:
+  - Updated installation instructions prioritizing Firefox Add-ons store
+  - Added note about GitHub releases having latest version
+  - Compact badge layout (2 rows instead of 10)
+  - Updated supported websites list
+  - Fixed repository URLs to use Life-Experimentalists organization
+
+### Fixed
+- **AO3 Handler**:
+  - Word count bug - now counts plain text instead of HTML content
+  - Content extraction reliability improvements
+- **Manifest Validation**:
+  - Invalid match patterns (130 errors) - wildcards now properly converted
+  - Added browser_specific_settings.gecko.strict_min_version (Firefox 109.0+)
+  - All match patterns follow valid format: *://*.domain.com/*
+- **Package.json**:
+  - Fixed circular reference in package script
+  - Corrected repository URLs
+  - Fixed build script execution order
+
+### Developer Experience
+- **New Commands**:
+  - `npm run update-domains` - Regenerate manifest from handler domains
+  - Automatic domain update on `npm run package`
+- **Handler Development**:
+  - Base handler template with required methods clearly documented
+  - Handler Manager automatically registers new handlers
+  - Domain constants dynamically collected at runtime
+  - No more manual manifest.json editing for new sites
+- **Testing**:
+  - Improved error messages and debug logging
+  - Better console output for domain detection
+  - Validation checklist in documentation
+
+### Migration Notes
+- Old domain constants (RANOBES_DOMAINS, etc.) still exported for backward compatibility
+- Legacy arrays now automatically generated from handlers via expandWildcards()
+- No breaking changes to existing handler interfaces
+
+### Known Issues
+- 35 AMO validation warnings about innerHTML usage (expected for AI content rendering)
+- 3 warnings about dynamic imports (expected for handler module loading)
+- These warnings are safe and necessary for extension functionality
+
 ## [2.2.1] - 2025-04-26
 
 ### Summary

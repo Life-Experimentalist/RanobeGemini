@@ -4,7 +4,6 @@
 		"bierner.markdown-mermaid",
 		"christian-kohler.path-intellisense",
 		"dbaeumer.vscode-eslint",
-
 		"eamodio.gitlens",
 		"EditorConfig.EditorConfig",
 		"esbenp.prettier-vscode",
@@ -17,7 +16,6 @@
 		"streetsidesoftware.code-spell-checker",
 		"VKrishna04.cspell-sync",
 		"VKrishna04.global-save-state",
-		"yzhang.markdown-all-in-one",
-
+		"yzhang.markdown-all-in-one"
 	]
 }

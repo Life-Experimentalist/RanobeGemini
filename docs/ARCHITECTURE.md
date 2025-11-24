@@ -42,6 +42,18 @@ graph TD
     class F config;
 ```
 
+### System Architecture Components
+
+| Component             | Description                             | Responsibilities                                                                           |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **User Browser**      | Firefox browser environment             | Hosts the extension, renders web pages, provides extension APIs                            |
+| **Content Script**    | JavaScript injected into web pages      | Detects novel content, injects UI, handles user interactions, communicates with background |
+| **Website Handler**   | Site-specific content extraction module | Identifies page structure, extracts chapter content, finds insertion points                |
+| **Background Script** | Persistent extension service            | Manages Gemini API calls, handles API key storage, processes large content via chunking    |
+| **Gemini API**        | Google's AI processing service          | Enhances text quality, generates summaries, processes content according to prompts         |
+| **Popup Interface**   | Extension toolbar popup                 | Provides settings UI, API key configuration, model selection, prompt customization         |
+| **Storage API**       | Browser's persistent storage            | Stores API key, user preferences, model settings, custom prompts                           |
+
 ## Extension Components
 
 The extension is organized into several key components:
@@ -130,6 +142,17 @@ classDiagram
     HandlerManager --> BaseHandler
 ```
 
+### Website Handler Class Hierarchy
+
+| Class                 | Type                | Purpose                                         | Key Methods                                                                         |
+| --------------------- | ------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **BaseHandler**       | Abstract Base Class | Defines common interface for all handlers       | `canHandle()`, `getContent()`, `getTitle()`, `getUIInsertionPoint()`, `isChapter()` |
+| **HandlerManager**    | Factory/Registry    | Selects appropriate handler for current website | `registerHandler()`, `getHandler()` - routes to correct handler based on URL        |
+| **RanobesHandler**    | Concrete Handler    | Extracts content from ranobes.net variants      | Implements DOM selectors for `.text-center`, `.epub-box`, chapter navigation        |
+| **FanfictionHandler** | Concrete Handler    | Extracts content from fanfiction.net            | Implements `#storytext` extraction, handles mobile/desktop versions                 |
+| **AO3Handler**        | Concrete Handler    | Extracts content from archiveofourown.org       | Implements `#chapters .userstuff` extraction, work metadata handling                |
+| **WebNovelHandler**   | Concrete Handler    | Extracts content from webnovel.com              | Implements infinite scroll monitoring, per-chapter button injection                 |
+
 - **base-handler.js**: The abstract base class defining the handler interface
 - **handler-manager.js**: Factory that selects the appropriate handler for a given website
 - **Website-specific handlers**: Implement extraction logic for different websites:
@@ -166,6 +189,19 @@ sequenceDiagram
     Note over CS,WH: Content extraction is website-specific
     Note over BS,API: Large content is split into chunks
 ```
+
+### Data Flow Sequence Steps
+
+| Step | Actor                       | Action                                            | Data Transferred                     | Purpose                                                     |
+| ---- | --------------------------- | ------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------- |
+| 1    | User                        | Clicks "Enhance" or "Summarize" button            | User intent                          | Initiates content processing workflow                       |
+| 2    | Content Script              | Requests content extraction from handler          | Current page URL                     | Delegates to appropriate site-specific handler              |
+| 3    | Website Handler             | Parses DOM and extracts text                      | Chapter content (plain text)         | Uses CSS selectors to locate and extract chapter text       |
+| 4    | Content Script → Background | Sends content via `browser.runtime.sendMessage()` | `{action, content, prompt}`          | Forwards to background for API processing                   |
+| 5    | Background Script           | Validates API key and sends request               | API key + formatted prompt + content | Authenticates and structures request for Gemini             |
+| 6    | Gemini API                  | Processes text using AI model                     | Enhanced/summarized text             | Applies grammar fixes, style improvements, or summarization |
+| 7    | Background → Content Script | Returns processed text                            | Enhanced content string              | Sends result back to page context                           |
+| 8    | Content Script              | Replaces or appends content in DOM                | Modified HTML elements               | Updates page with enhanced text, preserving formatting      |
 
 1. **Content Detection**:
    - Content script loads and detects if the current page contains novel content
@@ -221,6 +257,23 @@ flowchart TD
     D --- D3
     D --- D4
 ```
+
+### Website Support Addition Workflow
+
+| Step                        | Activity               | Description                                                   | Tools/Files                               |
+| --------------------------- | ---------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| **A. Identify**             | Select target website  | Choose a novel website to add support for                     | Browser DevTools, target website          |
+| **B. Inspect**              | Analyze DOM structure  | Use browser inspector to identify content selectors           | F12 DevTools, Element Inspector           |
+| **C. Create**               | Create handler file    | Create new `*-handler.js` in `utils/website-handlers/`        | Text editor, `base-handler.js` template   |
+| **D. Implement**            | Code core methods      | Implement 4 required methods (see sub-steps below)            | JavaScript, DOM APIs                      |
+| **D1. canHandle**           | URL detection          | Return `true` if URL matches target site                      | `window.location.hostname`                |
+| **D2. getContent**          | Content extraction     | Use CSS selectors to extract chapter text                     | `document.querySelector()`, `textContent` |
+| **D3. getTitle**            | Title extraction       | Extract chapter or work title from page                       | DOM traversal, regex if needed            |
+| **D4. getUIInsertionPoint** | Button placement       | Find where to inject Enhance/Summarize buttons                | DOM structure analysis                    |
+| **E. Register**             | Register handler       | Add handler to `handler-manager.js` and `domain-constants.js` | Import statements, array additions        |
+| **F. Update**               | Manifest configuration | Run `npm run update-domains` to update `manifest.json`        | Terminal, build script                    |
+| **G. Test**                 | Verification testing   | Load extension in Firefox, test on multiple chapters          | `about:debugging`, target website         |
+| **H. Submit**               | Pull request           | Submit PR with handler, tests, and documentation              | GitHub, CONTRIBUTING.md guidelines        |
 
 To add support for a new website:
 

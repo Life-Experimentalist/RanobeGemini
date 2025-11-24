@@ -1,11 +1,15 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.7.1",
+	"version": "2.8.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
-			"id": "{33b0347d-8e94-40d6-a169-249716997cc6}"
+			"id": "{33b0347d-8e94-40d6-a169-249716997cc6}",
+			"strict_min_version": "109.0"
+		},
+		"gecko_android": {
+			"strict_min_version": "109.0"
 		}
 	},
 	"icons": {
@@ -85,12 +89,34 @@
 	"content_scripts": [
 		{
 			"matches": [
+				"*://*.archiveofourown.org/*",
+				"*://*.www.archiveofourown.org/*",
+				"*://*.ao3.org/*",
+				"*://*.www.ao3.org/*",
+				"*://*.fanfiction.net/*",
+				"*://*.www.fanfiction.net/*",
+				"*://*.m.fanfiction.net/*",
+				"*://*.ranobes.net/*",
+				"*://*.www.ranobes.net/*",
+				"*://*.ranobes.com/*",
+				"*://*.ranobes.top/*",
+				"*://*.ranobes.org/*",
+				"*://*.webnovel.com/*",
+				"*://*.www.webnovel.com/*",
+				"*://*.m.webnovel.com/*",
+				"*://*.archiveofourown.org/*",
+				"*://*.ao3.org/*",
+				"*://*.fanfiction.net/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.top/*",
-				"*://*.fanfiction.net/*",
-				"*://*.archiveofourown.org/*",
-				"*://*.ao3.org/*"
+				"*://*.ranobes.org/*",
+				"*://*.ranobes.to/*",
+				"*://*.ranobes.co/*",
+				"*://*.ranobes.cc/*",
+				"*://*.ranobes.ru/*",
+				"*://*.ranobes.io/*",
+				"*://*.webnovel.com/*"
 			],
 			"js": [
 				"content/content.js"
@@ -114,12 +140,34 @@
 				"popup/*.js"
 			],
 			"matches": [
+				"*://*.archiveofourown.org/*",
+				"*://*.www.archiveofourown.org/*",
+				"*://*.ao3.org/*",
+				"*://*.www.ao3.org/*",
+				"*://*.fanfiction.net/*",
+				"*://*.www.fanfiction.net/*",
+				"*://*.m.fanfiction.net/*",
+				"*://*.ranobes.net/*",
+				"*://*.www.ranobes.net/*",
+				"*://*.ranobes.com/*",
+				"*://*.ranobes.top/*",
+				"*://*.ranobes.org/*",
+				"*://*.webnovel.com/*",
+				"*://*.www.webnovel.com/*",
+				"*://*.m.webnovel.com/*",
+				"*://*.archiveofourown.org/*",
+				"*://*.ao3.org/*",
+				"*://*.fanfiction.net/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.top/*",
-				"*://*.fanfiction.net/*",
-				"*://*.archiveofourown.org/*",
-				"*://*.ao3.org/*"
+				"*://*.ranobes.org/*",
+				"*://*.ranobes.to/*",
+				"*://*.ranobes.co/*",
+				"*://*.ranobes.cc/*",
+				"*://*.ranobes.ru/*",
+				"*://*.ranobes.io/*",
+				"*://*.webnovel.com/*"
 			]
 		}
 	]

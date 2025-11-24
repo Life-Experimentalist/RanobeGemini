@@ -6,6 +6,27 @@ import { BaseWebsiteHandler } from "./base-handler.js";
 
 
 export class AO3Handler extends BaseWebsiteHandler {
+	// Static properties for domain management
+	// Explicitly supported domains (documented for clarity)
+	// Wildcard at end acts as safety net for any unlisted subdomains
+	static SUPPORTED_DOMAINS = [
+		"archiveofourown.org",
+		"www.archiveofourown.org",
+		"ao3.org",
+		"www.ao3.org",
+		"*.archiveofourown.org", // Safety net: catches any other subdomains
+		"*.ao3.org", // Safety net: catches any other subdomains
+	];
+
+	static DEFAULT_SITE_PROMPT = `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
+Please maintain:
+- Proper paragraph breaks and formatting
+- Author's notes markers (if present) put them in a box
+- Scene breaks and dividers
+- Any special formatting like italics or bold for emphasis
+- Preserve the narrative flow and pacing
+When enhancing, improve readability while respecting the author's original style and voice.`;
+
 	constructor() {
 		super();
 		this.selectors = {
@@ -207,9 +228,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 			}
 
 			// Get notes (author's notes at beginning)
-			const beginNotes = document.querySelector(
-				"#notes .userstuff"
-			);
+			const beginNotes = document.querySelector("#notes .userstuff");
 			if (beginNotes) {
 				metadata.beginNotes = beginNotes.textContent.trim();
 			}
@@ -321,7 +340,10 @@ export class AO3Handler extends BaseWebsiteHandler {
 			contentArea: contentArea,
 			metadata: metadata,
 			navigation: navigation,
-			wordCount: textContent.trim().split(/\s+/).filter(word => word.length > 0).length,
+			wordCount: textContent
+				.trim()
+				.split(/\s+/)
+				.filter((word) => word.length > 0).length,
 		};
 	}
 
@@ -331,20 +353,16 @@ export class AO3Handler extends BaseWebsiteHandler {
 		const tempDiv = document.createElement("div");
 		tempDiv.innerHTML = content;
 		const text = tempDiv.textContent || tempDiv.innerText || "";
-		const words = text.trim().split(/\s+/).filter((word) => word.length > 0);
+		const words = text
+			.trim()
+			.split(/\s+/)
+			.filter((word) => word.length > 0);
 		return words.length;
 	}
 
 	// Get site-specific prompt enhancement
 	getSiteSpecificPrompt() {
-		return `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
-Please maintain:
-- Proper paragraph breaks and formatting
-- Author's notes markers (if present)
-- Scene breaks and dividers
-- Any special formatting like italics or bold for emphasis
-- Preserve the narrative flow and pacing
-When enhancing, improve readability while respecting the author's original style and voice.`;
+		return AO3Handler.DEFAULT_SITE_PROMPT;
 	}
 }
 

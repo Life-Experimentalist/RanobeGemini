@@ -5,6 +5,27 @@
 import { BaseWebsiteHandler } from "./base-handler.js";
 
 export class FanfictionHandler extends BaseWebsiteHandler {
+	// Static properties for domain management
+	// Explicitly supported domains (documented for clarity)
+	// Wildcard at end acts as safety net for any unlisted subdomains
+	static SUPPORTED_DOMAINS = [
+		"fanfiction.net",
+		"www.fanfiction.net",
+		"m.fanfiction.net",
+		"*.fanfiction.net", // Safety net: catches any other subdomains
+	];
+
+	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net, a fanfiction archive.
+Please maintain:
+- Proper paragraph breaks and formatting
+- Character personalities and relationships from the original work
+- Fandom-specific terminology and references
+- Author's notes markers (if present)
+- Scene breaks and dividers
+- Any special formatting for emphasis
+- Preserve the narrative flow and pacing
+When enhancing, improve readability while respecting the author's creative voice and the source material.`;
+
 	constructor() {
 		super();
 		this.selectors = {
@@ -232,6 +253,11 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	// Get a readable site name for the UI
 	getSiteIdentifier() {
 		return "Fanfiction.net";
+	}
+
+	// Get site-specific prompt enhancement
+	getSiteSpecificPrompt() {
+		return FanfictionHandler.DEFAULT_SITE_PROMPT;
 	}
 }
 

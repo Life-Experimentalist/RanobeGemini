@@ -5,6 +5,32 @@
 import { BaseWebsiteHandler } from "./base-handler.js";
 
 export class RanobesHandler extends BaseWebsiteHandler {
+	// Static properties for domain management
+	// Explicitly supported domains (documented for clarity)
+	// Wildcards act as safety net for any unlisted subdomains
+	static SUPPORTED_DOMAINS = [
+		"ranobes.net",
+		"www.ranobes.net",
+		"ranobes.com",
+		"ranobes.top",
+		"ranobes.org",
+
+		"*.ranobes.net", // Safety net: catches any other subdomains
+		"*.ranobes.com",
+		"*.ranobes.top",
+		"*.ranobes.org",
+		"*.ranobes.to",
+		"*.ranobes.co",
+		"*.ranobes.cc",
+		"*.ranobes.ru",
+		"*.ranobes.io",
+	];
+
+	static DEFAULT_SITE_PROMPT = `	// Get site-specific prompt enhancement
+	getSiteSpecificPrompt() {
+		return RanobesHandler.DEFAULT_SITE_PROMPT;
+	}`;
+
 	constructor() {
 		super();
 		this.selectors = {

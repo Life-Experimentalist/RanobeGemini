@@ -1,0 +1,536 @@
+/**
+ * WebNovel.com Website Content Handler
+ * Specialized handler for extracting content from webnovel.com
+ * Handles infinite scroll chapters with dynamic URL changes
+ *
+ * IMPORTANT: This site uses infinite scroll where multiple chapters are loaded
+ * on the same page. Each chapter gets its own enhance/summarize buttons.
+ */
+import { BaseWebsiteHandler } from "./base-handler.js";
+
+export class WebNovelHandler extends BaseWebsiteHandler {
+	// Static properties for domain management
+	// Explicitly supported domains (documented for clarity)
+	// Wildcard at end acts as safety net for any unlisted subdomains
+	static SUPPORTED_DOMAINS = [
+		"webnovel.com",
+		"www.webnovel.com",
+		"m.webnovel.com",
+		"*.webnovel.com", // Safety net: catches any other subdomains
+	];
+
+	static DEFAULT_SITE_PROMPT = `This content is from WebNovel.com, a web novel platform.
+Please maintain:
+- Proper paragraph breaks and formatting
+- Dialogue quotation marks and formatting
+- Scene breaks and dividers
+- Any special formatting for emphasis
+- Preserve the narrative flow and pacing
+When enhancing, improve readability and grammar while respecting the author's original style.`;
+
+	constructor() {
+		super();
+		this.selectors = {
+			content: [
+				".cha-content .cha-words", // Main chapter content
+				".cha-words", // Alternative
+			],
+			title: [
+				".cha-tit h1", // Chapter title
+				".cha-tit h3",
+				"h1.cha-tit",
+			],
+		};
+
+		// Enhancement mode - WebNovel has paragraphs we want to preserve
+		this.enhancementMode = "html";
+
+		// Track processed chapters to avoid duplicate buttons
+		this.processedChapters = new Set();
+
+		// Track current chapter for URL monitoring
+		this.lastUrl = window.location.href;
+
+		// Start monitoring for new chapters (infinite scroll)
+		this.startChapterMonitoring();
+	}
+
+	// Return true if this handler can handle the current website
+	canHandle() {
+		return (
+			window.location.hostname.includes("webnovel.com") ||
+			window.location.hostname.includes("webnovel.co")
+		);
+	}
+
+	/**
+	 * Start monitoring for new chapters being loaded (infinite scroll)
+	 * This finds ALL chapter containers on the page and injects buttons for each
+	 */
+	startChapterMonitoring() {
+		// Initial check after a delay to ensure DOM is ready
+		setTimeout(() => {
+			this.injectButtonsForAllChapters();
+		}, 1000);
+
+		// Monitor for new chapters being added (infinite scroll)
+		const observer = new MutationObserver(() => {
+			this.injectButtonsForAllChapters();
+		});
+
+		// Observe the main content area for new chapters
+		const contentArea =
+			document.querySelector(".g_ad_scroll_area") || document.body;
+		observer.observe(contentArea, {
+			childList: true,
+			subtree: true,
+		});
+
+		// Also monitor URL changes to detect manual navigation
+		setInterval(() => {
+			const currentUrl = window.location.href;
+			if (currentUrl !== this.lastUrl) {
+				console.log("WebNovel: URL changed via navigation");
+				this.lastUrl = currentUrl;
+				// Clear processed chapters on URL change
+				this.processedChapters.clear();
+				this.injectButtonsForAllChapters();
+			}
+		}, 1000);
+	}
+
+	/**
+	 * Inject enhance/summarize buttons for all chapters currently on the page
+	 */
+	injectButtonsForAllChapters() {
+		const allChapters = document.querySelectorAll(".cha-content");
+
+		allChapters.forEach((chapterContainer) => {
+			const chapterId = chapterContainer.getAttribute("data-cid");
+			if (!chapterId) return;
+
+			// Skip if already processed
+			if (this.processedChapters.has(chapterId)) return;
+
+			console.log(`WebNovel: Injecting buttons for chapter ${chapterId}`);
+			this.injectButtonsForChapter(chapterContainer, chapterId);
+			this.processedChapters.add(chapterId);
+		});
+	}
+
+	/**
+	 * Inject enhance/summarize buttons for a specific chapter
+	 */
+	injectButtonsForChapter(chapterContainer, chapterId) {
+		// Find the title area to insert buttons after
+		const titleArea = chapterContainer.querySelector(".cha-tit");
+		if (!titleArea) return;
+
+		// Check if buttons already exist
+		const existingButtons = chapterContainer.querySelector(
+			".webnovel-gemini-controls"
+		);
+		if (existingButtons) return;
+
+		// Create button container
+		const buttonContainer = document.createElement("div");
+		buttonContainer.className = "webnovel-gemini-controls";
+		buttonContainer.setAttribute("data-chapter-id", chapterId);
+		buttonContainer.style.cssText = `
+			display: flex;
+			gap: 10px;
+			margin: 15px 0;
+			padding: 10px;
+			background: #f8f9fa;
+			border-radius: 8px;
+			user-select: none;
+			-webkit-user-select: none;
+		`;
+
+		// Create enhance button
+		const enhanceBtn = document.createElement("button");
+		enhanceBtn.className = "gemini-enhance-btn";
+		enhanceBtn.textContent = "✨ Enhance Chapter";
+		enhanceBtn.setAttribute("data-chapter-id", chapterId);
+		enhanceBtn.style.cssText = `
+			flex: 1;
+			padding: 10px 15px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			border: none;
+			border-radius: 6px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s;
+			user-select: none;
+			-webkit-user-select: none;
+		`;
+		enhanceBtn.addEventListener("mouseenter", () => {
+			enhanceBtn.style.transform = "translateY(-2px)";
+		});
+		enhanceBtn.addEventListener("mouseleave", () => {
+			enhanceBtn.style.transform = "translateY(0)";
+		});
+		enhanceBtn.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.handleEnhanceClick(chapterId);
+		});
+
+		// Create summarize button
+		const summarizeBtn = document.createElement("button");
+		summarizeBtn.className = "gemini-summarize-btn";
+		summarizeBtn.textContent = "📝 Summarize Chapter";
+		summarizeBtn.setAttribute("data-chapter-id", chapterId);
+		summarizeBtn.style.cssText = `
+			flex: 1;
+			padding: 10px 15px;
+			background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+			color: white;
+			border: none;
+			border-radius: 6px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s;
+			user-select: none;
+			-webkit-user-select: none;
+		`;
+		summarizeBtn.addEventListener("mouseenter", () => {
+			summarizeBtn.style.transform = "translateY(-2px)";
+		});
+		summarizeBtn.addEventListener("mouseleave", () => {
+			summarizeBtn.style.transform = "translateY(0)";
+		});
+		summarizeBtn.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.handleSummarizeClick(chapterId);
+		});
+
+		buttonContainer.appendChild(enhanceBtn);
+		buttonContainer.appendChild(summarizeBtn);
+
+		// Insert after title
+		titleArea.parentNode.insertBefore(
+			buttonContainer,
+			titleArea.nextSibling
+		);
+	}
+
+	/**
+	 * Handle enhance button click for a specific chapter
+	 */
+	handleEnhanceClick(chapterId) {
+		console.log(`WebNovel: Enhance clicked for chapter ${chapterId}`);
+
+		// Extract content for this specific chapter
+		const chapterData = this.extractChapterContent(chapterId);
+		if (!chapterData.found) {
+			console.error("Failed to extract chapter content");
+			alert("Failed to extract chapter content. Please try again.");
+			return;
+		}
+
+		// Dispatch event to main content script with chapter data
+		window.dispatchEvent(
+			new CustomEvent("webnovel-enhance-chapter", {
+				detail: {
+					chapterId: chapterId,
+					...chapterData,
+				},
+			})
+		);
+	}
+
+	/**
+	 * Handle summarize button click for a specific chapter
+	 */
+	handleSummarizeClick(chapterId) {
+		console.log(`WebNovel: Summarize clicked for chapter ${chapterId}`);
+
+		// Extract content for this specific chapter
+		const chapterData = this.extractChapterContent(chapterId);
+		if (!chapterData.found) {
+			console.error("Failed to extract chapter content");
+			alert("Failed to extract chapter content. Please try again.");
+			return;
+		}
+
+		// Dispatch event to main content script with chapter data
+		window.dispatchEvent(
+			new CustomEvent("webnovel-summarize-chapter", {
+				detail: {
+					chapterId: chapterId,
+					...chapterData,
+				},
+			})
+		);
+	}
+
+	/**
+	 * Find the content area for a SPECIFIC chapter ID
+	 * This is used when buttons are clicked to ensure we get the right chapter
+	 */
+	findContentArea(chapterId = null) {
+		console.log("WebNovel: Looking for content area...");
+
+		// If chapterId provided, find that specific chapter
+		if (chapterId) {
+			const specificChapter = document.querySelector(
+				`.cha-content[data-cid="${chapterId}"] .cha-words`
+			);
+			if (specificChapter) {
+				console.log(`WebNovel: Found chapter ${chapterId} content`);
+				return specificChapter;
+			}
+		}
+
+		// Fallback: find the first visible chapter in viewport
+		const allChapterContainers = document.querySelectorAll(".cha-content");
+		for (const container of allChapterContainers) {
+			const rect = container.getBoundingClientRect();
+			// Check if chapter title is visible in viewport
+			if (rect.top >= -100 && rect.top <= window.innerHeight / 2) {
+				const words = container.querySelector(".cha-words");
+				if (words) {
+					const cid = container.getAttribute("data-cid");
+					console.log(
+						`WebNovel: Found visible chapter ${cid} content`
+					);
+					return words;
+				}
+			}
+		}
+
+		// Last fallback: just get first chapter
+		const firstChapter = document.querySelector(".cha-words");
+		if (firstChapter) {
+			console.log("WebNovel: Found first chapter content");
+			return firstChapter;
+		}
+
+		console.log("WebNovel: Falling back to base handler");
+		return super.findContentArea();
+	}
+
+	// Extract the title of the chapter
+	extractTitle(chapterId = null) {
+		// If chapterId provided, get title from that specific chapter
+		if (chapterId) {
+			const chapterContainer = document.querySelector(
+				`.cha-content[data-cid="${chapterId}"]`
+			);
+			if (chapterContainer) {
+				const titleElement = chapterContainer.querySelector(
+					".cha-tit h1, .cha-tit h3"
+				);
+				if (titleElement) {
+					return titleElement.textContent.trim();
+				}
+			}
+		}
+
+		// Fallback: get first visible chapter title
+		const titleElement = document.querySelector(".cha-tit h1, .cha-tit h3");
+		if (titleElement) {
+			return titleElement.textContent.trim();
+		}
+
+		// Last fallback to page title
+		return document.title.replace(/\s*-\s*WebNovel$/, "").trim();
+	}
+
+	/**
+	 * Extract content for a SPECIFIC chapter ID
+	 * This ensures we always get the right chapter, not just the first visible one
+	 */
+	extractChapterContent(chapterId) {
+		console.log(`WebNovel: Extracting content for chapter ${chapterId}...`);
+
+		const chapterContainer = document.querySelector(
+			`.cha-content[data-cid="${chapterId}"]`
+		);
+
+		if (!chapterContainer) {
+			console.error(
+				`WebNovel: Could not find chapter container ${chapterId}`
+			);
+			return {
+				found: false,
+				reason: `Could not locate chapter ${chapterId} on this page.`,
+			};
+		}
+
+		const contentArea = chapterContainer.querySelector(".cha-words");
+		if (!contentArea) {
+			console.error(
+				`WebNovel: Could not find content area for chapter ${chapterId}`
+			);
+			return {
+				found: false,
+				reason: `Could not locate content for chapter ${chapterId}.`,
+			};
+		}
+
+		// Get the title from this specific chapter
+		const titleElement = chapterContainer.querySelector(
+			".cha-tit h1, .cha-tit h3"
+		);
+		const title = titleElement
+			? titleElement.textContent.trim()
+			: `Chapter ${chapterId}`;
+		console.log("WebNovel: Extracted title:", title);
+
+		// Clone the content to avoid modifying the original
+		const contentClone = contentArea.cloneNode(true);
+
+		// Remove any script tags
+		const scripts = contentClone.querySelectorAll("script");
+		scripts.forEach((script) => script.remove());
+
+		// Remove any ads or unwanted elements
+		const ads = contentClone.querySelectorAll(".ad, .advertisement");
+		ads.forEach((ad) => ad.remove());
+
+		// Get HTML content with preserved structure
+		let htmlContent = contentClone.innerHTML.trim();
+
+		// Also get plain text for token counting and processing
+		let textContent =
+			contentClone.textContent || contentClone.innerText || "";
+		textContent = textContent.trim();
+
+		// Get metadata
+		const metadata = {
+			chapterId: chapterId,
+		};
+
+		console.log("WebNovel: Content extracted successfully");
+		console.log(
+			"WebNovel: HTML content length:",
+			htmlContent.length,
+			"characters"
+		);
+		console.log(
+			"WebNovel: Text content length:",
+			textContent.length,
+			"characters"
+		);
+
+		return {
+			found: true,
+			title: title,
+			text: textContent, // Plain text for processing
+			content: htmlContent, // HTML for preservation
+			contentArea: contentArea,
+			chapterContainer: chapterContainer, // Include container for targeted updates
+			metadata: metadata,
+			wordCount: textContent
+				.trim()
+				.split(/\s+/)
+				.filter((word) => word.length > 0).length,
+		};
+	}
+
+	/**
+	 * Legacy extractContent for compatibility with base system
+	 * Extracts the first visible chapter
+	 */
+	extractContent() {
+		console.log("WebNovel: Extracting content (legacy method)...");
+
+		// Find first visible chapter
+		const allChapterContainers = document.querySelectorAll(".cha-content");
+		for (const container of allChapterContainers) {
+			const rect = container.getBoundingClientRect();
+			if (rect.top >= -100 && rect.top <= window.innerHeight / 2) {
+				const chapterId = container.getAttribute("data-cid");
+				if (chapterId) {
+					return this.extractChapterContent(chapterId);
+				}
+			}
+		}
+
+		// Fallback to first chapter
+		const firstChapter = document.querySelector(".cha-content");
+		if (firstChapter) {
+			const chapterId = firstChapter.getAttribute("data-cid");
+			if (chapterId) {
+				return this.extractChapterContent(chapterId);
+			}
+		}
+
+		return {
+			found: false,
+			reason: "Could not locate any chapter content on this WebNovel page.",
+		};
+	}
+
+	/**
+	 * Get UI insertion point for a SPECIFIC chapter
+	 * Used by the base system if needed, but we handle our own button injection
+	 */
+	getUIInsertionPoint(chapterId = null) {
+		console.log("WebNovel: Finding UI insertion point...");
+
+		// If chapterId provided, find that specific chapter's insertion point
+		if (chapterId) {
+			const chapterContainer = document.querySelector(
+				`.cha-content[data-cid="${chapterId}"]`
+			);
+			if (chapterContainer) {
+				const title = chapterContainer.querySelector(".cha-tit");
+				if (title) {
+					console.log(
+						`WebNovel: Inserting after chapter ${chapterId} title`
+					);
+					return {
+						element: title,
+						position: "afterend",
+					};
+				}
+			}
+		}
+
+		// Fallback: find first visible chapter title
+		const allTitles = document.querySelectorAll(".cha-tit");
+		for (const title of allTitles) {
+			const rect = title.getBoundingClientRect();
+			if (rect.top >= -100 && rect.top <= window.innerHeight / 2) {
+				console.log("WebNovel: Inserting after visible chapter title");
+				return {
+					element: title,
+					position: "afterend",
+				};
+			}
+		}
+
+		// Last fallback
+		const firstTitle = document.querySelector(".cha-tit");
+		if (firstTitle) {
+			return {
+				element: firstTitle,
+				position: "afterend",
+			};
+		}
+
+		console.log("WebNovel: Using base UI insertion point");
+		return super.getUIInsertionPoint();
+	}
+
+	/**
+	 * Override: WebNovel handles its own UI injection per chapter
+	 * Return false to prevent base system from injecting global buttons
+	 */
+	shouldInjectGlobalUI() {
+		return false;
+	}
+
+	// Get site-specific prompt enhancement
+	getSiteSpecificPrompt() {
+		return WebNovelHandler.DEFAULT_SITE_PROMPT;
+	}
+}
+
+// Default export - create an instance
+export default new WebNovelHandler();

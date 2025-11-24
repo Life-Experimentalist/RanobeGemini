@@ -1,8 +1,8 @@
 docs/analysis_log.md
 node_modules/
-package-lock.json
 dist/
 releases/*
 !releases/*.zip
+!releases/source/
 .env
 sample/

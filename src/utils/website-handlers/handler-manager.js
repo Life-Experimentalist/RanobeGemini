@@ -6,6 +6,7 @@
 import ranobesHandler from "./ranobes-handler.js";
 import fanfictionHandler from "./fanfiction-handler.js";
 import ao3Handler from "./ao3-handler.js";
+import webnovelHandler from "./webnovel-handler.js";
 import { BaseWebsiteHandler } from "./base-handler.js";
 
 // Website handler manager
@@ -16,6 +17,7 @@ export class HandlerManager {
 			ranobesHandler,
 			fanfictionHandler,
 			ao3Handler,
+			webnovelHandler,
 			// Add more handlers as they are developed
 		];
 	}
@@ -45,6 +47,14 @@ export class HandlerManager {
 			) {
 				console.log("Loaded AO3 handler");
 				return ao3Handler;
+			}
+			// Try loading WebNovel handler if on webnovel.com
+			else if (
+				hostname.includes("webnovel.com") ||
+				hostname.includes("webnovel.net")
+			) {
+				console.log("Loaded WebNovel handler");
+				return webnovelHandler;
 			}
 
 			// No specific handler found

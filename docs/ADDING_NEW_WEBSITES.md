@@ -14,8 +14,20 @@ graph TD
     C --> E[fanfiction-handler.js]
     C --> F[your-new-handler.js]
 
-    style F fill:#f96,stroke:#333,stroke-width:2px
+
 ```
+
+### Handler System Architecture
+
+| Component                 | Type                    | Purpose                                              | Location                                       |
+| ------------------------- | ----------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| **Handler Manager**       | Factory                 | Selects the appropriate handler based on current URL | `utils/website-handlers/handler-manager.js`    |
+| **Base Handler**          | Abstract Class          | Defines common interface all handlers must implement | `utils/website-handlers/base-handler.js`       |
+| **ranobes-handler.js**    | Concrete Handler        | Handles ranobes.net and variants (10 domains)        | `utils/website-handlers/ranobes-handler.js`    |
+| **fanfiction-handler.js** | Concrete Handler        | Handles fanfiction.net (www, m, bare domain)         | `utils/website-handlers/fanfiction-handler.js` |
+| **ao3-handler.js**        | Concrete Handler        | Handles archiveofourown.org and ao3.org              | `utils/website-handlers/ao3-handler.js`        |
+| **webnovel-handler.js**   | Concrete Handler        | Handles webnovel.com with infinite scroll            | `utils/website-handlers/webnovel-handler.js`   |
+| **your-new-handler.js**   | New Handler (Your Code) | Your implementation for a new website                | Create in same directory                       |
 
 ## Step-by-Step Process
 
@@ -30,6 +42,23 @@ flowchart LR
     C --> F[UI Insertion Points]
     D & E & F --> G[Document Element Selectors]
 ```
+
+### DOM Structure Analysis Steps
+
+| Step             | Action                         | Tool                         | What to Find                                                                       |
+| ---------------- | ------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------- |
+| **A. Visit**     | Navigate to a chapter page     | Browser                      | Open a typical chapter page on the target website                                  |
+| **B. DevTools**  | Open browser inspector         | F12 or Right-click → Inspect | Opens the DOM inspection panel                                                     |
+| **C. Identify**  | Locate key elements            | Element picker tool          | Click elements to see their selectors in DevTools                                  |
+| **D. Content**   | Find chapter text container    | Inspector                    | Usually a `<div>` with class like `.chapter-content`, `.story-text`, or `#content` |
+| **E. Title**     | Find chapter/work title        | Inspector                    | Often in `<h1>`, `<h2>`, or special title div                                      |
+| **F. Insertion** | Find button placement location | Inspector                    | Look for navigation bars, chapter headers, or content wrappers                     |
+| **G. Document**  | Record all CSS selectors       | Notepad/text editor          | Write down: `.chapter-content`, `#title-element`, etc.                             |
+
+**Example Selectors:**
+- Content: `.chapter-content`, `#storytext`, `.userstuff`, `.cha-words`
+- Title: `.chapter-title`, `#profile_top b`, `.work-title`, `.cha-tit`
+- Insertion: `.chapter-nav`, `.entry-header`, `.chapter-inner`
 
 First, you need to understand how the target website structures its content:
 
@@ -68,6 +97,22 @@ classDiagram
 
     BaseHandler <|-- YourNewHandler
 ```
+
+### Handler Class Structure
+
+| Method                             | Return Type        | Purpose                                                         | Implementation Complexity                   |
+| ---------------------------------- | ------------------ | --------------------------------------------------------------- | ------------------------------------------- |
+| **canHandle(url)**                 | `boolean`          | Determines if this handler should process the current page      | ⭐ Easy - Simple URL/hostname check          |
+| **getContent(document)**           | `string` or `null` | Extracts the chapter text content from the page                 | ⭐⭐ Medium - Requires DOM selector knowledge |
+| **getTitle(document)**             | `string`           | Extracts the chapter or work title                              | ⭐ Easy - Usually a single selector          |
+| **getUIInsertionPoint(container)** | `object`           | Determines where to place Enhance/Summarize buttons             | ⭐⭐ Medium - May need experimentation        |
+| **isChapter(document)**            | `boolean`          | Checks if current page is actually a chapter (vs index/profile) | ⭐ Easy - Check for content presence         |
+
+**BaseHandler Inheritance:**
+- All website handlers must extend `BaseHandler`
+- Provides default implementations for some methods
+- Enforces consistent interface across all handlers
+- Enables the Handler Manager to work with any handler uniformly
 
 Here's a template for your new handler:
 
@@ -139,6 +184,21 @@ sequenceDiagram
     Note over HM: Return first handler that returns true
 ```
 
+### Handler Selection Process
+
+| Step | Actor              | Action                                                       | Decision Point                                             |
+| ---- | ------------------ | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| 1    | Handler Manager    | Receives page load event                                     | Extension detects navigation to new page                   |
+| 2    | Handler Manager    | Imports all registered handlers                              | Loads YourHandler, RanobesHandler, FanfictionHandler, etc. |
+| 3    | Handler Manager    | Calls `canHandle(url)` on each                               | Passes current page URL to each handler                    |
+| 4    | Your Handler       | Checks if URL matches (e.g., `url.includes('yoursite.com')`) | Returns `true` if match, `false` otherwise                 |
+| 5    | Ranobes Handler    | Checks if URL matches ranobes domains                        | Returns `true` if match, `false` otherwise                 |
+| 6    | Fanfiction Handler | Checks if URL matches fanfiction.net                         | Returns `true` if match, `false` otherwise                 |
+| 7    | Handler Manager    | Selects first handler that returned `true`                   | Uses this handler for all content operations               |
+| 8    | Handler Manager    | Returns selected handler to content script                   | Content script uses this handler to extract content        |
+
+**Important:** Handler order matters! The first handler to return `true` from `canHandle()` is used. Place more specific handlers before generic ones.
+
 Open `utils/website-handlers/handler-manager.js` and register your new handler:
 
 ```javascript
@@ -162,6 +222,25 @@ flowchart TD
     E --> F[matches]
     F --> G["Add '*://*.yourwebsite.com/*'"]
 ```
+
+### Manifest Configuration Elements
+
+| Element                      | Path                                         | Purpose                                   | Example Value                           |
+| ---------------------------- | -------------------------------------------- | ----------------------------------------- | --------------------------------------- |
+| **manifest.json**            | Root file                                    | Extension configuration file              | Defines permissions, scripts, resources |
+| **content_scripts**          | `manifest.json` → `content_scripts`          | Array of scripts to inject into web pages | Contains matches, js, css, run_at       |
+| **matches**                  | `content_scripts[0]` → `matches`             | URL patterns where content script runs    | `["*://*.yoursite.com/*"]`              |
+| **yourwebsite.com**          | Added to matches array                       | Your new website's domain pattern         | Use wildcard: `*://*.domain.com/*`      |
+| **web_accessible_resources** | `manifest.json` → `web_accessible_resources` | Resources that web pages can access       | Icons, utility scripts, handlers        |
+| **resources**                | `web_accessible_resources[0]` → `resources`  | Files available to content scripts        | `["icons/*.png", "utils/*.js"]`         |
+| **matches (WAR)**            | `web_accessible_resources[0]` → `matches`    | Which sites can access the resources      | Same patterns as content_scripts        |
+
+**Automated Approach:**
+Instead of manually editing `manifest.json`, use:
+```powershell
+npm run update-domains
+```
+This script automatically extracts domains from all handlers and updates the manifest.
 
 Update the `manifest.json` file to include your new website in the content script matching patterns:
 
@@ -209,6 +288,19 @@ flowchart TD
 
     style H fill:#bfb,stroke:#333
 ```
+
+### Testing Checklist
+
+| Test Stage             | Check                           | Pass Criteria                                        | Debug If Fails                                                    |
+| ---------------------- | ------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| **UI Appears?**        | Buttons visible on page         | "Enhance with Gemini" and "Summarize" buttons appear | Check `canHandle()` returns true, verify content script injection |
+| **Content Extracted?** | Click buttons, check console    | Console shows extracted content (no "null" or empty) | Debug `getContent()` selector, check DOM structure                |
+| **Enhancement Works?** | Enhanced text replaces original | Page content updates with enhanced version           | Check API key, verify Gemini API response, check network tab      |
+| **Restore Works?**     | "Restore Original" button       | Original content restored after enhancement          | Verify original content was saved before replacement              |
+| **Multiple Chapters**  | Test on 3+ different chapters   | Works consistently across chapters                   | Check if selectors are too specific, need more generic patterns   |
+| **Mobile/Desktop**     | Test both versions              | Works on www and m subdomain                         | Verify SUPPORTED_DOMAINS includes both                            |
+| **Summary Display**    | Click "Summarize"               | Summary appears correctly formatted                  | Check summary container injection                                 |
+| **Debug Mode**         | Enable in popup settings        | No console errors                                    | Fix JavaScript errors, check API limits                           |
 
 1. Load your modified extension in Firefox (about:debugging)
 2. Visit a chapter page on your target website
