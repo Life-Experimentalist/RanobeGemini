@@ -68,7 +68,7 @@ export const DEFAULT_PERMANENT_PROMPT =
 	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 // Default model ID
-export const DEFAULT_MODEL_ID = "gemini-1.5-pro";
+export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
 
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;

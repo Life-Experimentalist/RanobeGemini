@@ -1,31 +1,51 @@
 const fs = require("fs");
 const path = require("path");
 
+// Find root directory by looking for package.json
+function findRootDir() {
+	let currentDir = __dirname;
+	while (currentDir !== path.dirname(currentDir)) {
+		if (fs.existsSync(path.join(currentDir, "package.json"))) {
+			return currentDir;
+		}
+		currentDir = path.dirname(currentDir);
+	}
+	throw new Error("Could not find project root");
+}
+
+const ROOT_DIR = findRootDir();
+
 /**
  * Updates the extension version in manifest.json based on package.json
  * @returns {string} The current version
  */
 function updateManifestVersion() {
-    try {
-		// Read package.json to get current version
-		const packageJsonPath = path.join(__dirname, "..", "package.json");
+	try {
+		const packageJsonPath = path.join(ROOT_DIR, "package.json");
 		const packageData = JSON.parse(
 			fs.readFileSync(packageJsonPath, "utf8")
 		);
 		const currentVersion = packageData.version;
 
-		// Update manifest.json
-		const manifestPath = path.join(__dirname, "..", "src", "manifest.json");
+		const manifestPath = path.join(ROOT_DIR, "src", "manifest.json");
 		const manifestData = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-		manifestData.version = currentVersion;
-		fs.writeFileSync(
-			manifestPath,
-			JSON.stringify(manifestData, null, "\t")
-		);
 
-		console.log(
-			`Manifest version updated successfully to ${currentVersion}`
-		);
+		// Only write if version actually changed
+		if (manifestData.version !== currentVersion) {
+			manifestData.version = currentVersion;
+			fs.writeFileSync(
+				manifestPath,
+				JSON.stringify(manifestData, null, "\t")
+			);
+			console.log(
+				`Manifest version updated successfully to ${currentVersion}`
+			);
+		} else {
+			console.log(
+				`Manifest version already up to date: ${currentVersion}`
+			);
+		}
+
 		return currentVersion;
 	} catch (error) {
 		console.error("Error updating version in manifest:", error);
@@ -38,8 +58,8 @@ function updateManifestVersion() {
  * Copies necessary files from src to dist for packaging
  */
 function copyFilesToDist() {
-	const srcDir = path.join(__dirname, "..", "src");
-	const distDir = path.join(__dirname, "..", "dist");
+	const srcDir = path.join(ROOT_DIR, "src");
+	const distDir = path.join(ROOT_DIR, "dist");
 
 	// Ensure dist directory exists
 	if (!fs.existsSync(distDir)) {
@@ -62,8 +82,8 @@ function copyFilesToDist() {
 			to: path.join(distDir, "popup", "popup.js"),
 		},
 		{
-			from: path.join(srcDir, "popup", "popup.js"),
-			to: path.join(distDir, "popup", "popup.js"),
+			from: path.join(srcDir, "popup", "popup.css"),
+			to: path.join(distDir, "popup", "popup.css"),
 		},
 		{
 			from: path.join(srcDir, "background"),
@@ -129,13 +149,9 @@ function copyDirectory(source, destination) {
  */
 function packageExtension() {
 	try {
-		// First update the version
 		const version = updateManifestVersion();
-
-		// Then copy files to dist directory
 		console.log("Copying files to dist directory...");
 		copyFilesToDist();
-
 		console.log(
 			`Extension packaging completed successfully! Version: ${version}`
 		);
@@ -146,7 +162,6 @@ function packageExtension() {
 	}
 }
 
-// Run the function if this script is executed directly
 if (require.main === module) {
 	try {
 		packageExtension();

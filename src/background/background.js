@@ -424,20 +424,20 @@ try {
 			currentConfig = await initConfig();
 
 			// Default values
-			let maxContextSize = 16000; // Default for gemini-1.5-flash
+			let maxContextSize = 16000; // Default for gemini-2.5-flash
 			let maxOutputTokens = currentConfig.maxOutputTokens || 8192;
 
 			// Model-specific values
 			const modelId =
 				currentConfig.selectedModelId ||
 				currentConfig.modelEndpoint?.split("/").pop().split(":")[0] ||
-				"gemini-1.5-flash";
+				"gemini-2.5-flash";
 
 			// Set appropriate context sizes based on model
-			if (modelId.includes("gemini-1.5-pro")) {
-				maxContextSize = 1000000; // 1M token context for Gemini 1.5 Pro
-			} else if (modelId.includes("gemini-1.5-flash")) {
-				maxContextSize = 16000; // 16k token context for Gemini 1.5 Flash
+			if (modelId.includes("gemini-2.5-pro")) {
+				maxContextSize = 1000000; // 1M token context for Gemini 2.5 Pro
+			} else if (modelId.includes("gemini-2.5-flash")) {
+				maxContextSize = 16000; // 16k token context for Gemini 2.5 Flash
 			} else if (modelId.includes("gemini-2.0-flash")) {
 				maxContextSize = 32000; // 32k token context for Gemini 2.0 Flash
 			}
@@ -1105,6 +1105,37 @@ try {
 					responseData.error?.message ||
 					`API Error: ${response.status} ${response.statusText}`;
 				throw new Error(errorMessage);
+			}
+
+			// Check for content safety blocks
+			if (responseData.candidates && responseData.candidates.length > 0) {
+				const candidate = responseData.candidates[0];
+
+				// Check if content was blocked by safety filters
+				if (
+					candidate.finishReason === "SAFETY" ||
+					candidate.finishReason === "BLOCKED_REASON_UNSPECIFIED"
+				) {
+					console.error(
+						"Content blocked by safety filters:",
+						candidate.safetyRatings
+					);
+					throw new Error(
+						"Content was blocked by Gemini's safety filters. The content may contain sensitive themes. Try adjusting your content or prompt."
+					);
+				}
+
+				// Check if content is missing
+				if (
+					!candidate.content ||
+					!candidate.content.parts ||
+					candidate.content.parts.length === 0
+				) {
+					console.error("No content parts in response:", candidate);
+					throw new Error(
+						"Gemini returned no content. This may be due to safety filters or an API issue."
+					);
+				}
 			}
 
 			// Extract the generated text
@@ -1868,20 +1899,20 @@ try {
 			currentConfig = await initConfig();
 
 			// Default values
-			let maxContextSize = 16000; // Default for gemini-1.5-flash
+			let maxContextSize = 16000; // Default for gemini-2.5-flash
 			let maxOutputTokens = currentConfig.maxOutputTokens || 8192;
 
 			// Model-specific values
 			const modelId =
 				currentConfig.selectedModelId ||
 				currentConfig.modelEndpoint?.split("/").pop().split(":")[0] ||
-				"gemini-1.5-flash";
+				"gemini-2.5-flash";
 
 			// Set appropriate context sizes based on model
-			if (modelId.includes("gemini-1.5-pro")) {
-				maxContextSize = 1000000; // 1M token context for Gemini 1.5 Pro
-			} else if (modelId.includes("gemini-1.5-flash")) {
-				maxContextSize = 16000; // 16k token context for Gemini 1.5 Flash
+			if (modelId.includes("gemini-2.5-pro")) {
+				maxContextSize = 1000000; // 1M token context for Gemini 2.5 Pro
+			} else if (modelId.includes("gemini-2.5-flash")) {
+				maxContextSize = 16000; // 16k token context for Gemini 2.5 Flash
 			} else if (modelId.includes("gemini-2.0-flash")) {
 				maxContextSize = 32000; // 32k token context for Gemini 2.0 Flash
 			}

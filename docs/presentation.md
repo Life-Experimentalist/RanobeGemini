@@ -184,7 +184,7 @@ A Firefox extension that enhances the reading experience on web novel sites usin
 
 # User Experience Flow
 
-![width:800px](src/images/UX_FLow.png)
+![width:800px](../src/icons/UX_FLow.png)
 
 ---
 

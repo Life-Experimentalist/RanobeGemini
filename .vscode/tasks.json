@@ -1,22 +1,53 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Package Firefox Extension",
-            "type": "shell",
-            "command": "node",
-            "args": [
-                "${workspaceFolder}/package-firefox.js"
-            ],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "always",
-                "clear": true
-            }
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Package Firefox Extension",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"${workspaceFolder}/dev/package-firefox.js"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "always",
+				"clear": true
+			}
+		},
+		{
+			"label": "Watch and Build",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"${workspaceFolder}/dev/watch.js"
+			],
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "^(ERROR|WARNING): (.*)$",
+					"severity": 1,
+					"message": 2
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^.*Building.*",
+					"endsPattern": "^.*Build completed.*|^.*Build failed.*"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": false
+			},
+			"runOptions": {
+				"runOn": "folderOpen"
+			}
+		}
+	],
+	"inputs": []
 }

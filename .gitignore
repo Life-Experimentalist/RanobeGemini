@@ -1,7 +1,9 @@
 history/
 analysis_log.md
-sample.html
-test-page.html
 node_modules/
 package-lock.json
-.vscode/settings.json
+dist/
+releases/*
+!releases/*.zip
+.env
+sample/

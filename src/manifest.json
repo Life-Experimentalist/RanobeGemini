@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.5.0",
+	"version": "2.6.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -28,7 +28,12 @@
 		"default_icon": {
 			"16": "icons/logo-light-16.png",
 			"32": "icons/logo-light-32.png",
-			"48": "icons/logo-light-48.png"
+			"48": "icons/logo-light-48.png",
+			"96": "icons/logo-light-96.png",
+			"128": "icons/logo-light-128.png",
+			"256": "icons/logo-light-256.png",
+			"512": "icons/logo-light-512.png",
+			"1024": "icons/logo-light-1024.png"
 		},
 		"default_title": "Ranobe Gemini",
 		"default_popup": "popup/popup.html",
@@ -89,20 +94,10 @@
 				"content/content.js"
 			],
 			"css": [
-				"content/content.css"
+				"content/content.css",
+				"content/gemini-styles.css"
 			],
 			"run_at": "document_idle"
-		},
-		{
-			"matches": [
-				"*://*/*"
-			],
-			"js": [
-				"content/content.js"
-			],
-			"css": [
-				"content/gemini-styles.css"
-			]
 		}
 	],
 	"web_accessible_resources": [

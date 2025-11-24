@@ -201,7 +201,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Format model name for display
 	function formatModelName(modelId) {
-		// Convert model IDs like "gemini-1.5-flash" to "Gemini 1.5 Flash"
+		// Convert model IDs like "gemini-2.5-flash" to "Gemini 2.5 Flash"
 		return modelId
 			.replace("gemini-", "Gemini ")
 			.replace(/-/g, " ")
@@ -289,7 +289,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		} catch (error) {
 			console.error("Error updating model selector:", error);
 			modelSelect.innerHTML =
-				'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-1.5-flash">Gemini 1.5 Flash</option><option value="gemini-1.5-pro">Gemini 1.5 Pro</option>';
+				'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
 		} finally {
 			modelSelect.disabled = false;
 		}
@@ -298,16 +298,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Make textareas automatically resize to fit content
 	const textareas = document.querySelectorAll("textarea");
 	textareas.forEach((textarea) => {
-		// Function to adjust height
 		function adjustHeight() {
 			textarea.style.height = "auto";
 			textarea.style.height = textarea.scrollHeight + "px";
 		}
-
-		// Set initial height
 		adjustHeight();
-
-		// Add event listeners
 		textarea.addEventListener("input", adjustHeight);
 		textarea.addEventListener("focus", adjustHeight);
 	});
@@ -445,8 +440,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// No API key, use static default options
 			modelSelect.innerHTML = `
 				<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-				<option value="gemini-1.5-flash">Gemini 1.5 Flash (Faster)</option>
-				<option value="gemini-1.5-pro">Gemini 1.5 Pro (Better quality)</option>
+				<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
+				<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 			`;
 		}
 
@@ -464,10 +459,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (data.modelEndpoint) {
 			if (data.modelEndpoint.includes("gemini-2.0-flash")) {
 				modelSelect.value = "gemini-2.0-flash";
-			} else if (data.modelEndpoint.includes("gemini-1.5-pro")) {
-				modelSelect.value = "gemini-1.5-pro";
-			} else if (data.modelEndpoint.includes("gemini-1.5-flash")) {
-				modelSelect.value = "gemini-1.5-flash";
+			} else if (data.modelEndpoint.includes("gemini-2.5-pro")) {
+				modelSelect.value = "gemini-2.5-pro";
+			} else if (data.modelEndpoint.includes("gemini-2.5-flash")) {
+				modelSelect.value = "gemini-2.5-flash";
 			} else {
 				// Default to gemini-2.0-flash if endpoint doesn't match any known model
 				modelSelect.value = "gemini-2.0-flash";
@@ -942,7 +937,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	/**
-	 * Load novels from storage and display them
+	 * Load novels from storage and display them grouped by domain
 	 */
 	async function loadNovels() {
 		showStatus("Loading novels...", "info");
@@ -962,23 +957,74 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Clear the novels list
 			novelsListContainer.innerHTML = "";
 
-			// Sort novels by last read date (most recent first)
-			const sortedNovels = Object.entries(novels).sort((a, b) => {
-				const lastReadA = a[1].lastRead || "1970-01-01T00:00:00.000Z";
-				const lastReadB = b[1].lastRead || "1970-01-01T00:00:00.000Z";
-				return new Date(lastReadB) - new Date(lastReadA);
+			// Group novels by domain
+			const novelsByDomain = {};
+			Object.entries(novels).forEach(([novelId, novel]) => {
+				const domain = novel.domain || extractDomain(novel.url || "");
+				if (!novelsByDomain[domain]) {
+					novelsByDomain[domain] = [];
+				}
+				novelsByDomain[domain].push([novelId, novel]);
 			});
 
-			// Create and append novel items
-			sortedNovels.forEach(([novelId, novel]) => {
-				const novelItem = createNovelItem(novelId, novel);
-				novelsListContainer.appendChild(novelItem);
+			// Sort domains by most recently read novel
+			const sortedDomains = Object.entries(novelsByDomain).sort(
+				(a, b) => {
+					const latestA = Math.max(
+						...a[1].map(([_, novel]) =>
+							new Date(
+								novel.lastRead || "1970-01-01T00:00:00.000Z"
+							).getTime()
+						)
+					);
+					const latestB = Math.max(
+						...b[1].map(([_, novel]) =>
+							new Date(
+								novel.lastRead || "1970-01-01T00:00:00.000Z"
+							).getTime()
+						)
+					);
+					return latestB - latestA;
+				}
+			);
+
+			// Create domain sections
+			sortedDomains.forEach(([domain, domainNovels]) => {
+				// Sort novels within domain by last read
+				const sortedNovels = domainNovels.sort((a, b) => {
+					const lastReadA =
+						a[1].lastRead || "1970-01-01T00:00:00.000Z";
+					const lastReadB =
+						b[1].lastRead || "1970-01-01T00:00:00.000Z";
+					return new Date(lastReadB) - new Date(lastReadA);
+				});
+
+				// Create domain section
+				const domainSection = createDomainSection(domain, sortedNovels);
+				novelsListContainer.appendChild(domainSection);
 			});
 
 			showStatus(
-				`Loaded ${sortedNovels.length} novels from your reading history.`,
+				`Loaded ${Object.keys(novels).length} novels from ${
+					sortedDomains.length
+				} sites.`,
 				"success"
 			);
+
+			// Add event listeners for domain toggles
+			document.querySelectorAll(".domain-toggle").forEach((toggle) => {
+				toggle.addEventListener("click", function () {
+					const section = this.closest(".domain-section");
+					const novelsList = section.querySelector(".domain-novels");
+					novelsList.classList.toggle("collapsed");
+					const icon = this.querySelector(".toggle-icon");
+					icon.textContent = novelsList.classList.contains(
+						"collapsed"
+					)
+						? "▶"
+						: "▼";
+				});
+			});
 
 			// Add event listeners for chapter toggles
 			document
@@ -995,10 +1041,85 @@ document.addEventListener("DOMContentLoaded", async function () {
 							: "▼ Show Chapters";
 					});
 				});
+
+			// Add event listeners for auto-enhance checkboxes
+			document
+				.querySelectorAll(".auto-enhance-checkbox")
+				.forEach((checkbox) => {
+					const novelId = checkbox.dataset.novelId;
+
+					// Load saved state
+					browser.storage.local
+						.get(["autoEnhanceNovels"])
+						.then((result) => {
+							const autoEnhanceNovels =
+								result.autoEnhanceNovels || [];
+							checkbox.checked =
+								autoEnhanceNovels.includes(novelId);
+						});
+
+					checkbox.addEventListener("change", async function () {
+						const result = await browser.storage.local.get([
+							"autoEnhanceNovels",
+						]);
+						let autoEnhanceNovels = result.autoEnhanceNovels || [];
+
+						if (this.checked) {
+							if (!autoEnhanceNovels.includes(novelId)) {
+								autoEnhanceNovels.push(novelId);
+							}
+						} else {
+							autoEnhanceNovels = autoEnhanceNovels.filter(
+								(id) => id !== novelId
+							);
+						}
+
+						await browser.storage.local.set({ autoEnhanceNovels });
+						console.log(
+							"Auto-enhance updated for:",
+							novelId,
+							this.checked
+						);
+					});
+				});
 		} catch (error) {
 			console.error("Error loading novels:", error);
 			showStatus("Error loading novels. Please try again.", "error");
 		}
+	}
+
+	/**
+	 * Create a domain section element
+	 * @param {string} domain - Domain name
+	 * @param {Array} novels - Array of [novelId, novel] tuples
+	 * @returns {HTMLElement} - The domain section element
+	 */
+	function createDomainSection(domain, novels) {
+		const section = document.createElement("div");
+		section.className = "domain-section";
+
+		const header = document.createElement("div");
+		header.className = "domain-header domain-toggle";
+		header.innerHTML = `
+			<span class="toggle-icon">▼</span>
+			<span class="domain-name">${domain}</span>
+			<span class="domain-count">${novels.length} ${
+			novels.length === 1 ? "novel" : "novels"
+		}</span>
+		`;
+
+		const novelsList = document.createElement("div");
+		novelsList.className = "domain-novels";
+
+		novels.forEach(([novelId, novel]) => {
+			const novelItem = createNovelItem(novelId, novel);
+			novelsList.appendChild(novelItem);
+		});
+
+		section.appendChild(header);
+		section.appendChild(novelsList);
+
+		return section;
 	}
 
 	/**
@@ -1013,10 +1134,63 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 		const bookTitle = novel.bookTitle || "Unknown Title";
 		const author = novel.author || "Unknown Author";
-		const source = extractDomain(novel.url || "");
 		const lastRead = novel.lastRead
 			? formatRelativeTime(novel.lastRead)
 			: "Never";
+
+		// Build extended info HTML
+		let extendedInfoHtml = "";
+		if (
+			novel.description ||
+			novel.rating ||
+			novel.wordCount ||
+			novel.genres?.length > 0
+		) {
+			extendedInfoHtml = '<div class="novel-extended-info">';
+
+			if (novel.description) {
+				const shortDesc =
+					novel.description.length > 200
+						? novel.description.substring(0, 200) + "..."
+						: novel.description;
+				extendedInfoHtml += `<div class="novel-description">${shortDesc}</div>`;
+			}
+
+			const statsItems = [];
+			if (novel.rating) statsItems.push(`Rating: ${novel.rating}`);
+			if (novel.language) statsItems.push(`Language: ${novel.language}`);
+			if (novel.wordCount)
+				statsItems.push(`Words: ${novel.wordCount.toLocaleString()}`);
+			if (novel.completed !== undefined)
+				statsItems.push(novel.completed ? "✓ Complete" : "Ongoing");
+
+			if (statsItems.length > 0) {
+				extendedInfoHtml += `<div class="novel-stats">${statsItems.join(
+					" • "
+				)}</div>`;
+			}
+
+			const engagementItems = [];
+			if (novel.reviews) engagementItems.push(`${novel.reviews} reviews`);
+			if (novel.favorites)
+				engagementItems.push(`${novel.favorites} favs`);
+			if (novel.follows) engagementItems.push(`${novel.follows} follows`);
+
+			if (engagementItems.length > 0) {
+				extendedInfoHtml += `<div class="novel-engagement">${engagementItems.join(
+					" • "
+				)}</div>`;
+			}
+
+			if (novel.genres && novel.genres.length > 0) {
+				const genreTags = novel.genres
+					.map((g) => `<span class="genre-tag">${g}</span>`)
+					.join("");
+				extendedInfoHtml += `<div class="novel-genres">${genreTags}</div>`;
+			}
+
+			extendedInfoHtml += "</div>";
+		}
 
 		// Create chapters list
 		const chaptersHtml =
@@ -1026,7 +1200,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 		novelItem.innerHTML = `
 			<div class="novel-meta">
-				<span class="novel-source">${source}</span>
 				<span class="novel-last-read">Last read: ${lastRead}</span>
 			</div>
 			<div class="novel-title">${bookTitle}</div>
@@ -1034,6 +1207,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				<span>Author: ${author}</span>
 				<div>Chapters read: ${novel.chapters ? novel.chapters.length : 0}</div>
 			</div>
+			${extendedInfoHtml}
 			<div class="novel-actions">
 				<button class="novel-chapters-toggle">▼ Show Chapters</button>
 				${
@@ -1041,6 +1215,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 						? `<a href="${novel.currentChapterUrl}" target="_blank" style="text-decoration: none;"><button>Continue Reading</button></a>`
 						: ""
 				}
+				<label class="auto-enhance-label" title="Auto-enhance this novel's chapters">
+					<input type="checkbox" class="auto-enhance-checkbox" data-novel-id="${novelId}">
+					Auto-Enhance
+				</label>
 			</div>
 			<div class="novel-chapters">${chaptersHtml}</div>
 		`;

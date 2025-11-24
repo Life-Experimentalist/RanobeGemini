@@ -11,7 +11,7 @@ Ranobe Gemini is an advanced Firefox extension designed to revolutionize your we
 - **Permanent Prompts:** Add formatting rules that apply consistently to all requests.
 - **Large Chapter Handling:** Automatically splits and processes lengthy chapters to avoid token limits.
 - **Real-Time Processing:** Leverages Google's Gemini API to process and enhance content dynamically while you read.
-- **Multiple Gemini Models:** Choose between different models like Gemini 2.0 Flash or Gemini 1.5 Pro based on your needs.
+- **Multiple Gemini Models:** Choose between different models like Gemini 2.0 Flash or Gemini 2.5 Pro based on your needs.
 - **User-Friendly Settings Panel:** Access configuration options directly from the Firefox toolbar.
 - **Original Content Preservation:** Offers an intuitive "Restore Original" option to revert back to the unmodified version.
 - **Dark Mode Support:** Seamless experience in both light and dark themes.
@@ -58,7 +58,7 @@ Upon activation, Ranobe Gemini scans the webpage for targeted content areas usin
 - **v1.1.0** (April 10, 2025): Added chapter summarization, permanent prompts, and improved UI
 - **v1.0.0** (June 15, 2025): Initial release with basic enhancement functionality
 
-For a complete list of changes, see the [CHANGELOG](../CHANGELOG.md).
+For a complete list of changes, see the [CHANGELOG](../docs/CHANGELOG.md).
 
 ## License
 

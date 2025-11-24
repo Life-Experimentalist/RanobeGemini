@@ -4,7 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RanobeGemini</title>
-		<link rel="stylesheet" href="popup.css">
+		<link rel="stylesheet" href="popup.css"/>
 	</head>
 	<body>
 		<div class="container">
@@ -22,402 +22,649 @@
 				<h1>Ranobe Gemini</h1>
 			</div>
 
-				<!-- Tab navigation -->
-				<div class="tabs">
-					<button class="tab-btn active" data-tab="settings">Settings</button>
-					<button class="tab-btn" data-tab="novels">Novels</button>
-					<button class="tab-btn" data-tab="prompts">Prompts</button>
-					<button class="tab-btn" data-tab="advanced">Advanced</button>
-					<button class="tab-btn" data-tab="faq">FAQ</button>
-					<button class="tab-btn" data-tab="about">About</button>
-				</div>
-
-				<!-- Basic Settings Tab -->
-				<div id="settings" class="tab-content active">
-					<div class="setting">
-						<label for="apiKey">Gemini API Key:</label>
-						<input
-							type="password"
-							id="apiKey"
-							placeholder="Enter your API key"
-						/>
-						<div class="button-group">
-							<button id="saveApiKey">Save Key</button>
-							<button id="testApiKey">Test Key</button>
-						</div>
-					</div>
-
-					<div class="setting">
-						<label for="modelSelect">Gemini Model:</label>
-						<div class="model-select-container">
-							<select id="modelSelect">
-								<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-								<option value="gemini-1.5-flash">Gemini 1.5 Flash (Faster)</option>
-								<option value="gemini-1.5-pro">Gemini 1.5 Pro (Better quality)</option>
-							</select>
-							<button id="refreshModels" class="icon-button" title="Refresh models list">↻</button>
-						</div>
-					</div>
-
-					<div class="slider-container">
-						<label for="temperatureSlider">
-							Temperature
-							<span class="slider-value" id="temperatureValue">0.7</span>
-						</label>
-						<input type="range" min="0" max="1" step="0.1" value="0.7" class="slider" id="temperatureSlider">
-						<div class="description">Controls creativity (0 = deterministic, 1 = creative)</div>
-					</div>
-
-					<div class="setting">
-						<label>Processing Options:</label>
-						<div style="margin-top: 8px;">
-							<label style="font-weight: normal;">
-								<input type="checkbox" id="chunkingEnabled" checked />
-								Split large chapters automatically
-							</label>
-							<div class="description">
-								Processes large chapters in parts to avoid token limits
-							</div>
-						</div>
-
-						<div id="chunkSizeContainer" style="margin-top: 8px; margin-left: 22px;">
-							<label for="chunkSize">Segment size (characters per chunk):</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input
-									type="number"
-									id="chunkSize"
-									min="5000"
-									max="50000"
-									step="1000"
-									style="width: 120px;"
-									value="12000"
-								/>
-								<span class="description" style="font-size: 12px; color: #666;">
-									(smaller = safer but more segments)
-								</span>
-							</div>
-						</div>
-
-						<div style="margin-top: 15px;">
-							<label style="font-weight: normal;">
-								<input type="checkbox" id="useEmoji" />
-								Add emotion emojis to dialogue
-							</label>
-							<div class="description">
-								Adds appropriate emojis to enhance emotional expressions in text
-							</div>
-						</div>
-					</div>
-
-					<div class="setting">
-						<label for="maxOutputTokens">Maximum Output Length (tokens):</label>
-						<input
-							type="number"
-							id="maxOutputTokens"
-							min="1000"
-							max="32768"
-							step="512"
-							value="8192"
-						/>
-						<div class="description">
-							Controls maximum length of generated text (higher = longer outputs)
-						</div>
-					</div>
-
-					<div class="setting">
-						<label>
-							<input type="checkbox" id="debugMode" />
-							Debug mode (console logging)
-						</label>
-					</div>
-
-					<div class="actions">
-						<button id="enhancePageBtn">Enhance Current Page</button>
-						<button id="saveSettings" style="float: right; background-color: #34a853;">Save All Settings</button>
-					</div>
-				</div>
-
-					<!-- Novels Tab -->
-					<div id="novels" class="tab-content">
-						<div class="tab-header">
-							<h3>Novels</h3>
-							<button id="refreshNovels" class="icon-button">↻ Refresh</button>
-						</div>
-						<div class="novels-list" id="novelsList">
-							<div class="no-novels">No novels found. Please refresh or add novels.</div>
-						</div>
-					</div>
-
-				<!-- Prompts Tab -->
-				<div id="prompts" class="tab-content">
-					<div class="setting">
-						<label for="promptTemplate">Enhancement Prompt:</label>
-						<textarea
-							id="promptTemplate"
-							placeholder="Instructions for Gemini AI..."
-						></textarea>
-						<button id="resetPrompt" style="margin-top: 5px;">Reset to Default</button>
-					</div>
-
-					<div class="setting">
-						<label for="summaryPrompt">Summary Prompt:</label>
-						<textarea
-							id="summaryPrompt"
-							placeholder="Instructions for summarization..."
-						></textarea>
-						<button id="resetSummaryPrompt" style="margin-top: 5px;">Reset to Default</button>
-					</div>
-
-					<div class="setting">
-						<label for="siteSpecificPrompts">Site-Specific Prompts:</label>
-						<div id="siteSpecificPromptsContainer" class="site-specific-prompts">
-							<!-- Site-specific prompts will be loaded dynamically -->
-							<div class="no-site-prompts" id="noSitePrompts">No site-specific prompts available.</div>
-						</div>
-						<div class="site-prompt-template" style="display: none;">
-							<div class="site-prompt-item">
-								<div class="site-prompt-header">
-									<input type="text" class="site-name" placeholder="Site name">
-									<button class="remove-site-prompt">✕</button>
-								</div>
-								<textarea class="site-prompt-content" rows="3" placeholder="Enter site-specific prompt"></textarea>
-							</div>
-						</div>
-						<button id="addSitePrompt" style="margin-top: 5px;">Add Site Prompt</button>
-						<div class="description">These prompts are automatically provided by website handlers and can be customized. They help Gemini understand the specific formatting and style of each site.</div>
-					</div>
-
-					<div class="setting">
-						<label for="permanentPrompt">Permanent Prompt (Appended to all requests):</label>
-						<textarea id="permanentPrompt" rows="4"></textarea>
-						<button id="resetPermanentPrompt" style="margin-top: 5px;">Reset to Default</button>
-					</div>
-
-					<div class="actions">
-						<button id="resetAllPrompts" style="background-color: #db4437;">Reset All Prompts</button>
-						<button id="savePrompts" style="float: right; background-color: #34a853;">Save Prompts</button>
-					</div>
-				</div>
-
-				<!-- Advanced Tab -->
-				<div id="advanced" class="tab-content">
-					<div class="setting">
-						<div class="slider-container">
-							<label for="temperatureSlider">
-								Temperature
-								<span class="slider-value" id="temperatureValue">0.7</span>
-							</label>
-							<input type="range" min="0" max="1" step="0.1" value="0.7" class="slider" id="temperatureSlider">
-							<div class="description">Controls creativity (0 = deterministic, 1 = creative)</div>
-						</div>
-
-						<div class="slider-container">
-							<label for="topPSlider">
-								Top-P
-								<span class="slider-value" id="topPValue">0.95</span>
-							</label>
-							<input type="range" min="0" max="1" step="0.05" value="0.95" class="slider" id="topPSlider">
-							<div class="description">Controls diversity of output (lower = more focused)</div>
-						</div>
-
-						<div class="slider-container">
-							<label for="topKSlider">
-								Top-K
-								<span class="slider-value" id="topKValue">40</span>
-							</label>
-							<input type="range" min="1" max="100" step="1" value="40" class="slider" id="topKSlider">
-							<div class="description">Limits token selection pool (lower = more deterministic)</div>
-						</div>
-					</div>
-
-					<div class="setting">
-						<label for="maxOutputTokens">Maximum Output Length (tokens):</label>
-						<input
-							type="number"
-							id="maxOutputTokens"
-							min="1000"
-							max="32768"
-							step="512"
-							value="8192"
-						/>
-						<div class="description">
-							Controls maximum length of generated text (higher = longer outputs)
-						</div>
-					</div>
-
-					<div class="setting">
-						<label for="customEndpoint">Custom Model Endpoint (Advanced):</label>
-						<input
-							type="text"
-							id="customEndpoint"
-							placeholder="https://generativelanguage.googleapis.com/v1beta/models/..."
-						/>
-						<div class="description">
-							For advanced users only. Leave blank to use standard endpoints.
-						</div>
-					</div>
-
-					<div class="actions">
-						<button id="resetAllAdvanced" style="background-color: #db4437;">Reset All Advanced Settings</button>
-						<button id="saveAdvancedSettings" style="float: right; background-color: #34a853;">Save Advanced Settings</button>
-					</div>
-				</div>
-
-				<!-- About Tab -->
-				<div id="about" class="tab-content">
-					<h3>Ranobe Gemini</h3>
-
-					<div class="about-section">
-						<h4>Overview</h4>
-						<p>
-							Ranobe Gemini is a browser extension that uses Google's Gemini AI to enhance web novel translations,
-							making them more readable and natural while preserving the original story.
-						</p>
-						<p>
-							The extension integrates with supported novel websites, offering instant enhancement
-							and summarization of chapter content.
-						</p>
-					</div>
-
-					<div class="about-section">
-						<h4>Key Features</h4>
-						<ul>
-							<li><strong>Translation Enhancement:</strong> Improves grammar, flow, and readability of machine-translated novels</li>
-							<li><strong>Chapter Summarization:</strong> Creates concise summaries focusing on key plot points</li>
-							<li><strong>Customizable Prompts:</strong> Fine-tune how Gemini processes your content</li>
-							<li><strong>Large Chapter Handling:</strong> Automatically splits and processes lengthy chapters</li>
-							<li><strong>Multiple Gemini Models:</strong> Choose between different Gemini models based on your needs</li>
-							<li><strong>Advanced Parameters:</strong> Fine-tune the AI generation with temperature, top-P, and top-K settings</li>
-							<li><strong>Emoji Mode:</strong> Add emotional expressions to character dialogue</li>
-						</ul>
-					</div>
-
-					<div class="about-section">
-						<h4>Getting Started</h4>
-						<ol>
-							<li><a href="#" id="getKeyLink">Get a free Gemini API key</a> from Google AI Studio</li>
-							<li>Enter your API key in the Settings tab</li>
-							<li>Navigate to any chapter on a supported novel website</li>
-							<li>Click "Enhance with Gemini" or "Summarize Chapter" on the page</li>
-						</ol>
-					</div>
-
-					<div class="about-section">
-						<h4>Privacy & Data Usage</h4>
-						<p>
-							Ranobe Gemini only sends novel content to Google's Gemini API for processing.
-							Your API key and settings are stored locally in your browser.
-							The extension doesn't collect any usage data or personal information.
-						</p>
-					</div>
-
-					<div class="about-section">
-						<h4>Support & Feedback</h4>
-						<p>
-							If you encounter any issues or have suggestions for improvement, please report them on
-							<a href="https://github.com/Life-Experimentalist/RanobeGemini/issues" target="_blank">GitHub Issues</a>.
-						</p>
-						<p>
-							Developed by <a href="https://github.com/Life-Experimentalist" target="_blank">Life-Experimentalist</a> •
-							Powered by <a href="https://ai.google.dev/" target="_blank">Google Gemini API</a>
-						</p>
-					</div>
-				</div>
-
-				<!-- FAQ Tab -->
-				<div id="faq" class="tab-content">
-					<h3>Frequently Asked Questions</h3>
-
-					<div class="faq-item">
-						<div class="faq-question">What is Ranobe Gemini?</div>
-						<div class="faq-answer">
-							Ranobe Gemini is a browser extension that uses Google's Gemini AI to enhance novel translations, making them more readable and natural.
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">Do I need an API key?</div>
-						<div class="faq-answer">
-							Yes, you need a Gemini API key to use this extension. You can get a free API key from <a href="#" id="faqGetKeyLink">Google AI Studio</a>.
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">How do I use the extension?</div>
-						<div class="faq-answer">
-							<ol>
-								<li>Enter your API key in the Settings tab</li>
-								<li>Navigate to a novel chapter on a supported website</li>
-								<li>Click the "Enhance with Gemini" button that appears on the page</li>
-								<li>Wait for the enhanced text to replace the original content</li>
-							</ol>
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">What does the "Summarize Chapter" button do?</div>
-						<div class="faq-answer">
-							It generates a concise summary of the current chapter, focusing on main plot points and character interactions.
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">Which websites are supported?</div>
-						<div class="faq-answer">
-							Currently, the extension works with ranobes.net and fanfiction.net.
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">How do the advanced parameters work?</div>
-						<div class="faq-answer">
-							<ul>
-								<li><strong>Temperature:</strong> Controls randomness. Higher values (0.7-1.0) produce more creative outputs, lower values (0.2-0.5) produce more deterministic outputs.</li>
-								<li><strong>Top-P:</strong> Controls diversity by limiting token selection to the most probable tokens. Lower values make output more focused.</li>
-								<li><strong>Top-K:</strong> Limits the number of tokens considered for each step. Lower values make output more predictable.</li>
-								<li><strong>Maximum Output Length:</strong> Sets how many tokens the model can generate in its response.</li>
-							</ul>
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">What should I do if enhancement fails?</div>
-						<div class="faq-answer">
-							<ul>
-								<li>Check that your API key is correctly entered in the Settings tab</li>
-								<li>Make sure you're on a supported website</li>
-								<li>Try reloading the page and trying again</li>
-								<li>If processing large chapters, enable the "Split large chapters automatically" option</li>
-								<li>Check the browser console for error messages (Ctrl+Shift+J)</li>
-								<li>Try lowering the temperature to 0.5 for more reliable (but less creative) output</li>
-							</ul>
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">What does "Permanent Prompt" do?</div>
-						<div class="faq-answer">
-							The Permanent Prompt contains instructions that are added to every request sent to Gemini, both for enhancement and summarization. It's useful for formatting instructions and other consistent requirements.
-						</div>
-					</div>
-
-					<div class="faq-item">
-						<div class="faq-question">Which Gemini model should I use?</div>
-						<div class="faq-answer">
-							Gemini 2.0 Flash is recommended for most users as it offers a good balance of speed and quality. For longer chapters, Gemini 1.5 Pro has a larger context window but may be slower.
-						</div>
-					</div>
-				</div>
-
-				<div id="status"></div>
-
-				<!-- Size indicator -->
-				<div class="size-indicator" id="sizeIndicator"></div>
-
-				<!-- Resize handle with improved visibility -->
-				<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
+			<!-- Tab navigation -->
+			<div class="tabs">
+				<button class="tab-btn active" data-tab="settings">
+					Settings
+				</button>
+				<button class="tab-btn" data-tab="novels">Novels</button>
+				<button class="tab-btn" data-tab="prompts">Prompts</button>
+				<button class="tab-btn" data-tab="advanced">Advanced</button>
+				<button class="tab-btn" data-tab="info">Info & FAQ</button>
 			</div>
 
-			<script src="popup.js" type="module"></script>
-		</body>
-	</html>
+			<!-- Settings Tab -->
+			<div id="settings" class="tab-content active">
+				<div class="setting">
+					<label for="apiKey">Gemini API Key:</label>
+					<input
+						type="password"
+						id="apiKey"
+						placeholder="Enter your API key"
+					/>
+					<div class="button-group">
+						<button id="saveApiKey">Save Key</button>
+						<button id="testApiKey">Test Key</button>
+					</div>
+				</div>
+
+				<div class="setting">
+					<label for="modelSelect">Gemini Model:</label>
+					<div class="model-select-container">
+						<select id="modelSelect">
+							<option value="gemini-2.0-flash">
+								Gemini 2.0 Flash (Recommended)
+							</option>
+							<option value="gemini-2.5-flash">
+								Gemini 2.5 Flash (Faster)
+							</option>
+							<option value="gemini-2.5-pro">
+								Gemini 2.5 Pro (Better quality)
+							</option>
+						</select>
+						<button
+							id="refreshModels"
+							class="icon-button"
+							title="Refresh models list"
+						>
+							↻
+						</button>
+					</div>
+				</div>
+
+				<!-- Temperature moved to Advanced tab -->
+
+				<div class="setting">
+					<label>Processing Options:</label>
+					<div style="margin-top: 8px">
+						<label style="font-weight: normal">
+							<input
+								type="checkbox"
+								id="chunkingEnabled"
+								checked
+							/>
+							Split large chapters automatically
+						</label>
+						<div class="description">
+							Processes large chapters in parts to avoid token
+							limits
+						</div>
+					</div>
+
+					<div
+						id="chunkSizeContainer"
+						style="margin-top: 8px; margin-left: 22px"
+					>
+						<label for="chunkSize"
+							>Segment size (characters per chunk):</label
+						>
+						<div
+							style="
+								display: flex;
+								gap: 10px;
+								align-items: center;
+							"
+						>
+							<input
+								type="number"
+								id="chunkSize"
+								min="5000"
+								max="50000"
+								step="1000"
+								style="width: 120px"
+								value="12000"
+							/>
+							<span
+								class="description"
+								style="font-size: 12px; color: #666"
+							>
+								(smaller = safer but more segments)
+							</span>
+						</div>
+					</div>
+
+					<div style="margin-top: 15px">
+						<label style="font-weight: normal">
+							<input type="checkbox" id="useEmoji" />
+							Add emotion emojis to dialogue
+						</label>
+						<div class="description">
+							Adds appropriate emojis to enhance emotional
+							expressions in text
+						</div>
+					</div>
+				</div>
+
+				<div class="setting">
+					<label for="maxOutputTokens"
+						>Maximum Output Length (tokens):</label
+					>
+					<input
+						type="number"
+						id="maxOutputTokens"
+						min="1000"
+						max="32768"
+						step="512"
+						value="8192"
+					/>
+					<div class="description">
+						Controls maximum length of generated text (higher =
+						longer outputs)
+					</div>
+				</div>
+
+				<div class="setting">
+					<label>
+						<input type="checkbox" id="debugMode" />
+						Debug mode (console logging)
+					</label>
+				</div>
+
+				<div class="actions">
+					<button id="enhancePageBtn">Enhance Current Page</button>
+					<button
+						id="saveSettings"
+						style="float: right; background-color: #34a853"
+					>
+						Save All Settings
+					</button>
+				</div>
+			</div>
+
+			<!-- Novels Tab -->
+			<div id="novels" class="tab-content">
+				<div class="tab-header">
+					<h3>Novels</h3>
+					<button id="refreshNovels" class="icon-button">
+						↻ Refresh
+					</button>
+				</div>
+				<div class="novels-list" id="novelsList">
+					<div class="no-novels">
+						No novels found. Use refresh or future add feature.
+					</div>
+				</div>
+			</div>
+
+			<!-- Prompts Tab -->
+			<div id="prompts" class="tab-content">
+				<div class="setting">
+					<label for="promptTemplate">Enhancement Prompt:</label>
+					<textarea
+						id="promptTemplate"
+						placeholder="Instructions for Gemini AI..."
+					></textarea>
+					<button id="resetPrompt" style="margin-top: 5px">
+						Reset to Default
+					</button>
+				</div>
+
+				<div class="setting">
+					<label for="summaryPrompt">Summary Prompt:</label>
+					<textarea
+						id="summaryPrompt"
+						placeholder="Instructions for summarization..."
+					></textarea>
+					<button id="resetSummaryPrompt" style="margin-top: 5px">
+						Reset to Default
+					</button>
+				</div>
+
+				<div class="setting">
+					<label for="siteSpecificPrompts"
+						>Site-Specific Prompts:</label
+					>
+					<div
+						id="siteSpecificPromptsContainer"
+						class="site-specific-prompts"
+					>
+						<!-- Site-specific prompts will be loaded dynamically -->
+						<div class="no-site-prompts" id="noSitePrompts">
+							No site-specific prompts available.
+						</div>
+					</div>
+					<div class="site-prompt-template" style="display: none">
+						<div class="site-prompt-item">
+							<div class="site-prompt-header">
+								<input
+									type="text"
+									class="site-name"
+									placeholder="Site name"
+								/>
+								<button class="remove-site-prompt">✕</button>
+							</div>
+							<textarea
+								class="site-prompt-content"
+								rows="3"
+								placeholder="Enter site-specific prompt"
+							></textarea>
+						</div>
+					</div>
+					<button id="addSitePrompt" style="margin-top: 5px">
+						Add Site Prompt
+					</button>
+					<div class="description">
+						These prompts are automatically provided by website
+						handlers and can be customized. They help Gemini
+						understand the specific formatting and style of each
+						site.
+					</div>
+				</div>
+
+				<div class="setting">
+					<label for="permanentPrompt"
+						>Permanent Prompt (Appended to all requests):</label
+					>
+					<textarea id="permanentPrompt" rows="4"></textarea>
+					<button id="resetPermanentPrompt" style="margin-top: 5px">
+						Reset to Default
+					</button>
+				</div>
+
+				<div class="actions">
+					<button
+						id="resetAllPrompts"
+						style="background-color: #db4437"
+					>
+						Reset All Prompts
+					</button>
+					<button
+						id="savePrompts"
+						style="float: right; background-color: #34a853"
+					>
+						Save Prompts
+					</button>
+				</div>
+			</div>
+
+			<!-- Advanced Tab -->
+			<div id="advanced" class="tab-content">
+				<div class="setting">
+					<div class="slider-block">
+						<label for="temperatureSlider">
+							Temperature
+							<span class="slider-value" id="temperatureValue"
+								>0.7</span
+							>
+						</label>
+						<input
+							type="range"
+							min="0"
+							max="1"
+							step="0.1"
+							value="0.7"
+							class="slider"
+							id="temperatureSlider"
+						/>
+						<div class="description">
+							Controls creativity (0 = deterministic, 1 =
+							creative)
+						</div>
+					</div>
+
+					<div class="slider-block">
+						<label for="topPSlider">
+							Top-P
+							<span class="slider-value" id="topPValue"
+								>0.95</span
+							>
+						</label>
+						<input
+							type="range"
+							min="0"
+							max="1"
+							step="0.05"
+							value="0.95"
+							class="slider"
+							id="topPSlider"
+						/>
+						<div class="description">
+							Controls diversity of output (lower = more focused)
+						</div>
+					</div>
+
+					<div class="slider-block">
+						<label for="topKSlider">
+							Top-K
+							<span class="slider-value" id="topKValue">40</span>
+						</label>
+						<input
+							type="range"
+							min="1"
+							max="100"
+							step="1"
+							value="40"
+							class="slider"
+							id="topKSlider"
+						/>
+						<div class="description">
+							Limits token selection pool (lower = more
+							deterministic)
+						</div>
+					</div>
+				</div>
+
+				<div class="setting">
+					<label for="maxOutputTokens"
+						>Maximum Output Length (tokens):</label
+					>
+					<input
+						type="number"
+						id="maxOutputTokens"
+						min="1000"
+						max="32768"
+						step="512"
+						value="8192"
+					/>
+					<div class="description">
+						Controls maximum length of generated text (higher =
+						longer outputs)
+					</div>
+				</div>
+
+				<div class="setting">
+					<label for="customEndpoint"
+						>Custom Model Endpoint (Advanced):</label
+					>
+					<input
+						type="text"
+						id="customEndpoint"
+						placeholder="https://generativelanguage.googleapis.com/v1beta/models/..."
+					/>
+					<div class="description">
+						For advanced users only. Leave blank to use standard
+						endpoints.
+					</div>
+				</div>
+
+				<div class="actions">
+					<button
+						id="resetAllAdvanced"
+						style="background-color: #db4437"
+					>
+						Reset All Advanced Settings
+					</button>
+					<button
+						id="saveAdvancedSettings"
+						style="float: right; background-color: #34a853"
+					>
+						Save Advanced Settings
+					</button>
+				</div>
+			</div>
+
+			<!-- About Tab -->
+			<!-- Info & FAQ Tab (Merged About and FAQ) -->
+			<div id="info" class="tab-content">
+				<h3>About Ranobe Gemini</h3>
+
+				<div class="about-section">
+					<h4>Overview</h4>
+					<p>
+						Ranobe Gemini is a browser extension that uses Google's
+						Gemini AI to enhance web novel translations, making them
+						more readable and natural while preserving the original
+						story.
+					</p>
+					<p>
+						The extension integrates with supported novel websites,
+						offering instant enhancement and summarization of
+						chapter content.
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Key Features</h4>
+					<ul>
+						<li>
+							<strong>Translation Enhancement:</strong> Improves
+							grammar, flow, and readability of machine-translated
+							novels
+						</li>
+						<li>
+							<strong>Chapter Summarization:</strong> Creates
+							concise summaries focusing on key plot points
+						</li>
+						<li>
+							<strong>Customizable Prompts:</strong> Fine-tune how
+							Gemini processes your content
+						</li>
+						<li>
+							<strong>Large Chapter Handling:</strong>
+							Automatically splits and processes lengthy chapters
+						</li>
+						<li>
+							<strong>Multiple Gemini Models:</strong> Choose
+							between different Gemini models based on your needs
+						</li>
+						<li>
+							<strong>Advanced Parameters:</strong> Fine-tune the
+							AI generation with temperature, top-P, and top-K
+							settings
+						</li>
+						<li>
+							<strong>Emoji Mode:</strong> Add emotional
+							expressions to character dialogue
+						</li>
+					</ul>
+				</div>
+
+				<div class="about-section">
+					<h4>Getting Started</h4>
+					<ol>
+						<li>
+							<a href="#" id="getKeyLink"
+								>Get a free Gemini API key</a
+							>
+							from Google AI Studio
+						</li>
+						<li>Enter your API key in the Settings tab</li>
+						<li>
+							Navigate to any chapter on a supported novel website
+						</li>
+						<li>
+							Click "Enhance with Gemini" or "Summarize Chapter"
+							on the page
+						</li>
+					</ol>
+				</div>
+
+				<div class="about-section">
+					<h4>Privacy & Data Usage</h4>
+					<p>
+						Ranobe Gemini only sends novel content to Google's
+						Gemini API for processing. Your API key and settings are
+						stored locally in your browser. The extension doesn't
+						collect any usage data or personal information.
+					</p>
+				</div>
+
+				<div class="about-section">
+					<h4>Support & Feedback</h4>
+					<p>
+						If you encounter any issues or have suggestions for
+						improvement, please report them on
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini/issues"
+							target="_blank"
+							>GitHub Issues</a
+						>.
+					</p>
+					<p>
+						Developed by
+						<a
+							href="https://github.com/Life-Experimentalist"
+							target="_blank"
+							>Life-Experimentalist</a
+						>
+						• Powered by
+						<a href="https://ai.google.dev/" target="_blank"
+							>Google Gemini API</a
+						>
+					</p>
+				</div>
+
+				<!-- Divider between About and FAQ sections -->
+				<hr style="margin: 30px 0; border: none; border-top: 2px solid #e9ecef;" />
+
+				<h3>Frequently Asked Questions</h3>
+
+				<div class="faq-item">
+					<div class="faq-question">What is Ranobe Gemini?</div>
+					<div class="faq-answer">
+						Ranobe Gemini is a browser extension that uses Google's
+						Gemini AI to enhance novel translations, making them
+						more readable and natural.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">Do I need an API key?</div>
+					<div class="faq-answer">
+						Yes, you need a Gemini API key to use this extension.
+						You can get a free API key from
+						<a href="#" id="faqGetKeyLink">Google AI Studio</a>.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">How do I use the extension?</div>
+					<div class="faq-answer">
+						<ol>
+							<li>Enter your API key in the Settings tab</li>
+							<li>
+								Navigate to a novel chapter on a supported
+								website
+							</li>
+							<li>
+								Click the "Enhance with Gemini" button that
+								appears on the page
+							</li>
+							<li>
+								Wait for the enhanced text to replace the
+								original content
+							</li>
+						</ol>
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						What does the "Summarize Chapter" button do?
+					</div>
+					<div class="faq-answer">
+						It generates a concise summary of the current chapter,
+						focusing on main plot points and character interactions.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						Which websites are supported?
+					</div>
+					<div class="faq-answer">
+						Currently, the extension works with ranobes.net and
+						fanfiction.net.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						How do the advanced parameters work?
+					</div>
+					<div class="faq-answer">
+						<ul>
+							<li>
+								<strong>Temperature:</strong> Controls
+								randomness. Higher values (0.7-1.0) produce more
+								creative outputs, lower values (0.2-0.5) produce
+								more deterministic outputs.
+							</li>
+							<li>
+								<strong>Top-P:</strong> Controls diversity by
+								limiting token selection to the most probable
+								tokens. Lower values make output more focused.
+							</li>
+							<li>
+								<strong>Top-K:</strong> Limits the number of
+								tokens considered for each step. Lower values
+								make output more predictable.
+							</li>
+							<li>
+								<strong>Maximum Output Length:</strong> Sets how
+								many tokens the model can generate in its
+								response.
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						What should I do if enhancement fails?
+					</div>
+					<div class="faq-answer">
+						<ul>
+							<li>
+								Check that your API key is correctly entered in
+								the Settings tab
+							</li>
+							<li>Make sure you're on a supported website</li>
+							<li>Try reloading the page and trying again</li>
+							<li>
+								If processing large chapters, enable the "Split
+								large chapters automatically" option
+							</li>
+							<li>
+								Check the browser console for error messages
+								(Ctrl+Shift+J)
+							</li>
+							<li>
+								Try lowering the temperature to 0.5 for more
+								reliable (but less creative) output
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						What does "Permanent Prompt" do?
+					</div>
+					<div class="faq-answer">
+						The Permanent Prompt contains instructions that are
+						added to every request sent to Gemini, both for
+						enhancement and summarization. It's useful for
+						formatting instructions and other consistent
+						requirements.
+					</div>
+				</div>
+
+				<div class="faq-item">
+					<div class="faq-question">
+						Which Gemini model should I use?
+					</div>
+					<div class="faq-answer">
+						Gemini 2.0 Flash is recommended for most users as it
+						offers a good balance of speed and quality. For longer
+						chapters, Gemini 2.5 Pro has a larger context window but
+						may be slower.
+					</div>
+				</div>
+			</div>
+
+			<div id="status"></div>
+
+			<!-- Size indicator -->
+			<div class="size-indicator" id="sizeIndicator"></div>
+
+			<!-- Resize handle with improved visibility -->
+			<div
+				class="resize-handle"
+				id="resize-handle"
+				title="Drag to resize"
+			></div>
+		</div>
+		<script src="popup.js" type="module"></script>
+	</body>
+</html>
