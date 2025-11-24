@@ -67,8 +67,8 @@ function runBuild() {
 		console.log(
 			`[${getTimestamp()}]	✅ Build completed successfully (${duration}s) `
 		);
-		console.log(`[${getTimestamp()}]	🔍 Watching for changes...\n`);
-		console.log(`-----------------------\n`);
+		console.log(`[${getTimestamp()}]	🔍 Watching for changes...`);
+		console.log(`___________________________\n`);
 
 		ignoreChangesUntil = Date.now() + IGNORE_COOLDOWN;
 

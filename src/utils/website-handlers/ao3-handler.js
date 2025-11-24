@@ -4,6 +4,7 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 
+
 export class AO3Handler extends BaseWebsiteHandler {
 	constructor() {
 		super();
@@ -288,24 +289,39 @@ export class AO3Handler extends BaseWebsiteHandler {
 		const scripts = contentClone.querySelectorAll("script");
 		scripts.forEach((script) => script.remove());
 
-		// Get text content with preserved structure
-		let content = contentClone.innerHTML.trim();
+		// Get HTML content with preserved structure
+		let htmlContent = contentClone.innerHTML.trim();
+
+		// Also get plain text for token counting and processing
+		let textContent =
+			contentClone.textContent || contentClone.innerText || "";
+		textContent = textContent.trim();
 
 		// Get metadata
 		const metadata = this.getWorkMetadata();
 		const navigation = this.getChapterNavigation();
 
 		console.log("AO3: Content extracted successfully");
-		console.log("AO3: Content length:", content.length, "characters");
+		console.log(
+			"AO3: HTML content length:",
+			htmlContent.length,
+			"characters"
+		);
+		console.log(
+			"AO3: Text content length:",
+			textContent.length,
+			"characters"
+		);
 
 		return {
 			found: true,
 			title: title,
-			content: content,
+			text: textContent, // Plain text for processing
+			content: htmlContent, // HTML for preservation
 			contentArea: contentArea,
 			metadata: metadata,
 			navigation: navigation,
-			wordCount: this.countWords(content),
+			wordCount: textContent.trim().split(/\s+/).filter(word => word.length > 0).length,
 		};
 	}
 
@@ -332,4 +348,5 @@ When enhancing, improve readability while respecting the author's original style
 	}
 }
 
-export default AO3Handler;
+// Default export - create an instance
+export default new AO3Handler();

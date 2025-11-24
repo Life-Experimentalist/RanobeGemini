@@ -313,9 +313,10 @@ if (window.__RGInitDone) {
 		// Get model name and provider from modelInfo if available
 		const modelName = modelInfo?.name || "AI";
 		const modelProvider = modelInfo?.provider || "Ranobe Gemini";
+		const cachedLabel = showDeleteButton ? " [ Cached ]" : "";
 		const modelDisplay = `Enhanced with ${modelProvider}${
-			modelName ? ` (${modelName})` : ""
-		} by Ranobe Gemini`;
+			modelName !== "AI" ? ` (${modelName})` : ""
+		}${cachedLabel}`;
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-enhanced-banner";
@@ -341,7 +342,7 @@ if (window.__RGInitDone) {
 		}
 
 		const deleteButtonHtml = showDeleteButton
-			? `<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">✕</button>`
+			? `<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>`
 			: "";
 
 		banner.innerHTML = `
@@ -1066,9 +1067,14 @@ if (window.__RGInitDone) {
 		// Check for cached content
 		const cachedData = await checkCachedContent();
 		if (cachedData && cachedData.enhancedContent) {
-			console.log("Found cached enhanced content");
-			// Will show "Regenerate" button instead of "Enhance"
-			// Don't auto-apply, let user click the button to load
+			console.log("Found cached enhanced content, auto-loading...");
+			// Auto-load the cached content after UI is injected and content area is ready
+			// Use requestAnimationFrame to ensure DOM is fully rendered
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					replaceContentWithEnhancedVersion(cachedData);
+				}, 250);
+			});
 		}
 
 		// Get the appropriate handler for this website
@@ -1087,18 +1093,6 @@ if (window.__RGInitDone) {
 		// Create extract button if it doesn't exist
 		if (!hasExtractButton) {
 			injectUI();
-
-			// Also look for content periodically in case the page loads dynamically
-			const checkInterval = setInterval(() => {
-				const contentArea = findContentArea();
-				const button = document.querySelector(".gemini-enhance-btn");
-
-				if (contentArea && !button) {
-					console.log("Content area found in interval check");
-					injectUI();
-					clearInterval(checkInterval);
-				}
-			}, 2000);
 		}
 
 		// Automatically extract content once the page is loaded
@@ -1147,7 +1141,7 @@ if (window.__RGInitDone) {
 	function createSummarizeButton() {
 		const button = document.createElement("button");
 		button.id = "summarize-button";
-		button.textContent = "Summarize Chapter";
+		button.textContent = "📝 Summarize Chapter";
 		button.classList.add("gemini-button"); // Use the same class for styling
 		button.addEventListener("click", handleSummarizeButtonClick);
 		return button;
@@ -1366,7 +1360,10 @@ if (window.__RGInitDone) {
 		}
 
 		// Insert elements based on the recommended position
-		if (insertionPosition === "before") {
+		if (
+			insertionPosition === "before" ||
+			insertionPosition === "beforebegin"
+		) {
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				insertionPoint
@@ -1375,7 +1372,10 @@ if (window.__RGInitDone) {
 				summaryDisplay,
 				insertionPoint
 			);
-		} else if (insertionPosition === "after") {
+		} else if (
+			insertionPosition === "after" ||
+			insertionPosition === "afterend"
+		) {
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				insertionPoint.nextSibling
@@ -1384,12 +1384,28 @@ if (window.__RGInitDone) {
 				summaryDisplay,
 				controlsContainer.nextSibling
 			);
-		} else if (insertionPosition === "prepend") {
+		} else if (
+			insertionPosition === "prepend" ||
+			insertionPosition === "afterbegin"
+		) {
 			insertionPoint.prepend(controlsContainer);
 			insertionPoint.prepend(summaryDisplay);
-		} else if (insertionPosition === "append") {
+		} else if (
+			insertionPosition === "append" ||
+			insertionPosition === "beforeend"
+		) {
 			insertionPoint.appendChild(controlsContainer);
 			insertionPoint.appendChild(summaryDisplay);
+		} else {
+			// Default fallback to before
+			insertionPoint.parentNode.insertBefore(
+				controlsContainer,
+				insertionPoint
+			);
+			insertionPoint.parentNode.insertBefore(
+				summaryDisplay,
+				insertionPoint
+			);
 		}
 
 		console.log(
@@ -1829,6 +1845,10 @@ if (window.__RGInitDone) {
 		// Check if we have cached content and should load it instead
 		if (storageManager && isCachedContent) {
 			const button = document.querySelector(".gemini-enhance-btn");
+			if (!button) {
+				console.error("Enhance button not found");
+				return;
+			}
 			const originalText = button.textContent;
 
 			// If button says "Regenerate", user wants to regenerate
@@ -1922,6 +1942,11 @@ if (window.__RGInitDone) {
 		try {
 			// Show processing indicator on the button
 			const button = document.querySelector(".gemini-enhance-btn");
+			if (!button) {
+				console.error("Enhance button not found");
+				showStatusMessage("UI error: Button not found", "error");
+				return;
+			}
 			const originalText = button.textContent;
 			button.textContent = "Processing...";
 			button.disabled = true;
@@ -2229,16 +2254,22 @@ if (window.__RGInitDone) {
 						contentArea.getAttribute("data-showing-enhanced") ===
 						"true";
 					if (isShowingEnhanced) {
-						contentArea.innerHTML = originalContent;
+						// Switch to original
+						const storedOriginal = contentArea.getAttribute(
+							"data-original-content"
+						);
+						contentArea.innerHTML = sanitizeHTML(storedOriginal);
 						toggleButton.textContent = "Show Enhanced";
 						contentArea.setAttribute(
 							"data-showing-enhanced",
 							"false"
 						);
 					} else {
-						contentArea.innerHTML = contentArea.getAttribute(
+						// Switch to enhanced
+						const storedEnhanced = contentArea.getAttribute(
 							"data-enhanced-content"
 						);
+						contentArea.innerHTML = sanitizeHTML(storedEnhanced);
 						toggleButton.textContent = "Show Original";
 						contentArea.setAttribute(
 							"data-showing-enhanced",
@@ -2254,6 +2285,7 @@ if (window.__RGInitDone) {
 							applyDefaultFormatting(contentArea);
 						}
 					}
+					// Re-add the banner as the first element
 					if (contentArea.firstChild) {
 						contentArea.insertBefore(
 							banner,

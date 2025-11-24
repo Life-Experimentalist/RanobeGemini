@@ -1,5 +1,4 @@
-history/
-analysis_log.md
+docs/analysis_log.md
 node_modules/
 package-lock.json
 dist/

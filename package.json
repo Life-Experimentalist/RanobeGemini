@@ -1,6 +1,6 @@
 {
 	"name": "ranobe-gemini",
-	"version": "2.7.0",
+	"version": "2.7.1",
 	"description": "Enhances reading experience for web novels using Gemini AI",
     "scripts": {
 		"package": "node dev/package-firefox.js",
