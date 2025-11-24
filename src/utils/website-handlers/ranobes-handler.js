@@ -21,7 +21,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	canHandle() {
 		return (
 			window.location.hostname.includes("ranobes.net") ||
-			window.location.hostname.includes("ranobes.com")
+			window.location.hostname.includes("ranobes.com") ||
+			window.location.hostname.includes("ranobes.top")
 		);
 	}
 
@@ -65,13 +66,22 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Find the content area on Ranobes
 	findContentArea() {
-		// Look for the main content element
-		const contentElement = document.querySelector(".text-chapter");
+		// Look for the main arrticle div (note: it's 'arrticle' not 'article' - ranobes typo)
+		const contentElement = document.querySelector("#arrticle");
 		if (contentElement) {
+			console.log("Ranobes: Found #arrticle content area");
 			return contentElement;
 		}
 
+		// Fallback to .text-chapter
+		const textChapter = document.querySelector(".text-chapter");
+		if (textChapter) {
+			console.log("Ranobes: Found .text-chapter content area");
+			return textChapter;
+		}
+
 		// Fallback to the base implementation
+		console.log("Ranobes: Falling back to base handler");
 		return super.findContentArea();
 	}
 
@@ -191,17 +201,39 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Get ideal insertion point for UI controls
 	getUIInsertionPoint(contentArea) {
+		// Look for .text div that wraps the #arrticle
+		const textDiv = document.querySelector(".text");
+		if (textDiv) {
+			console.log("Ranobes: Inserting UI before .text div");
+			return {
+				element: textDiv,
+				position: "before",
+			};
+		}
+
+		// Look for story_tools div - we want to insert before it (after content, before tools)
+		const storyTools = document.querySelector(".story_tools");
+		if (storyTools) {
+			console.log("Ranobes: Inserting UI before .story_tools");
+			return {
+				element: storyTools,
+				position: "before",
+			};
+		}
+
 		// Look for a better insertion point - we want to insert before the content
 		// but after the title and possibly other elements
 		const textChapter = document.querySelector(".text-chapter");
 		if (textChapter) {
+			console.log("Ranobes: Inserting UI before .text-chapter");
 			return {
 				element: textChapter,
 				position: "before",
 			};
 		}
 
-		// Fallback to default behavior
+		// Fallback to default behavior (before article)
+		console.log("Ranobes: Using default UI insertion point");
 		return super.getUIInsertionPoint(contentArea);
 	}
 

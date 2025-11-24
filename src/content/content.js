@@ -9,6 +9,8 @@ let currentHandler = null; // Will store the website-specific handler
 let hasExtractButton = false;
 let autoExtracted = false;
 var isInitialized = false; // Track if the content script is fully initialized (var to avoid redeclaration)
+let storageManager = null; // Storage manager instance for caching
+let isCachedContent = false; // Track if current page has cached enhanced content
 if (window.__RGInitDone) {
 	console.log(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
@@ -72,8 +74,16 @@ if (window.__RGInitDone) {
 
 		console.log("[StripTags Final] Input:", html);
 
+		// Step 0: Remove code block markers first (```html, ```js, etc.)
+		let text = html.replace(
+			/```(?:html|javascript|css|js|xml|json|md|markdown|python|java|cpp|c\+\+)?\s*\n?/gi,
+			""
+		);
+		// Remove any remaining backtick markers
+		text = text.replace(/```/g, "");
+
 		// Step 1: Use regex to remove all HTML tags before DOM parsing
-		let text = html.replace(/<\/?[^>]+(>|$)/g, "");
+		text = text.replace(/<\/?[^>]+(>|$)/g, "");
 
 		console.log("[StripTags Final] After initial regex:", text);
 
@@ -280,7 +290,12 @@ if (window.__RGInitDone) {
 	}
 
 	// Create an enhanced banner with word count comparison and model info
-	function createEnhancedBanner(originalContent, enhancedContent, modelInfo) {
+	function createEnhancedBanner(
+		originalContent,
+		enhancedContent,
+		modelInfo,
+		showDeleteButton = false
+	) {
 		// Calculate word counts
 		const originalWordCount = countWords(originalContent);
 		const enhancedWordCount = countWords(enhancedContent);
@@ -325,6 +340,10 @@ if (window.__RGInitDone) {
 			banner.style.color = "#e0e0e0";
 		}
 
+		const deleteButtonHtml = showDeleteButton
+			? `<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">✕</button>`
+			: "";
+
 		banner.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%;">
 			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
@@ -332,7 +351,10 @@ if (window.__RGInitDone) {
                         <span style="font-size: 18px; margin-right: 5px;">✨</span>
                         <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
                     </div>
-                    <button class="gemini-toggle-btn">Show Original</button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="gemini-toggle-btn">Show Original</button>
+                        ${deleteButtonHtml}
+                    </div>
                 </div>
             <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
                 <span style="font-family: monospace;">
@@ -937,6 +959,42 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Load storage manager for caching
+	async function loadStorageManager() {
+		try {
+			const storageUrl = browser.runtime.getURL(
+				"utils/storage-manager.js"
+			);
+			const storageModule = await import(storageUrl);
+			return storageModule.default || storageModule;
+		} catch (error) {
+			console.error("Error loading storage manager:", error);
+			return null;
+		}
+	}
+
+	// Check if current page has cached enhanced content
+	async function checkCachedContent() {
+		if (!storageManager) return false;
+
+		try {
+			const cached = await storageManager.loadEnhancedContent(
+				window.location.href
+			);
+			if (cached) {
+				console.log("Found cached enhanced content");
+				isCachedContent = true;
+				return cached;
+			}
+			isCachedContent = false;
+			return null;
+		} catch (error) {
+			console.error("Error checking cached content:", error);
+			isCachedContent = false;
+			return null;
+		}
+	}
+
 	// Generic content extraction that works across different websites
 	// This serves as a fallback when no specific handler is available
 	function extractContentGeneric() {
@@ -1001,6 +1059,17 @@ if (window.__RGInitDone) {
 
 		// Verify background script connection
 		await verifyBackgroundConnection();
+
+		// Load storage manager
+		storageManager = await loadStorageManager();
+
+		// Check for cached content
+		const cachedData = await checkCachedContent();
+		if (cachedData && cachedData.enhancedContent) {
+			console.log("Found cached enhanced content");
+			// Will show "Regenerate" button instead of "Enhance"
+			// Don't auto-apply, let user click the button to load
+		}
 
 		// Get the appropriate handler for this website
 		currentHandler = await getHandlerForCurrentSite();
@@ -1089,8 +1158,10 @@ if (window.__RGInitDone) {
 		const enhanceButton = document.createElement("button");
 		enhanceButton.className = "gemini-enhance-btn";
 
-		// Simplify button - remove images and just use text
-		enhanceButton.textContent = "Enhance with Gemini";
+		// Change button text based on whether content is cached
+		enhanceButton.textContent = isCachedContent
+			? "♻ Regenerate with Gemini"
+			: "✨ Enhance with Gemini";
 
 		// Style to match the sample page buttons
 		enhanceButton.style.cssText = `
@@ -1264,6 +1335,7 @@ if (window.__RGInitDone) {
 
 		const enhanceButton = createEnhanceButton();
 		const summarizeButton = createSummarizeButton();
+
 		const statusDiv = document.createElement("div");
 		statusDiv.id = "gemini-status";
 		statusDiv.style.marginTop = "5px";
@@ -1348,7 +1420,35 @@ if (window.__RGInitDone) {
 	}
 	// Extract content using the appropriate handler
 	function extractContent() {
-		// If we have a specific handler for this website, use it
+		// Check if content area has enhanced content showing
+		const contentArea = findContentArea();
+		if (contentArea) {
+			const isShowingEnhanced =
+				contentArea.getAttribute("data-showing-enhanced") === "true";
+			const originalContent = contentArea.getAttribute(
+				"data-original-content"
+			);
+
+			// If showing enhanced, temporarily restore original for extraction
+			if (isShowingEnhanced && originalContent) {
+				const savedEnhanced = contentArea.innerHTML;
+				contentArea.innerHTML = originalContent;
+
+				// Extract from original content
+				let result;
+				if (currentHandler) {
+					result = currentHandler.extractContent();
+				} else {
+					result = extractContentGeneric();
+				}
+
+				// Restore enhanced content
+				contentArea.innerHTML = savedEnhanced;
+				return result;
+			}
+		}
+
+		// Normal extraction path
 		if (currentHandler) {
 			return currentHandler.extractContent();
 		}
@@ -1725,7 +1825,92 @@ if (window.__RGInitDone) {
 	}
 
 	// Handle click event for Enhance button
-	function handleEnhanceClick() {
+	async function handleEnhanceClick() {
+		// Check if we have cached content and should load it instead
+		if (storageManager && isCachedContent) {
+			const button = document.querySelector(".gemini-enhance-btn");
+			const originalText = button.textContent;
+
+			// If button says "Regenerate", user wants to regenerate
+			if (originalText.includes("Regenerate")) {
+				// Clear cache and proceed with enhancement
+				await storageManager.removeEnhancedContent(
+					window.location.href
+				);
+				isCachedContent = false;
+
+				// Restore original content if currently showing enhanced
+				const contentArea = findContentArea();
+				if (contentArea) {
+					const isShowingEnhanced =
+						contentArea.getAttribute("data-showing-enhanced") ===
+						"true";
+					const originalContent = contentArea.getAttribute(
+						"data-original-content"
+					);
+
+					if (isShowingEnhanced && originalContent) {
+						console.log(
+							"Restoring original content before regenerating"
+						);
+						contentArea.innerHTML = originalContent;
+						contentArea.setAttribute(
+							"data-showing-enhanced",
+							"false"
+						);
+						// Remove any enhanced banner
+						const banner = contentArea.querySelector(
+							".gemini-enhanced-banner"
+						);
+						if (banner) banner.remove();
+					}
+				}
+			} else {
+				// Load from cache
+				try {
+					const cachedData = await storageManager.loadEnhancedContent(
+						window.location.href
+					);
+					if (cachedData && cachedData.enhancedContent) {
+						showStatusMessage(
+							"Loading cached enhanced content...",
+							"info"
+						);
+						replaceContentWithEnhancedVersion(cachedData);
+						// Restore button state to normal after successful load
+						if (button) {
+							button.textContent = originalText;
+							button.disabled = false;
+							button.classList.remove("loading");
+						}
+						return;
+					} else {
+						// Cached data is invalid, restore button state
+						if (button) {
+							button.textContent = originalText;
+							button.disabled = false;
+							button.classList.remove("loading");
+						}
+						showStatusMessage(
+							"Cached enhanced content is invalid or missing.",
+							"error"
+						);
+					}
+				} catch (err) {
+					// Error loading cached content, restore button state
+					if (button) {
+						button.textContent = originalText;
+						button.disabled = false;
+						button.classList.remove("loading");
+					}
+					showStatusMessage(
+						"Failed to load cached enhanced content.",
+						"error"
+					);
+				}
+			}
+		}
+
 		// Extract content
 		const extractedContent = extractContent();
 		if (!extractedContent.found) {
@@ -1850,7 +2035,7 @@ if (window.__RGInitDone) {
 					);
 					// Restore button state
 					if (button) {
-						button.textContent = "Enhance with Gemini";
+						button.textContent = "✨ Enhance with Gemini";
 						button.disabled = false;
 					}
 
@@ -1897,7 +2082,7 @@ if (window.__RGInitDone) {
 			// Restore button state
 			const button = document.querySelector(".gemini-enhance-btn");
 			if (button) {
-				button.textContent = "Enhance with Gemini";
+				button.textContent = "✨ Enhance with Gemini";
 				button.disabled = false;
 			}
 		}
@@ -2008,9 +2193,34 @@ if (window.__RGInitDone) {
 			const banner = createEnhancedBanner(
 				originalText,
 				newContent,
-				modelInfo
+				modelInfo,
+				isCachedContent
 			);
 			removeOriginalWordCount();
+
+			// Add delete button handler if present
+			const deleteButton = banner.querySelector(
+				".gemini-delete-cache-btn"
+			);
+			if (deleteButton) {
+				deleteButton.addEventListener("click", async () => {
+					if (
+						confirm("Delete cached enhanced content for this page?")
+					) {
+						if (storageManager) {
+							await storageManager.removeEnhancedContent(
+								window.location.href
+							);
+							isCachedContent = false;
+							showStatusMessage(
+								"Cached content deleted. Reloading page...",
+								"info"
+							);
+							setTimeout(() => location.reload(), 1000);
+						}
+					}
+				});
+			}
 
 			const toggleButton = banner.querySelector(".gemini-toggle-btn");
 			if (toggleButton) {
@@ -2063,6 +2273,27 @@ if (window.__RGInitDone) {
 
 			window.scrollTo(0, scrollPosition);
 			showStatusMessage("Content successfully enhanced with Gemini!");
+
+			// Save to cache if storage manager is available
+			if (storageManager && !isCachedContent) {
+				try {
+					await storageManager.saveEnhancedContent(
+						window.location.href,
+						{
+							title: document.title,
+							originalContent: originalContent,
+							enhancedContent: enhancedContentText,
+							modelInfo: modelInfo,
+							timestamp: Date.now(),
+						}
+					);
+					isCachedContent = true;
+					console.log("Enhanced content saved to cache");
+				} catch (saveError) {
+					console.error("Failed to save to cache:", saveError);
+				}
+			}
+
 			return true;
 		} catch (error) {
 			console.error("Error replacing content:", error);

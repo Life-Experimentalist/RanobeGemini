@@ -5,6 +5,7 @@
 
 import ranobesHandler from "./ranobes-handler.js";
 import fanfictionHandler from "./fanfiction-handler.js";
+import ao3Handler from "./ao3-handler.js";
 import { BaseWebsiteHandler } from "./base-handler.js";
 
 // Website handler manager
@@ -14,6 +15,7 @@ export class HandlerManager {
 		this.handlers = [
 			ranobesHandler,
 			fanfictionHandler,
+			ao3Handler,
 			// Add more handlers as they are developed
 		];
 	}
@@ -35,6 +37,14 @@ export class HandlerManager {
 			else if (hostname.includes("fanfiction.net")) {
 				console.log("Loaded fanfiction handler");
 				return fanfictionHandler;
+			}
+			// Try loading AO3 handler if on archiveofourown.org
+			else if (
+				hostname.includes("archiveofourown.org") ||
+				hostname.includes("ao3.org")
+			) {
+				console.log("Loaded AO3 handler");
+				return ao3Handler;
 			}
 
 			// No specific handler found

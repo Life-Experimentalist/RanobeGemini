@@ -1,0 +1,23 @@
+{
+	"recommendations": [
+		"aaron-bond.better-comments",
+		"bierner.markdown-mermaid",
+		"christian-kohler.path-intellisense",
+		"dbaeumer.vscode-eslint",
+
+		"eamodio.gitlens",
+		"EditorConfig.EditorConfig",
+		"esbenp.prettier-vscode",
+		"moppitz.vscode-extension-auto-import",
+		"ms-vscode.vscode-typescript-next",
+		"naumovs.color-highlight",
+		"msjsdiag.debugger-for-chrome",
+		"pkief.material-icon-theme",
+		"ryu1kn.partial-diff",
+		"streetsidesoftware.code-spell-checker",
+		"VKrishna04.cspell-sync",
+		"VKrishna04.global-save-state",
+		"yzhang.markdown-all-in-one",
+
+	]
+}

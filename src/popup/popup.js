@@ -159,18 +159,27 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Function to fetch available Gemini models
 	async function fetchAvailableModels(apiKey) {
-		if (!apiKey) return null;
+		if (!apiKey) {
+			console.warn("fetchAvailableModels called without apiKey");
+			return null;
+		}
 
 		try {
+			console.log("Fetching models from Gemini API...");
 			const response = await fetch(
 				`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
 			);
 
+			console.log("API response status:", response.status);
+
 			if (!response.ok) {
-				throw new Error(`HTTP error ${response.status}`);
+				const errorText = await response.text();
+				console.error("API error response:", errorText);
+				throw new Error(`HTTP error ${response.status}: ${errorText}`);
 			}
 
 			const data = await response.json();
+			console.log("API returned data:", data);
 
 			// Filter for Gemini models that support text generation
 			const geminiModels = data.models
@@ -192,6 +201,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					};
 				});
 
+			console.log("Filtered Gemini models:", geminiModels);
 			return geminiModels;
 		} catch (error) {
 			console.error("Error fetching models:", error);
@@ -211,15 +221,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Update model selector with available models
 	async function updateModelSelector(apiKey) {
 		try {
+			console.log(
+				"updateModelSelector called with apiKey:",
+				apiKey ? "present" : "missing"
+			);
+
 			// Show loading state
 			modelSelect.innerHTML =
 				'<option value="">Loading models...</option>';
 			modelSelect.disabled = true;
 
 			// Fetch models
+			console.log("Fetching available models...");
 			const models = await fetchAvailableModels(apiKey);
+			console.log("Fetched models:", models);
 
 			if (!models || models.length === 0) {
+				console.warn("No models fetched or empty list");
 				modelSelect.innerHTML =
 					'<option value="">No models available</option>';
 				return;
@@ -286,6 +304,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 				selectedModelId: modelSelect.value,
 				modelsLastFetched: Date.now(),
 			});
+
+			console.log(
+				"Model selector updated with",
+				models.length,
+				"models. Selected:",
+				modelSelect.value
+			);
 		} catch (error) {
 			console.error("Error updating model selector:", error);
 			modelSelect.innerHTML =
@@ -551,11 +576,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 
 		try {
+			console.log("Saving API key...");
 			await browser.storage.local.set({ apiKey });
+			console.log("API key saved, updating model selector...");
 			showStatus("API key saved successfully!", "success");
 
 			// Refresh model list with new API key
 			await updateModelSelector(apiKey);
+			console.log("Model selector updated successfully");
 		} catch (error) {
 			console.error("Error saving API key:", error);
 			showStatus("Error saving API key: " + error.message, "error");
