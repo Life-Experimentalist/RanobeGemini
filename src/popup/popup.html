@@ -10,12 +10,12 @@
 		<div class="container">
 			<div class="header">
 				<img
-					src="../icons/logo-light-32.png"
+					src="src/icons/logo-light-32.png"
 					alt="Ranobe Gemini"
 					class="light-mode-icon"
 				/>
 				<img
-					src="../icons/logo-dark-32.png"
+					src="src/icons/logo-dark-32.png"
 					alt="Ranobe Gemini"
 					class="dark-mode-icon"
 				/>
@@ -174,16 +174,50 @@
 			<!-- Novels Tab -->
 			<div id="novels" class="tab-content">
 				<div class="tab-header">
-					<h3>Novels</h3>
-					<button id="refreshNovels" class="icon-button">
-						↻ Refresh
-					</button>
-				</div>
-				<div class="novels-list" id="novelsList">
-					<div class="no-novels">
-						No novels found. Use refresh or future add feature.
+					<h3>Novel Library</h3>
+					<div class="tab-header-actions">
+						<button id="openLibraryPage" class="btn-link" title="Open Full Library">
+							📚 Full Library
+						</button>
+						<button id="refreshNovels" class="icon-button" title="Refresh">
+							↻
+						</button>
 					</div>
 				</div>
+
+				<!-- Library Stats -->
+				<div class="library-stats-compact" id="libraryStatsCompact">
+					<div class="stat-mini">
+						<span class="stat-mini-value" id="libStatNovels">0</span>
+						<span class="stat-mini-label">Novels</span>
+					</div>
+					<div class="stat-mini">
+						<span class="stat-mini-value" id="libStatChapters">0</span>
+						<span class="stat-mini-label">Enhanced</span>
+					</div>
+					<div class="stat-mini">
+						<span class="stat-mini-value" id="libStatShelves">0</span>
+						<span class="stat-mini-label">Shelves</span>
+					</div>
+				</div>
+
+				<!-- Recent Novels (Compact View) -->
+				<div class="recent-novels-section">
+					<h4 class="section-subtitle">Recent Novels</h4>
+					<div class="recent-novels-list" id="recentNovelsList">
+						<!-- Recent novels will be loaded here -->
+					</div>
+				</div>
+
+				<!-- Legacy Novels List (Collapsible) -->
+				<details class="legacy-novels-section">
+					<summary>📖 Reading History (Legacy)</summary>
+					<div class="novels-list" id="novelsList">
+						<div class="no-novels">
+							No novels found. Use refresh or future add feature.
+						</div>
+					</div>
+				</details>
 			</div>
 
 			<!-- Prompts Tab -->
@@ -398,7 +432,7 @@
 			<div id="info" class="tab-content">
 				<div class="info-header">
 					<h3>📚 Ranobe Gemini</h3>
-					<p class="version-badge">Version 2.7.1</p>
+					<p class="version-badge">Version 3.0.0</p>
 				</div>
 
 				<div class="about-section">

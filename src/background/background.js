@@ -1471,6 +1471,58 @@ try {
 		})
 		.catch((error) => console.error("Config initialization error:", error));
 
+	// Create context menu items for right-click on extension icon
+	try {
+		// Remove existing menus first to avoid duplicates on reload
+		browser.contextMenus
+			.removeAll()
+			.then(() => {
+				// Add Novel Library shortcut
+				browser.contextMenus.create({
+					id: "openNovelLibrary",
+					title: "📚 Open Novel Library",
+					contexts: ["action"], // Shows when right-clicking extension icon
+				});
+
+				// Add separator
+				browser.contextMenus.create({
+					id: "separator1",
+					type: "separator",
+					contexts: ["action"],
+				});
+
+				// Add quick settings access
+				browser.contextMenus.create({
+					id: "openSettings",
+					title: "⚙️ Settings",
+					contexts: ["action"],
+				});
+
+				console.log("Context menus created successfully");
+			})
+			.catch((err) =>
+				console.error("Error creating context menus:", err)
+			);
+	} catch (error) {
+		console.error("Context menus API not available:", error);
+	}
+
+	// Handle context menu clicks
+	browser.contextMenus.onClicked.addListener((info, tab) => {
+		switch (info.menuItemId) {
+			case "openNovelLibrary":
+				browser.tabs.create({
+					url: browser.runtime.getURL("library/library.html"),
+				});
+				break;
+			case "openSettings":
+				browser.tabs.create({
+					url: browser.runtime.getURL("popup/popup.html"),
+				});
+				break;
+		}
+	});
+
 	// Log the extension startup
 	console.log("Ranobe Gemini extension initialized");
 

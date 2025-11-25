@@ -14,6 +14,16 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		"*.fanfiction.net", // Safety net: catches any other subdomains (EXCEPT m.fanfiction.net - handled by mobile handler)
 	];
 
+	// Shelf metadata for Novel Library
+	static SHELF_METADATA = {
+		id: "fanfiction",
+		name: "FanFiction.net",
+		icon: "📚",
+		color: "#2a4b8d",
+		novelIdPattern: /\/s\/(\d+)\//,
+		primaryDomain: "www.fanfiction.net",
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net, a fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting

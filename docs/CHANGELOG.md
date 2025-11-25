@@ -2,6 +2,88 @@
 
 All notable changes to the Ranobe Gemini extension will be documented in this file.
 
+## [3.0.0] - 2025-11-25
+
+### Summary
+Version 3.0.0 is a major feature release introducing the Novel Library system - a comprehensive way to organize, track, and manage your reading across all supported websites. This release also brings dynamic shelf generation, making it trivial to add new website support without manual configuration.
+
+### Added
+- **Novel Library System**:
+  - 📚 **Shelves**: Novels automatically organized by website (FanFiction.net, Ranobes, AO3, WebNovel)
+  - 📖 **Full Library Page**: Dedicated page accessible via extension menu with search, filter, and sort capabilities
+  - 🔄 **Auto-Add**: Novels automatically added to library when first enhanced
+  - 📱 **Unified Storage**: Mobile and desktop variants of sites share the same novel entries
+  - ✏️ **Edit Novel Details**: Edit title, author, cover, description, status, and genres
+  - 📤 **Export/Import**: Full library backup with merge or replace options
+  - 🔍 **Search & Sort**: Find novels by title/author, sort by recent, added date, or enhanced chapters
+
+- **Dynamic Shelf System**:
+  - Shelves now auto-generated from handler `SHELF_METADATA`
+  - Adding new website support automatically creates library shelf
+  - No manual configuration needed for new sites
+
+- **Context Menu**:
+  - Right-click extension icon for quick "Open Novel Library" shortcut
+  - Quick access to Settings from context menu
+
+- **Popup Enhancements**:
+  - Compact library view in Novels tab showing recent novels
+  - Library stats (novel count, enhanced chapters, active shelves)
+  - "Open Full Library" button for full library access
+
+### Changed
+- **Architecture**:
+  - SHELVES constant now dynamically built from SHELF_REGISTRY
+  - Handler classes include static SHELF_METADATA for library integration
+  - Improved domain-constants.js to export SHELF_REGISTRY
+
+- **Import System**:
+  - Import now properly merges data instead of replacing
+  - Option to choose merge or replace mode
+  - Detailed import results (new novels, updated novels, errors)
+
+### Developer Experience
+- **Adding New Sites**:
+  1. Create handler in `website-handlers/`
+  2. Add static `SHELF_METADATA` with id, name, icon, color, pattern
+  3. Import handler in `domain-constants.js`
+  4. Shelf automatically appears in library!
+
+### Migration Notes
+- Novel library uses new storage key `rg_novel_library`
+- Existing novel history not automatically migrated
+- No breaking changes to handler interfaces
+
+---
+
+## [2.9.0] - 2025-11-25
+
+### Summary
+Version 2.9.0 is a maintenance release that prepares the architecture for the Novel Library feature. It adds mobile FanFiction.net support and improves the handler registration system.
+
+### Added
+- **FanFiction Mobile Handler**:
+  - Full support for m.fanfiction.net mobile site
+  - Shares novel entries with desktop FanFiction.net
+  - Optimized selectors for mobile layout
+
+- **Handler System Improvements**:
+  - FanfictionMobileHandler properly registered in domain-constants.js
+  - Handler manager checks mobile handler before desktop handler
+  - Better logging for handler selection
+
+### Changed
+- **Domain Constants**:
+  - Added FanfictionMobileHandler import
+  - Handler classes array now includes all handlers
+  - Improved wildcard domain expansion
+
+### Fixed
+- Mobile FanFiction.net pages now properly detected
+- Handler selection order ensures mobile handlers take priority
+
+---
+
 ## [2.8.0] - 2025-11-25
 
 ### Summary

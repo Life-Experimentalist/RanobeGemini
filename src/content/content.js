@@ -1142,6 +1142,218 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Novel library instance
+	let novelLibrary = null;
+	let SHELVES = null;
+
+	// Load novel library for tracking novels
+	async function loadNovelLibrary() {
+		try {
+			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
+			const libraryModule = await import(libraryUrl);
+			novelLibrary = libraryModule.novelLibrary || libraryModule.default;
+			SHELVES = libraryModule.SHELVES;
+			return novelLibrary;
+		} catch (error) {
+			console.error("Error loading novel library:", error);
+			return null;
+		}
+	}
+
+	// Add novel to library when content is enhanced
+	async function addToNovelLibrary(context) {
+		if (!novelLibrary) {
+			await loadNovelLibrary();
+		}
+
+		if (!novelLibrary) {
+			console.warn("Novel library not available");
+			return;
+		}
+
+		try {
+			// Create novel data from context
+			const novelData = novelLibrary.createNovelFromContext(
+				context,
+				currentHandler
+			);
+
+			if (!novelData) {
+				console.log("Could not create novel data from context");
+				return;
+			}
+
+			// Add or update the novel in the library
+			await novelLibrary.addOrUpdateNovel(novelData);
+
+			// Update chapter tracking
+			await novelLibrary.updateChapter(novelData.id, {
+				chapterNumber: context.chapterNumber || 1,
+				title: context.chapterTitle || document.title,
+				url: window.location.href,
+				isEnhanced: true,
+				enhancedAt: Date.now(),
+				readAt: Date.now(),
+			});
+
+			console.log(
+				"📚 Novel and chapter added to library:",
+				novelData.title
+			);
+		} catch (error) {
+			console.error("Error adding to novel library:", error);
+		}
+	}
+
+	// Extract context for novel library from current page
+	function extractNovelContext() {
+		const context = {
+			url: window.location.href,
+			title: document.title,
+			chapterNumber: null,
+			chapterTitle: null,
+			author: null,
+			coverUrl: null,
+			description: null,
+			totalChapters: null,
+			status: null,
+			genres: [],
+			tags: [],
+			metadata: {},
+		};
+
+		// Try to extract chapter number from navigation
+		if (
+			currentHandler &&
+			typeof currentHandler.getChapterNavigation === "function"
+		) {
+			const nav = currentHandler.getChapterNavigation();
+			if (nav) {
+				context.chapterNumber = nav.currentChapter || 1;
+				context.totalChapters = nav.totalChapters || 0;
+			}
+		}
+
+		// Try to extract chapter title
+		if (
+			currentHandler &&
+			typeof currentHandler.extractTitle === "function"
+		) {
+			try {
+				context.chapterTitle = currentHandler.extractTitle();
+			} catch (e) {
+				// Fallback to document title
+			}
+		}
+
+		// Site-specific metadata extraction
+		const hostname = window.location.hostname;
+
+		// FanFiction.net specific extraction
+		if (hostname.includes("fanfiction.net")) {
+			// Author from profile link
+			const authorLink = document.querySelector(
+				'#profile_top a[href^="/u/"]'
+			);
+			if (authorLink) {
+				context.author = authorLink.textContent.trim();
+			}
+
+			// Story title (first bold text in profile_top)
+			const storyTitle = document.querySelector(
+				"#profile_top > b.xcontrast_txt"
+			);
+			if (storyTitle) {
+				context.title = storyTitle.textContent.trim();
+			}
+
+			// Get story metadata from info div
+			const infoDiv = document.querySelector("#profile_top .xgray");
+			if (infoDiv) {
+				const infoText = infoDiv.textContent;
+				// Extract genres
+				const genreMatch = infoText.match(
+					/(?:rated|language).*?-\s*([^-]+)\s*-/i
+				);
+				if (genreMatch) {
+					context.genres = genreMatch[1]
+						.split("/")
+						.map((g) => g.trim())
+						.filter(Boolean);
+				}
+			}
+		}
+
+		// AO3 specific extraction
+		else if (hostname.includes("archiveofourown.org")) {
+			// Author
+			const authorLink = document.querySelector(
+				'.byline a[rel="author"]'
+			);
+			if (authorLink) {
+				context.author = authorLink.textContent.trim();
+			}
+
+			// Title
+			const titleEl = document.querySelector(".title.heading");
+			if (titleEl) {
+				context.title = titleEl.textContent.trim();
+			}
+
+			// Tags/Genres
+			const tagLinks = document.querySelectorAll(
+				".fandom.tags a.tag, .freeform.tags a.tag"
+			);
+			context.tags = Array.from(tagLinks).map((a) =>
+				a.textContent.trim()
+			);
+
+			// Status
+			const statusEl = document.querySelector("dd.status");
+			if (statusEl) {
+				context.status = statusEl.textContent.trim().toLowerCase();
+			}
+		}
+
+		// Ranobes specific extraction
+		else if (hostname.includes("ranobes")) {
+			// These would typically be on the novel page, not chapter page
+			// But we can try to extract what's available
+			const authorEl = document.querySelector(
+				'.tag_list[itemprop="creator"]'
+			);
+			if (authorEl) {
+				context.author = authorEl.textContent.trim();
+			}
+
+			const titleEl = document.querySelector('h1.title[itemprop="name"]');
+			if (titleEl) {
+				context.title = titleEl.textContent.trim();
+			}
+		}
+
+		// WebNovel specific extraction
+		else if (hostname.includes("webnovel.com")) {
+			// Author
+			const authorEl = document.querySelector(
+				'.ell.dib.vam a[href*="/profile/"]'
+			);
+			if (authorEl) {
+				context.author = authorEl.textContent.trim();
+			}
+
+			// Title
+			const titleEl =
+				document.querySelector("h1") ||
+				document.querySelector(".pt4.pb4.oh.ell");
+			if (titleEl) {
+				context.title = titleEl.textContent.trim();
+			}
+		}
+
+		return context;
+	}
+
 	// Check if current page has cached enhanced content
 	async function checkCachedContent() {
 		if (!storageManager) return false;
@@ -2752,6 +2964,14 @@ if (window.__RGInitDone) {
 				} catch (saveError) {
 					console.error("Failed to save to cache:", saveError);
 				}
+			}
+
+			// Add novel to library
+			try {
+				const novelContext = extractNovelContext();
+				await addToNovelLibrary(novelContext);
+			} catch (libraryError) {
+				console.error("Failed to add to novel library:", libraryError);
 			}
 
 			return true;

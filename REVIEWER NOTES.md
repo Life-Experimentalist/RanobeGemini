@@ -13,7 +13,7 @@
 
 ### This will:
 - Run generate-manifest-domains.js to update manifest.json with handler domains
-- Create releases/RanobeGemini_v2.8.0.zip from src/ directory
+- Create releases/RanobeGemini_vX.X.X.zip from src/ directory
 
 ### Build Scripts:
 - dev/generate-manifest-domains.js - Extracts domains from handler files, generates manifest.json match patterns

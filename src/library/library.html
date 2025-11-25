@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Novel Library - Ranobe Gemini</title>
+		<link rel="stylesheet" href="library.css" />
+	</head>
+	<body>
+		<div class="library-container">
+			<!-- Header -->
+			<header class="library-header">
+				<div class="header-content">
+					<div class="logo-section">
+						<img
+							src="../icons/icon-48.png"
+							alt="Ranobe Gemini"
+							class="logo"
+						/>
+						<h1>Novel Library</h1>
+					</div>
+					<div class="header-actions">
+						<div class="search-box">
+							<input
+								type="text"
+								id="search-input"
+								placeholder="Search novels..."
+							/>
+							<span class="search-icon">🔍</span>
+						</div>
+						<button
+							class="btn btn-icon"
+							id="refresh-btn"
+							title="Refresh Library"
+						>
+							🔄
+						</button>
+						<button
+							class="btn btn-icon"
+							id="settings-btn"
+							title="Library Settings"
+						>
+							⚙️
+						</button>
+					</div>
+				</div>
+			</header>
+
+			<!-- Stats Bar -->
+			<div class="stats-bar">
+				<div class="stat-item">
+					<span class="stat-value" id="total-novels">0</span>
+					<span class="stat-label">Novels</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="total-chapters">0</span>
+					<span class="stat-label">Enhanced Chapters</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="shelf-count">0</span>
+					<span class="stat-label">Active Shelves</span>
+				</div>
+			</div>
+
+			<!-- View Toggle -->
+			<div class="view-controls">
+				<div class="view-toggle">
+					<button
+						class="view-btn active"
+						data-view="shelves"
+						title="View by Shelves"
+					>
+						📚 Shelves
+					</button>
+					<button
+						class="view-btn"
+						data-view="recent"
+						title="Recent Novels"
+					>
+						🕐 Recent
+					</button>
+					<button class="view-btn" data-view="all" title="All Novels">
+						📋 All
+					</button>
+				</div>
+				<div class="sort-controls">
+					<label for="sort-select">Sort by:</label>
+					<select id="sort-select">
+						<option value="recent">Recently Read</option>
+						<option value="added">Date Added</option>
+						<option value="title">Title (A-Z)</option>
+						<option value="chapters">Enhanced Chapters</option>
+					</select>
+				</div>
+			</div>
+
+			<!-- Main Content -->
+			<main class="library-main">
+				<!-- Shelves View -->
+				<div id="shelves-view" class="view-content active">
+					<!-- Shelves will be populated by JavaScript -->
+				</div>
+
+				<!-- Recent View -->
+				<div id="recent-view" class="view-content">
+					<h2 class="section-title">Recently Read</h2>
+					<div id="recent-novels" class="novel-grid">
+						<!-- Recent novels will be populated by JavaScript -->
+					</div>
+				</div>
+
+				<!-- All Novels View -->
+				<div id="all-view" class="view-content">
+					<h2 class="section-title">All Novels</h2>
+					<div id="all-novels" class="novel-grid">
+						<!-- All novels will be populated by JavaScript -->
+					</div>
+				</div>
+
+				<!-- Empty State -->
+				<div id="empty-state" class="empty-state hidden">
+					<div class="empty-icon">📚</div>
+					<h2>Your Library is Empty</h2>
+					<p>
+						Start reading novels on supported sites and they'll
+						appear here automatically when you enhance chapters.
+					</p>
+					<div class="supported-sites">
+						<h3>Supported Sites</h3>
+						<ul id="supported-sites-list">
+							<!-- Dynamically populated from SHELVES -->
+						</ul>
+					</div>
+				</div>
+
+				<!-- Loading State -->
+				<div id="loading-state" class="loading-state">
+					<div class="spinner"></div>
+					<p>Loading your library...</p>
+				</div>
+			</main>
+
+			<!-- Novel Detail Modal -->
+			<div id="novel-modal" class="modal hidden">
+				<div class="modal-backdrop"></div>
+				<div class="modal-content">
+					<button class="modal-close" id="modal-close">
+						&times;
+					</button>
+
+					<div class="novel-detail">
+						<div class="novel-detail-header">
+							<img
+								id="modal-cover"
+								src=""
+								alt="Cover"
+								class="novel-cover-large"
+							/>
+							<div class="novel-info">
+								<h2 id="modal-title"></h2>
+								<p class="novel-author">
+									by <span id="modal-author"></span>
+								</p>
+								<div class="novel-meta">
+									<span
+										class="meta-badge"
+										id="modal-shelf"
+									></span>
+									<span
+										class="meta-badge"
+										id="modal-status"
+									></span>
+								</div>
+								<div class="novel-stats">
+									<div class="stat">
+										<span
+											class="stat-num"
+											id="modal-chapters"
+											>0</span
+										>
+										<span class="stat-text">Chapters</span>
+									</div>
+									<div class="stat">
+										<span
+											class="stat-num"
+											id="modal-enhanced"
+											>0</span
+										>
+										<span class="stat-text">Enhanced</span>
+									</div>
+									<div class="stat">
+										<span
+											class="stat-num"
+											id="modal-last-read"
+											>0</span
+										>
+										<span class="stat-text">Last Read</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="novel-detail-body">
+							<div class="novel-description">
+								<h3>Description</h3>
+								<p id="modal-description"></p>
+							</div>
+
+							<div
+								class="novel-genres"
+								id="modal-genres-container"
+							>
+								<h3>Genres</h3>
+								<div id="modal-genres" class="genre-tags"></div>
+							</div>
+
+							<div class="novel-actions">
+								<a
+									id="modal-continue-btn"
+									href="#"
+									class="btn btn-primary"
+									>Continue Reading</a
+								>
+								<a
+									id="modal-source-btn"
+									href="#"
+									class="btn btn-secondary"
+									target="_blank"
+									>View on Site</a
+								>
+								<button
+									id="modal-edit-btn"
+									class="btn btn-secondary"
+								>
+									✏️ Edit Details
+								</button>
+								<button
+									id="modal-remove-btn"
+									class="btn btn-danger"
+								>
+									Remove from Library
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Edit Novel Modal -->
+			<div id="edit-modal" class="modal hidden">
+				<div class="modal-backdrop"></div>
+				<div class="modal-content modal-medium">
+					<button class="modal-close" id="edit-close">&times;</button>
+
+					<h2>✏️ Edit Novel Details</h2>
+
+					<form id="edit-novel-form" class="edit-form">
+						<div class="form-group">
+							<label for="edit-title">Title</label>
+							<input
+								type="text"
+								id="edit-title"
+								required
+								placeholder="Novel title"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="edit-author">Author</label>
+							<input
+								type="text"
+								id="edit-author"
+								placeholder="Author name"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="edit-cover">Cover Image URL</label>
+							<input
+								type="url"
+								id="edit-cover"
+								placeholder="https://example.com/cover.jpg"
+							/>
+							<div
+								class="cover-preview"
+								id="edit-cover-preview"
+							></div>
+						</div>
+
+						<div class="form-group">
+							<label for="edit-description">Description</label>
+							<textarea
+								id="edit-description"
+								rows="4"
+								placeholder="Novel description/summary..."
+							></textarea>
+						</div>
+
+						<div class="form-row">
+							<div class="form-group">
+								<label for="edit-status">Status</label>
+								<select id="edit-status">
+									<option value="unknown">Unknown</option>
+									<option value="ongoing">Ongoing</option>
+									<option value="completed">Completed</option>
+									<option value="hiatus">Hiatus</option>
+									<option value="dropped">Dropped</option>
+								</select>
+							</div>
+
+							<div class="form-group">
+								<label for="edit-total-chapters"
+									>Total Chapters</label
+								>
+								<input
+									type="number"
+									id="edit-total-chapters"
+									min="0"
+									placeholder="0"
+								/>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label for="edit-genres"
+								>Genres (comma-separated)</label
+							>
+							<input
+								type="text"
+								id="edit-genres"
+								placeholder="Fantasy, Romance, Action"
+							/>
+						</div>
+
+						<div class="form-actions">
+							<button
+								type="button"
+								id="edit-cancel-btn"
+								class="btn btn-secondary"
+							>
+								Cancel
+							</button>
+							<button type="submit" class="btn btn-primary">
+								💾 Save Changes
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<!-- Settings Modal -->
+			<div id="settings-modal" class="modal hidden">
+				<div class="modal-backdrop"></div>
+				<div class="modal-content modal-small">
+					<button class="modal-close" id="settings-close">
+						&times;
+					</button>
+
+					<h2>Library Settings</h2>
+
+					<div class="settings-section">
+						<h3>Data Management</h3>
+						<div class="settings-item">
+							<button id="export-btn" class="btn btn-secondary">
+								📤 Export Library
+							</button>
+							<p class="settings-desc">
+								Download your library data as a backup file.
+							</p>
+						</div>
+						<div class="settings-item">
+							<button id="import-btn" class="btn btn-secondary">
+								📥 Import Library
+							</button>
+							<input
+								type="file"
+								id="import-file"
+								accept=".json"
+								class="hidden"
+							/>
+							<p class="settings-desc">
+								Restore your library from a backup file.
+							</p>
+						</div>
+						<div class="settings-item">
+							<button id="clear-btn" class="btn btn-danger">
+								🗑️ Clear Library
+							</button>
+							<p class="settings-desc">
+								Remove all novels from your library. This cannot
+								be undone.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script type="module" src="library.js"></script>
+	</body>
+</html>

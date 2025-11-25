@@ -18,6 +18,16 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		"*.ranobes.top",
 	];
 
+	// Shelf metadata for Novel Library
+	static SHELF_METADATA = {
+		id: "ranobes",
+		name: "Ranobes",
+		icon: "📖",
+		color: "#4a7c4e",
+		novelIdPattern: /\/(?:novels\/([^\/]+)|read-(\d+)\.html)/,
+		primaryDomain: "ranobes.net",
+	};
+
 	static DEFAULT_SITE_PROMPT = `	// Get site-specific prompt enhancement
 	getSiteSpecificPrompt() {
 		return RanobesHandler.DEFAULT_SITE_PROMPT;

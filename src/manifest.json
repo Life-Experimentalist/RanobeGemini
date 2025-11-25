@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "2.9.0",
+	"version": "3.0.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -9,7 +9,7 @@
 			"strict_min_version": "109.0"
 		},
 		"gecko_android": {
-			"strict_min_version": "109.0"
+			"strict_min_version": "120.0"
 		}
 	},
 	"icons": {
@@ -26,7 +26,8 @@
 		"activeTab",
 		"storage",
 		"tabs",
-		"notifications"
+		"notifications",
+		"contextMenus"
 	],
 	"action": {
 		"default_icon": {
@@ -130,7 +131,10 @@
 				"content/content.*",
 				"config/config.js",
 				"popup/*.html",
-				"popup/*.js"
+				"popup/*.js",
+				"library/*.html",
+				"library/*.css",
+				"library/*.js"
 			],
 			"matches": [
 				"*://*.archiveofourown.org/*",

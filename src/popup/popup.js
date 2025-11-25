@@ -1,6 +1,7 @@
 // Simple popup script for Ranobe Gemini
 
 import { DEFAULT_CHUNK_SIZE } from "../utils/constants.js";
+import { novelLibrary, SHELVES } from "../utils/novel-library.js";
 
 // Define default prompt in case constants can't be loaded
 const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the following improvements:
@@ -110,6 +111,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Novels tab elements
 	const refreshNovelsBtn = document.getElementById("refreshNovels");
 	const novelsListContainer = document.getElementById("novelsList");
+
+	// Novel Library elements
+	const openLibraryPageBtn = document.getElementById("openLibraryPage");
+	const libStatNovels = document.getElementById("libStatNovels");
+	const libStatChapters = document.getElementById("libStatChapters");
+	const libStatShelves = document.getElementById("libStatShelves");
+	const recentNovelsListContainer =
+		document.getElementById("recentNovelsList");
 
 	// Initialize sliders
 	if (temperatureSlider && temperatureValue) {
@@ -399,7 +408,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			// Special handling for novels tab
 			if (tabId === "novels") {
-				loadNovels();
+				loadLibrary(); // Load the new library system
+				loadNovels(); // Also load legacy novels
 			}
 		});
 	});
@@ -1293,7 +1303,121 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Add event listener for refresh novels button
 	if (refreshNovelsBtn) {
-		refreshNovelsBtn.addEventListener("click", loadNovels);
+		refreshNovelsBtn.addEventListener("click", () => {
+			loadLibrary();
+			loadNovels();
+		});
+	}
+
+	// Add event listener for open library page button
+	if (openLibraryPageBtn) {
+		openLibraryPageBtn.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	/**
+	 * Load novel library data and display in compact view
+	 */
+	async function loadLibrary() {
+		try {
+			// Get library stats
+			const stats = await novelLibrary.getStats();
+
+			// Update stats display
+			if (libStatNovels) libStatNovels.textContent = stats.totalNovels;
+			if (libStatChapters)
+				libStatChapters.textContent = stats.totalEnhancedChapters;
+			if (libStatShelves) {
+				const activeShelfCount = Object.values(stats.shelves).filter(
+					(s) => s.novelCount > 0
+				).length;
+				libStatShelves.textContent = activeShelfCount;
+			}
+
+			// Get recent novels
+			const recentNovels = await novelLibrary.getRecentNovels(5);
+
+			if (recentNovelsListContainer) {
+				if (recentNovels.length === 0) {
+					recentNovelsListContainer.innerHTML = `
+						<div class="library-empty-compact">
+							<div class="empty-icon">📚</div>
+							<p>No novels in your library yet. Start enhancing chapters to add novels automatically!</p>
+						</div>
+					`;
+				} else {
+					recentNovelsListContainer.innerHTML = recentNovels
+						.map((novel) => {
+							const shelf = Object.values(SHELVES).find(
+								(s) => s.id === novel.shelfId
+							);
+							const shelfIcon = shelf ? shelf.icon : "📖";
+							const shelfName = shelf ? shelf.name : "Unknown";
+
+							const coverHtml = novel.coverUrl
+								? `<img src="${escapeHtml(
+										novel.coverUrl
+								  )}" alt="Cover" class="recent-novel-cover" onerror="this.outerHTML='<div class=\\'recent-novel-cover-placeholder\\'>${shelfIcon}</div>'">`
+								: `<div class="recent-novel-cover-placeholder">${shelfIcon}</div>`;
+
+							return `
+							<div class="recent-novel-card" data-url="${escapeHtml(
+								novel.lastReadUrl || novel.sourceUrl
+							)}">
+								${coverHtml}
+								<div class="recent-novel-info">
+									<div class="recent-novel-title">${escapeHtml(novel.title)}</div>
+									<div class="recent-novel-author">${escapeHtml(novel.author || "Unknown")}</div>
+									<div class="recent-novel-meta">
+										<span class="recent-novel-badge shelf">${shelfIcon} ${shelfName}</span>
+										${
+											novel.enhancedChaptersCount > 0
+												? `<span class="recent-novel-badge enhanced">✨ ${novel.enhancedChaptersCount}</span>`
+												: ""
+										}
+									</div>
+								</div>
+							</div>
+						`;
+						})
+						.join("");
+
+					// Add click handlers to open novels
+					recentNovelsListContainer
+						.querySelectorAll(".recent-novel-card")
+						.forEach((card) => {
+							card.addEventListener("click", () => {
+								const url = card.dataset.url;
+								if (url) {
+									browser.tabs.create({ url });
+								}
+							});
+						});
+				}
+			}
+		} catch (error) {
+			console.error("Error loading library:", error);
+			if (recentNovelsListContainer) {
+				recentNovelsListContainer.innerHTML = `
+					<div class="library-empty-compact">
+						<p>Failed to load library. Please try again.</p>
+					</div>
+				`;
+			}
+		}
+	}
+
+	/**
+	 * Escape HTML to prevent XSS
+	 */
+	function escapeHtml(text) {
+		if (!text) return "";
+		const div = document.createElement("div");
+		div.textContent = text;
+		return div.innerHTML;
 	}
 
 	// Improved resizing functionality

@@ -10,6 +10,16 @@ export class FanfictionMobileHandler extends BaseWebsiteHandler {
 		"m.fanfiction.net", // Mobile-specific domain
 	];
 
+	// Shelf metadata - shares shelf with desktop FanFiction.net
+	static SHELF_METADATA = {
+		id: "fanfiction", // Same ID as desktop to share shelf
+		name: "FanFiction.net",
+		icon: "📚",
+		color: "#2a4b8d",
+		novelIdPattern: /\/s\/(\d+)\//,
+		primaryDomain: "www.fanfiction.net",
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net mobile, a fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting

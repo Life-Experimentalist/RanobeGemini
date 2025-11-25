@@ -19,6 +19,16 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		"*.webnovel.com", // Safety net: catches any other subdomains
 	];
 
+	// Shelf metadata for Novel Library
+	static SHELF_METADATA = {
+		id: "webnovel",
+		name: "WebNovel",
+		icon: "🌐",
+		color: "#ff6600",
+		novelIdPattern: /\/book\/(\d+)/,
+		primaryDomain: "www.webnovel.com",
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from WebNovel.com, a web novel platform.
 Please maintain:
 - Proper paragraph breaks and formatting

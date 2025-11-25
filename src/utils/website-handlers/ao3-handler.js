@@ -18,6 +18,16 @@ export class AO3Handler extends BaseWebsiteHandler {
 		"*.ao3.org", // Safety net: catches any other subdomains
 	];
 
+	// Shelf metadata for Novel Library
+	static SHELF_METADATA = {
+		id: "ao3",
+		name: "Archive of Our Own",
+		icon: "🏛️",
+		color: "#990000",
+		novelIdPattern: /\/works\/(\d+)/,
+		primaryDomain: "archiveofourown.org",
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting

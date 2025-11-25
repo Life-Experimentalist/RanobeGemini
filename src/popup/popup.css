@@ -1074,6 +1074,288 @@ button:disabled {
 	color: #495057;
 }
 
+/* =============================================
+   Novel Library Compact View Styles
+   ============================================= */
+
+/* Tab header with actions */
+.tab-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.btn-link {
+	background: transparent;
+	border: 1px solid #667eea;
+	color: #667eea;
+	padding: 6px 12px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.btn-link:hover {
+	background: #667eea;
+	color: white;
+}
+
+/* Compact Library Stats */
+.library-stats-compact {
+	display: flex;
+	justify-content: space-around;
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 16px;
+}
+
+.stat-mini {
+	text-align: center;
+	padding: 8px 16px;
+}
+
+.stat-mini-value {
+	display: block;
+	font-size: 20px;
+	font-weight: 700;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+.stat-mini-label {
+	display: block;
+	font-size: 11px;
+	color: #6c757d;
+	text-transform: uppercase;
+	margin-top: 2px;
+}
+
+/* Section Subtitle */
+.section-subtitle {
+	font-size: 14px;
+	font-weight: 600;
+	color: #495057;
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #e9ecef;
+}
+
+/* Recent Novels Section */
+.recent-novels-section {
+	margin-bottom: 16px;
+}
+
+.recent-novels-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+/* Recent Novel Card */
+.recent-novel-card {
+	display: flex;
+	gap: 12px;
+	padding: 10px;
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.recent-novel-card:hover {
+	border-color: #667eea;
+	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+	transform: translateX(2px);
+}
+
+.recent-novel-cover {
+	width: 50px;
+	height: 70px;
+	object-fit: cover;
+	border-radius: 4px;
+	background: #f0f0f0;
+	flex-shrink: 0;
+}
+
+.recent-novel-cover-placeholder {
+	width: 50px;
+	height: 70px;
+	border-radius: 4px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	flex-shrink: 0;
+}
+
+.recent-novel-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.recent-novel-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 2px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.recent-novel-author {
+	font-size: 11px;
+	color: #6c757d;
+	margin-bottom: 4px;
+}
+
+.recent-novel-meta {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.recent-novel-badge {
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: #f0f0f0;
+	color: #666;
+}
+
+.recent-novel-badge.enhanced {
+	background: rgba(34, 197, 94, 0.1);
+	color: #22c55e;
+}
+
+.recent-novel-badge.shelf {
+	background: rgba(102, 126, 234, 0.1);
+	color: #667eea;
+}
+
+/* Legacy Novels Section */
+.legacy-novels-section {
+	margin-top: 16px;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.legacy-novels-section summary {
+	padding: 12px 16px;
+	background: #f8f9fa;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	color: #495057;
+	user-select: none;
+	transition: background 0.2s ease;
+}
+
+.legacy-novels-section summary:hover {
+	background: #e9ecef;
+}
+
+.legacy-novels-section .novels-list {
+	max-height: 400px;
+}
+
+/* Empty state for library */
+.library-empty-compact {
+	text-align: center;
+	padding: 24px;
+	color: #6c757d;
+}
+
+.library-empty-compact .empty-icon {
+	font-size: 32px;
+	margin-bottom: 8px;
+}
+
+.library-empty-compact p {
+	font-size: 12px;
+}
+
+/* Dark Mode for Library Compact View */
+@media (prefers-color-scheme: dark) {
+	.library-stats-compact {
+		background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+	}
+
+	.stat-mini-label {
+		color: #adb5bd;
+	}
+
+	.section-subtitle {
+		color: #e8ecef;
+		border-bottom-color: #3c4043;
+	}
+
+	.recent-novel-card {
+		background: #2a2a3e;
+		border-color: #3c4043;
+	}
+
+	.recent-novel-card:hover {
+		border-color: #8ab4f8;
+	}
+
+	.recent-novel-title {
+		color: #e8ecef;
+	}
+
+	.recent-novel-author {
+		color: #adb5bd;
+	}
+
+	.recent-novel-badge {
+		background: #3c4043;
+		color: #adb5bd;
+	}
+
+	.recent-novel-badge.enhanced {
+		background: rgba(34, 197, 94, 0.2);
+		color: #4ade80;
+	}
+
+	.recent-novel-badge.shelf {
+		background: rgba(138, 180, 248, 0.2);
+		color: #8ab4f8;
+	}
+
+	.legacy-novels-section {
+		border-color: #3c4043;
+	}
+
+	.legacy-novels-section summary {
+		background: #2a2a3e;
+		color: #e8ecef;
+	}
+
+	.legacy-novels-section summary:hover {
+		background: #3c4043;
+	}
+
+	.library-empty-compact {
+		color: #adb5bd;
+	}
+}
+
 /* Dark Mode for Info Tab */
 @media (prefers-color-scheme: dark) {
 	.about-section {
@@ -1113,3 +1395,4 @@ button:disabled {
 		color: #e8ecef;
 	}
 }
+

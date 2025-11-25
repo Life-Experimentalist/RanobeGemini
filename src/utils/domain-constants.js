@@ -7,6 +7,7 @@
 
 import { RanobesHandler } from "./website-handlers/ranobes-handler.js";
 import { FanfictionHandler } from "./website-handlers/fanfiction-handler.js";
+import { FanfictionMobileHandler } from "./website-handlers/fanfiction-mobile-handler.js";
 import { AO3Handler } from "./website-handlers/ao3-handler.js";
 import { WebNovelHandler } from "./website-handlers/webnovel-handler.js";
 
@@ -17,6 +18,7 @@ import { WebNovelHandler } from "./website-handlers/webnovel-handler.js";
 const HANDLER_CLASSES = [
 	RanobesHandler,
 	FanfictionHandler,
+	FanfictionMobileHandler,
 	AO3Handler,
 	WebNovelHandler,
 ];
@@ -37,11 +39,34 @@ export const ALL_SUPPORTED_DOMAINS = [];
  */
 export const SITE_PROMPTS = {};
 
+/**
+ * Shelf registry - dynamically built from handler SHELF_METADATA
+ * Used by Novel Library for organizing novels by site
+ */
+export const SHELF_REGISTRY = {};
+
+/**
+ * Helper: Expands wildcard patterns to explicit subdomains
+ */
+function expandWildcards(domains) {
+	const expanded = [];
+	domains.forEach((domain) => {
+		if (domain.startsWith("*.")) {
+			const base = domain.substring(2);
+			expanded.push(base, `www.${base}`, `m.${base}`);
+		} else if (!domain.startsWith("*")) {
+			expanded.push(domain);
+		}
+	});
+	return [...new Set(expanded)]; // Remove duplicates
+}
+
 // Build the registry automatically
 HANDLER_CLASSES.forEach((HandlerClass) => {
 	const handlerName = HandlerClass.name.replace("Handler", "").toUpperCase();
 	const domains = HandlerClass.SUPPORTED_DOMAINS || [];
 	const prompt = HandlerClass.DEFAULT_SITE_PROMPT || "";
+	const shelfMeta = HandlerClass.SHELF_METADATA || null;
 
 	// Store domains by handler name
 	DOMAIN_REGISTRY[handlerName] = domains;
@@ -50,9 +75,36 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 	ALL_SUPPORTED_DOMAINS.push(...domains);
 
 	// Store site-specific prompts for each domain
-	domains.forEach(domain => {
+	domains.forEach((domain) => {
 		SITE_PROMPTS[domain] = prompt;
 	});
+
+	// Build shelf registry from handler metadata
+	if (shelfMeta && shelfMeta.id) {
+		const shelfId = shelfMeta.id.toUpperCase();
+		const expandedDomains = expandWildcards(domains);
+
+		if (!SHELF_REGISTRY[shelfId]) {
+			// Create new shelf entry
+			SHELF_REGISTRY[shelfId] = {
+				id: shelfMeta.id,
+				name: shelfMeta.name,
+				icon: shelfMeta.icon,
+				color: shelfMeta.color,
+				domains: expandedDomains,
+				novelIdPattern: shelfMeta.novelIdPattern,
+				primaryDomain: shelfMeta.primaryDomain,
+			};
+		} else {
+			// Merge domains into existing shelf (for mobile/desktop variants)
+			SHELF_REGISTRY[shelfId].domains = [
+				...new Set([
+					...SHELF_REGISTRY[shelfId].domains,
+					...expandedDomains,
+				]),
+			];
+		}
+	}
 });
 
 /**
@@ -80,30 +132,13 @@ function matchesDomainPattern(hostname, pattern) {
 }
 
 /**
- * Helper: Expands wildcard patterns for backward compatibility
- * Converts "*.domain.com" to ["domain.com", "www.domain.com", "m.domain.com"]
- * @param {Array<string>} domains - Array of domain patterns
- * @returns {Array<string>} - Expanded array with common subdomains
- */
-function expandWildcards(domains) {
-	const expanded = [];
-	domains.forEach(domain => {
-		if (domain.startsWith("*.")) {
-			const base = domain.substring(2);
-			expanded.push(base, `www.${base}`, `m.${base}`);
-		} else {
-			expanded.push(domain);
-		}
-	});
-	return expanded;
-}
-
-/**
  * Legacy exports for backward compatibility
  * Wildcards are expanded to common subdomains
  */
 export const RANOBES_DOMAINS = expandWildcards(DOMAIN_REGISTRY.RANOBES || []);
-export const FANFICTION_DOMAINS = expandWildcards(DOMAIN_REGISTRY.FANFICTION || []);
+export const FANFICTION_DOMAINS = expandWildcards(
+	DOMAIN_REGISTRY.FANFICTION || []
+);
 export const AO3_DOMAINS = expandWildcards(DOMAIN_REGISTRY.AO3 || []);
 export const WEBNOVEL_DOMAINS = expandWildcards(DOMAIN_REGISTRY.WEBNOVEL || []);
 
@@ -114,7 +149,7 @@ export const WEBNOVEL_DOMAINS = expandWildcards(DOMAIN_REGISTRY.WEBNOVEL || []);
  * @returns {boolean} - True if it's a supported domain
  */
 export function isSupportedDomain(hostname) {
-	return ALL_SUPPORTED_DOMAINS.some(pattern =>
+	return ALL_SUPPORTED_DOMAINS.some((pattern) =>
 		matchesDomainPattern(hostname, pattern)
 	);
 }
@@ -200,6 +235,7 @@ export default {
 	DOMAIN_REGISTRY,
 	ALL_SUPPORTED_DOMAINS,
 	SITE_PROMPTS,
+	SHELF_REGISTRY,
 	RANOBES_DOMAINS,
 	FANFICTION_DOMAINS,
 	AO3_DOMAINS,
