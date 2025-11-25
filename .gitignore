@@ -4,5 +4,8 @@ dist/
 releases/*
 !releases/*.zip
 !releases/source/
+releases/source/*
+!releases/source/*.zip
 .env
 sample/
+src-backup/

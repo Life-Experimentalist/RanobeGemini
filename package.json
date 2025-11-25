@@ -1,12 +1,12 @@
 {
 	"name": "ranobe-gemini",
-	"version": "2.8.0",
+	"version": "2.9.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"scripts": {
 		"build": "node dev/build.js",
 		"watch": "node dev/watch.js",
-		"archive": "node dev/package-firefox.js",
-		"package": "npm run update-domains && npm run archive",
+		"package-quick": "node dev/package-firefox.js",
+		"package": "npm run update-domains && npm run package",
 		"package-source": "node dev/package-source.js",
 		"update-domains": "node dev/generate-manifest-domains.js"
 	},

@@ -5,6 +5,7 @@
 
 import ranobesHandler from "./ranobes-handler.js";
 import fanfictionHandler from "./fanfiction-handler.js";
+import fanfictionMobileHandler from "./fanfiction-mobile-handler.js";
 import ao3Handler from "./ao3-handler.js";
 import webnovelHandler from "./webnovel-handler.js";
 import { BaseWebsiteHandler } from "./base-handler.js";
@@ -13,8 +14,10 @@ import { BaseWebsiteHandler } from "./base-handler.js";
 export class HandlerManager {
 	constructor() {
 		// Register all handlers here
+		// Order matters: more specific handlers (like mobile) should come before generic ones
 		this.handlers = [
 			ranobesHandler,
+			fanfictionMobileHandler, // Check mobile version first
 			fanfictionHandler,
 			ao3Handler,
 			webnovelHandler,
@@ -35,7 +38,12 @@ export class HandlerManager {
 				console.log("Loaded ranobes handler");
 				return ranobesHandler;
 			}
-			// Try loading fanfiction handler if on fanfiction.net
+			// Check for mobile fanfiction FIRST (more specific)
+			else if (hostname === "m.fanfiction.net") {
+				console.log("Loaded fanfiction mobile handler");
+				return fanfictionMobileHandler;
+			}
+			// Try loading fanfiction handler if on fanfiction.net (desktop)
 			else if (hostname.includes("fanfiction.net")) {
 				console.log("Loaded fanfiction handler");
 				return fanfictionHandler;

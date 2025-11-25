@@ -65,6 +65,61 @@ if (window.__RGInitDone) {
 	}
 
 	/**
+	 * Sanitizes HTML content while preserving paragraph structure
+	 * Converts <p> tags to proper paragraphs and removes other HTML
+	 * @param {string} html - The HTML string to clean
+	 * @returns {Array<string>} - Array of paragraph texts
+	 */
+	function extractParagraphsFromHtml(html) {
+		if (!html) return [];
+
+		// Remove code block markers first
+		let text = html.replace(
+			/```(?:html|javascript|css|js|xml|json|md|markdown|python|java|cpp|c\+\+)?\s*\n?/gi,
+			""
+		);
+		text = text.replace(/```/g, "");
+
+		// Create a temporary div to parse HTML
+		const tempDiv = document.createElement("div");
+		tempDiv.innerHTML = text;
+
+		// Check if content has <p> tags
+		const pTags = tempDiv.querySelectorAll("p");
+
+		let paragraphs = [];
+
+		if (pTags.length > 0) {
+			// Extract text from each <p> tag
+			paragraphs = Array.from(pTags)
+				.map((p) => p.textContent.trim())
+				.filter((text) => text.length > 0);
+		} else {
+			// No <p> tags - split by double newlines or <br><br>
+			// First normalize <br> tags to newlines
+			let normalized = text.replace(/<br\s*\/?>/gi, "\n");
+			// Remove remaining HTML tags
+			normalized = normalized.replace(/<[^>]*>/g, "");
+			// Split by double newlines
+			paragraphs = normalized
+				.split(/\n\n+/)
+				.map((p) => p.trim())
+				.filter((p) => p.length > 0);
+		}
+
+		// Decode HTML entities in each paragraph
+		return paragraphs.map((p) => {
+			return p
+				.replace(/&amp;/g, "&")
+				.replace(/&lt;/g, "<")
+				.replace(/&gt;/g, ">")
+				.replace(/&quot;/g, '"')
+				.replace(/&#039;/g, "'")
+				.replace(/&nbsp;/g, " ");
+		});
+	}
+
+	/**
 	 * Thoroughly strips all HTML tags and properly decodes HTML entities from text
 	 * @param {string} html - The HTML string to clean
 	 * @returns {string} - Clean text with all HTML tags removed and entities decoded
@@ -496,6 +551,13 @@ if (window.__RGInitDone) {
 			}
 		} else {
 			if (contentArea && contentArea.firstChild) {
+				// Remove any existing enhanced banner before inserting a new one
+				const existingBanner = contentArea.querySelector(
+					".gemini-enhanced-banner"
+				);
+				if (existingBanner) {
+					existingBanner.remove();
+				}
 				contentArea.insertBefore(banner, contentArea.firstChild);
 			}
 		}
@@ -777,46 +839,152 @@ if (window.__RGInitDone) {
 		const banner = createEnhancedBanner(
 			originalText,
 			enhancedText,
-			modelInfo
+			modelInfo,
+			isCachedContent
 		);
 
-		// Get the toggle button from the banner
-		const toggleButton = banner.querySelector(".gemini-toggle-btn");
-		if (toggleButton) {
-			toggleButton.addEventListener("click", function () {
-				const isShowingEnhanced =
-					contentArea.getAttribute("data-showing-enhanced") ===
-					"true";
-
-				if (isShowingEnhanced) {
-					// Switch to original
-					contentArea.innerHTML = originalContent;
-					toggleButton.textContent = "Show Enhanced";
-					contentArea.setAttribute("data-showing-enhanced", "false");
-
-					// Show status message
-					showStatusMessage(
-						"Showing original content. Click 'Show Enhanced' to view the improved version."
-					);
-				} else {
-					// Switch back to enhanced
-					// Recreate content structure
-					contentArea.innerHTML = "";
-					contentArea.appendChild(progressiveContainer);
-					contentArea.insertBefore(banner, progressiveContainer);
-					toggleButton.textContent = "Show Original";
-					contentArea.setAttribute("data-showing-enhanced", "true");
-
-					// Show status message
-					showStatusMessage(
-						"Showing enhanced content. Click 'Show Original' to view the original version."
-					);
+		// Add delete button handler if present
+		const deleteButton = banner.querySelector(".gemini-delete-cache-btn");
+		if (deleteButton) {
+			deleteButton.addEventListener("click", async () => {
+				if (confirm("Delete cached enhanced content for this page?")) {
+					if (storageManager) {
+						await storageManager.removeEnhancedContent(
+							window.location.href
+						);
+						isCachedContent = false;
+						showStatusMessage(
+							"Cached content deleted. Reloading page...",
+							"info"
+						);
+						setTimeout(() => location.reload(), 1000);
+					}
 				}
 			});
 		}
 
+		// Get the toggle button from the banner
+		const toggleButton = banner.querySelector(".gemini-toggle-btn");
+		if (toggleButton) {
+			const toggleContent = function () {
+				const isShowingEnhanced =
+					contentArea.getAttribute("data-showing-enhanced") ===
+					"true";
+				let newBanner;
+				if (isShowingEnhanced) {
+					// Switch to original
+					contentArea.innerHTML = originalContent;
+					contentArea.setAttribute("data-showing-enhanced", "false");
+					showStatusMessage(
+						"Showing original content. Click 'Show Enhanced' to view the improved version."
+					);
+					// Re-create banner for original view
+					newBanner = createEnhancedBanner(
+						originalText,
+						enhancedText,
+						modelInfo,
+						isCachedContent
+					);
+					const newToggleButton =
+						newBanner.querySelector(".gemini-toggle-btn");
+					if (newToggleButton) {
+						newToggleButton.textContent = "Show Enhanced";
+						newToggleButton.addEventListener(
+							"click",
+							toggleContent
+						);
+					}
+					// Re-attach delete button handler
+					const newDeleteButton = newBanner.querySelector(
+						".gemini-delete-cache-btn"
+					);
+					if (newDeleteButton) {
+						newDeleteButton.addEventListener("click", async () => {
+							if (
+								confirm(
+									"Delete cached enhanced content for this page?"
+								)
+							) {
+								if (storageManager) {
+									await storageManager.removeEnhancedContent(
+										window.location.href
+									);
+									isCachedContent = false;
+									showStatusMessage(
+										"Cached content deleted. Reloading page...",
+										"info"
+									);
+									setTimeout(() => location.reload(), 1000);
+								}
+							}
+						});
+					}
+					contentArea.insertBefore(newBanner, contentArea.firstChild);
+				} else {
+					// Switch back to enhanced
+					contentArea.innerHTML = "";
+					contentArea.appendChild(progressiveContainer);
+					contentArea.setAttribute("data-showing-enhanced", "true");
+					showStatusMessage(
+						"Showing enhanced content. Click 'Show Original' to view the original version."
+					);
+					// Re-create banner for enhanced view
+					newBanner = createEnhancedBanner(
+						originalText,
+						enhancedText,
+						modelInfo,
+						isCachedContent
+					);
+					const newToggleButton =
+						newBanner.querySelector(".gemini-toggle-btn");
+					if (newToggleButton) {
+						newToggleButton.textContent = "Show Original";
+						newToggleButton.addEventListener(
+							"click",
+							toggleContent
+						);
+					}
+					// Re-attach delete button handler
+					const newDeleteButton = newBanner.querySelector(
+						".gemini-delete-cache-btn"
+					);
+					if (newDeleteButton) {
+						newDeleteButton.addEventListener("click", async () => {
+							if (
+								confirm(
+									"Delete cached enhanced content for this page?"
+								)
+							) {
+								if (storageManager) {
+									await storageManager.removeEnhancedContent(
+										window.location.href
+									);
+									isCachedContent = false;
+									showStatusMessage(
+										"Cached content deleted. Reloading page...",
+										"info"
+									);
+									setTimeout(() => location.reload(), 1000);
+								}
+							}
+						});
+					}
+					contentArea.insertBefore(newBanner, progressiveContainer);
+				}
+			};
+			toggleButton.addEventListener("click", toggleContent);
+		}
+
 		// Store state for toggling
 		contentArea.setAttribute("data-showing-enhanced", "true");
+
+		// Remove any existing enhanced banner before inserting a new one
+		const existingBanner = contentArea.querySelector(
+			".gemini-enhanced-banner"
+		);
+		if (existingBanner) {
+			existingBanner.remove();
+		}
 
 		// Add banner to the top of content area
 		contentArea.insertBefore(banner, progressiveContainer);
@@ -1147,6 +1315,74 @@ if (window.__RGInitDone) {
 		return button;
 	}
 
+	// Function to create the FanFiction version switcher button (mobile ⟷ desktop)
+	function createFanfictionVersionSwitcher() {
+		const hostname = window.location.hostname;
+		const isMobile = hostname === "m.fanfiction.net";
+		const isDesktop =
+			hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
+
+		// Only show switcher on FanFiction.net sites
+		if (!isMobile && !isDesktop) {
+			return null;
+		}
+
+		const button = document.createElement("button");
+		button.id = "fanfiction-version-switcher";
+		button.textContent = isMobile ? "🖥️ Desktop" : "📱 Mobile";
+		button.title = isMobile
+			? "Switch to desktop version"
+			: "Switch to mobile version";
+
+		// Match the same styling as enhance/summarize buttons but compact
+		button.style.cssText = `
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 12px;
+			margin: 0;
+			background-color: #222;
+			color: #bab9a0;
+			border: 1px solid #ffffff21;
+			box-shadow: inset 0 0 0 1px #5a5a5a4d;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: bold;
+			font-size: 12px;
+			z-index: 1000;
+		`;
+
+		button.addEventListener("click", () => {
+			const currentUrl = window.location.href;
+			let newUrl;
+
+			if (isMobile) {
+				// Switch to desktop: m.fanfiction.net → www.fanfiction.net
+				newUrl = currentUrl.replace(
+					"m.fanfiction.net",
+					"www.fanfiction.net"
+				);
+			} else {
+				// Switch to mobile: www.fanfiction.net → m.fanfiction.net
+				newUrl = currentUrl.replace(
+					/(?:www\.)?fanfiction\.net/,
+					"m.fanfiction.net"
+				);
+			}
+
+			window.location.href = newUrl;
+		});
+
+		button.addEventListener("mouseover", () => {
+			button.style.backgroundColor = "#333";
+		});
+		button.addEventListener("mouseout", () => {
+			button.style.backgroundColor = "#222";
+		});
+
+		return button;
+	}
+
 	// Function to create the Enhance button
 	function createEnhanceButton() {
 		const enhanceButton = document.createElement("button");
@@ -1318,6 +1554,21 @@ if (window.__RGInitDone) {
 			return;
 		}
 
+		// Create version switcher container (right-aligned, above main controls)
+		const versionSwitcher = createFanfictionVersionSwitcher();
+		let versionSwitcherContainer = null;
+
+		if (versionSwitcher) {
+			versionSwitcherContainer = document.createElement("div");
+			versionSwitcherContainer.id = "gemini-version-switcher-container";
+			versionSwitcherContainer.style.cssText = `
+				display: flex;
+				justify-content: flex-end;
+				margin-bottom: 8px;
+			`;
+			versionSwitcherContainer.appendChild(versionSwitcher);
+		}
+
 		const controlsContainer = document.createElement("div");
 		controlsContainer.id = "gemini-controls";
 		controlsContainer.style.marginBottom = "10px"; // Add some space below buttons
@@ -1364,6 +1615,12 @@ if (window.__RGInitDone) {
 			insertionPosition === "before" ||
 			insertionPosition === "beforebegin"
 		) {
+			if (versionSwitcherContainer) {
+				insertionPoint.parentNode.insertBefore(
+					versionSwitcherContainer,
+					insertionPoint
+				);
+			}
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				insertionPoint
@@ -1376,9 +1633,17 @@ if (window.__RGInitDone) {
 			insertionPosition === "after" ||
 			insertionPosition === "afterend"
 		) {
+			if (versionSwitcherContainer) {
+				insertionPoint.parentNode.insertBefore(
+					versionSwitcherContainer,
+					insertionPoint.nextSibling
+				);
+			}
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
-				insertionPoint.nextSibling
+				versionSwitcherContainer
+					? versionSwitcherContainer.nextSibling
+					: insertionPoint.nextSibling
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplay,
@@ -1388,12 +1653,18 @@ if (window.__RGInitDone) {
 			insertionPosition === "prepend" ||
 			insertionPosition === "afterbegin"
 		) {
+			if (versionSwitcherContainer) {
+				insertionPoint.prepend(versionSwitcherContainer);
+			}
 			insertionPoint.prepend(controlsContainer);
 			insertionPoint.prepend(summaryDisplay);
 		} else if (
 			insertionPosition === "append" ||
 			insertionPosition === "beforeend"
 		) {
+			if (versionSwitcherContainer) {
+				insertionPoint.appendChild(versionSwitcherContainer);
+			}
 			insertionPoint.appendChild(controlsContainer);
 			insertionPoint.appendChild(summaryDisplay);
 		} else {
@@ -1445,21 +1716,53 @@ if (window.__RGInitDone) {
 				"data-original-content"
 			);
 
-			// If showing enhanced, temporarily restore original for extraction
+			// If showing enhanced, extract from stored original content
+			// WITHOUT modifying the DOM (which would destroy event listeners)
 			if (isShowingEnhanced && originalContent) {
-				const savedEnhanced = contentArea.innerHTML;
-				contentArea.innerHTML = originalContent;
+				// Create a temporary element to parse the original content
+				// This avoids modifying the actual DOM
+				const tempDiv = document.createElement("div");
+				tempDiv.innerHTML = originalContent;
 
-				// Extract from original content
+				// Extract from the temporary element
 				let result;
-				if (currentHandler) {
-					result = currentHandler.extractContent();
+				if (
+					currentHandler &&
+					typeof currentHandler.extractFromElement === "function"
+				) {
+					// If handler has extractFromElement, use it
+					result = currentHandler.extractFromElement(tempDiv);
+				} else if (currentHandler) {
+					// Fallback: temporarily use the handler's extractContent
+					// by extracting text from our temp div
+					const paragraphs = tempDiv.querySelectorAll("p");
+					if (paragraphs.length > 0) {
+						const text = Array.from(paragraphs)
+							.map((p) => p.innerText)
+							.join("\n\n");
+						result = {
+							found: true,
+							title: document.title,
+							text: text,
+							selector: "extracted from cached original",
+						};
+					} else {
+						result = {
+							found: true,
+							title: document.title,
+							text: tempDiv.innerText || tempDiv.textContent,
+							selector:
+								"extracted from cached original (no paragraphs)",
+						};
+					}
 				} else {
-					result = extractContentGeneric();
+					result = {
+						found: true,
+						title: document.title,
+						text: tempDiv.innerText || tempDiv.textContent,
+						selector: "generic extraction from cached original",
+					};
 				}
-
-				// Restore enhanced content
-				contentArea.innerHTML = savedEnhanced;
 				return result;
 			}
 		}
@@ -1653,28 +1956,25 @@ if (window.__RGInitDone) {
 				const summaryContentContainer = document.createElement("div");
 				summaryContentContainer.className = "summary-text-content";
 
-				// Apply our enhanced HTML tag stripping
-				const cleanSummary = stripHtmlTags(summary);
-				console.log("[Render] Clean summary to display:", cleanSummary);
+				// Use the new paragraph extraction function to preserve structure
+				const paragraphs = extractParagraphsFromHtml(summary);
+				console.log(
+					"[Render] Extracted paragraphs for summary:",
+					paragraphs.length
+				);
 
-				// Enhanced paragraph handling - properly preserve line breaks
-				summaryContentContainer.style.whiteSpace = "pre-wrap";
-
-				// Split by double newlines to create paragraphs
-				const paragraphs = cleanSummary.split(/\n\n+/);
-				if (paragraphs.length > 1) {
-					// Multiple paragraphs - render each as a separate element
-					paragraphs.forEach((paragraph) => {
-						if (paragraph.trim()) {
-							const p = document.createElement("p");
-							// Handle any single line breaks within paragraphs
-							p.textContent = paragraph.replace(/\n/g, " ");
-							p.style.marginBottom = "1em";
-							summaryContentContainer.appendChild(p);
-						}
+				if (paragraphs.length > 0) {
+					// Render each paragraph as a separate <p> element
+					paragraphs.forEach((paragraphText) => {
+						const p = document.createElement("p");
+						p.textContent = paragraphText;
+						p.style.marginBottom = "1em";
+						p.style.lineHeight = "1.6";
+						summaryContentContainer.appendChild(p);
 					});
 				} else {
-					// Single block - preserve all line breaks
+					// Fallback - just display as text
+					const cleanSummary = stripHtmlTags(summary);
 					summaryContentContainer.textContent = cleanSummary;
 				}
 
@@ -2126,12 +2426,40 @@ if (window.__RGInitDone) {
 
 		try {
 			const scrollPosition = window.scrollY;
-			const originalContent = contentArea.innerHTML;
-			const originalText =
-				contentArea.innerText || contentArea.textContent;
+
+			// Determine if this is cached content based on the presence of a timestamp
+			// (which is only added when saving to cache) to distinguish from fresh API responses
+			const isFromCache =
+				typeof enhancedContent === "object" &&
+				enhancedContent.originalContent &&
+				enhancedContent.timestamp; // Timestamp indicates it's from cache
+
+			// For fresh enhancements, always use contentArea.innerHTML to preserve HTML structure
+			// For cached content, use the stored originalContent (which was saved with HTML)
+			const originalContent = isFromCache
+				? enhancedContent.originalContent
+				: contentArea.innerHTML;
+			const originalText = isFromCache
+				? stripHtmlTags(enhancedContent.originalContent)
+				: contentArea.innerText || contentArea.textContent;
+
+			// Debug logging to verify HTML structure preservation
+			console.log(
+				"replaceContentWithEnhancedVersion: isFromCache =",
+				isFromCache,
+				", originalContent has <p> tags =",
+				/<p[\s>]/i.test(originalContent),
+				", originalContent length =",
+				originalContent?.length || 0
+			);
+
 			const modelInfo =
-				typeof enhancedContent === "object" && enhancedContent.modelInfo
-					? enhancedContent.modelInfo
+				typeof enhancedContent === "object" &&
+				(enhancedContent.modelInfo || enhancedContent.modelUsed)
+					? enhancedContent.modelInfo || {
+							name: enhancedContent.modelUsed,
+							provider: "Google Gemini",
+					  }
 					: null;
 			const enhancedContentText =
 				typeof enhancedContent === "object" &&
@@ -2215,93 +2543,193 @@ if (window.__RGInitDone) {
 			);
 			contentArea.setAttribute("data-showing-enhanced", "true");
 
-			const banner = createEnhancedBanner(
-				originalText,
-				newContent,
-				modelInfo,
-				isCachedContent
+			// Debug: Check if original has <p> tags
+			const originalHasPTags = /<p[\s>]/i.test(originalContent);
+			const enhancedHasPTags = /<p[\s>]/i.test(contentArea.innerHTML);
+			console.log(
+				"Stored data attributes. Original length:",
+				originalContent ? originalContent.length : 0,
+				"Enhanced length:",
+				contentArea.innerHTML ? contentArea.innerHTML.length : 0,
+				"contentArea id:",
+				contentArea.id,
+				"Original has <p> tags:",
+				originalHasPTags,
+				"Enhanced has <p> tags:",
+				enhancedHasPTags
 			);
+			// Log first 500 chars of original to see structure
+			console.log(
+				"Original HTML preview:",
+				originalContent ? originalContent.substring(0, 500) : "null"
+			);
+
 			removeOriginalWordCount();
 
-			// Add delete button handler if present
-			const deleteButton = banner.querySelector(
-				".gemini-delete-cache-btn"
-			);
-			if (deleteButton) {
-				deleteButton.addEventListener("click", async () => {
-					if (
-						confirm("Delete cached enhanced content for this page?")
-					) {
-						if (storageManager) {
-							await storageManager.removeEnhancedContent(
-								window.location.href
-							);
-							isCachedContent = false;
-							showStatusMessage(
-								"Cached content deleted. Reloading page...",
-								"info"
-							);
-							setTimeout(() => location.reload(), 1000);
-						}
-					}
-				});
-			}
+			// Helper function to create and attach toggle functionality
+			const setupToggleBanner = (showingEnhanced) => {
+				// Remove any existing banner first
+				const existingBanners = contentArea.querySelectorAll(
+					".gemini-enhanced-banner"
+				);
+				existingBanners.forEach((b) => b.remove());
 
-			const toggleButton = banner.querySelector(".gemini-toggle-btn");
-			if (toggleButton) {
-				toggleButton.addEventListener("click", function () {
-					const isShowingEnhanced =
-						contentArea.getAttribute("data-showing-enhanced") ===
-						"true";
-					if (isShowingEnhanced) {
-						// Switch to original
-						const storedOriginal = contentArea.getAttribute(
-							"data-original-content"
+				// Create new banner
+				const newBanner = createEnhancedBanner(
+					originalText,
+					newContent,
+					modelInfo,
+					isCachedContent
+				);
+
+				// Update toggle button text based on current state
+				const newToggleButton =
+					newBanner.querySelector(".gemini-toggle-btn");
+				if (newToggleButton) {
+					newToggleButton.textContent = showingEnhanced
+						? "Show Original"
+						: "Show Enhanced";
+					console.log(
+						"Toggle button found, attaching click handler. showingEnhanced:",
+						showingEnhanced
+					);
+					newToggleButton.addEventListener("click", function (e) {
+						console.log("Toggle button clicked!");
+						e.preventDefault();
+						e.stopPropagation();
+
+						const currentlyShowingEnhanced =
+							contentArea.getAttribute(
+								"data-showing-enhanced"
+							) === "true";
+						console.log(
+							"currentlyShowingEnhanced:",
+							currentlyShowingEnhanced
 						);
-						contentArea.innerHTML = sanitizeHTML(storedOriginal);
-						toggleButton.textContent = "Show Enhanced";
-						contentArea.setAttribute(
-							"data-showing-enhanced",
-							"false"
-						);
-					} else {
-						// Switch to enhanced
-						const storedEnhanced = contentArea.getAttribute(
-							"data-enhanced-content"
-						);
-						contentArea.innerHTML = sanitizeHTML(storedEnhanced);
-						toggleButton.textContent = "Show Original";
-						contentArea.setAttribute(
-							"data-showing-enhanced",
-							"true"
-						);
-						if (
-							currentHandler &&
-							typeof currentHandler.formatAfterEnhancement ===
-								"function"
-						) {
-							currentHandler.formatAfterEnhancement(contentArea);
+
+						if (currentlyShowingEnhanced) {
+							// Switch to original - restore original HTML
+							const storedOriginal = contentArea.getAttribute(
+								"data-original-content"
+							);
+							console.log(
+								"Switching to original. storedOriginal length:",
+								storedOriginal ? storedOriginal.length : 0,
+								"Has <p> tags:",
+								storedOriginal
+									? /<p[\s>]/i.test(storedOriginal)
+									: false
+							);
+							console.log(
+								"Restoring HTML preview:",
+								storedOriginal
+									? storedOriginal.substring(0, 500)
+									: "null"
+							);
+							if (storedOriginal) {
+								contentArea.innerHTML =
+									sanitizeHTML(storedOriginal);
+								contentArea.setAttribute(
+									"data-showing-enhanced",
+									"false"
+								);
+								console.log(
+									"Switched to original content. Actual innerHTML has <p> tags:",
+									/<p[\s>]/i.test(contentArea.innerHTML)
+								);
+							} else {
+								console.error(
+									"No stored original content found!"
+								);
+							}
 						} else {
-							applyDefaultFormatting(contentArea);
-						}
-					}
-					// Re-add the banner as the first element
-					if (contentArea.firstChild) {
-						contentArea.insertBefore(
-							banner,
-							contentArea.firstChild
-						);
-					} else {
-						contentArea.appendChild(banner);
-					}
-				});
-			}
+							// Switch to enhanced - restore enhanced HTML
+							const storedEnhanced = contentArea.getAttribute(
+								"data-enhanced-content"
+							);
+							console.log(
+								"Switching to enhanced. storedEnhanced length:",
+								storedEnhanced ? storedEnhanced.length : 0
+							);
+							if (storedEnhanced) {
+								contentArea.innerHTML =
+									sanitizeHTML(storedEnhanced);
+								contentArea.setAttribute(
+									"data-showing-enhanced",
+									"true"
+								);
 
-			if (contentArea.firstChild) {
-				contentArea.insertBefore(banner, contentArea.firstChild);
-			} else {
-				contentArea.appendChild(banner);
-			}
+								// Reapply formatting
+								if (
+									currentHandler &&
+									typeof currentHandler.formatAfterEnhancement ===
+										"function"
+								) {
+									currentHandler.formatAfterEnhancement(
+										contentArea
+									);
+								} else {
+									applyDefaultFormatting(contentArea);
+								}
+								console.log("Switched to enhanced content");
+							} else {
+								console.error(
+									"No stored enhanced content found!"
+								);
+							}
+						}
+
+						// Recursively setup the banner for the new state
+						console.log(
+							"Setting up toggle banner for state:",
+							!currentlyShowingEnhanced
+						);
+						setupToggleBanner(!currentlyShowingEnhanced);
+					});
+				}
+
+				// Setup delete button handler if present
+				const newDeleteButton = newBanner.querySelector(
+					".gemini-delete-cache-btn"
+				);
+				if (newDeleteButton) {
+					newDeleteButton.addEventListener("click", async () => {
+						if (
+							confirm(
+								"Delete cached enhanced content for this page?"
+							)
+						) {
+							if (storageManager) {
+								await storageManager.removeEnhancedContent(
+									window.location.href
+								);
+								isCachedContent = false;
+								showStatusMessage(
+									"Cached content deleted. Reloading page...",
+									"info"
+								);
+								setTimeout(() => location.reload(), 1000);
+							}
+						}
+					});
+				}
+
+				// Insert banner at the top
+				if (contentArea.firstChild) {
+					contentArea.insertBefore(newBanner, contentArea.firstChild);
+				} else {
+					contentArea.appendChild(newBanner);
+				}
+				console.log(
+					"Banner inserted. contentArea:",
+					contentArea.id,
+					"Banner parent:",
+					newBanner.parentNode ? newBanner.parentNode.id : "null"
+				);
+			};
+
+			// Initial banner setup
+			setupToggleBanner(true);
 
 			window.scrollTo(0, scrollPosition);
 			showStatusMessage("Content successfully enhanced with Gemini!");
@@ -2409,23 +2837,43 @@ if (window.__RGInitDone) {
 			// Get the toggle button from the banner
 			const toggleButton = banner.querySelector(".gemini-toggle-btn");
 			if (toggleButton) {
-				toggleButton.addEventListener("click", function () {
+				const toggleContent = function () {
 					const isShowingEnhanced =
 						contentArea.getAttribute("data-showing-enhanced") ===
 						"true";
-
+					let newBanner;
 					if (isShowingEnhanced) {
 						// Switch to original
 						contentArea.innerHTML = sanitizeHTML(originalContent);
-						toggleButton.textContent = "Show Enhanced";
 						contentArea.setAttribute(
 							"data-showing-enhanced",
 							"false"
 						);
+						// Re-create banner for original view
+						newBanner = createEnhancedBanner(
+							originalContent,
+							enhancedContent
+						);
+						const newToggleButton =
+							newBanner.querySelector(".gemini-toggle-btn");
+						if (newToggleButton) {
+							newToggleButton.textContent = "Show Enhanced";
+							newToggleButton.addEventListener(
+								"click",
+								toggleContent
+							);
+						}
+						if (contentArea.firstChild) {
+							contentArea.insertBefore(
+								newBanner,
+								contentArea.firstChild
+							);
+						} else {
+							contentArea.appendChild(newBanner);
+						}
 					} else {
 						// Switch to enhanced
 						contentArea.innerHTML = sanitizeHTML(enhancedContent);
-						toggleButton.textContent = "Show Original";
 						contentArea.setAttribute(
 							"data-showing-enhanced",
 							"true"
@@ -2441,18 +2889,39 @@ if (window.__RGInitDone) {
 						} else {
 							applyDefaultFormatting(contentArea);
 						}
-					}
-
-					// Re-add the banner as the first element
-					if (contentArea.firstChild) {
-						contentArea.insertBefore(
-							banner,
-							contentArea.firstChild
+						// Re-create banner for enhanced view
+						newBanner = createEnhancedBanner(
+							originalContent,
+							enhancedContent
 						);
-					} else {
-						contentArea.appendChild(banner);
+						const newToggleButton =
+							newBanner.querySelector(".gemini-toggle-btn");
+						if (newToggleButton) {
+							newToggleButton.textContent = "Show Original";
+							newToggleButton.addEventListener(
+								"click",
+								toggleContent
+							);
+						}
+						if (contentArea.firstChild) {
+							contentArea.insertBefore(
+								newBanner,
+								contentArea.firstChild
+							);
+						} else {
+							contentArea.appendChild(newBanner);
+						}
 					}
-				});
+				};
+				toggleButton.addEventListener("click", toggleContent);
+			}
+
+			// Remove any existing enhanced banner before inserting a new one
+			const existingBanner = contentArea.querySelector(
+				".gemini-enhanced-banner"
+			);
+			if (existingBanner) {
+				existingBanner.remove();
 			}
 
 			// Add banner to the top of content area

@@ -11,8 +11,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	static SUPPORTED_DOMAINS = [
 		"fanfiction.net",
 		"www.fanfiction.net",
-		"m.fanfiction.net",
-		"*.fanfiction.net", // Safety net: catches any other subdomains
+		"*.fanfiction.net", // Safety net: catches any other subdomains (EXCEPT m.fanfiction.net - handled by mobile handler)
 	];
 
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net, a fanfiction archive.
@@ -47,7 +46,12 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	// Return true if this handler can handle the current website
 	canHandle() {
-		return window.location.hostname.includes("fanfiction.net");
+		const hostname = window.location.hostname;
+		// Exclude mobile version (m.fanfiction.net)
+		if (hostname === "m.fanfiction.net") {
+			return false;
+		}
+		return hostname.includes("fanfiction.net");
 	}
 
 	// Find the content area on Fanfiction.net

@@ -50,7 +50,7 @@ Version 2.8.0 is a major architectural update introducing multi-site support, dy
   - Added note about GitHub releases having latest version
   - Compact badge layout (2 rows instead of 10)
   - Updated supported websites list
-  - Fixed repository URLs to use Life-Experimentalists organization
+  - Fixed repository URLs to use Life-Experimentalist organization
 
 ### Fixed
 - **AO3 Handler**:

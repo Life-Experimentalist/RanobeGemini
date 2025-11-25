@@ -13,17 +13,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		"www.ranobes.net",
 		"ranobes.com",
 		"ranobes.top",
-		"ranobes.org",
-
 		"*.ranobes.net", // Safety net: catches any other subdomains
 		"*.ranobes.com",
 		"*.ranobes.top",
-		"*.ranobes.org",
-		"*.ranobes.to",
-		"*.ranobes.co",
-		"*.ranobes.cc",
-		"*.ranobes.ru",
-		"*.ranobes.io",
 	];
 
 	static DEFAULT_SITE_PROMPT = `	// Get site-specific prompt enhancement

@@ -11,6 +11,7 @@ export class StorageManager {
 
 	/**
 	 * Generate a cache key from URL
+	 * Normalizes FanFiction.net mobile/desktop URLs to share cache
 	 * @param {string} url - The chapter URL
 	 * @returns {string} Cache key
 	 */
@@ -18,7 +19,17 @@ export class StorageManager {
 		// Use just the pathname to avoid query parameter differences
 		try {
 			const urlObj = new URL(url);
-			return this.DB_KEY_PREFIX + urlObj.pathname;
+			let pathname = urlObj.pathname;
+
+			// Normalize FanFiction.net URLs: treat m.fanfiction.net and www.fanfiction.net as same
+			// This allows cached content to be shared between mobile and desktop versions
+			if (urlObj.hostname.includes("fanfiction.net")) {
+				// Use a normalized hostname for cache key
+				const normalizedHostname = "fanfiction.net";
+				return this.DB_KEY_PREFIX + normalizedHostname + pathname;
+			}
+
+			return this.DB_KEY_PREFIX + urlObj.hostname + pathname;
 		} catch (e) {
 			return this.DB_KEY_PREFIX + url;
 		}
@@ -31,7 +42,7 @@ export class StorageManager {
 	 * @param {string} data.title - Chapter title
 	 * @param {string} data.originalContent - Original chapter text
 	 * @param {string} data.enhancedContent - Enhanced chapter text
-	 * @param {string} data.modelUsed - Model ID used for enhancement
+	 * @param {Object} data.modelInfo - Model info object with name and provider
 	 * @param {Object} data.settings - Settings used (optional)
 	 * @returns {Promise<boolean>} Success status
 	 */
@@ -43,7 +54,7 @@ export class StorageManager {
 				title: data.title,
 				originalContent: data.originalContent,
 				enhancedContent: data.enhancedContent,
-				modelUsed: data.modelUsed,
+				modelInfo: data.modelInfo,
 				settings: data.settings || {},
 				timestamp: Date.now(),
 				version: "1.0",

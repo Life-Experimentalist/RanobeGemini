@@ -1268,7 +1268,7 @@ try {
 				contents: requestContents,
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
-					maxOutputTokens: 512, // Limit summary length
+					maxOutputTokens: 2048, // Increased to allow more comprehensive summaries
 					topP: 0.95,
 					topK: 40,
 				},
