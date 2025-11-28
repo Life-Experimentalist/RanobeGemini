@@ -23,7 +23,7 @@ const ROOT_DIR = findRootDir();
 const MANIFEST_PATH = path.join(ROOT_DIR, "src", "manifest.json");
 
 // Read all handler files and extract SUPPORTED_DOMAINS
-// Includes explicit domains + basic wildcards for edge cases
+// Only extracts explicit domains, skips wildcards to avoid duplicates
 function extractDomainsFromHandlers() {
 	const handlersDir = path.join(ROOT_DIR, "src", "utils", "website-handlers");
 	const handlerFiles = fs
@@ -32,8 +32,7 @@ function extractDomainsFromHandlers() {
 			(file) => file.endsWith("-handler.js") && !file.startsWith("base")
 		);
 
-	const explicitDomains = [];
-	const wildcardDomains = [];
+	const explicitDomains = new Set();
 
 	handlerFiles.forEach((file) => {
 		const filePath = path.join(handlersDir, file);
@@ -49,36 +48,36 @@ function extractDomainsFromHandlers() {
 			const domains = domainsStr.match(/"([^"]+)"|'([^']+)'/g);
 			if (domains) {
 				domains.forEach((domain) => {
-					const cleanDomain = domain.replace(/["']/g, "");
-					// Skip comments and empty strings
-					if (cleanDomain && !cleanDomain.startsWith("//")) {
-						if (cleanDomain.startsWith("*.")) {
-							// Include wildcards for edge cases
-							wildcardDomains.push(cleanDomain);
-						} else {
-							// Include explicit domains
-							explicitDomains.push(cleanDomain);
-						}
+					const cleanDomain = domain.replace(/["']/g, "").trim();
+					// Skip comments, empty strings, and wildcards
+					if (
+						cleanDomain &&
+						!cleanDomain.startsWith("//") &&
+						!cleanDomain.startsWith("*")
+					) {
+						explicitDomains.add(cleanDomain);
 					}
 				});
 			}
 		}
 	});
 
-	// Combine explicit domains + unique wildcards
-	const allDomains = [...new Set([...explicitDomains, ...wildcardDomains])];
-	return allDomains;
+	return [...explicitDomains].sort();
 }
 
 // Generate match patterns for manifest.json
+// Uses *://*.domain.com/* format which covers the domain and all subdomains
 function generateMatchPatterns(domains) {
-	return domains.map((domain) => {
-		// Strip wildcard prefix if present (*.domain.com -> domain.com)
-		const cleanDomain = domain.startsWith("*.")
-			? domain.substring(2)
-			: domain;
-		return `*://*.${cleanDomain}/*`;
+	const patterns = new Set();
+
+	domains.forEach((domain) => {
+		// Remove www. prefix to get base domain for broader matching
+		const baseDomain = domain.replace(/^www\./, "").replace(/^m\./, "");
+		// Add pattern for the base domain (covers all subdomains)
+		patterns.add(`*://*.${baseDomain}/*`);
 	});
+
+	return [...patterns].sort();
 }
 
 // Update manifest.json

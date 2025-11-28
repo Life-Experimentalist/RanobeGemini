@@ -922,6 +922,13 @@ body {
 	cursor: pointer;
 }
 
+.form-hint {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: var(--spacing-xs);
+}
+
 .form-row {
 	display: grid;
 	grid-template-columns: 1fr 1fr;

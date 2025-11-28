@@ -10,6 +10,7 @@ try {
 		DEFAULT_MODEL_ENDPOINT,
 		DEFAULT_PERMANENT_PROMPT,
 		DEFAULT_SUMMARY_PROMPT,
+		DEFAULT_SHORT_SUMMARY_PROMPT,
 	} = constantsModule;
 
 	console.log("Ranobe Gemini: Background script loaded");
@@ -24,33 +25,200 @@ try {
 			const data = await browser.storage.local.get();
 			return {
 				apiKey: data.apiKey || "",
+				backupApiKeys: data.backupApiKeys || [], // Array of backup API keys
+				apiKeyRotation: data.apiKeyRotation || "failover", // "failover" or "round-robin"
+				currentApiKeyIndex: data.currentApiKeyIndex || 0, // Current API key index for round-robin
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
-				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT, // Load summary prompt
+				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
+				shortSummaryPrompt:
+					data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
 				permanentPrompt:
-					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT, // Load permanent prompt
+					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
 				temperature: data.temperature || 0.7,
+				topP: data.topP !== undefined ? data.topP : 0.95,
+				topK: data.topK !== undefined ? data.topK : 40,
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
 				modelEndpoint: data.modelEndpoint || DEFAULT_MODEL_ENDPOINT,
-				chunkingEnabled: data.chunkingEnabled !== false, // Default to true
-				chunkSize: data.chunkSize || 12000, // Default chunk size
-				useEmoji: data.useEmoji || false, // Load emoji setting
+				chunkingEnabled: data.chunkingEnabled !== false,
+				chunkSize: data.chunkSize || 12000,
+				chunkThreshold: data.chunkThreshold || 20000, // Threshold to trigger chunking (characters)
+				useEmoji: data.useEmoji || false,
+				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 			};
 		} catch (error) {
 			console.error("Error loading configuration:", error);
 			return {
 				apiKey: "",
+				backupApiKeys: [],
+				apiKeyRotation: "failover",
+				currentApiKeyIndex: 0,
 				defaultPrompt:
 					"Please fix grammar and improve readability of this text while maintaining original meaning.",
-				summaryPrompt: DEFAULT_SUMMARY_PROMPT, // Default summary prompt on error
-				permanentPrompt: DEFAULT_PERMANENT_PROMPT, // Default permanent prompt on error
+				summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+				shortSummaryPrompt:
+					DEFAULT_SHORT_SUMMARY_PROMPT ||
+					"Provide a brief 2-3 paragraph summary.",
+				permanentPrompt: DEFAULT_PERMANENT_PROMPT,
 				temperature: 0.7,
+				topP: 0.95,
+				topK: 40,
 				maxOutputTokens: 8192,
 				chunkingEnabled: true,
 				chunkSize: 12000,
+				chunkThreshold: 20000,
 				useEmoji: false,
+				fontSize: 100,
 			};
 		}
+	}
+
+	// Get the current API key based on rotation strategy
+	function getCurrentApiKey(config, forceNext = false) {
+		const allKeys = [config.apiKey, ...config.backupApiKeys].filter(
+			(k) => k && k.trim()
+		);
+		if (allKeys.length === 0) return null;
+
+		if (config.apiKeyRotation === "round-robin") {
+			let index = config.currentApiKeyIndex || 0;
+			if (forceNext) {
+				index = (index + 1) % allKeys.length;
+				// Save the new index
+				browser.storage.local.set({ currentApiKeyIndex: index });
+			}
+			return { key: allKeys[index], index, total: allKeys.length };
+		} else {
+			// Failover mode - try primary first, then backups
+			return { key: allKeys[0], index: 0, total: allKeys.length };
+		}
+	}
+
+	// Get next API key for failover
+	async function getNextApiKey(config, currentIndex) {
+		const allKeys = [config.apiKey, ...config.backupApiKeys].filter(
+			(k) => k && k.trim()
+		);
+		const nextIndex = currentIndex + 1;
+		if (nextIndex >= allKeys.length) {
+			return null; // No more keys available
+		}
+		return {
+			key: allKeys[nextIndex],
+			index: nextIndex,
+			total: allKeys.length,
+		};
+	}
+
+	// Make API call with automatic key rotation on rate limit errors
+	async function makeApiCallWithRotation(modelEndpoint, requestBody, config) {
+		const allKeys = [config.apiKey, ...config.backupApiKeys].filter(
+			(k) => k && k.trim()
+		);
+
+		if (allKeys.length === 0) {
+			throw new Error(
+				"No API keys configured. Please set an API key in the extension popup."
+			);
+		}
+
+		let currentKeyInfo = getCurrentApiKey(config);
+		let attempts = 0;
+		const maxAttempts = allKeys.length;
+
+		while (attempts < maxAttempts) {
+			const apiKey = currentKeyInfo.key;
+			console.log(
+				`Attempting API call with key ${currentKeyInfo.index + 1}/${
+					currentKeyInfo.total
+				}`
+			);
+
+			try {
+				const response = await fetch(`${modelEndpoint}?key=${apiKey}`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(requestBody),
+				});
+
+				// Parse the response
+				const responseData = await response.json();
+
+				// Check for rate limiting
+				if (response.status === 429) {
+					const retryAfter = response.headers.get("retry-after");
+					const waitTime = retryAfter
+						? parseInt(retryAfter) * 1000
+						: 60000;
+
+					console.log(
+						`Rate limit hit on key ${
+							currentKeyInfo.index + 1
+						}. Will try next key.`
+					);
+
+					// Try next key
+					if (config.apiKeyRotation === "round-robin") {
+						currentKeyInfo = getCurrentApiKey(config, true); // Force next key
+					} else {
+						// Failover mode
+						const nextKey = await getNextApiKey(
+							config,
+							currentKeyInfo.index
+						);
+						if (nextKey) {
+							currentKeyInfo = nextKey;
+						} else {
+							// No more keys, throw rate limit error
+							throw new Error(
+								`Rate limit reached on all ${
+									allKeys.length
+								} API keys. Please try again in ${Math.ceil(
+									waitTime / 1000
+								)} seconds.`
+							);
+						}
+					}
+					attempts++;
+					continue;
+				}
+
+				// Return both response and data for further processing
+				return {
+					response,
+					responseData,
+					keyUsed: currentKeyInfo.index,
+				};
+			} catch (fetchError) {
+				// Network error or other fetch failure
+				console.error(
+					`API call failed with key ${currentKeyInfo.index + 1}:`,
+					fetchError
+				);
+
+				// Try next key for network errors too
+				if (config.apiKeyRotation === "round-robin") {
+					currentKeyInfo = getCurrentApiKey(config, true);
+				} else {
+					const nextKey = await getNextApiKey(
+						config,
+						currentKeyInfo.index
+					);
+					if (nextKey) {
+						currentKeyInfo = nextKey;
+					} else {
+						throw fetchError; // Re-throw if no more keys
+					}
+				}
+				attempts++;
+			}
+		}
+
+		throw new Error(
+			`All ${allKeys.length} API keys exhausted. Please check your API keys or try again later.`
+		);
 	}
 
 	// Helper function to combine prompts for Gemini
@@ -112,50 +280,77 @@ try {
 		}
 
 		if (message.action === "processWithGemini") {
-			// For longer content, use chunk processing with progressive rendering
-			if (message.content && message.content.length > 4000) {
-				processContentInChunks(
-					message.title,
-					message.content,
-					message.useEmoji
-				)
-					.then((result) => {
-						sendResponse({ success: true, result: result });
-					})
-					.catch((error) => {
-						console.error(
-							"Error processing with Gemini in chunks:",
-							error
+			// Load config to get threshold setting
+			initConfig()
+				.then((config) => {
+					const threshold = config.chunkThreshold || 20000;
+
+					// For longer content, use chunk processing with progressive rendering
+					if (message.content && message.content.length > threshold) {
+						console.log(
+							`Content length ${message.content.length} exceeds threshold ${threshold}, using chunked processing`
 						);
-						sendResponse({
-							success: false,
-							error:
-								error.message ||
-								"Unknown error processing with Gemini",
-						});
+						processContentInChunks(
+							message.title,
+							message.content,
+							message.useEmoji,
+							message.siteSpecificPrompt || ""
+						)
+							.then((result) => {
+								sendResponse({ success: true, result: result });
+							})
+							.catch((error) => {
+								console.error(
+									"Error processing with Gemini in chunks:",
+									error
+								);
+								sendResponse({
+									success: false,
+									error:
+										error.message ||
+										"Unknown error processing with Gemini",
+								});
+							});
+					} else {
+						// For shorter content, process as a single piece
+						console.log(
+							`Content length ${
+								message.content?.length || 0
+							} is under threshold ${threshold}, processing as single piece`
+						);
+						processContentWithGemini(
+							message.title,
+							message.content,
+							message.isPart,
+							message.partInfo,
+							message.useEmoji,
+							null,
+							message.siteSpecificPrompt || ""
+						)
+							.then((result) => {
+								sendResponse({ success: true, result: result });
+							})
+							.catch((error) => {
+								console.error(
+									"Error processing with Gemini:",
+									error
+								);
+								sendResponse({
+									success: false,
+									error:
+										error.message ||
+										"Unknown error processing with Gemini",
+								});
+							});
+					}
+				})
+				.catch((error) => {
+					console.error("Error loading config:", error);
+					sendResponse({
+						success: false,
+						error: "Failed to load configuration",
 					});
-			} else {
-				// For shorter content, process as a single piece
-				processContentWithGemini(
-					message.title,
-					message.content,
-					message.isPart,
-					message.partInfo,
-					message.useEmoji
-				)
-					.then((result) => {
-						sendResponse({ success: true, result: result });
-					})
-					.catch((error) => {
-						console.error("Error processing with Gemini:", error);
-						sendResponse({
-							success: false,
-							error:
-								error.message ||
-								"Unknown error processing with Gemini",
-						});
-					});
-			}
+				});
 			return true; // Indicates we'll send a response asynchronously
 		}
 
@@ -359,7 +554,8 @@ try {
 				message.title,
 				message.content,
 				message.isPart,
-				message.partInfo
+				message.partInfo,
+				false // isShort = false for long summaries
 			)
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
@@ -371,6 +567,31 @@ try {
 						error:
 							error.message ||
 							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		
+		// Handle short summary requests
+		if (message.action === "shortSummarizeWithGemini") {
+			summarizeContentWithGemini(
+				message.title,
+				message.content,
+				message.isPart,
+				message.partInfo,
+				true // isShort = true for short summaries
+			)
+				.then((summary) => {
+					sendResponse({ success: true, summary: summary });
+				})
+				.catch((error) => {
+					console.error("Error creating short summary with Gemini:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error creating short summary",
 					});
 				});
 			return true; // Indicates we'll send a response asynchronously
@@ -442,10 +663,14 @@ try {
 				maxContextSize = 32000; // 32k token context for Gemini 2.0 Flash
 			}
 
+			// Get font size setting (default 100%)
+			const fontSize = currentConfig.fontSize || 100;
+
 			return {
 				modelId,
 				maxContextSize,
 				maxOutputTokens,
+				fontSize,
 			};
 		} catch (error) {
 			console.error("Error determining model info:", error);
@@ -454,6 +679,7 @@ try {
 				modelId: "unknown",
 				maxContextSize: 16000,
 				maxOutputTokens: 8192,
+				fontSize: 100,
 			};
 		}
 	}
@@ -930,8 +1156,12 @@ try {
 			// Load latest config directly from storage for most up-to-date settings
 			currentConfig = await initConfig();
 
-			// Check if we have an API key
-			if (!currentConfig.apiKey) {
+			// Check if we have any API key (primary or backup)
+			const allKeys = [
+				currentConfig.apiKey,
+				...(currentConfig.backupApiKeys || []),
+			].filter((k) => k && k.trim());
+			if (allKeys.length === 0) {
 				throw new Error(
 					"API key is missing. Please set it in the extension popup."
 				);
@@ -1046,8 +1276,14 @@ try {
 				generationConfig: {
 					temperature: currentConfig.temperature || 0.7,
 					maxOutputTokens: currentConfig.maxOutputTokens || 8192,
-					topP: 0.95,
-					topK: 40,
+					topP:
+						currentConfig.topP !== undefined
+							? currentConfig.topP
+							: 0.95,
+					topK:
+						currentConfig.topK !== undefined
+							? currentConfig.topK
+							: 40,
 				},
 			};
 
@@ -1059,44 +1295,20 @@ try {
 				});
 			}
 
-			// Make the API call
-			const response = await fetch(
-				`${modelEndpoint}?key=${currentConfig.apiKey}`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(requestBody),
-				}
-			);
-
-			// Parse the response
-			const responseData = await response.json();
+			// Make the API call with automatic key rotation
+			const { response, responseData, keyUsed } =
+				await makeApiCallWithRotation(
+					modelEndpoint,
+					requestBody,
+					currentConfig
+				);
 
 			// Log the response if debug mode is enabled
 			if (currentConfig.debugMode) {
 				console.log("Gemini API Response:", responseData);
-			}
-
-			// Check for rate limiting
-			if (response.status === 429) {
-				const retryAfter = response.headers.get("retry-after");
-				const waitTime = retryAfter
-					? parseInt(retryAfter) * 1000
-					: 60000; // Default to 1 minute if no header
-
-				console.log(
-					`Rate limit hit. Will retry after ${
-						waitTime / 1000
-					} seconds.`
-				);
-
-				throw new Error(
-					`Rate limit reached. Please try again in ${Math.ceil(
-						waitTime / 1000
-					)} seconds.`
-				);
+				if (keyUsed > 0) {
+					console.log(`Used backup API key ${keyUsed}`);
+				}
 			}
 
 			// Handle other API errors
@@ -1203,25 +1415,32 @@ try {
 		title,
 		content,
 		isPart = false,
-		partInfo = null
+		partInfo = null,
+		isShort = false
 	) {
 		try {
 			// Load latest config
 			currentConfig = await initConfig();
 
-			if (!currentConfig.apiKey) {
+			// Check if we have any API key (primary or backup)
+			const allKeys = [
+				currentConfig.apiKey,
+				...(currentConfig.backupApiKeys || []),
+			].filter((k) => k && k.trim());
+			if (allKeys.length === 0) {
 				throw new Error(
 					"API key is missing. Please set it in the extension popup."
 				);
 			}
 
+			const summaryType = isShort ? "short" : "long";
 			if (isPart && partInfo) {
 				console.log(
-					`Summarizing "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${content.length} characters)`
+					`Creating ${summaryType} summary of "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${content.length} characters)`
 				);
 			} else {
 				console.log(
-					`Summarizing "${title}" with Gemini (${content.length} characters)`
+					`Creating ${summaryType} summary of "${title}" with Gemini (${content.length} characters)`
 				);
 			}
 
@@ -1229,9 +1448,16 @@ try {
 				currentConfig.modelEndpoint ||
 				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
 
-			// Use the summary prompt from settings
-			let summarizationBasePrompt =
-				currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+			// Use the appropriate summary prompt based on isShort flag
+			let summarizationBasePrompt;
+			if (isShort) {
+				summarizationBasePrompt =
+					currentConfig.shortSummaryPrompt ||
+					DEFAULT_SHORT_SUMMARY_PROMPT;
+			} else {
+				summarizationBasePrompt =
+					currentConfig.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+			}
 
 			// If processing a part, add special instructions
 			if (isPart && partInfo) {
@@ -1257,6 +1483,9 @@ try {
 				},
 			];
 
+			// Use smaller output tokens for short summaries
+			const maxOutputTokens = isShort ? 512 : 2048;
+
 			const requestBody = {
 				system_instruction: {
 					parts: [
@@ -1268,9 +1497,15 @@ try {
 				contents: requestContents,
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
-					maxOutputTokens: 2048, // Increased to allow more comprehensive summaries
-					topP: 0.95,
-					topK: 40,
+					maxOutputTokens: maxOutputTokens,
+					topP:
+						currentConfig.topP !== undefined
+							? currentConfig.topP
+							: 0.95,
+					topK:
+						currentConfig.topK !== undefined
+							? currentConfig.topK
+							: 40,
 				},
 			};
 
@@ -1281,21 +1516,19 @@ try {
 				});
 			}
 
-			const response = await fetch(
-				`${modelEndpoint}?key=${currentConfig.apiKey}`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(requestBody),
-				}
-			);
-
-			const responseData = await response.json();
+			// Make the API call with automatic key rotation
+			const { response, responseData, keyUsed } =
+				await makeApiCallWithRotation(
+					modelEndpoint,
+					requestBody,
+					currentConfig
+				);
 
 			if (currentConfig.debugMode) {
 				console.log("Gemini Summarization Response:", responseData);
+				if (keyUsed > 0) {
+					console.log(`Used backup API key ${keyUsed}`);
+				}
 			}
 
 			if (!response.ok) {
@@ -1326,7 +1559,12 @@ try {
 			// Load latest config
 			currentConfig = await initConfig();
 
-			if (!currentConfig.apiKey) {
+			// Check if we have any API key (primary or backup)
+			const allKeys = [
+				currentConfig.apiKey,
+				...(currentConfig.backupApiKeys || []),
+			].filter((k) => k && k.trim());
+			if (allKeys.length === 0) {
 				throw new Error(
 					"API key is missing. Please set it in the extension popup."
 				);
@@ -1383,8 +1621,14 @@ try {
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
 					maxOutputTokens: 512, // Limit summary length
-					topP: 0.95,
-					topK: 40,
+					topP:
+						currentConfig.topP !== undefined
+							? currentConfig.topP
+							: 0.95,
+					topK:
+						currentConfig.topK !== undefined
+							? currentConfig.topK
+							: 40,
 				},
 			};
 
@@ -1395,21 +1639,19 @@ try {
 				});
 			}
 
-			const response = await fetch(
-				`${modelEndpoint}?key=${currentConfig.apiKey}`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(requestBody),
-				}
-			);
-
-			const responseData = await response.json();
+			// Make the API call with automatic key rotation
+			const { response, responseData, keyUsed } =
+				await makeApiCallWithRotation(
+					modelEndpoint,
+					requestBody,
+					currentConfig
+				);
 
 			if (currentConfig.debugMode) {
 				console.log("Gemini Combination Response:", responseData);
+				if (keyUsed > 0) {
+					console.log(`Used backup API key ${keyUsed}`);
+				}
 			}
 
 			if (!response.ok) {
@@ -1538,6 +1780,7 @@ try {
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 	const DEFAULT_PERMANENT_PROMPT = `Ensure the translation maintains cultural nuances and original tone.`;
 	const DEFAULT_SUMMARY_PROMPT = `Please provide a concise summary of the following novel chapter content. Focus on the main plot points and character interactions. Keep the summary brief and easy to understand.`;
+	const DEFAULT_SHORT_SUMMARY_PROMPT = `Provide a brief 2-3 paragraph summary focusing on the main events and key character moments.`;
 
 	console.log("Ranobe Gemini: Background script loaded");
 
@@ -1551,33 +1794,87 @@ try {
 			const data = await browser.storage.local.get();
 			return {
 				apiKey: data.apiKey || "",
+				backupApiKeys: data.backupApiKeys || [],
+				apiKeyRotation: data.apiKeyRotation || "failover",
+				currentApiKeyIndex: data.currentApiKeyIndex || 0,
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
-				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT, // Load summary prompt
+				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
+				shortSummaryPrompt:
+					data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
 				permanentPrompt:
-					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT, // Load permanent prompt
+					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
 				temperature: data.temperature || 0.7,
+				topP: data.topP !== undefined ? data.topP : 0.95,
+				topK: data.topK !== undefined ? data.topK : 40,
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
 				modelEndpoint: data.modelEndpoint || DEFAULT_MODEL_ENDPOINT,
-				chunkingEnabled: data.chunkingEnabled !== false, // Default to true
-				chunkSize: data.chunkSize || 12000, // Default chunk size
-				useEmoji: data.useEmoji || false, // Load emoji setting
+				chunkingEnabled: data.chunkingEnabled !== false,
+				chunkSize: data.chunkSize || 12000,
+				chunkThreshold: data.chunkThreshold || 20000,
+				useEmoji: data.useEmoji || false,
+				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 			};
 		} catch (error) {
 			console.error("Error loading configuration:", error);
 			return {
 				apiKey: "",
+				backupApiKeys: [],
+				apiKeyRotation: "failover",
+				currentApiKeyIndex: 0,
 				defaultPrompt:
 					"Please fix grammar and improve readability of this text while maintaining original meaning.",
-				summaryPrompt: DEFAULT_SUMMARY_PROMPT, // Default summary prompt on error
-				permanentPrompt: DEFAULT_PERMANENT_PROMPT, // Default permanent prompt on error
+				summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+				shortSummaryPrompt:
+					DEFAULT_SHORT_SUMMARY_PROMPT ||
+					"Provide a brief 2-3 paragraph summary.",
+				permanentPrompt: DEFAULT_PERMANENT_PROMPT,
 				temperature: 0.7,
+				topP: 0.95,
+				topK: 40,
 				maxOutputTokens: 8192,
 				chunkingEnabled: true,
 				chunkSize: 12000,
+				chunkThreshold: 20000,
 				useEmoji: false,
+				fontSize: 100,
 			};
 		}
+	}
+
+	// Get the current API key based on rotation strategy
+	function getCurrentApiKey(config, forceNext = false) {
+		const allKeys = [config.apiKey, ...config.backupApiKeys].filter(
+			(k) => k && k.trim()
+		);
+		if (allKeys.length === 0) return null;
+
+		if (config.apiKeyRotation === "round-robin") {
+			let index = config.currentApiKeyIndex || 0;
+			if (forceNext) {
+				index = (index + 1) % allKeys.length;
+				browser.storage.local.set({ currentApiKeyIndex: index });
+			}
+			return { key: allKeys[index], index, total: allKeys.length };
+		} else {
+			return { key: allKeys[0], index: 0, total: allKeys.length };
+		}
+	}
+
+	// Get next API key for failover
+	async function getNextApiKey(config, currentIndex) {
+		const allKeys = [config.apiKey, ...config.backupApiKeys].filter(
+			(k) => k && k.trim()
+		);
+		const nextIndex = currentIndex + 1;
+		if (nextIndex >= allKeys.length) {
+			return null;
+		}
+		return {
+			key: allKeys[nextIndex],
+			index: nextIndex,
+			total: allKeys.length,
+		};
 	}
 
 	// Helper function to combine prompts for Gemini
@@ -1886,7 +2183,8 @@ try {
 				message.title,
 				message.content,
 				message.isPart,
-				message.partInfo
+				message.partInfo,
+				false // isShort = false for long summaries
 			)
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
@@ -1898,6 +2196,31 @@ try {
 						error:
 							error.message ||
 							"Unknown error summarizing with Gemini",
+					});
+				});
+			return true; // Indicates we'll send a response asynchronously
+		}
+
+		
+		// Handle short summary requests
+		if (message.action === "shortSummarizeWithGemini") {
+			summarizeContentWithGemini(
+				message.title,
+				message.content,
+				message.isPart,
+				message.partInfo,
+				true // isShort = true for short summaries
+			)
+				.then((summary) => {
+					sendResponse({ success: true, summary: summary });
+				})
+				.catch((error) => {
+					console.error("Error creating short summary with Gemini:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message ||
+							"Unknown error creating short summary",
 					});
 				});
 			return true; // Indicates we'll send a response asynchronously
@@ -1969,10 +2292,14 @@ try {
 				maxContextSize = 32000; // 32k token context for Gemini 2.0 Flash
 			}
 
+			// Get font size setting (default 100%)
+			const fontSize = currentConfig.fontSize || 100;
+
 			return {
 				modelId,
 				maxContextSize,
 				maxOutputTokens,
+				fontSize,
 			};
 		} catch (error) {
 			console.error("Error determining model info:", error);
@@ -1981,6 +2308,7 @@ try {
 				modelId: "unknown",
 				maxContextSize: 16000,
 				maxOutputTokens: 8192,
+				fontSize: 100,
 			};
 		}
 	}

@@ -114,8 +114,140 @@ When enhancing, improve readability while respecting the author's creative voice
 			if (title) return title;
 		}
 
+		// Try the profile_top area for desktop
+		const profileTop = document.getElementById("profile_top");
+		if (profileTop) {
+			const titleEl = profileTop.querySelector("b.xcontrast_txt");
+			if (titleEl) {
+				return titleEl.textContent.trim();
+			}
+		}
+
 		// Fallback to the default title extraction (page title)
 		return document.title;
+	}
+
+	/**
+	 * Extract the story description/summary from FanFiction.net
+	 * The description is typically in the #profile_top area
+	 * @returns {string|null} The story description or null if not found
+	 */
+	extractDescription() {
+		try {
+			const profileTop = document.getElementById("profile_top");
+			if (!profileTop) {
+				console.log("FanFiction: #profile_top not found");
+				return null;
+			}
+
+			// The description is in a div with class 'xcontrast_txt' and style 'margin-top:2px'
+			// It comes after the author link
+			const descriptionDivs =
+				profileTop.querySelectorAll("div.xcontrast_txt");
+			for (const div of descriptionDivs) {
+				// Skip empty divs or divs that are just spacing
+				const text = div.textContent.trim();
+				if (text && text.length > 20 && !text.startsWith("By:")) {
+					// Check if this looks like a description (not metadata)
+					if (!text.includes("Rated:") && !text.includes("Words:")) {
+						console.log(
+							"FanFiction: Found description:",
+							text.substring(0, 100) + "..."
+						);
+						return text;
+					}
+				}
+			}
+
+			// Alternative: look for the div that follows the author info
+			// The structure is: title (b), author link (a), then description (div with margin-top:2px)
+			const allDivs = profileTop.querySelectorAll("div");
+			for (const div of allDivs) {
+				const style = div.getAttribute("style") || "";
+				if (
+					style.includes("margin-top") &&
+					div.classList.contains("xcontrast_txt")
+				) {
+					const text = div.textContent.trim();
+					if (text && text.length > 20) {
+						console.log(
+							"FanFiction: Found description via style:",
+							text.substring(0, 100) + "..."
+						);
+						return text;
+					}
+				}
+			}
+
+			console.log("FanFiction: No description found in #profile_top");
+			return null;
+		} catch (error) {
+			console.error("FanFiction: Error extracting description:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Extract the author name from FanFiction.net
+	 * @returns {string|null} The author name or null if not found
+	 */
+	extractAuthor() {
+		try {
+			const profileTop = document.getElementById("profile_top");
+			if (!profileTop) {
+				return null;
+			}
+
+			// Author is in an anchor tag with class 'xcontrast_txt' and href starting with '/u/'
+			const authorLink = profileTop.querySelector(
+				"a.xcontrast_txt[href^='/u/']"
+			);
+			if (authorLink) {
+				return authorLink.textContent.trim();
+			}
+
+			return null;
+		} catch (error) {
+			console.error("FanFiction: Error extracting author:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Extract metadata for novel library storage
+	 * @returns {Object} Object containing title, author, description, coverUrl
+	 */
+	extractNovelMetadata() {
+		const metadata = {
+			title: this.extractTitle(),
+			author: this.extractAuthor(),
+			description: this.extractDescription(),
+			coverUrl: null,
+		};
+
+		// Try to extract cover image URL
+		try {
+			const profileTop = document.getElementById("profile_top");
+			if (profileTop) {
+				const coverImg = profileTop.querySelector("img.cimage");
+				if (coverImg) {
+					// The src might be a thumbnail, try to get full image from data-original
+					const imgLarge = document.querySelector("#img_large img");
+					if (imgLarge) {
+						metadata.coverUrl =
+							imgLarge.getAttribute("data-original") ||
+							imgLarge.src;
+					} else {
+						metadata.coverUrl = coverImg.src;
+					}
+				}
+			}
+		} catch (error) {
+			console.error("FanFiction: Error extracting cover URL:", error);
+		}
+
+		console.log("FanFiction: Extracted metadata:", metadata);
+		return metadata;
 	}
 
 	// Get chapter navigation info (previous, next, current chapter number)

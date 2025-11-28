@@ -5,6 +5,18 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Novel Library - Ranobe Gemini</title>
 		<link rel="stylesheet" href="library.css" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../icons/logo-dark-32.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../icons/logo-light-32.png"
+		/>
 	</head>
 	<body>
 		<div class="library-container">
@@ -13,10 +25,15 @@
 				<div class="header-content">
 					<div class="logo-section">
 						<img
-							src="../icons/icon-48.png"
+							src="../icons/logo-light-48.png"
 							alt="Ranobe Gemini"
-							class="logo"
+							class="logo light-mode-icon"
 						/>
+						<!-- <img
+							src="../icons/logo-dark-48.png"
+							alt="Ranobe Gemini"
+							class="logo dark-mode-icon"
+						/> -->
 						<h1>Novel Library</h1>
 					</div>
 					<div class="header-actions">
@@ -330,6 +347,21 @@
 								id="edit-genres"
 								placeholder="Fantasy, Romance, Action"
 							/>
+						</div>
+
+						<div class="form-group">
+							<label for="edit-custom-prompt"
+								>✨ Custom Enhancement Prompt</label
+							>
+							<textarea
+								id="edit-custom-prompt"
+								rows="4"
+								placeholder="Add specific instructions for enhancing this novel's chapters. This will be appended to the default prompt.&#10;&#10;Example: This novel uses Chinese cultivation terms. Preserve terms like 'Qi' and 'Dao'. The protagonist is female."
+							></textarea>
+							<small class="form-hint"
+								>This prompt will be used whenever chapters from
+								this novel are enhanced.</small
+							>
 						</div>
 
 						<div class="form-actions">

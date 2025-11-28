@@ -90,25 +90,11 @@
 	"content_scripts": [
 		{
 			"matches": [
-				"*://*.archiveofourown.org/*",
-				"*://*.www.archiveofourown.org/*",
 				"*://*.ao3.org/*",
-				"*://*.www.ao3.org/*",
-				"*://*.fanfiction.net/*",
-				"*://*.www.fanfiction.net/*",
-				"*://*.m.fanfiction.net/*",
-				"*://*.ranobes.net/*",
-				"*://*.www.ranobes.net/*",
-				"*://*.ranobes.com/*",
-				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*",
-				"*://*.www.webnovel.com/*",
-				"*://*.m.webnovel.com/*",
 				"*://*.archiveofourown.org/*",
-				"*://*.ao3.org/*",
 				"*://*.fanfiction.net/*",
-				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
+				"*://*.ranobes.net/*",
 				"*://*.ranobes.top/*",
 				"*://*.webnovel.com/*"
 			],
@@ -137,25 +123,11 @@
 				"library/*.js"
 			],
 			"matches": [
-				"*://*.archiveofourown.org/*",
-				"*://*.www.archiveofourown.org/*",
 				"*://*.ao3.org/*",
-				"*://*.www.ao3.org/*",
-				"*://*.fanfiction.net/*",
-				"*://*.www.fanfiction.net/*",
-				"*://*.m.fanfiction.net/*",
-				"*://*.ranobes.net/*",
-				"*://*.www.ranobes.net/*",
-				"*://*.ranobes.com/*",
-				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*",
-				"*://*.www.webnovel.com/*",
-				"*://*.m.webnovel.com/*",
 				"*://*.archiveofourown.org/*",
-				"*://*.ao3.org/*",
 				"*://*.fanfiction.net/*",
-				"*://*.ranobes.net/*",
 				"*://*.ranobes.com/*",
+				"*://*.ranobes.net/*",
 				"*://*.ranobes.top/*",
 				"*://*.webnovel.com/*"
 			]

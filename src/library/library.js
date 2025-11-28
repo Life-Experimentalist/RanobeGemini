@@ -67,6 +67,7 @@ const elements = {
 	editStatus: document.getElementById("edit-status"),
 	editTotalChapters: document.getElementById("edit-total-chapters"),
 	editGenres: document.getElementById("edit-genres"),
+	editCustomPrompt: document.getElementById("edit-custom-prompt"),
 	editCancelBtn: document.getElementById("edit-cancel-btn"),
 
 	// Settings Modal
@@ -512,6 +513,7 @@ function handleOpenEditModal() {
 	elements.editStatus.value = novel.status || "unknown";
 	elements.editTotalChapters.value = novel.totalChapters || "";
 	elements.editGenres.value = (novel.genres || []).join(", ");
+	elements.editCustomPrompt.value = novel.customPrompt || "";
 
 	// Update cover preview
 	updateCoverPreview(novel.coverUrl);
@@ -567,6 +569,7 @@ async function handleSaveEdit(e) {
 			.split(",")
 			.map((g) => g.trim())
 			.filter((g) => g.length > 0),
+		customPrompt: elements.editCustomPrompt.value.trim(),
 	};
 
 	try {

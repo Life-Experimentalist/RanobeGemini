@@ -37,6 +37,7 @@ export const DEFAULT_PROMPT = `Please enhance this novel chapter translation wit
 
     Preserve all line breaks, formatting, and exact data within these status windows. if there are any text in [ square brackets ] please pay attention to if they sound like system announcements or game-like status windows, and format them accordingly. If there are any consecutive [ square boxes ] then combine then into a single div. Be especially attentive to identifying stat blocks, status screens, system messages, skill descriptions, or any RPG-game-like information that should be formatted this way.
 11. Remove any advertising code snippets or irrelevant promotional content
+12. **Author Notes Handling:** Identify author notes, translator notes, or any meta-content not part of the story. Format them inside a styled HTML box using <div class="game-stats-box">. Insert a visible horizontal divider line using <hr class="section-divider"> before and after author notes to clearly separate them from the main story content. Summarize lengthy author notes by keeping only plot-relevant explanations (e.g., world-building clarifications, character context) while removing disclaimers, credits, update schedules, Patreon links, and other non-story content.
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
 
@@ -62,6 +63,15 @@ export const DEFAULT_SUMMARY_PROMPT = `Please generate a comprehensive summary o
 * The summary must be thorough, capturing the essential substance and depth of the chapter, rather than just a minimal outline.
 * Ensure accuracy and rely *only* on information explicitly present within the provided chapter text.
 * Maintain clarity and readability for someone needing to understand the chapter's core content.`;
+
+// Short summary prompt for quick summaries
+export const DEFAULT_SHORT_SUMMARY_PROMPT = `Please provide a concise summary of this novel chapter in 2-4 paragraphs:
+
+1. **Main Events:** What are the key events that happened in this chapter?
+2. **Character Focus:** Who are the main characters involved and what did they do?
+3. **Key Takeaways:** What is the most important information the reader should remember?
+
+Keep the summary brief but informative. Focus only on the most essential plot points and character actions.`;
 
 // Default permanent prompt
 export const DEFAULT_PERMANENT_PROMPT =

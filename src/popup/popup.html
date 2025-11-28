@@ -4,24 +4,30 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RanobeGemini</title>
-		<link rel="stylesheet" href="popup.css"/>
+		<link rel="stylesheet" href="popup.css" />
 	</head>
 	<body>
 		<div class="container">
 			<div class="header">
 				<img
-					src="src/icons/logo-light-32.png"
+					src="../icons/logo-light-32.png"
 					alt="Ranobe Gemini"
 					class="light-mode-icon"
 				/>
 				<img
-					src="src/icons/logo-dark-32.png"
+					src="../icons/logo-dark-32.png"
 					alt="Ranobe Gemini"
 					class="dark-mode-icon"
 				/>
 				<h1>Ranobe Gemini</h1>
+				<button
+					id="openLibraryPage"
+					class="btn-link"
+					title="Open Full Library"
+				>
+					📚 Full Library
+				</button>
 			</div>
-
 			<!-- Tab navigation -->
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="settings">
@@ -36,17 +42,61 @@
 			<!-- Settings Tab -->
 			<div id="settings" class="tab-content active">
 				<div class="setting">
-					<label for="apiKey">Gemini API Key:</label>
+					<label for="apiKey">Gemini API Key (Primary):</label>
 					<input
 						type="password"
 						id="apiKey"
-						placeholder="Enter your API key"
+						placeholder="Enter your primary API key"
 					/>
 					<div class="button-group">
 						<button id="saveApiKey">Save Key</button>
 						<button id="testApiKey">Test Key</button>
 					</div>
 				</div>
+
+				<!-- Backup API Keys -->
+				<details class="setting backup-keys-section">
+					<summary>
+						🔑 Backup API Keys (for rate limit handling)
+					</summary>
+					<div class="backup-keys-content">
+						<div class="backup-keys-list" id="backupKeysList">
+							<!-- Backup keys will be dynamically added here -->
+						</div>
+						<div class="add-backup-key">
+							<input
+								type="password"
+								id="newBackupKey"
+								placeholder="Enter backup API key"
+								style="flex: 1"
+							/>
+							<button id="addBackupKey" class="btn-small">
+								+ Add
+							</button>
+						</div>
+						<div
+							class="api-rotation-setting"
+							style="margin-top: 10px"
+						>
+							<label for="apiKeyRotation"
+								>Key Rotation Strategy:</label
+							>
+							<select id="apiKeyRotation">
+								<option value="failover">
+									Failover (use backups only on error)
+								</option>
+								<option value="round-robin">
+									Round Robin (rotate through all keys)
+								</option>
+							</select>
+							<div class="description">
+								Failover uses backup keys only when rate
+								limited. Round Robin distributes load across all
+								keys.
+							</div>
+						</div>
+					</div>
+				</details>
 
 				<div class="setting">
 					<label for="modelSelect">Gemini Model:</label>
@@ -73,7 +123,6 @@
 				</div>
 
 				<!-- Temperature moved to Advanced tab -->
-
 				<div class="setting">
 					<label>Processing Options:</label>
 					<div style="margin-top: 8px">
@@ -176,10 +225,18 @@
 				<div class="tab-header">
 					<h3>Novel Library</h3>
 					<div class="tab-header-actions">
-						<button id="openLibraryPage" class="btn-link" title="Open Full Library">
+						<button
+							id="openLibraryPage"
+							class="btn-link"
+							title="Open Full Library"
+						>
 							📚 Full Library
 						</button>
-						<button id="refreshNovels" class="icon-button" title="Refresh">
+						<button
+							id="refreshNovels"
+							class="icon-button"
+							title="Refresh"
+						>
 							↻
 						</button>
 					</div>
@@ -188,15 +245,21 @@
 				<!-- Library Stats -->
 				<div class="library-stats-compact" id="libraryStatsCompact">
 					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatNovels">0</span>
+						<span class="stat-mini-value" id="libStatNovels"
+							>0</span
+						>
 						<span class="stat-mini-label">Novels</span>
 					</div>
 					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatChapters">0</span>
+						<span class="stat-mini-value" id="libStatChapters"
+							>0</span
+						>
 						<span class="stat-mini-label">Enhanced</span>
 					</div>
 					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatShelves">0</span>
+						<span class="stat-mini-value" id="libStatShelves"
+							>0</span
+						>
 						<span class="stat-mini-label">Shelves</span>
 					</div>
 				</div>
@@ -233,15 +296,74 @@
 					</button>
 				</div>
 
-				<div class="setting">
-					<label for="summaryPrompt">Summary Prompt:</label>
-					<textarea
-						id="summaryPrompt"
-						placeholder="Instructions for summarization..."
-					></textarea>
-					<button id="resetSummaryPrompt" style="margin-top: 5px">
-						Reset to Default
-					</button>
+				<div class="setting summary-prompts-section">
+					<h4 style="margin-bottom: 12px; color: #495057">
+						📝 Summary Prompts
+					</h4>
+					<p
+						style="
+							font-size: 12px;
+							color: #6c757d;
+							margin-bottom: 15px;
+						"
+					>
+						These are separate prompts used for different summary
+						types. Long summary is for detailed chapter analysis,
+						short summary is for quick overviews.
+					</p>
+
+					<div
+						class="summary-prompt-box"
+						style="
+							background: #f8f9fa;
+							padding: 15px;
+							border-radius: 8px;
+							margin-bottom: 15px;
+							border-left: 4px solid #28a745;
+						"
+					>
+						<label
+							for="summaryPrompt"
+							style="color: #28a745; font-weight: 600"
+							>📖 Long Summary Prompt (Detailed Analysis):</label
+						>
+						<textarea
+							id="summaryPrompt"
+							placeholder="Instructions for detailed summarization..."
+							style="margin-top: 8px"
+						></textarea>
+						<button id="resetSummaryPrompt" style="margin-top: 5px">
+							Reset to Default
+						</button>
+					</div>
+
+					<div
+						class="summary-prompt-box"
+						style="
+							background: #f8f9fa;
+							padding: 15px;
+							border-radius: 8px;
+							border-left: 4px solid #17a2b8;
+						"
+					>
+						<label
+							for="shortSummaryPrompt"
+							style="color: #17a2b8; font-weight: 600"
+							>⚡ Short Summary Prompt (Quick Overview):</label
+						>
+						<textarea
+							id="shortSummaryPrompt"
+							placeholder="Instructions for brief summarization..."
+							rows="4"
+							style="margin-top: 8px"
+						></textarea>
+						<button
+							id="resetShortSummaryPrompt"
+							style="margin-top: 5px"
+						>
+							Reset to Default
+						</button>
+					</div>
 				</div>
 
 				<div class="setting">
@@ -295,6 +417,36 @@
 					</button>
 				</div>
 
+				<!-- Full Prompt Preview Section -->
+				<details class="setting prompt-preview-section">
+					<summary>👁️ Preview Full Prompt (sent to model)</summary>
+					<div class="prompt-preview-content">
+						<div class="prompt-preview-header">
+							<span
+								>This is the complete prompt that will be sent
+								to the AI model:</span
+							>
+							<button
+								id="copyFullPrompt"
+								class="btn-small"
+								title="Copy to clipboard"
+							>
+								📋 Copy
+							</button>
+						</div>
+						<pre id="fullPromptPreview" class="full-prompt-preview">
+Click to generate preview...</pre
+						>
+						<button
+							id="refreshPromptPreview"
+							class="btn-secondary"
+							style="margin-top: 8px"
+						>
+							🔄 Refresh Preview
+						</button>
+					</div>
+				</details>
+
 				<div class="actions">
 					<button
 						id="resetAllPrompts"
@@ -313,6 +465,115 @@
 
 			<!-- Advanced Tab -->
 			<div id="advanced" class="tab-content">
+				<!-- Chunking Threshold Settings -->
+				<div class="setting">
+					<h4 style="margin-bottom: 10px">📊 Content Chunking</h4>
+					<div
+						class="chunking-info"
+						style="
+							background: #e8f4fd;
+							padding: 10px;
+							border-radius: 6px;
+							margin-bottom: 12px;
+							font-size: 12px;
+							color: #1a73e8;
+							border-left: 3px solid #1a73e8;
+						"
+					>
+						<strong>How it works:</strong> If content exceeds the
+						<em>threshold</em>, it gets divided into smaller
+						<em>chunks</em> for processing. Each chunk is processed
+						separately and results are combined.
+					</div>
+					<div class="slider-block">
+						<label for="chunkThresholdSlider">
+							⚡ Split Trigger (min chars to split)
+							<span class="slider-value" id="chunkThresholdValue"
+								>20000</span
+							>
+						</label>
+						<input
+							type="range"
+							min="5000"
+							max="50000"
+							step="1000"
+							value="20000"
+							class="slider"
+							id="chunkThresholdSlider"
+						/>
+						<div class="description">
+							Content shorter than this is processed as one piece.
+							Longer content gets split.
+						</div>
+					</div>
+
+					<div class="slider-block">
+						<label for="chunkSizeSlider">
+							📦 Chunk Size (chars per piece)
+							<span class="slider-value" id="chunkSizeValue"
+								>12000</span
+							>
+						</label>
+						<input
+							type="range"
+							min="5000"
+							max="30000"
+							step="1000"
+							value="12000"
+							class="slider"
+							id="chunkSizeSlider"
+						/>
+						<div class="description">
+							When splitting, each chunk will be this size.
+							Smaller = more API calls but safer.
+						</div>
+					</div>
+					<div
+						id="chunkingWarning"
+						class="chunking-warning"
+						style="
+							display: none;
+							background: #fff3cd;
+							padding: 8px 10px;
+							border-radius: 6px;
+							font-size: 11px;
+							color: #856404;
+							margin-top: 8px;
+							border-left: 3px solid #ffc107;
+						"
+					>
+						⚠️ Chunk size should be smaller than split trigger for
+						chunking to work properly.
+					</div>
+				</div>
+
+				<!-- Font Size Settings -->
+				<div class="setting">
+					<h4 style="margin-bottom: 10px">🔤 Font Size Settings</h4>
+					<div class="slider-block">
+						<label for="fontSizeSlider">
+							Enhanced Content Font Size
+							<span class="slider-value" id="fontSizeValue"
+								>100%</span
+							>
+						</label>
+						<input
+							type="range"
+							min="80"
+							max="150"
+							step="5"
+							value="100"
+							class="slider"
+							id="fontSizeSlider"
+						/>
+						<div class="description">
+							Adjusts font size of enhanced content (100% =
+							default)
+						</div>
+					</div>
+				</div>
+
+				<!-- Advanced Model Parameters -->
 				<div class="setting">
 					<div class="slider-block">
 						<label for="temperatureSlider">
@@ -438,15 +699,16 @@
 				<div class="about-section">
 					<h4>✨ Overview</h4>
 					<p>
-						Ranobe Gemini is a powerful browser extension that leverages Google's
-						Gemini AI to enhance web novel reading experiences. It improves
-						machine-translated content, making it more readable and natural while
+						Ranobe Gemini is a powerful browser extension that
+						leverages Google's Gemini AI to enhance web novel
+						reading experiences. It improves machine-translated
+						content, making it more readable and natural while
 						preserving the original story and author's intent.
 					</p>
 					<p>
-						The extension seamlessly integrates with supported novel websites,
-						providing instant enhancement, summarization, and intelligent content
-						caching for offline access.
+						The extension seamlessly integrates with supported novel
+						websites, providing instant enhancement, summarization,
+						and intelligent content caching for offline access.
 					</p>
 				</div>
 
@@ -454,36 +716,43 @@
 					<h4>🚀 Key Features</h4>
 					<ul class="feature-list">
 						<li>
-							<strong>Smart Enhancement:</strong> Improves grammar, flow, and
-							readability while preserving character voices and story elements
+							<strong>Smart Enhancement:</strong> Improves
+							grammar, flow, and readability while preserving
+							character voices and story elements
 						</li>
 						<li>
-							<strong>Content Caching:</strong> Automatically caches enhanced
-							chapters for 7 days with regenerate and delete options
+							<strong>Content Caching:</strong> Automatically
+							caches enhanced chapters for 7 days with regenerate
+							and delete options
 						</li>
 						<li>
-							<strong>Chapter Summarization:</strong> Generate concise summaries
-							focusing on key plot points and character development
+							<strong>Chapter Summarization:</strong> Generate
+							concise summaries focusing on key plot points and
+							character development
 						</li>
 						<li>
-							<strong>Multi-Site Support:</strong> Works with Ranobes.net,
-							FanFiction.net, and Archive of Our Own (AO3)
+							<strong>Multi-Site Support:</strong> Works with
+							Ranobes.net, FanFiction.net, and Archive of Our Own
+							(AO3)
 						</li>
 						<li>
-							<strong>Customizable Prompts:</strong> Fine-tune enhancement and
-							summarization behavior with custom prompts
+							<strong>Customizable Prompts:</strong> Fine-tune
+							enhancement and summarization behavior with custom
+							prompts
 						</li>
 						<li>
-							<strong>Advanced AI Parameters:</strong> Control temperature,
-							top-P, top-K, and output length for precise results
+							<strong>Advanced AI Parameters:</strong> Control
+							temperature, top-P, top-K, and output length for
+							precise results
 						</li>
 						<li>
-							<strong>Large Chapter Handling:</strong> Automatically splits
-							and processes lengthy chapters to avoid token limits
+							<strong>Large Chapter Handling:</strong>
+							Automatically splits and processes lengthy chapters
+							to avoid token limits
 						</li>
 						<li>
-							<strong>Multiple Models:</strong> Choose from Gemini 2.0 Flash,
-							2.5 Flash, or 2.5 Pro based on your needs
+							<strong>Multiple Models:</strong> Choose from Gemini
+							2.0 Flash, 2.5 Flash, or 2.5 Pro based on your needs
 						</li>
 					</ul>
 				</div>
@@ -494,13 +763,25 @@
 						<li>
 							<a href="#" id="getKeyLink" class="inline-link">
 								Get a free Gemini API key
-							</a> from Google AI Studio
+							</a>
+							from Google AI Studio
 						</li>
-						<li>Enter your API key in the <strong>Settings</strong> tab</li>
+						<li>
+							Enter your API key in the
+							<strong>Settings</strong> tab
+						</li>
 						<li>Navigate to any chapter on a supported website</li>
-						<li>Click <strong>✨ Enhance with Gemini</strong> to improve the text</li>
-						<li>Use <strong>📝 Summarize Chapter</strong> for quick summaries</li>
-						<li>Toggle between original and enhanced content anytime</li>
+						<li>
+							Click <strong>✨ Enhance with Gemini</strong> to
+							improve the text
+						</li>
+						<li>
+							Use <strong>📝 Summarize Chapter</strong> for quick
+							summaries
+						</li>
+						<li>
+							Toggle between original and enhanced content anytime
+						</li>
 					</ol>
 				</div>
 
@@ -515,14 +796,22 @@
 
 				<div class="about-section">
 					<h4>🔒 Privacy & Security</h4>
-					<p>
-						Your privacy is our priority. Ranobe Gemini:
-					</p>
+					<p>Your privacy is our priority. Ranobe Gemini:</p>
 					<ul>
-						<li>Only sends chapter content to Google's Gemini API for processing</li>
-						<li>Stores API keys and settings locally in your browser</li>
-						<li>Never collects usage data or personal information</li>
-						<li>Operates entirely client-side with no external servers</li>
+						<li>
+							Only sends chapter content to Google's Gemini API
+							for processing
+						</li>
+						<li>
+							Stores API keys and settings locally in your browser
+						</li>
+						<li>
+							Never collects usage data or personal information
+						</li>
+						<li>
+							Operates entirely client-side with no external
+							servers
+						</li>
 					</ul>
 				</div>
 
@@ -530,16 +819,24 @@
 					<h4>📝 License</h4>
 					<p>
 						Ranobe Gemini is open-source software licensed under the
-						<strong>Apache License 2.0</strong>. You are free to use, modify,
-						and distribute this software under the terms of the license.
+						<strong>Apache License 2.0</strong>. You are free to
+						use, modify, and distribute this software under the
+						terms of the license.
 					</p>
 					<p class="license-links">
-						<a href="https://github.com/Life-Experimentalist/RanobeGemini"
-						   target="_blank" class="inline-link">
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini"
+							target="_blank"
+							class="inline-link"
+						>
 							📂 View Source Code
-						</a> •
-						<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/LICENSE.md"
-						   target="_blank" class="inline-link">
+						</a>
+						•
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/LICENSE.md"
+							target="_blank"
+							class="inline-link"
+						>
 							📄 Full License Text
 						</a>
 					</p>
@@ -547,20 +844,27 @@
 
 				<div class="about-section">
 					<h4>💬 Support & Community</h4>
-					<p>
-						Need help or want to contribute?
-					</p>
+					<p>Need help or want to contribute?</p>
 					<div class="support-links">
-						<a href="https://github.com/Life-Experimentalist/RanobeGemini/issues"
-						   target="_blank" class="support-button">
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini/issues"
+							target="_blank"
+							class="support-button"
+						>
 							🐛 Report Issues
 						</a>
-						<a href="https://github.com/Life-Experimentalist/RanobeGemini/discussions"
-						   target="_blank" class="support-button">
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini/discussions"
+							target="_blank"
+							class="support-button"
+						>
 							💭 Discussions
 						</a>
-						<a href="https://github.com/Life-Experimentalist/RanobeGemini"
-						   target="_blank" class="support-button">
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini"
+							target="_blank"
+							class="support-button"
+						>
 							⭐ Star on GitHub
 						</a>
 					</div>
@@ -569,30 +873,44 @@
 				<div class="about-section credits">
 					<p>
 						Developed with ❤️ by
-						<a href="https://github.com/Life-Experimentalist"
-						   target="_blank" class="inline-link">
+						<a
+							href="https://github.com/Life-Experimentalist"
+							target="_blank"
+							class="inline-link"
+						>
 							Life-Experimentalist
 						</a>
 					</p>
 					<p>
 						Powered by
-						<a href="https://ai.google.dev/" target="_blank" class="inline-link">
+						<a
+							href="https://ai.google.dev/"
+							target="_blank"
+							class="inline-link"
+						>
 							Google Gemini API
 						</a>
 					</p>
 				</div>
 
 				<!-- Divider -->
-				<hr style="margin: 40px 0; border: none; border-top: 2px solid #e9ecef;" />
+				<hr
+					style="
+						margin: 40px 0;
+						border: none;
+						border-top: 2px solid #e9ecef;
+					"
+				/>
 
 				<h3>❓ Frequently Asked Questions</h3>
 
 				<div class="faq-item">
 					<div class="faq-question">💡 What is Ranobe Gemini?</div>
 					<div class="faq-answer">
-						Ranobe Gemini is a browser extension that uses Google's Gemini AI
-						to enhance machine-translated web novels, improving readability,
-						grammar, and flow while maintaining the original story integrity.
+						Ranobe Gemini is a browser extension that uses Google's
+						Gemini AI to enhance machine-translated web novels,
+						improving readability, grammar, and flow while
+						maintaining the original story integrity.
 					</div>
 				</div>
 
@@ -600,75 +918,120 @@
 					<div class="faq-question">🔑 Do I need an API key?</div>
 					<div class="faq-answer">
 						Yes, you need a free Gemini API key from
-						<a href="#" id="faqGetKeyLink" class="inline-link">Google AI Studio</a>.
-						The free tier is generous and suitable for most users.
+						<a href="#" id="faqGetKeyLink" class="inline-link"
+							>Google AI Studio</a
+						>. The free tier is generous and suitable for most
+						users.
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">🌐 Which websites are supported?</div>
+					<div class="faq-question">
+						🌐 Which websites are supported?
+					</div>
 					<div class="faq-answer">
 						Currently supports:
 						<ul>
-							<li><strong>Ranobes.net</strong> (ranobes.net, ranobes.com, ranobes.top)</li>
-							<li><strong>FanFiction.net</strong> (fanfiction.net, m.fanfiction.net)</li>
-							<li><strong>Archive of Our Own</strong> (archiveofourown.org, ao3.org)</li>
+							<li>
+								<strong>Ranobes.net</strong> (ranobes.net,
+								ranobes.com, ranobes.top)
+							</li>
+							<li>
+								<strong>FanFiction.net</strong> (fanfiction.net,
+								m.fanfiction.net)
+							</li>
+							<li>
+								<strong>Archive of Our Own</strong>
+								(archiveofourown.org, ao3.org)
+							</li>
 						</ul>
 						More sites may be added based on user requests.
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">💾 How does content caching work?</div>
+					<div class="faq-question">
+						💾 How does content caching work?
+					</div>
 					<div class="faq-answer">
-						Enhanced chapters are automatically cached for 7 days. When you revisit
-						a chapter, the cached version loads instantly. You can regenerate fresh
-						content or delete the cache using the buttons in the enhanced banner.
+						Enhanced chapters are automatically cached for 7 days.
+						When you revisit a chapter, the cached version loads
+						instantly. You can regenerate fresh content or delete
+						the cache using the buttons in the enhanced banner.
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">⚙️ Which Gemini model should I use?</div>
+					<div class="faq-question">
+						⚙️ Which Gemini model should I use?
+					</div>
 					<div class="faq-answer">
 						<ul>
-							<li><strong>Gemini 2.0 Flash:</strong> Recommended for most users -
-							balanced speed and quality</li>
-							<li><strong>Gemini 2.5 Flash:</strong> Faster processing, good for
-							quick reads</li>
-							<li><strong>Gemini 2.5 Pro:</strong> Best quality, larger context
-							window, slower processing</li>
+							<li>
+								<strong>Gemini 2.0 Flash:</strong> Recommended
+								for most users - balanced speed and quality
+							</li>
+							<li>
+								<strong>Gemini 2.5 Flash:</strong> Faster
+								processing, good for quick reads
+							</li>
+							<li>
+								<strong>Gemini 2.5 Pro:</strong> Best quality,
+								larger context window, slower processing
+							</li>
 						</ul>
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">🎨 What do the advanced parameters do?</div>
+					<div class="faq-question">
+						🎨 What do the advanced parameters do?
+					</div>
 					<div class="faq-answer">
 						<ul>
-							<li><strong>Temperature (0.0-1.0):</strong> Controls creativity.
-							Lower = consistent, Higher = creative</li>
-							<li><strong>Top-P (0.0-1.0):</strong> Nucleus sampling - limits
-							token diversity</li>
-							<li><strong>Top-K (1-40):</strong> Maximum tokens considered per
-							step</li>
-							<li><strong>Max Output (1024-8192):</strong> Maximum response length
-							in tokens</li>
+							<li>
+								<strong>Temperature (0.0-1.0):</strong> Controls
+								creativity. Lower = consistent, Higher =
+								creative
+							</li>
+							<li>
+								<strong>Top-P (0.0-1.0):</strong> Nucleus
+								sampling - limits token diversity
+							</li>
+							<li>
+								<strong>Top-K (1-40):</strong> Maximum tokens
+								considered per step
+							</li>
+							<li>
+								<strong>Max Output (1024-8192):</strong> Maximum
+								response length in tokens
+							</li>
 						</ul>
 						Use defaults unless you understand these parameters.
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">🔧 What if enhancement fails?</div>
+					<div class="faq-question">
+						🔧 What if enhancement fails?
+					</div>
 					<div class="faq-answer">
 						Try these solutions:
 						<ol>
 							<li>Verify your API key in Settings → Test Key</li>
 							<li>Check you're on a supported website</li>
-							<li>Enable "Split large chapters automatically" for long content</li>
+							<li>
+								Enable "Split large chapters automatically" for
+								long content
+							</li>
 							<li>Try a different Gemini model</li>
-							<li>Lower temperature to 0.3 for more reliable output</li>
-							<li>Check browser console (F12) for detailed errors</li>
+							<li>
+								Lower temperature to 0.3 for more reliable
+								output
+							</li>
+							<li>
+								Check browser console (F12) for detailed errors
+							</li>
 							<li>Report persistent issues on GitHub</li>
 						</ol>
 					</div>
@@ -677,28 +1040,45 @@
 				<div class="faq-item">
 					<div class="faq-question">📋 What are Custom Prompts?</div>
 					<div class="faq-answer">
-						Custom prompts let you control how Gemini processes content:
+						Custom prompts let you control how Gemini processes
+						content:
 						<ul>
-							<li><strong>Enhancement Prompt:</strong> Instructions for improving
-							translation quality</li>
-							<li><strong>Summarization Prompt:</strong> Instructions for creating
-							chapter summaries</li>
-							<li><strong>Permanent Prompt:</strong> Global instructions added to
-							all requests</li>
+							<li>
+								<strong>Enhancement Prompt:</strong>
+								Instructions for improving translation quality
+							</li>
+							<li>
+								<strong>Summarization Prompt:</strong>
+								Instructions for creating chapter summaries
+							</li>
+							<li>
+								<strong>Permanent Prompt:</strong> Global
+								instructions added to all requests
+							</li>
 						</ul>
 						Reset to defaults if you're unsure about changes.
 					</div>
 				</div>
 
 				<div class="faq-item">
-					<div class="faq-question">🔄 How do I toggle between original and enhanced?</div>
+					<div class="faq-question">
+						🔄 How do I toggle between original and enhanced?
+					</div>
 					<div class="faq-answer">
 						After enhancement, a banner appears at the top with:
 						<ul>
-							<li><strong>Show Original</strong> button - switches to original text</li>
-							<li><strong>Show Enhanced</strong> button - returns to enhanced version</li>
-							<li><strong>🗑️ Delete</strong> button - removes cached content (for
-							cached chapters)</li>
+							<li>
+								<strong>Show Original</strong> button - switches
+								to original text
+							</li>
+							<li>
+								<strong>Show Enhanced</strong> button - returns
+								to enhanced version
+							</li>
+							<li>
+								<strong>🗑️ Delete</strong> button - removes
+								cached content (for cached chapters)
+							</li>
 						</ul>
 					</div>
 				</div>
@@ -706,9 +1086,11 @@
 				<div class="faq-item">
 					<div class="faq-question">💰 Is this free to use?</div>
 					<div class="faq-answer">
-						Yes! The extension is free and open-source. You only need a free Gemini
-						API key from Google. The free tier includes generous usage limits suitable
-						for regular novel reading. Check Google AI Studio for current rate limits.
+						Yes! The extension is free and open-source. You only
+						need a free Gemini API key from Google. The free tier
+						includes generous usage limits suitable for regular
+						novel reading. Check Google AI Studio for current rate
+						limits.
 					</div>
 				</div>
 			</div>

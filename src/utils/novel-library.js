@@ -252,6 +252,34 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Update a novel's custom prompt
+	 * @param {string} novelId - Library novel ID
+	 * @param {string} customPrompt - Custom prompt for enhancement
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async updateNovelCustomPrompt(novelId, customPrompt) {
+		try {
+			const library = await this.getLibrary();
+			if (!library.novels[novelId]) {
+				console.error(`Novel not found: ${novelId}`);
+				return false;
+			}
+
+			library.novels[novelId].customPrompt = customPrompt;
+			library.novels[novelId].lastAccessedAt = Date.now();
+
+			await this.saveLibrary(library);
+			console.log(
+				`📝 Updated custom prompt for: ${library.novels[novelId].title}`
+			);
+			return true;
+		} catch (error) {
+			console.error("Error updating novel custom prompt:", error);
+			return false;
+		}
+	}
+
+	/**
 	 * Get a novel by URL
 	 * @param {string} url - Chapter or novel URL
 	 * @returns {Promise<Object|null>} Novel data or null
@@ -482,6 +510,7 @@ export class NovelLibrary {
 			genres: context.genres || [],
 			tags: context.tags || [],
 			metadata: context.metadata || {},
+			customPrompt: "", // Novel-specific custom prompt for enhancement
 		};
 	}
 

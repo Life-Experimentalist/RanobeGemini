@@ -298,7 +298,8 @@ html[data-darkreader-mode] .dark-mode-icon {
 }
 
 /* Style for the summary display area - with proper theming */
-#summary-display {
+#summary-display-long,
+#summary-display-short {
 	/* Base styling */
 	border-radius: 4px;
 	padding: 15px;
@@ -317,7 +318,8 @@ html[data-darkreader-mode] .dark-mode-icon {
 
 /* Dark mode styling - applied based on various site-specific dark mode classes */
 @media (prefers-color-scheme: dark) {
-	#summary-display {
+	#summary-display-long,
+	#summary-display-short {
 		background-color: #2b2b2b;
 		color: #bab9a0;
 		border-color: #444;
@@ -325,24 +327,31 @@ html[data-darkreader-mode] .dark-mode-icon {
 }
 
 /* Additional dark mode selectors to ensure compatibility with various sites */
-body.dark-theme #summary-display,
-.reading_fullwidth #summary-display,
-[data-theme="dark"] #summary-display,
-.dark-mode #summary-display,
-html[data-darkreader-mode] #summary-display {
+body.dark-theme #summary-display-long,
+.reading_fullwidth #summary-display-long,
+[data-theme="dark"] #summary-display-long,
+.dark-mode #summary-display-long,
+html[data-darkreader-mode] #summary-display-long,
+body.dark-theme #summary-display-short,
+.reading_fullwidth #summary-display-short,
+[data-theme="dark"] #summary-display-short,
+.dark-mode #summary-display-short,
+html[data-darkreader-mode] #summary-display-short {
 	background-color: #2b2b2b;
 	color: #bab9a0;
 	border-color: #444;
 }
 
 /* Dark Reader specific override */
-html[data-darkreader-mode] #summary-display {
+html[data-darkreader-mode] #summary-display-long,
+html[data-darkreader-mode] #summary-display-short {
 	background-color: var(--darkreader-neutral-background, #2b2b2b) !important;
 	color: var(--darkreader-neutral-text, #bab9a0) !important;
 	border-color: var(--darkreader-neutral-border, #444) !important;
 }
 
-#summary-display h3 {
+#summary-display-long h3,
+#summary-display-short h3 {
 	margin-top: 0;
 	margin-bottom: 10px;
 	font-size: 16px;
@@ -352,20 +361,27 @@ html[data-darkreader-mode] #summary-display {
 
 /* Summary heading dark mode */
 @media (prefers-color-scheme: dark) {
-	#summary-display h3 {
+	#summary-display-long h3,
+	#summary-display-short h3 {
 		color: #8ab4f8;
 	}
 }
 
-body.dark-theme #summary-display h3,
-.reading_fullwidth #summary-display h3,
-[data-theme="dark"] #summary-display h3,
-.dark-mode #summary-display h3,
-html[data-darkreader-mode] #summary-display h3 {
+body.dark-theme #summary-display-long h3,
+.reading_fullwidth #summary-display-long h3,
+[data-theme="dark"] #summary-display-long h3,
+.dark-mode #summary-display-long h3,
+html[data-darkreader-mode] #summary-display-long h3,
+body.dark-theme #summary-display-short h3,
+.reading_fullwidth #summary-display-short h3,
+[data-theme="dark"] #summary-display-short h3,
+.dark-mode #summary-display-short h3,
+html[data-darkreader-mode] #summary-display-short h3 {
 	color: #8ab4f8;
 }
 
-#summary-display p {
+#summary-display-long p,
+#summary-display-short p {
 	margin-bottom: 0.8em;
 }
 
@@ -693,6 +709,34 @@ html[data-darkreader-mode] .game-stats-box {
 		color: #1a73e8;
 	}
 }
+
+/* Section divider for separating author notes and other meta-content from story */
+.section-divider,
+hr.section-divider {
+	border: none;
+	height: 2px;
+	background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.5), transparent);
+	margin: 30px auto;
+	width: 80%;
+	max-width: 500px;
+}
+
+/* Dark mode variant for section divider */
+body.dark-theme .section-divider,
+.reading_fullwidth .section-divider,
+[data-theme="dark"] .section-divider,
+.dark-mode .section-divider,
+html[data-darkreader-mode] .section-divider {
+	background: linear-gradient(90deg, transparent, rgba(180, 180, 180, 0.4), transparent);
+}
+
+@media (prefers-color-scheme: light) {
+	.section-divider,
+	hr.section-divider {
+		background: linear-gradient(90deg, transparent, rgba(100, 100, 100, 0.3), transparent);
+	}
+}
+
 /* Mobile and responsive design adjustments */
 @media screen and (max-width: 768px) {
 

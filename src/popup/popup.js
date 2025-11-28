@@ -1,69 +1,13 @@
 // Simple popup script for Ranobe Gemini
 
-import { DEFAULT_CHUNK_SIZE } from "../utils/constants.js";
+import {
+	DEFAULT_CHUNK_SIZE,
+	DEFAULT_PROMPT,
+	DEFAULT_SUMMARY_PROMPT,
+	DEFAULT_SHORT_SUMMARY_PROMPT,
+	DEFAULT_PERMANENT_PROMPT,
+} from "../utils/constants.js";
 import { novelLibrary, SHELVES } from "../utils/novel-library.js";
-
-// Define default prompt in case constants can't be loaded
-const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the following improvements:
-
-1. Fix grammatical errors, punctuation mistakes, and spelling issues
-2. Improve the narrative flow and overall readability
-3. Ensure consistent character voice, tone, and gender pronouns throughout
-4. Make dialogue sound more natural and conversational
-5. Refine descriptions to be more vivid and engaging
-6. Maintain the original plot points, character development, and story elements exactly
-7. Streamline overly verbose sections while preserving important details
-8. Ensure proper transitioning between scenes and ideas
-9. Add bold section headings at scene changes, POV shifts, or topic transitions. If the original text already has section headings, incorporate them seamlessly and consistently. Make sure that the section headings are not too long, and do not use any special characters or symbols in the headings. Use only standard English letters and numbers.
-10. **IMPORTANT:** Format game-like status windows, character stats, skill lists, or RPG system information into styled HTML boxes. Use a div with class="game-stats-box" to contain the exact text. For example, a status window like:
-    Player: Mike
-    Level: 0
-    Equipment: None
-    Skills: None
-    Class: Unspecialized
-    Experience: 0
-    Overall Combat Power: 5
-
-    Should be formatted as:
-    <div class="game-stats-box">
-		Player: Mike
-    	Level: 0
-    	Equipment: None
-    	Skills: None
-    	Class: Unspecialized
-    	Experience: 0
-    	Overall Combat Power: 5
-	</div>
-    Preserve all line breaks, formatting, and exact data within these status windows. if there are any text in [ square brackets ] please pay attention to if they sound like system announcements or game-like status windows, and format them accordingly. If there are any consecutive [ square boxes ] then combine then into a single div. Be especially attentive to identifying stat blocks, status screens, system messages, skill descriptions, or any RPG-game-like information that should be formatted this way.
-11. Remove any advertising code snippets or irrelevant promotional content
-
-Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
-
-// Define default summary prompt
-const DEFAULT_SUMMARY_PROMPT = `Please generate a comprehensive summary of the provided novel chapter, ensuring the following aspects are covered:
-1.  **Major Plot Points:** Detail the main sequence of events and key developments that advance the story within this chapter.
-2.  **Character Interactions & Development:** Describe significant interactions between characters, notable character introductions, important decisions made by characters, and any expressed motivations or changes in character state.
-3.  **Key Reveals & Information:** Clearly mention any crucial information revealed, secrets uncovered, unique abilities or concepts introduced (like 'Sacred Gear'), prophecies, or significant plot twists occurring in this chapter.
-4.  **Setting & Atmosphere:** Briefly incorporate significant details about the setting(s) and any notable shifts in mood, tone, or atmosphere relevant to the chapter's events.
-5.  **Thematic Elements:** Touch upon any central themes that are prominent or introduced within this specific chapter (e.g., survival, fear, destiny, adjustment).
-6.  **Character Dynamics:** Highlight any changes in relationships or dynamics between characters, including alliances, rivalries, or emotional shifts.
-7.  **Foreshadowing & Future Implications:** Note any hints or foreshadowing of future events, character arcs, or plot developments that are introduced in this chapter.
-8.  **Conflict & Tension:** Identify any conflicts (internal or external) that arise in this chapter, including character struggles, interpersonal conflicts, or larger narrative tensions.
-9.  **Symbolism & Motifs:** Mention any recurring symbols, motifs, or imagery that are significant to the chapter's content.
-10. **Narrative Style & Tone:** Comment on the narrative style, tone, and perspective used in this chapter, including any shifts or unique stylistic choices.
-11. **Cultural References:** If applicable, include any cultural references or allusions that are relevant to the chapter's context.
-12. **Character Names & Titles:** Ensure all character names and titles are accurately represented, including any honorifics or specific titles used in the original text.
-13. **Important Objects or Artifacts:** Note any significant objects, artifacts, or items introduced in this chapter that may have relevance to the plot or character development.
-14. **Dialogue Highlights:** Include any particularly impactful or memorable lines of dialogue that encapsulate character emotions or plot points, but ensure they are not the main focus of the summary.
-
-**Overall Requirements:**
-* The summary must be thorough, capturing the essential substance and depth of the chapter, rather than just a minimal outline.
-* Ensure accuracy and rely *only* on information explicitly present within the provided chapter text.
-* Maintain clarity and readability for someone needing to understand the chapter's core content.`;
-
-// Define default permanent prompt
-const DEFAULT_PERMANENT_PROMPT =
-	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 document.addEventListener("DOMContentLoaded", async function () {
 	// DOM elements
@@ -78,6 +22,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const resetPromptBtn = document.getElementById("resetPrompt");
 	const summaryPrompt = document.getElementById("summaryPrompt"); // Get summary prompt textarea
 	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt"); // Get summary prompt reset button
+	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt"); // Get short summary prompt textarea
+	const resetShortSummaryPromptBtn = document.getElementById(
+		"resetShortSummaryPrompt"
+	); // Get short summary prompt reset button
 	const permanentPrompt = document.getElementById("permanentPrompt"); // Get permanent prompt textarea
 	const resetPermanentPromptBtn = document.getElementById(
 		"resetPermanentPrompt"
@@ -96,6 +44,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
 	const topKValue = document.getElementById("topKValue");
+	const chunkThresholdSlider = document.getElementById(
+		"chunkThresholdSlider"
+	);
+	const chunkThresholdValue = document.getElementById("chunkThresholdValue");
+	const chunkSizeSlider = document.getElementById("chunkSizeSlider");
+	const chunkSizeValueDisplay = document.getElementById("chunkSizeValue");
+	const fontSizeSlider = document.getElementById("fontSizeSlider");
+	const fontSizeValue = document.getElementById("fontSizeValue");
 	const customEndpointInput = document.getElementById("customEndpoint");
 	const saveAdvancedSettingsBtn = document.getElementById(
 		"saveAdvancedSettings"
@@ -108,6 +64,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 		"advancedParamsContent"
 	);
 
+	// Backup API Keys elements
+	const backupKeysListContainer = document.getElementById("backupKeysList");
+	const newBackupKeyInput = document.getElementById("newBackupKey");
+	const addBackupKeyBtn = document.getElementById("addBackupKey");
+	const apiKeyRotationSelect = document.getElementById("apiKeyRotation");
+
 	// Novels tab elements
 	const refreshNovelsBtn = document.getElementById("refreshNovels");
 	const novelsListContainer = document.getElementById("novelsList");
@@ -119,6 +81,81 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const libStatShelves = document.getElementById("libStatShelves");
 	const recentNovelsListContainer =
 		document.getElementById("recentNovelsList");
+
+	// Backup API Keys Management
+	let backupApiKeys = [];
+
+	function renderBackupKeys() {
+		if (!backupKeysListContainer) return;
+
+		backupKeysListContainer.innerHTML = "";
+
+		if (backupApiKeys.length === 0) {
+			backupKeysListContainer.innerHTML =
+				'<div class="description" style="padding: 8px; text-align: center;">No backup keys added yet</div>';
+			return;
+		}
+
+		backupApiKeys.forEach((key, index) => {
+			const keyItem = document.createElement("div");
+			keyItem.className = "backup-key-item";
+			const keyPreview =
+				key.substring(0, 8) + "..." + key.substring(key.length - 4);
+			keyItem.innerHTML = `
+				<span class="key-label">Key ${index + 1}</span>
+				<span class="key-preview">${keyPreview}</span>
+				<button class="remove-key-btn" data-index="${index}">✕</button>
+			`;
+			backupKeysListContainer.appendChild(keyItem);
+		});
+
+		// Add event listeners for remove buttons
+		backupKeysListContainer
+			.querySelectorAll(".remove-key-btn")
+			.forEach((btn) => {
+				btn.addEventListener("click", async (e) => {
+					const index = parseInt(e.target.dataset.index);
+					backupApiKeys.splice(index, 1);
+					await browser.storage.local.set({
+						backupApiKeys: backupApiKeys,
+					});
+					renderBackupKeys();
+					showStatus("Backup key removed", "success");
+				});
+			});
+	}
+
+	// Add backup key handler
+	if (addBackupKeyBtn && newBackupKeyInput) {
+		addBackupKeyBtn.addEventListener("click", async () => {
+			const newKey = newBackupKeyInput.value.trim();
+			if (!newKey) {
+				showStatus("Please enter a valid API key", "error");
+				return;
+			}
+
+			if (backupApiKeys.includes(newKey)) {
+				showStatus("This key is already added", "error");
+				return;
+			}
+
+			backupApiKeys.push(newKey);
+			await browser.storage.local.set({ backupApiKeys: backupApiKeys });
+			newBackupKeyInput.value = "";
+			renderBackupKeys();
+			showStatus("Backup key added successfully", "success");
+		});
+	}
+
+	// API Key Rotation handler
+	if (apiKeyRotationSelect) {
+		apiKeyRotationSelect.addEventListener("change", async () => {
+			await browser.storage.local.set({
+				apiKeyRotation: apiKeyRotationSelect.value,
+			});
+			showStatus("Key rotation strategy saved", "success");
+		});
+	}
 
 	// Initialize sliders
 	if (temperatureSlider && temperatureValue) {
@@ -136,6 +173,25 @@ document.addEventListener("DOMContentLoaded", async function () {
 	if (topKSlider && topKValue) {
 		topKSlider.addEventListener("input", () => {
 			topKValue.textContent = topKSlider.value;
+		});
+	}
+
+	// Initialize new sliders for chunk threshold, chunk size, and font size
+	if (chunkThresholdSlider && chunkThresholdValue) {
+		chunkThresholdSlider.addEventListener("input", () => {
+			chunkThresholdValue.textContent = chunkThresholdSlider.value;
+		});
+	}
+
+	if (chunkSizeSlider && chunkSizeValueDisplay) {
+		chunkSizeSlider.addEventListener("input", () => {
+			chunkSizeValueDisplay.textContent = chunkSizeSlider.value;
+		});
+	}
+
+	if (fontSizeSlider && fontSizeValue) {
+		fontSizeSlider.addEventListener("input", () => {
+			fontSizeValue.textContent = fontSizeSlider.value + "%";
 		});
 	}
 
@@ -441,7 +497,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		faqGetKeyLink.addEventListener("click", (e) => {
 			e.preventDefault();
 			browser.tabs.create({
-				url: "https://makersuite.google.com/app/apikey",
+				url: "https://aistudio.google.com/app/api-keys",
 			});
 		});
 	}
@@ -485,6 +541,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 		// Load summary prompt
 		summaryPrompt.value = data.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+
+		// Load short summary prompt
+		if (shortSummaryPrompt) {
+			shortSummaryPrompt.value =
+				data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT;
+		}
 
 		// Load permanent prompt
 		permanentPrompt.value =
@@ -549,9 +611,41 @@ document.addEventListener("DOMContentLoaded", async function () {
 			topKValue.textContent = topK;
 		}
 
+		// Set chunk threshold slider
+		if (chunkThresholdSlider && chunkThresholdValue) {
+			const threshold =
+				data.chunkThreshold !== undefined ? data.chunkThreshold : 20000;
+			chunkThresholdSlider.value = threshold;
+			chunkThresholdValue.textContent = threshold;
+		}
+
+		// Set chunk size slider in advanced tab
+		if (chunkSizeSlider && chunkSizeValueDisplay) {
+			const chunkSize =
+				data.chunkSize !== undefined ? data.chunkSize : 12000;
+			chunkSizeSlider.value = chunkSize;
+			chunkSizeValueDisplay.textContent = chunkSize;
+		}
+
+		// Set font size slider
+		if (fontSizeSlider && fontSizeValue) {
+			const fontSize = data.fontSize !== undefined ? data.fontSize : 100;
+			fontSizeSlider.value = fontSize;
+			fontSizeValue.textContent = fontSize + "%";
+		}
+
 		// Set custom endpoint
 		if (customEndpointInput) {
 			customEndpointInput.value = data.customEndpoint || "";
+		}
+
+		// Load backup API keys
+		backupApiKeys = data.backupApiKeys || [];
+		renderBackupKeys();
+
+		// Set API key rotation strategy
+		if (apiKeyRotationSelect) {
+			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
 		}
 
 		// Set initial chunk size container visibility
@@ -709,6 +803,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 				const topP = parseFloat(topPSlider.value);
 				const topK = parseInt(topKSlider.value, 10);
 				const customEndpoint = customEndpointInput.value.trim();
+				const chunkThreshold = chunkThresholdSlider
+					? parseInt(chunkThresholdSlider.value, 10)
+					: 20000;
+				const chunkSize = chunkSizeSlider
+					? parseInt(chunkSizeSlider.value, 10)
+					: 12000;
+				const fontSize = fontSizeSlider
+					? parseInt(fontSizeSlider.value, 10)
+					: 100;
 
 				await browser.storage.local.set({
 					defaultPrompt: promptTemplate.value,
@@ -717,6 +820,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topP: topP,
 					topK: topK,
 					customEndpoint: customEndpoint,
+					chunkThreshold: chunkThreshold,
+					chunkSize: chunkSize,
+					fontSize: fontSize,
 				});
 
 				showStatus("Advanced settings saved successfully!", "success");
@@ -750,6 +856,21 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topKValue.textContent = "40";
 				}
 
+				if (chunkThresholdSlider && chunkThresholdValue) {
+					chunkThresholdSlider.value = 20000;
+					chunkThresholdValue.textContent = "20000";
+				}
+
+				if (chunkSizeSlider && chunkSizeValueDisplay) {
+					chunkSizeSlider.value = 12000;
+					chunkSizeValueDisplay.textContent = "12000";
+				}
+
+				if (fontSizeSlider && fontSizeValue) {
+					fontSizeSlider.value = 100;
+					fontSizeValue.textContent = "100%";
+				}
+
 				if (customEndpointInput) {
 					customEndpointInput.value = "";
 				}
@@ -762,6 +883,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topP: 0.95,
 					topK: 40,
 					customEndpoint: "",
+					chunkThreshold: 20000,
+					chunkSize: 12000,
+					fontSize: 100,
 				});
 
 				showStatus("Advanced settings reset to defaults", "info");
@@ -787,11 +911,97 @@ document.addEventListener("DOMContentLoaded", async function () {
 		showStatus("Summary prompt reset to default", "info");
 	});
 
+	// Reset short summary prompt to default
+	if (resetShortSummaryPromptBtn) {
+		resetShortSummaryPromptBtn.addEventListener("click", () => {
+			if (shortSummaryPrompt) {
+				shortSummaryPrompt.value = DEFAULT_SHORT_SUMMARY_PROMPT;
+				showStatus("Short summary prompt reset to default", "info");
+			}
+		});
+	}
+
 	// Reset permanent prompt to default
 	resetPermanentPromptBtn.addEventListener("click", () => {
 		permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
 		showStatus("Permanent prompt reset to default", "info");
 	});
+
+	// Full Prompt Preview functionality
+	const fullPromptPreview = document.getElementById("fullPromptPreview");
+	const refreshPromptPreviewBtn = document.getElementById("refreshPromptPreview");
+	const copyFullPromptBtn = document.getElementById("copyFullPrompt");
+
+	function generateFullPromptPreview() {
+		if (!fullPromptPreview) return;
+
+		const enhancementPrompt = promptTemplate?.value || DEFAULT_PROMPT;
+		const permPrompt = permanentPrompt?.value || DEFAULT_PERMANENT_PROMPT;
+
+		// Get site-specific prompts
+		let sitePrompts = "";
+		const sitePromptsContainer = document.getElementById("siteSpecificPromptsContainer");
+		if (sitePromptsContainer) {
+			const sitePromptItems = sitePromptsContainer.querySelectorAll(".site-prompt-item");
+			sitePromptItems.forEach(item => {
+				const siteName = item.querySelector(".site-name")?.value;
+				const sitePromptContent = item.querySelector(".site-prompt-content")?.value;
+				if (siteName && sitePromptContent) {
+					sitePrompts += `\n--- ${siteName} ---\n${sitePromptContent}\n`;
+				}
+			});
+		}
+
+		// Build the full prompt preview
+		let fullPrompt = "";
+		fullPrompt += "=== SYSTEM INSTRUCTION ===\n\n";
+		fullPrompt += enhancementPrompt;
+
+		if (sitePrompts.trim()) {
+			fullPrompt += "\n\n=== SITE-SPECIFIC CONTEXT ===\n";
+			fullPrompt += sitePrompts;
+		}
+
+		if (permPrompt.trim()) {
+			fullPrompt += "\n\n=== PERMANENT INSTRUCTIONS ===\n";
+			fullPrompt += permPrompt;
+		}
+
+		fullPrompt += "\n\n=== TITLE ===\n";
+		fullPrompt += "[Chapter title from page]";
+
+		fullPrompt += "\n\n=== CONTENT TO ENHANCE ===\n";
+		fullPrompt += "[Chapter content from page]";
+
+		fullPromptPreview.textContent = fullPrompt;
+	}
+
+	if (refreshPromptPreviewBtn) {
+		refreshPromptPreviewBtn.addEventListener("click", generateFullPromptPreview);
+	}
+
+	if (copyFullPromptBtn) {
+		copyFullPromptBtn.addEventListener("click", async () => {
+			generateFullPromptPreview();
+			try {
+				await navigator.clipboard.writeText(fullPromptPreview.textContent);
+				showStatus("Full prompt copied to clipboard!", "success");
+			} catch (err) {
+				console.error("Failed to copy:", err);
+				showStatus("Failed to copy to clipboard", "error");
+			}
+		});
+	}
+
+	// Auto-generate preview when the details element is opened
+	const promptPreviewSection = document.querySelector(".prompt-preview-section");
+	if (promptPreviewSection) {
+		promptPreviewSection.addEventListener("toggle", (e) => {
+			if (e.target.open) {
+				generateFullPromptPreview();
+			}
+		});
+	}
 
 	// Enhance current page
 	enhancePageBtn.addEventListener("click", async () => {
@@ -853,7 +1063,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	getKeyLink.addEventListener("click", (e) => {
 		e.preventDefault();
 		browser.tabs.create({
-			url: "https://makersuite.google.com/app/apikey",
+			url: "https://aistudio.google.com/app/api-keys",
 		});
 	});
 
@@ -1882,7 +2092,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Modify the savePrompts function to include site-specific prompts
 	document
 		.getElementById("savePrompts")
-		.addEventListener("click", function () {
+		.addEventListener("click", async function () {
 			// Save enhancement prompt
 			const promptTemplate =
 				document.getElementById("promptTemplate").value;
@@ -1893,10 +2103,36 @@ document.addEventListener("DOMContentLoaded", async function () {
 				document.getElementById("summaryPrompt").value;
 			localStorage.setItem("geminiSummaryPrompt", summaryPrompt);
 
+			// Save short summary prompt
+			const shortSummaryPromptEl =
+				document.getElementById("shortSummaryPrompt");
+			const shortSummaryPrompt = shortSummaryPromptEl
+				? shortSummaryPromptEl.value
+				: DEFAULT_SHORT_SUMMARY_PROMPT;
+			localStorage.setItem(
+				"geminiShortSummaryPrompt",
+				shortSummaryPrompt
+			);
+
 			// Save permanent prompt
 			const permanentPrompt =
 				document.getElementById("permanentPrompt").value;
 			localStorage.setItem("permanentPrompt", permanentPrompt);
+
+			// Also save to browser.storage.local for background script access
+			try {
+				await browser.storage.local.set({
+					defaultPrompt: promptTemplate,
+					summaryPrompt: summaryPrompt,
+					shortSummaryPrompt: shortSummaryPrompt,
+					permanentPrompt: permanentPrompt,
+				});
+			} catch (error) {
+				console.error(
+					"Error saving prompts to browser storage:",
+					error
+				);
+			}
 
 			// Save site-specific prompts
 			saveSiteHandlerPrompts();
