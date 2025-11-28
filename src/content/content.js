@@ -190,6 +190,50 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	/**
+	 * Wake up background service worker with retry logic
+	 * Fixes the issue where first click fails because worker is sleeping
+	 * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
+	 * @param {number} delayMs - Delay between retries in milliseconds (default: 500)
+	 * @returns {Promise<boolean>} True if background worker is ready
+	 */
+	async function wakeUpBackgroundWorker(maxRetries = 3, delayMs = 500) {
+		for (let i = 0; i < maxRetries; i++) {
+			try {
+				const response = await browser.runtime.sendMessage({
+					action: "ping",
+				});
+				if (response && response.success) {
+					console.log(
+						`Background worker ready (attempt ${
+							i + 1
+						}/${maxRetries})`
+					);
+					isBackgroundScriptReady = true;
+					return true;
+				}
+			} catch (error) {
+				console.warn(
+					`Background wake-up attempt ${i + 1}/${maxRetries} failed:`,
+					error.message
+				);
+				if (i < maxRetries - 1) {
+					// Wait before retry (except on last attempt)
+					await new Promise((resolve) =>
+						setTimeout(resolve, delayMs)
+					);
+				}
+			}
+		}
+		console.error(
+			"Background worker failed to wake up after",
+			maxRetries,
+			"attempts"
+		);
+		isBackgroundScriptReady = false;
+		return false;
+	}
+
 	// Function to identify and protect game stats boxes
 	function preserveGameStatsBoxes(content) {
 		// Replace game stats boxes with placeholders to protect them
@@ -1260,6 +1304,12 @@ if (window.__RGInitDone) {
 			// Add or update the novel in the library
 			await novelLibrary.addOrUpdateNovel(novelData);
 
+			// Try retroactive metadata update
+			const metadata = currentHandler.extractNovelMetadata?.() || {};
+			if (metadata && Object.keys(metadata).length > 0) {
+				await novelLibrary.updateNovelMetadata(novelData.id, metadata);
+			}
+
 			// Update chapter tracking
 			await novelLibrary.updateChapter(novelData.id, {
 				chapterNumber: context.chapterNumber || 1,
@@ -1391,18 +1441,39 @@ if (window.__RGInitDone) {
 
 		// Ranobes specific extraction
 		else if (hostname.includes("ranobes")) {
-			// These would typically be on the novel page, not chapter page
-			// But we can try to extract what's available
+			// Extract novel title from breadcrumbs (second link is the novel)
+			const breadcrumbLinks =
+				document.querySelectorAll("#dle-speedbar a");
+			if (breadcrumbLinks.length >= 2) {
+				context.title = breadcrumbLinks[1].textContent.trim();
+			}
+
+			// Fallback: Extract from page title
+			if (!context.title) {
+				const titleMatch = document.title.match(
+					/(.+?)\s*[|\-]\s*Chapter/i
+				);
+				if (titleMatch) {
+					context.title = titleMatch[1].trim();
+				}
+			}
+
+			// Try to extract author if available
 			const authorEl = document.querySelector(
-				'.tag_list[itemprop="creator"]'
+				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
 			);
 			if (authorEl) {
 				context.author = authorEl.textContent.trim();
 			}
 
-			const titleEl = document.querySelector('h1.title[itemprop="name"]');
-			if (titleEl) {
-				context.title = titleEl.textContent.trim();
+			// Extract description from meta tag
+			const descriptionMeta = document.querySelector(
+				'meta[name="description"]'
+			);
+			if (descriptionMeta) {
+				context.description = descriptionMeta
+					.getAttribute("content")
+					.trim();
 			}
 		}
 
@@ -2203,13 +2274,19 @@ if (window.__RGInitDone) {
 		const originalButtonText = summarizeButton.textContent;
 
 		try {
-			if (!isBackgroundScriptReady) {
+			// Wake up background worker first
+			summarizeButton.disabled = true;
+			summarizeButton.textContent = "Waking up AI...";
+			statusDiv.textContent = "Waking up AI service...";
+
+			const isReady = await wakeUpBackgroundWorker();
+			if (!isReady) {
 				throw new Error(
-					"Background script is not ready. Please reload the page."
+					"Background service is not responding. Please try summarizing again."
 				);
 			}
 
-			summarizeButton.disabled = true;
+			// Now proceed with summarization
 			summarizeButton.textContent = "Summarizing...";
 			statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary...`;
 			if (summaryDisplay) {
@@ -2217,7 +2294,6 @@ if (window.__RGInitDone) {
 				// Do not clear the other summary display - keep long and short independent
 				summaryDisplay.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
 			}
-
 			const extractedContent = extractContent();
 			const { title, text: content } = extractedContent;
 
@@ -2600,13 +2676,20 @@ if (window.__RGInitDone) {
 		const originalButtonText = button.textContent;
 		try {
 			// Disable UI and show status
-			button.textContent = "Processing...";
+			button.textContent = "Waking up AI...";
 			button.disabled = true;
-			showStatusMessage("Processing content with Gemini AI...", "info");
+			showStatusMessage("Waking up AI service...", "info");
 
-			// Ensure background is reachable
-			const ping = await browser.runtime.sendMessage({ action: "ping" });
-			console.log("Ping result: ", ping);
+			// Wake up background worker with retry logic
+			const isReady = await wakeUpBackgroundWorker();
+			if (!isReady) {
+				throw new Error(
+					"Background service is not responding. Please try again."
+				);
+			}
+
+			button.textContent = "Processing...";
+			showStatusMessage("Processing content with Gemini AI...", "info");
 
 			// Load config values from storage to match background's chunking
 			const settings = await browser.storage.local.get([

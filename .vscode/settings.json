@@ -7,7 +7,7 @@
 		"**/Thumbs.db": true,
 		"samples/**": true
 	},
-	"explorer.excludeGitIgnore": true,
+	// "explorer.excludeGitIgnore": true,
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 }

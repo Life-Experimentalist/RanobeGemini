@@ -24,7 +24,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		name: "Ranobes",
 		icon: "📖",
 		color: "#4a7c4e",
-		novelIdPattern: /\/(?:novels\/([^\/]+)|read-(\d+)\.html)/,
+		// Pattern matches: /novel-slug-123456/chapter.html or /read-123.html
+		novelIdPattern: /\/([a-z0-9-]+-\d+)\/|^\/read-(\d+)\.html/,
 		primaryDomain: "ranobes.net",
 	};
 
@@ -296,6 +297,71 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			"Keep any special formatting like section breaks. " +
 			"Russian and Chinese names should be properly transliterated."
 		);
+	}
+
+	/**
+	 * Extract novel metadata for library storage
+	 * @returns {Object} Object containing title, author, description, coverUrl
+	 */
+	extractNovelMetadata() {
+		const metadata = {
+			title: null,
+			author: null,
+			description: null,
+			coverUrl: null,
+		};
+
+		try {
+			// Extract novel title from breadcrumbs
+			const breadcrumb = document.querySelector(
+				"#dle-speedbar a[href*='/1']"
+			);
+			if (breadcrumb) {
+				// The second link in breadcrumbs is usually the novel title
+				const breadcrumbLinks =
+					document.querySelectorAll("#dle-speedbar a");
+				if (breadcrumbLinks.length >= 2) {
+					metadata.title = breadcrumbLinks[1].textContent.trim();
+				}
+			}
+
+			// Fallback: Extract from page title
+			if (!metadata.title) {
+				const titleMatch = document.title.match(
+					/(.+?)\s*[|\-]\s*Chapter/i
+				);
+				if (titleMatch) {
+					metadata.title = titleMatch[1].trim();
+				}
+			}
+
+			// Try to extract author if available on chapter page
+			// Note: Author info is usually on the novel's main page, not chapter pages
+			const authorEl = document.querySelector(
+				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
+			);
+			if (authorEl) {
+				metadata.author = authorEl.textContent.trim();
+			}
+
+			// Try to extract description from meta tag
+			const descriptionMeta = document.querySelector(
+				'meta[name="description"]'
+			);
+			if (descriptionMeta) {
+				metadata.description = descriptionMeta
+					.getAttribute("content")
+					.trim();
+			}
+
+			// Note: Cover images are typically on the novel's main page, not chapter pages
+			// We can try to construct a URL to the novel page if needed
+		} catch (error) {
+			console.error("Ranobes: Error extracting metadata:", error);
+		}
+
+		console.log("Ranobes: Extracted metadata:", metadata);
+		return metadata;
 	}
 }
 

@@ -77,6 +77,23 @@ const elements = {
 	importBtn: document.getElementById("import-btn"),
 	importFile: document.getElementById("import-file"),
 	clearBtn: document.getElementById("clear-btn"),
+
+	// Carousel
+	carouselSection: document.getElementById("carousel-section"),
+	carouselTrack: document.getElementById("carousel-track"),
+	carouselIndicators: document.getElementById("carousel-indicators"),
+	carouselPlayPause: document.getElementById("carousel-play-pause"),
+	carouselPrev: document.getElementById("carousel-prev"),
+	carouselNext: document.getElementById("carousel-next"),
+};
+
+// Carousel State
+let carouselState = {
+	currentIndex: 0,
+	isPlaying: true,
+	interval: null,
+	itemsPerView: 5,
+	itemsToShow: 10, // Total novels in carousel (configurable)
 };
 
 /**
@@ -164,6 +181,14 @@ function setupEventListeners() {
 	elements.importFile.addEventListener("change", handleImport);
 	elements.clearBtn.addEventListener("click", handleClearLibrary);
 
+	// Carousel controls
+	elements.carouselPlayPause.addEventListener(
+		"click",
+		toggleCarouselPlayPause
+	);
+	elements.carouselPrev.addEventListener("click", () => moveCarousel(-1));
+	elements.carouselNext.addEventListener("click", () => moveCarousel(1));
+
 	// Modal backdrop clicks
 	document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
 		backdrop.addEventListener("click", (e) => {
@@ -204,6 +229,9 @@ async function loadLibrary() {
 		}
 
 		showEmptyState(false);
+
+		// Initialize carousel with recent novels
+		initCarousel(allNovels);
 
 		// Render current view
 		renderCurrentView();
@@ -302,37 +330,85 @@ function renderShelvesView(novels) {
 		novelsByShelf[novel.shelfId].push(novel);
 	}
 
-	// Render each shelf
+	// Render ALL registered shelves (including empty ones)
 	for (const [shelfId, shelfDefinition] of Object.entries(SHELVES)) {
 		const shelfNovels = novelsByShelf[shelfDefinition.id] || [];
 
-		// Skip empty shelves unless showing all
-		if (shelfNovels.length === 0) continue;
-
 		const shelfSection = document.createElement("section");
 		shelfSection.className = "shelf-section";
+		shelfSection.dataset.shelfId = shelfDefinition.id;
+
+		const showAll = shelfSection.dataset.expanded === "true";
+		const visibleNovels = showAll ? shelfNovels : shelfNovels.slice(0, 10); // 2 rows of 5
+		const hasMore = shelfNovels.length > 10;
+
 		shelfSection.innerHTML = `
 			<div class="shelf-header">
 				<h2 class="shelf-title">
-					<span class="shelf-color-bar" style="background: ${shelfDefinition.color}"></span>
+					<button class="shelf-collapse-btn" title="Collapse shelf" data-shelf-id="${
+						shelfDefinition.id
+					}">
+						<span class="collapse-icon">▼</span>
+					</button>
+					<span class="shelf-color-bar" style="background: ${
+						shelfDefinition.color
+					}"></span>
 					<span class="shelf-icon">${shelfDefinition.icon}</span>
 					${shelfDefinition.name}
 					<span class="novel-count">(${shelfNovels.length})</span>
 				</h2>
+				<a href="shelf/${
+					shelfDefinition.id
+				}.html" class="shelf-view-all-link" title="View full shelf page">
+					View All →
+				</a>
 			</div>
-			<div class="novel-grid"></div>
+			<div class="novel-grid ${!showAll && hasMore ? "limited" : ""}"></div>
+			${
+				hasMore
+					? `<button class="shelf-show-more" data-shelf-id="${
+							shelfDefinition.id
+					  }">${showAll ? "Show Less" : "Show More"}</button>`
+					: ""
+			}
 		`;
 
 		const grid = shelfSection.querySelector(".novel-grid");
-		shelfNovels.forEach((novel) => {
-			grid.appendChild(createNovelCard(novel));
-		});
+
+		if (shelfNovels.length === 0) {
+			// Show empty shelf message
+			grid.innerHTML = `
+				<div class="empty-shelf-message">
+					<span class="empty-icon">📚</span>
+					<p>No novels from ${shelfDefinition.name} yet!</p>
+					<small>Visit a chapter on <a href="https://${shelfDefinition.primaryDomain}" class="shelf-domain-link" target="_blank">${shelfDefinition.primaryDomain}</a> to add novels</small>
+				</div>
+			`;
+		} else {
+			// Render novel cards (limited or all)
+			visibleNovels.forEach((novel) => {
+				grid.appendChild(createNovelCard(novel));
+			});
+		}
+
+		// Add event listeners
+		const collapseBtn = shelfSection.querySelector(".shelf-collapse-btn");
+		collapseBtn.addEventListener("click", () =>
+			toggleShelfCollapse(shelfDefinition.id)
+		);
+
+		const showMoreBtn = shelfSection.querySelector(".shelf-show-more");
+		if (showMoreBtn) {
+			showMoreBtn.addEventListener("click", () =>
+				toggleShelfExpand(shelfDefinition.id)
+			);
+		}
 
 		elements.shelvesView.appendChild(shelfSection);
 	}
 
-	// If no shelves with novels, show empty state
-	if (elements.shelvesView.children.length === 0) {
+	// If no shelves registered at all, show empty state
+	if (Object.keys(SHELVES).length === 0) {
 		showEmptyState(true);
 	}
 }
@@ -781,6 +857,297 @@ function showEmptyState(show) {
 function openModal(modal) {
 	modal.classList.remove("hidden");
 	document.body.style.overflow = "hidden";
+}
+
+/**
+ * Initialize and populate the carousel with recent novels
+ */
+function initCarousel(novels) {
+	if (!novels || novels.length === 0) {
+		elements.carouselSection.style.display = "none";
+		return;
+	}
+
+	elements.carouselSection.style.display = "block";
+
+	// Get top N most recent novels (configurable)
+	const recentNovels = novels
+		.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
+		.slice(0, carouselState.itemsToShow);
+
+	// Duplicate novels for infinite scrolling
+	const infiniteNovels = [...recentNovels, ...recentNovels, ...recentNovels];
+
+	// Populate carousel track
+	elements.carouselTrack.innerHTML = "";
+	infiniteNovels.forEach((novel, index) => {
+		const shelf = SHELVES[novel.shelfId];
+		const item = document.createElement("div");
+		item.className = "carousel-item";
+		item.dataset.novelId = novel.id;
+		item.dataset.originalIndex = index % recentNovels.length;
+
+		item.innerHTML = `
+			<img src="${novel.coverUrl || "../icons/logo-light-48.png"}" alt="${escapeHtml(
+			novel.title
+		)}"
+				 onerror="this.src='../icons/logo-light-48.png'">
+			<div class="carousel-item-info">
+				<div class="carousel-item-website">
+					<span class="website-badge" style="background: ${shelf?.color || "#666"}">${
+			shelf?.icon || "📚"
+		} ${shelf?.name || "Unknown"}</span>
+				</div>
+				<h3 class="carousel-item-title">${escapeHtml(novel.title)}</h3>
+				<p class="carousel-item-author">by ${escapeHtml(novel.author || "Unknown")}</p>
+				<div class="carousel-item-meta">
+					<span>📚 ${novel.enhancedChaptersCount || 0} chapters</span>
+					<span>📅 ${formatRelativeTime(novel.lastAccessedAt)}</span>
+				</div>
+			</div>
+			<div class="carousel-item-hover-details">
+				<div class="hover-details-content">
+					<h4>${escapeHtml(novel.title)}</h4>
+					<p class="hover-author">by ${escapeHtml(novel.author || "Unknown")}</p>
+					<p class="hover-description">${escapeHtml(
+						novel.description || "No description available"
+					)}</p>
+					<div class="hover-stats">
+						<span>📖 ${novel.totalChapters || "?"} chapters</span>
+						<span>✨ ${novel.enhancedChaptersCount || 0} enhanced</span>
+					</div>
+					<div class="hover-actions">
+						<button class="hover-btn hover-continue" data-novel-id="${
+							novel.id
+						}">Continue Reading</button>
+						<button class="hover-btn hover-details" data-novel-id="${
+							novel.id
+						}">Full Details</button>
+					</div>
+				</div>
+			</div>
+		`;
+
+		// Click handler to open modal
+		item.addEventListener("click", (e) => {
+			if (!e.target.closest(".hover-btn")) {
+				openNovelModal(novel);
+			}
+		});
+
+		// Hover button handlers
+		const continueBtn = item.querySelector(".hover-continue");
+		const detailsBtn = item.querySelector(".hover-details");
+
+		if (continueBtn) {
+			continueBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				if (novel.lastReadUrl) {
+					window.open(novel.lastReadUrl, "_blank");
+				}
+			});
+		}
+
+		if (detailsBtn) {
+			detailsBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				openNovelModal(novel);
+			});
+		}
+
+		elements.carouselTrack.appendChild(item);
+	});
+
+	// Start at the middle set for infinite scrolling
+	carouselState.currentIndex = recentNovels.length;
+	updateCarouselPosition(false);
+
+	// Populate indicators (only for actual novels, not duplicates)
+	elements.carouselIndicators.innerHTML = "";
+	for (let i = 0; i < recentNovels.length; i++) {
+		const indicator = document.createElement("div");
+		indicator.className = "carousel-indicator" + (i === 0 ? " active" : "");
+		indicator.addEventListener("click", () => goToCarouselPage(i));
+		elements.carouselIndicators.appendChild(indicator);
+	}
+
+	// Start auto-scrolling
+	startCarousel();
+}
+
+/**
+ * Start carousel auto-scrolling
+ */
+function startCarousel() {
+	if (carouselState.interval) clearInterval(carouselState.interval);
+
+	carouselState.isPlaying = true;
+	elements.carouselPlayPause.textContent = "⏸️";
+	elements.carouselPlayPause.title = "Pause auto-scroll";
+
+	carouselState.interval = setInterval(() => {
+		moveCarousel(1);
+	}, 3000); // Auto-scroll every 3 seconds
+}
+
+/**
+ * Stop carousel auto-scrolling
+ */
+function stopCarousel() {
+	if (carouselState.interval) {
+		clearInterval(carouselState.interval);
+		carouselState.interval = null;
+	}
+
+	carouselState.isPlaying = false;
+	elements.carouselPlayPause.textContent = "▶️";
+	elements.carouselPlayPause.title = "Play auto-scroll";
+}
+
+/**
+ * Toggle carousel play/pause
+ */
+function toggleCarouselPlayPause() {
+	if (carouselState.isPlaying) {
+		stopCarousel();
+	} else {
+		startCarousel();
+	}
+}
+
+/**
+ * Move carousel by direction (-1 or 1)
+ */
+function moveCarousel(direction) {
+	const items = elements.carouselTrack.children;
+	if (items.length === 0) return;
+
+	const totalNovels = carouselState.itemsToShow;
+
+	carouselState.currentIndex += direction;
+
+	// Infinite scrolling logic
+	if (carouselState.currentIndex >= totalNovels * 2) {
+		// Jumped to end, reset to middle without animation
+		carouselState.currentIndex = totalNovels;
+		updateCarouselPosition(false);
+		setTimeout(() => {
+			carouselState.currentIndex += direction;
+			updateCarouselPosition(true);
+		}, 50);
+	} else if (carouselState.currentIndex < totalNovels) {
+		// Jumped to beginning, reset to middle without animation
+		carouselState.currentIndex = totalNovels * 2 - 1;
+		updateCarouselPosition(false);
+		setTimeout(() => {
+			carouselState.currentIndex += direction;
+			updateCarouselPosition(true);
+		}, 50);
+	} else {
+		updateCarouselPosition(true);
+	}
+
+	// Update indicators to show actual position
+	updateCarouselIndicators();
+}
+
+/**
+ * Go to specific carousel page
+ */
+function goToCarouselPage(index) {
+	const items = elements.carouselTrack.children;
+	if (items.length === 0) return;
+
+	const totalNovels = carouselState.itemsToShow;
+	// Jump to middle set + requested index
+	carouselState.currentIndex = totalNovels + index;
+
+	updateCarouselPosition(true);
+	updateCarouselIndicators();
+}
+
+/**
+ * Update carousel visual position
+ */
+function updateCarouselPosition(animate = true) {
+	const track = elements.carouselTrack;
+	if (!track.children[0]) return;
+
+	const itemWidth = track.children[0].offsetWidth || 0;
+	const gap = 16; // --spacing-md
+	const translateX = -(carouselState.currentIndex * (itemWidth + gap));
+
+	track.style.transition = animate ? "transform 0.5s ease-in-out" : "none";
+	track.style.transform = `translateX(${translateX}px)`;
+}
+
+/**
+ * Update carousel indicators based on current position
+ */
+function updateCarouselIndicators() {
+	const indicators = elements.carouselIndicators.children;
+	const totalNovels = carouselState.itemsToShow;
+	const actualIndex = carouselState.currentIndex % totalNovels;
+
+	for (let i = 0; i < indicators.length; i++) {
+		indicators[i].classList.toggle("active", i === actualIndex);
+	}
+}
+
+/**
+ * Format relative time (e.g., "2 days ago")
+ */
+function formatRelativeTime(timestamp) {
+	const now = Date.now();
+	const diff = now - timestamp;
+	const seconds = Math.floor(diff / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+
+	if (days > 0) return `${days}d ago`;
+	if (hours > 0) return `${hours}h ago`;
+	if (minutes > 0) return `${minutes}m ago`;
+	return "just now";
+}
+
+/**
+ * Toggle shelf collapse/expand
+ */
+function toggleShelfCollapse(shelfId) {
+	const shelfSection = document.querySelector(
+		`.shelf-section[data-shelf-id="${shelfId}"]`
+	);
+	if (!shelfSection) return;
+
+	const isCollapsed = shelfSection.classList.toggle("collapsed");
+	const collapseIcon = shelfSection.querySelector(".collapse-icon");
+
+	if (isCollapsed) {
+		collapseIcon.textContent = "▶";
+		shelfSection.querySelector(".shelf-collapse-btn").title =
+			"Expand shelf";
+	} else {
+		collapseIcon.textContent = "▼";
+		shelfSection.querySelector(".shelf-collapse-btn").title =
+			"Collapse shelf";
+	}
+}
+
+/**
+ * Toggle shelf show more/less
+ */
+function toggleShelfExpand(shelfId) {
+	const shelfSection = document.querySelector(
+		`.shelf-section[data-shelf-id="${shelfId}"]`
+	);
+	if (!shelfSection) return;
+
+	const isExpanded = shelfSection.dataset.expanded === "true";
+	shelfSection.dataset.expanded = !isExpanded;
+
+	// Re-render this shelf
+	renderCurrentView();
 }
 
 /**

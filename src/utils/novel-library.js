@@ -396,6 +396,63 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Update novel metadata retroactively if new data is found
+	 * @param {string} novelId - Library novel ID
+	 * @param {Object} newMetadata - New metadata to merge
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async updateNovelMetadata(novelId, newMetadata) {
+		try {
+			const library = await this.getLibrary();
+			const novel = library.novels[novelId];
+
+			if (!novel) {
+				console.log(
+					"Novel Library: Novel not found for metadata update"
+				);
+				return false;
+			}
+
+			// Only update fields that are empty or have new non-empty values
+			let updated = false;
+
+			if (!novel.description && newMetadata.description) {
+				novel.description = newMetadata.description;
+				updated = true;
+			}
+
+			if (!novel.author && newMetadata.author) {
+				novel.author = newMetadata.author;
+				updated = true;
+			}
+
+			if (!novel.coverUrl && newMetadata.coverUrl) {
+				novel.coverUrl = newMetadata.coverUrl;
+				updated = true;
+			}
+
+			if (newMetadata.title && newMetadata.title !== "Unknown Novel") {
+				novel.title = newMetadata.title;
+				updated = true;
+			}
+
+			if (updated) {
+				library.novels[novelId] = novel;
+				await this.saveLibrary(library);
+				console.log(
+					"Novel Library: Retroactively updated metadata for",
+					novelId
+				);
+			}
+
+			return updated;
+		} catch (error) {
+			console.error("Failed to update novel metadata:", error);
+			return false;
+		}
+	}
+
+	/**
 	 * Update chapter tracking for a novel
 	 * @param {string} novelId - Library novel ID
 	 * @param {Object} chapterData - Chapter data

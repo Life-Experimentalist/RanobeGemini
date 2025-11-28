@@ -20,13 +20,6 @@
 					class="dark-mode-icon"
 				/>
 				<h1>Ranobe Gemini</h1>
-				<button
-					id="openLibraryPage"
-					class="btn-link"
-					title="Open Full Library"
-				>
-					📚 Full Library
-				</button>
 			</div>
 			<!-- Tab navigation -->
 			<div class="tabs">
@@ -227,10 +220,11 @@
 					<div class="tab-header-actions">
 						<button
 							id="openLibraryPage"
-							class="btn-link"
+							class="btn-primary"
 							title="Open Full Library"
+							style="padding: 6px 12px; font-weight: 500;"
 						>
-							📚 Full Library
+							📚 Open Full Library
 						</button>
 						<button
 							id="refreshNovels"
@@ -273,14 +267,14 @@
 				</div>
 
 				<!-- Legacy Novels List (Collapsible) -->
-				<details class="legacy-novels-section">
+				<!-- <details class="legacy-novels-section">
 					<summary>📖 Reading History (Legacy)</summary>
 					<div class="novels-list" id="novelsList">
 						<div class="no-novels">
 							No novels found. Use refresh or future add feature.
 						</div>
 					</div>
-				</details>
+				</details> -->
 			</div>
 
 			<!-- Prompts Tab -->
@@ -547,7 +541,7 @@ Click to generate preview...</pre
 					</div>
 				</div>
 
-				<!-- Font Size Settings -->
+				<!-- Font Size Settings TODO: Add this to the top of the advance tab -->
 				<div class="setting">
 					<h4 style="margin-bottom: 10px">🔤 Font Size Settings</h4>
 					<div class="slider-block">
@@ -1089,8 +1083,14 @@ Click to generate preview...</pre
 						Yes! The extension is free and open-source. You only
 						need a free Gemini API key from Google. The free tier
 						includes generous usage limits suitable for regular
-						novel reading. Check Google AI Studio for current rate
-						limits.
+						novel reading. Check the
+						<a
+							href="https://ai.google.dev/gemini-api/docs/pricing"
+							target="_blank"
+							class="inline-link"
+							>Google AI Studio pricing page</a
+						>
+						for current rate limits and details.
 					</div>
 				</div>
 			</div>

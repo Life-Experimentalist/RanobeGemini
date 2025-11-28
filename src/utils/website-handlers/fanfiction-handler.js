@@ -16,7 +16,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 
 	// Shelf metadata for Novel Library
 	static SHELF_METADATA = {
-		id: "fanfiction",
+		id: "fanfiction", // Same ID as mobile to share shelf
 		name: "FanFiction.net",
 		icon: "📚",
 		color: "#2a4b8d",

@@ -197,7 +197,7 @@ sequenceDiagram
 | 7    | Handler Manager    | Selects first handler that returned `true`                   | Uses this handler for all content operations               |
 | 8    | Handler Manager    | Returns selected handler to content script                   | Content script uses this handler to extract content        |
 
-**Important:** Handler order matters! The first handler to return `true` from `canHandle()` is used. Place more specific handlers before generic ones.
+> **Important:** Handler order matters! The first handler to return `true` from `canHandle()` is used. Place more specific handlers before generic ones.
 
 Open `utils/website-handlers/handler-manager.js` and register your new handler:
 
@@ -283,10 +283,9 @@ flowchart TD
     C -->|Yes| E{Content Extracted?}
     E -->|No| D
     E -->|Yes| F{Enhancement Works?}
-    F -->|No| G[Debug Processing]
     F -->|Yes| H[Implementation Complete]
-
-    style H fill:#bfb,stroke:#333
+    F -->|No| G[Debug Processing]
+	G -->|Reload| A[Load Extension]
 ```
 
 ### Testing Checklist
@@ -298,8 +297,8 @@ flowchart TD
 | **Enhancement Works?** | Enhanced text replaces original | Page content updates with enhanced version           | Check API key, verify Gemini API response, check network tab      |
 | **Restore Works?**     | "Restore Original" button       | Original content restored after enhancement          | Verify original content was saved before replacement              |
 | **Multiple Chapters**  | Test on 3+ different chapters   | Works consistently across chapters                   | Check if selectors are too specific, need more generic patterns   |
-| **Mobile/Desktop**     | Test both versions              | Works on www and m subdomain                         | Verify SUPPORTED_DOMAINS includes both                            |
-| **Summary Display**    | Click "Summarize"               | Summary appears correctly formatted                  | Check summary container injection                                 |
+| **Mobile/Desktop**     | Test both versions              | Works on www. & m. subdomain like in fanfiction.net  | Verify SUPPORTED_DOMAINS includes both                            |
+| **Summary Display**    | Click "Summarize" buttons       | Summary appears correctly formatted                  | Check summary container injection                                 |
 | **Debug Mode**         | Enable in popup settings        | No console errors                                    | Fix JavaScript errors, check API limits                           |
 
 1. Load your modified extension in Firefox (about:debugging)
