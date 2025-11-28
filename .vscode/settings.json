@@ -4,6 +4,10 @@
 		"**/.svn": true,
 		"**/.hg": true,
 		"**/.DS_Store": true,
-		"**/Thumbs.db": true
-	}
+		"**/Thumbs.db": true,
+		"samples/**": true
+	},
+	"explorer.excludeGitIgnore": true,
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
 }

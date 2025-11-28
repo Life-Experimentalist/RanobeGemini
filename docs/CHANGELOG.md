@@ -1,58 +1,275 @@
 # Changelog
 
-All notable changes to the Ranobe Gemini extension will be documented in this file.
+> **Index:**
 
-## [3.0.0] - 2025-11-25
+- [Changelog](#changelog)
+	- [\[3.0.0\] - 2025-11-28](#300---2025-11-28)
+		- [🎉 Major Release: Novel Library System](#-major-release-novel-library-system)
+		- [Added](#added)
+			- [📚 Novel Library System](#-novel-library-system)
+			- [🔧 Dynamic Shelf System](#-dynamic-shelf-system)
+			- [🎨 UI Enhancements](#-ui-enhancements)
+			- [📖 Metadata Extraction](#-metadata-extraction)
+			- [📝 Documentation Overhaul](#-documentation-overhaul)
+		- [Changed](#changed)
+			- [🏗️ Architecture Improvements](#️-architecture-improvements)
+			- [📚 Documentation](#-documentation)
+		- [Fixed](#fixed)
+		- [Developer Experience](#developer-experience)
+			- [Adding New Website Support (Simplified)](#adding-new-website-support-simplified)
+			- [Build Scripts](#build-scripts)
+		- [Technical Details](#technical-details)
+			- [Novel Library Schema](#novel-library-schema)
+			- [Shelf Metadata Schema](#shelf-metadata-schema)
+		- [Migration Notes](#migration-notes)
+	- [\[2.8.0\] - 2024-12-15](#280---2024-12-15)
+		- [Migration Notes](#migration-notes-1)
+	- [\[2.9.0\] - 2025-11-25](#290---2025-11-25)
+		- [Summary](#summary)
+		- [Added](#added-1)
+		- [Changed](#changed-1)
+		- [Fixed](#fixed-1)
+	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
+		- [Summary](#summary-1)
+		- [Added](#added-2)
+		- [Changed](#changed-2)
+		- [Fixed](#fixed-2)
+		- [Developer Experience](#developer-experience-1)
+		- [Migration Notes](#migration-notes-2)
+		- [Known Issues](#known-issues)
+	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
+		- [Summary](#summary-2)
+		- [Added](#added-3)
+		- [Changed](#changed-3)
+		- [Fixed](#fixed-3)
+	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
+		- [Summary](#summary-3)
+		- [Added](#added-4)
+		- [Changed](#changed-4)
+		- [Fixed](#fixed-4)
+	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
+		- [Summary](#summary-4)
+		- [Added](#added-5)
+		- [Changed](#changed-5)
+		- [Fixed](#fixed-5)
+	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
+		- [Summary](#summary-5)
+		- [Added](#added-6)
+		- [Changed](#changed-6)
+		- [Fixed](#fixed-6)
+	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
+		- [Added](#added-7)
+		- [Changed](#changed-7)
+		- [Fixed](#fixed-7)
+	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
+		- [Added](#added-8)
+		- [Fixed](#fixed-8)
 
-### Summary
-Version 3.0.0 is a major feature release introducing the Novel Library system - a comprehensive way to organize, track, and manage your reading across all supported websites. This release also brings dynamic shelf generation, making it trivial to add new website support without manual configuration.
+
+All notable changes to the RanobeGemini extension are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [3.0.0] - 2025-11-28
+
+### 🎉 Major Release: Novel Library System
+
+Version 3.0.0 introduces the comprehensive Novel Library system - a complete solution for organizing, tracking, and managing your reading across all supported websites. This release also includes extensive documentation improvements and enhanced metadata extraction.
 
 ### Added
-- **Novel Library System**:
-  - 📚 **Shelves**: Novels automatically organized by website (FanFiction.net, Ranobes, AO3, WebNovel)
-  - 📖 **Full Library Page**: Dedicated page accessible via extension menu with search, filter, and sort capabilities
-  - 🔄 **Auto-Add**: Novels automatically added to library when first enhanced
-  - 📱 **Unified Storage**: Mobile and desktop variants of sites share the same novel entries
-  - ✏️ **Edit Novel Details**: Edit title, author, cover, description, status, and genres
-  - 📤 **Export/Import**: Full library backup with merge or replace options
-  - 🔍 **Search & Sort**: Find novels by title/author, sort by recent, added date, or enhanced chapters
 
-- **Dynamic Shelf System**:
-  - Shelves now auto-generated from handler `SHELF_METADATA`
-  - Adding new website support automatically creates library shelf
-  - No manual configuration needed for new sites
+#### 📚 Novel Library System
+- **Full Library Page**: Dedicated library interface accessible via extension menu
+  - Grid-based layout with novel cards
+  - Search functionality (title, author, description)
+  - Filter by shelf (website), status, rating
+  - Sort by recent visit, date added, or enhanced chapters
+  - Stats display (total novels, enhanced chapters, active shelves)
+
+- **Automatic Organization**:
+  - Novels automatically added to library on first enhancement
+  - Organized into shelves by website (FanFiction.net, Ranobes, AO3, WebNovel)
+  - Mobile and desktop variants share same novel entries
+  - Novel ID extraction from URL patterns
+
+- **Novel Management**:
+  - Edit metadata: title, author, cover URL, description
+  - Update status (reading, completed, on-hold, plan-to-read, dropped)
+  - Add genres/tags
+  - Set custom per-novel enhancement prompts
+  - Add personal notes
+  - Track reading progress (chapters enhanced, last visited)
+
+- **Import/Export**:
+  - Export entire library as JSON with timestamp
+  - Import with merge or replace modes
+  - Detailed import results (new, updated, errors)
+  - Backup and restore functionality
+
+#### 🔧 Dynamic Shelf System
+- **Handler-Based Shelves**:
+  - Shelves auto-generated from handler `SHELF_METADATA`
+  - Adding new website automatically creates library shelf
+  - No manual shelf configuration needed
+  - Each shelf has: id, name, icon, color, novelIdPattern, primaryDomain
+
+- **Shelf Registry**:
+  - Centralized `SHELF_REGISTRY` in domain-constants.js
+  - Dynamically builds `SHELVES` constant
+  - Extensible for new website handlers
+
+#### 🎨 UI Enhancements
+- **Popup Improvements**:
+  - New "Novels" tab with library preview
+  - Shows 5 most recently visited novels
+  - Library statistics overview
+  - "Open Full Library" quick access button
 
 - **Context Menu**:
-  - Right-click extension icon for quick "Open Novel Library" shortcut
-  - Quick access to Settings from context menu
+  - Right-click extension icon for quick actions
+  - "Open Novel Library" shortcut
+  - "Settings" quick access
 
-- **Popup Enhancements**:
-  - Compact library view in Novels tab showing recent novels
-  - Library stats (novel count, enhanced chapters, active shelves)
-  - "Open Full Library" button for full library access
+#### 📖 Metadata Extraction
+- **FanFiction.net Enhanced Extraction**:
+  - `extractDescription()`: Extracts story summary from #profile_top
+  - `extractAuthor()`: Gets author name and profile link
+  - `extractNovelMetadata()`: Returns complete metadata object
+  - Cover image URL extraction
+
+- **Improved Title Extraction**:
+  - Better desktop/mobile detection
+  - Fallback selectors for edge cases
+
+#### 📝 Documentation Overhaul
+- **Reorganized Structure**:
+  - `docs/architecture/` - Technical architecture docs
+  - `docs/features/` - Feature-specific documentation
+  - `docs/guides/` - User and contributor guides
+  - `docs/development/` - Development workflows
+
+- **New Documentation**:
+  - Comprehensive ARCHITECTURE.md with diagrams and component tables
+  - Gateway README.md in each subdirectory
+  - Updated main docs/README.md as documentation hub
+  - Consistent formatting with index placeholders
+
+- **Architecture Documentation**:
+  - System architecture with Mermaid diagrams
+  - Detailed component breakdowns with tables
+  - Content processing pipeline sequences
+  - Storage schema documentation
+  - API integration architecture
+  - Novel library system design
+  - Feature architecture (chunking, emoji, backup keys)
 
 ### Changed
-- **Architecture**:
-  - SHELVES constant now dynamically built from SHELF_REGISTRY
-  - Handler classes include static SHELF_METADATA for library integration
-  - Improved domain-constants.js to export SHELF_REGISTRY
+
+#### 🏗️ Architecture Improvements
+- **Handler System**:
+  - All handlers now include static `SHELF_METADATA`
+  - Improved domain pattern matching
+  - Better separation of concerns
+
+- **Storage**:
+  - Library stored in `rg_novel_library` key
+  - Novel objects keyed as `[shelfId]_[novelId]`
+  - Metadata includes timestamps for sorting
 
 - **Import System**:
-  - Import now properly merges data instead of replacing
-  - Option to choose merge or replace mode
-  - Detailed import results (new novels, updated novels, errors)
+  - Changed from replace to merge by default
+  - Added mode selection (merge/replace)
+  - Better conflict resolution
+  - Detailed import reporting
+
+#### 📚 Documentation
+- **Naming Convention**: UPPERCASE.md for major docs
+- **Structure**: Index placeholders, version metadata, navigation links
+- **Diagrams**: All diagrams include detailed component tables below
+- **Consistency**: Unified formatting across all documentation
+
+### Fixed
+
+- **Short Summary Handler**: Added missing `shortSummarizeWithGemini` handlers in background.js
+- **FanFiction Description**: Fixed extraction for desktop version
+- **In-Progress Banner**: Corrected positioning and removal logic
+- **Long Enhancement**: Fixed "not working" issue with proper action handling
 
 ### Developer Experience
-- **Adding New Sites**:
-  1. Create handler in `website-handlers/`
-  2. Add static `SHELF_METADATA` with id, name, icon, color, pattern
-  3. Import handler in `domain-constants.js`
-  4. Shelf automatically appears in library!
+
+#### Adding New Website Support (Simplified)
+1. Create handler in `src/utils/website-handlers/[site]-handler.js`
+2. Extend `BaseWebsiteHandler`
+3. Add static `SHELF_METADATA` property:
+   ```javascript
+   static SHELF_METADATA = {
+     id: "mysite",
+     name: "MySite",
+     icon: "📚",
+     color: "#4a90e2",
+     novelIdPattern: /mysite\.com\/novel\/(\d+)/,
+     primaryDomain: "mysite.com"
+   };
+   ```
+4. Implement required methods
+5. Import in `handler-manager.js`
+6. Export metadata in `domain-constants.js`
+7. Run `npm run update-domains`
+8. Shelf automatically appears in library!
+
+#### Build Scripts
+- `npm run watch` - Watch mode for development
+- `npm run build` - Production build
+- `npm run package:firefox` - Create .xpi package
+- `npm run package:source` - Create source archive
+- `npm run update-domains` - Update manifest domains
+
+### Technical Details
+
+#### Novel Library Schema
+```javascript
+{
+  "id": "shelf_novelId",
+  "shelfId": "fanfiction",
+  "novelId": "12025721",
+  "title": "Story Title",
+  "author": "Author Name",
+  "url": "https://...",
+  "description": "Story description...",
+  "coverUrl": "https://.../cover.jpg",
+  "status": "reading|completed|on-hold|plan-to-read|dropped",
+  "genres": ["Genre1", "Genre2"],
+  "rating": "K|K+|T|M|MA",
+  "addedDate": "2025-11-28T...",
+  "lastVisited": "2025-11-28T...",
+  "chaptersEnhanced": 5,
+  "totalChapters": 20,
+  "customPrompt": "Custom instructions...",
+  "notes": "Personal notes..."
+}
+```
+
+#### Shelf Metadata Schema
+```javascript
+{
+  id: "unique-id",
+  name: "Display Name",
+  icon: "📚",
+  color: "#hexcolor",
+  novelIdPattern: /regex/,
+  primaryDomain: "example.com"
+}
+```
 
 ### Migration Notes
-- Novel library uses new storage key `rg_novel_library`
-- Existing novel history not automatically migrated
-- No breaking changes to handler interfaces
+
+Users upgrading from v2.x to v3.0.0:
+- Novel library is new - no migration needed
+- All previous settings preserved
+- Previously enhanced chapters not automatically added to library
+- Re-enhance any chapter to add its novel to library
 
 ---
 
@@ -191,6 +408,8 @@ Version 2.2.1 addresses the domain transition from ranobes.top to ranobes.net, e
 - Documentation references to deprecated domain names
 - UI references to specific domains in the interface
 
+---
+
 ## [2.2.0] - 2025-04-19
 
 ### Summary
@@ -219,6 +438,8 @@ Version 2.2.0 delivers a significant user experience upgrade focusing on improve
 - Theme compatibility issues with Dark Reader and other dark mode extensions
 - Visual glitches when transitioning between light and dark modes
 - Contrast issues with text on certain background colors
+
+---
 
 ## [2.1.0] - 2025-04-15
 
@@ -249,6 +470,8 @@ Version 2.1.0 brings significant improvements to the summary feature, handling o
 - Paragraph and section break handling in summary display
 - Error recovery when processing extremely large contents
 
+---
+
 ## [2.0.0] - 2025-04-13
 
 ### Summary
@@ -275,6 +498,8 @@ Version 2.0.0 is a major update that introduces a completely redesigned interfac
 - API error handling and user feedback
 - Compatibility with the latest browser versions
 
+---
+
 ## [1.1.0] - 2025-04-10
 
 ### Added
@@ -295,6 +520,8 @@ Version 2.0.0 is a major update that introduces a completely redesigned interfac
 - Fixed content extraction on dynamically loaded pages
 - Improved token count estimation
 - Addressed compatibility issues with Firefox 120+
+
+---
 
 ## [1.0.0] - 2025-06-15
 
