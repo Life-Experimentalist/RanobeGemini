@@ -888,10 +888,10 @@ function initCarousel(novels) {
 		item.dataset.originalIndex = index % recentNovels.length;
 
 		item.innerHTML = `
-			<img src="${novel.coverUrl || "../icons/logo-light-48.png"}" alt="${escapeHtml(
-			novel.title
-		)}"
-				 onerror="this.src='../icons/logo-light-48.png'">
+			<img src="${
+				novel.coverUrl || "../icons/logo-light-1024.png"
+			}" alt="${escapeHtml(novel.title)}"
+				 onerror="this.src='../icons/logo-light-1024.png'">
 			<div class="carousel-item-info">
 				<div class="carousel-item-website">
 					<span class="website-badge" style="background: ${shelf?.color || "#666"}">${
@@ -931,7 +931,7 @@ function initCarousel(novels) {
 		// Click handler to open modal
 		item.addEventListener("click", (e) => {
 			if (!e.target.closest(".hover-btn")) {
-				openNovelModal(novel);
+				openNovelDetail(novel);
 			}
 		});
 
@@ -951,7 +951,7 @@ function initCarousel(novels) {
 		if (detailsBtn) {
 			detailsBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
-				openNovelModal(novel);
+				openNovelDetail(novel);
 			});
 		}
 

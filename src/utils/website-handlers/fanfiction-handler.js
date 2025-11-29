@@ -234,11 +234,19 @@ When enhancing, improve readability while respecting the author's creative voice
 					// The src might be a thumbnail, try to get full image from data-original
 					const imgLarge = document.querySelector("#img_large img");
 					if (imgLarge) {
-						metadata.coverUrl =
+						let src =
 							imgLarge.getAttribute("data-original") ||
 							imgLarge.src;
+						if (src && src.startsWith("/")) {
+							src = window.location.origin + src;
+						}
+						metadata.coverUrl = src;
 					} else {
-						metadata.coverUrl = coverImg.src;
+						let src = coverImg.src;
+						if (src && src.startsWith("/")) {
+							src = window.location.origin + src;
+						}
+						metadata.coverUrl = src;
 					}
 				}
 			}

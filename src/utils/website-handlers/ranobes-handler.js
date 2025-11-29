@@ -9,13 +9,12 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	// Explicitly supported domains (documented for clarity)
 	// Wildcards act as safety net for any unlisted subdomains
 	static SUPPORTED_DOMAINS = [
-		"ranobes.net",
-		"www.ranobes.net",
-		"ranobes.com",
 		"ranobes.top",
+		"ranobes.net",
+		"ranobes.com",
+		"*.ranobes.top",
 		"*.ranobes.net", // Safety net: catches any other subdomains
 		"*.ranobes.com",
-		"*.ranobes.top",
 	];
 
 	// Shelf metadata for Novel Library
@@ -24,9 +23,15 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		name: "Ranobes",
 		icon: "📖",
 		color: "#4a7c4e",
-		// Pattern matches: /novel-slug-123456/chapter.html or /read-123.html
+		// Pattern matches: /novel-slug-123456/chapter.html or /novel-slug-123456/ or /read-123.html
+		// Captures the ID number (123456 or 123) from the slug or read URL
+
+		// OLD: /\/([a-z0-9-]+-\d+)\/|^\/read-(\d+)\.html/
+		// This captured the whole slug including text
+		// NEW: /\/[a-z0-9-]+-(\d+)(?:\/|$)|^\/read-(\d+)\.html/
+		// This correctly captures ONLY the ID number
 		novelIdPattern: /\/([a-z0-9-]+-\d+)\/|^\/read-(\d+)\.html/,
-		primaryDomain: "ranobes.net",
+		primaryDomain: "ranobes.top",
 	};
 
 	static DEFAULT_SITE_PROMPT = `	// Get site-specific prompt enhancement
@@ -281,26 +286,29 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Implement site-specific default prompt for Ranobes
 	getDefaultPrompt() {
-		return "This is a machine-translated web novel from a Russian novel site. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Russian and Chinese names should be properly transliterated.";
+		return "This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions, and in regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter. And then add breaks to signify the sepeation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.";
 	}
 
 	// Get a readable site name for the UI
 	getSiteIdentifier() {
-		return "Ranobes.net";
+		return "Ranobes.top";
 	}
 
 	// Get site-specific prompt for Ranobes
 	getSiteSpecificPrompt() {
 		return (
-			"This is a machine-translated web novel from a Russian novel site. " +
-			"Please improve the translation while maintaining the original meaning and flow. " +
-			"Keep any special formatting like section breaks. " +
-			"Russian and Chinese names should be properly transliterated."
+			"This is a novel from Ranobes.top." +
+			"Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc." +
+			"Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions." +
+			"In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter" + " And then add breaks to signify the sepeation between author notes and actual chapter." +
+			"Please improve the translation while maintaining the original meaning and flow." +
+			"Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated."
 		);
 	}
 
 	/**
 	 * Extract novel metadata for library storage
+	 * Works on both chapter pages and main novel pages
 	 * @returns {Object} Object containing title, author, description, coverUrl
 	 */
 	extractNovelMetadata() {
@@ -309,53 +317,164 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			author: null,
 			description: null,
 			coverUrl: null,
+			mainNovelUrl: null,
 		};
 
 		try {
-			// Extract novel title from breadcrumbs
-			const breadcrumb = document.querySelector(
-				"#dle-speedbar a[href*='/1']"
-			);
-			if (breadcrumb) {
-				// The second link in breadcrumbs is usually the novel title
+			const isChapterPage = this.isChapterPage();
+
+			// Extract novel title (clean, without chapter info)
+			if (isChapterPage) {
+				// On chapter pages, try breadcrumbs first
 				const breadcrumbLinks =
 					document.querySelectorAll("#dle-speedbar a");
 				if (breadcrumbLinks.length >= 2) {
-					metadata.title = breadcrumbLinks[1].textContent.trim();
+					// Get the novel link (second breadcrumb)
+					const novelLink = breadcrumbLinks[1];
+					metadata.title = novelLink.textContent.trim();
+					metadata.mainNovelUrl = novelLink.href;
 				}
-			}
 
-			// Fallback: Extract from page title
-			if (!metadata.title) {
-				const titleMatch = document.title.match(
-					/(.+?)\s*[|\-]\s*Chapter/i
+				// Fallback: Extract from page title
+				if (!metadata.title) {
+					const titleMatch = document.title.match(
+						/(.+?)\s*[|\-]\s*Chapter/i
+					);
+					if (titleMatch) {
+						metadata.title = titleMatch[1].trim();
+					}
+				}
+
+				// Clean up title - remove "# Chapter X" pattern if present
+				if (metadata.title) {
+					metadata.title = metadata.title
+						.replace(/\s*#\s*Chapter\s*\d+\s*$/i, "")
+						.trim();
+				}
+
+				// Extract description from meta tag on chapter page
+				const descMeta = document.querySelector(
+					'meta[name="description"]'
 				);
-				if (titleMatch) {
-					metadata.title = titleMatch[1].trim();
+				if (descMeta) {
+					let desc = descMeta.getAttribute("content")?.trim();
+					// Clean up chapter-specific description pattern
+					if (desc) {
+						// Remove "Novel Title #Chapter X" pattern from start
+						desc = desc
+							.replace(/^.+?#Chapter\s*\d+\s*/i, "")
+							.trim();
+						if (desc && desc.length > 20) {
+							metadata.description =
+								desc.length > 500
+									? desc.substring(0, 500) + "..."
+									: desc;
+						}
+					}
+				}
+			} else {
+				// On main novel pages
+				const titleSelectors = [
+					"h1.entry-title",
+					"h1.title",
+					".post-title h1",
+					'meta[property="og:title"]',
+				];
+
+				for (const selector of titleSelectors) {
+					const el = document.querySelector(selector);
+					if (el) {
+						metadata.title = selector.includes("meta")
+							? el.getAttribute("content")?.trim()
+							: el.textContent.trim();
+						if (metadata.title) break;
+					}
+				}
+
+				// Extract full description from main page
+				const descSelectors = [
+					'meta[name="description"]',
+					'meta[property="og:description"]',
+					".summary",
+					".entry-content p:first-of-type",
+					".synopsis",
+					".novel-description",
+				];
+
+				for (const selector of descSelectors) {
+					const el = document.querySelector(selector);
+					if (el) {
+						if (selector.includes("meta")) {
+							metadata.description = el
+								.getAttribute("content")
+								?.trim();
+						} else {
+							const text = el.textContent.trim();
+							metadata.description =
+								text.length > 500
+									? text.substring(0, 500) + "..."
+									: text;
+						}
+						if (metadata.description) break;
+					}
 				}
 			}
 
-			// Try to extract author if available on chapter page
-			// Note: Author info is usually on the novel's main page, not chapter pages
-			const authorEl = document.querySelector(
-				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
-			);
-			if (authorEl) {
-				metadata.author = authorEl.textContent.trim();
+			// Extract author
+			const authorSelectors = [
+				'.info_line a[href*="/author/"]',
+				'.tag_list[itemprop="creator"]',
+				".author-name",
+				".entry-author a",
+				'meta[name="author"]',
+				'a[rel="author"]',
+			];
+
+			for (const selector of authorSelectors) {
+				const el = document.querySelector(selector);
+				if (el) {
+					metadata.author = selector.includes("meta")
+						? el.getAttribute("content")?.trim()
+						: el.textContent.trim();
+					if (metadata.author) break;
+				}
 			}
 
-			// Try to extract description from meta tag
-			const descriptionMeta = document.querySelector(
-				'meta[name="description"]'
-			);
-			if (descriptionMeta) {
-				metadata.description = descriptionMeta
-					.getAttribute("content")
-					.trim();
-			}
+			// Extract cover image
+			const coverSelectors = [
+				'meta[property="og:image"]',
+				".post-thumbnail img",
+				".novel-cover img",
+				".entry-thumb img",
+				"img.cover",
+				"article img:first-of-type",
+			];
 
-			// Note: Cover images are typically on the novel's main page, not chapter pages
-			// We can try to construct a URL to the novel page if needed
+			for (const selector of coverSelectors) {
+				const el = document.querySelector(selector);
+				if (el) {
+					const src = selector.includes("meta")
+						? el.getAttribute("content")
+						: el.getAttribute("src");
+
+					if (
+						src &&
+						!src.includes("default") &&
+						!src.includes("placeholder")
+					) {
+						// Make absolute URL
+						try {
+							metadata.coverUrl = new URL(
+								src,
+								window.location.href
+							).href;
+							break;
+						} catch (e) {
+							// Invalid URL, skip
+						}
+					}
+				}
+			}
 		} catch (error) {
 			console.error("Ranobes: Error extracting metadata:", error);
 		}

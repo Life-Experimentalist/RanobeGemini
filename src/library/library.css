@@ -314,6 +314,8 @@ body {
 	width: 100%;
 	height: 280px;
 	object-fit: cover;
+	transition: filter var(--transition-normal),
+		transform var(--transition-normal);
 }
 
 .carousel-item-info {
@@ -355,11 +357,18 @@ body {
 	z-index: 10;
 	border-radius: var(--radius-md);
 	overflow: hidden;
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
 }
 
 .carousel-item:hover .carousel-item-hover-details {
 	opacity: 1;
 	visibility: visible;
+}
+
+.carousel-item:hover img {
+	filter: blur(4px);
+	transform: scale(1.05);
 }
 
 .hover-details-content {
@@ -700,7 +709,6 @@ body {
 	color: var(--primary-color);
 }
 
-
 .shelf-domain-link {
 	display: inline-block;
 	padding: 4px 10px;
@@ -712,10 +720,12 @@ body {
 	text-decoration: none;
 	font-family: monospace;
 	font-size: 0.95em;
-	transition: all 0.2s ease;}
-.shelf-domain-link:hover{
-	background:'var(--bg-tertiary)';
-	border-color:'var(--primary-color)';}
+	transition: all 0.2s ease;
+}
+.shelf-domain-link:hover {
+	background: "var(--bg-tertiary)";
+	border-color: "var(--primary-color)";
+}
 
 /* Novel Grid */
 .novel-grid {
