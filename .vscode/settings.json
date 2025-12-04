@@ -10,4 +10,10 @@
 	// "explorer.excludeGitIgnore": true,
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"cSpell.words": [
+		"authorid",
+		"noimagefound",
+		"scribblehub",
+		"showtags"
+	],
 }

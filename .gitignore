@@ -8,4 +8,4 @@ releases/source/*
 .env
 sample/
 src-backup/
-src/icons/websites/
+src/icons/static/

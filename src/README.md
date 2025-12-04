@@ -1,6 +1,6 @@
-# Ranobe Gemini – Firefox Extension
+# Ranobe Gemini – Chromium / Firefox Extension
 
-Ranobe Gemini is an advanced Firefox extension designed to revolutionize your web novel reading experience. By harnessing the power of Google's Gemini AI, it intelligently refines and enhances translated web novel chapters—correcting grammatical errors, optimizing narrative flow, and preserving the original story's tone and style.
+>Ranobe Gemini is an advanced Chromium / Firefox extension designed to revolutionize your web novel reading experience. By harnessing the power of Google's Gemini AI, it intelligently refines and enhances translated web novel chapters—correcting grammatical errors, optimizing narrative flow, and preserving the original story's tone and style.
 
 ## Key Features
 
@@ -11,7 +11,7 @@ Ranobe Gemini is an advanced Firefox extension designed to revolutionize your we
 - **Permanent Prompts:** Add formatting rules that apply consistently to all requests.
 - **Large Chapter Handling:** Automatically splits and processes lengthy chapters to avoid token limits.
 - **Real-Time Processing:** Leverages Google's Gemini API to process and enhance content dynamically while you read.
-- **Multiple Gemini Models:** Choose between different models like Gemini 2.0 Flash or Gemini 2.5 Pro based on your needs.
+- **Multiple Gemini Models:** Choose between different models like Gemini 2.5 Flash or Gemini 2.5 Pro based on your needs.
 - **User-Friendly Settings Panel:** Access configuration options directly from the Firefox toolbar.
 - **Original Content Preservation:** Offers an intuitive "Restore Original" option to revert back to the unmodified version.
 - **Dark Mode Support:** Seamless experience in both light and dark themes.

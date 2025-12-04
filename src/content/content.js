@@ -234,6 +234,86 @@ if (window.__RGInitDone) {
 		return false;
 	}
 
+	/**
+	 * Send a message to the background script with automatic retry and wake-up logic
+	 * This handles the MV3 service worker sleep issue gracefully
+	 * @param {object} message - The message to send
+	 * @param {number} maxRetries - Maximum retry attempts (default: 3)
+	 * @param {number} retryDelayMs - Delay between retries in ms (default: 1000)
+	 * @returns {Promise<any>} The response from the background script
+	 */
+	async function sendMessageWithRetry(
+		message,
+		maxRetries = 3,
+		retryDelayMs = 1000
+	) {
+		let lastError = null;
+
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				// Try sending the message
+				const response = await browser.runtime.sendMessage(message);
+
+				// Check if we got a valid response
+				if (response !== undefined) {
+					return response;
+				}
+
+				// If response is undefined, the worker might have just woken up
+				// Try to wake it up explicitly
+				throw new Error("Empty response - worker may be waking up");
+			} catch (error) {
+				lastError = error;
+				const errorMessage = error.message || String(error);
+
+				// Check for common service worker disconnection errors
+				const isDisconnectionError =
+					errorMessage.includes("Extension context invalidated") ||
+					errorMessage.includes("Receiving end does not exist") ||
+					errorMessage.includes("The message port closed") ||
+					errorMessage.includes("Could not establish connection") ||
+					errorMessage.includes("Empty response");
+
+				if (isDisconnectionError && attempt < maxRetries) {
+					console.warn(
+						`[sendMessageWithRetry] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`
+					);
+					console.log(
+						`[sendMessageWithRetry] Waking up background worker before retry...`
+					);
+
+					// Wake up the background worker
+					const workerReady = await wakeUpBackgroundWorker(2, 300);
+
+					if (workerReady) {
+						console.log(
+							`[sendMessageWithRetry] Worker woken up, retrying in ${retryDelayMs}ms...`
+						);
+						await new Promise((resolve) =>
+							setTimeout(resolve, retryDelayMs)
+						);
+						continue; // Retry the message
+					} else {
+						console.error(
+							"[sendMessageWithRetry] Could not wake up background worker"
+						);
+					}
+				}
+
+				// If not a disconnection error or last attempt, throw the error
+				if (attempt >= maxRetries) {
+					console.error(
+						`[sendMessageWithRetry] All ${maxRetries} attempts failed. Last error:`,
+						lastError
+					);
+					throw lastError;
+				}
+			}
+		}
+
+		throw lastError || new Error("Failed to send message after retries");
+	}
+
 	// Function to identify and protect game stats boxes
 	function preserveGameStatsBoxes(content) {
 		// Replace game stats boxes with placeholders to protect them
@@ -508,14 +588,594 @@ if (window.__RGInitDone) {
             <span style="font-weight: bold; font-size: 16px;">Enhancing Content: Work in Progress</span>
         </div>
         <div style="width: 100%; margin: 10px 0; background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
-            <div style="width: ${progressPercent}%; background: #4285f4; height: 100%;"></div>
+            <div class="progress-bar" style="width: ${progressPercent}%; background: linear-gradient(90deg, #4285f4, #34a853); height: 100%; transition: width 0.3s ease;"></div>
         </div>
-        <div style="font-size: 14px; color: #555;">
+        <div class="progress-text" style="font-size: 14px; color: #555;">
             Processing chunk ${currentChunk} of ${totalChunks} (${progressPercent}% complete). Please wait while the content is being enhanced...
         </div>
+        <button class="gemini-cancel-btn" style="margin-top: 10px; padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+            Cancel Enhancement
+        </button>
     `;
 
+		// Add cancel button handler
+		const cancelBtn = banner.querySelector(".gemini-cancel-btn");
+		if (cancelBtn) {
+			cancelBtn.addEventListener("click", () => {
+				handleCancelEnhancement();
+			});
+		}
+
 		return banner;
+	}
+
+	/**
+	 * Create a chunk divider banner with status and full control buttons
+	 * @param {number} chunkIndex - Index of the chunk (0-based)
+	 * @param {number} totalChunks - Total number of chunks
+	 * @param {string} status - 'pending', 'processing', 'completed', 'error'
+	 * @param {string} errorMessage - Error message if status is 'error'
+	 * @returns {HTMLElement} The chunk banner element
+	 */
+	function createChunkBanner(
+		chunkIndex,
+		totalChunks,
+		status = "pending",
+		errorMessage = null
+	) {
+		const banner = document.createElement("div");
+		banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
+		banner.setAttribute("data-chunk-index", chunkIndex);
+		banner.setAttribute("data-chunk-status", status);
+
+		const isDarkMode =
+			document.querySelector(
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+		let bgColor,
+			borderColor,
+			textColor,
+			statusIcon,
+			statusText,
+			statusBgColor;
+
+		switch (status) {
+			case "processing":
+				bgColor = isDarkMode ? "#2c3a3a" : "#e3f2fd";
+				borderColor = isDarkMode ? "#4a6a6a" : "#90caf9";
+				statusBgColor = isDarkMode ? "#1a2a2a" : "#bbdefb";
+				statusIcon = "⏳";
+				statusText = "Processing...";
+				break;
+			case "completed":
+				bgColor = isDarkMode ? "#2c3a2c" : "#e8f5e9";
+				borderColor = isDarkMode ? "#4a6a4a" : "#a5d6a7";
+				statusBgColor = isDarkMode ? "#1a2a1a" : "#c8e6c9";
+				statusIcon = "✅";
+				statusText = "Enhanced";
+				break;
+			case "error":
+				bgColor = isDarkMode ? "#3a2c2c" : "#ffebee";
+				borderColor = isDarkMode ? "#6a4a4a" : "#ef9a9a";
+				statusBgColor = isDarkMode ? "#2a1a1a" : "#ffcdd2";
+				statusIcon = "❌";
+				statusText = "Error";
+				break;
+			default: // pending
+				bgColor = isDarkMode ? "#3a3a2c" : "#fff8e1";
+				borderColor = isDarkMode ? "#5a5a40" : "#ffcc80";
+				statusBgColor = isDarkMode ? "#2a2a1a" : "#ffe0b2";
+				statusIcon = "⏸️";
+				statusText = "Pending";
+		}
+
+		textColor = isDarkMode ? "#e0e0e0" : "#333";
+		const buttonBg = isDarkMode ? "#444" : "#f0f0f0";
+		const buttonColor = isDarkMode ? "#fff" : "#333";
+
+		banner.style.cssText = `
+			margin: 1em 0;
+			padding: 10px 12px;
+			background-color: ${bgColor};
+			border: 1px solid ${borderColor};
+			border-radius: 6px;
+			box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+		`;
+
+		let errorHtml = "";
+		if (status === "error" && errorMessage) {
+			errorHtml = `
+				<div style="margin-top: 8px; padding: 8px; background: rgba(220, 53, 69, 0.1); border-radius: 4px; font-size: 11px; color: ${
+					isDarkMode ? "#ff8a80" : "#c62828"
+				};">
+					Error: ${errorMessage}
+				</div>
+			`;
+		}
+
+		// Build action buttons based on status
+		let actionButtons = "";
+
+		// Always show Enhance/Re-enhance button (except during processing)
+		if (status !== "processing") {
+			const enhanceBtnText =
+				status === "completed"
+					? "🔄 Re-enhance"
+					: status === "error"
+					? "🔄 Retry"
+					: "✨ Enhance";
+			actionButtons += `
+				<button class="gemini-chunk-enhance-btn" data-chunk-index="${chunkIndex}" title="Enhance this chunk" style="
+					padding: 4px 8px;
+					background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+					color: white;
+					border: none;
+					border-radius: 4px;
+					cursor: pointer;
+					font-size: 11px;
+					font-weight: 600;
+				">${enhanceBtnText}</button>
+			`;
+		}
+
+		// Show Original/Enhanced toggle button (only when completed)
+		if (status === "completed") {
+			actionButtons += `
+				<button class="gemini-chunk-toggle-btn" data-chunk-index="${chunkIndex}" data-showing="enhanced" title="Toggle original/enhanced" style="
+					padding: 4px 8px;
+					background: ${buttonBg};
+					color: ${buttonColor};
+					border: 1px solid ${borderColor};
+					border-radius: 4px;
+					cursor: pointer;
+					font-size: 11px;
+				">📄 Original</button>
+			`;
+			// Delete button for this chunk's enhanced data
+			actionButtons += `
+				<button class="gemini-chunk-delete-btn" data-chunk-index="${chunkIndex}" title="Delete enhanced data for this chunk" style="
+					padding: 4px 8px;
+					background: #d32f2f;
+					color: white;
+					border: none;
+					border-radius: 4px;
+					cursor: pointer;
+					font-size: 11px;
+				">🗑️</button>
+			`;
+		}
+
+		banner.innerHTML = `
+			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+				<div style="display: flex; align-items: center; gap: 8px;">
+					<span style="font-size: 14px;">${statusIcon}</span>
+					<span style="font-weight: 600; font-size: 13px; color: ${textColor};">
+						Chunk ${chunkIndex + 1}/${totalChunks}
+					</span>
+					<span style="padding: 2px 6px; background: ${statusBgColor}; border-radius: 10px; font-size: 10px; font-weight: 500; color: ${textColor};">
+						${statusText}
+					</span>
+				</div>
+				<div style="display: flex; align-items: center; gap: 6px;">
+					${actionButtons}
+				</div>
+			</div>
+			${errorHtml}
+		`;
+
+		// Attach button handlers
+		const enhanceBtn = banner.querySelector(".gemini-chunk-enhance-btn");
+		if (enhanceBtn) {
+			enhanceBtn.addEventListener("click", async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				await handleReenhanceChunk(chunkIndex);
+			});
+		}
+
+		const toggleBtn = banner.querySelector(".gemini-chunk-toggle-btn");
+		if (toggleBtn) {
+			toggleBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				handleChunkToggle(chunkIndex);
+			});
+		}
+
+		const deleteBtn = banner.querySelector(".gemini-chunk-delete-btn");
+		if (deleteBtn) {
+			deleteBtn.addEventListener("click", async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				await handleChunkDelete(chunkIndex, totalChunks);
+			});
+		}
+
+		return banner;
+	}
+
+	/**
+	 * Toggle between original and enhanced content for a specific chunk
+	 * @param {number} chunkIndex - The chunk index to toggle
+	 */
+	function handleChunkToggle(chunkIndex) {
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content"
+		);
+		const toggleBtn = chunkWrapper.querySelector(
+			".gemini-chunk-toggle-btn"
+		);
+		if (!chunkContent || !toggleBtn) return;
+
+		const isShowingEnhanced =
+			toggleBtn.getAttribute("data-showing") === "enhanced";
+		// Use HTML chunk if available, fall back to formatted text
+		const originalHtml = chunkContent.getAttribute(
+			"data-original-chunk-html"
+		);
+		const originalContent = chunkContent.getAttribute(
+			"data-original-chunk-content"
+		);
+		const enhancedContent =
+			chunkContent.getAttribute("data-enhanced-chunk-content") ||
+			chunkContent.innerHTML;
+
+		if (isShowingEnhanced) {
+			// Switch to original - use preserved HTML if available
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				chunkContent.innerHTML
+			);
+			if (originalHtml) {
+				chunkContent.innerHTML = `<div class="gemini-original-chunk">${originalHtml}</div>`;
+			} else {
+				chunkContent.innerHTML = `<div class="gemini-original-chunk">${formatOriginalChunkContent(
+					originalContent
+				)}</div>`;
+			}
+			toggleBtn.textContent = "✨ Enhanced";
+			toggleBtn.setAttribute("data-showing", "original");
+		} else {
+			// Switch to enhanced
+			const savedEnhanced = chunkContent.getAttribute(
+				"data-enhanced-chunk-content"
+			);
+			if (savedEnhanced) {
+				chunkContent.innerHTML = savedEnhanced;
+			}
+			toggleBtn.textContent = "📄 Original";
+			toggleBtn.setAttribute("data-showing", "enhanced");
+		}
+	}
+
+	/**
+	 * Delete enhanced data for a specific chunk and revert to original
+	 * @param {number} chunkIndex - The chunk index
+	 * @param {number} totalChunks - Total number of chunks
+	 */
+	async function handleChunkDelete(chunkIndex, totalChunks) {
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content"
+		);
+		if (!chunkContent) return;
+
+		// Use HTML chunk if available, fall back to formatted text
+		const originalHtml = chunkContent.getAttribute(
+			"data-original-chunk-html"
+		);
+		const originalContent = chunkContent.getAttribute(
+			"data-original-chunk-content"
+		);
+		if (!originalContent && !originalHtml) {
+			showStatusMessage(
+				"Original content not available for this chunk.",
+				"error"
+			);
+			return;
+		}
+
+		// Revert to original content with preserved HTML if available
+		if (originalHtml) {
+			chunkContent.innerHTML = originalHtml;
+		} else {
+			chunkContent.innerHTML =
+				formatOriginalChunkContent(originalContent);
+		}
+		chunkContent.removeAttribute("data-chunk-enhanced");
+		chunkContent.removeAttribute("data-enhanced-chunk-content");
+
+		// Update banner to pending state
+		const banner = chunkWrapper.querySelector(".gemini-chunk-banner");
+		if (banner) {
+			const newBanner = createChunkBanner(
+				chunkIndex,
+				totalChunks,
+				"pending"
+			);
+			banner.replaceWith(newBanner);
+		}
+
+		// Update cache - save current state
+		await saveCurrentChunkedState();
+		showStatusMessage(
+			`Chunk ${chunkIndex + 1} reverted to original.`,
+			"info",
+			2000
+		);
+	}
+
+	/**
+	 * Save current chunked content state to cache
+	 */
+	async function saveCurrentChunkedState() {
+		if (!storageManager) return;
+
+		const allChunks = document.querySelectorAll(".gemini-chunk-content");
+		if (allChunks.length === 0) return;
+
+		const hasAnyEnhanced = Array.from(allChunks).some(
+			(c) => c.getAttribute("data-chunk-enhanced") === "true"
+		);
+		if (!hasAnyEnhanced) {
+			// All chunks are original, remove from cache
+			await storageManager.removeEnhancedContent(window.location.href);
+			isCachedContent = false;
+			return;
+		}
+
+		// Collect current state
+		const chunkContents = Array.from(allChunks)
+			.sort(
+				(a, b) =>
+					parseInt(a.getAttribute("data-chunk-index")) -
+					parseInt(b.getAttribute("data-chunk-index"))
+			)
+			.map((c) => c.innerHTML);
+
+		const combinedContent = chunkContents.join("\n\n");
+		const originalContent =
+			findContentArea()?.getAttribute("data-original-html") || "";
+
+		try {
+			await storageManager.saveEnhancedContent(window.location.href, {
+				title: document.title,
+				originalContent: originalContent,
+				enhancedContent: combinedContent,
+				timestamp: Date.now(),
+				isChunked: true,
+				chunkCount: allChunks.length,
+			});
+			isCachedContent = true;
+		} catch (error) {
+			console.error("Failed to save chunked state:", error);
+		}
+	}
+
+	/**
+	 * Handle cancellation of enhancement process
+	 */
+	function handleCancelEnhancement() {
+		console.log("Cancelling enhancement process...");
+
+		// Send cancel message to background
+		browser.runtime
+			.sendMessage({ action: "cancelEnhancement" })
+			.catch(console.error);
+
+		// Restore original content
+		const contentArea = findContentArea();
+		if (contentArea) {
+			const originalContent =
+				contentArea.getAttribute("data-original-html") ||
+				contentArea.getAttribute("data-original-content");
+			if (originalContent) {
+				contentArea.innerHTML = originalContent;
+				showStatusMessage(
+					"Enhancement cancelled. Original content restored.",
+					"info"
+				);
+			}
+		}
+
+		// Reset button state
+		const button = document.querySelector(".gemini-enhance-btn");
+		if (button) {
+			button.textContent = "✨ Enhance with Gemini";
+			button.disabled = false;
+			button.classList.remove("loading");
+		}
+	}
+
+	/**
+	 * Handle re-enhancement of a specific chunk
+	 * @param {number} chunkIndex - The index of the chunk to re-enhance
+	 */
+	async function handleReenhanceChunk(chunkIndex) {
+		console.log(`Re-enhancing chunk ${chunkIndex}...`);
+
+		const banner = document.querySelector(`.chunk-banner-${chunkIndex}`);
+		if (banner) {
+			// Update banner to processing state
+			banner.setAttribute("data-chunk-status", "processing");
+			const statusSpan = banner.querySelector("span:nth-child(2)");
+			if (statusSpan) {
+				const parent = statusSpan.parentElement;
+				const iconSpan = parent.querySelector("span:first-child");
+				if (iconSpan) iconSpan.textContent = "⏳";
+				const statusBadge = parent.querySelector("span:nth-child(3)");
+				if (statusBadge) statusBadge.textContent = "Processing...";
+			}
+			const btn = banner.querySelector(".gemini-chunk-reenhance-btn");
+			if (btn) btn.style.display = "none";
+		}
+
+		// Get the original content for this chunk
+		const chunkContent = document.querySelector(
+			`.gemini-chunk-content[data-chunk-index="${chunkIndex}"]`
+		);
+		const originalContent = chunkContent?.getAttribute(
+			"data-original-chunk-content"
+		);
+
+		if (!originalContent) {
+			console.error("No original content found for chunk", chunkIndex);
+			showStatusMessage(
+				`Cannot re-enhance chunk ${
+					chunkIndex + 1
+				}: Original content not found`,
+				"error"
+			);
+			return;
+		}
+
+		try {
+			// Wake up background worker
+			await wakeUpBackgroundWorker();
+
+			// Get settings
+			const settings = await browser.storage.local.get(["useEmoji"]);
+			const useEmoji = settings.useEmoji === true;
+
+			// Get prompts
+			let combinedPrompt = currentHandler
+				? currentHandler.getSiteSpecificPrompt()
+				: "";
+
+			// Send single chunk for processing
+			const response = await sendMessageWithRetry({
+				action: "reenhanceChunk",
+				chunkIndex: chunkIndex,
+				content: originalContent,
+				title: document.title,
+				siteSpecificPrompt: combinedPrompt,
+				useEmoji: useEmoji,
+			});
+
+			if (response && response.success && response.result) {
+				// Update the chunk content
+				if (chunkContent) {
+					const sanitizedContent = sanitizeHTML(
+						response.result.enhancedContent
+					);
+					chunkContent.innerHTML = sanitizedContent;
+					chunkContent.setAttribute("data-chunk-enhanced", "true");
+				}
+
+				// Update banner to completed
+				updateChunkBannerStatus(chunkIndex, "completed");
+				showStatusMessage(
+					`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
+					"success"
+				);
+
+				// Check if all chunks are now complete and save to cache
+				await checkAndSaveAllChunks();
+			} else {
+				const errorMsg = response?.error || "Unknown error";
+				updateChunkBannerStatus(chunkIndex, "error", errorMsg);
+				showStatusMessage(
+					`Failed to re-enhance chunk ${chunkIndex + 1}: ${errorMsg}`,
+					"error"
+				);
+			}
+		} catch (error) {
+			console.error("Error re-enhancing chunk:", error);
+			updateChunkBannerStatus(chunkIndex, "error", error.message);
+			showStatusMessage(
+				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
+				"error"
+			);
+		}
+	}
+
+	/**
+	 * Update a chunk banner's status
+	 * @param {number} chunkIndex - The chunk index
+	 * @param {string} status - New status
+	 * @param {string} errorMessage - Error message if applicable
+	 */
+	function updateChunkBannerStatus(chunkIndex, status, errorMessage = null) {
+		const existingBanner = document.querySelector(
+			`.chunk-banner-${chunkIndex}`
+		);
+		if (existingBanner) {
+			const contentArea = findContentArea();
+			const totalChunks = parseInt(
+				existingBanner
+					.closest("[data-total-chunks]")
+					?.getAttribute("data-total-chunks") ||
+					document.querySelectorAll(".gemini-chunk-banner").length
+			);
+			const newBanner = createChunkBanner(
+				chunkIndex,
+				totalChunks,
+				status,
+				errorMessage
+			);
+			existingBanner.replaceWith(newBanner);
+		}
+	}
+
+	/**
+	 * Check if all chunks are completed and save combined content to cache
+	 */
+	async function checkAndSaveAllChunks() {
+		const allBanners = document.querySelectorAll(".gemini-chunk-banner");
+		const allCompleted = Array.from(allBanners).every(
+			(b) => b.getAttribute("data-chunk-status") === "completed"
+		);
+
+		if (allCompleted && storageManager) {
+			console.log(
+				"All chunks completed, saving combined content to cache..."
+			);
+
+			// Collect all enhanced content
+			const chunkContents = Array.from(
+				document.querySelectorAll(".gemini-chunk-content")
+			)
+				.sort(
+					(a, b) =>
+						parseInt(a.getAttribute("data-chunk-index")) -
+						parseInt(b.getAttribute("data-chunk-index"))
+				)
+				.map((c) => c.innerHTML);
+
+			const combinedEnhancedContent = chunkContents.join("\n\n");
+			const originalContent =
+				findContentArea()?.getAttribute("data-original-html") || "";
+
+			try {
+				await storageManager.saveEnhancedContent(window.location.href, {
+					title: document.title,
+					originalContent: originalContent,
+					enhancedContent: combinedEnhancedContent,
+					timestamp: Date.now(),
+					isChunked: true,
+					chunkCount: allBanners.length,
+				});
+				isCachedContent = true;
+				console.log("Combined chunked content saved to cache");
+				showStatusMessage(
+					"Enhanced content saved to cache!",
+					"success",
+					3000
+				);
+			} catch (saveError) {
+				console.error("Failed to save combined content:", saveError);
+			}
+		}
 	}
 
 	// Simple HTML escape for inserting original text chunks safely
@@ -527,6 +1187,177 @@ if (window.__RGInitDone) {
 			.replace(/>/g, "&gt;")
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#039;");
+	}
+
+	/**
+	 * Format original chunk content for display
+	 * Converts plain text to readable HTML paragraphs
+	 * @param {string} content - The plain text chunk content
+	 * @returns {string} HTML formatted content
+	 */
+	function formatOriginalChunkContent(content) {
+		if (!content)
+			return '<p style="color: #999; font-style: italic;">No content available</p>';
+
+		// Split by double newlines for paragraphs, escape HTML
+		const paragraphs = content
+			.split(/\n\n+/)
+			.map((p) => p.trim())
+			.filter((p) => p.length > 0)
+			.map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+			.join("\n");
+
+		return paragraphs || `<p>${escapeHtml(content)}</p>`;
+	}
+
+	/**
+	 * Split HTML content into chunks that correspond to text chunks
+	 * Preserves the original HTML structure (p tags, divs, etc.)
+	 * @param {HTMLElement} contentArea - The content area element
+	 * @param {string[]} textChunks - Array of plain text chunks
+	 * @returns {string[]} Array of HTML chunks corresponding to text chunks
+	 */
+	function splitHTMLIntoChunks(contentArea, textChunks) {
+		if (!contentArea || !textChunks || textChunks.length === 0) {
+			return [];
+		}
+
+		// Get all paragraph-level elements (p, div with text, br-separated text blocks)
+		const childElements = Array.from(contentArea.children);
+		const htmlChunks = [];
+
+		// If there are no child elements or only one chunk needed, return original HTML
+		if (childElements.length === 0 || textChunks.length <= 1) {
+			return [contentArea.innerHTML];
+		}
+
+		// Calculate character length for each text chunk (NOT cumulative)
+		const chunkSizes = textChunks.map((chunk) => chunk.length);
+		const totalTextLength = chunkSizes.reduce((sum, len) => sum + len, 0);
+
+		console.log(
+			`[splitHTMLIntoChunks] Total text: ${totalTextLength} chars, ${textChunks.length} chunks`
+		);
+		console.log(
+			`[splitHTMLIntoChunks] Chunk sizes: ${chunkSizes.join(", ")}`
+		);
+
+		// Calculate total HTML text length
+		let totalHtmlTextLength = 0;
+		const elementTextLengths = [];
+		for (const el of childElements) {
+			const elTextLen = el.textContent.trim().replace(/\s+/g, " ").length;
+			elementTextLengths.push(elTextLen);
+			totalHtmlTextLength += elTextLen;
+		}
+
+		console.log(
+			`[splitHTMLIntoChunks] HTML has ${childElements.length} elements, ${totalHtmlTextLength} chars of text`
+		);
+
+		// Calculate the target size for each HTML chunk based on proportion of text chunks
+		// Scale factor accounts for any difference between HTML text and plain text lengths
+		const scaleFactor = totalHtmlTextLength / totalTextLength;
+		const targetHtmlChunkSizes = chunkSizes.map((size) =>
+			Math.round(size * scaleFactor)
+		);
+
+		console.log(
+			`[splitHTMLIntoChunks] Target HTML chunk sizes: ${targetHtmlChunkSizes.join(
+				", "
+			)}`
+		);
+
+		// Build HTML chunks by distributing elements according to target sizes
+		let currentChunkElements = [];
+		let currentChunkTextLen = 0;
+		let targetChunkIndex = 0;
+		let elementIndex = 0;
+
+		while (
+			elementIndex < childElements.length &&
+			targetChunkIndex < textChunks.length
+		) {
+			const el = childElements[elementIndex];
+			const elTextLen = elementTextLengths[elementIndex];
+			const targetSize = targetHtmlChunkSizes[targetChunkIndex];
+			const isLastChunk = targetChunkIndex === textChunks.length - 1;
+
+			// For the last chunk, just add all remaining elements
+			if (isLastChunk) {
+				currentChunkElements.push(el);
+				currentChunkTextLen += elTextLen;
+				elementIndex++;
+				continue;
+			}
+
+			// Check if adding this element would exceed the target size significantly
+			const wouldExceed = currentChunkTextLen + elTextLen > targetSize;
+			const hasMinContent = currentChunkTextLen > 0;
+
+			if (wouldExceed && hasMinContent) {
+				// Finalize current chunk WITHOUT adding this element
+				const chunkDiv = document.createElement("div");
+				currentChunkElements.forEach((elem) => {
+					chunkDiv.appendChild(elem.cloneNode(true));
+				});
+				htmlChunks.push(chunkDiv.innerHTML);
+
+				console.log(
+					`[splitHTMLIntoChunks] Created chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars (target: ${targetSize})`
+				);
+
+				// Reset for next chunk - DON'T increment elementIndex, process this element in next chunk
+				currentChunkElements = [];
+				currentChunkTextLen = 0;
+				targetChunkIndex++;
+			} else {
+				// Add element to current chunk
+				currentChunkElements.push(el);
+				currentChunkTextLen += elTextLen;
+				elementIndex++;
+			}
+		}
+
+		// Add remaining elements as the last chunk
+		if (currentChunkElements.length > 0) {
+			// Also add any remaining elements we haven't processed
+			while (elementIndex < childElements.length) {
+				currentChunkElements.push(childElements[elementIndex]);
+				currentChunkTextLen += elementTextLengths[elementIndex];
+				elementIndex++;
+			}
+
+			const chunkDiv = document.createElement("div");
+			currentChunkElements.forEach((elem) => {
+				chunkDiv.appendChild(elem.cloneNode(true));
+			});
+			htmlChunks.push(chunkDiv.innerHTML);
+
+			console.log(
+				`[splitHTMLIntoChunks] Created final chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars`
+			);
+		}
+
+		// Ensure we have the right number of chunks
+		// If we have fewer HTML chunks than text chunks, pad with formatted text
+		while (htmlChunks.length < textChunks.length) {
+			const missingIndex = htmlChunks.length;
+			console.log(
+				`[splitHTMLIntoChunks] Padding missing chunk ${
+					missingIndex + 1
+				} with formatted text`
+			);
+			htmlChunks.push(
+				formatOriginalChunkContent(textChunks[missingIndex])
+			);
+		}
+
+		console.log(
+			`[splitHTMLIntoChunks] Created ${htmlChunks.length} HTML chunks from ${childElements.length} child elements`
+		);
+
+		return htmlChunks;
 	}
 
 	// Function to create an error disclaimer banner
@@ -645,17 +1476,96 @@ if (window.__RGInitDone) {
 			return;
 		}
 
+		const chunkIndex = message.chunkIndex;
+		const totalChunks = message.totalChunks;
+		const chunkResult = message.result;
+
+		// Try to find the new inline chunk structure first
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content"
+		);
+
+		if (chunkedContainer) {
+			// New inline replacement system
+			const chunkWrapper = chunkedContainer.querySelector(
+				`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
+			);
+
+			if (chunkWrapper && chunkResult && chunkResult.enhancedContent) {
+				// Update the banner to completed status
+				const existingBanner = chunkWrapper.querySelector(
+					".gemini-chunk-banner"
+				);
+				if (existingBanner) {
+					const newBanner = createChunkBanner(
+						chunkIndex,
+						totalChunks,
+						"completed"
+					);
+					existingBanner.replaceWith(newBanner);
+				}
+
+				// Replace the chunk content with enhanced version
+				const chunkContent = chunkWrapper.querySelector(
+					".gemini-chunk-content"
+				);
+				if (chunkContent) {
+					const sanitizedContent = sanitizeHTML(
+						chunkResult.enhancedContent
+					);
+					chunkContent.innerHTML = sanitizedContent;
+					chunkContent.setAttribute("data-chunk-enhanced", "true");
+				}
+
+				console.log(
+					`Chunk ${
+						chunkIndex + 1
+					} replaced inline with enhanced content`
+				);
+			}
+
+			// Update next chunk banner to "processing" if there's more
+			if (chunkIndex + 1 < totalChunks) {
+				const nextWrapper = chunkedContainer.querySelector(
+					`.gemini-chunk-wrapper[data-chunk-index="${
+						chunkIndex + 1
+					}"]`
+				);
+				if (nextWrapper) {
+					const nextBanner = nextWrapper.querySelector(
+						".gemini-chunk-banner"
+					);
+					if (
+						nextBanner &&
+						nextBanner.getAttribute("data-chunk-status") ===
+							"pending"
+					) {
+						const processingBanner = createChunkBanner(
+							chunkIndex + 1,
+							totalChunks,
+							"processing"
+						);
+						nextBanner.replaceWith(processingBanner);
+					}
+				}
+			}
+
+			// If all chunks are processed, finalize
+			if (message.isComplete) {
+				finalizeChunkedContent(chunkResult.modelInfo);
+			}
+
+			return;
+		}
+
+		// Fallback to old progressive system for backwards compatibility
 		const enhancedContainer = document.getElementById(
 			"gemini-enhanced-container"
 		);
-		const remainderContainer = document.getElementById(
-			"gemini-remainder-container"
-		);
 		let wipBanner = document.querySelector(".gemini-wip-banner");
 
-		// If progressive structure wasn't created earlier (background processed as single piece), fall back
-		if (!enhancedContainer || !remainderContainer) {
-			// Simple fallback: append at top like before
+		// If neither new nor old container exists, create fallback structure
+		if (!enhancedContainer) {
 			let progressiveContentContainer = document.getElementById(
 				"gemini-progressive-content"
 			);
@@ -673,24 +1583,20 @@ if (window.__RGInitDone) {
 				contentArea.innerHTML = "";
 				contentArea.appendChild(progressiveContentContainer);
 				const banner = createWorkInProgressBanner(
-					message.chunkIndex + 1,
-					message.totalChunks
+					chunkIndex + 1,
+					totalChunks
 				);
 				contentArea.insertBefore(banner, progressiveContentContainer);
 				wipBanner = banner;
 			}
 
-			const chunkResult = message.result;
 			if (chunkResult && chunkResult.enhancedContent) {
 				const sanitizedContent = sanitizeHTML(
 					chunkResult.enhancedContent
 				);
 				const chunkContainer = document.createElement("div");
 				chunkContainer.className = "gemini-chunk";
-				chunkContainer.setAttribute(
-					"data-chunk-index",
-					message.chunkIndex
-				);
+				chunkContainer.setAttribute("data-chunk-index", chunkIndex);
 				chunkContainer.innerHTML = sanitizedContent;
 				progressiveContentContainer.appendChild(chunkContainer);
 
@@ -701,63 +1607,453 @@ if (window.__RGInitDone) {
 					finalizePrefixEnhancedContent(chunkResult.modelInfo);
 				}
 			}
-
 			return;
 		}
 
-		// Normal progressive flow: insert enhanced chunk, remove corresponding remainder, move banner down
-		const chunkResult = message.result;
+		// Old progressive flow with enhanced container
 		if (chunkResult && chunkResult.enhancedContent) {
 			const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
 
 			const enhancedChunk = document.createElement("div");
 			enhancedChunk.className = "gemini-chunk";
-			enhancedChunk.setAttribute("data-chunk-index", message.chunkIndex);
-			enhancedChunk.innerHTML = sanitizedContent;
+			enhancedChunk.setAttribute("data-chunk-index", chunkIndex);
 
-			// Append enhanced chunk to enhanced container
-			enhancedContainer.appendChild(enhancedChunk);
-
-			// Remove the corresponding original chunk from remainder
-			const originalChunk = remainderContainer.querySelector(
-				`[data-chunk-index="${message.chunkIndex}"]`
-			);
-			if (originalChunk) {
-				originalChunk.remove();
+			// Add chunk divider banner if not the first chunk
+			if (chunkIndex > 0) {
+				const divider = document.createElement("div");
+				divider.className = "gemini-chunk-divider";
+				divider.style.cssText = `
+					margin: 2em 0;
+					padding: 0.8em;
+					background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+					color: white;
+					font-weight: 600;
+					text-align: center;
+					border-radius: 8px;
+					font-size: 0.9em;
+					box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+				`;
+				divider.innerHTML = `✨ Chunk ${
+					chunkIndex + 1
+				} of ${totalChunks} ✨`;
+				enhancedChunk.appendChild(divider);
 			}
 
-			// Move the WIP banner to be before the next remainder chunk (so it visually moves down)
+			const contentDiv = document.createElement("div");
+			contentDiv.innerHTML = sanitizedContent;
+			enhancedChunk.appendChild(contentDiv);
+
+			enhancedContainer.appendChild(enhancedChunk);
+
 			wipBanner = document.querySelector(".gemini-wip-banner");
 			if (wipBanner) {
-				const nextRemainder = remainderContainer.querySelector(
-					".gemini-original-chunk"
-				);
-				if (nextRemainder) {
-					// Place banner before the next remainder chunk
-					nextRemainder.parentNode.insertBefore(
-						wipBanner,
-						nextRemainder
-					);
-				} else {
-					// No remainder left - remove banner
-					wipBanner.remove();
+				const progressText = wipBanner.querySelector(".progress-text");
+				if (progressText) {
+					progressText.textContent = `Processing chunk ${
+						chunkIndex + 2
+					} of ${totalChunks}...`;
 				}
 			}
 
-			// If all chunks are processed, finalize
 			if (message.isComplete) {
 				const wip = document.querySelector(".gemini-wip-banner");
 				if (wip) wip.remove();
 				finalizePrefixEnhancedContent(chunkResult.modelInfo);
 			} else {
-				// Update banner progress if still present
 				updateWorkInProgressBanner(
-					message.chunkIndex + 1,
-					message.totalChunks,
+					chunkIndex + 1,
+					totalChunks,
 					message.progressPercent
 				);
 			}
 		}
+	}
+
+	/**
+	 * Add model attribution to the content area
+	 * @param {Object} modelInfo - Information about the model used
+	 */
+	function addModelAttribution(modelInfo) {
+		if (!modelInfo) return;
+
+		const contentArea = findContentArea();
+		if (!contentArea) return;
+
+		// Check if attribution already exists
+		if (document.querySelector(".gemini-model-attribution")) return;
+
+		const isDarkMode =
+			document.querySelector(
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+		const attribution = document.createElement("div");
+		attribution.className = "gemini-model-attribution";
+		attribution.style.cssText = `
+			margin: 1.5em 0;
+			padding: 8px 12px;
+			background: ${isDarkMode ? "#2a2a2a" : "#f5f5f5"};
+			border-radius: 6px;
+			font-size: 12px;
+			color: ${isDarkMode ? "#999" : "#666"};
+			text-align: center;
+		`;
+
+		const modelName = modelInfo.name || modelInfo.modelId || "Gemini AI";
+		attribution.innerHTML = `
+			<span style="opacity: 0.7;">Enhanced by</span>
+			<span style="font-weight: 600;">${escapeHtml(modelName)}</span>
+			<span style="opacity: 0.7;">via Ranobe Gemini</span>
+		`;
+
+		contentArea.appendChild(attribution);
+	}
+
+	/**
+	 * Create a main summary banner for completed chunked enhancement
+	 * Shows overall word count comparison and global controls
+	 * @param {Object} modelInfo - Information about the model used
+	 * @param {number} totalChunks - Total number of chunks
+	 * @param {number} completedChunks - Number of successfully enhanced chunks
+	 * @returns {HTMLElement} The main summary banner
+	 */
+	function createMainSummaryBanner(modelInfo, totalChunks, completedChunks) {
+		const contentArea = findContentArea();
+		const originalText =
+			contentArea?.getAttribute("data-original-text") || "";
+
+		// Calculate total enhanced word count from all chunks
+		let totalEnhancedWords = 0;
+		const allChunkContents = document.querySelectorAll(
+			".gemini-chunk-content"
+		);
+		allChunkContents.forEach((chunk) => {
+			const enhancedContent =
+				chunk.getAttribute("data-enhanced-chunk-content") ||
+				chunk.innerHTML;
+			totalEnhancedWords += countWords(enhancedContent);
+		});
+
+		const originalWordCount = countWords(originalText);
+		const wordDifference = totalEnhancedWords - originalWordCount;
+		const percentChange =
+			originalWordCount > 0
+				? Math.round((wordDifference / originalWordCount) * 100)
+				: 0;
+		const changeSymbol = wordDifference >= 0 ? "+" : "-";
+
+		const modelName = modelInfo?.name || "AI";
+		const modelProvider = modelInfo?.provider || "Ranobe Gemini";
+		const modelDisplay = `Enhanced with ${modelProvider}${
+			modelName !== "AI" ? ` (${modelName})` : ""
+		}`;
+
+		// Determine banner color based on completion status
+		const allSuccess = completedChunks === totalChunks;
+		const statusEmoji = allSuccess ? "✨" : "⚠️";
+		const statusText = allSuccess
+			? `All ${totalChunks} chunks enhanced`
+			: `${completedChunks}/${totalChunks} chunks enhanced`;
+
+		const banner = document.createElement("div");
+		banner.className = "gemini-main-summary-banner";
+		banner.id = "gemini-main-summary-banner";
+
+		// Check dark mode
+		const isDarkMode =
+			document.querySelector(
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+		const bgColor = isDarkMode ? "#2a2a3c" : "#f0f8ff";
+		const borderColor = isDarkMode ? "#4a4a5c" : "#a8d4f0";
+		const textColor = isDarkMode ? "#e0e0e0" : "#333";
+		const subtleColor = isDarkMode ? "#aaa" : "#666";
+
+		banner.style.cssText = `
+			margin: 15px 0;
+			padding: 15px 18px;
+			background: ${bgColor};
+			border-radius: 10px;
+			border: 2px solid ${borderColor};
+			box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+		`;
+
+		banner.innerHTML = `
+			<div style="display: flex; flex-direction: column; gap: 12px;">
+				<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<span style="font-size: 22px;">${statusEmoji}</span>
+						<div>
+							<div style="font-weight: bold; font-size: 16px; color: ${textColor};">${modelDisplay}</div>
+							<div style="font-size: 12px; color: ${subtleColor};">${statusText}</div>
+						</div>
+					</div>
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<button class="gemini-main-toggle-btn" data-showing="enhanced" style="
+							padding: 6px 12px;
+							background: #4285f4;
+							color: white;
+							border: none;
+							border-radius: 6px;
+							cursor: pointer;
+							font-size: 12px;
+							font-weight: 600;
+						">📄 Show All Original</button>
+						<button class="gemini-main-delete-btn" title="Delete all cached enhanced content" style="
+							padding: 6px 12px;
+							background: #d32f2f;
+							color: white;
+							border: none;
+							border-radius: 6px;
+							cursor: pointer;
+							font-size: 12px;
+							font-weight: 600;
+						">🗑️ Delete Cache</button>
+					</div>
+				</div>
+				<div style="padding-top: 10px; border-top: 1px solid ${
+					isDarkMode ? "#444" : "#ddd"
+				};">
+					<div style="font-size: 14px; color: ${textColor}; font-family: monospace;">
+						Total Words: ${originalWordCount.toLocaleString()} → ${totalEnhancedWords.toLocaleString()}
+						<span style="color: ${
+							wordDifference >= 0 ? "#28a745" : "#dc3545"
+						}; font-weight: bold; margin-left: 8px;">
+							(${changeSymbol}${Math.abs(
+			wordDifference
+		).toLocaleString()}, ${changeSymbol}${Math.abs(percentChange)}%)
+						</span>
+					</div>
+				</div>
+			</div>
+		`;
+
+		// Add toggle all button handler
+		const toggleAllBtn = banner.querySelector(".gemini-main-toggle-btn");
+		if (toggleAllBtn) {
+			toggleAllBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				handleToggleAllChunks();
+			});
+		}
+
+		// Add delete all button handler
+		const deleteAllBtn = banner.querySelector(".gemini-main-delete-btn");
+		if (deleteAllBtn) {
+			deleteAllBtn.addEventListener("click", async (e) => {
+				e.preventDefault();
+				if (
+					confirm(
+						"Are you sure you want to delete all cached enhanced content for this chapter?"
+					)
+				) {
+					await handleDeleteAllChunks();
+				}
+			});
+		}
+
+		return banner;
+	}
+
+	/**
+	 * Toggle all chunks between original and enhanced
+	 */
+	function handleToggleAllChunks() {
+		const mainBanner = document.getElementById(
+			"gemini-main-summary-banner"
+		);
+		const toggleBtn = mainBanner?.querySelector(".gemini-main-toggle-btn");
+		if (!toggleBtn) return;
+
+		const isShowingEnhanced =
+			toggleBtn.getAttribute("data-showing") === "enhanced";
+		const allChunkContents = document.querySelectorAll(
+			".gemini-chunk-content"
+		);
+		const allChunkToggleBtns = document.querySelectorAll(
+			".gemini-chunk-toggle-btn"
+		);
+
+		allChunkContents.forEach((chunkContent, idx) => {
+			if (chunkContent.getAttribute("data-chunk-enhanced") !== "true")
+				return;
+
+			const originalHtml = chunkContent.getAttribute(
+				"data-original-chunk-html"
+			);
+			const originalContent = chunkContent.getAttribute(
+				"data-original-chunk-content"
+			);
+			const enhancedContent =
+				chunkContent.getAttribute("data-enhanced-chunk-content") ||
+				chunkContent.innerHTML;
+
+			if (isShowingEnhanced) {
+				// Switch all to original
+				chunkContent.setAttribute(
+					"data-enhanced-chunk-content",
+					chunkContent.innerHTML
+				);
+				if (originalHtml) {
+					chunkContent.innerHTML = `<div class="gemini-original-chunk">${originalHtml}</div>`;
+				} else {
+					chunkContent.innerHTML = `<div class="gemini-original-chunk">${formatOriginalChunkContent(
+						originalContent
+					)}</div>`;
+				}
+			} else {
+				// Switch all to enhanced
+				const savedEnhanced = chunkContent.getAttribute(
+					"data-enhanced-chunk-content"
+				);
+				if (savedEnhanced) {
+					chunkContent.innerHTML = savedEnhanced;
+				}
+			}
+		});
+
+		// Update all individual toggle buttons
+		allChunkToggleBtns.forEach((btn) => {
+			if (isShowingEnhanced) {
+				btn.textContent = "✨ Enhanced";
+				btn.setAttribute("data-showing", "original");
+			} else {
+				btn.textContent = "📄 Original";
+				btn.setAttribute("data-showing", "enhanced");
+			}
+		});
+
+		// Update main toggle button
+		if (isShowingEnhanced) {
+			toggleBtn.textContent = "✨ Show All Enhanced";
+			toggleBtn.setAttribute("data-showing", "original");
+		} else {
+			toggleBtn.textContent = "📄 Show All Original";
+			toggleBtn.setAttribute("data-showing", "enhanced");
+		}
+	}
+
+	/**
+	 * Delete all cached chunk data and revert to original
+	 */
+	async function handleDeleteAllChunks() {
+		const contentArea = findContentArea();
+		if (!contentArea) return;
+
+		const originalHtml = contentArea.getAttribute("data-original-html");
+		if (originalHtml) {
+			contentArea.innerHTML = originalHtml;
+			contentArea.removeAttribute("data-original-html");
+			contentArea.removeAttribute("data-original-text");
+			contentArea.removeAttribute("data-total-chunks");
+		}
+
+		// Clear from storage
+		if (storageManager) {
+			await storageManager.removeEnhancedContent(window.location.href);
+		}
+
+		isCachedContent = false;
+		showStatusMessage(
+			"All enhanced content deleted. Reverted to original.",
+			"info",
+			3000
+		);
+
+		// Reset enhance button
+		const button = document.querySelector(".gemini-enhance-btn");
+		if (button) {
+			button.textContent = "✨ Enhance with Gemini";
+			button.disabled = false;
+		}
+	}
+
+	/**
+	 * Finalize chunked content processing - remove pending banners, save to cache, add summary banner
+	 * @param {Object} modelInfo - Information about the model used
+	 */
+	async function finalizeChunkedContent(modelInfo) {
+		console.log("Finalizing chunked content...");
+
+		// Remove any remaining "pending" or "processing" states
+		const allBanners = document.querySelectorAll(".gemini-chunk-banner");
+		const totalChunks = allBanners.length;
+		let completedChunks = 0;
+
+		allBanners.forEach((banner, idx) => {
+			const status = banner.getAttribute("data-chunk-status");
+			if (status === "completed") {
+				completedChunks++;
+			} else if (status !== "error") {
+				// Check if the corresponding content was actually enhanced
+				const wrapper = banner.closest(".gemini-chunk-wrapper");
+				const content = wrapper?.querySelector(".gemini-chunk-content");
+				if (
+					content &&
+					content.getAttribute("data-chunk-enhanced") === "true"
+				) {
+					const newBanner = createChunkBanner(
+						idx,
+						totalChunks,
+						"completed"
+					);
+					banner.replaceWith(newBanner);
+					completedChunks++;
+				}
+			}
+		});
+
+		// Show completion message
+		const successMsg =
+			completedChunks === totalChunks
+				? "✅ All chunks enhanced successfully!"
+				: `⚠️ Enhancement complete: ${completedChunks}/${totalChunks} chunks successful`;
+		showStatusMessage(
+			successMsg,
+			completedChunks === totalChunks ? "success" : "warning",
+			5000
+		);
+
+		// Remove any existing summary banner first
+		const existingSummary = document.getElementById(
+			"gemini-main-summary-banner"
+		);
+		if (existingSummary) {
+			existingSummary.remove();
+		}
+
+		// Add main summary banner at the top of chunked content
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content"
+		);
+		if (chunkedContainer && totalChunks > 0) {
+			const summaryBanner = createMainSummaryBanner(
+				modelInfo,
+				totalChunks,
+				completedChunks
+			);
+			chunkedContainer.insertBefore(
+				summaryBanner,
+				chunkedContainer.firstChild
+			);
+		}
+
+		// Also add model attribution if available (at the end)
+		if (modelInfo) {
+			addModelAttribution(modelInfo);
+		}
+
+		// Reset button state
+		const button = document.querySelector(".gemini-enhance-btn");
+		if (button) {
+			button.textContent = "🔄 Re-enhance with Gemini";
+			button.disabled = false;
+			button.classList.remove("loading");
+		}
+
+		// Save combined content to cache
+		await checkAndSaveAllChunks();
 	}
 
 	// Handler for chunk processing errors
@@ -775,7 +2071,76 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		// Check if we have any processed content
+		const chunkIndex = message.chunkIndex;
+		const totalChunks = message.totalChunks;
+
+		// Try new inline chunk system first
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content"
+		);
+		if (chunkedContainer) {
+			// Update the specific chunk banner to error state with re-enhance button
+			const chunkWrapper = chunkedContainer.querySelector(
+				`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
+			);
+
+			if (chunkWrapper) {
+				const existingBanner = chunkWrapper.querySelector(
+					".gemini-chunk-banner"
+				);
+				if (existingBanner) {
+					const errorBanner = createChunkBanner(
+						chunkIndex,
+						totalChunks,
+						"error",
+						message.error
+					);
+					existingBanner.replaceWith(errorBanner);
+				}
+
+				// Keep the original content visible - don't replace it
+				console.log(
+					`Chunk ${
+						chunkIndex + 1
+					} marked as error - original content preserved`
+				);
+			}
+
+			// If this is a rate limit, show status message
+			if (message.isRateLimit) {
+				let waitTimeSeconds = 60;
+				if (message.waitTime) {
+					waitTimeSeconds = Math.ceil(message.waitTime / 1000);
+				}
+				showStatusMessage(
+					`Rate limit reached on chunk ${
+						chunkIndex + 1
+					}. Waiting ${waitTimeSeconds} seconds before continuing...`,
+					"warning"
+				);
+			} else {
+				showStatusMessage(
+					`Error processing chunk ${chunkIndex + 1}: ${
+						message.error
+					}`,
+					"error"
+				);
+			}
+
+			// If all chunks are done (including this error), update button
+			if (message.isComplete) {
+				const button = document.querySelector(".gemini-enhance-btn");
+				if (button) {
+					button.textContent = "🔄 Re-enhance with Gemini";
+					button.disabled = false;
+					button.classList.remove("loading");
+				}
+			}
+
+			return;
+		}
+
+		// Fallback to old system
 		const enhancedContainer = document.getElementById(
 			"gemini-enhanced-container"
 		);
@@ -783,17 +2148,14 @@ if (window.__RGInitDone) {
 			enhancedContainer &&
 			enhancedContainer.querySelector(".gemini-chunk");
 
-		// Update or create the WIP banner to reflect the error
 		const wipBanner = document.querySelector(".gemini-wip-banner");
 		if (wipBanner) {
-			// Replace with error banner
 			const errorBanner = createErrorDisclaimerBanner(
 				message.error,
 				hasPartialContent
 			);
 			wipBanner.replaceWith(errorBanner);
 		} else {
-			// Create new error banner
 			const errorBanner = createErrorDisclaimerBanner(
 				message.error,
 				hasPartialContent
@@ -803,18 +2165,16 @@ if (window.__RGInitDone) {
 
 		// If it's a rate limit error, update the banner with waiting information and allow retry
 		if (message.isRateLimit) {
-			let waitTimeSeconds = 60; // Default wait time
+			let waitTimeSeconds = 60;
 			if (message.waitTime) {
 				waitTimeSeconds = Math.ceil(message.waitTime / 1000);
 			}
 
-			// Show status message with retry information
 			showStatusMessage(
 				`Rate limit reached. Waiting ${waitTimeSeconds} seconds before continuing...`,
 				"warning"
 			);
 
-			// Create a retry button for rate limit errors
 			if (hasPartialContent) {
 				const errorBanner = document.querySelector(
 					".gemini-error-banner"
@@ -832,14 +2192,12 @@ if (window.__RGInitDone) {
 					cursor: pointer;
 				`;
 					retryButton.addEventListener("click", () => {
-						// Replace error banner with WIP banner
 						const wipBanner = createWorkInProgressBanner(
 							message.chunkIndex + 1,
 							message.totalChunks
 						);
 						errorBanner.replaceWith(wipBanner);
 
-						// Request resuming processing from where it left off
 						browser.runtime
 							.sendMessage({
 								action: "resumeProcessing",
@@ -860,7 +2218,6 @@ if (window.__RGInitDone) {
 							});
 					});
 
-					// Add retry button to error banner
 					errorBanner.appendChild(retryButton);
 				}
 			}
@@ -932,21 +2289,59 @@ if (window.__RGInitDone) {
 	}
 
 	// Helper function to finalize the progressive content display
-	function finalizePrefixEnhancedContent(modelInfo) {
+	async function finalizePrefixEnhancedContent(modelInfo) {
 		const contentArea = findContentArea();
 		if (!contentArea) return;
 
-		const progressiveContainer = document.getElementById(
-			"gemini-progressive-content"
+		// Get the enhanced container (where chunks were added)
+		const enhancedContainer = document.getElementById(
+			"gemini-enhanced-container"
 		);
-		if (!progressiveContainer) return;
+		if (!enhancedContainer) {
+			console.error("No enhanced container found for finalization");
+			return;
+		}
 
-		// Calculate word counts for banner
-		const originalContent = contentArea.getAttribute(
-			"data-original-content"
-		);
+		// Get original content from stored attribute
+		const originalContent =
+			contentArea.getAttribute("data-original-html") ||
+			contentArea.getAttribute("data-original-content") ||
+			document.getElementById("gemini-original-content")?.innerHTML ||
+			"";
+
 		const originalText = stripHtmlTags(originalContent);
-		const enhancedText = stripHtmlTags(progressiveContainer.innerHTML);
+		const enhancedContent = enhancedContainer.innerHTML;
+		const enhancedText = stripHtmlTags(enhancedContent);
+
+		// Save to cache so it persists on reload
+		if (storageManager && !isCachedContent && enhancedContent) {
+			try {
+				await storageManager.saveEnhancedContent(window.location.href, {
+					title: document.title,
+					originalContent: originalContent,
+					enhancedContent: enhancedContent,
+					modelInfo: modelInfo,
+					timestamp: Date.now(),
+					isChunked: true,
+				});
+				isCachedContent = true;
+				console.log("Chunked enhanced content saved to cache");
+			} catch (saveError) {
+				console.error(
+					"Failed to save chunked content to cache:",
+					saveError
+				);
+			}
+		}
+
+		// Add novel to library and update chapter progression
+		try {
+			const novelContext = extractNovelContext();
+			await addToNovelLibrary(novelContext);
+			await updateChapterProgression();
+		} catch (libraryError) {
+			console.error("Failed to update novel library:", libraryError);
+		}
 
 		// Create enhanced banner with word count statistics and model info
 		const banner = createEnhancedBanner(
@@ -1036,7 +2431,7 @@ if (window.__RGInitDone) {
 				} else {
 					// Switch back to enhanced
 					contentArea.innerHTML = "";
-					contentArea.appendChild(progressiveContainer);
+					contentArea.appendChild(enhancedContainer);
 					contentArea.setAttribute("data-showing-enhanced", "true");
 					showStatusMessage(
 						"Showing enhanced content. Click 'Show Original' to view the original version."
@@ -1082,7 +2477,7 @@ if (window.__RGInitDone) {
 							}
 						});
 					}
-					contentArea.insertBefore(newBanner, progressiveContainer);
+					contentArea.insertBefore(newBanner, enhancedContainer);
 				}
 			};
 			toggleButton.addEventListener("click", toggleContent);
@@ -1100,7 +2495,12 @@ if (window.__RGInitDone) {
 		}
 
 		// Add banner to the top of content area
-		contentArea.insertBefore(banner, progressiveContainer);
+		contentArea.insertBefore(banner, enhancedContainer);
+		// For chunked content, skip the main enhanced banner since each chunk has its own banner
+		// Just clean up WIP/error banners and mark processing as complete
+
+		// Store state for toggling (individual chunks handle their own toggle)
+		contentArea.setAttribute("data-showing-enhanced", "true");
 
 		// Remove any existing WIP banner
 		const wipBanner = document.querySelector(".gemini-wip-banner");
@@ -1115,7 +2515,7 @@ if (window.__RGInitDone) {
 		}
 
 		// Add a class to indicate processing is complete
-		progressiveContainer.classList.add("gemini-processing-complete");
+		enhancedContainer.classList.add("gemini-processing-complete");
 	}
 
 	// Initialize when DOM is fully loaded
@@ -1263,6 +2663,8 @@ if (window.__RGInitDone) {
 	// Novel library instance
 	let novelLibrary = null;
 	let SHELVES = null;
+	let READING_STATUS = null;
+	let READING_STATUS_INFO = null;
 
 	// Load novel library for tracking novels
 	async function loadNovelLibrary() {
@@ -1271,11 +2673,37 @@ if (window.__RGInitDone) {
 			const libraryModule = await import(libraryUrl);
 			novelLibrary = libraryModule.novelLibrary || libraryModule.default;
 			SHELVES = libraryModule.SHELVES;
+			READING_STATUS = libraryModule.READING_STATUS;
+			READING_STATUS_INFO = libraryModule.READING_STATUS_INFO;
 			return novelLibrary;
 		} catch (error) {
 			console.error("Error loading novel library:", error);
 			return null;
 		}
+	}
+
+	/**
+	 * Generate reading status dropdown options from READING_STATUS_INFO
+	 * @returns {Array} Array of {value, label} objects
+	 */
+	function getReadingStatusOptions() {
+		if (!READING_STATUS || !READING_STATUS_INFO) {
+			// Fallback if constants aren't loaded yet
+			return [
+				{ value: "reading", label: "📖 Reading" },
+				{ value: "completed", label: "✅ Completed" },
+				{ value: "plan-to-read", label: "📋 Plan to Read" },
+				{ value: "on-hold", label: "⏸️ On Hold" },
+				{ value: "dropped", label: "❌ Dropped" },
+				{ value: "re-reading", label: "🔁 Re-reading" },
+			];
+		}
+
+		// Generate options from constants
+		return Object.entries(READING_STATUS_INFO).map(([value, info]) => ({
+			value: value,
+			label: info.label,
+		}));
 	}
 
 	// Add novel to library when content is enhanced
@@ -1300,6 +2728,10 @@ if (window.__RGInitDone) {
 				console.log("Could not create novel data from context");
 				return;
 			}
+
+			// When enhancing a chapter, user is actively reading
+			// Set status to READING if it's a new novel or still PLAN_TO_READ
+			novelData.readingStatus = READING_STATUS.READING;
 
 			// Add or update the novel in the library
 			await novelLibrary.addOrUpdateNovel(novelData);
@@ -1590,8 +3022,9 @@ if (window.__RGInitDone) {
 		storageManager = await loadStorageManager();
 
 		// Fetch font size setting from background script
+		// Using sendMessageWithRetry to handle service worker sleep issues
 		try {
-			const modelInfo = await browser.runtime.sendMessage({
+			const modelInfo = await sendMessageWithRetry({
 				action: "getModelInfo",
 			});
 			if (modelInfo && modelInfo.fontSize) {
@@ -1628,9 +3061,35 @@ if (window.__RGInitDone) {
 			);
 		}
 
-		// Create extract button if it doesn't exist
-		if (!hasExtractButton) {
+		// Determine page type
+		const isChapterPage = currentHandler
+			? currentHandler.isChapterPage()
+			: true;
+		const isNovelPage = currentHandler?.isNovelPage?.() || false;
+		const handlerType = getHandlerType();
+
+		// Auto-update novel metadata when visiting any supported novel page
+		// This happens regardless of whether it's a chapter or novel info page
+		if (currentHandler) {
+			await autoUpdateNovelOnVisit();
+		}
+
+		// For DEDICATED_PAGE-type handlers on novel info pages, show novel management UI
+		// instead of enhance/summarize buttons
+		if (
+			!hasExtractButton &&
+			isNovelPage &&
+			handlerType === HANDLER_TYPES.DEDICATED_PAGE
+		) {
+			injectNovelPageUI();
+		}
+		// Create enhance/summarize UI if it doesn't exist and we're on a chapter page
+		else if (!hasExtractButton && isChapterPage) {
 			injectUI();
+		} else if (!isChapterPage && !isNovelPage) {
+			console.log(
+				"Ranobe Gemini: Not a chapter or novel page, skipping UI injection"
+			);
 		}
 
 		// Automatically extract content once the page is loaded
@@ -1639,6 +3098,477 @@ if (window.__RGInitDone) {
 				autoExtractContent();
 			}, 1500);
 		}
+	}
+
+	/**
+	 * Handler type constants for metadata extraction strategy
+	 *
+	 * CHAPTER_EMBEDDED: Full novel metadata available on chapter pages
+	 *   - Sites: FanFiction.net (desktop), AO3
+	 *   - Can auto-add novels when visiting any chapter
+	 *   - No need to visit a separate info page
+	 *
+	 * DEDICATED_PAGE: Novel metadata only available on dedicated info pages
+	 *   - Sites: Ranobes, ScribbleHub, WebNovel, FanFiction.net (mobile)
+	 *   - Must visit the novel's info page to get full details
+	 *   - Chapter pages only have partial info (title, current chapter)
+	 */
+	const HANDLER_TYPES = {
+		CHAPTER_EMBEDDED: "chapter_embedded",
+		DEDICATED_PAGE: "dedicated_page",
+	};
+
+	/**
+	 * Get the current handler's type
+	 * @returns {"chapter_embedded" | "dedicated_page" | null}
+	 */
+	function getHandlerType() {
+		if (!currentHandler) return null;
+		return (
+			currentHandler.constructor.HANDLER_TYPE?.toLowerCase() ||
+			"chapter_embedded"
+		);
+	}
+
+	/**
+	 * Create and show a timed notification banner
+	 * @param {string} message - Message to display
+	 * @param {string} type - Banner type: 'info', 'success', 'warning', 'action'
+	 * @param {number} duration - How long to show (ms), 0 = until dismissed
+	 * @param {Object} options - Additional options (actionButton, etc.)
+	 * @returns {HTMLElement} The banner element
+	 */
+	function showTimedBanner(
+		message,
+		type = "info",
+		duration = 3000,
+		options = {}
+	) {
+		// Remove any existing banner
+		const existingBanner = document.getElementById(
+			"rg-notification-banner"
+		);
+		if (existingBanner) {
+			existingBanner.remove();
+		}
+
+		const banner = document.createElement("div");
+		banner.id = "rg-notification-banner";
+		banner.className = `rg-banner rg-banner-${type}`;
+
+		// Banner styles
+		const colors = {
+			info: { bg: "#1a237e", border: "#3949ab", icon: "📚" },
+			success: { bg: "#1b5e20", border: "#43a047", icon: "✅" },
+			warning: { bg: "#e65100", border: "#ff9800", icon: "⚠️" },
+			action: { bg: "#4a148c", border: "#7b1fa2", icon: "🔗" },
+			updating: { bg: "#00695c", border: "#26a69a", icon: "🔄" },
+		};
+
+		const color = colors[type] || colors.info;
+
+		banner.style.cssText = `
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			background: ${color.bg};
+			border: 2px solid ${color.border};
+			border-radius: 8px;
+			padding: 12px 20px;
+			color: white;
+			font-family: system-ui, -apple-system, sans-serif;
+			font-size: 14px;
+			z-index: 999999;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			max-width: 400px;
+			animation: rg-slide-in 0.3s ease-out;
+		`;
+
+		// Add animation keyframes if not already added
+		if (!document.getElementById("rg-banner-styles")) {
+			const styleSheet = document.createElement("style");
+			styleSheet.id = "rg-banner-styles";
+			styleSheet.textContent = `
+				@keyframes rg-slide-in {
+					from { transform: translateX(100%); opacity: 0; }
+					to { transform: translateX(0); opacity: 1; }
+				}
+				@keyframes rg-slide-out {
+					from { transform: translateX(0); opacity: 1; }
+					to { transform: translateX(100%); opacity: 0; }
+				}
+				@keyframes rg-spin {
+					from { transform: rotate(0deg); }
+					to { transform: rotate(360deg); }
+				}
+				.rg-banner-updating .rg-banner-icon {
+					animation: rg-spin 1s linear infinite;
+				}
+			`;
+			document.head.appendChild(styleSheet);
+		}
+
+		// Icon
+		const iconSpan = document.createElement("span");
+		iconSpan.className = "rg-banner-icon";
+		iconSpan.textContent = color.icon;
+		iconSpan.style.fontSize = "18px";
+		banner.appendChild(iconSpan);
+
+		// Message container
+		const msgContainer = document.createElement("div");
+		msgContainer.style.flex = "1";
+
+		const msgText = document.createElement("div");
+		msgText.textContent = message;
+		msgContainer.appendChild(msgText);
+
+		// Field being updated (for updating banners)
+		if (options.field) {
+			const fieldText = document.createElement("div");
+			fieldText.style.cssText =
+				"font-size: 12px; opacity: 0.8; margin-top: 4px;";
+			fieldText.textContent = `Updating: ${options.field}`;
+			msgContainer.appendChild(fieldText);
+		}
+
+		banner.appendChild(msgContainer);
+
+		// Action button (for DEDICATED_PAGE-type sites)
+		if (options.actionButton) {
+			const actionBtn = document.createElement("button");
+			actionBtn.textContent = options.actionButton.text;
+			actionBtn.style.cssText = `
+				background: white;
+				color: ${color.bg};
+				border: none;
+				padding: 6px 12px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-weight: bold;
+				font-size: 12px;
+				white-space: nowrap;
+			`;
+			actionBtn.addEventListener("click", () => {
+				if (options.actionButton.url) {
+					window.open(options.actionButton.url, "_blank");
+				} else if (options.actionButton.onClick) {
+					options.actionButton.onClick();
+				}
+				banner.remove();
+			});
+			banner.appendChild(actionBtn);
+		}
+
+		// Close button
+		const closeBtn = document.createElement("button");
+		closeBtn.textContent = "×";
+		closeBtn.style.cssText = `
+			background: transparent;
+			border: none;
+			color: white;
+			font-size: 20px;
+			cursor: pointer;
+			padding: 0 4px;
+			opacity: 0.7;
+		`;
+		closeBtn.addEventListener("click", () => banner.remove());
+		banner.appendChild(closeBtn);
+
+		document.body.appendChild(banner);
+
+		// Auto-dismiss after duration (if not 0)
+		if (duration > 0) {
+			setTimeout(() => {
+				if (banner.parentElement) {
+					banner.style.animation =
+						"rg-slide-out 0.3s ease-in forwards";
+					setTimeout(() => banner.remove(), 300);
+				}
+			}, duration);
+		}
+
+		return banner;
+	}
+
+	/**
+	 * Update the banner to show which field is being updated
+	 * @param {string} field - Field name being updated
+	 */
+	function updateBannerField(field) {
+		const banner = document.getElementById("rg-notification-banner");
+		if (banner) {
+			const fieldText = banner.querySelector("div > div:nth-child(2)");
+			if (fieldText) {
+				fieldText.textContent = `Updating: ${field}`;
+			}
+		}
+	}
+
+	/**
+	 * Auto-update novel metadata when visiting any supported novel page
+	 * This ensures the library stays up-to-date without requiring user action
+	 */
+	async function autoUpdateNovelOnVisit() {
+		if (!currentHandler) return;
+
+		// Load novel library if not already loaded
+		if (!novelLibrary) {
+			await loadNovelLibrary();
+		}
+
+		if (!novelLibrary) {
+			console.log("Novel library not available for auto-update");
+			return;
+		}
+
+		try {
+			// Get handler type
+			const handlerType = getHandlerType();
+			const isChapter = currentHandler.isChapterPage();
+			const isNovelPage = currentHandler.isNovelPage?.() || false;
+
+			// For DEDICATED_PAGE-type sites on chapter pages, show banner with link to novel details
+			if (
+				handlerType === HANDLER_TYPES.DEDICATED_PAGE &&
+				isChapter &&
+				!isNovelPage
+			) {
+				const novelPageUrl = currentHandler.getNovelPageUrl?.();
+				if (novelPageUrl) {
+					// Check if we have the novel in library
+					const novelId = getNovelIdFromCurrentPage();
+					const existingNovels = await novelLibrary.getRecentNovels(
+						0
+					);
+					const existingNovel = novelId
+						? existingNovels.find((n) => n.id === novelId)
+						: null;
+
+					if (!existingNovel) {
+						// Novel not in library, show banner to visit novel page
+						showTimedBanner(
+							"Add this novel to your library?",
+							"action",
+							8000,
+							{
+								actionButton: {
+									text: "📖 View Novel Details",
+									url: novelPageUrl,
+								},
+							}
+						);
+					}
+				}
+			}
+
+			// Check if handler supports metadata extraction
+			if (typeof currentHandler.extractNovelMetadata !== "function") {
+				console.log("Handler does not support metadata extraction");
+				return;
+			}
+
+			// Extract metadata from current page
+			const metadata = currentHandler.extractNovelMetadata();
+			if (!metadata || !metadata.title) {
+				console.log("Could not extract novel metadata");
+				return;
+			}
+
+			// Generate novel ID using handler or fallback method
+			let novelId = getNovelIdFromCurrentPage();
+			if (!novelId) {
+				// Fallback: use shelf ID + URL-based ID
+				const shelfId =
+					currentHandler.constructor.SHELF_METADATA?.id || "unknown";
+				const urlPath = window.location.pathname;
+				const urlHash = btoa(urlPath)
+					.substring(0, 16)
+					.replace(/[^a-zA-Z0-9]/g, "");
+				novelId = `${shelfId}-${urlHash}`;
+			}
+
+			// Determine if we're on a chapter page to set proper initial progress
+			const chapterNav = currentHandler.getChapterNavigation?.() || {};
+			const currentChapterNum = chapterNav.currentChapter;
+
+			// Create novel data object
+			// CRITICAL: For dedicated_page handlers, sourceUrl MUST be mainNovelUrl (novel details page)
+			// NOT the current chapter URL, so "View on Site" and "Refresh Metadata" go to the right place
+			const novelData = {
+				id: novelId,
+				title: metadata.title,
+				author: metadata.author || "Unknown",
+				description: metadata.description || "",
+				coverUrl: metadata.coverUrl || "",
+				// For dedicated_page: Always use mainNovelUrl if available (extracted from breadcrumbs/links)
+				// For chapter_embedded: mainNovelUrl will be the same as current URL on chapter pages
+				sourceUrl: metadata.mainNovelUrl || window.location.href,
+				sourceSite: window.location.hostname,
+				shelfId:
+					currentHandler.constructor.SHELF_METADATA?.id || "unknown",
+				genres: metadata.genres || [],
+				tags: metadata.tags || [],
+				status: metadata.status || null,
+				// CRITICAL: Ensure totalChapters is set from chapterCount
+				totalChapters: metadata.chapterCount || null,
+				lastUpdated: Date.now(),
+				// Only set progress if on a chapter page, otherwise let library set defaults
+				...(isChapter && currentChapterNum
+					? {
+							lastReadChapter: currentChapterNum,
+							lastReadUrl: window.location.href,
+							readingStatus: READING_STATUS.READING,
+					  }
+					: {}),
+			}; // Check if this novel already exists in the library
+			const existingNovels = await novelLibrary.getRecentNovels(0);
+			const existingNovel = existingNovels.find((n) => n.id === novelId);
+
+			// Auto-add logic:
+			// - For CHAPTER_EMBEDDED-type sites: auto-add/update on chapter pages (full metadata available)
+			// - For DEDICATED_PAGE-type sites:
+			//   - On novel info pages: auto-add/update (full metadata available)
+			//   - On chapter pages: auto-add with partial metadata (will be updated when visiting novel page)
+			// This ensures users don't miss tracking novels they're reading
+			const hasGoodMetadata =
+				handlerType === HANDLER_TYPES.CHAPTER_EMBEDDED ||
+				(handlerType === HANDLER_TYPES.DEDICATED_PAGE && isNovelPage);
+
+			// Always allow auto-add if we have some metadata (title at minimum)
+			const shouldAutoAdd = metadata.title && metadata.title.length > 0;
+
+			if (existingNovel) {
+				// Check if this novel has pending refresh (from library refresh button)
+				const hasPendingRefresh = existingNovel.pendingRefresh === true;
+
+				if (hasPendingRefresh) {
+					// Force update - user requested refresh, skip editedFields protection
+					showTimedBanner(
+						`Refreshing: ${metadata.title}`,
+						"updating",
+						2000,
+						{ field: "all metadata" }
+					);
+
+					// Clear the pending refresh flag and reset edited fields
+					const library = await novelLibrary.getLibrary();
+					if (library.novels[novelId]) {
+						library.novels[novelId].pendingRefresh = false;
+						library.novels[novelId].editedFields = {};
+						// Apply all new metadata directly
+						Object.assign(library.novels[novelId], novelData);
+						library.novels[novelId].lastMetadataUpdate = Date.now();
+						library.novels[novelId].lastAccessedAt = Date.now();
+						await novelLibrary.saveLibrary(library);
+					}
+
+					console.log(
+						"📚 Force-refreshed novel metadata:",
+						metadata.title
+					);
+					showTimedBanner(
+						`Refreshed: ${metadata.title}`,
+						"success",
+						3000
+					);
+				} else {
+					// Normal update - respects editedFields
+					if (hasGoodMetadata) {
+						showTimedBanner(
+							`Updating: ${metadata.title}`,
+							"updating",
+							2000,
+							{
+								field: "metadata",
+							}
+						);
+					}
+					await novelLibrary.updateNovelMetadata(novelId, novelData);
+					console.log(
+						"📚 Auto-updated novel metadata:",
+						metadata.title
+					);
+					if (hasGoodMetadata) {
+						showTimedBanner(
+							`Updated: ${metadata.title}`,
+							"success",
+							2000
+						);
+					}
+				}
+			} else if (shouldAutoAdd) {
+				// Add new novel to library
+				const addMessage = hasGoodMetadata
+					? `Adding: ${metadata.title}`
+					: `Tracking: ${metadata.title}`;
+				showTimedBanner(addMessage, "updating", 2000, {
+					field: "new novel",
+				});
+				await novelLibrary.addOrUpdateNovel(novelData);
+				console.log("📚 Auto-added novel to library:", metadata.title);
+
+				const successMessage = hasGoodMetadata
+					? `Added to library: ${metadata.title}`
+					: `Now tracking: ${metadata.title}`;
+				showTimedBanner(successMessage, "success", 3000);
+
+				// For DEDICATED_PAGE type on chapter pages, remind user to visit novel page for full details
+				if (
+					handlerType === HANDLER_TYPES.DEDICATED_PAGE &&
+					isChapter &&
+					!isNovelPage
+				) {
+					const novelPageUrl = currentHandler.getNovelPageUrl?.();
+					if (novelPageUrl) {
+						setTimeout(() => {
+							showTimedBanner(
+								"Visit novel page for full details",
+								"action",
+								5000,
+								{
+									actionButton: {
+										text: "📖 View Details",
+										url: novelPageUrl,
+									},
+								}
+							);
+						}, 3500);
+					}
+				}
+			}
+
+			// If on a chapter page, also update chapter tracking
+			if (isChapter) {
+				const chapterNav =
+					currentHandler.getChapterNavigation?.() || {};
+				await novelLibrary.updateChapter(novelId, {
+					chapterNumber: chapterNav.currentChapter || 1,
+					title: document.title,
+					url: window.location.href,
+					readAt: Date.now(),
+				});
+				console.log("📖 Updated chapter tracking");
+			}
+		} catch (error) {
+			console.error("Error in auto-update novel:", error);
+		}
+	}
+
+	/**
+	 * Get novel ID from current page using handler
+	 * @returns {string|null}
+	 */
+	function getNovelIdFromCurrentPage() {
+		if (!currentHandler) return null;
+
+		if (typeof currentHandler.generateNovelId === "function") {
+			return currentHandler.generateNovelId(window.location.href);
+		}
+		return null;
 	}
 
 	// Find the content area using handlers or generic approach
@@ -1924,6 +3854,613 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	/**
+	 * Inject novel management UI for novel info pages (DEDICATED_PAGE-type sites)
+	 * Shows Add/Update/Delete/View Library buttons instead of enhance/summarize
+	 */
+	async function injectNovelPageUI() {
+		if (!currentHandler) return;
+
+		// Find a good insertion point for the UI
+		const insertionPoint = findNovelPageInsertionPoint();
+		if (!insertionPoint) {
+			console.warn(
+				"Ranobe Gemini: Could not find insertion point for novel page UI"
+			);
+			return;
+		}
+
+		// Check if UI already injected
+		if (document.getElementById("rg-novel-controls")) {
+			console.log("Ranobe Gemini: Novel page UI already injected.");
+			return;
+		}
+
+		// Load novel library
+		if (!novelLibrary) {
+			await loadNovelLibrary();
+		}
+
+		// Get novel ID and check if it exists in library
+		const novelId = getNovelIdFromCurrentPage();
+		const existingNovels = novelLibrary
+			? await novelLibrary.getRecentNovels(0)
+			: [];
+		const existingNovel = novelId
+			? existingNovels.find((n) => n.id === novelId)
+			: null;
+
+		// Create the controls container
+		const controlsContainer = document.createElement("div");
+		controlsContainer.id = "rg-novel-controls";
+		controlsContainer.style.cssText = `
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			padding: 15px;
+			margin: 15px 0;
+			background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+			border: 1px solid #0f3460;
+			border-radius: 8px;
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+		`;
+
+		// Create header
+		const header = document.createElement("div");
+		header.style.cssText = `
+			width: 100%;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 10px;
+			padding-bottom: 10px;
+			border-bottom: 1px solid #0f3460;
+		`;
+
+		const logo = document.createElement("span");
+		logo.textContent = "📚";
+		logo.style.fontSize = "24px";
+
+		const title = document.createElement("span");
+		title.textContent = "Ranobe Gemini Library";
+		title.style.cssText = `
+			color: #e94560;
+			font-weight: bold;
+			font-size: 16px;
+		`;
+
+		const status = document.createElement("span");
+		status.id = "rg-novel-status";
+		status.textContent = existingNovel
+			? "✅ In Library"
+			: "📖 Not in Library";
+		status.style.cssText = `
+			margin-left: auto;
+			padding: 4px 10px;
+			background: ${existingNovel ? "#1b5e20" : "#424242"};
+			color: white;
+			border-radius: 4px;
+			font-size: 12px;
+		`;
+
+		header.appendChild(logo);
+		header.appendChild(title);
+		header.appendChild(status);
+		controlsContainer.appendChild(header);
+
+		// Create button row - centered for uniformity
+		const buttonRow = document.createElement("div");
+		buttonRow.style.cssText = `
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			width: 100%;
+			justify-content: center;
+			align-items: center;
+		`;
+
+		// Button style helper
+		const createButton = (text, icon, color, onClick) => {
+			const btn = document.createElement("button");
+			btn.textContent = `${icon} ${text}`;
+			btn.style.cssText = `
+				padding: 10px 16px;
+				background: ${color};
+				color: white;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: bold;
+				font-size: 14px;
+				transition: all 0.2s ease;
+				flex: 1;
+				min-width: 120px;
+			`;
+			btn.addEventListener("mouseover", () => {
+				btn.style.transform = "translateY(-2px)";
+				btn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+			});
+			btn.addEventListener("mouseout", () => {
+				btn.style.transform = "translateY(0)";
+				btn.style.boxShadow = "none";
+			});
+			btn.addEventListener("click", onClick);
+			return btn;
+		};
+
+		// Add/Update button
+		const addUpdateBtn = createButton(
+			existingNovel ? "Update Novel" : "Add to Library",
+			existingNovel ? "🔄" : "➕",
+			existingNovel ? "#00695c" : "#1976d2",
+			async () => {
+				await handleNovelAddUpdate();
+			}
+		);
+		buttonRow.appendChild(addUpdateBtn);
+
+		// Reading status dropdown (if novel exists)
+		if (existingNovel) {
+			const statusSelect = document.createElement("select");
+			statusSelect.id = "rg-reading-status";
+			statusSelect.style.cssText = `
+				padding: 10px 16px;
+				background: #424242;
+				color: white;
+				border: 1px solid #666;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				flex: 1;
+				min-width: 140px;
+			`;
+
+			const statusOptions = getReadingStatusOptions();
+
+			statusOptions.forEach((opt) => {
+				const option = document.createElement("option");
+				option.value = opt.value;
+				option.textContent = opt.label;
+				if (existingNovel.readingStatus === opt.value) {
+					option.selected = true;
+				}
+				statusSelect.appendChild(option);
+			});
+
+			statusSelect.addEventListener("change", async (e) => {
+				await handleReadingStatusChange(e.target.value);
+			});
+
+			buttonRow.appendChild(statusSelect);
+
+			// Delete button
+			const deleteBtn = createButton(
+				"Remove",
+				"🗑️",
+				"#c62828",
+				async () => {
+					await handleNovelDelete();
+				}
+			);
+			buttonRow.appendChild(deleteBtn);
+		}
+
+		// Open Library button
+		const libraryBtn = createButton("Open Library", "📚", "#7b1fa2", () => {
+			const libraryUrl = browser.runtime.getURL("library/library.html");
+			window.open(libraryUrl, "_blank");
+		});
+		buttonRow.appendChild(libraryBtn);
+
+		controlsContainer.appendChild(buttonRow);
+
+		// Insert the controls
+		insertionPoint.element.parentNode.insertBefore(
+			controlsContainer,
+			insertionPoint.element
+		);
+
+		hasExtractButton = true; // Prevent duplicate injection
+		console.log("Ranobe Gemini: Novel page UI injected successfully");
+	}
+
+	/**
+	 * Find the best insertion point for novel page UI
+	 */
+	function findNovelPageInsertionPoint() {
+		if (!currentHandler) return null;
+
+		// Try handler-specific insertion point
+		if (typeof currentHandler.getNovelPageUIInsertionPoint === "function") {
+			return currentHandler.getNovelPageUIInsertionPoint();
+		}
+
+		// Common novel page selectors across sites
+		const selectors = [
+			".r-fullstory-spec", // Ranobes
+			".fic_row", // ScribbleHub
+			".g_thumb", // WebNovel
+			".story-info", // Generic
+			".novel-info",
+			".book-info",
+			"article header",
+			"h1",
+		];
+
+		for (const selector of selectors) {
+			const element = document.querySelector(selector);
+			if (element) {
+				return { element, position: "before" };
+			}
+		}
+
+		// Fallback to body
+		return { element: document.body.firstChild, position: "before" };
+	}
+
+	/**
+	 * Handle add/update button click on novel page
+	 */
+	async function handleNovelAddUpdate() {
+		if (!currentHandler || !novelLibrary) {
+			showTimedBanner("Library not available", "warning", 3000);
+			return;
+		}
+
+		try {
+			showTimedBanner("Saving novel...", "updating", 0, {
+				field: "metadata",
+			});
+
+			const metadata = currentHandler.extractNovelMetadata();
+			if (!metadata || !metadata.title) {
+				showTimedBanner(
+					"Could not extract novel metadata",
+					"warning",
+					3000
+				);
+				return;
+			}
+
+			const novelId = getNovelIdFromCurrentPage();
+			if (!novelId) {
+				showTimedBanner("Could not generate novel ID", "warning", 3000);
+				return;
+			}
+
+			const novelData = {
+				id: novelId,
+				title: metadata.title,
+				author: metadata.author || "Unknown",
+				description: metadata.description || "",
+				coverUrl: metadata.coverUrl || "",
+				sourceUrl: metadata.mainNovelUrl || window.location.href,
+				sourceSite: window.location.hostname,
+				shelfId:
+					currentHandler.constructor.SHELF_METADATA?.id || "unknown",
+				genres: metadata.genres || [],
+				tags: metadata.tags || [],
+				status: metadata.status || null,
+				totalChapters: metadata.chapterCount || null,
+				lastUpdated: Date.now(),
+			};
+
+			await novelLibrary.addOrUpdateNovel(novelData);
+
+			// Also update with extracted metadata
+			await novelLibrary.updateNovelMetadata(novelId, metadata);
+
+			showTimedBanner(`Saved: ${metadata.title}`, "success", 3000);
+
+			// Refresh the UI
+			const controls = document.getElementById("rg-novel-controls");
+			if (controls) {
+				controls.remove();
+				hasExtractButton = false;
+				await injectNovelPageUI();
+			}
+		} catch (error) {
+			console.error("Error saving novel:", error);
+			showTimedBanner("Error saving novel", "warning", 3000);
+		}
+	}
+
+	/**
+	 * Handle reading status change
+	 */
+	async function handleReadingStatusChange(newStatus) {
+		if (!novelLibrary) return;
+
+		const novelId = getNovelIdFromCurrentPage();
+		if (!novelId) return;
+
+		try {
+			await novelLibrary.updateNovelMetadata(novelId, {
+				readingStatus: newStatus,
+			});
+			showTimedBanner(`Status updated: ${newStatus}`, "success", 2000);
+		} catch (error) {
+			console.error("Error updating reading status:", error);
+			showTimedBanner("Error updating status", "warning", 3000);
+		}
+	}
+
+	/**
+	 * Update chapter progression in library
+	 * Automatically tracks when user reads/enhances chapters
+	 */
+	async function updateChapterProgression() {
+		if (!novelLibrary || !currentHandler) return;
+
+		const novelId = getNovelIdFromCurrentPage();
+		if (!novelId) return;
+
+		try {
+			// Get current chapter info from handler
+			const chapterNav = currentHandler.getChapterNavigation();
+			if (!chapterNav || chapterNav.currentChapter === null) {
+				console.log("No chapter info available from handler");
+				return;
+			}
+
+			// Get the novel from library
+			const novel = await novelLibrary.getNovelByUrl(
+				window.location.href
+			);
+			if (!novel) {
+				console.log(
+					"Novel not in library, skipping progression update"
+				);
+				return;
+			}
+
+			// Only update if this chapter is newer than last read
+			if (
+				!novel.lastReadChapter ||
+				chapterNav.currentChapter > novel.lastReadChapter
+			) {
+				// Use updateReadingProgress for auto-status updates
+				await novelLibrary.updateReadingProgress(
+					novelId,
+					chapterNav.currentChapter,
+					window.location.href
+				);
+				console.log(
+					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`
+				);
+				showTimedBanner(
+					`Progress saved: Chapter ${chapterNav.currentChapter}`,
+					"success",
+					2000
+				);
+			}
+		} catch (error) {
+			console.error("Error updating chapter progression:", error);
+		}
+	}
+
+	/**
+	 * Handle delete button click
+	 */
+	async function handleNovelDelete() {
+		if (!novelLibrary) return;
+
+		const novelId = getNovelIdFromCurrentPage();
+		if (!novelId) return;
+
+		// Confirm deletion
+		if (!confirm("Remove this novel from your library?")) {
+			return;
+		}
+
+		try {
+			await novelLibrary.removeNovel(novelId);
+			showTimedBanner("Novel removed from library", "success", 3000);
+
+			// Refresh the UI
+			const controls = document.getElementById("rg-novel-controls");
+			if (controls) {
+				controls.remove();
+				hasExtractButton = false;
+				await injectNovelPageUI();
+			}
+		} catch (error) {
+			console.error("Error removing novel:", error);
+			showTimedBanner("Error removing novel", "warning", 3000);
+		}
+	}
+
+	/**
+	 * Create compact novel controls for CHAPTER_EMBEDDED type sites
+	 * These appear inline with enhance/summarize controls on chapter pages
+	 * @returns {HTMLElement|null} The novel controls container or null if not applicable
+	 */
+	async function createChapterPageNovelControls() {
+		const handlerType = getHandlerType();
+
+		// Only for CHAPTER_EMBEDDED handlers on chapter pages
+		if (handlerType !== HANDLER_TYPES.CHAPTER_EMBEDDED) {
+			return null;
+		}
+
+		if (!currentHandler?.isChapterPage?.()) {
+			return null;
+		}
+
+		// Load novel library if needed
+		if (!novelLibrary) {
+			await loadNovelLibrary();
+		}
+
+		if (!novelLibrary) {
+			console.log(
+				"Novel library not available for chapter page controls"
+			);
+			return null;
+		}
+
+		// Get novel ID and check if it exists in library
+		const novelId = getNovelIdFromCurrentPage();
+		const existingNovels = await novelLibrary.getRecentNovels(0);
+		const existingNovel = novelId
+			? existingNovels.find((n) => n.id === novelId)
+			: null;
+
+		// Create the compact controls container
+		const controlsContainer = document.createElement("div");
+		controlsContainer.id = "rg-chapter-novel-controls";
+		controlsContainer.style.cssText = `
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 12px;
+			margin: 10px 0;
+			background: linear-gradient(135deg, #1a2540 0%, #16213e 100%);
+			border: 1px solid #2a4b8d;
+			border-radius: 6px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		`;
+
+		// Status indicator
+		const statusBadge = document.createElement("span");
+		statusBadge.style.cssText = `
+			padding: 4px 8px;
+			background: ${existingNovel ? "#1b5e20" : "#424242"};
+			color: white;
+			border-radius: 4px;
+			font-size: 11px;
+			font-weight: 600;
+		`;
+		statusBadge.textContent = existingNovel
+			? "📚 In Library"
+			: "📖 Not Saved";
+		controlsContainer.appendChild(statusBadge);
+
+		// Separator
+		const separator = document.createElement("span");
+		separator.textContent = "•";
+		separator.style.cssText = "color: #666; margin: 0 4px;";
+		controlsContainer.appendChild(separator);
+
+		// Button style helper
+		const createCompactButton = (text, icon, color, onClick) => {
+			const btn = document.createElement("button");
+			btn.innerHTML = `${icon} ${text}`;
+			btn.style.cssText = `
+				padding: 6px 10px;
+				background: ${color};
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-weight: 600;
+				font-size: 12px;
+				transition: all 0.2s ease;
+			`;
+			btn.addEventListener("mouseover", () => {
+				btn.style.filter = "brightness(1.1)";
+			});
+			btn.addEventListener("mouseout", () => {
+				btn.style.filter = "brightness(1)";
+			});
+			btn.addEventListener("click", onClick);
+			return btn;
+		};
+
+		// Add/Update button
+		const addUpdateBtn = createCompactButton(
+			existingNovel ? "Update" : "Add to Library",
+			existingNovel ? "🔄" : "➕",
+			existingNovel ? "#00695c" : "#1976d2",
+			async () => {
+				await handleNovelAddUpdate();
+				// Refresh the controls
+				const oldControls = document.getElementById(
+					"rg-chapter-novel-controls"
+				);
+				if (oldControls) {
+					const newControls = await createChapterPageNovelControls();
+					if (newControls) {
+						oldControls.replaceWith(newControls);
+					}
+				}
+			}
+		);
+		controlsContainer.appendChild(addUpdateBtn);
+
+		// Reading status dropdown (if novel exists)
+		if (existingNovel) {
+			const statusSelect = document.createElement("select");
+			statusSelect.id = "rg-chapter-reading-status";
+			statusSelect.style.cssText = `
+				padding: 6px 8px;
+				background: #424242;
+				color: white;
+				border: 1px solid #666;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 12px;
+			`;
+
+			const statusOptions = getReadingStatusOptions();
+
+			statusOptions.forEach((opt) => {
+				const option = document.createElement("option");
+				option.value = opt.value;
+				option.textContent = opt.label;
+				if (existingNovel.readingStatus === opt.value) {
+					option.selected = true;
+				}
+				statusSelect.appendChild(option);
+			});
+
+			statusSelect.addEventListener("change", async (e) => {
+				await handleReadingStatusChange(e.target.value);
+			});
+
+			controlsContainer.appendChild(statusSelect);
+
+			// Remove button
+			const removeBtn = createCompactButton(
+				"Remove",
+				"🗑️",
+				"#c62828",
+				async () => {
+					await handleNovelDelete();
+					// Refresh the controls
+					const oldControls = document.getElementById(
+						"rg-chapter-novel-controls"
+					);
+					if (oldControls) {
+						const newControls =
+							await createChapterPageNovelControls();
+						if (newControls) {
+							oldControls.replaceWith(newControls);
+						}
+					}
+				}
+			);
+			controlsContainer.appendChild(removeBtn);
+		}
+
+		// Open Library button
+		const libraryBtn = createCompactButton(
+			"Library",
+			"📚",
+			"#7b1fa2",
+			() => {
+				const libraryUrl = browser.runtime.getURL(
+					"library/library.html"
+				);
+				window.open(libraryUrl, "_blank");
+			}
+		);
+		controlsContainer.appendChild(libraryBtn);
+
+		return controlsContainer;
+	}
+
 	// Function to inject UI elements (buttons, status area)
 	function injectUI() {
 		const contentArea = findContentArea();
@@ -2090,10 +4627,34 @@ if (window.__RGInitDone) {
 
 		// Add the initial word count display
 		addInitialWordCountDisplay(contentArea);
+
+		// Add novel controls for CHAPTER_EMBEDDED type sites (like FanFiction.net)
+		// These are added asynchronously after main UI
+		setTimeout(async () => {
+			try {
+				const novelControls = await createChapterPageNovelControls();
+				if (novelControls) {
+					// Insert after the main controls container
+					const mainControls =
+						document.getElementById("gemini-controls");
+					if (mainControls && mainControls.parentNode) {
+						mainControls.parentNode.insertBefore(
+							novelControls,
+							mainControls.nextSibling
+						);
+						console.log(
+							"Ranobe Gemini: Novel controls added for chapter page"
+						);
+					}
+				}
+			} catch (err) {
+				console.log("Could not add novel controls:", err);
+			}
+		}, 100);
 	}
 
 	// Automatically extract content once the page is loaded
-	function autoExtractContent() {
+	async function autoExtractContent() {
 		const contentArea = findContentArea();
 
 		if (contentArea) {
@@ -2105,6 +4666,32 @@ if (window.__RGInitDone) {
 				console.log(`Title: ${result.title}`);
 				console.log(`Content length: ${result.text.length} characters`);
 				autoExtracted = true;
+
+				// Update chapter progression when content is loaded
+				await updateChapterProgression();
+
+				// Check if auto-enhance is enabled for this novel
+				if (novelLibrary) {
+					try {
+						const novel = await novelLibrary.getNovelByUrl(
+							window.location.href
+						);
+						if (novel && novel.autoEnhance === true) {
+							console.log(
+								"🚀 Auto-enhance enabled for this novel, starting enhancement..."
+							);
+							// Wait a bit for page to stabilize
+							setTimeout(() => {
+								handleEnhanceClick();
+							}, 1000);
+						}
+					} catch (err) {
+						console.log(
+							"Could not check auto-enhance setting:",
+							err
+						);
+					}
+				}
 			}
 		}
 	}
@@ -2180,75 +4767,149 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to intelligently split content for large chapters
-	function splitContentForProcessing(content, maxChunkSize = 10000) {
-		// If content is already small enough, return it as a single chunk
+	// CRITICAL: This function must NEVER return empty chunks
+	// NOTE: This function MUST produce identical results to background.js splitContentForProcessing
+	function splitContentForProcessing(content, maxChunkSize = 20000) {
+		console.log(
+			`[splitContentForProcessing] Starting with maxChunkSize=${maxChunkSize}`
+		);
+		console.log(
+			`[splitContentForProcessing] Content length: ${
+				content?.length || 0
+			} chars`
+		);
+
+		// Validate input
+		if (!content || typeof content !== "string") {
+			console.error(
+				"[splitContentForProcessing] Invalid content provided"
+			);
+			return [content || ""];
+		}
+
+		// If content is already small enough, return as is
 		if (content.length <= maxChunkSize) {
+			console.log(
+				"[splitContentForProcessing] Content is small enough, no splitting needed"
+			);
 			return [content];
 		}
 
+		let chunks = [];
+		let splitParts = [];
+
+		// Try multiple splitting strategies in order of preference
+		// Strategy 1: Split on double newlines (paragraph breaks) - MUST match background.js
+		splitParts = content.split(/\n\s*\n/);
 		console.log(
-			`Content is large (${content.length} chars), splitting into chunks...`
+			`[splitContentForProcessing] Strategy 1 (double newlines): ${splitParts.length} parts`
 		);
 
-		// First try to split at natural paragraph boundaries
-		const paragraphs = content.split(/\n\n+/);
-		const chunks = [];
+		// Strategy 2: If no double newlines, try single newlines
+		if (splitParts.length <= 1) {
+			splitParts = content.split(/\n/);
+			console.log(
+				`[splitContentForProcessing] Strategy 2 (single newlines): ${splitParts.length} parts`
+			);
+		}
+
+		// Strategy 3: If still no luck, try splitting on sentence endings
+		// This handles AO3's plain text which has no line breaks
+		if (splitParts.length <= 1) {
+			// Split on sentence endings (.!?) followed by space and capital letter
+			splitParts = content.split(/(?<=[.!?])\s+(?=[A-Z])/);
+			console.log(
+				`[splitContentForProcessing] Strategy 3 (sentence boundaries): ${splitParts.length} parts`
+			);
+		}
+
+		// Strategy 4: If still just one part, split on any sentence ending
+		if (splitParts.length <= 1) {
+			splitParts = content.split(/(?<=[.!?])\s+/);
+			console.log(
+				`[splitContentForProcessing] Strategy 4 (any sentence ending): ${splitParts.length} parts`
+			);
+		}
+
+		// Build chunks from split parts
 		let currentChunk = "";
 
-		// Group paragraphs into chunks that don't exceed maxChunkSize
-		for (const paragraph of paragraphs) {
-			// If adding this paragraph would exceed the limit, start a new chunk
+		for (let i = 0; i < splitParts.length; i++) {
+			const part = splitParts[i];
+			if (!part) continue;
+
+			const separator = currentChunk ? " " : "";
+
+			// If adding this part would exceed the limit, finalize current chunk
 			if (
-				currentChunk.length + paragraph.length > maxChunkSize &&
+				currentChunk.length + separator.length + part.length >
+					maxChunkSize &&
 				currentChunk.length > 0
 			) {
-				chunks.push(currentChunk);
-				currentChunk = paragraph;
+				chunks.push(currentChunk.trim());
+				currentChunk = part;
 			} else {
-				// Otherwise, add to current chunk
-				currentChunk += (currentChunk ? "\n\n" : "") + paragraph;
+				currentChunk += separator + part;
 			}
 		}
 
-		// Add the last chunk if it has content
-		if (currentChunk.length > 0) {
-			chunks.push(currentChunk);
+		// Add the final chunk
+		if (currentChunk.trim()) {
+			chunks.push(currentChunk.trim());
 		}
 
-		// If we still have any chunks that are too large, split them at sentence boundaries
-		const finalChunks = [];
+		console.log(
+			`[splitContentForProcessing] After part-based splitting: ${chunks.length} chunks`
+		);
 
+		// If we have chunks that are still too big, force split them
+		const finalChunks = [];
 		for (const chunk of chunks) {
 			if (chunk.length <= maxChunkSize) {
 				finalChunks.push(chunk);
-				continue;
-			}
+			} else {
+				// Force split by words
+				console.log(
+					`[splitContentForProcessing] Chunk too large (${chunk.length} chars), force splitting by words`
+				);
+				const words = chunk.split(/\s+/);
+				let subChunk = "";
 
-			// Split this chunk at sentence boundaries
-			const sentences = chunk.match(/[^.!?]+[.!?]+/g) || [chunk];
-			let sentenceChunk = "";
-
-			for (const sentence of sentences) {
-				if (
-					sentenceChunk.length + sentence.length > maxChunkSize &&
-					sentenceChunk.length > 0
-				) {
-					finalChunks.push(sentenceChunk);
-					sentenceChunk = sentence;
-				} else {
-					sentenceChunk += sentence;
+				for (const word of words) {
+					if (
+						subChunk.length + word.length + 1 > maxChunkSize &&
+						subChunk.length > 0
+					) {
+						finalChunks.push(subChunk.trim());
+						subChunk = word;
+					} else {
+						subChunk += (subChunk ? " " : "") + word;
+					}
 				}
-			}
 
-			if (sentenceChunk.length > 0) {
-				finalChunks.push(sentenceChunk);
+				if (subChunk.trim()) {
+					finalChunks.push(subChunk.trim());
+				}
 			}
 		}
 
+		// Filter out any empty chunks
+		const validChunks = finalChunks.filter((c) => c && c.trim().length > 0);
+
 		console.log(
-			`Split content into ${finalChunks.length} chunks for processing`
+			`Split content into ${validChunks.length} valid chunks for processing`
 		);
-		return finalChunks;
+
+		// Log chunk sizes for debugging
+		validChunks.forEach((chunk, idx) => {
+			console.log(
+				`[splitContentForProcessing] Chunk ${idx}: ${
+					chunk.length
+				} chars, preview: "${chunk.substring(0, 80)}..."`
+			);
+		});
+
+		return validChunks.length > 0 ? validChunks : [content];
 	}
 
 	// Handle click event for Summarize button
@@ -2309,7 +4970,8 @@ if (window.__RGInitDone) {
 			statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summarization...`;
 
 			// Get model info to determine if we need to split the content
-			const modelInfoResponse = await browser.runtime.sendMessage({
+			// Using sendMessageWithRetry to handle service worker sleep issues
+			const modelInfoResponse = await sendMessageWithRetry({
 				action: "getModelInfo",
 			});
 
@@ -2347,7 +5009,8 @@ if (window.__RGInitDone) {
 				const action = isShort
 					? "shortSummarizeWithGemini"
 					: "summarizeWithGemini";
-				const response = await browser.runtime.sendMessage({
+				// Using sendMessageWithRetry to handle service worker sleep issues
+				const response = await sendMessageWithRetry({
 					action: action,
 					title: title,
 					content: content,
@@ -2507,8 +5170,8 @@ if (window.__RGInitDone) {
 			const partTitle = `${title} (Part ${currentPartNum}/${parts.length})`;
 
 			try {
-				// Process this part
-				const response = await browser.runtime.sendMessage({
+				// Process this part using sendMessageWithRetry for service worker resilience
+				const response = await sendMessageWithRetry({
 					action: action,
 					title: partTitle,
 					content: part,
@@ -2557,8 +5220,8 @@ if (window.__RGInitDone) {
 					})
 					.join("\n\n");
 
-				// Make a final API call to combine the summaries
-				const finalResponse = await browser.runtime.sendMessage({
+				// Make a final API call to combine the summaries using retry wrapper
+				const finalResponse = await sendMessageWithRetry({
 					action: "combinePartialSummaries",
 					title: title,
 					partSummaries: combinedPartSummaries,
@@ -2611,6 +5274,8 @@ if (window.__RGInitDone) {
 					window.location.href
 				);
 				isCachedContent = false;
+				// Update button text immediately
+				button.textContent = "✨ Enhance with Gemini";
 				const contentArea = findContentArea();
 				if (contentArea) {
 					const isShowingEnhanced =
@@ -2631,6 +5296,7 @@ if (window.__RGInitDone) {
 						if (banner) banner.remove();
 					}
 				}
+				return; // Don't proceed to enhance, just clear cache
 			} else {
 				// Try loading cached content
 				try {
@@ -2692,15 +5358,15 @@ if (window.__RGInitDone) {
 			showStatusMessage("Processing content with Gemini AI...", "info");
 
 			// Load config values from storage to match background's chunking
+			// NOTE: We use chunkSize as BOTH the threshold and chunk size (simplified)
 			const settings = await browser.storage.local.get([
 				"chunkingEnabled",
 				"chunkSize",
-				"chunkThreshold",
 				"useEmoji",
 			]);
 			const chunkingEnabled = settings.chunkingEnabled !== false;
-			const chunkSize = settings.chunkSize || 12000;
-			const chunkThreshold = settings.chunkThreshold || 20000;
+			const chunkSize = settings.chunkSize || 20000; // Same default as background
+			const chunkThreshold = chunkSize; // Use same value for threshold (simplified)
 			const useEmoji = settings.useEmoji === true;
 
 			// If chunking is enabled and content is large enough, prepare progressive containers
@@ -2718,52 +5384,68 @@ if (window.__RGInitDone) {
 					chunkSize
 				);
 
-				// Create progressive container structure: enhanced container, WIP banner, remainder container
-				const progressiveContentContainer =
-					document.createElement("div");
-				progressiveContentContainer.id = "gemini-progressive-content";
-				progressiveContentContainer.style.width = "100%";
-
-				const enhancedContainer = document.createElement("div");
-				enhancedContainer.id = "gemini-enhanced-container";
-
-				const remainderContainer = document.createElement("div");
-				remainderContainer.id = "gemini-remainder-container";
-
-				// Populate remainder container with original chunks so they can be replaced progressively
-				parts.forEach((part, idx) => {
-					const partDiv = document.createElement("div");
-					partDiv.className = "gemini-original-chunk";
-					partDiv.setAttribute("data-chunk-index", idx);
-					// Convert text paragraphs into simple <p> blocks
-					const paragraphs = part
-						.split(/\n\n+/)
-						.map((p) => p.trim())
-						.filter(Boolean);
-					partDiv.innerHTML = paragraphs
-						.map((p) => `<p>${escapeHtml(p)}</p>`)
-						.join("");
-					remainderContainer.appendChild(partDiv);
-				});
-
-				// Clear content area and add new structure
-				contentArea.innerHTML = "";
-				contentArea.appendChild(enhancedContainer);
-
-				// Insert initial WIP banner
-				const wipBanner = createWorkInProgressBanner(0, parts.length);
-				contentArea.appendChild(wipBanner);
-
-				contentArea.appendChild(remainderContainer);
-
-				// Save original content for toggling
+				// Store original HTML for restoration/caching
+				const originalHTML = contentArea.innerHTML;
+				contentArea.setAttribute("data-original-html", originalHTML);
 				contentArea.setAttribute(
-					"data-original-content",
+					"data-original-text",
 					extractedContent.text
 				);
-			}
+				contentArea.setAttribute("data-total-chunks", parts.length);
 
-			// Get novel-specific custom prompt if available
+				// Split HTML into chunks that match text chunks (preserves original formatting)
+				const htmlChunks = splitHTMLIntoChunks(contentArea, parts);
+
+				// Create new structure with inline chunk replacement:
+				// For each chunk, we show a banner + content area that will be replaced in place
+				const chunkedContentContainer = document.createElement("div");
+				chunkedContentContainer.id = "gemini-chunked-content";
+				chunkedContentContainer.style.width = "100%";
+
+				for (let i = 0; i < parts.length; i++) {
+					// Create chunk wrapper
+					const chunkWrapper = document.createElement("div");
+					chunkWrapper.className = "gemini-chunk-wrapper";
+					chunkWrapper.setAttribute("data-chunk-index", i);
+
+					// Add chunk banner (first chunk starts as 'processing', rest as 'pending')
+					const initialStatus = i === 0 ? "processing" : "pending";
+					const banner = createChunkBanner(
+						i,
+						parts.length,
+						initialStatus
+					);
+					chunkWrapper.appendChild(banner);
+
+					// Add chunk content area with original content (preserving HTML structure)
+					const chunkContent = document.createElement("div");
+					chunkContent.className = "gemini-chunk-content";
+					chunkContent.setAttribute("data-chunk-index", i);
+					chunkContent.setAttribute(
+						"data-original-chunk-content",
+						parts[i]
+					);
+					// Store original HTML chunk for show/hide toggle
+					chunkContent.setAttribute(
+						"data-original-chunk-html",
+						htmlChunks[i] || formatOriginalChunkContent(parts[i])
+					);
+					// Display original content with preserved HTML structure
+					chunkContent.innerHTML =
+						htmlChunks[i] || formatOriginalChunkContent(parts[i]);
+					chunkWrapper.appendChild(chunkContent);
+
+					chunkedContentContainer.appendChild(chunkWrapper);
+				}
+
+				// Clear and replace content area
+				contentArea.innerHTML = "";
+				contentArea.appendChild(chunkedContentContainer);
+
+				console.log(
+					`Prepared ${parts.length} chunks for inline replacement with preserved HTML`
+				);
+			} // Get novel-specific custom prompt if available
 			let novelCustomPrompt = "";
 			if (novelLibrary) {
 				try {
@@ -2792,7 +5474,8 @@ if (window.__RGInitDone) {
 			}
 
 			// Send content to background for processing (background will stream chunkProcessed messages)
-			const response = await browser.runtime.sendMessage({
+			// Using sendMessageWithRetry to handle service worker sleep issues
+			const response = await sendMessageWithRetry({
 				action: "processWithGemini",
 				title: extractedContent.title,
 				content: extractedContent.text,
@@ -2806,17 +5489,53 @@ if (window.__RGInitDone) {
 
 			if (response && response.success) {
 				// If background returned a combined result (non-chunked), handle it here
-				if (response.result && response.result.enhancedContent) {
+				// Skip if we've already been handling chunks progressively
+				const enhancedContainer = document.getElementById(
+					"gemini-enhanced-container"
+				);
+				const hasProgressiveChunks =
+					enhancedContainer &&
+					enhancedContainer.querySelector(".gemini-chunk");
+
+				if (
+					response.result &&
+					response.result.enhancedContent &&
+					!hasProgressiveChunks
+				) {
 					replaceContentWithEnhancedVersion(response.result);
+				} else if (hasProgressiveChunks) {
+					console.log(
+						"Skipping replaceContentWithEnhancedVersion - chunks already displayed progressively"
+					);
 				}
-			} else {
+			} else if (!response || !response.success) {
 				const errorMessage = response?.error || "Unknown error";
-				if (errorMessage.includes("API key is missing")) {
+
+				// Handle API key missing scenario
+				if (
+					response?.needsApiKey ||
+					errorMessage.includes("API key is missing")
+				) {
 					showStatusMessage(
-						"API key is missing. Opening settings page...",
+						"⚠️ API key is missing. Please configure it in the extension popup.",
 						"error"
 					);
-					browser.runtime.sendMessage({ action: "openPopup" });
+					// Try to open the popup
+					try {
+						await browser.runtime.sendMessage({
+							action: "openPopup",
+						});
+					} catch (popupError) {
+						console.warn(
+							"Could not open popup automatically:",
+							popupError
+						);
+						showStatusMessage(
+							"⚠️ API key is missing. Please click the extension icon to configure it.",
+							"error",
+							10000 // Show for 10 seconds
+						);
+					}
 				} else {
 					showStatusMessage(
 						"Error processing with Gemini: " + errorMessage,
@@ -2887,7 +5606,23 @@ if (window.__RGInitDone) {
 				enhancedContent.enhancedContent
 					? enhancedContent.enhancedContent
 					: enhancedContent;
-			const sanitizedContent = sanitizeHTML(enhancedContentText);
+			let sanitizedContent = sanitizeHTML(enhancedContentText);
+
+			// If content doesn't have <p> tags, convert newlines to paragraphs
+			if (!/<p[\s>]/i.test(sanitizedContent)) {
+				console.log(
+					"Enhanced content missing <p> tags, converting newlines to paragraphs"
+				);
+				// Split by double newlines (paragraph breaks)
+				const paragraphs = sanitizedContent
+					.split(/\n\n+/)
+					.map((p) => p.trim())
+					.filter((p) => p.length > 0);
+				// Wrap each paragraph in <p> tags
+				sanitizedContent = paragraphs
+					.map((p) => `<p>${p}</p>`)
+					.join("\n");
+			}
 
 			// Handler-driven enhancement selection
 			const supportsTextOnly =
@@ -3187,6 +5922,9 @@ if (window.__RGInitDone) {
 			} catch (libraryError) {
 				console.error("Failed to add to novel library:", libraryError);
 			}
+
+			// Update chapter progression after successful enhancement
+			await updateChapterProgression();
 
 			return true;
 		} catch (error) {
@@ -3563,12 +6301,207 @@ if (window.__RGInitDone) {
 		}, 5000);
 	}
 
+	/**
+	 * Handle getting novel info for popup display
+	 * @returns {Promise<Object>} Novel info response
+	 */
+	async function handleGetNovelInfo() {
+		try {
+			if (!currentHandler) {
+				console.log("📚 getNovelInfo: No handler available");
+				return {
+					success: false,
+					error: "No handler available for this page",
+				};
+			}
+
+			// Get novel metadata from handler
+			console.log("📚 getNovelInfo: Extracting metadata...");
+			const metadata = await currentHandler.extractNovelMetadata();
+			console.log("📚 getNovelInfo: Raw metadata:", metadata);
+
+			if (!metadata || !metadata.title) {
+				console.log("📚 getNovelInfo: No valid metadata found");
+				return {
+					success: false,
+					error: "Could not extract novel metadata",
+				};
+			}
+
+			// Get current chapter from navigation (the chapter user is actually reading)
+			const chapterNav = currentHandler.getChapterNavigation?.() || {};
+			const currentReadingChapter = chapterNav.currentChapter;
+
+			// Check page type
+			const isOnChapterPage = currentHandler.isChapterPage?.() || false;
+			const isOnNovelPage = currentHandler.isNovelPage?.() || false;
+
+			// Check if novel is in library
+			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
+			const { novelLibrary } = await import(libraryUrl);
+			const library = await novelLibrary.getLibrary();
+			const novelId =
+				metadata.id ||
+				currentHandler.generateNovelId(window.location.href);
+			const isInLibrary =
+				novelId &&
+				library.novels &&
+				library.novels[novelId] !== undefined;
+
+			// Get library novel data for additional info
+			const libraryNovel = isInLibrary ? library.novels[novelId] : null;
+
+			// Build comprehensive response
+			const novelInfo = {
+				novelId: novelId,
+				title: metadata.title,
+				author: metadata.author,
+				description:
+					metadata.description ||
+					(libraryNovel ? libraryNovel.description : null),
+				coverUrl:
+					metadata.coverUrl ||
+					metadata.coverImage ||
+					(libraryNovel ? libraryNovel.coverUrl : null),
+				// Priority: current reading chapter from navigation > library record > null
+				currentChapter:
+					currentReadingChapter ||
+					(libraryNovel ? libraryNovel.lastReadChapter : null),
+				totalChapters:
+					metadata.totalChapters ||
+					(libraryNovel ? libraryNovel.totalChapters : null),
+				chapterTitle: metadata.chapterTitle,
+				source: metadata.source || currentHandler.getSiteIdentifier(),
+				sourceUrl: metadata.sourceUrl || window.location.href,
+				mainNovelUrl:
+					metadata.mainNovelUrl ||
+					(libraryNovel ? libraryNovel.sourceUrl : null),
+				isInLibrary: isInLibrary,
+				isChapterPage: isOnChapterPage,
+				isNovelPage: isOnNovelPage,
+				shelfId: libraryNovel
+					? libraryNovel.shelfId
+					: currentHandler.constructor.SHELF_METADATA?.id || null,
+				// Library-specific data when novel is in library
+				...(isInLibrary && libraryNovel
+					? {
+							readingStatus:
+								libraryNovel.readingStatus || "reading",
+							lastReadChapter: libraryNovel.lastReadChapter,
+							lastReadUrl: libraryNovel.lastReadUrl,
+							dateAdded: libraryNovel.dateAdded,
+							lastUpdated: libraryNovel.lastUpdated,
+							genres:
+								libraryNovel.genres || metadata.genres || [],
+							tags: libraryNovel.tags || metadata.tags || [],
+							status: libraryNovel.status || metadata.status,
+							enhancedChapters:
+								libraryNovel.enhancedChapters || 0,
+					  }
+					: {
+							genres: metadata.genres || [],
+							tags: metadata.tags || [],
+							status: metadata.status,
+					  }),
+			};
+
+			console.log("📚 getNovelInfo: Returning novelInfo:", novelInfo);
+			return {
+				success: true,
+				novelInfo: novelInfo,
+			};
+		} catch (error) {
+			console.error("Error in handleGetNovelInfo:", error);
+			return { success: false, error: error.message };
+		}
+	}
+
+	/**
+	 * Handle adding current novel to library
+	 * @returns {Promise<Object>} Add result
+	 */
+	async function handleAddToLibrary() {
+		try {
+			if (!currentHandler) {
+				return {
+					success: false,
+					error: "No handler available for this page",
+				};
+			}
+
+			// Get novel metadata from handler
+			const metadata = await currentHandler.extractNovelMetadata();
+			if (!metadata) {
+				return {
+					success: false,
+					error: "Could not extract novel metadata",
+				};
+			}
+
+			// Import novel library
+			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
+			const { novelLibrary } = await import(libraryUrl);
+
+			// Add/update novel in library
+			const result = await novelLibrary.addOrUpdateNovel({
+				title: metadata.title,
+				author: metadata.author,
+				coverUrl: metadata.coverImage,
+				currentChapter: metadata.currentChapter,
+				totalChapters: metadata.totalChapters,
+				chapterTitle: metadata.chapterTitle,
+				source: metadata.source || currentHandler.getSiteIdentifier(),
+				sourceUrl: metadata.sourceUrl || window.location.href,
+				lastChapterUrl: window.location.href,
+				tags: metadata.tags || [],
+				description: metadata.description,
+			});
+
+			return { success: true, novel: result };
+		} catch (error) {
+			console.error("Error in handleAddToLibrary:", error);
+			return { success: false, error: error.message };
+		}
+	}
+
 	// Listen for messages from the extension popup or background
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		console.log("Content script received message:", message);
 
 		if (message.action === "ping") {
 			sendResponse({ success: true, message: "Content script is alive" });
+			return true;
+		}
+
+		// Handle API key missing message - stop everything immediately
+		if (message.action === "apiKeyMissing") {
+			console.error("[Content] API key is missing, halting processing");
+			showStatusMessage(
+				"⚠️ API key is missing. Please configure it in the extension popup.",
+				"error",
+				10000
+			);
+
+			// Try to open the popup
+			try {
+				browser.runtime
+					.sendMessage({ action: "openPopup" })
+					.catch((err) => {
+						console.warn("Could not open popup:", err);
+					});
+			} catch (err) {
+				console.warn("Could not send openPopup message:", err);
+			}
+
+			// Reset UI state
+			const button = document.querySelector(".gemini-enhance-btn");
+			if (button) {
+				button.textContent = "✨ Enhance with Gemini";
+				button.disabled = false;
+				button.classList.remove("loading");
+			}
+
+			sendResponse({ success: true });
 			return true;
 		}
 
@@ -3589,6 +6522,28 @@ if (window.__RGInitDone) {
 		// Handle all chunks processing completion
 		if (message.action === "allChunksProcessed") {
 			handleAllChunksProcessed(message);
+			sendResponse({ success: true });
+			return true;
+		}
+
+		// Handle processing cancellation
+		if (message.action === "processingCancelled") {
+			console.log(
+				`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`
+			);
+			showStatusMessage(
+				`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
+				"info"
+			);
+
+			// Reset button state
+			const button = document.querySelector(".gemini-enhance-btn");
+			if (button) {
+				button.textContent = "🔄 Continue Enhancement";
+				button.disabled = false;
+				button.classList.remove("loading");
+			}
+
 			sendResponse({ success: true });
 			return true;
 		}
@@ -3658,139 +6613,65 @@ if (window.__RGInitDone) {
 			return true;
 		}
 
+		// Get novel info for popup display
+		if (message.action === "getNovelInfo") {
+			handleGetNovelInfo()
+				.then((result) => {
+					sendResponse(result);
+				})
+				.catch((error) => {
+					sendResponse({
+						success: false,
+						error: error.message || "Failed to get novel info",
+					});
+				});
+			return true;
+		}
+
+		// Add current novel to library
+		if (message.action === "addToLibrary") {
+			handleAddToLibrary()
+				.then((result) => {
+					sendResponse(result);
+				})
+				.catch((error) => {
+					sendResponse({
+						success: false,
+						error: error.message || "Failed to add to library",
+					});
+				});
+			return true;
+		}
+
+		// Update novel reading status
+		if (message.action === "updateNovelReadingStatus") {
+			(async () => {
+				try {
+					const libraryUrl = browser.runtime.getURL(
+						"utils/novel-library.js"
+					);
+					const { novelLibrary } = await import(libraryUrl);
+					const result = await novelLibrary.updateNovel(
+						message.novelId,
+						{
+							readingStatus: message.readingStatus,
+						}
+					);
+					sendResponse({ success: true, result });
+				} catch (error) {
+					console.error("Error updating reading status:", error);
+					sendResponse({
+						success: false,
+						error:
+							error.message || "Failed to update reading status",
+					});
+				}
+			})();
+			return true;
+		}
+
 		return false;
 	});
-
-	// Handler for processed chunks from the background script
-	function handleChunkProcessed(message) {
-		console.log(
-			`Received processed chunk ${message.chunkIndex + 1}/${
-				message.totalChunks
-			}`
-		);
-
-		const contentArea = findContentArea();
-		if (!contentArea) {
-			console.error(
-				"Unable to find content area for displaying processed chunk"
-			);
-			return;
-		}
-
-		const enhancedContainer = document.getElementById(
-			"gemini-enhanced-container"
-		);
-		const remainderContainer = document.getElementById(
-			"gemini-remainder-container"
-		);
-		let wipBanner = document.querySelector(".gemini-wip-banner");
-
-		// If progressive structure wasn't created earlier (background processed as single piece), fall back
-		if (!enhancedContainer || !remainderContainer) {
-			// Simple fallback: append at top like before
-			let progressiveContentContainer = document.getElementById(
-				"gemini-progressive-content"
-			);
-			if (!progressiveContentContainer) {
-				const originalContent = contentArea.innerHTML;
-				contentArea.setAttribute(
-					"data-original-content",
-					originalContent
-				);
-				progressiveContentContainer = document.createElement("div");
-				progressiveContentContainer.id = "gemini-progressive-content";
-				if (currentFontSize && currentFontSize !== 100) {
-					progressiveContentContainer.style.fontSize = `${currentFontSize}%`;
-				}
-				contentArea.innerHTML = "";
-				contentArea.appendChild(progressiveContentContainer);
-				const banner = createWorkInProgressBanner(
-					message.chunkIndex + 1,
-					message.totalChunks
-				);
-				contentArea.insertBefore(banner, progressiveContentContainer);
-				wipBanner = banner;
-			}
-
-			const chunkResult = message.result;
-			if (chunkResult && chunkResult.enhancedContent) {
-				const sanitizedContent = sanitizeHTML(
-					chunkResult.enhancedContent
-				);
-				const chunkContainer = document.createElement("div");
-				chunkContainer.className = "gemini-chunk";
-				chunkContainer.setAttribute(
-					"data-chunk-index",
-					message.chunkIndex
-				);
-				chunkContainer.innerHTML = sanitizedContent;
-				progressiveContentContainer.appendChild(chunkContainer);
-
-				if (message.isComplete) {
-					const existingWip =
-						document.querySelector(".gemini-wip-banner");
-					if (existingWip) existingWip.remove();
-					finalizePrefixEnhancedContent(chunkResult.modelInfo);
-				}
-			}
-
-			return;
-		}
-
-		// Normal progressive flow: insert enhanced chunk, remove corresponding remainder, move banner down
-		const chunkResult = message.result;
-		if (chunkResult && chunkResult.enhancedContent) {
-			const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
-
-			const enhancedChunk = document.createElement("div");
-			enhancedChunk.className = "gemini-chunk";
-			enhancedChunk.setAttribute("data-chunk-index", message.chunkIndex);
-			enhancedChunk.innerHTML = sanitizedContent;
-
-			// Append enhanced chunk to enhanced container
-			enhancedContainer.appendChild(enhancedChunk);
-
-			// Remove the corresponding original chunk from remainder
-			const originalChunk = remainderContainer.querySelector(
-				`[data-chunk-index="${message.chunkIndex}"]`
-			);
-			if (originalChunk) {
-				originalChunk.remove();
-			}
-
-			// Move the WIP banner to be before the next remainder chunk (so it visually moves down)
-			wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				const nextRemainder = remainderContainer.querySelector(
-					".gemini-original-chunk"
-				);
-				if (nextRemainder) {
-					// Place banner before the next remainder chunk
-					nextRemainder.parentNode.insertBefore(
-						wipBanner,
-						nextRemainder
-					);
-				} else {
-					// No remainder left - remove banner
-					wipBanner.remove();
-				}
-			}
-
-			// If all chunks are processed, finalize
-			if (message.isComplete) {
-				const wip = document.querySelector(".gemini-wip-banner");
-				if (wip) wip.remove();
-				finalizePrefixEnhancedContent(chunkResult.modelInfo);
-			} else {
-				// Update banner progress if still present
-				updateWorkInProgressBanner(
-					message.chunkIndex + 1,
-					message.totalChunks,
-					message.progressPercent
-				);
-			}
-		}
-	}
 
 	// Test function for game status boxes (can be triggered from the console for verification)
 	window.testGameStatsBox = async function () {

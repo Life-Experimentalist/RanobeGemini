@@ -1,0 +1,234 @@
+/**
+ * Novel Card Styles
+ * Base styles for novel cards with support for per-site customization
+ */
+
+/* Base Novel Card */
+.novel-card {
+	position: relative;
+	background: var(--bg-card);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	cursor: pointer;
+	transition: all var(--transition-normal);
+	border: 1px solid var(--border-color);
+}
+
+.novel-card:hover {
+	transform: translateY(-4px);
+	box-shadow: var(--shadow-lg);
+	border-color: var(--primary-color);
+}
+
+/* Faded Background Icon */
+.novel-card-bg-icon {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: flex-end;
+	align-items: flex-start;
+	pointer-events: none;
+	z-index: 0;
+	overflow: hidden;
+}
+
+.novel-card-bg-icon img {
+	width: 80px;
+	height: 80px;
+	object-fit: contain;
+	opacity: 0.08;
+	transform: translate(20%, -20%);
+}
+
+.novel-card-bg-icon.emoji {
+	font-size: 4rem;
+	opacity: 0.08;
+	padding: var(--spacing-sm);
+	line-height: 1;
+}
+
+/* Card Cover */
+.novel-card-cover {
+	position: relative;
+	overflow: hidden;
+	aspect-ratio: 2/3;
+	z-index: 1;
+}
+
+.novel-card-cover img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform var(--transition-normal);
+}
+
+.novel-card:hover .novel-card-cover img {
+	transform: scale(1.05);
+}
+
+.novel-card-overlay {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	padding: var(--spacing-sm);
+	background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* Reading Status Badge */
+.reading-status-badge {
+	padding: 2px 8px;
+	border-radius: var(--radius-sm);
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: white;
+	text-transform: uppercase;
+}
+
+/* Card Info Section */
+.novel-card-info {
+	position: relative;
+	z-index: 1;
+	padding: var(--spacing-md);
+	background: var(--bg-card);
+}
+
+.novel-card-title {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	margin: 0 0 var(--spacing-xs) 0;
+	line-height: 1.3;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.novel-card-author {
+	font-size: 0.8rem;
+	color: var(--text-secondary);
+	margin: 0 0 var(--spacing-sm) 0;
+	font-style: italic;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Card Metadata */
+.novel-card-meta {
+	display: flex;
+	gap: var(--spacing-sm);
+	flex-wrap: wrap;
+	margin-bottom: var(--spacing-sm);
+}
+
+.novel-card-meta .meta-item {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+/* Small Rating Badge */
+.rating-badge-small {
+	padding: 2px 6px;
+	border-radius: var(--radius-xs);
+	font-size: 0.65rem;
+	font-weight: 600;
+}
+
+.rating-badge-small.rating-general {
+	background: rgba(46, 204, 113, 0.2);
+	color: #2ecc71;
+}
+
+.rating-badge-small.rating-teen {
+	background: rgba(241, 196, 15, 0.2);
+	color: #f1c40f;
+}
+
+.rating-badge-small.rating-mature {
+	background: rgba(230, 126, 34, 0.2);
+	color: #e67e22;
+}
+
+.rating-badge-small.rating-explicit {
+	background: rgba(231, 76, 60, 0.2);
+	color: #e74c3c;
+}
+
+.rating-badge-small.rating-not-rated {
+	background: rgba(149, 165, 166, 0.2);
+	color: #95a5a6;
+}
+
+/* Card Tags */
+.novel-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.card-tag {
+	font-size: 0.65rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-xs);
+	background: rgba(92, 124, 250, 0.15);
+	color: var(--primary-color);
+	max-width: 100px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.card-tag-more {
+	font-size: 0.65rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-xs);
+	background: rgba(92, 124, 250, 0.25);
+	color: var(--primary-color);
+	font-weight: 600;
+}
+
+/* AO3-specific Tag Colors */
+.ao3-tags .card-tag-fandom {
+	background: rgba(52, 152, 219, 0.15);
+	color: #3498db;
+}
+
+.ao3-tags .card-tag-relationship {
+	background: rgba(241, 196, 15, 0.15);
+	color: #f1c40f;
+}
+
+.ao3-tags .card-tag-additional {
+	background: rgba(149, 165, 166, 0.15);
+	color: var(--text-secondary);
+}
+
+/* Novel Card Grid */
+.novel-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--spacing-md);
+}
+
+/* Compact Card Variant */
+.novel-card.compact .novel-card-cover {
+	aspect-ratio: 3/4;
+}
+
+.novel-card.compact .novel-card-info {
+	padding: var(--spacing-sm);
+}
+
+.novel-card.compact .novel-card-title {
+	font-size: 0.85rem;
+	-webkit-line-clamp: 1;
+	line-clamp: 1;
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>WebNovel - Novel Library</title>
+		<link rel="stylesheet" href="../shelf-page.css" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../../../icons/logo-dark-32.png"
+		/>
+	</head>
+	<body>
+		<div class="shelf-page-container">
+			<!-- Page Header -->
+			<header class="shelf-page-header">
+				<div class="shelf-page-title">
+					<span
+						class="shelf-page-color-bar"
+						id="color-bar"
+						style="background: #ff6600"
+					></span>
+					<span class="shelf-page-icon" id="page-icon">📖</span>
+					<h1 id="page-title">WebNovel</h1>
+					<span class="novel-count" id="novel-count">(0 novels)</span>
+				</div>
+				<a href="../../library.html" class="back-link">
+					← Back to Library
+				</a>
+			</header>
+
+			<!-- Stats Summary -->
+			<div class="stats-summary">
+				<div class="stat-card">
+					<span class="stat-value" id="stats-novels">0</span>
+					<span class="stat-label">Novels</span>
+				</div>
+				<div class="stat-card">
+					<span class="stat-value" id="stats-enhanced">0</span>
+					<span class="stat-label">Enhanced Chapters</span>
+				</div>
+				<div class="stat-card">
+					<span class="stat-value" id="stats-chapters">0</span>
+					<span class="stat-label">Total Chapters</span>
+				</div>
+			</div>
+
+			<!-- Filters Section -->
+			<div class="filters-section">
+				<div class="filter-group">
+					<label for="sort-select">Sort by:</label>
+					<select id="sort-select">
+						<option value="recent">Recently Read</option>
+						<option value="added">Date Added</option>
+						<option value="title">Title</option>
+						<option value="chapters">Enhanced Chapters</option>
+					</select>
+				</div>
+				<div class="filter-group">
+					<label for="status-filter">Status:</label>
+					<select id="status-filter">
+						<option value="all">All</option>
+						<option value="ongoing">Ongoing</option>
+						<option value="completed">Completed</option>
+						<option value="hiatus">Hiatus</option>
+					</select>
+				</div>
+				<div class="filter-group search-input">
+					<label for="search-input">Search:</label>
+					<input
+						type="text"
+						id="search-input"
+						placeholder="Search by title or author..."
+					/>
+				</div>
+			</div>
+
+			<!-- Loading State -->
+			<div class="loading-state" id="loading-state">
+				<div class="loading-spinner"></div>
+				<p>Loading novels...</p>
+			</div>
+
+			<!-- Empty State -->
+			<div class="empty-state" id="empty-state" style="display: none">
+				<span class="empty-icon">📖</span>
+				<h2>No novels from WebNovel yet!</h2>
+				<p>
+					Visit a chapter on
+					<a href="https://www.webnovel.com" target="_blank"
+						>webnovel.com</a
+					>
+					to add novels to your library
+				</p>
+			</div>
+
+			<!-- Novel Grid -->
+			<div class="novel-grid" id="novel-grid" style="display: none"></div>
+		</div>
+
+		<script src="../../../lib/browser-polyfill.min.js"></script>
+		<script type="module">
+			import { initShelfPage } from "../shelf-page.js";
+			// Initialize with WebNovel shelf configuration
+			document.addEventListener("DOMContentLoaded", () => {
+				initShelfPage("webnovel", {
+					id: "webnovel",
+					name: "WebNovel",
+					icon: "https://www.yueimg.com/en/favicon/favicon.d3f6a.ico",
+					color: "#ff6600",
+					primaryDomain: "www.webnovel.com",
+				});
+			});
+		</script>
+	</body>
+</html>

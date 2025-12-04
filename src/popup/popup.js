@@ -1,7 +1,6 @@
 // Simple popup script for Ranobe Gemini
 
 import {
-	DEFAULT_CHUNK_SIZE,
 	DEFAULT_PROMPT,
 	DEFAULT_SUMMARY_PROMPT,
 	DEFAULT_SHORT_SUMMARY_PROMPT,
@@ -34,9 +33,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const saveSettingsBtn = document.getElementById("saveSettings");
 	const tabButtons = document.querySelectorAll(".tab-btn");
 	const tabContents = document.querySelectorAll(".tab-content");
-	const chunkingEnabledCheckbox = document.getElementById("chunkingEnabled");
-	const chunkSizeContainer = document.getElementById("chunkSizeContainer");
-	const chunkSizeInput = document.getElementById("chunkSize");
 	const maxOutputTokensInput = document.getElementById("maxOutputTokens");
 	const temperatureSlider = document.getElementById("temperatureSlider");
 	const temperatureValue = document.getElementById("temperatureValue");
@@ -44,12 +40,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
 	const topKValue = document.getElementById("topKValue");
-	const chunkThresholdSlider = document.getElementById(
-		"chunkThresholdSlider"
-	);
-	const chunkThresholdValue = document.getElementById("chunkThresholdValue");
-	const chunkSizeSlider = document.getElementById("chunkSizeSlider");
-	const chunkSizeValueDisplay = document.getElementById("chunkSizeValue");
 	const fontSizeSlider = document.getElementById("fontSizeSlider");
 	const fontSizeValue = document.getElementById("fontSizeValue");
 	const customEndpointInput = document.getElementById("customEndpoint");
@@ -74,13 +64,241 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const refreshNovelsBtn = document.getElementById("refreshNovels");
 	const novelsListContainer = document.getElementById("novelsList");
 
-	// Novel Library elements
-	const openLibraryPageBtn = document.getElementById("openLibraryPage");
-	const libStatNovels = document.getElementById("libStatNovels");
-	const libStatChapters = document.getElementById("libStatChapters");
-	const libStatShelves = document.getElementById("libStatShelves");
-	const recentNovelsListContainer =
-		document.getElementById("recentNovelsList");
+	// Library Tab Elements (New)
+	const libraryLoading = document.getElementById("libraryLoading");
+	const currentPageSection = document.getElementById("currentPageSection");
+	const pageStatusBadge = document.getElementById("pageStatusBadge");
+	const currentNovelCard = document.getElementById("currentNovelCard");
+	const currentNovelCover = document.getElementById("currentNovelCover");
+	const currentNovelTitle = document.getElementById("currentNovelTitle");
+	const currentNovelAuthor = document.getElementById("currentNovelAuthor");
+	const currentPageTypeTag = document.getElementById("currentPageTypeTag");
+	const currentStatusTag = document.getElementById("currentStatusTag");
+	const currentChapterInfo = document.getElementById("currentChapterInfo");
+	const currentChapterText = document.getElementById("currentChapterText");
+	const currentProgressBar = document.getElementById("currentProgressBar");
+	const currentProgressFill = document.getElementById("currentProgressFill");
+	const currentProgressPercent = document.getElementById(
+		"currentProgressPercent"
+	);
+	const libraryDetails = document.getElementById("libraryDetails");
+	const readingStatusSelect = document.getElementById("readingStatusSelect");
+	const enhancedCountRow = document.getElementById("enhancedCountRow");
+	const enhancedCountValue = document.getElementById("enhancedCountValue");
+	const genresRow = document.getElementById("genresRow");
+	const genresList = document.getElementById("genresList");
+	const addToLibraryBtn = document.getElementById("addToLibraryBtn");
+	const openNovelBtn = document.getElementById("openNovelBtn");
+	const notSupportedMessage = document.getElementById("notSupportedMessage");
+	const notSupportedText = document.getElementById("notSupportedText");
+	const openFullLibraryBtn = document.getElementById("openFullLibrary");
+	const refreshLibraryBtn = document.getElementById("refreshLibrary");
+	const statNovels = document.getElementById("statNovels");
+	const statChapters = document.getElementById("statChapters");
+	const statShelves = document.getElementById("statShelves");
+	const recentSectionTitle = document.getElementById("recentSectionTitle");
+	const siteIndicator = document.getElementById("siteIndicator");
+	const recentNovelsGrid = document.getElementById("recentNovelsGrid");
+	const emptyState = document.getElementById("emptyState");
+
+	// Theme elements
+	const themeModeSelect = document.getElementById("themeMode");
+	const accentColorPicker = document.getElementById("accentColorPicker");
+	const accentColorText = document.getElementById("accentColorText");
+	const accentSecondaryPicker = document.getElementById(
+		"accentSecondaryPicker"
+	);
+	const accentSecondaryText = document.getElementById("accentSecondaryText");
+	const backgroundColorPicker = document.getElementById(
+		"backgroundColorPicker"
+	);
+	const backgroundColorText = document.getElementById("backgroundColorText");
+	const textColorPicker = document.getElementById("textColorPicker");
+	const textColorText = document.getElementById("textColorText");
+	const saveThemeBtn = document.getElementById("saveTheme");
+	const resetThemeBtn = document.getElementById("resetTheme");
+
+	// Store current page novel data
+	let currentPageNovelData = null;
+	let currentSiteShelfId = null;
+
+	// Theme defaults
+	const defaultTheme = {
+		mode: "dark",
+		accentPrimary: "#667eea",
+		accentSecondary: "#764ba2",
+		bgColor: "#16213e",
+		textColor: "#e0e0e0",
+	};
+
+	// Theme Management Functions
+	async function loadTheme() {
+		try {
+			const result = await browser.storage.local.get("themeSettings");
+			const theme = result.themeSettings || defaultTheme;
+
+			// Apply theme mode
+			if (themeModeSelect) {
+				themeModeSelect.value = theme.mode || "dark";
+			}
+
+			// Set color pickers and text inputs
+			if (accentColorPicker && accentColorText) {
+				accentColorPicker.value =
+					theme.accentPrimary || defaultTheme.accentPrimary;
+				accentColorText.value =
+					theme.accentPrimary || defaultTheme.accentPrimary;
+			}
+
+			if (accentSecondaryPicker && accentSecondaryText) {
+				accentSecondaryPicker.value =
+					theme.accentSecondary || defaultTheme.accentSecondary;
+				accentSecondaryText.value =
+					theme.accentSecondary || defaultTheme.accentSecondary;
+			}
+
+			if (backgroundColorPicker && backgroundColorText) {
+				backgroundColorPicker.value =
+					theme.bgColor || defaultTheme.bgColor;
+				backgroundColorText.value =
+					theme.bgColor || defaultTheme.bgColor;
+			}
+
+			if (textColorPicker && textColorText) {
+				textColorPicker.value =
+					theme.textColor || defaultTheme.textColor;
+				textColorText.value = theme.textColor || defaultTheme.textColor;
+			}
+
+			// Apply theme to UI
+			applyTheme(theme);
+		} catch (error) {
+			console.error("Error loading theme:", error);
+			applyTheme(defaultTheme);
+		}
+	}
+
+	function applyTheme(theme) {
+		const root = document.documentElement;
+
+		// Apply theme mode
+		if (theme.mode === "light") {
+			root.setAttribute("data-theme", "light");
+		} else if (theme.mode === "auto") {
+			// Use system preference
+			const prefersDark = window.matchMedia(
+				"(prefers-color-scheme: dark)"
+			).matches;
+			root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+		} else {
+			root.removeAttribute("data-theme"); // Default to dark
+		}
+
+		// Apply custom colors
+		root.style.setProperty("--accent-primary", theme.accentPrimary);
+		root.style.setProperty("--accent-secondary", theme.accentSecondary);
+		root.style.setProperty("--container-bg", theme.bgColor);
+		root.style.setProperty("--text-primary", theme.textColor);
+	}
+
+	async function saveTheme() {
+		try {
+			const theme = {
+				mode: themeModeSelect?.value || "dark",
+				accentPrimary:
+					accentColorPicker?.value || defaultTheme.accentPrimary,
+				accentSecondary:
+					accentSecondaryPicker?.value ||
+					defaultTheme.accentSecondary,
+				bgColor: backgroundColorPicker?.value || defaultTheme.bgColor,
+				textColor: textColorPicker?.value || defaultTheme.textColor,
+			};
+
+			await browser.storage.local.set({ themeSettings: theme });
+			applyTheme(theme);
+			showStatus("Theme saved successfully!", "success");
+		} catch (error) {
+			console.error("Error saving theme:", error);
+			showStatus("Failed to save theme", "error");
+		}
+	}
+
+	async function resetTheme() {
+		try {
+			await browser.storage.local.set({ themeSettings: defaultTheme });
+
+			// Reset UI controls
+			if (themeModeSelect) themeModeSelect.value = defaultTheme.mode;
+			if (accentColorPicker)
+				accentColorPicker.value = defaultTheme.accentPrimary;
+			if (accentColorText)
+				accentColorText.value = defaultTheme.accentPrimary;
+			if (accentSecondaryPicker)
+				accentSecondaryPicker.value = defaultTheme.accentSecondary;
+			if (accentSecondaryText)
+				accentSecondaryText.value = defaultTheme.accentSecondary;
+			if (backgroundColorPicker)
+				backgroundColorPicker.value = defaultTheme.bgColor;
+			if (backgroundColorText)
+				backgroundColorText.value = defaultTheme.bgColor;
+			if (textColorPicker) textColorPicker.value = defaultTheme.textColor;
+			if (textColorText) textColorText.value = defaultTheme.textColor;
+
+			applyTheme(defaultTheme);
+			showStatus("Theme reset to default", "success");
+		} catch (error) {
+			console.error("Error resetting theme:", error);
+			showStatus("Failed to reset theme", "error");
+		}
+	}
+
+	// Sync color picker and text input
+	function syncColorInputs(picker, text) {
+		if (picker && text) {
+			picker.addEventListener("input", () => {
+				text.value = picker.value;
+			});
+			text.addEventListener("input", () => {
+				if (/^#[0-9A-Fa-f]{6}$/.test(text.value)) {
+					picker.value = text.value;
+				}
+			});
+		}
+	}
+
+	// Initialize theme controls
+	syncColorInputs(accentColorPicker, accentColorText);
+	syncColorInputs(accentSecondaryPicker, accentSecondaryText);
+	syncColorInputs(backgroundColorPicker, backgroundColorText);
+	syncColorInputs(textColorPicker, textColorText);
+
+	// Theme event listeners
+	if (saveThemeBtn) {
+		saveThemeBtn.addEventListener("click", saveTheme);
+	}
+
+	if (resetThemeBtn) {
+		resetThemeBtn.addEventListener("click", resetTheme);
+	}
+
+	if (themeModeSelect) {
+		themeModeSelect.addEventListener("change", () => {
+			const theme = {
+				mode: themeModeSelect.value,
+				accentPrimary:
+					accentColorPicker?.value || defaultTheme.accentPrimary,
+				accentSecondary:
+					accentSecondaryPicker?.value ||
+					defaultTheme.accentSecondary,
+				bgColor: backgroundColorPicker?.value || defaultTheme.bgColor,
+				textColor: textColorPicker?.value || defaultTheme.textColor,
+			};
+			applyTheme(theme);
+		});
+	}
+
+	// Load theme on startup
+	loadTheme();
 
 	// Backup API Keys Management
 	let backupApiKeys = [];
@@ -176,19 +394,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	}
 
-	// Initialize new sliders for chunk threshold, chunk size, and font size
-	if (chunkThresholdSlider && chunkThresholdValue) {
-		chunkThresholdSlider.addEventListener("input", () => {
-			chunkThresholdValue.textContent = chunkThresholdSlider.value;
-		});
-	}
-
-	if (chunkSizeSlider && chunkSizeValueDisplay) {
-		chunkSizeSlider.addEventListener("input", () => {
-			chunkSizeValueDisplay.textContent = chunkSizeSlider.value;
-		});
-	}
-
+	// Initialize font size slider
 	if (fontSizeSlider && fontSizeValue) {
 		fontSizeSlider.addEventListener("input", () => {
 			fontSizeValue.textContent = fontSizeSlider.value + "%";
@@ -202,19 +408,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 			advancedParamsContent.classList.toggle("active");
 		});
 	}
-
-	// Set up chunking settings toggle
-	function toggleChunkSizeVisibility() {
-		chunkSizeContainer.style.display = chunkingEnabledCheckbox.checked
-			? "block"
-			: "none";
-	}
-
-	// Add event listener for chunking checkbox
-	chunkingEnabledCheckbox.addEventListener(
-		"change",
-		toggleChunkSizeVisibility
-	);
 
 	// Enable resizing of the popup
 	setupResizing();
@@ -462,10 +655,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const tabId = button.getAttribute("data-tab");
 			document.getElementById(tabId).classList.add("active");
 
-			// Special handling for novels tab
-			if (tabId === "novels") {
-				loadLibrary(); // Load the new library system
-				loadNovels(); // Also load legacy novels
+			// Special handling for library tab
+			if (tabId === "library") {
+				initializeLibraryTab();
 			}
 		});
 	});
@@ -572,12 +764,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// Set debug mode checkbox
 		debugModeCheckbox.checked = data.debugMode || false;
 
-		// Set chunking checkbox state
-		chunkingEnabledCheckbox.checked = data.chunkingEnabled !== false; // Default to true
-
-		// Set chunk size input value
-		chunkSizeInput.value = data.chunkSize || DEFAULT_CHUNK_SIZE;
-
 		// Set emoji checkbox state
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		if (useEmojiCheckbox) {
@@ -611,22 +797,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 			topKValue.textContent = topK;
 		}
 
-		// Set chunk threshold slider
-		if (chunkThresholdSlider && chunkThresholdValue) {
-			const threshold =
-				data.chunkThreshold !== undefined ? data.chunkThreshold : 20000;
-			chunkThresholdSlider.value = threshold;
-			chunkThresholdValue.textContent = threshold;
-		}
-
-		// Set chunk size slider in advanced tab
-		if (chunkSizeSlider && chunkSizeValueDisplay) {
-			const chunkSize =
-				data.chunkSize !== undefined ? data.chunkSize : 12000;
-			chunkSizeSlider.value = chunkSize;
-			chunkSizeValueDisplay.textContent = chunkSize;
-		}
-
 		// Set font size slider
 		if (fontSizeSlider && fontSizeValue) {
 			const fontSize = data.fontSize !== undefined ? data.fontSize : 100;
@@ -647,9 +817,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (apiKeyRotationSelect) {
 			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
 		}
-
-		// Set initial chunk size container visibility
-		toggleChunkSizeVisibility();
 	} catch (error) {
 		console.error("Error loading settings:", error);
 		// If settings fail to load, at least set the default prompt
@@ -663,10 +830,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// Set default permanent prompt on error
 		if (permanentPrompt && !permanentPrompt.value) {
 			permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
-		}
-		// Set default chunk size on error
-		if (chunkSizeInput && !chunkSizeInput.value) {
-			chunkSizeInput.value = DEFAULT_CHUNK_SIZE;
 		}
 	}
 
@@ -736,22 +899,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 	saveSettingsBtn.addEventListener("click", async () => {
 		const apiKey = apiKeyInput.value.trim();
 		const selectedModelId = modelSelect.value;
-		const chunkSize = parseInt(chunkSizeInput.value, 10);
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		const maxTokens = parseInt(maxOutputTokensInput.value, 10) || 8192;
 		const temperature = parseFloat(temperatureSlider.value);
 
 		if (!apiKey) {
 			showStatus("Please enter a valid API key", "error");
-			return;
-		}
-
-		// Validate chunk size
-		if (isNaN(chunkSize) || chunkSize < 5000) {
-			showStatus(
-				"Please enter a valid chunk size (minimum 5000)",
-				"error"
-			);
 			return;
 		}
 
@@ -782,8 +935,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 				selectedModelId: selectedModelId,
 				modelEndpoint: modelEndpoint,
 				debugMode: debugModeCheckbox.checked,
-				chunkingEnabled: chunkingEnabledCheckbox.checked, // Save the chunking setting
-				chunkSize: chunkSize, // Save the chunk size
 				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false, // Save emoji setting
 				maxOutputTokens: maxTokens,
 				temperature: temperature,
@@ -803,12 +954,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 				const topP = parseFloat(topPSlider.value);
 				const topK = parseInt(topKSlider.value, 10);
 				const customEndpoint = customEndpointInput.value.trim();
-				const chunkThreshold = chunkThresholdSlider
-					? parseInt(chunkThresholdSlider.value, 10)
-					: 20000;
-				const chunkSize = chunkSizeSlider
-					? parseInt(chunkSizeSlider.value, 10)
-					: 12000;
 				const fontSize = fontSizeSlider
 					? parseInt(fontSizeSlider.value, 10)
 					: 100;
@@ -820,11 +965,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topP: topP,
 					topK: topK,
 					customEndpoint: customEndpoint,
-					chunkThreshold: chunkThreshold,
-					chunkSize: chunkSize,
 					fontSize: fontSize,
 				});
-
 				showStatus("Advanced settings saved successfully!", "success");
 			} catch (error) {
 				console.error("Error saving advanced settings:", error);
@@ -856,16 +998,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topKValue.textContent = "40";
 				}
 
-				if (chunkThresholdSlider && chunkThresholdValue) {
-					chunkThresholdSlider.value = 20000;
-					chunkThresholdValue.textContent = "20000";
-				}
-
-				if (chunkSizeSlider && chunkSizeValueDisplay) {
-					chunkSizeSlider.value = 12000;
-					chunkSizeValueDisplay.textContent = "12000";
-				}
-
 				if (fontSizeSlider && fontSizeValue) {
 					fontSizeSlider.value = 100;
 					fontSizeValue.textContent = "100%";
@@ -883,8 +1015,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 					topP: 0.95,
 					topK: 40,
 					customEndpoint: "",
-					chunkThreshold: 20000,
-					chunkSize: 12000,
 					fontSize: 100,
 				});
 
@@ -929,7 +1059,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Full Prompt Preview functionality
 	const fullPromptPreview = document.getElementById("fullPromptPreview");
-	const refreshPromptPreviewBtn = document.getElementById("refreshPromptPreview");
+	const refreshPromptPreviewBtn = document.getElementById(
+		"refreshPromptPreview"
+	);
 	const copyFullPromptBtn = document.getElementById("copyFullPrompt");
 
 	function generateFullPromptPreview() {
@@ -940,12 +1072,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 		// Get site-specific prompts
 		let sitePrompts = "";
-		const sitePromptsContainer = document.getElementById("siteSpecificPromptsContainer");
+		const sitePromptsContainer = document.getElementById(
+			"siteSpecificPromptsContainer"
+		);
 		if (sitePromptsContainer) {
-			const sitePromptItems = sitePromptsContainer.querySelectorAll(".site-prompt-item");
-			sitePromptItems.forEach(item => {
+			const sitePromptItems =
+				sitePromptsContainer.querySelectorAll(".site-prompt-item");
+			sitePromptItems.forEach((item) => {
 				const siteName = item.querySelector(".site-name")?.value;
-				const sitePromptContent = item.querySelector(".site-prompt-content")?.value;
+				const sitePromptContent = item.querySelector(
+					".site-prompt-content"
+				)?.value;
 				if (siteName && sitePromptContent) {
 					sitePrompts += `\n--- ${siteName} ---\n${sitePromptContent}\n`;
 				}
@@ -977,14 +1114,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	if (refreshPromptPreviewBtn) {
-		refreshPromptPreviewBtn.addEventListener("click", generateFullPromptPreview);
+		refreshPromptPreviewBtn.addEventListener(
+			"click",
+			generateFullPromptPreview
+		);
 	}
 
 	if (copyFullPromptBtn) {
 		copyFullPromptBtn.addEventListener("click", async () => {
 			generateFullPromptPreview();
 			try {
-				await navigator.clipboard.writeText(fullPromptPreview.textContent);
+				await navigator.clipboard.writeText(
+					fullPromptPreview.textContent
+				);
 				showStatus("Full prompt copied to clipboard!", "success");
 			} catch (err) {
 				console.error("Failed to copy:", err);
@@ -994,7 +1136,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	// Auto-generate preview when the details element is opened
-	const promptPreviewSection = document.querySelector(".prompt-preview-section");
+	const promptPreviewSection = document.querySelector(
+		".prompt-preview-section"
+	);
 	if (promptPreviewSection) {
 		promptPreviewSection.addEventListener("toggle", (e) => {
 			if (e.target.open) {
@@ -1337,6 +1481,66 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	/**
+	 * Get shelf info by domain name
+	 * @param {string} domain - Domain name (e.g., "www.fanfiction.net")
+	 * @returns {Object|null} Shelf definition or null
+	 */
+	function getShelfByDomain(domain) {
+		const normalizedDomain = domain.toLowerCase();
+		for (const [key, shelf] of Object.entries(SHELVES)) {
+			for (const shelfDomain of shelf.domains) {
+				const normalizedShelfDomain = shelfDomain.toLowerCase();
+				if (
+					normalizedDomain === normalizedShelfDomain ||
+					normalizedDomain === `www.${normalizedShelfDomain}` ||
+					normalizedDomain.endsWith(`.${normalizedShelfDomain}`)
+				) {
+					return shelf;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Render a shelf/domain icon - supports emoji, URL strings
+	 * @param {string|Object} icon - Icon value (emoji string, URL string, or {url, fallback})
+	 * @param {string} className - Optional CSS class
+	 * @returns {string} HTML string for the icon
+	 */
+	function renderDomainIcon(icon, className = "") {
+		if (!icon) return `<span class="domain-icon ${className}">📖</span>`;
+
+		// If icon is a simple string
+		if (typeof icon === "string") {
+			// Check if it's a URL (starts with http:// or https://)
+			if (icon.startsWith("http://") || icon.startsWith("https://")) {
+				return `<span class="domain-icon domain-icon-img ${className}">
+					<img src="${escapeHtml(icon)}" alt=""
+						onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+						style="width: 16px; height: 16px; vertical-align: middle;">
+					<span class="icon-fallback" style="display: none;">📖</span>
+				</span>`;
+			}
+			// It's an emoji
+			return `<span class="domain-icon ${className}">${icon}</span>`;
+		}
+
+		// If icon is an object with url and fallback
+		if (typeof icon === "object" && icon.url) {
+			const fallback = icon.fallback || "📖";
+			return `<span class="domain-icon domain-icon-img ${className}">
+				<img src="${escapeHtml(icon.url)}" alt=""
+					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+					style="width: 16px; height: 16px; vertical-align: middle;">
+				<span class="icon-fallback" style="display: none;">${fallback}</span>
+			</span>`;
+		}
+
+		return `<span class="domain-icon ${className}">📖</span>`;
+	}
+
+	/**
 	 * Create a domain section element
 	 * @param {string} domain - Domain name
 	 * @param {Array} novels - Array of [novelId, novel] tuples
@@ -1346,11 +1550,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 		const section = document.createElement("div");
 		section.className = "domain-section";
 
+		// Get shelf info for icon
+		const shelf = getShelfByDomain(domain);
+		const shelfIcon = shelf ? shelf.icon : "📖";
+		const shelfName = shelf ? shelf.name : domain;
+		const iconHtml = renderDomainIcon(shelfIcon);
+
 		const header = document.createElement("div");
 		header.className = "domain-header domain-toggle";
 		header.innerHTML = `
 			<span class="toggle-icon">▼</span>
-			<span class="domain-name">${domain}</span>
+			${iconHtml}
+			<span class="domain-name">${shelfName}</span>
 			<span class="domain-count">${novels.length} ${
 			novels.length === 1 ? "novel" : "novels"
 		}</span>
@@ -1528,64 +1739,570 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	}
 
+	// Add event listener for quick library button in header
+	const quickLibraryBtn = document.getElementById("quickLibraryBtn");
+	if (quickLibraryBtn) {
+		quickLibraryBtn.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	// ============================================
+	// LIBRARY TAB FUNCTIONS
+	// ============================================
+
 	/**
-	 * Load novel library data and display in compact view
+	 * Initialize the Library tab
 	 */
-	async function loadLibrary() {
+	async function initializeLibraryTab() {
+		// Show loading state
+		if (libraryLoading) libraryLoading.style.display = "flex";
+
+		try {
+			// Load current page info first (determines site-specific filtering)
+			await loadCurrentPageInfo();
+
+			// Then load library data
+			await loadLibraryData();
+		} catch (error) {
+			console.error("Error initializing library tab:", error);
+		} finally {
+			// Hide loading state
+			if (libraryLoading) libraryLoading.style.display = "none";
+		}
+	}
+
+	/**
+	 * Load and display current page novel information
+	 */
+	async function loadCurrentPageInfo() {
+		// Reset state
+		currentPageNovelData = null;
+		currentSiteShelfId = null;
+
+		// Reset UI
+		if (currentNovelCard) currentNovelCard.style.display = "none";
+		if (notSupportedMessage) notSupportedMessage.style.display = "none";
+		if (pageStatusBadge) {
+			pageStatusBadge.textContent = "Detecting...";
+			pageStatusBadge.className = "status-badge";
+		}
+
+		try {
+			// Get current tab
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (!tabs[0]) {
+				showNotSupported("No active tab");
+				return;
+			}
+
+			const currentTab = tabs[0];
+
+			// Try to communicate with content script
+			try {
+				const response = await browser.tabs.sendMessage(currentTab.id, {
+					action: "getNovelInfo",
+				});
+
+				console.log("📚 Library: getNovelInfo response:", response);
+
+				if (response && response.success && response.novelInfo) {
+					currentPageNovelData = response.novelInfo;
+					currentSiteShelfId = response.novelInfo.shelfId || null;
+					displayCurrentPageNovel(response.novelInfo);
+				} else if (response && !response.success) {
+					showNotSupported(
+						response.error || "Could not extract novel info"
+					);
+				} else {
+					showNotSupported("No novel info available");
+				}
+			} catch (error) {
+				console.log(
+					"📚 Library: Error communicating with content script:",
+					error
+				);
+				// Content script not available - page not supported
+				if (
+					error.message?.includes("could not establish connection") ||
+					error.message?.includes("Receiving end does not exist")
+				) {
+					showNotSupported("Not a supported novel site");
+				} else {
+					showNotSupported("Error: " + error.message);
+				}
+			}
+		} catch (error) {
+			console.error("Error loading current page info:", error);
+			showNotSupported("Error detecting page");
+		}
+	}
+
+	/**
+	 * Display the current page novel info
+	 */
+	function displayCurrentPageNovel(novelInfo) {
+		if (!currentNovelCard) return;
+
+		// Show the card, hide not supported message
+		currentNovelCard.style.display = "flex";
+		if (notSupportedMessage) notSupportedMessage.style.display = "none";
+
+		// Update status badge
+		if (pageStatusBadge) {
+			if (novelInfo.isInLibrary) {
+				pageStatusBadge.textContent = "✓ In Library";
+				pageStatusBadge.className = "status-badge in-library";
+			} else {
+				pageStatusBadge.textContent = "New Novel";
+				pageStatusBadge.className = "status-badge new";
+			}
+		}
+
+		// Get shelf info
+		const shelf = novelInfo.shelfId
+			? Object.values(SHELVES).find((s) => s.id === novelInfo.shelfId)
+			: null;
+		const shelfEmoji = shelf?.emoji || "📖";
+		const shelfIcon = shelf?.icon;
+
+		// Cover
+		if (currentNovelCover) {
+			if (novelInfo.coverUrl) {
+				currentNovelCover.innerHTML = `<img src="${escapeHtml(
+					novelInfo.coverUrl
+				)}" alt="Cover" class="cover-image" onerror="this.parentElement.innerHTML='<div class=\\'cover-placeholder\\'>${shelfEmoji}</div>'">`;
+			} else {
+				const iconHtml =
+					shelfIcon && shelfIcon.startsWith("http")
+						? `<img src="${escapeHtml(
+								shelfIcon
+						  )}" alt="" class="cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
+						: shelfEmoji;
+				currentNovelCover.innerHTML = `<div class="cover-placeholder">${iconHtml}</div>`;
+			}
+		}
+
+		// Title & Author
+		if (currentNovelTitle) {
+			currentNovelTitle.textContent = novelInfo.title || "Unknown Title";
+			currentNovelTitle.title = novelInfo.title || "";
+		}
+		if (currentNovelAuthor) {
+			currentNovelAuthor.textContent = novelInfo.author
+				? `by ${novelInfo.author}`
+				: "";
+		}
+
+		// Page type tag
+		if (currentPageTypeTag) {
+			if (novelInfo.isChapterPage) {
+				currentPageTypeTag.textContent = "📖 Chapter";
+				currentPageTypeTag.className = "tag tag-page-type chapter";
+				currentPageTypeTag.style.display = "inline-flex";
+			} else if (novelInfo.isNovelPage) {
+				currentPageTypeTag.textContent = "📚 Novel Page";
+				currentPageTypeTag.className = "tag tag-page-type novel";
+				currentPageTypeTag.style.display = "inline-flex";
+			} else {
+				currentPageTypeTag.style.display = "none";
+			}
+		}
+
+		// Status tag
+		if (currentStatusTag) {
+			const status = novelInfo.status;
+			if (status) {
+				const statusMap = {
+					completed: { text: "✅ Completed", class: "completed" },
+					ongoing: { text: "📝 Ongoing", class: "ongoing" },
+					hiatus: { text: "⏸️ Hiatus", class: "hiatus" },
+					dropped: { text: "❌ Dropped", class: "dropped" },
+				};
+				const statusInfo = statusMap[status.toLowerCase()] || {
+					text: status,
+					class: "",
+				};
+				currentStatusTag.textContent = statusInfo.text;
+				currentStatusTag.className = `tag tag-status ${statusInfo.class}`;
+				currentStatusTag.style.display = "inline-flex";
+			} else {
+				currentStatusTag.style.display = "none";
+			}
+		}
+
+		// Chapter info
+		if (currentChapterText) {
+			let chapterStr = "";
+			if (novelInfo.chapterTitle) {
+				chapterStr = novelInfo.chapterTitle;
+			} else if (novelInfo.currentChapter) {
+				chapterStr = novelInfo.totalChapters
+					? `Chapter ${novelInfo.currentChapter} of ${novelInfo.totalChapters}`
+					: `Chapter ${novelInfo.currentChapter}`;
+			} else if (novelInfo.totalChapters) {
+				chapterStr = `${novelInfo.totalChapters} chapters total`;
+			}
+			currentChapterText.textContent = chapterStr;
+			if (currentChapterInfo) {
+				currentChapterInfo.style.display = chapterStr ? "flex" : "none";
+			}
+		}
+
+		// Progress bar
+		if (
+			currentProgressBar &&
+			currentProgressFill &&
+			currentProgressPercent
+		) {
+			if (novelInfo.totalChapters && novelInfo.currentChapter) {
+				const progress = Math.min(
+					100,
+					Math.round(
+						(novelInfo.currentChapter / novelInfo.totalChapters) *
+							100
+					)
+				);
+				currentProgressBar.style.display = "block";
+				currentProgressFill.style.width = `${progress}%`;
+				currentProgressPercent.textContent = `${progress}%`;
+				currentProgressPercent.style.display = "inline";
+			} else {
+				currentProgressBar.style.display = "none";
+				currentProgressPercent.style.display = "none";
+			}
+		}
+
+		// Library details (only if in library)
+		if (libraryDetails) {
+			if (novelInfo.isInLibrary) {
+				libraryDetails.style.display = "block";
+
+				// Reading status
+				if (readingStatusSelect) {
+					readingStatusSelect.value =
+						novelInfo.readingStatus || "reading";
+					readingStatusSelect.onchange = async () => {
+						await updateReadingStatus(
+							novelInfo.novelId,
+							readingStatusSelect.value
+						);
+					};
+				}
+
+				// Enhanced count
+				if (enhancedCountValue && enhancedCountRow) {
+					const count = novelInfo.enhancedChapters || 0;
+					if (count > 0) {
+						enhancedCountValue.textContent = `${count} chapter${
+							count !== 1 ? "s" : ""
+						}`;
+						enhancedCountRow.style.display = "flex";
+					} else {
+						enhancedCountRow.style.display = "none";
+					}
+				}
+
+				// Genres
+				if (genresList && genresRow) {
+					const genres = novelInfo.genres || [];
+					if (genres.length > 0) {
+						const displayGenres = genres.slice(0, 3);
+						const moreCount = genres.length - 3;
+						genresList.innerHTML = displayGenres
+							.map(
+								(g) =>
+									`<span class="genre-tag">${escapeHtml(
+										g
+									)}</span>`
+							)
+							.join("");
+						if (moreCount > 0) {
+							genresList.innerHTML += `<span class="genre-tag more" title="${escapeHtml(
+								genres.slice(3).join(", ")
+							)}">+${moreCount}</span>`;
+						}
+						genresRow.style.display = "flex";
+					} else {
+						genresRow.style.display = "none";
+					}
+				}
+			} else {
+				libraryDetails.style.display = "none";
+			}
+		}
+
+		// Buttons
+		if (addToLibraryBtn) {
+			const btnText = addToLibraryBtn.querySelector(".btn-text");
+			if (btnText) {
+				btnText.textContent = novelInfo.isInLibrary
+					? "Update"
+					: "Add to Library";
+			}
+			addToLibraryBtn.onclick = () => addCurrentNovelToLibrary();
+		}
+
+		if (openNovelBtn) {
+			if (novelInfo.isInLibrary && novelInfo.lastReadUrl) {
+				openNovelBtn.style.display = "inline-flex";
+				openNovelBtn.onclick = () => {
+					browser.tabs.create({ url: novelInfo.lastReadUrl });
+				};
+			} else if (novelInfo.mainNovelUrl || novelInfo.sourceUrl) {
+				openNovelBtn.style.display = "inline-flex";
+				openNovelBtn.onclick = () => {
+					browser.tabs.create({
+						url: novelInfo.mainNovelUrl || novelInfo.sourceUrl,
+					});
+				};
+			} else {
+				openNovelBtn.style.display = "none";
+			}
+		}
+	}
+
+	/**
+	 * Show "not supported" message
+	 */
+	function showNotSupported(message) {
+		if (currentNovelCard) currentNovelCard.style.display = "none";
+		if (notSupportedMessage) {
+			notSupportedMessage.style.display = "flex";
+			if (notSupportedText) {
+				notSupportedText.textContent =
+					message || "Not a supported page";
+			}
+		}
+		if (pageStatusBadge) {
+			pageStatusBadge.textContent = "Not Supported";
+			pageStatusBadge.className = "status-badge not-supported";
+		}
+	}
+
+	/**
+	 * Add current novel to library
+	 */
+	async function addCurrentNovelToLibrary() {
+		try {
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (!tabs[0]) return;
+
+			const response = await browser.tabs.sendMessage(tabs[0].id, {
+				action: "addToLibrary",
+			});
+
+			if (response && response.success) {
+				showStatus(
+					currentPageNovelData?.isInLibrary
+						? "Novel updated!"
+						: "Novel added to library!",
+					"success"
+				);
+
+				// Update UI
+				if (currentPageNovelData) {
+					currentPageNovelData.isInLibrary = true;
+				}
+				if (pageStatusBadge) {
+					pageStatusBadge.textContent = "✓ In Library";
+					pageStatusBadge.className = "status-badge in-library";
+				}
+				if (addToLibraryBtn) {
+					const btnText = addToLibraryBtn.querySelector(".btn-text");
+					if (btnText) btnText.textContent = "Update";
+				}
+				if (libraryDetails) {
+					libraryDetails.style.display = "block";
+				}
+
+				// Refresh library data
+				await loadLibraryData();
+			} else {
+				showStatus(
+					"Failed: " + (response?.error || "Unknown error"),
+					"error"
+				);
+			}
+		} catch (error) {
+			console.error("Error adding to library:", error);
+			showStatus("Error: " + error.message, "error");
+		}
+	}
+
+	/**
+	 * Update reading status for a novel
+	 */
+	async function updateReadingStatus(novelId, status) {
+		try {
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (!tabs[0]) return;
+
+			const response = await browser.tabs.sendMessage(tabs[0].id, {
+				action: "updateNovelReadingStatus",
+				novelId: novelId,
+				readingStatus: status,
+			});
+
+			if (response && response.success) {
+				showStatus("Status updated!", "success");
+			}
+		} catch (error) {
+			console.error("Error updating reading status:", error);
+		}
+	}
+
+	/**
+	 * Load library statistics and recent novels
+	 */
+	async function loadLibraryData() {
 		try {
 			// Get library stats
 			const stats = await novelLibrary.getStats();
 
-			// Update stats display
-			if (libStatNovels) libStatNovels.textContent = stats.totalNovels;
-			if (libStatChapters)
-				libStatChapters.textContent = stats.totalEnhancedChapters;
-			if (libStatShelves) {
-				const activeShelfCount = Object.values(stats.shelves).filter(
+			// Update stats
+			if (statNovels) statNovels.textContent = stats.totalNovels || 0;
+			if (statChapters)
+				statChapters.textContent = stats.totalEnhancedChapters || 0;
+			if (statShelves) {
+				const activeCount = Object.values(stats.shelves || {}).filter(
 					(s) => s.novelCount > 0
 				).length;
-				libStatShelves.textContent = activeShelfCount;
+				statShelves.textContent = activeCount;
 			}
 
 			// Get recent novels
-			const recentNovels = await novelLibrary.getRecentNovels(5);
+			const allRecentNovels = await novelLibrary.getRecentNovels(20);
 
-			if (recentNovelsListContainer) {
-				if (recentNovels.length === 0) {
-					recentNovelsListContainer.innerHTML = `
-						<div class="library-empty-compact">
-							<div class="empty-icon">📚</div>
-							<p>No novels in your library yet. Start enhancing chapters to add novels automatically!</p>
-						</div>
-					`;
+			// Filter by current site if applicable
+			let displayNovels = allRecentNovels;
+			let showingSiteSpecific = false;
+			let currentShelf = null;
+
+			if (currentSiteShelfId) {
+				currentShelf = Object.values(SHELVES).find(
+					(s) => s.id === currentSiteShelfId
+				);
+				const siteNovels = allRecentNovels.filter(
+					(n) => n.shelfId === currentSiteShelfId
+				);
+
+				if (siteNovels.length > 0) {
+					displayNovels = siteNovels;
+					showingSiteSpecific = true;
+				}
+			}
+
+			// Limit to 6 novels
+			displayNovels = displayNovels.slice(0, 6);
+
+			// Update section title
+			if (recentSectionTitle) {
+				recentSectionTitle.textContent =
+					showingSiteSpecific && currentShelf
+						? `${currentShelf.name} Novels`
+						: "Recent Novels";
+			}
+
+			// Update site indicator
+			if (siteIndicator) {
+				if (showingSiteSpecific && currentShelf) {
+					const iconHtml =
+						currentShelf.icon &&
+						currentShelf.icon.startsWith("http")
+							? `<img src="${escapeHtml(
+									currentShelf.icon
+							  )}" alt="" class="site-icon" onerror="this.outerHTML='${
+									currentShelf.emoji || "📖"
+							  }'">`
+							: currentShelf.emoji || "📖";
+					siteIndicator.innerHTML = iconHtml;
+					siteIndicator.style.display = "inline-flex";
 				} else {
-					recentNovelsListContainer.innerHTML = recentNovels
+					siteIndicator.style.display = "none";
+				}
+			}
+
+			// Render novels grid
+			if (recentNovelsGrid) {
+				if (displayNovels.length === 0) {
+					recentNovelsGrid.innerHTML = "";
+					if (emptyState) {
+						emptyState.querySelector(".empty-text").textContent =
+							showingSiteSpecific
+								? `No novels from ${
+										currentShelf?.name || "this site"
+								  } yet. Start enhancing!`
+								: "No novels yet. Start enhancing chapters to build your library!";
+						emptyState.style.display = "flex";
+					}
+				} else {
+					if (emptyState) emptyState.style.display = "none";
+
+					recentNovelsGrid.innerHTML = displayNovels
 						.map((novel) => {
 							const shelf = Object.values(SHELVES).find(
 								(s) => s.id === novel.shelfId
 							);
-							const shelfIcon = shelf ? shelf.icon : "📖";
-							const shelfName = shelf ? shelf.name : "Unknown";
+							const shelfEmoji = shelf?.emoji || "📖";
+							const shelfIcon = shelf?.icon;
+							const shelfName = shelf?.name || "Unknown";
 
-							const coverHtml = novel.coverUrl
-								? `<img src="${escapeHtml(
-										novel.coverUrl
-								  )}" alt="Cover" class="recent-novel-cover" onerror="this.outerHTML='<div class=\\'recent-novel-cover-placeholder\\'>${shelfIcon}</div>'">`
-								: `<div class="recent-novel-cover-placeholder">${shelfIcon}</div>`;
+							// Build cover HTML
+							let coverHtml;
+							if (novel.coverUrl) {
+								coverHtml = `<img src="${escapeHtml(
+									novel.coverUrl
+								)}" alt="" class="novel-cover-img" onerror="this.outerHTML='<div class=\\'novel-cover-placeholder\\'>${shelfEmoji}</div>'">`;
+							} else {
+								const iconHtml =
+									shelfIcon && shelfIcon.startsWith("http")
+										? `<img src="${escapeHtml(
+												shelfIcon
+										  )}" alt="" class="novel-cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
+										: shelfEmoji;
+								coverHtml = `<div class="novel-cover-placeholder">${iconHtml}</div>`;
+							}
+
+							// Site badge (only show if not filtering by site)
+							const siteBadgeHtml = showingSiteSpecific
+								? ""
+								: `
+							<span class="novel-site-badge" title="${shelfName}">
+								${
+									shelfIcon && shelfIcon.startsWith("http")
+										? `<img src="${escapeHtml(
+												shelfIcon
+										  )}" alt="" onerror="this.outerHTML='${shelfEmoji}'">`
+										: shelfEmoji
+								}
+							</span>`;
 
 							return `
-							<div class="recent-novel-card" data-url="${escapeHtml(
+							<div class="novel-grid-item" data-url="${escapeHtml(
 								novel.lastReadUrl || novel.sourceUrl
-							)}">
-								${coverHtml}
-								<div class="recent-novel-info">
-									<div class="recent-novel-title">${escapeHtml(novel.title)}</div>
-									<div class="recent-novel-author">${escapeHtml(novel.author || "Unknown")}</div>
-									<div class="recent-novel-meta">
-										<span class="recent-novel-badge shelf">${shelfIcon} ${shelfName}</span>
+							)}" title="${escapeHtml(novel.title)}">
+								<div class="novel-cover">
+									${coverHtml}
+									${siteBadgeHtml}
+								</div>
+								<div class="novel-info">
+									<div class="novel-title">${escapeHtml(novel.title)}</div>
+									<div class="novel-meta">
 										${
 											novel.enhancedChaptersCount > 0
-												? `<span class="recent-novel-badge enhanced">✨ ${novel.enhancedChaptersCount}</span>`
+												? `<span class="enhanced-badge">✨ ${novel.enhancedChaptersCount}</span>`
 												: ""
 										}
 									</div>
@@ -1595,29 +2312,40 @@ document.addEventListener("DOMContentLoaded", async function () {
 						})
 						.join("");
 
-					// Add click handlers to open novels
-					recentNovelsListContainer
-						.querySelectorAll(".recent-novel-card")
-						.forEach((card) => {
-							card.addEventListener("click", () => {
-								const url = card.dataset.url;
-								if (url) {
-									browser.tabs.create({ url });
-								}
+					// Add click handlers
+					recentNovelsGrid
+						.querySelectorAll(".novel-grid-item")
+						.forEach((item) => {
+							item.addEventListener("click", () => {
+								const url = item.dataset.url;
+								if (url) browser.tabs.create({ url });
 							});
 						});
 				}
 			}
 		} catch (error) {
-			console.error("Error loading library:", error);
-			if (recentNovelsListContainer) {
-				recentNovelsListContainer.innerHTML = `
-					<div class="library-empty-compact">
-						<p>Failed to load library. Please try again.</p>
-					</div>
-				`;
+			console.error("Error loading library data:", error);
+			if (recentNovelsGrid) {
+				recentNovelsGrid.innerHTML = `<div class="error-message">Failed to load library. <button onclick="loadLibraryData()">Retry</button></div>`;
 			}
 		}
+	}
+
+	// Setup Library Tab Event Listeners
+	if (openFullLibraryBtn) {
+		openFullLibraryBtn.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	if (refreshLibraryBtn) {
+		refreshLibraryBtn.addEventListener("click", async () => {
+			refreshLibraryBtn.classList.add("spinning");
+			await initializeLibraryTab();
+			refreshLibraryBtn.classList.remove("spinning");
+		});
 	}
 
 	/**

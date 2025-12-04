@@ -8,6 +8,7 @@ import fanfictionHandler from "./fanfiction-handler.js";
 import fanfictionMobileHandler from "./fanfiction-mobile-handler.js";
 import ao3Handler from "./ao3-handler.js";
 import webnovelHandler from "./webnovel-handler.js";
+import scribblehubHandler from "./scribblehub-handler.js";
 import { BaseWebsiteHandler } from "./base-handler.js";
 
 // Website handler manager
@@ -20,6 +21,7 @@ export class HandlerManager {
 			fanfictionMobileHandler, // Check mobile version first
 			fanfictionHandler,
 			ao3Handler,
+			scribblehubHandler,
 			webnovelHandler,
 			// Add more handlers as they are developed
 		];
@@ -55,6 +57,11 @@ export class HandlerManager {
 			) {
 				console.log("Loaded AO3 handler");
 				return ao3Handler;
+			}
+			// Try loading ScribbleHub handler
+			else if (hostname.includes("scribblehub.com")) {
+				console.log("Loaded ScribbleHub handler");
+				return scribblehubHandler;
 			}
 			// Try loading WebNovel handler if on webnovel.com
 			else if (

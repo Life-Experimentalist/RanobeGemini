@@ -1,6 +1,9 @@
 /**
  * FanFiction.net Mobile Website Content Handler
  * Specialized handler for mobile version (m.fanfiction.net)
+ *
+ * This is a SECONDARY handler that shares a shelf with the primary FanfictionHandler.
+ * Shelf display metadata (name, icon, color, primaryDomain) is inherited from primary.
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 
@@ -10,15 +13,19 @@ export class FanfictionMobileHandler extends BaseWebsiteHandler {
 		"m.fanfiction.net", // Mobile-specific domain
 	];
 
-	// Shelf metadata - shares shelf with desktop FanFiction.net
+	// Shelf metadata - SECONDARY handler, shares shelf with desktop FanFiction.net
+	// Only id and novelIdPattern are required for secondary handlers
+	// Other display properties are inherited from the PRIMARY handler (FanfictionHandler)
 	static SHELF_METADATA = {
-		id: "fanfiction", // Same ID as desktop to share shelf
-		name: "FanFiction.net",
-		icon: "📚",
-		color: "#2a4b8d",
-		novelIdPattern: /\/s\/(\d+)\//,
-		primaryDomain: "www.fanfiction.net",
+		id: "fanfiction", // Must match primary handler's shelf ID
+		isPrimary: false, // Mark as secondary handler
+		novelIdPattern: /\/s\/(\d+)\//, // Same pattern as primary
 	};
+
+	// Handler type: Metadata requires visiting dedicated novel info page
+	// For mobile users, we need to redirect to www subdomain for full novel details
+	static HANDLER_TYPE = "dedicated_page";
+	static DETAILS_DOMAIN = "www.fanfiction.net";
 
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net mobile, a fanfiction archive.
 Please maintain:
@@ -52,6 +59,135 @@ When enhancing, improve readability while respecting the author's creative voice
 	// Return true if this handler can handle the mobile version
 	canHandle() {
 		return window.location.hostname === "m.fanfiction.net";
+	}
+
+	/**
+	 * Check if current page is a chapter/story page (reading content)
+	 * @returns {boolean}
+	 */
+	isChapterPage() {
+		const url = window.location.pathname;
+		// Story pages have /s/ in the URL
+		const isStoryUrl = /^\/s\/\d+/.test(url);
+		// Also check for story content
+		const hasStoryContent = !!document.getElementById("storycontent");
+		return isStoryUrl && hasStoryContent;
+	}
+
+	/**
+	 * Check if current page is a novel info page
+	 * Mobile version doesn't have detailed novel info pages
+	 * Users should visit desktop version for full details
+	 * @returns {boolean}
+	 */
+	isNovelPage() {
+		return false;
+	}
+
+	/**
+	 * Generate a unique novel ID from URL
+	 * @param {string} url - The story URL
+	 * @returns {string} Unique novel ID
+	 */
+	generateNovelId(url = window.location.href) {
+		// Extract story ID from URL: /s/12345/...
+		const match = url.match(/\/s\/(\d+)/);
+		if (match) {
+			return `fanfiction-${match[1]}`; // Same as desktop version for shared shelf
+		}
+
+		const urlPath = new URL(url).pathname;
+		const urlHash = btoa(urlPath)
+			.substring(0, 16)
+			.replace(/[^a-zA-Z0-9]/g, "");
+		return `fanfiction-${urlHash}`;
+	}
+
+	/**
+	 * Get the story details page URL - redirects to desktop version for full details
+	 * @returns {string}
+	 */
+	getNovelPageUrl() {
+		// Redirect to desktop version for full story details
+		const match = window.location.href.match(/\/s\/(\d+)/);
+		if (match) {
+			return `https://www.fanfiction.net/s/${match[1]}/1/`;
+		}
+		return window.location.href.replace(
+			"m.fanfiction.net",
+			"www.fanfiction.net"
+		);
+	}
+
+	/**
+	 * Get novel controls configuration for FanFiction mobile
+	 * @returns {Object} Configuration for novel controls UI
+	 */
+	getNovelControlsConfig() {
+		return {
+			showControls: this.isChapterPage(),
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			position: "before",
+			isChapterPage: true,
+			customStyles: {
+				background: "linear-gradient(135deg, #1a2540 0%, #16213e 100%)",
+				borderColor: "#2a4b8d",
+				accentColor: "#4a7c9c",
+			},
+		};
+	}
+
+	/**
+	 * Get insertion point for novel controls UI on FanFiction mobile
+	 * @returns {Object|null} { element, position } or null
+	 */
+	getNovelPageUIInsertionPoint() {
+		// Insert before story content on mobile
+		const storyContent = document.getElementById("storycontent");
+		if (storyContent) {
+			return { element: storyContent, position: "before" };
+		}
+
+		// Fallback to content div
+		const contentDiv = document.getElementById("content");
+		if (contentDiv) {
+			const titleArea = contentDiv.querySelector("div[align='center']");
+			if (titleArea) {
+				return { element: titleArea, position: "after" };
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extract basic metadata from mobile page
+	 * Note: Mobile version has limited metadata, prefer desktop for full details
+	 * @returns {Object}
+	 */
+	extractNovelMetadata() {
+		const metadata = {
+			title: this.extractTitle(),
+			author: null,
+			description: null,
+			coverUrl: null,
+			genres: [],
+			tags: [],
+			status: null,
+			chapterCount: null,
+			mainNovelUrl: this.getNovelPageUrl(),
+		};
+
+		// Try to extract author from mobile page
+		const contentDiv = document.getElementById("content");
+		if (contentDiv) {
+			const authorLink = contentDiv.querySelector("a[href*='/u/']");
+			if (authorLink) {
+				metadata.author = authorLink.textContent.trim();
+			}
+		}
+
+		return metadata;
 	}
 
 	// Find the content area on mobile Fanfiction.net

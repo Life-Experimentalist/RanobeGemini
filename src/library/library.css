@@ -241,7 +241,7 @@ body {
 
 .carousel-header {
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
 	margin-bottom: var(--spacing-md);
 	position: relative;
@@ -254,13 +254,14 @@ body {
 	margin: 0;
 }
 
-.carousel-controls {
-	position: absolute;
-	bottom: -230px;
-	right: 0;
+/* Carousel Footer - contains prev button, indicators, play/pause, next button inline */
+.carousel-footer {
 	display: flex;
-	gap: var(--spacing-sm);
-	z-index: 20;
+	justify-content: center;
+	align-items: center;
+	gap: var(--spacing-md);
+	margin-top: var(--spacing-md);
+	padding: var(--spacing-sm) 0;
 }
 
 .carousel-btn {
@@ -318,6 +319,20 @@ body {
 		transform var(--transition-normal);
 }
 
+/* Carousel Image Wrapper with Website Overlay */
+.carousel-item-image-wrapper {
+	position: relative;
+	overflow: hidden;
+}
+
+.carousel-item-image-wrapper img {
+	width: 100%;
+	height: 280px;
+	object-fit: cover;
+	transition: filter var(--transition-normal),
+		transform var(--transition-normal);
+}
+
 .carousel-item-info {
 	padding: var(--spacing-md);
 }
@@ -366,7 +381,8 @@ body {
 	visibility: visible;
 }
 
-.carousel-item:hover img {
+.carousel-item:hover img,
+.carousel-item:hover .carousel-item-image-wrapper img {
 	filter: blur(4px);
 	transform: scale(1.05);
 }
@@ -472,6 +488,7 @@ body {
 .carousel-indicators {
 	display: flex;
 	justify-content: center;
+	align-items: center;
 	gap: var(--spacing-sm);
 }
 
@@ -585,6 +602,99 @@ body {
 	border-color: var(--primary-color);
 }
 
+/* Reading Status Filter */
+.reading-status-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-lg);
+	padding: var(--spacing-md);
+	background: var(--bg-secondary);
+	border-radius: var(--radius-md);
+}
+
+.reading-status-filter.hidden {
+	display: none;
+}
+
+.status-filter-btn {
+	padding: var(--spacing-sm) var(--spacing-md);
+	border: 1px solid var(--border-color);
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all var(--transition-fast);
+	white-space: nowrap;
+}
+
+.status-filter-btn:hover {
+	background: var(--bg-card-hover);
+	color: var(--text-primary);
+	border-color: var(--primary-color);
+}
+
+.status-filter-btn.active {
+	background: var(--primary-color);
+	color: white;
+	border-color: var(--primary-color);
+}
+
+/* Status badge colors */
+.status-filter-btn[data-status="reading"].active {
+	background: #4caf50;
+	border-color: #4caf50;
+}
+
+.status-filter-btn[data-status="completed"].active {
+	background: #2196f3;
+	border-color: #2196f3;
+}
+
+.status-filter-btn[data-status="plan-to-read"].active {
+	background: #ff9800;
+	border-color: #ff9800;
+}
+
+.status-filter-btn[data-status="on-hold"].active {
+	background: #9e9e9e;
+	border-color: #9e9e9e;
+}
+
+.status-filter-btn[data-status="dropped"].active {
+	background: #f44336;
+	border-color: #f44336;
+}
+
+.status-filter-btn[data-status="re-reading"].active {
+	background: #9c27b0;
+	border-color: #9c27b0;
+}
+
+/* Lists Stats */
+.lists-stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-md);
+	margin-bottom: var(--spacing-lg);
+}
+
+.lists-stat-item {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	padding: var(--spacing-sm) var(--spacing-md);
+	background: var(--bg-secondary);
+	border-radius: var(--radius-md);
+	font-size: 0.9rem;
+}
+
+.lists-stat-item .count {
+	font-weight: bold;
+	color: var(--primary-color);
+}
+
 /* Main Content */
 .library-main {
 	min-height: 400px;
@@ -654,13 +764,71 @@ body {
 	transform: rotate(-90deg);
 }
 
-.shelf-section.collapsed .novel-grid,
+/* Collapsed state: show exactly 2 rows of cards */
+.shelf-section.collapsed .novel-grid {
+	/* Calculate height for exactly 2 full rows:
+	 * Each card is ~150px tall
+	 * Gap between rows is 24px (--spacing-lg)
+	 * Total: (150px * 2) + 24px = 324px
+	 * Add extra space to ensure second row is fully visible
+	 */
+	max-height: 360px;
+	overflow: hidden;
+	position: relative;
+}
+
+/* Add subtle fade-out gradient at the bottom of collapsed grid */
+.shelf-section.collapsed .novel-grid::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 40px;
+	background: linear-gradient(to bottom, transparent, var(--bg-primary));
+	pointer-events: none;
+	z-index: 1;
+}
+
 .shelf-section.collapsed .shelf-show-more {
+	display: block;
+}
+
+/* Expanded state: ensure all novels are visible */
+.shelf-section:not(.collapsed) .novel-grid {
+	max-height: none;
+	overflow: visible;
+}
+
+.shelf-section:not(.collapsed) .novel-grid::after {
 	display: none;
 }
 
 .shelf-icon {
 	font-size: 1.5rem;
+	display: inline-flex;
+	align-items: center;
+}
+
+/* Support for image-based shelf icons with emoji fallback */
+.shelf-icon-img {
+	position: relative;
+}
+
+.shelf-icon-img img {
+	width: 1.5em;
+	height: 1.5em;
+	vertical-align: middle;
+	object-fit: contain;
+}
+
+.shelf-icon-img .icon-fallback {
+	font-size: inherit;
+}
+
+.site-icon {
+	font-size: 1.25rem;
+	margin-right: var(--spacing-xs);
 }
 
 .shelf-title .novel-count {
@@ -876,6 +1044,15 @@ body {
 	color: var(--text-secondary);
 }
 
+.meta-badge.tag-badge {
+	background: rgba(92, 124, 250, 0.15);
+	color: var(--primary-color);
+	max-width: 80px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .meta-badge.enhanced {
 	background: rgba(34, 197, 94, 0.2);
 	color: var(--success-color);
@@ -903,6 +1080,100 @@ body {
 	background: var(--primary-color);
 	border-radius: 2px;
 	transition: width var(--transition-normal);
+}
+
+/* Novel Card Status Dropdown */
+.novel-card-status {
+	margin-top: var(--spacing-xs);
+}
+
+.status-dropdown {
+	width: 100%;
+	padding: 4px 8px;
+	font-size: 0.75rem;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border-color);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 6px center;
+	padding-right: 24px;
+}
+
+.status-dropdown:hover {
+	border-color: var(--primary-color);
+	background-color: var(--bg-secondary);
+}
+
+.status-dropdown:focus {
+	outline: none;
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+.status-dropdown option {
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+	padding: 8px;
+}
+
+/* Status-specific colors for dropdown */
+.status-dropdown[data-status="reading"] {
+	border-color: #4caf50;
+}
+
+.status-dropdown[data-status="completed"] {
+	border-color: #2196f3;
+}
+
+.status-dropdown[data-status="plan-to-read"] {
+	border-color: #ff9800;
+}
+
+.status-dropdown[data-status="on-hold"] {
+	border-color: #9e9e9e;
+}
+
+.status-dropdown[data-status="dropped"] {
+	border-color: #f44336;
+}
+
+.status-dropdown[data-status="re-reading"] {
+	border-color: #9c27b0;
+}
+
+/* Notification Toast */
+.notification {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	padding: 12px 20px;
+	border-radius: var(--radius-md);
+	background: var(--bg-card);
+	color: var(--text-primary);
+	box-shadow: var(--shadow-lg);
+	z-index: 10000;
+	transform: translateY(100px);
+	opacity: 0;
+	transition: all 0.3s ease;
+	border: 1px solid var(--border-color);
+}
+
+.notification.show {
+	transform: translateY(0);
+	opacity: 1;
+}
+
+.notification-success {
+	border-left: 4px solid var(--success-color);
+}
+
+.notification-error {
+	border-left: 4px solid var(--error-color);
 }
 
 /* Empty State */
@@ -1088,6 +1359,35 @@ body {
 	display: flex;
 	gap: var(--spacing-sm);
 	margin-bottom: var(--spacing-lg);
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.novel-meta .status-selector {
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--border-radius);
+	border: 1px solid var(--border-color);
+	background: var(--card-background);
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	cursor: pointer;
+	transition: border-color 0.2s ease;
+}
+
+.novel-meta .status-selector option {
+	background: var(--card-background);
+	color: var(--text-primary);
+	padding: 0.5rem;
+}
+
+.novel-meta .status-selector:hover {
+	border-color: var(--primary-color);
+}
+
+.novel-meta .status-selector:focus {
+	outline: none;
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
 }
 
 .novel-stats {
@@ -1142,6 +1442,160 @@ body {
 	border-radius: var(--radius-sm);
 	font-size: 0.875rem;
 	color: var(--text-secondary);
+}
+
+/* Novel Metadata Sections */
+.novel-metadata {
+	margin-bottom: var(--spacing-lg);
+}
+
+.metadata-section {
+	margin-bottom: var(--spacing-lg);
+	padding: var(--spacing-md);
+	background: var(--bg-tertiary);
+	border-radius: var(--radius-md);
+}
+
+.metadata-section h3 {
+	font-size: 1rem;
+	font-weight: 600;
+	margin-bottom: var(--spacing-sm);
+	color: var(--text-primary);
+}
+
+.metadata-row {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-sm);
+}
+
+.metadata-row:last-child {
+	margin-bottom: 0;
+}
+
+.metadata-label {
+	font-weight: 500;
+	color: var(--text-secondary);
+	min-width: 80px;
+	flex-shrink: 0;
+}
+
+.tag-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.tag-list .tag-item {
+	padding: 4px 10px;
+	border-radius: var(--radius-sm);
+	font-size: 0.8rem;
+	background: rgba(92, 124, 250, 0.15);
+	color: var(--primary-color);
+	white-space: nowrap;
+}
+
+/* Rating badge styles */
+.rating-badge {
+	padding: 4px 12px;
+	border-radius: var(--radius-sm);
+	font-size: 0.85rem;
+	font-weight: 600;
+}
+
+.rating-badge.rating-g,
+.rating-badge.rating-general {
+	background: rgba(46, 204, 113, 0.2);
+	color: #2ecc71;
+}
+
+.rating-badge.rating-teen,
+.rating-badge.rating-t {
+	background: rgba(241, 196, 15, 0.2);
+	color: #f1c40f;
+}
+
+.rating-badge.rating-mature,
+.rating-badge.rating-m {
+	background: rgba(230, 126, 34, 0.2);
+	color: #e67e22;
+}
+
+.rating-badge.rating-explicit,
+.rating-badge.rating-e {
+	background: rgba(231, 76, 60, 0.2);
+	color: #e74c3c;
+}
+
+.rating-badge.rating-not-rated {
+	background: rgba(149, 165, 166, 0.2);
+	color: #95a5a6;
+}
+
+/* Warning tags */
+.warning-tags .tag-item {
+	background: rgba(231, 76, 60, 0.15);
+	color: #e74c3c;
+}
+
+/* Category tags */
+.category-tags .tag-item {
+	background: rgba(155, 89, 182, 0.15);
+	color: #9b59b6;
+}
+
+/* Fandom tags */
+.fandom-tags .tag-item {
+	background: rgba(52, 152, 219, 0.15);
+	color: #3498db;
+}
+
+/* Relationship tags */
+.relationship-tags .tag-item {
+	background: rgba(241, 196, 15, 0.15);
+	color: #f1c40f;
+}
+
+/* Character tags */
+.character-tags .tag-item {
+	background: rgba(26, 188, 156, 0.15);
+	color: #1abc9c;
+}
+
+/* Additional tags */
+.additional-tags .tag-item {
+	background: rgba(149, 165, 166, 0.15);
+	color: var(--text-secondary);
+}
+
+/* Work stats grid */
+.work-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: var(--spacing-sm);
+}
+
+.work-stat-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: var(--spacing-sm);
+	background: var(--bg-secondary);
+	border-radius: var(--radius-sm);
+	text-align: center;
+}
+
+.work-stat-value {
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--primary-color);
+}
+
+.work-stat-label {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: 2px;
 }
 
 .novel-actions {
@@ -1258,6 +1712,15 @@ body {
 	.novel-cover-placeholder {
 		width: 100px;
 		height: 140px;
+	}
+
+	/* Adjust collapsed state for mobile - still 2 rows but with mobile card sizes */
+	.shelf-section.collapsed .novel-grid {
+		/* Mobile cards are taller due to column layout
+		 * Approximate mobile card height: ~220px
+		 * 2 rows: 220px * 2 + gap 24px = 464px
+		 */
+		max-height: 480px;
 	}
 }
 
@@ -1399,5 +1862,393 @@ body {
 	}
 	to {
 		opacity: 0;
+	}
+}
+
+/* Carousel Tags */
+.carousel-item-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: var(--spacing-xs);
+}
+
+.carousel-tag {
+	font-size: 0.65rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-sm);
+	background: rgba(92, 124, 250, 0.15);
+	color: var(--primary-color);
+	max-width: 80px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.carousel-tag-more {
+	font-size: 0.65rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-sm);
+	background: rgba(92, 124, 250, 0.25);
+	color: var(--primary-color);
+	font-weight: 600;
+}
+
+.carousel-tag-none {
+	font-size: 0.65rem;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* ================================================
+   Sidebar Mode Styles
+   Applied when library is opened in Firefox sidebar
+   Automatically switches to regular styles when width > 600px
+   ================================================ */
+
+/* Base sidebar mode - compact layout */
+body.sidebar-mode,
+html.sidebar-mode body {
+	min-width: unset;
+}
+
+body.sidebar-mode .library-container,
+html.sidebar-mode .library-container {
+	padding: var(--spacing-sm);
+	max-width: 100%;
+}
+
+body.sidebar-mode .library-header,
+html.sidebar-mode .library-header {
+	padding: var(--spacing-sm);
+}
+
+body.sidebar-mode .logo-section h1,
+html.sidebar-mode .logo-section h1 {
+	font-size: 1rem;
+}
+
+body.sidebar-mode .logo-section .logo,
+html.sidebar-mode .logo-section .logo {
+	width: 24px;
+	height: 24px;
+}
+
+body.sidebar-mode .stats-bar,
+html.sidebar-mode .stats-bar {
+	flex-direction: column;
+	gap: var(--spacing-xs);
+}
+
+body.sidebar-mode .stat-card,
+html.sidebar-mode .stat-card {
+	padding: var(--spacing-sm);
+}
+
+body.sidebar-mode .stat-value,
+html.sidebar-mode .stat-value {
+	font-size: 1.25rem;
+}
+
+body.sidebar-mode .view-controls,
+html.sidebar-mode .view-controls {
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--spacing-xs);
+}
+
+body.sidebar-mode .view-toggle,
+html.sidebar-mode .view-toggle {
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+body.sidebar-mode .view-btn,
+html.sidebar-mode .view-btn {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	font-size: 0.75rem;
+}
+
+body.sidebar-mode .search-box input,
+html.sidebar-mode .search-box input {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	font-size: 0.85rem;
+}
+
+body.sidebar-mode .novel-grid,
+html.sidebar-mode .novel-grid {
+	grid-template-columns: 1fr;
+}
+
+body.sidebar-mode .carousel-section,
+html.sidebar-mode .carousel-section {
+	display: none;
+}
+
+body.sidebar-mode .shelf-section,
+html.sidebar-mode .shelf-section {
+	padding: var(--spacing-sm);
+}
+
+body.sidebar-mode .shelf-header,
+html.sidebar-mode .shelf-header {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--spacing-xs);
+}
+
+/* Compact novel cards for sidebar - horizontal list style */
+body.sidebar-mode .novel-card {
+	margin-bottom: var(--spacing-xs);
+}
+
+body.sidebar-mode .novel-card-inner {
+	flex-direction: row;
+	text-align: left;
+	padding: var(--spacing-sm);
+	gap: var(--spacing-sm);
+	align-items: center;
+}
+
+body.sidebar-mode .novel-cover,
+body.sidebar-mode .novel-cover-placeholder {
+	width: 45px;
+	height: 65px;
+	min-width: 45px;
+	flex-shrink: 0;
+	border-radius: var(--radius-sm);
+}
+
+body.sidebar-mode .novel-card-content {
+	flex: 1;
+	min-width: 0;
+	align-items: flex-start;
+	gap: 2px;
+}
+
+body.sidebar-mode .novel-card-title {
+	font-size: 0.8rem;
+	line-height: 1.2;
+	margin-bottom: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+body.sidebar-mode .novel-card-author {
+	font-size: 0.7rem;
+	margin-bottom: 2px;
+	opacity: 0.8;
+}
+
+body.sidebar-mode .novel-card-meta {
+	display: none;
+}
+
+body.sidebar-mode .novel-card-status {
+	margin-top: 4px;
+}
+
+body.sidebar-mode .status-dropdown {
+	font-size: 0.65rem;
+	padding: 2px 4px;
+	min-width: auto;
+}
+
+body.sidebar-mode .novel-card-progress {
+	margin-top: 4px;
+}
+
+body.sidebar-mode .novel-card-progress span {
+	font-size: 0.65rem;
+}
+
+body.sidebar-mode .progress-bar {
+	height: 3px;
+}
+
+/* Modal adjustments for sidebar */
+body.sidebar-mode .modal-content,
+html.sidebar-mode .modal-content {
+	width: 95%;
+	max-height: 90vh;
+	padding: var(--spacing-md);
+}
+
+body.sidebar-mode .novel-detail-header,
+html.sidebar-mode .novel-detail-header {
+	flex-direction: column;
+	text-align: center;
+}
+
+body.sidebar-mode .novel-detail-cover,
+html.sidebar-mode .novel-detail-cover {
+	width: 80px;
+	height: 120px;
+}
+
+/* ================================================
+   Sidebar Mode - Switch to regular layout at 600px+
+   When user expands sidebar, show full layout
+   ================================================ */
+@media (min-width: 600px) {
+	body.sidebar-mode .library-container,
+	html.sidebar-mode .library-container {
+		padding: var(--spacing-lg);
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	body.sidebar-mode .library-header,
+	html.sidebar-mode .library-header {
+		padding: var(--spacing-lg);
+	}
+
+	body.sidebar-mode .logo-section h1,
+	html.sidebar-mode .logo-section h1 {
+		font-size: 1.5rem;
+	}
+
+	body.sidebar-mode .logo-section .logo,
+	html.sidebar-mode .logo-section .logo {
+		width: 48px;
+		height: 48px;
+	}
+
+	body.sidebar-mode .stats-bar,
+	html.sidebar-mode .stats-bar {
+		flex-direction: row;
+		gap: var(--spacing-md);
+	}
+
+	body.sidebar-mode .stat-card,
+	html.sidebar-mode .stat-card {
+		padding: var(--spacing-lg);
+	}
+
+	body.sidebar-mode .stat-value,
+	html.sidebar-mode .stat-value {
+		font-size: 2rem;
+	}
+
+	body.sidebar-mode .view-controls,
+	html.sidebar-mode .view-controls {
+		flex-direction: row;
+		align-items: center;
+		gap: var(--spacing-md);
+	}
+
+	body.sidebar-mode .view-toggle,
+	html.sidebar-mode .view-toggle {
+		flex-wrap: nowrap;
+	}
+
+	body.sidebar-mode .view-btn,
+	html.sidebar-mode .view-btn {
+		padding: var(--spacing-sm) var(--spacing-md);
+		font-size: 0.85rem;
+	}
+
+	body.sidebar-mode .search-box input,
+	html.sidebar-mode .search-box input {
+		padding: var(--spacing-sm) var(--spacing-md);
+		font-size: 0.9rem;
+	}
+
+	body.sidebar-mode .novel-grid,
+	html.sidebar-mode .novel-grid {
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	}
+
+	body.sidebar-mode .carousel-section,
+	html.sidebar-mode .carousel-section {
+		display: block;
+	}
+
+	body.sidebar-mode .shelf-section,
+	html.sidebar-mode .shelf-section {
+		padding: var(--spacing-lg);
+	}
+
+	body.sidebar-mode .shelf-header,
+	html.sidebar-mode .shelf-header {
+		flex-direction: row;
+		align-items: center;
+		gap: var(--spacing-md);
+	}
+
+	body.sidebar-mode .novel-card {
+		margin-bottom: 0;
+	}
+
+	body.sidebar-mode .novel-card-inner {
+		flex-direction: row;
+		padding: var(--spacing-md);
+		gap: var(--spacing-md);
+	}
+
+	body.sidebar-mode .novel-cover,
+	body.sidebar-mode .novel-cover-placeholder {
+		width: 80px;
+		height: 120px;
+		min-width: 80px;
+	}
+
+	body.sidebar-mode .novel-card-content {
+		gap: var(--spacing-xs);
+	}
+
+	body.sidebar-mode .novel-card-title {
+		font-size: 1rem;
+		-webkit-line-clamp: 2;
+	}
+
+	body.sidebar-mode .novel-card-author {
+		font-size: 0.85rem;
+	}
+
+	body.sidebar-mode .novel-card-meta {
+		display: flex;
+	}
+
+	body.sidebar-mode .novel-card-status {
+		margin-top: var(--spacing-xs);
+	}
+
+	body.sidebar-mode .status-dropdown {
+		font-size: 0.75rem;
+		padding: var(--spacing-xs) var(--spacing-sm);
+	}
+
+	body.sidebar-mode .novel-card-progress {
+		margin-top: var(--spacing-xs);
+	}
+
+	body.sidebar-mode .novel-card-progress span {
+		font-size: 0.75rem;
+	}
+
+	body.sidebar-mode .progress-bar {
+		height: 4px;
+	}
+
+	body.sidebar-mode .modal-content,
+	html.sidebar-mode .modal-content {
+		width: 90%;
+		max-width: 800px;
+		padding: var(--spacing-xl);
+	}
+
+	body.sidebar-mode .novel-detail-header,
+	html.sidebar-mode .novel-detail-header {
+		flex-direction: row;
+		text-align: left;
+	}
+
+	body.sidebar-mode .novel-detail-cover,
+	html.sidebar-mode .novel-detail-cover {
+		width: 150px;
+		height: 220px;
 	}
 }

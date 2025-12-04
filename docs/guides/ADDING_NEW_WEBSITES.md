@@ -309,9 +309,161 @@ flowchart TD
    - Enhancement and summarization work as expected
 4. Fix any issues in your handler implementation
 
-### 7. Submit Your Contribution
+### 7. Add SHELF_METADATA for Novel Library
+
+To enable the Novel Library feature for your website, add a static `SHELF_METADATA` property to your handler class. This metadata is used to create shelves in the library UI and enable site-specific filtering.
+
+```javascript
+class YourWebsiteHandler extends BaseHandler {
+    // Static metadata for the Novel Library shelf system
+    static SHELF_METADATA = {
+        id: 'yoursite',           // Unique identifier (lowercase, no spaces)
+        name: 'Your Site Name',   // Display name for the shelf
+        icon: '📖',               // Can be emoji OR URL (see icon options below)
+        description: 'Novels from yoursite.com'
+    };
+
+    static SUPPORTED_DOMAINS = ['yoursite.com', 'www.yoursite.com'];
+
+    // ... rest of handler implementation
+}
+```
+
+**Icon Options:**
+
+| Format                   | Example                                 | Use Case                                    |
+| ------------------------ | --------------------------------------- | ------------------------------------------- |
+| **Emoji**                | `'📖'`                                   | Simple, universal, no external dependencies |
+| **URL**                  | `'https://yoursite.com/favicon.ico'`    | Site's actual favicon/logo                  |
+| **Object with fallback** | `{ url: 'https://...', fallback: '📖' }` | Best practice: URL with emoji backup        |
+
+```javascript
+// Option 1: Simple emoji
+static SHELF_METADATA = {
+    icon: '📖',  // Works everywhere
+};
+
+// Option 2: URL (favicon/logo)
+static SHELF_METADATA = {
+    icon: 'https://yoursite.com/favicon.ico',
+};
+
+// Option 3: URL with emoji fallback (recommended)
+static SHELF_METADATA = {
+    icon: {
+        url: 'https://yoursite.com/favicon.ico',
+        fallback: '📖'
+    },
+};
+```
+
+### 8. Create a Library Page for Your Website (Optional)
+
+To add a dedicated "View All" page for novels from your website in the Novel Library:
+
+**Step 1:** Create a folder at `src/library/websites/yoursite/`
+
+**Step 2:** Create `index.html` in that folder:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Site Name - Novel Library</title>
+    <link rel="stylesheet" href="../shelf-page.css">
+</head>
+<body>
+    <header>
+        <a href="../../library.html" class="back-link">← Back to Library</a>
+        <h1><span class="shelf-icon">📖</span> Your Site Name Novels</h1>
+    </header>
+    <main id="shelf-container">
+        <p class="loading">Loading novels...</p>
+    </main>
+    <script src="../../lib/browser-polyfill.min.js"></script>
+    <script src="../shelf-page.js"></script>
+    <script>
+        // Initialize with your shelf ID (must match SHELF_METADATA.id)
+        document.addEventListener('DOMContentLoaded', () => {
+            initShelfPage('yoursite');
+        });
+    </script>
+</body>
+</html>
+```
+
+**Step 3:** Update the shelf's View All link in `library.js` to point to your page.
+
+The shared `shelf-page.js` handles all the logic automatically - it reads the shelf ID, fetches novels, and renders them using the same card format as the main library.
+
+### 9. Implement Novel Metadata Extraction (For Auto-Update)
+
+For the Novel Library to auto-update novel details when users visit novel pages, implement these methods in your handler:
+
+```javascript
+class YourWebsiteHandler extends BaseHandler {
+    // Check if current page is a novel info page (not chapter)
+    isNovelPage(document) {
+        // Return true if this is the novel's main page (description, info)
+        return document.querySelector('.novel-info-container') !== null;
+    }
+
+    // Extract comprehensive novel metadata
+    extractNovelMetadata(document, url) {
+        return {
+            // Required fields
+            id: this.generateNovelId(url),  // Unique ID
+            title: document.querySelector('.novel-title')?.textContent?.trim(),
+            sourceUrl: url,
+            sourceSite: 'yoursite',  // Must match SHELF_METADATA.id
+
+            // Optional but recommended
+            author: document.querySelector('.author-name')?.textContent?.trim(),
+            coverUrl: document.querySelector('.novel-cover img')?.src,
+            description: document.querySelector('.novel-description')?.textContent?.trim(),
+            genres: Array.from(document.querySelectorAll('.genre-tag'))
+                        .map(el => el.textContent.trim()),
+            status: document.querySelector('.novel-status')?.textContent?.trim(),
+            totalChapters: parseInt(document.querySelector('.chapter-count')?.textContent) || null,
+
+            // Timestamps
+            lastUpdated: Date.now(),
+            dateAdded: Date.now()
+        };
+    }
+
+    // Generate a consistent unique ID for the novel
+    generateNovelId(url) {
+        // Extract unique identifier from URL
+        const match = url.match(/\/novel\/(\d+)/);
+        return match ? `yoursite-${match[1]}` : `yoursite-${btoa(url).substring(0, 12)}`;
+    }
+}
+```
+
+**Auto-Update Behavior:**
+When a user visits a novel page on your supported website, the extension automatically:
+1. Checks if the novel exists in the library
+2. Updates non-edited fields (fields the user hasn't manually changed)
+3. Preserves any user edits to title, description, etc.
+
+### 10. Submit Your Contribution
 
 When your implementation is working correctly, submit a pull request with your changes.
+
+## Complete Integration Checklist
+
+| Step | File(s) to Modify                          | Required?  | Description                                               |
+| ---- | ------------------------------------------ | ---------- | --------------------------------------------------------- |
+| 1    | `your-handler.js`                          | ✅ Yes      | Create handler class with `canHandle`, `getContent`, etc. |
+| 2    | `your-handler.js`                          | ✅ Yes      | Add `SHELF_METADATA` static property                      |
+| 3    | `your-handler.js`                          | ✅ Yes      | Add `SUPPORTED_DOMAINS` static array                      |
+| 4    | `handler-manager.js`                       | ✅ Yes      | Import and register your handler                          |
+| 5    | Run `npm run update-domains`               | ✅ Yes      | Auto-updates manifest.json                                |
+| 6    | `src/library/websites/yoursite/index.html` | ⭐ Optional | Site-specific library page                                |
+| 7    | `your-handler.js`                          | ⭐ Optional | Add `isNovelPage()` and `extractNovelMetadata()`          |
 
 ## Common Challenges and Solutions
 

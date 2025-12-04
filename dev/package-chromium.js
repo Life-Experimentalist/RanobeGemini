@@ -5,7 +5,7 @@ const { execSync } = require("child_process");
 const { platform } = require("os");
 
 // Configuration
-const SOURCE_DIR = "../dist/dist-firefox";
+const SOURCE_DIR = "../dist/dist-chromium";
 const RELEASES_DIR = "../releases";
 const EXCLUDE_PATTERNS = ["node_modules/**", "*.tmp", "*.log", ".DS_Store"];
 
@@ -18,7 +18,6 @@ function ensureDependencies() {
 		try {
 			execSync("npm install archiver --save-dev", { stdio: "inherit" });
 			console.log("✅ archiver installed successfully");
-			// Re-require after installation
 			return require("archiver");
 		} catch (installError) {
 			console.error(
@@ -41,7 +40,7 @@ function getExtensionInfo() {
 
 		if (!fs.existsSync(manifestPath)) {
 			throw new Error(
-				`Manifest not found. Please run 'npm run build' first to create the dist-firefox folder.`
+				`Manifest not found. Please run 'npm run build' first to create the dist-chromium folder.`
 			);
 		}
 
@@ -64,7 +63,7 @@ function getExtensionInfo() {
 async function packageExtension() {
 	const archiver = ensureDependencies();
 	const { name, version } = getExtensionInfo();
-	const packageName = `${name}_v${version}_firefox.zip`;
+	const packageName = `${name}_v${version}_chromium.zip`;
 	const outputPath = resolvePath(RELEASES_DIR, packageName);
 
 	// Ensure releases directory exists
@@ -85,17 +84,18 @@ async function packageExtension() {
 		output.on("close", () => {
 			const sizeMB = (archive.pointer() / (1024 * 1024)).toFixed(2);
 			console.log(`
-🎉 Successfully packaged for Firefox!
+🎉 Successfully packaged for Chromium/Chrome/Edge!
 Name:    ${name}
 Version: ${version}
 Path:    ${outputPath}
 Size:    ${sizeMB} MB
 OS:      ${platform()}
 
-📝 Next steps for Firefox Add-ons:
-1. Go to https://addons.mozilla.org/developers/
+📝 Next steps for Chrome Web Store:
+1. Go to https://chrome.google.com/webstore/devconsole
 2. Upload ${packageName}
-3. Submit for review
+3. Fill in store listing details
+4. Submit for review
 			`);
 			resolve();
 		});

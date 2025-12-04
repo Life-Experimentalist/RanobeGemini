@@ -3,11 +3,17 @@
  * Handles UI interactions and data loading for the library page
  */
 
-import { novelLibrary, SHELVES } from "../utils/novel-library.js";
+import {
+	novelLibrary,
+	SHELVES,
+	READING_STATUS,
+	READING_STATUS_INFO,
+} from "../utils/novel-library.js";
 
 // State
 let currentView = "shelves";
 let currentSort = "recent";
+let currentStatusFilter = "all";
 let searchQuery = "";
 let allNovels = [];
 
@@ -22,8 +28,16 @@ const elements = {
 	shelvesView: document.getElementById("shelves-view"),
 	recentView: document.getElementById("recent-view"),
 	allView: document.getElementById("all-view"),
+	listsView: document.getElementById("lists-view"),
 	recentNovels: document.getElementById("recent-novels"),
 	allNovels: document.getElementById("all-novels"),
+	listsNovels: document.getElementById("lists-novels"),
+	listsTitle: document.getElementById("lists-title"),
+	listsStats: document.getElementById("lists-stats"),
+
+	// Reading Status Filter
+	readingStatusFilter: document.getElementById("reading-status-filter"),
+	statusFilterBtns: document.querySelectorAll(".status-filter-btn"),
 
 	// States
 	emptyState: document.getElementById("empty-state"),
@@ -44,6 +58,7 @@ const elements = {
 	modalAuthor: document.getElementById("modal-author"),
 	modalShelf: document.getElementById("modal-shelf"),
 	modalStatus: document.getElementById("modal-status"),
+	modalStatusSelector: document.getElementById("modal-status-selector"),
 	modalChapters: document.getElementById("modal-chapters"),
 	modalEnhanced: document.getElementById("modal-enhanced"),
 	modalLastRead: document.getElementById("modal-last-read"),
@@ -52,8 +67,32 @@ const elements = {
 	modalGenresContainer: document.getElementById("modal-genres-container"),
 	modalContinueBtn: document.getElementById("modal-continue-btn"),
 	modalSourceBtn: document.getElementById("modal-source-btn"),
+	modalRefreshBtn: document.getElementById("modal-refresh-btn"),
 	modalEditBtn: document.getElementById("modal-edit-btn"),
 	modalRemoveBtn: document.getElementById("modal-remove-btn"),
+
+	// Modal Metadata Sections
+	modalMetadataContainer: document.getElementById("modal-metadata-container"),
+	modalRatingSection: document.getElementById("modal-rating-section"),
+	modalRating: document.getElementById("modal-rating"),
+	modalWarningsRow: document.getElementById("modal-warnings-row"),
+	modalWarnings: document.getElementById("modal-warnings"),
+	modalCategoriesRow: document.getElementById("modal-categories-row"),
+	modalCategories: document.getElementById("modal-categories"),
+	modalFandomsSection: document.getElementById("modal-fandoms-section"),
+	modalFandoms: document.getElementById("modal-fandoms"),
+	modalRelationshipsSection: document.getElementById(
+		"modal-relationships-section"
+	),
+	modalRelationships: document.getElementById("modal-relationships"),
+	modalCharactersSection: document.getElementById("modal-characters-section"),
+	modalCharacters: document.getElementById("modal-characters"),
+	modalAdditionalTagsSection: document.getElementById(
+		"modal-additional-tags-section"
+	),
+	modalAdditionalTags: document.getElementById("modal-additional-tags"),
+	modalWorkStatsSection: document.getElementById("modal-work-stats-section"),
+	modalWorkStats: document.getElementById("modal-work-stats"),
 
 	// Edit Modal
 	editModal: document.getElementById("edit-modal"),
@@ -96,11 +135,22 @@ let carouselState = {
 	itemsToShow: 10, // Total novels in carousel (configurable)
 };
 
+// Detect if running in sidebar (set via manifest URL parameter)
+const isSidebar = window.location.search.includes("sidebar=true");
+
 /**
  * Initialize the library page
  */
 async function init() {
-	console.log("📚 Initializing Novel Library Page");
+	console.log(
+		"📚 Initializing Novel Library Page" +
+			(isSidebar ? " (Sidebar mode)" : "")
+	);
+
+	// Add sidebar class to body if in sidebar
+	if (isSidebar) {
+		document.body.classList.add("sidebar-mode");
+	}
 
 	// Populate supported sites list dynamically from SHELVES
 	populateSupportedSites();
@@ -108,8 +158,159 @@ async function init() {
 	// Set up event listeners
 	setupEventListeners();
 
+	// Set up storage change listener for auto-updates
+	setupStorageListener();
+
 	// Load library data
 	await loadLibrary();
+}
+
+/**
+ * Set up storage change listener for auto-updates
+ */
+function setupStorageListener() {
+	browser.storage.onChanged.addListener((changes, areaName) => {
+		if (areaName !== "local") return;
+
+		// Check if library data changed
+		if (changes.rg_novel_library) {
+			console.log("📚 Library data changed externally, refreshing...");
+			// Debounce the refresh to avoid rapid updates
+			if (window.libraryRefreshTimeout) {
+				clearTimeout(window.libraryRefreshTimeout);
+			}
+			window.libraryRefreshTimeout = setTimeout(() => {
+				loadLibrary();
+			}, 500);
+		}
+	});
+}
+
+/**
+ * Render a shelf icon - supports emoji strings, URL strings, and URL objects
+ * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
+ * @param {string} className - Optional CSS class name
+ * @returns {string} HTML string for the icon
+ */
+function renderShelfIcon(icon, className = "") {
+	if (!icon) return `<span class="shelf-icon ${className}">📖</span>`;
+
+	// If icon is a simple string
+	if (typeof icon === "string") {
+		// Check if it's a URL (starts with http:// or https://)
+		if (icon.startsWith("http://") || icon.startsWith("https://")) {
+			return `<span class="shelf-icon shelf-icon-img ${className}">
+				<img src="${escapeHtml(icon)}" alt=""
+					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+					style="width: 1.5em; height: 1.5em; vertical-align: middle;">
+				<span class="icon-fallback" style="display: none;">📖</span>
+			</span>`;
+		}
+		// It's an emoji
+		return `<span class="shelf-icon ${className}">${icon}</span>`;
+	}
+
+	// If icon is an object with url and fallback
+	if (typeof icon === "object" && icon.url) {
+		const fallback = icon.fallback || "📖";
+		return `<span class="shelf-icon shelf-icon-img ${className}">
+			<img src="${escapeHtml(icon.url)}" alt=""
+				onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
+				style="width: 1.5em; height: 1.5em; vertical-align: middle;">
+			<span class="icon-fallback" style="display: none;">${fallback}</span>
+		</span>`;
+	}
+
+	return `<span class="shelf-icon ${className}">📖</span>`;
+}
+
+/**
+ * Get the icon emoji/text from a shelf icon config
+ * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
+ * @param {string} emoji - Optional emoji fallback from shelf
+ * @returns {string} The emoji/text to use
+ */
+function getIconText(icon, emoji) {
+	if (!icon) return emoji || "📖";
+	// If it's a URL string, return the provided emoji or default
+	if (typeof icon === "string") {
+		if (icon.startsWith("http://") || icon.startsWith("https://")) {
+			return icon || emoji || "📖";
+		}
+		return icon;
+	}
+	if (typeof icon === "object" && icon.fallback) return icon.fallback;
+	return emoji || "📖";
+}
+
+/**
+ * Render shelf icon for novel cover placeholder - supports images and emojis
+ * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
+ * @returns {string} HTML string for the icon
+ */
+function renderShelfIconForPlaceholder(icon) {
+	if (!icon) return "📖";
+
+	// If icon is a simple string
+	if (typeof icon === "string") {
+		// Check if it's a URL
+		if (icon.startsWith("http://") || icon.startsWith("https://")) {
+			return `<img src="${escapeHtml(
+				icon
+			)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
+				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">📖</span>`;
+		}
+		// It's an emoji
+		return icon;
+	}
+
+	// If icon is an object with url and fallback
+	if (typeof icon === "object" && icon.url) {
+		const fallback = icon.fallback || "📖";
+		return `<img src="${escapeHtml(
+			icon.url
+		)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
+				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallback}</span>`;
+	}
+
+	return "📖";
+}
+
+/**
+ * Render shelf icon overlay for novel cards
+ * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
+ * @returns {string} HTML string for the icon overlay
+ */
+function renderShelfIconOverlay(icon) {
+	if (!icon) return '<span class="novel-icon-overlay">📖</span>';
+
+	// If icon is a simple string
+	if (typeof icon === "string") {
+		// Check if it's a URL
+		if (icon.startsWith("http://") || icon.startsWith("https://")) {
+			return `<div class="novel-icon-overlay">
+				<img src="${escapeHtml(
+					icon
+				)}" alt="" class="overlay-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+				<span class="overlay-icon-fallback" style="display: none;">📖</span>
+			</div>`;
+		}
+		// It's an emoji
+		return `<span class="novel-icon-overlay">${icon}</span>`;
+	}
+
+	// If icon is an object with url and fallback
+	if (typeof icon === "object" && icon.url) {
+		const fallback = icon.fallback || "📖";
+		return `<div class="novel-icon-overlay">
+				<img src="${escapeHtml(
+					icon.url
+				)}" alt="" class="overlay-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+				<span class="overlay-icon-fallback" style="display: none;">${fallback}</span>
+			</div>`;
+	}
+
+	return '<span class="novel-icon-overlay">📖</span>';
 }
 
 /**
@@ -122,7 +323,9 @@ function populateSupportedSites() {
 	sitesList.innerHTML = Object.values(SHELVES)
 		.map(
 			(shelf) =>
-				`<li><span class="site-icon">${shelf.icon}</span> ${shelf.name}</li>`
+				`<li>${renderShelfIcon(shelf.icon, "site-icon")} ${
+					shelf.name
+				}</li>`
 		)
 		.join("");
 }
@@ -142,6 +345,15 @@ function setupEventListeners() {
 		btn.addEventListener("click", () => handleViewChange(btn.dataset.view));
 	});
 
+	// Reading status filter
+	if (elements.statusFilterBtns) {
+		elements.statusFilterBtns.forEach((btn) => {
+			btn.addEventListener("click", () =>
+				handleStatusFilterChange(btn.dataset.status)
+			);
+		});
+	}
+
 	// Refresh
 	elements.refreshBtn.addEventListener("click", loadLibrary);
 
@@ -158,7 +370,14 @@ function setupEventListeners() {
 		closeModal(elements.novelModal)
 	);
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);
+	elements.modalRefreshBtn.addEventListener("click", handleRefreshMetadata);
 	elements.modalEditBtn.addEventListener("click", handleOpenEditModal);
+	if (elements.modalStatusSelector) {
+		elements.modalStatusSelector.addEventListener(
+			"change",
+			handleModalStatusChange
+		);
+	}
 
 	// Edit modal
 	elements.editClose.addEventListener("click", () =>
@@ -214,6 +433,14 @@ async function loadLibrary() {
 	showLoading(true);
 
 	try {
+		// Clean up any duplicates first
+		const cleanupResult = await novelLibrary.cleanupDuplicates();
+		if (cleanupResult.totalRemoved > 0) {
+			console.log(
+				`📚 Cleaned up ${cleanupResult.totalRemoved} duplicate novels`
+			);
+		}
+
 		// Get library stats
 		const stats = await novelLibrary.getStats();
 		updateStats(stats);
@@ -263,6 +490,14 @@ function updateStats(stats) {
 function renderCurrentView() {
 	const filteredNovels = filterAndSortNovels();
 
+	// Show/hide reading status filter based on view
+	if (elements.readingStatusFilter) {
+		elements.readingStatusFilter.classList.toggle(
+			"hidden",
+			currentView !== "lists"
+		);
+	}
+
 	switch (currentView) {
 		case "shelves":
 			renderShelvesView(filteredNovels);
@@ -272,6 +507,9 @@ function renderCurrentView() {
 			break;
 		case "all":
 			renderAllView(filteredNovels);
+			break;
+		case "lists":
+			renderListsView(filteredNovels);
 			break;
 	}
 }
@@ -290,6 +528,14 @@ function filterAndSortNovels() {
 				novel.title.toLowerCase().includes(query) ||
 				novel.author.toLowerCase().includes(query)
 		);
+	}
+
+	// Filter by reading status (only in lists view)
+	if (currentView === "lists" && currentStatusFilter !== "all") {
+		novels = novels.filter((novel) => {
+			const novelStatus = novel.readingStatus || "unset";
+			return novelStatus === currentStatusFilter;
+		});
 	}
 
 	// Sort
@@ -316,6 +562,94 @@ function filterAndSortNovels() {
 }
 
 /**
+ * Render reading lists view with status filtering
+ */
+function renderListsView(novels) {
+	if (!elements.listsNovels) return;
+
+	// Update title based on current filter
+	const statusInfo = READING_STATUS_INFO[currentStatusFilter];
+	if (elements.listsTitle) {
+		if (currentStatusFilter === "all") {
+			elements.listsTitle.textContent = "📖 Reading Lists";
+		} else if (statusInfo) {
+			elements.listsTitle.textContent = `${statusInfo.label}`;
+		}
+	}
+
+	// Render stats
+	if (elements.listsStats) {
+		renderListsStats();
+	}
+
+	// Render novels
+	elements.listsNovels.innerHTML = "";
+
+	if (novels.length === 0) {
+		elements.listsNovels.innerHTML = `
+			<div class="empty-list-message">
+				<p>No novels in this list yet.</p>
+				<p class="empty-hint">Set a reading status on any novel to see it here!</p>
+			</div>
+		`;
+		return;
+	}
+
+	novels.forEach((novel) => {
+		const card = createNovelCard(novel);
+		elements.listsNovels.appendChild(card);
+	});
+}
+
+/**
+ * Render reading status stats
+ */
+async function renderListsStats() {
+	if (!elements.listsStats) return;
+
+	// Count novels by status
+	const statusCounts = {};
+	Object.values(READING_STATUS).forEach((status) => {
+		statusCounts[status] = 0;
+	});
+	statusCounts["unset"] = 0;
+
+	allNovels.forEach((novel) => {
+		const status = novel.readingStatus || "unset";
+		if (statusCounts[status] !== undefined) {
+			statusCounts[status]++;
+		} else {
+			statusCounts["unset"]++;
+		}
+	});
+
+	// Build stats HTML
+	let statsHtml = "";
+	Object.entries(READING_STATUS_INFO).forEach(([status, info]) => {
+		const count = statusCounts[status] || 0;
+		statsHtml += `
+			<div class="lists-stat-item">
+				<span>${info.label.split(" ")[0]}</span>
+				<span class="count">${count}</span>
+			</div>
+		`;
+	});
+
+	// Add unset count
+	if (statusCounts["unset"] > 0) {
+		statsHtml += `
+			<div class="lists-stat-item">
+				<span>📌</span>
+				<span class="count">${statusCounts["unset"]}</span>
+				<span style="font-size: 0.8em; color: var(--text-muted);">No Status</span>
+			</div>
+		`;
+	}
+
+	elements.listsStats.innerHTML = statsHtml;
+}
+
+/**
  * Render shelves view
  */
 function renderShelvesView(novels) {
@@ -323,43 +657,63 @@ function renderShelvesView(novels) {
 
 	// Group novels by shelf
 	const novelsByShelf = {};
+	const shelfLatestActivity = {}; // Track latest activity per shelf
+
 	for (const novel of novels) {
 		if (!novelsByShelf[novel.shelfId]) {
 			novelsByShelf[novel.shelfId] = [];
+			shelfLatestActivity[novel.shelfId] = 0;
 		}
 		novelsByShelf[novel.shelfId].push(novel);
+		// Track the most recent activity in this shelf
+		const novelActivity = novel.lastAccessedAt || novel.addedAt || 0;
+		if (novelActivity > shelfLatestActivity[novel.shelfId]) {
+			shelfLatestActivity[novel.shelfId] = novelActivity;
+		}
 	}
 
-	// Render ALL registered shelves (including empty ones)
-	for (const [shelfId, shelfDefinition] of Object.entries(SHELVES)) {
+	// Sort shelves by latest activity (most recent first)
+	const sortedShelves = Object.entries(SHELVES).sort((a, b) => {
+		const activityA = shelfLatestActivity[a[1].id] || 0;
+		const activityB = shelfLatestActivity[b[1].id] || 0;
+		return activityB - activityA; // Descending order
+	});
+
+	// Render shelves in sorted order
+	for (const [shelfId, shelfDefinition] of sortedShelves) {
 		const shelfNovels = novelsByShelf[shelfDefinition.id] || [];
 
 		const shelfSection = document.createElement("section");
-		shelfSection.className = "shelf-section";
+		// Start collapsed by default
+		shelfSection.className = "shelf-section collapsed";
 		shelfSection.dataset.shelfId = shelfDefinition.id;
 
 		const showAll = shelfSection.dataset.expanded === "true";
-		const visibleNovels = showAll ? shelfNovels : shelfNovels.slice(0, 10); // 2 rows of 5
+		const isCollapsed = shelfSection.classList.contains("collapsed");
+		// When collapsed, render all cards but CSS will limit visible rows
+		// When expanded but not showAll, show first 10 (2 rows), otherwise show all
+		const visibleNovels =
+			showAll || isCollapsed ? shelfNovels : shelfNovels.slice(0, 10);
 		const hasMore = shelfNovels.length > 10;
 
 		shelfSection.innerHTML = `
 			<div class="shelf-header">
 				<h2 class="shelf-title">
-					<button class="shelf-collapse-btn" title="Collapse shelf" data-shelf-id="${
+					<button class="shelf-collapse-btn" title="Expand shelf" data-shelf-id="${
 						shelfDefinition.id
 					}">
-						<span class="collapse-icon">▼</span>
+						<span class="collapse-icon">▶</span>
 					</button>
 					<span class="shelf-color-bar" style="background: ${
 						shelfDefinition.color
 					}"></span>
-					<span class="shelf-icon">${shelfDefinition.icon}</span>
+					${renderShelfIcon(shelfDefinition.icon)}
 					${shelfDefinition.name}
 					<span class="novel-count">(${shelfNovels.length})</span>
 				</h2>
-				<a href="shelf/${
+				<a href="websites/${
 					shelfDefinition.id
-				}.html" class="shelf-view-all-link" title="View full shelf page">
+				}/index.html" class="shelf-view-all-link" title="View full shelf page">
 					View All →
 				</a>
 			</div>
@@ -368,7 +722,9 @@ function renderShelvesView(novels) {
 				hasMore
 					? `<button class="shelf-show-more" data-shelf-id="${
 							shelfDefinition.id
-					  }">${showAll ? "Show Less" : "Show More"}</button>`
+					  }" style="display: none;">${
+							showAll ? "Show Less" : "Show More"
+					  }</button>`
 					: ""
 			}
 		`;
@@ -385,9 +741,11 @@ function renderShelvesView(novels) {
 				</div>
 			`;
 		} else {
-			// Render novel cards (limited or all)
+			// Render novel cards (limited or all) - use shelf-specific card for this view
 			visibleNovels.forEach((novel) => {
-				grid.appendChild(createNovelCard(novel));
+				grid.appendChild(
+					createNovelCardForShelf(novel, shelfDefinition)
+				);
 			});
 		}
 
@@ -411,6 +769,112 @@ function renderShelvesView(novels) {
 	if (Object.keys(SHELVES).length === 0) {
 		showEmptyState(true);
 	}
+}
+
+/**
+ * Create a novel card for shelf view (shows tags instead of website name)
+ */
+function createNovelCardForShelf(novel, shelf) {
+	const card = document.createElement("div");
+	card.className = "novel-card";
+	card.dataset.novelId = novel.id;
+
+	// Fallback to extension logo if cover fails to load
+	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+
+	// Generate placeholder content with icon image support
+	const placeholderContent = shelf
+		? renderShelfIconForPlaceholder(shelf.icon)
+		: "📖";
+
+	const coverHtml = novel.coverUrl
+		? `<img src="${novel.coverUrl}" alt="Cover" class="novel-cover" loading="lazy" onerror="this.src='${fallbackLogo}'; this.onerror=null;">`
+		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
+
+	const progress =
+		novel.totalChapters > 0
+			? Math.round((novel.lastReadChapter / novel.totalChapters) * 100)
+			: 0;
+
+	// Get current reading status
+	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	const statusInfo =
+		READING_STATUS_INFO[currentStatus] ||
+		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
+
+	// Generate status dropdown options
+	const statusOptions = Object.entries(READING_STATUS_INFO)
+		.map(
+			([status, info]) =>
+				`<option value="${status}" ${
+					status === currentStatus ? "selected" : ""
+				}>${info.label}</option>`
+		)
+		.join("");
+
+	// Show tags/genres instead of website name (since we're already in a shelf)
+	const tagsHtml = (novel.genres || novel.tags || [])
+		.slice(0, 3)
+		.map(
+			(tag) =>
+				`<span class="meta-badge tag-badge">${escapeHtml(tag)}</span>`
+		)
+		.join("");
+
+	card.innerHTML = `
+		<div class="novel-card-inner">
+			${coverHtml}
+			<div class="novel-card-content">
+				<h3 class="novel-card-title">${escapeHtml(novel.title)}</h3>
+				<p class="novel-card-author">${escapeHtml(novel.author || "Unknown")}</p>
+				<div class="novel-card-meta">
+					${
+						tagsHtml ||
+						`<span class="meta-badge enhanced">✨ ${
+							novel.enhancedChaptersCount || 0
+						} enhanced</span>`
+					}
+				</div>
+				<div class="novel-card-status">
+					<select class="status-dropdown" data-novel-id="${
+						novel.id
+					}" title="Change reading status">
+						${statusOptions}
+					</select>
+				</div>
+				${
+					novel.totalChapters > 0
+						? `
+				<div class="novel-card-progress">
+					<div class="progress-bar">
+						<div class="progress-fill" style="width: ${progress}%"></div>
+					</div>
+					<span>Ch. ${novel.lastReadChapter || 1}/${novel.totalChapters}</span>
+				</div>
+				`
+						: ""
+				}
+			</div>
+		</div>
+	`;
+
+	// Add event listener for status dropdown
+	const statusDropdown = card.querySelector(".status-dropdown");
+	statusDropdown.dataset.status = currentStatus;
+
+	statusDropdown.addEventListener("click", (e) => {
+		e.stopPropagation();
+	});
+	statusDropdown.addEventListener("change", async (e) => {
+		e.stopPropagation();
+		const newStatus = e.target.value;
+		e.target.dataset.status = newStatus;
+		await handleStatusChange(novel.id, newStatus);
+	});
+
+	card.addEventListener("click", () => openNovelDetail(novel));
+
+	return card;
 }
 
 /**
@@ -445,16 +909,40 @@ function createNovelCard(novel) {
 	card.dataset.novelId = novel.id;
 
 	const shelf = Object.values(SHELVES).find((s) => s.id === novel.shelfId);
-	const shelfIcon = shelf ? shelf.icon : "📖";
+	const shelfIconText = shelf ? getIconText(shelf.icon, shelf.emoji) : "📖";
+
+	// Fallback to extension logo if cover fails to load
+	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+
+	// Generate placeholder content with icon image support
+	const placeholderContent = shelf
+		? renderShelfIconForPlaceholder(shelf.icon)
+		: "📖";
 
 	const coverHtml = novel.coverUrl
-		? `<img src="${novel.coverUrl}" alt="Cover" class="novel-cover" loading="lazy" onerror="this.outerHTML='<div class=\\'novel-cover-placeholder\\'>${shelfIcon}</div>'">`
-		: `<div class="novel-cover-placeholder">${shelfIcon}</div>`;
+		? `<img src="${novel.coverUrl}" alt="Cover" class="novel-cover" loading="lazy" onerror="this.src='${fallbackLogo}'; this.onerror=null;">`
+		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
 		novel.totalChapters > 0
 			? Math.round((novel.lastReadChapter / novel.totalChapters) * 100)
 			: 0;
+
+	// Get current reading status
+	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	const statusInfo =
+		READING_STATUS_INFO[currentStatus] ||
+		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
+
+	// Generate status dropdown options
+	const statusOptions = Object.entries(READING_STATUS_INFO)
+		.map(
+			([status, info]) =>
+				`<option value="${status}" ${
+					status === currentStatus ? "selected" : ""
+				}>${info.label}</option>`
+		)
+		.join("");
 
 	card.innerHTML = `
 		<div class="novel-card-inner">
@@ -463,12 +951,19 @@ function createNovelCard(novel) {
 				<h3 class="novel-card-title">${escapeHtml(novel.title)}</h3>
 				<p class="novel-card-author">${escapeHtml(novel.author || "Unknown")}</p>
 				<div class="novel-card-meta">
-					<span class="meta-badge">${shelfIcon} ${shelf?.name || "Unknown"}</span>
+					<span class="meta-badge">${shelfIconText} ${shelf?.name || "Unknown"}</span>
 					${
 						novel.enhancedChaptersCount > 0
 							? `<span class="meta-badge enhanced">✨ ${novel.enhancedChaptersCount} enhanced</span>`
 							: ""
 					}
+				</div>
+				<div class="novel-card-status">
+					<select class="status-dropdown" data-novel-id="${
+						novel.id
+					}" title="Change reading status">
+						${statusOptions}
+					</select>
 				</div>
 				${
 					novel.totalChapters > 0
@@ -486,9 +981,71 @@ function createNovelCard(novel) {
 		</div>
 	`;
 
+	// Add event listener for status dropdown
+	const statusDropdown = card.querySelector(".status-dropdown");
+	// Set initial data attribute for CSS styling
+	statusDropdown.dataset.status = currentStatus;
+
+	statusDropdown.addEventListener("click", (e) => {
+		e.stopPropagation(); // Prevent card click from opening modal
+	});
+	statusDropdown.addEventListener("change", async (e) => {
+		e.stopPropagation();
+		const newStatus = e.target.value;
+		// Update data attribute for CSS styling
+		e.target.dataset.status = newStatus;
+		await handleStatusChange(novel.id, newStatus);
+	});
+
 	card.addEventListener("click", () => openNovelDetail(novel));
 
 	return card;
+}
+
+/**
+ * Handle reading status change from dropdown
+ */
+async function handleStatusChange(novelId, newStatus) {
+	try {
+		await novelLibrary.updateNovel(novelId, { readingStatus: newStatus });
+		// Update local cache
+		const novelIndex = allNovels.findIndex((n) => n.id === novelId);
+		if (novelIndex !== -1) {
+			allNovels[novelIndex].readingStatus = newStatus;
+		}
+		// Show brief notification
+		showNotification(
+			`Status updated to ${
+				READING_STATUS_INFO[newStatus]?.label || newStatus
+			}`
+		);
+	} catch (error) {
+		console.error("Failed to update reading status:", error);
+		showNotification("Failed to update status", "error");
+		// Reload to reset dropdown
+		loadLibrary();
+	}
+}
+
+/**
+ * Show a brief notification
+ */
+function showNotification(message, type = "success") {
+	const notification = document.createElement("div");
+	notification.className = `notification notification-${type}`;
+	notification.textContent = message;
+	document.body.appendChild(notification);
+
+	// Animate in
+	requestAnimationFrame(() => {
+		notification.classList.add("show");
+	});
+
+	// Remove after 2 seconds
+	setTimeout(() => {
+		notification.classList.remove("show");
+		setTimeout(() => notification.remove(), 300);
+	}, 2000);
 }
 
 /**
@@ -496,25 +1053,77 @@ function createNovelCard(novel) {
  */
 function openNovelDetail(novel) {
 	const shelf = Object.values(SHELVES).find((s) => s.id === novel.shelfId);
+	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
 
-	// Set cover
+	// Use shelf/website icon as fallback instead of main logo
+	const shelfFallback =
+		shelf?.icon && shelf.icon.startsWith("http")
+			? shelf.icon
+			: fallbackLogo;
+
+	// Set cover with fallback to shelf icon
 	if (novel.coverUrl) {
 		elements.modalCover.src = novel.coverUrl;
+		elements.modalCover.onerror = function () {
+			// Try shelf icon first, then fall back to main logo
+			if (this.src !== shelfFallback && shelfFallback !== fallbackLogo) {
+				this.src = shelfFallback;
+			} else {
+				this.src = fallbackLogo;
+				this.onerror = null;
+			}
+		};
 		elements.modalCover.style.display = "block";
 	} else {
-		elements.modalCover.style.display = "none";
+		// No cover URL - use shelf icon if available, otherwise main logo
+		elements.modalCover.src = shelfFallback;
+		elements.modalCover.onerror = function () {
+			this.src = fallbackLogo;
+			this.onerror = null;
+		};
+		elements.modalCover.style.display = "block";
 	}
 
 	// Set basic info
 	elements.modalTitle.textContent = novel.title;
 	elements.modalAuthor.textContent = novel.author || "Unknown";
-	elements.modalShelf.textContent = shelf
-		? `${shelf.icon} ${shelf.name}`
+
+	// Render shelf badge with icon (using innerHTML to render HTML)
+	elements.modalShelf.innerHTML = shelf
+		? `${renderShelfIcon(shelf.icon, "site-icon")} ${shelf.name}`
 		: "Unknown";
-	elements.modalStatus.textContent =
-		novel.status !== "unknown" ? novel.status : "";
-	elements.modalStatus.style.display =
-		novel.status !== "unknown" ? "inline" : "none";
+
+	// Set reading status selector with options from READING_STATUS_INFO
+	if (elements.modalStatusSelector) {
+		const currentStatus =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+		// Clear existing options
+		elements.modalStatusSelector.innerHTML = "";
+
+		// Populate options from READING_STATUS_INFO
+		Object.entries(READING_STATUS_INFO).forEach(([status, info]) => {
+			const option = document.createElement("option");
+			option.value = status;
+			option.textContent = info.label;
+			if (status === currentStatus) {
+				option.selected = true;
+			}
+			elements.modalStatusSelector.appendChild(option);
+		});
+
+		elements.modalStatusSelector.dataset.novelId = novel.id;
+	}
+
+	// Set status display badge
+	const statusInfo =
+		READING_STATUS_INFO[novel.readingStatus] ||
+		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
+	elements.modalStatus.textContent = statusInfo.label;
+	elements.modalStatus.style.display = "inline";
+
+	// Store current novel ID for status changes
+	elements.modalStatus.dataset.novelId = novel.id;
 
 	// Set stats
 	elements.modalChapters.textContent = novel.totalChapters || "?";
@@ -537,6 +1146,9 @@ function openNovelDetail(novel) {
 		elements.modalGenresContainer.style.display = "none";
 	}
 
+	// Populate rich metadata from novel.metadata
+	populateNovelMetadata(novel);
+
 	// Set action buttons
 	elements.modalContinueBtn.href = novel.lastReadUrl || novel.sourceUrl;
 	elements.modalSourceBtn.href = novel.sourceUrl;
@@ -545,6 +1157,271 @@ function openNovelDetail(novel) {
 	elements.modalRemoveBtn.dataset.novelId = novel.id;
 
 	openModal(elements.novelModal);
+}
+
+/**
+ * Populate novel metadata sections in the modal
+ * @param {Object} novel - The novel object with metadata
+ */
+function populateNovelMetadata(novel) {
+	const metadata = novel.metadata || {};
+	let hasAnyMetadata = false;
+
+	// Helper function to render tag list
+	const renderTagList = (container, tags) => {
+		if (!container || !tags || tags.length === 0) return false;
+		container.innerHTML = tags
+			.map((tag) => `<span class="tag-item">${escapeHtml(tag)}</span>`)
+			.join("");
+		return true;
+	};
+
+	// Rating section (primarily for AO3, FanFiction)
+	if (metadata.rating) {
+		hasAnyMetadata = true;
+		elements.modalRatingSection.style.display = "block";
+
+		// Determine rating class for styling
+		const ratingLower = metadata.rating.toLowerCase();
+		let ratingClass = "rating-not-rated";
+		if (
+			ratingLower.includes("general") ||
+			ratingLower === "g" ||
+			ratingLower === "k"
+		) {
+			ratingClass = "rating-general";
+		} else if (
+			ratingLower.includes("teen") ||
+			ratingLower === "t" ||
+			ratingLower === "k+"
+		) {
+			ratingClass = "rating-teen";
+		} else if (ratingLower.includes("mature") || ratingLower === "m") {
+			ratingClass = "rating-mature";
+		} else if (
+			ratingLower.includes("explicit") ||
+			ratingLower === "e" ||
+			ratingLower === "ma"
+		) {
+			ratingClass = "rating-explicit";
+		}
+
+		elements.modalRating.className = `rating-badge ${ratingClass}`;
+		elements.modalRating.textContent = metadata.rating;
+
+		// Warnings
+		if (metadata.warnings && metadata.warnings.length > 0) {
+			elements.modalWarningsRow.style.display = "flex";
+			renderTagList(elements.modalWarnings, metadata.warnings);
+		} else if (
+			metadata.archive_warnings &&
+			metadata.archive_warnings.length > 0
+		) {
+			elements.modalWarningsRow.style.display = "flex";
+			renderTagList(elements.modalWarnings, metadata.archive_warnings);
+		} else {
+			elements.modalWarningsRow.style.display = "none";
+		}
+
+		// Categories
+		if (metadata.categories && metadata.categories.length > 0) {
+			elements.modalCategoriesRow.style.display = "flex";
+			renderTagList(elements.modalCategories, metadata.categories);
+		} else {
+			elements.modalCategoriesRow.style.display = "none";
+		}
+	} else {
+		elements.modalRatingSection.style.display = "none";
+	}
+
+	// Fandoms section
+	if (metadata.fandoms && metadata.fandoms.length > 0) {
+		hasAnyMetadata = true;
+		elements.modalFandomsSection.style.display = "block";
+		renderTagList(elements.modalFandoms, metadata.fandoms);
+	} else if (metadata.fandom) {
+		hasAnyMetadata = true;
+		elements.modalFandomsSection.style.display = "block";
+		elements.modalFandoms.innerHTML = `<span class="tag-item">${escapeHtml(
+			metadata.fandom
+		)}</span>`;
+	} else {
+		elements.modalFandomsSection.style.display = "none";
+	}
+
+	// Relationships section
+	if (metadata.relationships && metadata.relationships.length > 0) {
+		hasAnyMetadata = true;
+		elements.modalRelationshipsSection.style.display = "block";
+		renderTagList(elements.modalRelationships, metadata.relationships);
+	} else {
+		elements.modalRelationshipsSection.style.display = "none";
+	}
+
+	// Characters section
+	if (metadata.characters && metadata.characters.length > 0) {
+		hasAnyMetadata = true;
+		elements.modalCharactersSection.style.display = "block";
+		renderTagList(elements.modalCharacters, metadata.characters);
+	} else {
+		elements.modalCharactersSection.style.display = "none";
+	}
+
+	// Additional Tags section (use additionalTags, freeformTags, or tags)
+	const additionalTags =
+		metadata.additionalTags || metadata.freeformTags || metadata.tags;
+	if (additionalTags && additionalTags.length > 0) {
+		hasAnyMetadata = true;
+		elements.modalAdditionalTagsSection.style.display = "block";
+		renderTagList(elements.modalAdditionalTags, additionalTags);
+	} else {
+		elements.modalAdditionalTagsSection.style.display = "none";
+	}
+
+	// Work Stats section
+	const stats = metadata.stats || {};
+	const hasStats =
+		stats.words ||
+		stats.kudos ||
+		stats.hits ||
+		stats.bookmarks ||
+		stats.comments;
+	if (hasStats) {
+		hasAnyMetadata = true;
+		elements.modalWorkStatsSection.style.display = "block";
+
+		let statsHtml = "";
+		if (stats.words) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.words
+			)}</span><span class="work-stat-label">Words</span></div>`;
+		}
+		if (stats.kudos) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.kudos
+			)}</span><span class="work-stat-label">Kudos</span></div>`;
+		}
+		if (stats.hits) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.hits
+			)}</span><span class="work-stat-label">Hits</span></div>`;
+		}
+		if (stats.bookmarks) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.bookmarks
+			)}</span><span class="work-stat-label">Bookmarks</span></div>`;
+		}
+		if (stats.comments) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.comments
+			)}</span><span class="work-stat-label">Comments</span></div>`;
+		}
+
+		elements.modalWorkStats.innerHTML = statsHtml;
+	} else {
+		elements.modalWorkStatsSection.style.display = "none";
+	}
+
+	// Show/hide the entire metadata container
+	elements.modalMetadataContainer.style.display = hasAnyMetadata
+		? "block"
+		: "none";
+}
+
+/**
+ * Format large numbers with K/M suffixes
+ * @param {number} num - The number to format
+ * @returns {string} - Formatted number string
+ */
+function formatNumber(num) {
+	if (!num) return "0";
+	if (num >= 1000000) {
+		return (num / 1000000).toFixed(1) + "M";
+	}
+	if (num >= 1000) {
+		return (num / 1000).toFixed(1) + "K";
+	}
+	return num.toString();
+}
+
+/**
+ * Handle status change from modal dropdown
+ */
+async function handleModalStatusChange(e) {
+	const novelId = e.target.dataset.novelId;
+	const newStatus = e.target.value;
+
+	if (!novelId) return;
+
+	try {
+		// Update the novel reading status
+		await novelLibrary.updateNovel(novelId, { readingStatus: newStatus });
+
+		// Update the display badge
+		const statusInfo = READING_STATUS_INFO[newStatus];
+		elements.modalStatus.textContent = statusInfo?.label || newStatus;
+		elements.modalStatus.style.display = "inline";
+
+		// Refresh the view to show updated status
+		await loadLibrary();
+
+		showNotification("Status updated successfully!");
+	} catch (error) {
+		console.error("Error updating status:", error);
+		showNotification("Failed to update status");
+	}
+}
+
+/**
+ * Handle refresh metadata button click
+ * Resets edited fields and navigates to the novel page to refresh
+ */
+async function handleRefreshMetadata() {
+	const novelId = elements.modalRemoveBtn.dataset.novelId;
+	const novel = allNovels.find((n) => n.id === novelId);
+
+	if (!novel) {
+		showToast("Novel not found", "error");
+		return;
+	}
+
+	const confirmed = confirm(
+		`Refresh metadata for "${novel.title}"?\n\n` +
+			`This will open the novel's page to fetch the latest details from the source.`
+	);
+
+	if (!confirmed) return;
+
+	try {
+		// Reset edited fields
+		await novelLibrary.resetEditedFields(novelId, "all");
+
+		// Mark last update as old to trigger refresh on next visit
+		const library = await novelLibrary.getLibrary();
+		if (library.novels[novelId]) {
+			library.novels[novelId].lastMetadataUpdate = 0; // Force update on next visit
+			library.novels[novelId].pendingRefresh = true; // Flag for content.js
+			await novelLibrary.saveLibrary(library);
+		}
+
+		// Show banner
+		showNotification("Refreshing metadata... Opening novel page", "info");
+
+		// Close the modal
+		closeModal(elements.novelModal);
+
+		// Navigate to the novel's source page to fetch fresh data
+		const novelUrl = novel.sourceUrl || novel.lastReadUrl;
+		if (novelUrl) {
+			// Open in a new tab so user can see the refresh happen
+			window.open(novelUrl, "_blank");
+		} else {
+			showToast("No source URL available for this novel", "error");
+		}
+	} catch (error) {
+		console.error("Error refreshing metadata:", error);
+		showToast("Failed to reset metadata. Please try again.", "error");
+	}
 }
 
 /**
@@ -623,6 +1500,7 @@ function updateCoverPreview(url) {
 
 /**
  * Handle save edit form submission
+ * Marks fields as manually edited so auto-updates won't overwrite them
  */
 async function handleSaveEdit(e) {
 	e.preventDefault();
@@ -649,8 +1527,9 @@ async function handleSaveEdit(e) {
 	};
 
 	try {
-		// Update novel in library
-		await novelLibrary.addOrUpdateNovel(updatedData);
+		// Update novel in library with isManualEdit=true
+		// This marks changed fields so auto-updates won't overwrite them
+		await novelLibrary.addOrUpdateNovel(updatedData, true);
 
 		// Close modal and refresh
 		closeModal(elements.editModal);
@@ -695,6 +1574,20 @@ function handleViewChange(view) {
 			"active",
 			el.id === `${view}-view` || el.id === `${view}s-view`
 		);
+	});
+
+	renderCurrentView();
+}
+
+/**
+ * Handle reading status filter change
+ */
+function handleStatusFilterChange(status) {
+	currentStatusFilter = status;
+
+	// Update button states
+	elements.statusFilterBtns.forEach((btn) => {
+		btn.classList.toggle("active", btn.dataset.status === status);
 	});
 
 	renderCurrentView();
@@ -878,6 +1771,9 @@ function initCarousel(novels) {
 	// Duplicate novels for infinite scrolling
 	const infiniteNovels = [...recentNovels, ...recentNovels, ...recentNovels];
 
+	// Fallback to extension logo if cover fails to load
+	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+
 	// Populate carousel track
 	elements.carouselTrack.innerHTML = "";
 	infiniteNovels.forEach((novel, index) => {
@@ -887,21 +1783,68 @@ function initCarousel(novels) {
 		item.dataset.novelId = novel.id;
 		item.dataset.originalIndex = index % recentNovels.length;
 
+		// Use shelf emoji as fallback for icon (now available from SHELF_REGISTRY)
+		const shelfEmoji = shelf?.emoji || "📖";
+
+		// Use shelf icon as cover fallback (website favicon), then main logo
+		const shelfCoverFallback =
+			shelf?.icon && shelf.icon.startsWith("http")
+				? shelf.icon
+				: fallbackLogo;
+
+		// Render small shelf icon for meta section - always show image icon, emoji only as final fallback
+		const shelfIconSmall = shelf?.icon
+			? shelf.icon.startsWith("http")
+				? `<img src="${escapeHtml(
+						shelf.icon
+				  )}" alt="" class="meta-icon" onerror="this.outerHTML='${shelfEmoji}';" style="width: 1em; height: 1em; vertical-align: middle;">`
+				: shelf.icon
+			: shelfEmoji;
+
+		// Generate tags display for carousel (show first 2 tags)
+		const novelTags = novel.genres || novel.tags || [];
+		const tagsHtml = novelTags
+			.slice(0, 2)
+			.map(
+				(tag) => `<span class="carousel-tag">${escapeHtml(tag)}</span>`
+			)
+			.join("");
+		const moreTagsCount = novelTags.length > 2 ? novelTags.length - 2 : 0;
+		const moreTagsHtml =
+			moreTagsCount > 0
+				? `<span class="carousel-tag-more">+${moreTagsCount}</span>`
+				: "";
+
+		// Determine cover source and fallback chain
+		const coverSrc = novel.coverUrl || shelfCoverFallback;
+		const coverFallbackChain = novel.coverUrl
+			? `this.onerror=function(){this.src='${fallbackLogo}';this.onerror=null;}; this.src='${shelfCoverFallback}';`
+			: `this.src='${fallbackLogo}'; this.onerror=null;`;
+
 		item.innerHTML = `
-			<img src="${
-				novel.coverUrl || "../icons/logo-light-1024.png"
-			}" alt="${escapeHtml(novel.title)}"
-				 onerror="this.src='../icons/logo-light-1024.png'">
+			<div class="carousel-item-image-wrapper">
+				<img src="${coverSrc}" alt="${escapeHtml(novel.title)}"
+					 onerror="${coverFallbackChain}">
+			</div>
 			<div class="carousel-item-info">
-				<div class="carousel-item-website">
-					<span class="website-badge" style="background: ${shelf?.color || "#666"}">${
-			shelf?.icon || "📚"
-		} ${shelf?.name || "Unknown"}</span>
-				</div>
+				${
+					shelf
+						? `<div class="carousel-item-website">
+					<span class="website-badge" style="background: ${
+						shelf.color || "#666"
+					}">${shelfIconSmall} ${escapeHtml(shelf.name)}</span>
+				</div>`
+						: ""
+				}
 				<h3 class="carousel-item-title">${escapeHtml(novel.title)}</h3>
-				<p class="carousel-item-author">by ${escapeHtml(novel.author || "Unknown")}</p>
+				<p class="carousel-item-author">by ${escapeHtml(
+					novel.author || "Unknown Author"
+				)}</p>
+				<div class="carousel-item-tags">
+					${tagsHtml || '<span class="carousel-tag-none">No tags</span>'}${moreTagsHtml}
+				</div>
 				<div class="carousel-item-meta">
-					<span>📚 ${novel.enhancedChaptersCount || 0} chapters</span>
+					<span>✨ ${novel.enhancedChaptersCount || 0} enhanced</span>
 					<span>📅 ${formatRelativeTime(novel.lastAccessedAt)}</span>
 				</div>
 			</div>
@@ -960,7 +1903,11 @@ function initCarousel(novels) {
 
 	// Start at the middle set for infinite scrolling
 	carouselState.currentIndex = recentNovels.length;
-	updateCarouselPosition(false);
+
+	// Use requestAnimationFrame to ensure layout is complete before positioning
+	requestAnimationFrame(() => {
+		updateCarouselPosition(false);
+	});
 
 	// Populate indicators (only for actual novels, not duplicates)
 	elements.carouselIndicators.innerHTML = "";
@@ -1024,28 +1971,36 @@ function moveCarousel(direction) {
 
 	const totalNovels = carouselState.itemsToShow;
 
+	// Don't do anything if we only have one or no items
+	if (totalNovels <= 1) return;
+
 	carouselState.currentIndex += direction;
 
-	// Infinite scrolling logic
-	if (carouselState.currentIndex >= totalNovels * 2) {
-		// Jumped to end, reset to middle without animation
-		carouselState.currentIndex = totalNovels;
-		updateCarouselPosition(false);
-		setTimeout(() => {
-			carouselState.currentIndex += direction;
-			updateCarouselPosition(true);
-		}, 50);
-	} else if (carouselState.currentIndex < totalNovels) {
-		// Jumped to beginning, reset to middle without animation
-		carouselState.currentIndex = totalNovels * 2 - 1;
-		updateCarouselPosition(false);
-		setTimeout(() => {
-			carouselState.currentIndex += direction;
-			updateCarouselPosition(true);
-		}, 50);
-	} else {
-		updateCarouselPosition(true);
-	}
+	// Normal animation first
+	updateCarouselPosition(true);
+
+	// After animation completes, check if we need to wrap
+	// We have 3 copies: [0..n-1] [n..2n-1] [2n..3n-1]
+	// We want to stay in or near the middle set [n..2n-1]
+	setTimeout(() => {
+		let needsReset = false;
+
+		if (carouselState.currentIndex >= totalNovels * 2) {
+			// Wrapped past the end, reset to equivalent position in middle set
+			carouselState.currentIndex =
+				carouselState.currentIndex - totalNovels;
+			needsReset = true;
+		} else if (carouselState.currentIndex < totalNovels) {
+			// Wrapped before the start, reset to equivalent position in middle set
+			carouselState.currentIndex =
+				carouselState.currentIndex + totalNovels;
+			needsReset = true;
+		}
+
+		if (needsReset) {
+			updateCarouselPosition(false); // Reset without animation
+		}
+	}, 550); // Wait for animation to complete (500ms + buffer)
 
 	// Update indicators to show actual position
 	updateCarouselIndicators();
@@ -1113,6 +2068,8 @@ function formatRelativeTime(timestamp) {
 
 /**
  * Toggle shelf collapse/expand
+ * When collapsed: show only 2 rows with fade-out effect
+ * When expanded: show full content based on showAll state
  */
 function toggleShelfCollapse(shelfId) {
 	const shelfSection = document.querySelector(
@@ -1122,15 +2079,26 @@ function toggleShelfCollapse(shelfId) {
 
 	const isCollapsed = shelfSection.classList.toggle("collapsed");
 	const collapseIcon = shelfSection.querySelector(".collapse-icon");
+	const showMoreBtn = shelfSection.querySelector(".shelf-show-more");
 
 	if (isCollapsed) {
 		collapseIcon.textContent = "▶";
 		shelfSection.querySelector(".shelf-collapse-btn").title =
 			"Expand shelf";
+		// Hide show more button when collapsed (arrow handles expand)
+		if (showMoreBtn) {
+			showMoreBtn.style.display = "none";
+		}
 	} else {
 		collapseIcon.textContent = "▼";
 		shelfSection.querySelector(".shelf-collapse-btn").title =
 			"Collapse shelf";
+		// Show and update show more button text based on expanded state
+		if (showMoreBtn) {
+			showMoreBtn.style.display = "";
+			const showAll = shelfSection.dataset.expanded === "true";
+			showMoreBtn.textContent = showAll ? "Show Less" : "Show More";
+		}
 	}
 }
 
@@ -1181,6 +2149,27 @@ function debounce(func, wait) {
 		timeout = setTimeout(later, wait);
 	};
 }
+
+/**
+ * Listen for storage changes to auto-reload library data
+ * This handles updates from content scripts or other extension pages
+ */
+browser.storage.onChanged.addListener((changes, areaName) => {
+	if (areaName !== "local") return;
+
+	// Check if novels data changed
+	if (changes.novels) {
+		console.log("📚 Storage change detected, reloading library...");
+		// Debounce the reload to avoid rapid refreshes
+		if (window.libraryReloadTimeout) {
+			clearTimeout(window.libraryReloadTimeout);
+		}
+		window.libraryReloadTimeout = setTimeout(async () => {
+			await loadLibrary();
+			console.log("📚 Library reloaded due to storage change");
+		}, 500);
+	}
+});
 
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", init);

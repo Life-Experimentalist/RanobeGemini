@@ -7,6 +7,31 @@
 import { DOMAIN_REGISTRY, SHELF_REGISTRY } from "./domain-constants.js";
 
 /**
+ * Reading status constants
+ * Used to categorize novels by reading progress
+ */
+export const READING_STATUS = {
+	READING: "reading",
+	COMPLETED: "completed",
+	PLAN_TO_READ: "plan-to-read",
+	ON_HOLD: "on-hold",
+	DROPPED: "dropped",
+	RE_READING: "re-reading",
+};
+
+/**
+ * Reading status display info
+ */
+export const READING_STATUS_INFO = {
+	[READING_STATUS.READING]: { label: "📖 Reading", color: "#4caf50" },
+	[READING_STATUS.COMPLETED]: { label: "✅ Completed", color: "#2196f3" },
+	[READING_STATUS.PLAN_TO_READ]: { label: "📋 Plan to Read", color: "#ff9800" },
+	[READING_STATUS.ON_HOLD]: { label: "⏸️ On Hold", color: "#9e9e9e" },
+	[READING_STATUS.DROPPED]: { label: "❌ Dropped", color: "#f44336" },
+	[READING_STATUS.RE_READING]: { label: "🔁 Re-reading", color: "#9c27b0" },
+};
+
+/**
  * Shelf definitions - dynamically imported from handler SHELF_METADATA
  * via SHELF_REGISTRY in domain-constants.js
  *
@@ -50,6 +75,7 @@ export const SHELVES = SHELF_REGISTRY;
  * @property {number} lastAccessedAt - Timestamp of last access
  * @property {number} enhancedChaptersCount - Number of enhanced chapters
  * @property {Object} metadata - Additional site-specific metadata
+ * @property {Object} editedFields - Fields that have been manually edited by user
  */
 
 /**
@@ -77,6 +103,9 @@ export class NovelLibrary {
 	 * @returns {Promise<Object>} Library data
 	 */
 	async init() {
+		// Run migration for old ID format (underscore to hyphen)
+		await this.migrateOldIdFormat();
+
 		const library = await this.getLibrary();
 		console.log(
 			`📚 Novel Library initialized with ${
@@ -84,6 +113,65 @@ export class NovelLibrary {
 			} novels`
 		);
 		return library;
+	}
+
+	/**
+	 * Migrate novels with old underscore ID format to new hyphen format
+	 * e.g., "fanfiction_12345" -> "fanfiction-12345"
+	 * @returns {Promise<void>}
+	 */
+	async migrateOldIdFormat() {
+		try {
+			const library = await this.getLibrary();
+			const novels = library.novels;
+			let migrated = 0;
+
+			const novelEntries = Object.entries(novels);
+			for (const [oldId, novel] of novelEntries) {
+				// Check if ID uses old underscore format
+				if (oldId.includes("_") && !oldId.includes("-")) {
+					const newId = oldId.replace("_", "-");
+
+					// Skip if new ID already exists
+					if (novels[newId]) {
+						// Delete the old one if duplicate
+						delete novels[oldId];
+						migrated++;
+						continue;
+					}
+
+					// Update the ID in the novel object
+					novel.id = newId;
+					novels[newId] = novel;
+					delete novels[oldId];
+
+					// Also migrate chapters key
+					const oldChaptersKey = this.CHAPTERS_KEY_PREFIX + oldId;
+					const newChaptersKey = this.CHAPTERS_KEY_PREFIX + newId;
+
+					const chaptersResult = await browser.storage.local.get(
+						oldChaptersKey
+					);
+					if (chaptersResult[oldChaptersKey]) {
+						await browser.storage.local.set({
+							[newChaptersKey]: chaptersResult[oldChaptersKey],
+						});
+						await browser.storage.local.remove(oldChaptersKey);
+					}
+
+					migrated++;
+				}
+			}
+
+			if (migrated > 0) {
+				await this.saveLibrary(library);
+				console.log(
+					`📚 Migrated ${migrated} novels from old ID format`
+				);
+			}
+		} catch (error) {
+			console.error("Error migrating old ID format:", error);
+		}
 	}
 
 	/**
@@ -188,40 +276,98 @@ export class NovelLibrary {
 	 * @returns {string} Unique library ID
 	 */
 	generateNovelId(shelfId, siteNovelId) {
-		return `${shelfId}_${siteNovelId}`;
+		// Use hyphen to match handler format (e.g., "fanfiction-12345")
+		return `${shelfId}-${siteNovelId}`;
 	}
 
 	/**
 	 * Add or update a novel in the library
+	 * Respects manually edited fields - auto-updates won't overwrite them
 	 * @param {Object} novelData - Novel data to add/update
+	 * @param {boolean} isManualEdit - If true, marks changed fields as edited
 	 * @returns {Promise<Object>} The saved novel
 	 */
-	async addOrUpdateNovel(novelData) {
+	async addOrUpdateNovel(novelData, isManualEdit = false) {
 		const library = await this.getLibrary();
 
 		const existingNovel = library.novels[novelData.id];
 		const now = Date.now();
 
 		if (existingNovel) {
-			// Update existing novel
-			library.novels[novelData.id] = {
-				...existingNovel,
-				...novelData,
-				lastAccessedAt: now,
-				// Don't overwrite addedAt
-				addedAt: existingNovel.addedAt,
-			};
+			// Fields that can be auto-updated from site visits
+			const autoUpdatableFields = [
+				"title",
+				"author",
+				"coverUrl",
+				"description",
+				"status",
+				"totalChapters",
+				"genres",
+				"tags",
+				"metadata",
+			];
+
+			// Get existing edited fields or initialize empty
+			const editedFields = existingNovel.editedFields || {};
+
+			// If this is a manual edit, mark fields as edited
+			if (isManualEdit) {
+				for (const field of autoUpdatableFields) {
+					if (
+						novelData[field] !== undefined &&
+						novelData[field] !== existingNovel[field]
+					) {
+						editedFields[field] = true;
+					}
+				}
+			}
+
+			// Build the updated novel data
+			const updatedNovel = { ...existingNovel };
+
+			for (const [key, value] of Object.entries(novelData)) {
+				if (key === "addedAt" || key === "editedFields") continue;
+
+				// For auto-updates, skip fields that have been manually edited
+				if (
+					!isManualEdit &&
+					autoUpdatableFields.includes(key) &&
+					editedFields[key]
+				) {
+					console.log(
+						`📚 Skipping auto-update for manually edited field: ${key}`
+					);
+					continue;
+				}
+
+				updatedNovel[key] = value;
+			}
+
+			updatedNovel.lastAccessedAt = now;
+			updatedNovel.addedAt = existingNovel.addedAt;
+			updatedNovel.editedFields = editedFields;
+
+			library.novels[novelData.id] = updatedNovel;
 		} else {
-			// Add new novel
+			// Add new novel with proper defaults
 			library.novels[novelData.id] = {
 				...novelData,
 				addedAt: now,
 				lastAccessedAt: now,
 				enhancedChaptersCount: novelData.enhancedChaptersCount || 0,
+				// Set defaults for new novels:
+				// - lastReadChapter defaults to 0 (not started yet)
+				// - readingStatus defaults to PLAN_TO_READ
+				// These will be overridden if novelData explicitly provides them
+				lastReadChapter:
+					novelData.lastReadChapter !== undefined
+						? novelData.lastReadChapter
+						: 0,
+				readingStatus:
+					novelData.readingStatus || READING_STATUS.PLAN_TO_READ,
+				editedFields: {}, // Initialize empty edited fields
 			};
-		}
-
-		// Update shelf stats
+		} // Update shelf stats
 		if (!library.shelves[novelData.shelfId]) {
 			library.shelves[novelData.shelfId] = {
 				novelCount: 0,
@@ -252,6 +398,99 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Update specific fields of a novel
+	 * @param {string} novelId - Library novel ID
+	 * @param {Object} updates - Fields to update
+	 * @returns {Promise<Object|null>} Updated novel or null
+	 */
+	async updateNovel(novelId, updates) {
+		try {
+			const library = await this.getLibrary();
+			if (!library.novels[novelId]) {
+				console.error(`Novel not found: ${novelId}`);
+				return null;
+			}
+
+			// Update specified fields
+			for (const [key, value] of Object.entries(updates)) {
+				library.novels[novelId][key] = value;
+			}
+			library.novels[novelId].lastAccessedAt = Date.now();
+
+			await this.saveLibrary(library);
+			console.log(`📚 Updated novel: ${library.novels[novelId].title}`);
+			return library.novels[novelId];
+		} catch (error) {
+			console.error("Error updating novel:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Update reading progress and automatically adjust reading status
+	 * @param {string} novelId - Library novel ID
+	 * @param {number} chapterNumber - Current chapter number
+	 * @param {string} chapterUrl - URL of the current chapter
+	 * @returns {Promise<Object|null>} Updated novel or null
+	 */
+	async updateReadingProgress(novelId, chapterNumber, chapterUrl) {
+		try {
+			const library = await this.getLibrary();
+			const novel = library.novels[novelId];
+
+			if (!novel) {
+				console.error(`Novel not found: ${novelId}`);
+				return null;
+			}
+
+			const updates = {
+				lastReadChapter: chapterNumber,
+				lastReadUrl: chapterUrl,
+				lastAccessedAt: Date.now(),
+			};
+
+			// Auto-update reading status based on progress
+			const currentStatus =
+				novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+			// If status is "Plan to Read" and user starts reading, change to "Reading"
+			if (
+				currentStatus === READING_STATUS.PLAN_TO_READ &&
+				chapterNumber >= 1
+			) {
+				updates.readingStatus = READING_STATUS.READING;
+				console.log(`📚 Auto-status: Plan to Read → Reading`);
+			}
+
+			// If user reaches the last chapter, suggest completion
+			// (Only auto-complete if they were actively reading)
+			if (
+				novel.totalChapters > 0 &&
+				chapterNumber >= novel.totalChapters &&
+				(currentStatus === READING_STATUS.READING ||
+					currentStatus === READING_STATUS.RE_READING)
+			) {
+				updates.readingStatus = READING_STATUS.COMPLETED;
+				console.log(
+					`📚 Auto-status: ${currentStatus} → Completed (reached chapter ${chapterNumber}/${novel.totalChapters})`
+				);
+			}
+
+			// Apply updates
+			Object.assign(novel, updates);
+			await this.saveLibrary(library);
+
+			console.log(
+				`📚 Progress updated: Ch.${chapterNumber} - ${novel.title}`
+			);
+			return novel;
+		} catch (error) {
+			console.error("Error updating reading progress:", error);
+			return null;
+		}
+	}
+
+	/**
 	 * Update a novel's custom prompt
 	 * @param {string} novelId - Library novel ID
 	 * @param {string} customPrompt - Custom prompt for enhancement
@@ -275,6 +514,50 @@ export class NovelLibrary {
 			return true;
 		} catch (error) {
 			console.error("Error updating novel custom prompt:", error);
+			return false;
+		}
+	}
+
+	/**
+	 * Reset manually edited fields to allow auto-updates again
+	 * @param {string} novelId - Library novel ID
+	 * @param {Array<string>|string} fields - Field(s) to reset, or 'all' to reset all
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async resetEditedFields(novelId, fields = "all") {
+		try {
+			const library = await this.getLibrary();
+			if (!library.novels[novelId]) {
+				console.error(`Novel not found: ${novelId}`);
+				return false;
+			}
+
+			const novel = library.novels[novelId];
+
+			if (!novel.editedFields) {
+				console.log(`📚 No edited fields to reset for: ${novel.title}`);
+				return true;
+			}
+
+			if (fields === "all") {
+				novel.editedFields = {};
+				console.log(`📚 Reset all edited fields for: ${novel.title}`);
+			} else {
+				const fieldsToReset = Array.isArray(fields) ? fields : [fields];
+				for (const field of fieldsToReset) {
+					delete novel.editedFields[field];
+				}
+				console.log(
+					`📚 Reset edited fields [${fieldsToReset.join(
+						", "
+					)}] for: ${novel.title}`
+				);
+			}
+
+			await this.saveLibrary(library);
+			return true;
+		} catch (error) {
+			console.error("Error resetting edited fields:", error);
 			return false;
 		}
 	}
@@ -396,7 +679,80 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Get all novels with a specific reading status
+	 * @param {string} status - Reading status to filter by
+	 * @returns {Promise<Array<Object>>} Array of novels with that status
+	 */
+	async getNovelsByReadingStatus(status) {
+		const library = await this.getLibrary();
+		return Object.values(library.novels)
+			.filter((novel) => novel.readingStatus === status)
+			.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt);
+	}
+
+	/**
+	 * Update a novel's reading status
+	 * @param {string} novelId - Library novel ID
+	 * @param {string} status - New reading status
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async updateReadingStatus(novelId, status) {
+		try {
+			const library = await this.getLibrary();
+			if (!library.novels[novelId]) {
+				console.error(`Novel not found: ${novelId}`);
+				return false;
+			}
+
+			library.novels[novelId].readingStatus = status;
+			library.novels[novelId].lastAccessedAt = Date.now();
+
+			await this.saveLibrary(library);
+			console.log(
+				`📚 Updated reading status for ${library.novels[novelId].title}: ${status}`
+			);
+			return true;
+		} catch (error) {
+			console.error("Error updating reading status:", error);
+			return false;
+		}
+	}
+
+	/**
+	 * Get reading status statistics
+	 * @returns {Promise<Object>} Object with count per status
+	 */
+	async getReadingStatusStats() {
+		const library = await this.getLibrary();
+		const novels = Object.values(library.novels);
+
+		const stats = {
+			total: novels.length,
+			byStatus: {},
+		};
+
+		// Initialize all statuses with 0
+		Object.values(READING_STATUS).forEach((status) => {
+			stats.byStatus[status] = 0;
+		});
+		stats.byStatus["unset"] = 0;
+
+		// Count novels per status
+		novels.forEach((novel) => {
+			const status = novel.readingStatus || "unset";
+			if (stats.byStatus[status] !== undefined) {
+				stats.byStatus[status]++;
+			} else {
+				stats.byStatus["unset"]++;
+			}
+		});
+
+		return stats;
+	}
+
+	/**
 	 * Update novel metadata retroactively if new data is found
+	 * Also handles readingStatus and other direct updates
 	 * @param {string} novelId - Library novel ID
 	 * @param {Object} newMetadata - New metadata to merge
 	 * @returns {Promise<boolean>} Success status
@@ -413,36 +769,85 @@ export class NovelLibrary {
 				return false;
 			}
 
-			// Only update fields that are empty or have new non-empty values
+			// Get existing edited fields or initialize empty
+			const editedFields = novel.editedFields || {};
 			let updated = false;
 
-			if (!novel.description && newMetadata.description) {
-				novel.description = newMetadata.description;
+			// Fields that can be auto-updated (respecting editedFields)
+			const autoUpdatableFields = [
+				"description",
+				"author",
+				"coverUrl",
+				"title",
+				"status",
+				"totalChapters",
+				"genres",
+				"tags",
+			];
+
+			// Update auto-updatable fields (skip if manually edited)
+			for (const field of autoUpdatableFields) {
+				if (newMetadata[field] !== undefined) {
+					// Skip if manually edited
+					if (editedFields[field]) {
+						console.log(`📚 Skipping edited field: ${field}`);
+						continue;
+					}
+
+					// Only update if:
+					// - Novel has no value for this field
+					// - OR newMetadata has a valid value (non-empty, not 'Unknown')
+					const hasValidNewValue =
+						newMetadata[field] &&
+						newMetadata[field] !== "Unknown" &&
+						newMetadata[field] !== "Unknown Novel" &&
+						(Array.isArray(newMetadata[field])
+							? newMetadata[field].length > 0
+							: true);
+
+					// Special handling for totalChapters - allow 0 to be updated to a positive number
+					const shouldUpdate =
+						field === "totalChapters"
+							? (!novel[field] || novel[field] === 0) &&
+							  hasValidNewValue
+							: !novel[field] || hasValidNewValue;
+
+					if (shouldUpdate) {
+						console.log(
+							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`
+						);
+						novel[field] = newMetadata[field];
+						updated = true;
+					}
+				}
+			} // Direct updates (always apply, not auto-updatable)
+			// These are user actions, not site scraping
+			if (newMetadata.readingStatus !== undefined) {
+				novel.readingStatus = newMetadata.readingStatus;
 				updated = true;
 			}
 
-			if (!novel.author && newMetadata.author) {
-				novel.author = newMetadata.author;
+			if (newMetadata.lastReadChapter !== undefined) {
+				novel.lastReadChapter = newMetadata.lastReadChapter;
 				updated = true;
 			}
 
-			if (!novel.coverUrl && newMetadata.coverUrl) {
-				novel.coverUrl = newMetadata.coverUrl;
+			if (newMetadata.lastReadUrl !== undefined) {
+				novel.lastReadUrl = newMetadata.lastReadUrl;
 				updated = true;
 			}
 
-			if (newMetadata.title && newMetadata.title !== "Unknown Novel") {
-				novel.title = newMetadata.title;
+			// Main novel URL (sourceUrl) can be updated
+			if (newMetadata.mainNovelUrl && !novel.sourceUrl) {
+				novel.sourceUrl = newMetadata.mainNovelUrl;
 				updated = true;
 			}
 
 			if (updated) {
+				novel.lastAccessedAt = Date.now();
 				library.novels[novelId] = novel;
 				await this.saveLibrary(library);
-				console.log(
-					"Novel Library: Retroactively updated metadata for",
-					novelId
-				);
+				console.log("Novel Library: Updated metadata for", novel.title);
 			}
 
 			return updated;
@@ -532,13 +937,30 @@ export class NovelLibrary {
 			return null;
 		}
 
-		const siteNovelId = this.extractNovelId(url, shelf);
-		if (!siteNovelId) {
-			console.log("Novel Library: Could not extract novel ID from URL");
-			return null;
+		// Use handler's generateNovelId if available (ensures consistency)
+		let novelId;
+		let siteNovelId;
+
+		if (handler && typeof handler.generateNovelId === "function") {
+			novelId = handler.generateNovelId(url);
+			// Extract the site ID portion from handler's ID (e.g., "fanfiction-12345" -> "12345")
+			siteNovelId = novelId.replace(/^[a-z]+-/, "");
+		} else {
+			// Fallback to library's extraction
+			siteNovelId = this.extractNovelId(url, shelf);
+			if (!siteNovelId) {
+				console.log(
+					"Novel Library: Could not extract novel ID from URL"
+				);
+				return null;
+			}
+			novelId = this.generateNovelId(shelf.id, siteNovelId);
 		}
 
-		const novelId = this.generateNovelId(shelf.id, siteNovelId);
+		if (!novelId) {
+			console.log("Novel Library: Could not generate novel ID");
+			return null;
+		}
 
 		// Extract title from page title (strip chapter info)
 		// Most sites have format: "Chapter X - Novel Title" or "Novel Title - Chapter X"
@@ -561,8 +983,9 @@ export class NovelLibrary {
 			description: context.description || "",
 			sourceUrl: url,
 			totalChapters: context.totalChapters || 0,
-			lastReadChapter: chapterNumber || 1,
+			lastReadChapter: chapterNumber || 1, // From context, so we're on a chapter
 			lastReadUrl: url,
+			readingStatus: READING_STATUS.READING, // User is reading this chapter
 			status: context.status || "unknown",
 			genres: context.genres || [],
 			tags: context.tags || [],
@@ -570,7 +993,6 @@ export class NovelLibrary {
 			customPrompt: "", // Novel-specific custom prompt for enhancement
 		};
 	}
-
 	/**
 	 * Export library data for backup
 	 * @returns {Promise<Object>} Exportable library data
@@ -758,6 +1180,330 @@ export class NovelLibrary {
 			console.error("Failed to clear library:", error);
 			return false;
 		}
+	}
+
+	/**
+	 * Find duplicate novels in the library
+	 * Duplicates are identified by:
+	 * 1. Same siteNovelId within the same shelf
+	 * 2. Very similar titles (normalized) within the same shelf
+	 * @param {string} shelfId - Optional: limit search to specific shelf
+	 * @returns {Promise<Array>} Array of duplicate groups
+	 */
+	async findDuplicates(shelfId = null) {
+		const library = await this.getLibrary();
+		const novels = Object.values(library.novels);
+
+		// Filter by shelf if specified
+		const filteredNovels = shelfId
+			? novels.filter((n) => n.shelfId === shelfId)
+			: novels;
+
+		const duplicateGroups = [];
+		const processedIds = new Set();
+
+		// Helper to normalize title for comparison
+		const normalizeTitle = (title) => {
+			if (!title) return "";
+			return title
+				.toLowerCase()
+				.replace(/[^\w\s]/g, "") // Remove punctuation
+				.replace(/\s+/g, " ") // Normalize whitespace
+				.trim();
+		};
+
+		// Group by siteNovelId first (most reliable)
+		const bySiteNovelId = {};
+		for (const novel of filteredNovels) {
+			if (novel.siteNovelId) {
+				const key = `${novel.shelfId}_${novel.siteNovelId}`;
+				if (!bySiteNovelId[key]) {
+					bySiteNovelId[key] = [];
+				}
+				bySiteNovelId[key].push(novel);
+			}
+		}
+
+		// Find groups with more than one novel (duplicates by siteNovelId)
+		for (const [key, group] of Object.entries(bySiteNovelId)) {
+			if (group.length > 1) {
+				duplicateGroups.push({
+					reason: "same_site_novel_id",
+					key: key,
+					novels: group.map((n) => ({
+						id: n.id,
+						title: n.title,
+						siteNovelId: n.siteNovelId,
+						addedAt: n.addedAt,
+						lastAccessedAt: n.lastAccessedAt,
+						enhancedChaptersCount: n.enhancedChaptersCount || 0,
+					})),
+				});
+				group.forEach((n) => processedIds.add(n.id));
+			}
+		}
+
+		// Also check for title similarity (for novels without matching siteNovelId)
+		const byNormalizedTitle = {};
+		for (const novel of filteredNovels) {
+			if (processedIds.has(novel.id)) continue;
+
+			const normalizedTitle = normalizeTitle(novel.title);
+			if (!normalizedTitle) continue;
+
+			const key = `${novel.shelfId}_${normalizedTitle}`;
+			if (!byNormalizedTitle[key]) {
+				byNormalizedTitle[key] = [];
+			}
+			byNormalizedTitle[key].push(novel);
+		}
+
+		// Find groups with more than one novel (duplicates by title)
+		for (const [key, group] of Object.entries(byNormalizedTitle)) {
+			if (group.length > 1) {
+				duplicateGroups.push({
+					reason: "similar_title",
+					key: key,
+					novels: group.map((n) => ({
+						id: n.id,
+						title: n.title,
+						siteNovelId: n.siteNovelId,
+						addedAt: n.addedAt,
+						lastAccessedAt: n.lastAccessedAt,
+						enhancedChaptersCount: n.enhancedChaptersCount || 0,
+					})),
+				});
+			}
+		}
+
+		console.log(`📚 Found ${duplicateGroups.length} duplicate groups`);
+		return duplicateGroups;
+	}
+
+	/**
+	 * Merge duplicate novels, keeping the one with the most data
+	 * @param {Array<string>} novelIds - Array of novel IDs to merge
+	 * @param {string} keepId - Optional: ID of the novel to keep (auto-selects best if not provided)
+	 * @returns {Promise<Object>} Result with kept novel and removed count
+	 */
+	async mergeDuplicates(novelIds, keepId = null) {
+		if (!novelIds || novelIds.length < 2) {
+			return { success: false, error: "Need at least 2 novels to merge" };
+		}
+
+		const library = await this.getLibrary();
+		const novels = novelIds.map((id) => library.novels[id]).filter(Boolean);
+
+		if (novels.length < 2) {
+			return { success: false, error: "Not enough valid novels found" };
+		}
+
+		// Determine which novel to keep (most data/activity)
+		let novelToKeep;
+		if (keepId && library.novels[keepId]) {
+			novelToKeep = library.novels[keepId];
+		} else {
+			// Score novels by data quality
+			const scoreNovel = (novel) => {
+				let score = 0;
+				if (novel.enhancedChaptersCount)
+					score += novel.enhancedChaptersCount * 10;
+				if (novel.lastReadChapter) score += novel.lastReadChapter;
+				if (novel.coverUrl) score += 5;
+				if (novel.description) score += 3;
+				if (novel.author) score += 2;
+				if (novel.lastAccessedAt) score += 1;
+				return score;
+			};
+
+			novelToKeep = novels.reduce((best, current) =>
+				scoreNovel(current) > scoreNovel(best) ? current : best
+			);
+		}
+
+		const keepNovelId = novelToKeep.id;
+		const removeIds = novelIds.filter((id) => id !== keepNovelId);
+
+		// Merge data from other novels into the keeper
+		for (const removeId of removeIds) {
+			const removeNovel = library.novels[removeId];
+			if (!removeNovel) continue;
+
+			// Merge reading progress (keep highest)
+			if (
+				removeNovel.lastReadChapter > (novelToKeep.lastReadChapter || 0)
+			) {
+				novelToKeep.lastReadChapter = removeNovel.lastReadChapter;
+				novelToKeep.lastReadUrl = removeNovel.lastReadUrl;
+			}
+
+			// Merge enhanced chapters count (keep highest)
+			if (
+				(removeNovel.enhancedChaptersCount || 0) >
+				(novelToKeep.enhancedChaptersCount || 0)
+			) {
+				novelToKeep.enhancedChaptersCount =
+					removeNovel.enhancedChaptersCount;
+			}
+
+			// Merge reading status (prefer more advanced status)
+			// Priority: COMPLETED > READING > ON_HOLD > DROPPED > PLAN_TO_READ
+			const statusPriority = {
+				completed: 5,
+				reading: 4,
+				on_hold: 3,
+				dropped: 2,
+				plan_to_read: 1,
+			};
+			const keepStatus = novelToKeep.readingStatus || "plan_to_read";
+			const removeStatus = removeNovel.readingStatus || "plan_to_read";
+			if (
+				(statusPriority[removeStatus] || 0) >
+				(statusPriority[keepStatus] || 0)
+			) {
+				novelToKeep.readingStatus = removeStatus;
+			}
+
+			// Merge total chapters (keep highest)
+			if (
+				(removeNovel.totalChapters || 0) >
+				(novelToKeep.totalChapters || 0)
+			) {
+				novelToKeep.totalChapters = removeNovel.totalChapters;
+			}
+
+			// Merge cover URL if kept novel doesn't have one
+			if (!novelToKeep.coverUrl && removeNovel.coverUrl) {
+				novelToKeep.coverUrl = removeNovel.coverUrl;
+			}
+
+			// Merge description if kept novel doesn't have one
+			if (!novelToKeep.description && removeNovel.description) {
+				novelToKeep.description = removeNovel.description;
+			}
+
+			// Merge genres/tags (combine unique)
+			if (removeNovel.genres && removeNovel.genres.length > 0) {
+				const existingGenres = novelToKeep.genres || [];
+				novelToKeep.genres = [
+					...new Set([...existingGenres, ...removeNovel.genres]),
+				];
+			}
+			if (removeNovel.tags && removeNovel.tags.length > 0) {
+				const existingTags = novelToKeep.tags || [];
+				novelToKeep.tags = [
+					...new Set([...existingTags, ...removeNovel.tags]),
+				];
+			}
+
+			// Merge chapter data
+			try {
+				const keepChaptersKey = this.CHAPTERS_KEY_PREFIX + keepNovelId;
+				const removeChaptersKey = this.CHAPTERS_KEY_PREFIX + removeId;
+
+				const [keepResult, removeResult] = await Promise.all([
+					browser.storage.local.get(keepChaptersKey),
+					browser.storage.local.get(removeChaptersKey),
+				]);
+
+				const keepChapters = keepResult[keepChaptersKey] || {
+					chapters: {},
+				};
+				const removeChapters = removeResult[removeChaptersKey] || {
+					chapters: {},
+				};
+
+				// Merge chapters, preferring enhanced ones
+				for (const [chapterId, chapter] of Object.entries(
+					removeChapters.chapters || {}
+				)) {
+					const existingChapter = keepChapters.chapters[chapterId];
+					if (
+						!existingChapter ||
+						(chapter.isEnhanced && !existingChapter.isEnhanced)
+					) {
+						keepChapters.chapters[chapterId] = chapter;
+					}
+				}
+
+				// Save merged chapters and remove old
+				await browser.storage.local.set({
+					[keepChaptersKey]: keepChapters,
+				});
+				await browser.storage.local.remove(removeChaptersKey);
+			} catch (err) {
+				console.error(`Error merging chapters for ${removeId}:`, err);
+			}
+
+			// Remove the duplicate novel
+			delete library.novels[removeId];
+		}
+
+		// Update the kept novel
+		library.novels[keepNovelId] = novelToKeep;
+
+		// Update shelf stats
+		if (novelToKeep.shelfId && library.shelves[novelToKeep.shelfId]) {
+			library.shelves[novelToKeep.shelfId].novelCount = Object.values(
+				library.novels
+			).filter((n) => n.shelfId === novelToKeep.shelfId).length;
+			library.shelves[novelToKeep.shelfId].lastUpdated = Date.now();
+		}
+
+		await this.saveLibrary(library);
+
+		console.log(
+			`📚 Merged ${removeIds.length} duplicates into ${novelToKeep.title}`
+		);
+		return {
+			success: true,
+			keptNovel: novelToKeep,
+			removedCount: removeIds.length,
+			removedIds: removeIds,
+		};
+	}
+
+	/**
+	 * Automatically find and merge all duplicates in the library
+	 * @param {string} shelfId - Optional: limit to specific shelf
+	 * @returns {Promise<Object>} Results summary
+	 */
+	async cleanupDuplicates(shelfId = null) {
+		const duplicateGroups = await this.findDuplicates(shelfId);
+
+		if (duplicateGroups.length === 0) {
+			console.log("📚 No duplicates found");
+			return { success: true, mergedGroups: 0, totalRemoved: 0 };
+		}
+
+		let mergedGroups = 0;
+		let totalRemoved = 0;
+		const errors = [];
+
+		for (const group of duplicateGroups) {
+			try {
+				const novelIds = group.novels.map((n) => n.id);
+				const result = await this.mergeDuplicates(novelIds);
+				if (result.success) {
+					mergedGroups++;
+					totalRemoved += result.removedCount;
+				} else {
+					errors.push({ group: group.key, error: result.error });
+				}
+			} catch (err) {
+				errors.push({ group: group.key, error: err.message });
+			}
+		}
+
+		console.log(
+			`📚 Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`
+		);
+		return {
+			success: errors.length === 0,
+			mergedGroups,
+			totalRemoved,
+			errors: errors.length > 0 ? errors : undefined,
+		};
 	}
 }
 

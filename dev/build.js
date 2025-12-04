@@ -105,6 +105,10 @@ function copyFilesToDist() {
 			from: path.join(srcDir, "library"),
 			to: path.join(distDir, "library"),
 		},
+		{
+			from: path.join(srcDir, "lib"),
+			to: path.join(distDir, "lib"),
+		},
 	];
 
 	filesToCopy.forEach((file) => {

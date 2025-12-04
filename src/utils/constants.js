@@ -4,7 +4,9 @@
  */
 
 // Default prompt template for Gemini AI
-export const DEFAULT_PROMPT = `Please enhance this novel chapter translation with the following improvements:
+export const DEFAULT_PROMPT = `**CRITICAL INSTRUCTION:** You are enhancing EXISTING text only. You must NEVER generate new content, create new stories, or add content that doesn't exist in the provided text. Your ONLY task is to improve the writing quality of the EXACT content given to you below. If no content is provided or the content is empty, respond with "ERROR: No content provided for enhancement."
+
+Please enhance this novel chapter translation with the following improvements:
 
 1. Fix grammatical errors, punctuation mistakes, and spelling issues
 2. Improve the narrative flow and overall readability
@@ -39,7 +41,9 @@ export const DEFAULT_PROMPT = `Please enhance this novel chapter translation wit
 11. Remove any advertising code snippets or irrelevant promotional content
 12. **Author Notes Handling:** Identify author notes, translator notes, or any meta-content not part of the story. Format them inside a styled HTML box using <div class="game-stats-box">. Insert a visible horizontal divider line using <hr class="section-divider"> before and after author notes to clearly separate them from the main story content. Summarize lengthy author notes by keeping only plot-relevant explanations (e.g., world-building clarifications, character context) while removing disclaimers, credits, update schedules, Patreon links, and other non-story content.
 
-Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.`;
+Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.
+
+**REMINDER:** Only enhance the text provided below. Do not create or add any new story content.`;
 
 // Default summary prompt
 export const DEFAULT_SUMMARY_PROMPT = `Please generate a comprehensive summary of the provided novel chapter, ensuring the following aspects are covered:
@@ -84,7 +88,8 @@ export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
 
 // Default chunk size for large chapters (characters per segment)
-export const DEFAULT_CHUNK_SIZE = 12000;
+// Content larger than this will be split into chunks of this size
+export const DEFAULT_CHUNK_SIZE = 20000;
 
 // Default rate limit wait time (in milliseconds)
 export const RATE_LIMIT_WAIT_TIME = 300000; // 5 minutes

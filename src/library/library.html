@@ -17,6 +17,16 @@
 			sizes="32x32"
 			href="../icons/logo-light-32.png"
 		/>
+		<script>
+			// Detect sidebar mode early to prevent layout flash
+			// Only use URL parameter - sidebar mode is explicitly set by manifest
+			(function() {
+				const isSidebar = window.location.search.includes('sidebar=true');
+				if (isSidebar) {
+					document.documentElement.classList.add('sidebar-mode');
+				}
+			})();
+		</script>
 	</head>
 	<body>
 		<div class="library-container">
@@ -67,25 +77,25 @@
 			<div class="carousel-section" id="carousel-section">
 				<div class="carousel-header">
 					<h2 class="carousel-title">🔥 Recently Read</h2>
-					<div class="carousel-controls">
-						<button class="carousel-btn" id="carousel-play-pause" title="Pause auto-scroll">
-							⏸️
-						</button>
-						<button class="carousel-btn" id="carousel-prev" title="Previous">
-							◀
-						</button>
-						<button class="carousel-btn" id="carousel-next" title="Next">
-							▶
-						</button>
-					</div>
 				</div>
 				<div class="carousel-container">
 					<div class="carousel-track" id="carousel-track">
 						<!-- Carousel items will be populated by JavaScript -->
 					</div>
 				</div>
-				<div class="carousel-indicators" id="carousel-indicators">
-					<!-- Indicators will be populated by JavaScript -->
+				<div class="carousel-footer">
+					<button class="carousel-btn" id="carousel-prev" title="Previous">
+						◀
+					</button>
+					<div class="carousel-indicators" id="carousel-indicators">
+						<!-- Indicators will be populated by JavaScript -->
+					</div>
+					<button class="carousel-btn" id="carousel-play-pause" title="Pause auto-scroll">
+						⏸️
+					</button>
+					<button class="carousel-btn" id="carousel-next" title="Next">
+						▶
+					</button>
 				</div>
 			</div>
 
@@ -125,6 +135,9 @@
 					<button class="view-btn" data-view="all" title="All Novels">
 						📋 All
 					</button>
+					<button class="view-btn" data-view="lists" title="Reading Lists">
+						📖 Lists
+					</button>
 				</div>
 				<div class="sort-controls">
 					<label for="sort-select">Sort by:</label>
@@ -135,6 +148,31 @@
 						<option value="chapters">Enhanced Chapters</option>
 					</select>
 				</div>
+			</div>
+
+			<!-- Reading Status Filter (shown in Lists view) -->
+			<div id="reading-status-filter" class="reading-status-filter hidden">
+				<button class="status-filter-btn active" style="align-items: center;" data-status="all" title="All Novels">
+					📚 All
+				</button>
+				<button class="status-filter-btn" data-status="reading" title="Currently Reading">
+					📖 Reading
+				</button>
+				<button class="status-filter-btn" data-status="completed" title="Completed">
+					✅ Completed
+				</button>
+				<button class="status-filter-btn" data-status="plan-to-read" title="Plan to Read">
+					📋 Plan to Read
+				</button>
+				<button class="status-filter-btn" data-status="on-hold" title="On Hold">
+					⏸️ On Hold
+				</button>
+				<button class="status-filter-btn" data-status="dropped" title="Dropped">
+					❌ Dropped
+				</button>
+				<button class="status-filter-btn" data-status="re-reading" title="Re-reading">
+					🔁 Re-reading
+				</button>
 			</div>
 
 			<!-- Main Content -->
@@ -157,6 +195,17 @@
 					<h2 class="section-title">All Novels</h2>
 					<div id="all-novels" class="novel-grid">
 						<!-- All novels will be populated by JavaScript -->
+					</div>
+				</div>
+
+				<!-- Reading Lists View -->
+				<div id="lists-view" class="view-content">
+					<h2 class="section-title" id="lists-title">Reading Lists</h2>
+					<div id="lists-stats" class="lists-stats">
+						<!-- Reading status counts will be shown here -->
+					</div>
+					<div id="lists-novels" class="novel-grid">
+						<!-- Filtered novels will be populated by JavaScript -->
 					</div>
 				</div>
 
@@ -213,6 +262,13 @@
 										class="meta-badge"
 										id="modal-status"
 									></span>
+									<select
+										id="modal-status-selector"
+										class="status-selector"
+										title="Change Reading Status"
+									>
+										<!-- Options populated by JavaScript from READING_STATUS_INFO -->
+									</select>
 								</div>
 								<div class="novel-stats">
 									<div class="stat">
@@ -249,6 +305,56 @@
 								<p id="modal-description"></p>
 							</div>
 
+							<!-- Website-specific metadata section -->
+							<div class="novel-metadata" id="modal-metadata-container" style="display: none;">
+								<!-- Rating/Warnings section for AO3/fanfic sites -->
+								<div class="metadata-section" id="modal-rating-section" style="display: none;">
+									<h3>Rating & Warnings</h3>
+									<div class="metadata-row">
+										<span class="metadata-label">Rating:</span>
+										<span id="modal-rating" class="rating-badge"></span>
+									</div>
+									<div class="metadata-row" id="modal-warnings-row" style="display: none;">
+										<span class="metadata-label">Warnings:</span>
+										<div id="modal-warnings" class="tag-list warning-tags"></div>
+									</div>
+									<div class="metadata-row" id="modal-categories-row" style="display: none;">
+										<span class="metadata-label">Categories:</span>
+										<div id="modal-categories" class="tag-list category-tags"></div>
+									</div>
+								</div>
+
+								<!-- Fandoms section -->
+								<div class="metadata-section" id="modal-fandoms-section" style="display: none;">
+									<h3>Fandoms</h3>
+									<div id="modal-fandoms" class="tag-list fandom-tags"></div>
+								</div>
+
+								<!-- Relationships section -->
+								<div class="metadata-section" id="modal-relationships-section" style="display: none;">
+									<h3>Relationships</h3>
+									<div id="modal-relationships" class="tag-list relationship-tags"></div>
+								</div>
+
+								<!-- Characters section -->
+								<div class="metadata-section" id="modal-characters-section" style="display: none;">
+									<h3>Characters</h3>
+									<div id="modal-characters" class="tag-list character-tags"></div>
+								</div>
+
+								<!-- Additional Tags section -->
+								<div class="metadata-section" id="modal-additional-tags-section" style="display: none;">
+									<h3>Additional Tags</h3>
+									<div id="modal-additional-tags" class="tag-list additional-tags"></div>
+								</div>
+
+								<!-- Work Stats section -->
+								<div class="metadata-section" id="modal-work-stats-section" style="display: none;">
+									<h3>Work Stats</h3>
+									<div class="work-stats-grid" id="modal-work-stats"></div>
+								</div>
+							</div>
+
 							<div
 								class="novel-genres"
 								id="modal-genres-container"
@@ -262,15 +368,24 @@
 									id="modal-continue-btn"
 									href="#"
 									class="btn btn-primary"
+									target="_blank"
 									>Continue Reading</a
 								>
 								<a
 									id="modal-source-btn"
 									href="#"
+									target="_blank"
 									class="btn btn-secondary"
 									target="_blank"
 									>View on Site</a
 								>
+								<button
+									id="modal-refresh-btn"
+									class="btn btn-secondary"
+									title="Reset manual edits and refresh metadata from source"
+								>
+									🔄 Refresh Metadata
+								</button>
 								<button
 									id="modal-edit-btn"
 									class="btn btn-secondary"
@@ -453,6 +568,9 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Browser API polyfill for Chrome/Edge compatibility -->
+		<script src="../lib/browser-polyfill.min.js"></script>
 
 		<script type="module" src="library.js"></script>
 	</body>

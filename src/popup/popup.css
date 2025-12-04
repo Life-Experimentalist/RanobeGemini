@@ -1,5 +1,52 @@
 /* Ranobe Gemini Popup Styles */
 
+/* Theme Variables */
+:root {
+	/* Dark Mode Colors (Default) */
+	--bg-gradient-start: #1a1a2e;
+	--bg-gradient-end: #0f0f1e;
+	--container-bg: #16213e;
+	--text-primary: #e0e0e0;
+	--text-secondary: #a0a0a0;
+	--accent-primary: #667eea;
+	--accent-secondary: #764ba2;
+	--border-color: #2a2a3e;
+	--setting-bg: #1e293b;
+	--input-bg: #0f172a;
+	--input-border: #334155;
+	--hover-bg: rgba(102, 126, 234, 0.2);
+	--shadow-color: rgba(0, 0, 0, 0.5);
+	--success-color: #34a853;
+	--error-color: #db4437;
+	--warning-color: #fbbc04;
+	--tab-inactive: #64748b;
+	--scrollbar-track: #1e293b;
+	--scrollbar-thumb: #475569;
+}
+
+/* Light Mode Override */
+:root[data-theme="light"] {
+	--bg-gradient-start: #667eea;
+	--bg-gradient-end: #764ba2;
+	--container-bg: #ffffff;
+	--text-primary: #212529;
+	--text-secondary: #6c757d;
+	--accent-primary: #667eea;
+	--accent-secondary: #764ba2;
+	--border-color: #e9ecef;
+	--setting-bg: #f8f9fa;
+	--input-bg: #ffffff;
+	--input-border: #ced4da;
+	--hover-bg: rgba(102, 126, 234, 0.1);
+	--shadow-color: rgba(0, 0, 0, 0.1);
+	--success-color: #34a853;
+	--error-color: #db4437;
+	--warning-color: #fbbc04;
+	--tab-inactive: #6c757d;
+	--scrollbar-track: #f8f9fa;
+	--scrollbar-thumb: #dee2e6;
+}
+
 /* Base Styles */
 * {
 	margin: 0;
@@ -9,20 +56,21 @@
 
 body {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
 	min-width: 600px;
 	min-height: 500px;
+	color: var(--text-primary);
 }
 
 /* Container */
 .container {
-	background: white;
+	background: var(--container-bg);
 	padding: 20px;
 	/* width: 600px; */
 	max-width: 100%;
 	margin: 0 auto;
 	border-radius: 8px;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 4px 6px var(--shadow-color);
 	position: relative;
 	overflow: hidden;
 }
@@ -32,32 +80,63 @@ body {
 	text-align: center;
 	margin-bottom: 20px;
 	padding-bottom: 15px;
-	border-bottom: 2px solid #e9ecef;
+	border-bottom: 2px solid var(--border-color);
+	position: relative;
 }
 
 .header h1 {
 	font-size: 24px;
 	font-weight: 700;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
 	margin-bottom: 5px;
 }
 
+/* Quick Library Button */
+.quick-library-btn {
+	position: absolute;
+	top: 50%;
+	right: 0;
+	transform: translateY(-50%);
+	width: 36px;
+	height: 36px;
+	border: none;
+	border-radius: 8px;
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+	color: white;
+	font-size: 18px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.quick-library-btn:hover {
+	transform: translateY(-50%) scale(1.1);
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.quick-library-btn:active {
+	transform: translateY(-50%) scale(0.95);
+}
+
 .header p {
 	font-size: 13px;
-	color: #6c757d;
+	color: var(--text-secondary);
 }
 
 /* Tabs */
 .tabs {
 	display: flex;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 8px;
 	padding: 4px;
 	margin-bottom: 20px;
-	border-bottom: 2px solid #e9ecef;
+	border-bottom: 2px solid var(--border-color);
 	flex-wrap: nowrap;
 	gap: 4px;
 	justify-content: space-between;
@@ -72,7 +151,7 @@ body {
 	border-radius: 6px;
 	font-size: 14px;
 	font-weight: 600;
-	color: #6c757d;
+	color: var(--tab-inactive);
 	cursor: pointer;
 	transition: all 0.2s ease;
 	text-align: center;
@@ -80,12 +159,12 @@ body {
 }
 
 .tab-btn:hover {
-	background: rgba(102, 126, 234, 0.1);
-	color: #667eea;
+	background: var(--hover-bg);
+	color: var(--accent-primary);
 }
 
 .tab-btn.active {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	color: white;
 	box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
@@ -113,16 +192,16 @@ body {
 
 /* Settings */
 .setting {
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	padding: 15px;
 	border-radius: 8px;
 	margin-bottom: 15px;
-	border: 1px solid #e9ecef;
+	border: 1px solid var(--border-color);
 	transition: all 0.2s ease;
 }
 
 .setting:hover {
-	border-color: #667eea;
+	border-color: var(--accent-primary);
 	box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
 }
 
@@ -130,7 +209,7 @@ body {
 	display: block;
 	font-weight: 600;
 	margin-bottom: 8px;
-	color: #495057;
+	color: var(--text-primary);
 	font-size: 14px;
 }
 
@@ -141,10 +220,11 @@ body {
 .setting textarea {
 	width: 100%;
 	padding: 10px 12px;
-	border: 1px solid #ced4da;
+	border: 1px solid var(--input-border);
 	border-radius: 6px;
 	font-size: 14px;
-	background: white;
+	background: var(--input-bg);
+	color: var(--text-primary);
 	transition: all 0.2s ease;
 	font-family: inherit;
 }
@@ -153,7 +233,7 @@ body {
 .setting select:focus,
 .setting textarea:focus {
 	outline: none;
-	border-color: #667eea;
+	border-color: var(--accent-primary);
 	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -165,7 +245,7 @@ body {
 /* Buttons */
 button {
 	padding: 10px 20px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	color: white;
 	border: none;
 	border-radius: 6px;
@@ -194,9 +274,9 @@ button:disabled {
 
 .icon-button {
 	padding: 8px 12px;
-	background-color: #f1f3f4;
-	color: #5f6368;
-	border: 1px solid #dadce0;
+	background-color: var(--setting-bg);
+	color: var(--text-secondary);
+	border: 1px solid var(--border-color);
 	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -207,8 +287,15 @@ button:disabled {
 }
 
 .icon-button:hover {
-	background-color: #e8eaed;
-	border-color: #dadce0;
+	background-color: var(--hover-bg);
+	border-color: var(--accent-primary);
+}
+
+.header img {
+	width: 32px;
+	height: 32px;
+	vertical-align: middle;
+	margin-right: 8px;
 }
 
 .light-mode-icon {
@@ -221,9 +308,9 @@ button:disabled {
 
 /* Info Box */
 .info {
-	background-color: #e8f0fe;
-	color: #1a73e8;
-	border-left: 4px solid #4285f4;
+	background-color: var(--setting-bg);
+	color: var(--accent-primary);
+	border-left: 4px solid var(--accent-primary);
 	padding: 12px 15px;
 	border-radius: 6px;
 	margin-bottom: 15px;
@@ -233,7 +320,7 @@ button:disabled {
 
 .description {
 	font-size: 12px;
-	color: #333333;
+	color: var(--text-secondary);
 	margin-top: 6px;
 	line-height: 1.4;
 }
@@ -242,7 +329,7 @@ button:disabled {
 .actions {
 	margin-top: 20px;
 	padding-top: 20px;
-	border-top: 2px solid #e9ecef;
+	border-top: 2px solid var(--border-color);
 	display: flex;
 	gap: 12px;
 	flex-wrap: wrap;
@@ -275,12 +362,13 @@ button:disabled {
 
 /* Slider */
 .slider-block {
-	background: white;
+	background: var(--input-bg);
 	padding: 12px;
 	border-radius: 6px;
 	margin-top: 8px;
 	width: 100%;
 	margin-bottom: 15px;
+	border: 1px solid var(--input-border);
 }
 
 .slider-block label {
@@ -295,7 +383,7 @@ button:disabled {
 	width: 100%;
 	height: 6px;
 	border-radius: 3px;
-	background: #e9ecef;
+	background: var(--border-color);
 	outline: none;
 	-webkit-appearance: none;
 	appearance: none;
@@ -307,7 +395,7 @@ button:disabled {
 	width: 18px;
 	height: 18px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	cursor: pointer;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -316,7 +404,7 @@ button:disabled {
 	width: 18px;
 	height: 18px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	cursor: pointer;
 	border: none;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -326,7 +414,7 @@ button:disabled {
 	font-weight: 700;
 	color: #ffffff;
 	font-size: 13px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	padding: 3px 10px;
 	border-radius: 12px;
 	margin-left: 8px;
@@ -340,12 +428,12 @@ button:disabled {
 .help-text {
 	margin-top: 15px;
 	font-size: 12px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	line-height: 1.6;
 	padding: 12px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 6px;
-	border-left: 3px solid #667eea;
+	border-left: 3px solid var(--accent-primary);
 }
 
 /* Tab Header */
@@ -355,14 +443,14 @@ button:disabled {
 	align-items: center;
 	margin-bottom: 20px;
 	padding-bottom: 12px;
-	border-bottom: 2px solid #e9ecef;
+	border-bottom: 2px solid var(--border-color);
 }
 
 .tab-header h3 {
 	margin: 0;
 	font-size: 18px;
 	font-weight: 600;
-	color: #495057;
+	color: var(--text-primary);
 }
 
 /* Novels List */
@@ -375,7 +463,7 @@ button:disabled {
 .no-novels {
 	text-align: center;
 	padding: 40px 20px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	font-size: 14px;
 	font-style: italic;
 }
@@ -383,10 +471,10 @@ button:disabled {
 /* Domain Section */
 .domain-section {
 	margin-bottom: 16px;
-	border: 1px solid #e0e0e0;
+	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	overflow: hidden;
-	background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+	background: var(--setting-bg);
 }
 
 .domain-header {
@@ -394,7 +482,7 @@ button:disabled {
 	align-items: center;
 	gap: 10px;
 	padding: 12px 15px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
 	color: white;
 	cursor: pointer;
 	user-select: none;
@@ -402,7 +490,7 @@ button:disabled {
 }
 
 .domain-header:hover {
-	background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+	filter: brightness(0.9);
 	transform: translateX(2px);
 }
 
@@ -410,6 +498,30 @@ button:disabled {
 	font-size: 12px;
 	transition: transform 0.3s ease;
 	min-width: 16px;
+}
+
+/* Domain Icon */
+.domain-icon {
+	font-size: 16px;
+	line-height: 1;
+	flex-shrink: 0;
+}
+
+.domain-icon-img {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.domain-icon-img img {
+	width: 16px;
+	height: 16px;
+	object-fit: contain;
+	vertical-align: middle;
+}
+
+.domain-icon .icon-fallback {
+	font-size: 16px;
 }
 
 .domain-name {
@@ -441,17 +553,17 @@ button:disabled {
 
 /* Novel Item */
 .novel-item {
-	border: 1px solid #ddd;
+	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	padding: 12px;
 	margin-bottom: 8px;
-	background-color: #fff;
+	background-color: var(--input-bg);
 	transition: all 0.2s ease;
 }
 
 .novel-item:hover {
 	box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
-	border-color: #667eea;
+	border-color: var(--accent-primary);
 	transform: translateY(-1px);
 }
 
@@ -459,13 +571,13 @@ button:disabled {
 	font-size: 16px;
 	font-weight: bold;
 	margin-bottom: 8px;
-	color: #4285f4;
+	color: var(--accent-primary);
 }
 
 .novel-info {
 	font-size: 13px;
 	margin-bottom: 8px;
-	color: #666;
+	color: var(--text-secondary);
 }
 
 .novel-actions {
@@ -481,7 +593,7 @@ button:disabled {
 	align-items: center;
 	gap: 5px;
 	font-size: 13px;
-	color: #666;
+	color: var(--text-secondary);
 	cursor: pointer;
 	user-select: none;
 	padding: 4px 8px;
@@ -490,7 +602,7 @@ button:disabled {
 }
 
 .auto-enhance-label:hover {
-	background-color: #f0f0f0;
+	background-color: var(--hover-bg);
 }
 
 .auto-enhance-checkbox {
@@ -500,19 +612,19 @@ button:disabled {
 .novel-extended-info {
 	margin: 10px 0;
 	padding: 10px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 4px;
 	font-size: 13px;
 }
 
 .novel-description {
-	color: #444;
+	color: var(--text-primary);
 	line-height: 1.5;
 	margin-bottom: 8px;
 }
 
 .novel-stats {
-	color: #666;
+	color: var(--text-secondary);
 	margin-bottom: 6px;
 }
 
@@ -709,82 +821,24 @@ button:disabled {
 	}
 }
 
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-	body {
-		background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-	}
+/* Icon visibility based on theme */
+:root .light-mode-icon,
+:root[data-theme="dark"] .light-mode-icon {
+	display: none;
+}
 
-	.container {
-		background: #2d2d44;
-		color: #e9ecef;
-	}
+:root .dark-mode-icon,
+:root[data-theme="dark"] .dark-mode-icon {
+	display: inline-block;
+}
 
-	.setting {
-		background: #1f1f35;
-		border-color: #3a3a56;
-	}
+:root[data-theme="light"] .light-mode-icon {
+	display: inline-block;
+}
 
-	.setting input[type="text"],
-	.setting input[type="password"],
-	.setting input[type="number"],
-	.setting select,
-	.setting textarea {
-		background: #1a1a2e;
-		border-color: #3a3a56;
-		color: #e8ecef;
-	}
-
-	.tabs {
-		background: #1f1f35;
-		border-bottom-color: #3a3a56;
-	}
-
-	.tab-btn {
-		color: #adb5bd;
-	}
-
-	.tab-btn:hover {
-		background: rgba(102, 126, 234, 0.2);
-	}
-
-	label {
-		color: #dee2e6;
-	}
-
-	.description {
-		color: #adb5bd;
-	}
-
-	.tab-header {
-		border-bottom-color: #3a3a56;
-	}
-
-	.tab-header h3 {
-		color: #dee2e6;
-	}
-
-	.light-mode-icon {
-		display: none;
-	}
-
-	.dark-mode-icon {
-		display: inline-block;
-	}
-
-	.icon-button {
-		background-color: #3c4043;
-		color: #e8eaed;
-		border-color: #5f6368;
-	}
-
-	.icon-button:hover {
-		background-color: #5f6368;
-	}
-
-	.resize-handle {
-		background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path d="M8 2v6H2V2h6m2-2H0v10h10V0z" fill="rgba(255, 255, 255, 0.3)"/></svg>');
-	}
+:root[data-theme="light"] .dark-mode-icon {
+	display: none;
+}
 
 	::-webkit-scrollbar-track {
 		background: rgba(255, 255, 255, 0.05);
@@ -1113,6 +1167,908 @@ button:disabled {
 	color: white;
 }
 
+/* ============================================
+   LIBRARY TAB - Complete Redesign
+   ============================================ */
+
+/* Loading State */
+.library-loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 20px;
+	color: #6c757d;
+	gap: 12px;
+}
+
+.loading-spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid #e9ecef;
+	border-top-color: #667eea;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+
+/* Library Sections */
+.library-section {
+	margin-bottom: 16px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #e9ecef;
+	border-radius: 10px;
+}
+
+.library-section:last-child {
+	margin-bottom: 0;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.section-header h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333;
+	margin: 0;
+}
+
+.header-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+/* Current Page Section */
+.current-page-section {
+	background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+	border-color: #667eea30;
+}
+
+/* Status Badges */
+.status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+	background: #e9ecef;
+	color: #6c757d;
+}
+
+.status-badge.in-library {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: #fff;
+}
+
+.status-badge.new {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: #fff;
+}
+
+.status-badge.not-supported {
+	background: #f8d7da;
+	color: #842029;
+}
+
+/* Novel Card */
+.novel-card {
+	display: flex;
+	gap: 12px;
+}
+
+.novel-card-cover {
+	width: 70px;
+	height: 100px;
+	flex-shrink: 0;
+	border-radius: 6px;
+	overflow: hidden;
+	background: #f0f0f0;
+}
+
+.novel-card-cover .cover-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.novel-card-cover .cover-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	font-size: 28px;
+}
+
+.novel-card-cover .cover-site-icon {
+	max-width: 60%;
+	max-height: 60%;
+}
+
+.novel-card-content {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.novel-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #333;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.novel-author {
+	font-size: 12px;
+	color: #6c757d;
+	margin: 0;
+}
+
+/* Tags */
+.novel-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 2px;
+}
+
+.tag {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 10px;
+	font-weight: 500;
+}
+
+.tag-page-type {
+	background: #e3f2fd;
+	color: #1565c0;
+}
+
+.tag-page-type.chapter {
+	background: #e8f5e9;
+	color: #2e7d32;
+}
+
+.tag-page-type.novel {
+	background: #fff3e0;
+	color: #ef6c00;
+}
+
+.tag-status {
+	background: #f5f5f5;
+	color: #616161;
+}
+
+.tag-status.completed {
+	background: #e8f5e9;
+	color: #2e7d32;
+}
+
+.tag-status.ongoing {
+	background: #fff3e0;
+	color: #ef6c00;
+}
+
+/* Chapter Info */
+.novel-chapter-info {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.chapter-text {
+	font-size: 12px;
+	color: #495057;
+	font-weight: 500;
+}
+
+.progress-bar {
+	flex: 1;
+	min-width: 60px;
+	max-width: 120px;
+	height: 6px;
+	background: #e9ecef;
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+	transition: width 0.3s ease;
+}
+
+.progress-percent {
+	font-size: 11px;
+	font-weight: 600;
+	color: #667eea;
+}
+
+/* Library Details */
+.library-details {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e9ecef;
+}
+
+.detail-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+	font-size: 12px;
+}
+
+.detail-row:last-child {
+	margin-bottom: 0;
+}
+
+.detail-row label {
+	color: #6c757d;
+	min-width: 70px;
+	font-weight: 500;
+}
+
+.status-select {
+	flex: 1;
+	padding: 4px 8px;
+	border: 1px solid #dee2e6;
+	border-radius: 6px;
+	font-size: 12px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.status-select:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.genres-row {
+	flex-wrap: wrap;
+}
+
+.genres-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.genre-tag {
+	display: inline-block;
+	padding: 2px 8px;
+	background: #f0f4ff;
+	color: #667eea;
+	border-radius: 10px;
+	font-size: 10px;
+	font-weight: 500;
+}
+
+.genre-tag.more {
+	background: #e9ecef;
+	color: #6c757d;
+	cursor: help;
+}
+
+/* Novel Actions */
+.novel-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+/* Buttons */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	padding: 8px 16px;
+	border: none;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.btn-sm {
+	padding: 6px 12px;
+	font-size: 12px;
+}
+
+.btn-icon {
+	font-size: 14px;
+}
+
+.btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: #fff;
+}
+
+.btn-primary:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+	background: #f8f9fa;
+	color: #495057;
+	border: 1px solid #dee2e6;
+}
+
+.btn-secondary:hover {
+	background: #e9ecef;
+}
+
+.btn-icon-only {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	background: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 6px;
+	font-size: 16px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.btn-icon-only:hover {
+	background: #e9ecef;
+}
+
+.btn-icon-only.spinning {
+	animation: spin 0.8s linear infinite;
+}
+
+/* Not Supported Message */
+.not-supported-message {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 16px;
+	background: #f8f9fa;
+	border-radius: 8px;
+	color: #6c757d;
+}
+
+.message-icon {
+	font-size: 20px;
+}
+
+.message-text {
+	font-size: 13px;
+}
+
+/* Stats Row */
+.stats-row {
+	display: flex;
+	justify-content: space-around;
+	padding: 12px 0;
+	background: #f8f9fa;
+	border-radius: 8px;
+}
+
+.stat-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.stat-value {
+	font-size: 20px;
+	font-weight: 700;
+	color: #667eea;
+}
+
+.stat-label {
+	font-size: 11px;
+	color: #6c757d;
+	text-transform: uppercase;
+	margin-top: 2px;
+}
+
+/* Recent Section */
+.recent-section .section-header {
+	border-bottom: 1px solid #e9ecef;
+	padding-bottom: 8px;
+}
+
+.site-indicator {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 6px;
+	font-size: 14px;
+}
+
+.site-indicator .site-icon {
+	width: 16px;
+	height: 16px;
+}
+
+/* Novels Grid */
+.novels-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+}
+
+.novel-grid-item {
+	display: flex;
+	flex-direction: column;
+	cursor: pointer;
+	transition: transform 0.2s ease;
+}
+
+.novel-grid-item:hover {
+	transform: translateY(-2px);
+}
+
+.novel-grid-item .novel-cover {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 2/3;
+	border-radius: 8px;
+	overflow: hidden;
+	background: #f0f0f0;
+}
+
+.novel-grid-item .novel-cover-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.novel-grid-item .novel-cover-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	font-size: 24px;
+}
+
+.novel-grid-item .novel-cover-site-icon {
+	max-width: 40%;
+	max-height: 40%;
+}
+
+.novel-site-badge {
+	position: absolute;
+	bottom: 4px;
+	right: 4px;
+	width: 20px;
+	height: 20px;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.novel-site-badge img {
+	width: 14px;
+	height: 14px;
+}
+
+.novel-grid-item .novel-info {
+	margin-top: 6px;
+}
+
+.novel-grid-item .novel-title {
+	font-size: 11px;
+	font-weight: 600;
+	color: #333;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.novel-grid-item .novel-meta {
+	margin-top: 2px;
+}
+
+.enhanced-badge {
+	font-size: 10px;
+	color: #10b981;
+	font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 30px 20px;
+	text-align: center;
+}
+
+.empty-icon {
+	font-size: 40px;
+	margin-bottom: 12px;
+	opacity: 0.5;
+}
+
+.empty-text {
+	font-size: 13px;
+	color: #6c757d;
+	max-width: 200px;
+	margin: 0;
+}
+
+/* Error Message */
+.error-message {
+	padding: 20px;
+	text-align: center;
+	color: #842029;
+	background: #f8d7da;
+	border-radius: 8px;
+}
+
+.error-message button {
+	margin-top: 10px;
+	padding: 6px 16px;
+	background: #667eea;
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+/* ============================================
+   OLD Library Styles (keeping for compatibility)
+   ============================================ */
+
+/* Current Novel Section */
+.current-novel-section {
+	background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+	border: 1px solid #667eea30;
+	border-radius: 10px;
+	padding: 12px;
+	margin-bottom: 16px;
+}
+
+.current-novel-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.current-novel-header h4 {
+	font-size: 13px;
+	font-weight: 600;
+	color: #495057;
+	margin: 0;
+}
+
+.current-novel-badge {
+	font-size: 10px;
+	padding: 3px 8px;
+	border-radius: 12px;
+	background: #28a745;
+	color: white;
+	font-weight: 500;
+}
+
+.current-novel-badge.not-supported {
+	background: #ffc107;
+	color: #212529;
+}
+
+.current-novel-badge.error {
+	background: #dc3545;
+}
+
+.current-novel-card {
+	display: flex;
+	gap: 12px;
+	background: white;
+	border-radius: 8px;
+	padding: 10px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.current-novel-cover {
+	width: 60px;
+	height: 80px;
+	border-radius: 4px;
+	overflow: hidden;
+	flex-shrink: 0;
+	background: #f1f3f5;
+}
+
+.current-novel-cover img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.current-novel-cover-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24px;
+	background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+}
+
+.current-novel-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.current-novel-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: #212529;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.current-novel-author {
+	font-size: 11px;
+	color: #6c757d;
+}
+
+.current-novel-chapter {
+	font-size: 11px;
+	color: #495057;
+	font-weight: 500;
+}
+
+.current-novel-progress {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 2px;
+}
+
+.progress-bar-mini {
+	flex: 1;
+	height: 4px;
+	background: #e9ecef;
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.progress-fill-mini {
+	height: 100%;
+	background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+	transition: width 0.3s ease;
+}
+
+.progress-text-mini {
+	font-size: 10px;
+	color: #6c757d;
+	white-space: nowrap;
+}
+
+.current-novel-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.current-novel-actions .btn-small {
+	flex: 1;
+	padding: 4px 8px;
+	font-size: 11px;
+	border-radius: 4px;
+	border: 1px solid #dee2e6;
+	background: white;
+	color: #495057;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.current-novel-actions .btn-small:hover {
+	background: #f8f9fa;
+	border-color: #667eea;
+}
+
+.current-novel-actions .btn-small.btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	border: none;
+}
+
+.current-novel-actions .btn-small.btn-primary:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+}
+
+.current-novel-actions .btn-small.btn-success {
+	background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+	color: white;
+}
+
+.current-novel-actions .btn-small.btn-success:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+}
+
+.current-novel-not-supported {
+	text-align: center;
+	padding: 16px;
+	color: #6c757d;
+	font-size: 12px;
+}
+
+.current-novel-not-supported span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Current Novel Badge Variants */
+.current-novel-badge.in-library {
+	background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+	color: white;
+}
+
+/* Current Novel Meta Info Row */
+.current-novel-meta {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 4px;
+	flex-wrap: wrap;
+}
+
+.current-novel-page-type {
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: #e9ecef;
+	color: #495057;
+}
+
+.current-novel-page-type.chapter {
+	background: #e7f5ff;
+	color: #1971c2;
+}
+
+.current-novel-page-type.novel {
+	background: #f3f0ff;
+	color: #7048e8;
+}
+
+.current-novel-status-tag {
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: #e9ecef;
+	color: #495057;
+}
+
+.current-novel-status-tag.completed {
+	background: #d3f9d8;
+	color: #2b8a3e;
+}
+
+.current-novel-status-tag.ongoing {
+	background: #fff3bf;
+	color: #e67700;
+}
+
+.current-novel-status-tag.hiatus {
+	background: #ffe8cc;
+	color: #d9480f;
+}
+
+.current-novel-status-tag.dropped {
+	background: #ffe3e3;
+	color: #c92a2a;
+}
+
+/* Library Info Section (shown when novel is in library) */
+.current-novel-library-info {
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	border-radius: 6px;
+	padding: 8px;
+	margin: 8px 0;
+	font-size: 11px;
+}
+
+.library-info-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+.library-info-row:last-child {
+	margin-bottom: 0;
+}
+
+.library-info-label {
+	color: #6c757d;
+	min-width: 80px;
+	font-weight: 500;
+}
+
+.library-info-value {
+	color: #495057;
+	flex: 1;
+}
+
+/* Reading status dropdown mini */
+.reading-status-select-mini {
+	flex: 1;
+	padding: 3px 6px;
+	border-radius: 4px;
+	border: 1px solid #ced4da;
+	background: white;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.reading-status-select-mini:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Genre tags mini */
+.current-novel-genres {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.genre-tag-mini {
+	background: #e9ecef;
+	color: #495057;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 10px;
+}
+
+.genre-tag-mini.more {
+	background: #dee2e6;
+	cursor: help;
+}
+
 /* Compact Library Stats */
 .library-stats-compact {
 	display: flex;
@@ -1159,6 +2115,42 @@ button:disabled {
 /* Recent Novels Section */
 .recent-novels-section {
 	margin-bottom: 16px;
+}
+
+.recent-novels-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #e9ecef;
+}
+
+.recent-novels-header .section-subtitle {
+	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom: none;
+}
+
+.recent-novels-site-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px 8px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: #fff;
+	border-radius: 12px;
+	font-size: 12px;
+}
+
+.no-recent-novels {
+	text-align: center;
+	padding: 24px 16px;
+	color: #6c757d;
+	font-size: 13px;
+	background: #f8f9fa;
+	border-radius: 8px;
+	border: 1px dashed #dee2e6;
 }
 
 .recent-novels-list {
@@ -1309,6 +2301,83 @@ button:disabled {
 		color: #adb5bd;
 	}
 
+	/* Dark Mode - Current Novel Section Enhancements */
+	.current-novel-meta {
+		display: flex;
+	}
+
+	.current-novel-page-type {
+		background: #3c4043;
+		color: #adb5bd;
+	}
+
+	.current-novel-page-type.chapter {
+		background: rgba(25, 113, 194, 0.3);
+		color: #74c0fc;
+	}
+
+	.current-novel-page-type.novel {
+		background: rgba(112, 72, 232, 0.3);
+		color: #b197fc;
+	}
+
+	.current-novel-status-tag {
+		background: #3c4043;
+		color: #adb5bd;
+	}
+
+	.current-novel-status-tag.completed {
+		background: rgba(43, 138, 62, 0.3);
+		color: #69db7c;
+	}
+
+	.current-novel-status-tag.ongoing {
+		background: rgba(230, 119, 0, 0.3);
+		color: #ffc078;
+	}
+
+	.current-novel-status-tag.hiatus {
+		background: rgba(217, 72, 15, 0.3);
+		color: #ffa94d;
+	}
+
+	.current-novel-status-tag.dropped {
+		background: rgba(201, 42, 42, 0.3);
+		color: #ff8787;
+	}
+
+	.current-novel-library-info {
+		background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+	}
+
+	.library-info-label {
+		color: #adb5bd;
+	}
+
+	.library-info-value {
+		color: #e8ecef;
+	}
+
+	.reading-status-select-mini {
+		background: #1a1a2e;
+		border-color: #3a3a56;
+		color: #e8ecef;
+	}
+
+	.reading-status-select-mini:focus {
+		border-color: #8ab4f8;
+		box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+	}
+
+	.genre-tag-mini {
+		background: #3c4043;
+		color: #adb5bd;
+	}
+
+	.genre-tag-mini.more {
+		background: #4a4a5e;
+	}
+
 	.section-subtitle {
 		color: #e8ecef;
 		border-bottom-color: #3c4043;
@@ -1344,6 +2413,20 @@ button:disabled {
 	.recent-novel-badge.shelf {
 		background: rgba(138, 180, 248, 0.2);
 		color: #8ab4f8;
+	}
+
+	.recent-novels-header {
+		border-bottom-color: #3c4043;
+	}
+
+	.recent-novels-site-badge {
+		background: linear-gradient(135deg, #5c6bc0 0%, #7c4dff 100%);
+	}
+
+	.no-recent-novels {
+		background: #2a2a3e;
+		color: #adb5bd;
+		border-color: #3c4043;
 	}
 
 	.legacy-novels-section {
@@ -1515,29 +2598,29 @@ button:disabled {
 /* Full Prompt Preview Section */
 .prompt-preview-section {
 	margin-top: 15px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 8px;
-	border: 1px solid #e9ecef;
+	border: 1px solid var(--border-color);
 }
 
 .prompt-preview-section summary {
 	cursor: pointer;
 	padding: 12px 15px;
 	font-weight: 600;
-	color: #495057;
+	color: var(--text-primary);
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
 .prompt-preview-section summary:hover {
-	background: #e9ecef;
+	background: var(--hover-bg);
 	border-radius: 8px;
 }
 
 .prompt-preview-content {
 	padding: 15px;
-	border-top: 1px solid #e9ecef;
+	border-top: 1px solid var(--border-color);
 }
 
 .prompt-preview-header {
@@ -1546,12 +2629,12 @@ button:disabled {
 	align-items: center;
 	margin-bottom: 10px;
 	font-size: 12px;
-	color: #6c757d;
+	color: var(--text-secondary);
 }
 
 .full-prompt-preview {
-	background: #1e1e1e;
-	color: #d4d4d4;
+	background: var(--input-bg);
+	color: var(--text-primary);
 	padding: 15px;
 	border-radius: 8px;
 	font-family: 'Consolas', 'Monaco', monospace;
@@ -1561,13 +2644,13 @@ button:disabled {
 	overflow-y: auto;
 	white-space: pre-wrap;
 	word-wrap: break-word;
-	border: 1px solid #333;
+	border: 1px solid var(--input-border);
 }
 
 .full-prompt-preview .prompt-section {
 	margin-bottom: 15px;
 	padding-bottom: 15px;
-	border-bottom: 1px dashed #444;
+	border-bottom: 1px dashed var(--border-color);
 }
 
 .full-prompt-preview .prompt-section:last-child {
@@ -1577,7 +2660,7 @@ button:disabled {
 }
 
 .full-prompt-preview .section-label {
-	color: #569cd6;
+	color: var(--accent-primary);
 	font-weight: bold;
 	margin-bottom: 8px;
 	display: block;

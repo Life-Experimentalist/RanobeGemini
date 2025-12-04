@@ -1,9 +1,10 @@
 /**
  * Archive of Our Own (AO3) Website Content Handler
  * Specialized handler for extracting content from archiveofourown.org
+ *
+ * Handler Type: "chapter_embedded" - full novel metadata available on chapter pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
-
 
 export class AO3Handler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -18,15 +19,22 @@ export class AO3Handler extends BaseWebsiteHandler {
 		"*.ao3.org", // Safety net: catches any other subdomains
 	];
 
-	// Shelf metadata for Novel Library
+	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
 		id: "ao3",
+		isPrimary: true,
 		name: "Archive of Our Own",
-		icon: "🏛️",
+		icon: "https://archiveofourown.org/images/ao3_logos/logo_42.png",
+		emoji: "📚",
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
+		// Path to custom card renderer (relative to src/library/websites/)
+		cardRenderer: "ao3/novel-card.js",
 	};
+
+	// Handler type: Full metadata available on chapter pages (no separate info page needed)
+	static HANDLER_TYPE = "chapter_embedded";
 
 	static DEFAULT_SITE_PROMPT = `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
 Please maintain:
@@ -62,6 +70,431 @@ When enhancing, improve readability while respecting the author's original style
 			window.location.hostname.includes("archiveofourown.org") ||
 			window.location.hostname.includes("ao3.org")
 		);
+	}
+
+	/**
+	 * Check if current page is a chapter/work page (reading content)
+	 * AO3 chapters have /works/ID/chapters/ID or just /works/ID for single-chapter works
+	 * @returns {boolean}
+	 */
+	isChapterPage() {
+		const url = window.location.pathname;
+		// Work or chapter pages
+		const isWork = /^\/works\/\d+/.test(url);
+		// Check for chapter content on page
+		const hasContent = !!document.querySelector(
+			'div.userstuff.module[role="article"], #chapters .userstuff.module, .userstuff.module'
+		);
+		return isWork && hasContent;
+	}
+
+	/**
+	 * Check if current page is a single-chapter work (all content on one page)
+	 * These are works without /chapters/ in the URL but with content
+	 * @returns {boolean}
+	 */
+	isSingleChapterWork() {
+		const url = window.location.pathname;
+		// Works without /chapters/ but with content
+		const isSingleWork =
+			/^\/works\/\d+\/?$/.test(url) || /^\/works\/\d+\?/.test(url);
+		const hasContent = !!document.querySelector(
+			'div.userstuff.module[role="article"], .userstuff.module'
+		);
+
+		// Check if there's a chapter selector (means multi-chapter)
+		const hasChapterSelector = !!document.getElementById("selected_id");
+
+		return isSingleWork && hasContent && !hasChapterSelector;
+	}
+
+	/**
+	 * Check if current page is specifically a work info page (not reading)
+	 * For CHAPTER_EMBEDDED-type handlers like AO3, details are on the chapter page itself
+	 * This returns false since we don't have separate novel info pages
+	 * @returns {boolean}
+	 */
+	isNovelPage() {
+		// AO3 doesn't have separate novel info pages - info is on chapter pages
+		// Return false so we don't show the novel management UI
+		return false;
+	}
+
+	/**
+	 * Generate a unique novel ID from URL
+	 * @param {string} url - The work or chapter URL
+	 * @returns {string} Unique novel ID
+	 */
+	generateNovelId(url = window.location.href) {
+		// Extract work ID from URL: /works/12345 or /works/12345/chapters/67890
+		const match = url.match(/\/works\/(\d+)/);
+		if (match) {
+			return `ao3-${match[1]}`;
+		}
+
+		// Fallback to URL hash
+		const urlPath = new URL(url).pathname;
+		const urlHash = btoa(urlPath)
+			.substring(0, 16)
+			.replace(/[^a-zA-Z0-9]/g, "");
+		return `ao3-${urlHash}`;
+	}
+
+	/**
+	 * Get the work details page URL from current page
+	 * For AO3, the chapter page itself contains all the details
+	 * @returns {string}
+	 */
+	getNovelPageUrl() {
+		// Extract work ID and return the base work URL
+		const match = window.location.href.match(/\/works\/(\d+)/);
+		if (match) {
+			return `https://archiveofourown.org/works/${match[1]}`;
+		}
+		return window.location.href;
+	}
+
+	/**
+	 * Get novel controls configuration for AO3
+	 * @returns {Object} Configuration for novel controls UI
+	 */
+	getNovelControlsConfig() {
+		return {
+			showControls: this.isChapterPage(),
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			position: "after",
+			isChapterPage: true,
+			customStyles: {
+				background: "linear-gradient(135deg, #1a1a1a 0%, #2d1f1f 100%)",
+				borderColor: "#990000",
+				accentColor: "#c62828",
+			},
+		};
+	}
+
+	/**
+	 * Get insertion point for novel controls UI on AO3
+	 * @returns {Object|null} { element, position } or null
+	 */
+	getNovelPageUIInsertionPoint() {
+		// Insert after the work meta (tags, stats area)
+		const workMeta = document.querySelector("dl.work.meta");
+		if (workMeta) {
+			return { element: workMeta, position: "after" };
+		}
+
+		// Fallback to preface section
+		const preface = document.querySelector(".preface.group");
+		if (preface) {
+			return { element: preface, position: "after" };
+		}
+
+		// Fallback to before chapter content
+		const chapterContent = document.querySelector(
+			'.userstuff.module[role="article"]'
+		);
+		if (chapterContent) {
+			return { element: chapterContent, position: "before" };
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extract novel/work metadata from current page
+	 * AO3 has rich metadata in the work header
+	 * @returns {Object} Novel metadata
+	 */
+	extractNovelMetadata() {
+		const metadata = {
+			title: null,
+			author: null,
+			description: null,
+			coverUrl: null,
+			genres: [],
+			tags: [],
+			status: null,
+			totalChapters: null,
+			mainNovelUrl: this.getNovelPageUrl(),
+			metadata: {
+				rating: null,
+				warnings: [],
+				categories: [],
+				fandoms: [],
+				relationships: [],
+				characters: [],
+				additionalTags: [],
+				language: null,
+				publishedDate: null,
+				completedDate: null,
+				words: 0,
+				chapters: null,
+				totalChapters: null,
+				comments: 0,
+				kudos: 0,
+				bookmarks: 0,
+				hits: 0,
+				workId: null,
+			},
+		};
+
+		// Extract work ID from URL
+		const workIdMatch = window.location.href.match(/works\/(\d+)/);
+		if (workIdMatch) {
+			metadata.metadata.workId = workIdMatch[1];
+		}
+
+		// Title
+		const titleEl = document.querySelector(
+			".preface h2.title.heading, .work h2.title"
+		);
+		if (titleEl) {
+			metadata.title = titleEl.textContent.trim();
+		}
+
+		// Author(s)
+		const authorEls = document.querySelectorAll(
+			".preface .byline a[rel='author'], .byline a[rel='author']"
+		);
+		if (authorEls.length > 0) {
+			metadata.author = Array.from(authorEls)
+				.map((a) => a.textContent.trim())
+				.join(", ");
+		}
+
+		// Summary/Description
+		const summaryEl = document.querySelector(
+			".summary .userstuff blockquote, .summary .userstuff"
+		);
+		if (summaryEl) {
+			metadata.description = summaryEl.textContent
+				.trim()
+				.substring(0, 500);
+		}
+
+		// ==========================================
+		// Extract from work meta dl (rating, warnings, etc.)
+		// ==========================================
+		const workMeta = document.querySelector("dl.work.meta");
+		if (workMeta) {
+			// Rating
+			const ratingEl = workMeta.querySelector("dd.rating a.tag");
+			if (ratingEl) {
+				metadata.metadata.rating = ratingEl.textContent.trim();
+				metadata.tags.push(`Rating: ${metadata.metadata.rating}`);
+			}
+
+			// Archive Warnings
+			const warningEls = workMeta.querySelectorAll("dd.warning a.tag");
+			warningEls.forEach((el) => {
+				const warning = el.textContent.trim();
+				metadata.metadata.warnings.push(warning);
+				metadata.tags.push(`Warning: ${warning}`);
+			});
+
+			// Categories (F/M, M/M, Gen, etc.)
+			const categoryEls = workMeta.querySelectorAll("dd.category a.tag");
+			categoryEls.forEach((el) => {
+				const category = el.textContent.trim();
+				metadata.metadata.categories.push(category);
+				metadata.tags.push(`Category: ${category}`);
+			});
+
+			// Fandoms
+			const fandomEls = workMeta.querySelectorAll("dd.fandom a.tag");
+			fandomEls.forEach((el) => {
+				const fandom = el.textContent.trim();
+				metadata.metadata.fandoms.push(fandom);
+				metadata.genres.push(fandom);
+				metadata.tags.push(fandom);
+			});
+
+			// Relationships
+			const relationshipEls = workMeta.querySelectorAll(
+				"dd.relationship a.tag"
+			);
+			relationshipEls.forEach((el) => {
+				const relationship = el.textContent.trim();
+				metadata.metadata.relationships.push(relationship);
+				metadata.tags.push(relationship);
+			});
+
+			// Characters
+			const characterEls =
+				workMeta.querySelectorAll("dd.character a.tag");
+			characterEls.forEach((el) => {
+				const character = el.textContent.trim();
+				metadata.metadata.characters.push(character);
+				metadata.tags.push(character);
+			});
+
+			// Additional (Freeform) Tags
+			const freeformEls = workMeta.querySelectorAll("dd.freeform a.tag");
+			freeformEls.forEach((el) => {
+				const tag = el.textContent.trim();
+				metadata.metadata.additionalTags.push(tag);
+				metadata.tags.push(tag);
+			});
+
+			// Language
+			const languageEl = workMeta.querySelector("dd.language");
+			if (languageEl) {
+				metadata.metadata.language = languageEl.textContent.trim();
+			}
+
+			// Remove duplicate tags
+			metadata.tags = [...new Set(metadata.tags)];
+		}
+
+		// ==========================================
+		// Extract stats (chapters, words, kudos, etc.)
+		// ==========================================
+		const statsDl = document.querySelector("dl.stats");
+		if (statsDl) {
+			// Published date
+			const publishedEl = statsDl.querySelector("dd.published");
+			if (publishedEl) {
+				const dateStr = publishedEl.textContent.trim();
+				const date = new Date(dateStr);
+				if (!isNaN(date.getTime())) {
+					metadata.metadata.publishedDate = date.getTime();
+				}
+			}
+
+			// Completed/Updated date
+			const statusEl = statsDl.querySelector("dd.status");
+			if (statusEl) {
+				const dateStr = statusEl.textContent.trim();
+				const date = new Date(dateStr);
+				if (!isNaN(date.getTime())) {
+					metadata.metadata.completedDate = date.getTime();
+				}
+			}
+
+			// Words
+			const wordsEl = statsDl.querySelector("dd.words");
+			if (wordsEl) {
+				const wordsText = wordsEl.textContent.trim().replace(/,/g, "");
+				metadata.metadata.words = parseInt(wordsText, 10) || 0;
+			}
+
+			// Chapters - format: "5/10" or "5/?" or just a number for single-chapter
+			const chaptersEl = statsDl.querySelector("dd.chapters");
+			if (chaptersEl) {
+				const chaptersText = chaptersEl.textContent.trim();
+
+				// Try to match "X/Y" or "X/?" format first
+				// X = published chapters, Y = total planned chapters (or ? if unknown)
+				const match = chaptersText.match(/(\d+)\/(\d+|\?)/);
+				if (match) {
+					const publishedChapters = parseInt(match[1], 10);
+					metadata.metadata.chapters = publishedChapters;
+					// Note: currentChapter (the chapter being read) will be set separately
+					// from getChapterNavigation(), not from this stats value
+
+					if (match[2] !== "?") {
+						// Has explicit total chapter count (e.g., "5/10")
+						metadata.metadata.totalChapters = parseInt(
+							match[2],
+							10
+						);
+						metadata.totalChapters =
+							metadata.metadata.totalChapters;
+						// Determine status from chapters
+						if (
+							metadata.metadata.chapters ===
+							metadata.metadata.totalChapters
+						) {
+							metadata.status = "completed";
+						} else {
+							metadata.status = "ongoing";
+						}
+					} else {
+						// Format is X/? - work is ongoing, use published as available count
+						// Important: For "41/?", 41 is the total available chapters to read
+						// so we set totalChapters to publishedChapters (e.g., 41)
+						metadata.metadata.totalChapters = publishedChapters;
+						metadata.totalChapters = publishedChapters;
+						metadata.status = "ongoing";
+						console.log(
+							`AO3: Work ongoing with ${publishedChapters} published chapters (totalChapters = ${publishedChapters})`
+						);
+					}
+				} else {
+					// Single number - likely a single-chapter work
+					const singleMatch = chaptersText.match(/^(\d+)$/);
+					if (singleMatch) {
+						const chapterCount = parseInt(singleMatch[1], 10);
+						metadata.metadata.chapters = chapterCount;
+						metadata.metadata.totalChapters = chapterCount;
+						metadata.totalChapters = chapterCount;
+						metadata.status =
+							chapterCount === 1 ? "completed" : "unknown";
+					}
+				}
+			}
+
+			// If no chapters found but this is clearly a single-chapter work
+			if (!metadata.totalChapters && this.isSingleChapterWork?.()) {
+				metadata.metadata.chapters = 1;
+				metadata.metadata.totalChapters = 1;
+				metadata.totalChapters = 1;
+				metadata.status = "completed";
+			}
+
+			// Comments
+			const commentsEl = statsDl.querySelector("dd.comments");
+			if (commentsEl) {
+				const commentsText = commentsEl.textContent
+					.trim()
+					.replace(/,/g, "");
+				metadata.metadata.comments = parseInt(commentsText, 10) || 0;
+			}
+
+			// Kudos
+			const kudosEl = statsDl.querySelector("dd.kudos");
+			if (kudosEl) {
+				const kudosText = kudosEl.textContent.trim().replace(/,/g, "");
+				metadata.metadata.kudos = parseInt(kudosText, 10) || 0;
+			}
+
+			// Bookmarks
+			const bookmarksEl = statsDl.querySelector("dd.bookmarks");
+			if (bookmarksEl) {
+				const bookmarksText = bookmarksEl.textContent
+					.trim()
+					.replace(/,/g, "");
+				metadata.metadata.bookmarks = parseInt(bookmarksText, 10) || 0;
+			}
+
+			// Hits
+			const hitsEl = statsDl.querySelector("dd.hits");
+			if (hitsEl) {
+				const hitsText = hitsEl.textContent.trim().replace(/,/g, "");
+				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
+			}
+		}
+
+		// Check for explicit status label
+		const statusLabelEl = document.querySelector("dt.status");
+		if (statusLabelEl) {
+			const labelText = statusLabelEl.textContent.trim().toLowerCase();
+			if (labelText.includes("completed")) {
+				metadata.status = "completed";
+			} else if (labelText.includes("updated")) {
+				metadata.status = "ongoing";
+			}
+		}
+
+		// Try to get cover from any embedded image (fanworks sometimes have them)
+		// AO3 doesn't have official cover images, but some works embed them
+		const coverEl = document.querySelector(".userstuff img:first-of-type");
+		if (coverEl && coverEl.src && !coverEl.src.includes("icon")) {
+			metadata.coverUrl = coverEl.src;
+		}
+
+		console.log("AO3: Extracted metadata:", metadata);
+		return metadata;
 	}
 
 	// Find the content area on AO3
@@ -321,6 +754,10 @@ When enhancing, improve readability while respecting the author's original style
 		// Get HTML content with preserved structure
 		let htmlContent = contentClone.innerHTML.trim();
 
+		// Convert markdown-style formatting to HTML
+		// Authors sometimes use **text** for bold and *text* for italics
+		htmlContent = this.convertMarkdownFormatting(htmlContent);
+
 		// Also get plain text for token counting and processing
 		let textContent =
 			contentClone.textContent || contentClone.innerText || "";
@@ -368,6 +805,58 @@ When enhancing, improve readability while respecting the author's original style
 			.split(/\s+/)
 			.filter((word) => word.length > 0);
 		return words.length;
+	}
+
+	/**
+	 * Convert markdown-style formatting to HTML
+	 * Handles **bold**, *italic*, and ***bold italic*** patterns
+	 * @param {string} content - HTML content that may contain markdown-style text
+	 * @returns {string} - Content with markdown converted to proper HTML tags
+	 */
+	convertMarkdownFormatting(content) {
+		if (!content) return content;
+
+		// Process in a way that doesn't break existing HTML tags
+		// We need to be careful not to match asterisks inside HTML attributes
+
+		// First, temporarily protect HTML tags
+		const htmlTagPlaceholders = [];
+		let protectedContent = content.replace(/<[^>]+>/g, (match) => {
+			htmlTagPlaceholders.push(match);
+			return `__HTML_TAG_${htmlTagPlaceholders.length - 1}__`;
+		});
+
+		// Convert ***text*** to <strong><em>text</em></strong> (bold italic)
+		protectedContent = protectedContent.replace(
+			/\*\*\*([^*]+)\*\*\*/g,
+			"<strong><em>$1</em></strong>"
+		);
+
+		// Convert **text** to <strong>text</strong> (bold)
+		protectedContent = protectedContent.replace(
+			/\*\*([^*]+)\*\*/g,
+			"<strong>$1</strong>"
+		);
+
+		// Convert *text* to <em>text</em> (italic)
+		// Be more careful here - only match if not preceded/followed by space after/before asterisk
+		protectedContent = protectedContent.replace(
+			/\*([^\s*][^*]*[^\s*])\*/g,
+			"<em>$1</em>"
+		);
+		// Also handle single word italics like *word*
+		protectedContent = protectedContent.replace(
+			/\*([^\s*]+)\*/g,
+			"<em>$1</em>"
+		);
+
+		// Restore HTML tags
+		protectedContent = protectedContent.replace(
+			/__HTML_TAG_(\d+)__/g,
+			(_, index) => htmlTagPlaceholders[parseInt(index)]
+		);
+
+		return protectedContent;
 	}
 
 	// Get site-specific prompt enhancement

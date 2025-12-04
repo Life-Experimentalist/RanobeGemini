@@ -20,13 +20,20 @@
 					class="dark-mode-icon"
 				/>
 				<h1>Ranobe Gemini</h1>
+				<button
+					id="quickLibraryBtn"
+					class="quick-library-btn"
+					title="Open Full Library (Ctrl+Alt+N)"
+				>
+					📚
+				</button>
 			</div>
 			<!-- Tab navigation -->
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="settings">
 					Settings
 				</button>
-				<button class="tab-btn" data-tab="novels">Novels</button>
+				<button class="tab-btn" data-tab="library">Library</button>
 				<button class="tab-btn" data-tab="prompts">Prompts</button>
 				<button class="tab-btn" data-tab="advanced">Advanced</button>
 				<button class="tab-btn" data-tab="info">Info & FAQ</button>
@@ -154,7 +161,7 @@
 								max="50000"
 								step="1000"
 								style="width: 120px"
-								value="12000"
+								value="20000"
 							/>
 							<span
 								class="description"
@@ -213,68 +220,131 @@
 				</div>
 			</div>
 
-			<!-- Novels Tab -->
-			<div id="novels" class="tab-content">
-				<div class="tab-header">
-					<h3>Novel Library</h3>
-					<div class="tab-header-actions">
-						<button
-							id="openLibraryPage"
-							class="btn-primary"
-							title="Open Full Library"
-							style="padding: 6px 12px; font-weight: 500"
-						>
-							📚 Open Full Library
-						</button>
-						<button
-							id="refreshNovels"
-							class="icon-button"
-							title="Refresh"
-						>
-							↻
-						</button>
-					</div>
+			<!-- Library Tab -->
+			<div id="library" class="tab-content">
+				<!-- Loading State -->
+				<div id="libraryLoading" class="library-loading">
+					<div class="loading-spinner"></div>
+					<span>Loading library...</span>
 				</div>
 
-				<!-- Library Stats -->
-				<div class="library-stats-compact" id="libraryStatsCompact">
-					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatNovels"
-							>0</span
-						>
-						<span class="stat-mini-label">Novels</span>
+				<!-- Current Page Section -->
+				<section id="currentPageSection" class="library-section current-page-section">
+					<div class="section-header">
+						<h4>📄 Current Page</h4>
+						<span class="status-badge" id="pageStatusBadge">Detecting...</span>
 					</div>
-					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatChapters"
-							>0</span
-						>
-						<span class="stat-mini-label">Enhanced</span>
-					</div>
-					<div class="stat-mini">
-						<span class="stat-mini-value" id="libStatShelves"
-							>0</span
-						>
-						<span class="stat-mini-label">Shelves</span>
-					</div>
-				</div>
 
-				<!-- Recent Novels (Compact View) -->
-				<div class="recent-novels-section">
-					<h4 class="section-subtitle">Recent Novels</h4>
-					<div class="recent-novels-list" id="recentNovelsList">
-						<!-- Recent novels will be loaded here -->
-					</div>
-				</div>
+					<!-- Novel Detected Card -->
+					<div id="currentNovelCard" class="novel-card current-novel-card" style="display: none;">
+						<div class="novel-card-cover" id="currentNovelCover">
+							<div class="cover-placeholder">📖</div>
+						</div>
+						<div class="novel-card-content">
+							<h5 class="novel-title" id="currentNovelTitle">Novel Title</h5>
+							<p class="novel-author" id="currentNovelAuthor">by Author</p>
 
-				<!-- Legacy Novels List (Collapsible) -->
-				<!-- <details class="legacy-novels-section">
-					<summary>📖 Reading History (Legacy)</summary>
-					<div class="novels-list" id="novelsList">
-						<div class="no-novels">
-							No novels found. Use refresh or future add feature.
+							<div class="novel-tags" id="currentNovelTags">
+								<span class="tag tag-page-type" id="currentPageTypeTag"></span>
+								<span class="tag tag-status" id="currentStatusTag"></span>
+							</div>
+
+							<div class="novel-chapter-info" id="currentChapterInfo">
+								<span class="chapter-text" id="currentChapterText"></span>
+								<div class="progress-bar" id="currentProgressBar" style="display: none;">
+									<div class="progress-fill" id="currentProgressFill"></div>
+								</div>
+								<span class="progress-percent" id="currentProgressPercent"></span>
+							</div>
+
+							<!-- In Library Details -->
+							<div class="library-details" id="libraryDetails" style="display: none;">
+								<div class="detail-row">
+									<label>Status:</label>
+									<select id="readingStatusSelect" class="status-select">
+										<option value="reading">📖 Reading</option>
+										<option value="plan-to-read">📋 Plan to Read</option>
+										<option value="completed">✅ Completed</option>
+										<option value="on-hold">⏸️ On Hold</option>
+										<option value="dropped">❌ Dropped</option>
+									</select>
+								</div>
+								<div class="detail-row" id="enhancedCountRow">
+									<label>Enhanced:</label>
+									<span id="enhancedCountValue">0 chapters</span>
+								</div>
+								<div class="detail-row genres-row" id="genresRow" style="display: none;">
+									<label>Genres:</label>
+									<div class="genres-list" id="genresList"></div>
+								</div>
+							</div>
+
+							<div class="novel-actions">
+								<button id="addToLibraryBtn" class="btn btn-primary btn-sm">
+									<span class="btn-icon">📚</span>
+									<span class="btn-text">Add to Library</span>
+								</button>
+								<button id="openNovelBtn" class="btn btn-secondary btn-sm" style="display: none;">
+									<span class="btn-icon">📖</span>
+									<span class="btn-text">Open</span>
+								</button>
+							</div>
 						</div>
 					</div>
-				</details> -->
+
+					<!-- Not Supported Message -->
+					<div id="notSupportedMessage" class="not-supported-message" style="display: none;">
+						<span class="message-icon">ℹ️</span>
+						<span class="message-text" id="notSupportedText">Not a supported novel page</span>
+					</div>
+				</section>
+
+				<!-- Library Overview Section -->
+				<section class="library-section library-overview">
+					<div class="section-header">
+						<h4>📚 Your Library</h4>
+						<div class="header-actions">
+							<button id="openFullLibrary" class="btn btn-primary btn-sm" title="Open Full Library">
+								<span class="btn-icon">📖</span>
+								<span class="btn-text">Full Library</span>
+							</button>
+							<button id="refreshLibrary" class="btn btn-icon-only" title="Refresh">↻</button>
+						</div>
+					</div>
+
+					<!-- Stats Row -->
+					<div class="stats-row" id="libraryStats">
+						<div class="stat-item">
+							<span class="stat-value" id="statNovels">0</span>
+							<span class="stat-label">Novels</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-value" id="statChapters">0</span>
+							<span class="stat-label">Enhanced</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-value" id="statShelves">0</span>
+							<span class="stat-label">Sites</span>
+						</div>
+					</div>
+				</section>
+
+				<!-- Recent Novels Section -->
+				<section class="library-section recent-section">
+					<div class="section-header">
+						<h4 id="recentSectionTitle">Recent Novels</h4>
+						<span class="site-indicator" id="siteIndicator" style="display: none;"></span>
+					</div>
+
+					<div class="novels-grid" id="recentNovelsGrid">
+						<!-- Novels will be populated here -->
+					</div>
+
+					<div class="empty-state" id="emptyState" style="display: none;">
+						<span class="empty-icon">📚</span>
+						<p class="empty-text">No novels yet. Start enhancing chapters to build your library!</p>
+					</div>
+				</section>
 			</div>
 
 			<!-- Prompts Tab -->
@@ -459,89 +529,65 @@ Click to generate preview...</pre
 
 			<!-- Advanced Tab -->
 			<div id="advanced" class="tab-content">
-				<!-- Chunking Threshold Settings -->
+				<!-- Theme Settings -->
 				<div class="setting">
-					<h4 style="margin-bottom: 10px">📊 Content Chunking</h4>
-					<div
-						class="chunking-info"
-						style="
-							background: #e8f4fd;
-							padding: 10px;
-							border-radius: 6px;
-							margin-bottom: 12px;
-							font-size: 12px;
-							color: #1a73e8;
-							border-left: 3px solid #1a73e8;
-						"
-					>
-						<strong>How it works:</strong> If content exceeds the
-						<em>threshold</em>, it gets divided into smaller
-						<em>chunks</em> for processing. Each chunk is processed
-						separately and results are combined.
+					<h4 style="margin-bottom: 15px">🎨 Theme Settings</h4>
+
+					<div class="slider-block" style="margin-bottom: 20px;">
+						<label for="themeMode">Theme Mode</label>
+						<select id="themeMode" style="width: 100%; padding: 10px; border-radius: 6px;">
+							<option value="dark">Dark Mode (Default)</option>
+							<option value="light">Light Mode</option>
+							<option value="auto">Auto (System Preference)</option>
+						</select>
+						<div class="description">Choose your preferred theme</div>
 					</div>
-					<div class="slider-block">
-						<label for="chunkThresholdSlider">
-							⚡ Split Trigger (min chars to split)
-							<span class="slider-value" id="chunkThresholdValue"
-								>20000</span
-							>
-						</label>
-						<input
-							type="range"
-							min="5000"
-							max="50000"
-							step="1000"
-							value="20000"
-							class="slider"
-							id="chunkThresholdSlider"
-						/>
-						<div class="description">
-							Content shorter than this is processed as one piece.
-							Longer content gets split.
+
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+						<div>
+							<label for="accentColorPicker">Accent Color</label>
+							<div style="display: flex; gap: 10px; align-items: center;">
+								<input type="color" id="accentColorPicker" value="#667eea" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+								<input type="text" id="accentColorText" value="#667eea" style="flex: 1; padding: 8px;" placeholder="#667eea">
+							</div>
+						</div>
+
+						<div>
+							<label for="accentSecondaryPicker">Accent Secondary</label>
+							<div style="display: flex; gap: 10px; align-items: center;">
+								<input type="color" id="accentSecondaryPicker" value="#764ba2" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+								<input type="text" id="accentSecondaryText" value="#764ba2" style="flex: 1; padding: 8px;" placeholder="#764ba2">
+							</div>
+						</div>
+
+						<div>
+							<label for="backgroundColorPicker">Background Color</label>
+							<div style="display: flex; gap: 10px; align-items: center;">
+								<input type="color" id="backgroundColorPicker" value="#16213e" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+								<input type="text" id="backgroundColorText" value="#16213e" style="flex: 1; padding: 8px;" placeholder="#16213e">
+							</div>
+						</div>
+
+						<div>
+							<label for="textColorPicker">Text Color</label>
+							<div style="display: flex; gap: 10px; align-items: center;">
+								<input type="color" id="textColorPicker" value="#e0e0e0" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+								<input type="text" id="textColorText" value="#e0e0e0" style="flex: 1; padding: 8px;" placeholder="#e0e0e0">
+							</div>
 						</div>
 					</div>
 
-					<div class="slider-block">
-						<label for="chunkSizeSlider">
-							📦 Chunk Size (chars per piece)
-							<span class="slider-value" id="chunkSizeValue"
-								>12000</span
-							>
-						</label>
-						<input
-							type="range"
-							min="5000"
-							max="30000"
-							step="1000"
-							value="12000"
-							class="slider"
-							id="chunkSizeSlider"
-						/>
-						<div class="description">
-							When splitting, each chunk will be this size.
-							Smaller = more API calls but safer.
-						</div>
-					</div>
-					<div
-						id="chunkingWarning"
-						class="chunking-warning"
-						style="
-							display: none;
-							background: #fff3cd;
-							padding: 8px 10px;
-							border-radius: 6px;
-							font-size: 11px;
-							color: #856404;
-							margin-top: 8px;
-							border-left: 3px solid #ffc107;
-						"
-					>
-						⚠️ Chunk size should be smaller than split trigger for
-						chunking to work properly.
+					<div class="actions" style="margin-top: 15px;">
+						<button id="resetTheme" style="background-color: #db4437;">
+							Reset Theme to Default
+						</button>
+						<button id="saveTheme" style="float: right; background-color: #34a853;">
+							Save Theme
+						</button>
 					</div>
 				</div>
 
-				<!-- Font Size Settings TODO: Add this to the top of the advance tab -->
+				<!-- Font Size Settings -->
 				<div class="setting">
 					<h4 style="margin-bottom: 10px">🔤 Font Size Settings</h4>
 					<div class="slider-block">
@@ -1108,6 +1154,8 @@ Click to generate preview...</pre
 				title="Drag to resize"
 			></div>
 		</div>
+		<!-- Browser API polyfill for Chrome/Edge compatibility -->
+		<script src="../lib/browser-polyfill.min.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>
 </html>

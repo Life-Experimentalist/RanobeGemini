@@ -5,6 +5,8 @@
  *
  * IMPORTANT: This site uses infinite scroll where multiple chapters are loaded
  * on the same page. Each chapter gets its own enhance/summarize buttons.
+ *
+ * Handler Type: "dedicated_page" - novel metadata only on separate /book/ pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 
@@ -19,15 +21,20 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		"*.webnovel.com", // Safety net: catches any other subdomains
 	];
 
-	// Shelf metadata for Novel Library
+	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
 		id: "webnovel",
+		isPrimary: true,
 		name: "WebNovel",
-		icon: "🌐",
+		icon: "https://www.yueimg.com/en/favicon/favicon.d3f6a.ico",
+		emoji: "🌎",
 		color: "#ff6600",
 		novelIdPattern: /\/book\/(\d+)/,
 		primaryDomain: "www.webnovel.com",
 	};
+
+	// Handler type: Metadata requires visiting dedicated novel info page
+	static HANDLER_TYPE = "dedicated_page";
 
 	static DEFAULT_SITE_PROMPT = `This content is from WebNovel.com, a web novel platform.
 Please maintain:
@@ -71,6 +78,232 @@ When enhancing, improve readability and grammar while respecting the author's or
 			window.location.hostname.includes("webnovel.com") ||
 			window.location.hostname.includes("webnovel.co")
 		);
+	}
+
+	/**
+	 * Check if current page is a chapter page (reading content)
+	 * @returns {boolean}
+	 */
+	isChapterPage() {
+		// Chapter URLs contain /chapter/ or have .cha-content elements
+		const url = window.location.pathname;
+		if (url.includes("/chapter/")) {
+			return true;
+		}
+		// Also check for chapter content elements
+		const chapterContent = document.querySelector(".cha-content");
+		return !!chapterContent;
+	}
+
+	/**
+	 * Check if current page is a novel info/details page
+	 * @returns {boolean}
+	 */
+	isNovelPage() {
+		const url = window.location.pathname;
+		// Novel pages have /book/NUMBER format without /chapter/
+		const isBookPage =
+			/^\/book\/\d+/.test(url) && !url.includes("/chapter/");
+
+		// Also check for novel info elements
+		const novelInfo = document.querySelector(
+			".g_thumb, .det-info, .book-info"
+		);
+
+		return isBookPage || (!!novelInfo && !this.isChapterPage());
+	}
+
+	/**
+	 * Generate a unique novel ID from URL
+	 * @param {string} url - The novel or chapter URL
+	 * @returns {string} Unique novel ID
+	 */
+	generateNovelId(url = window.location.href) {
+		// Extract book ID from URL: /book/12345
+		const match = url.match(/\/book\/(\d+)/);
+		if (match) {
+			return `webnovel-${match[1]}`;
+		}
+
+		// Fallback to URL hash
+		const urlPath = new URL(url).pathname;
+		const urlHash = btoa(urlPath)
+			.substring(0, 16)
+			.replace(/[^a-zA-Z0-9]/g, "");
+		return `webnovel-${urlHash}`;
+	}
+
+	/**
+	 * Get the novel details page URL from current page
+	 * @returns {string|null}
+	 */
+	getNovelPageUrl() {
+		// If already on novel page, return current URL
+		if (this.isNovelPage()) {
+			return window.location.href;
+		}
+
+		// Extract book ID from chapter URL
+		const match = window.location.href.match(/\/book\/(\d+)/);
+		if (match) {
+			return `https://www.webnovel.com/book/${match[1]}`;
+		}
+
+		// Try to find link to novel page on chapter page
+		const novelLink = document.querySelector(
+			'a[href*="/book/"][href$=".html"], .det-title a, .book-title a'
+		);
+		if (novelLink) {
+			return novelLink.href;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get novel controls configuration for WebNovel
+	 * @returns {Object} Configuration for novel controls UI
+	 */
+	getNovelControlsConfig() {
+		const isNovel = this.isNovelPage();
+		const isChapter = this.isChapterPage();
+
+		return {
+			showControls: isNovel || isChapter,
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			position: isNovel ? "after" : "before",
+			isChapterPage: isChapter,
+			customStyles: {
+				background: "linear-gradient(135deg, #1a1a2e 0%, #1c1c2e 100%)",
+				borderColor: "#ff6600",
+				accentColor: "#ff8c33",
+			},
+		};
+	}
+
+	/**
+	 * Get insertion point for novel controls UI on WebNovel
+	 * @returns {Object|null} { element, position } or null
+	 */
+	getNovelPageUIInsertionPoint() {
+		// For novel info pages
+		if (this.isNovelPage()) {
+			const detInfo = document.querySelector(".det-info, .g_thumb");
+			if (detInfo) {
+				return { element: detInfo, position: "after" };
+			}
+		}
+
+		// For chapter pages
+		const chapterHeader = document.querySelector(".cha-tit");
+		if (chapterHeader) {
+			return { element: chapterHeader, position: "after" };
+		}
+
+		const chapterContent = document.querySelector(".cha-content");
+		if (chapterContent) {
+			return { element: chapterContent, position: "before" };
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extract novel metadata from current page
+	 * @returns {Object} Novel metadata
+	 */
+	extractNovelMetadata() {
+		const metadata = {
+			title: null,
+			author: null,
+			description: null,
+			coverUrl: null,
+			genres: [],
+			tags: [],
+			status: null,
+			chapterCount: null,
+			mainNovelUrl: this.getNovelPageUrl(),
+		};
+
+		// Title
+		const titleEl = document.querySelector(
+			".det-title h2, .book-title, .g_thumb h1, .cha-tit h1 a"
+		);
+		if (titleEl) {
+			metadata.title = titleEl.textContent.trim();
+		}
+
+		// Author
+		const authorEl = document.querySelector(
+			".det-hd-detail a, .author-name, .g_thumb .g_author a"
+		);
+		if (authorEl) {
+			metadata.author = authorEl.textContent.trim();
+		}
+
+		// Cover image
+		const coverEl = document.querySelector(
+			".g_thumb img, .det-pic img, .book-cover img"
+		);
+		if (coverEl) {
+			metadata.coverUrl = coverEl.src || coverEl.getAttribute("data-src");
+		}
+
+		// Description
+		const descEl = document.querySelector(
+			".det-abt, .book-intro, .g_thumb_intro"
+		);
+		if (descEl) {
+			metadata.description = descEl.textContent.trim().substring(0, 500);
+		}
+
+		// Genres/Tags
+		const tagEls = document.querySelectorAll(
+			".det-hd-detail .g_grey, .tag-item, .genre-item"
+		);
+		tagEls.forEach((el) => {
+			const text = el.textContent.trim();
+			if (text) {
+				metadata.tags.push(text);
+			}
+		});
+
+		// Chapter count
+		const chapterCountEl = document.querySelector(
+			".det-hd-detail .g_grey:last-child, .chapter-count"
+		);
+		if (chapterCountEl) {
+			const match = chapterCountEl.textContent.match(/(\d+)/);
+			if (match) {
+				metadata.chapterCount = parseInt(match[1], 10);
+			}
+		}
+
+		// Status (Ongoing/Completed)
+		const statusEl = document.querySelector(
+			".det-hd-detail .g_status, .book-status"
+		);
+		if (statusEl) {
+			metadata.status = statusEl.textContent.trim().toLowerCase();
+		}
+
+		return metadata;
+	}
+
+	/**
+	 * Get insertion point for novel page UI
+	 */
+	getNovelPageUIInsertionPoint() {
+		const selectors = [".det-info", ".g_thumb", ".book-info", ".det-hd"];
+
+		for (const selector of selectors) {
+			const el = document.querySelector(selector);
+			if (el) {
+				return { element: el, position: "after" };
+			}
+		}
+
+		return null;
 	}
 
 	/**

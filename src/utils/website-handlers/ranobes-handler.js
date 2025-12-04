@@ -1,6 +1,8 @@
 /**
  * Ranobes.top Website Content Handler
  * Specialized handler for extracting content from ranobes.top
+ *
+ * Handler Type: "dedicated_page" - novel metadata only on separate /novels/ pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 
@@ -12,32 +14,35 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		"ranobes.top",
 		"ranobes.net",
 		"ranobes.com",
-		"*.ranobes.top",
-		"*.ranobes.net", // Safety net: catches any other subdomains
+		"ranobes.org",
+		"*.ranobes.top", // Safety net: catches any other subdomains
+		"*.ranobes.net",
 		"*.ranobes.com",
+		"*.ranobes.org",
 	];
 
-	// Shelf metadata for Novel Library
+	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
 		id: "ranobes",
+		isPrimary: true,
 		name: "Ranobes",
-		icon: "📖",
+		icon: "https://ranobes.top/templates/Dark/images/favicon.ico?v=2",
+		emoji: "🍃",
 		color: "#4a7c4e",
-		// Pattern matches: /novel-slug-123456/chapter.html or /novel-slug-123456/ or /read-123.html
-		// Captures the ID number (123456 or 123) from the slug or read URL
-
-		// OLD: /\/([a-z0-9-]+-\d+)\/|^\/read-(\d+)\.html/
-		// This captured the whole slug including text
-		// NEW: /\/[a-z0-9-]+-(\d+)(?:\/|$)|^\/read-(\d+)\.html/
-		// This correctly captures ONLY the ID number
-		novelIdPattern: /\/([a-z0-9-]+-\d+)\/|^\/read-(\d+)\.html/,
+		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
+		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html → captures 1206917
+		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html → captures 1206917
+		// Read page: /read-1206917.html → captures 1206917
+		// Chapters list: /chapters/1206917/ → captures 1206917
+		novelIdPattern:
+			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
 	};
 
-	static DEFAULT_SITE_PROMPT = `	// Get site-specific prompt enhancement
-	getSiteSpecificPrompt() {
-		return RanobesHandler.DEFAULT_SITE_PROMPT;
-	}`;
+	// Handler type: Metadata requires visiting dedicated novel info page
+	static HANDLER_TYPE = "dedicated_page";
+
+	static DEFAULT_SITE_PROMPT = `This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beginning or at the end of the chapter. And then add breaks to signify the separation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.`;
 
 	constructor() {
 		super();
@@ -70,6 +75,12 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			return true;
 		}
 
+		// Check if this is a novel info page (NOT a chapter page)
+		// Novel pages have .r-fullstory structure
+		if (document.querySelector(".r-fullstory")) {
+			return false;
+		}
+
 		// Check if page has content elements typical for chapter pages
 		for (const selector of this.selectors.content) {
 			const element = document.querySelector(selector);
@@ -96,6 +107,155 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Page doesn't match chapter page criteria
 		return false;
+	}
+
+	/**
+	 * Check if current page is a novel info page (not a chapter)
+	 * @returns {boolean} True if this is a novel info/description page
+	 */
+	isNovelPage() {
+		// Novel info pages typically have the .r-fullstory structure
+		if (document.querySelector(".r-fullstory")) {
+			return true;
+		}
+
+		// Check URL pattern for novel pages
+		// e.g., /novels/123456-novel-name.html
+		if (window.location.pathname.match(/\/novels\/\d+-[^/]+\.html$/)) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Generate a unique novel ID from URL
+	 * Extracts numeric ID from various Ranobes URL formats
+	 * @param {string} url - The novel or chapter URL
+	 * @returns {string} Unique novel ID
+	 */
+	generateNovelId(url = window.location.href) {
+		// Try multiple patterns to extract novel ID
+		const patterns = [
+			/\/novels\/(\d+)-/, // /novels/1206917-my-yandere-female-tycoon-wife.html
+			/\/[a-z0-9-]+-(\d+)\//, // /my-yandere-female-tycoon-wife-1206917/
+			/^\/read-(\d+)\.html/, // /read-1206917.html
+			/\/chapters\/(\d+)/, // /chapters/1206917/
+		];
+
+		for (const pattern of patterns) {
+			const match = url.match(pattern);
+			if (match) {
+				return `ranobes-${match[1]}`;
+			}
+		}
+
+		// Fallback to URL hash
+		const urlPath = new URL(url).pathname;
+		const urlHash = btoa(urlPath)
+			.substring(0, 16)
+			.replace(/[^a-zA-Z0-9]/g, "");
+		return `ranobes-${urlHash}`;
+	}
+
+	/**
+	 * Get the novel details page URL from current page
+	 * @returns {string|null}
+	 */
+	getNovelPageUrl() {
+		// If already on novel page, return current URL
+		if (this.isNovelPage()) {
+			return window.location.href;
+		}
+
+		// Primary: Extract from category breadcrumb (most reliable on chapter pages)
+		// <div class="category grey ellipses"><a href="/novels/1206962-...-name.html" rel="up">Novel Title</a></div>
+		const categoryLink = document.querySelector(
+			".category.grey.ellipses a[rel='up'][href*='/novels/']"
+		);
+		if (categoryLink) {
+			return categoryLink.href;
+		}
+
+		// Fallback: Try to find link to novel page on chapter page
+		const novelLink = document.querySelector(
+			".r-chapter-info a[href*='/novels/'], .breadcrumb a[href*='/novels/'], a.btn-primary[href*='/novels/']"
+		);
+		if (novelLink) {
+			return novelLink.href;
+		}
+
+		// Try extracting from page metadata or breadcrumb
+		const breadcrumbs = document.querySelectorAll(".breadcrumb li a");
+		for (const crumb of breadcrumbs) {
+			if (crumb.href.includes("/novels/")) {
+				return crumb.href;
+			}
+		}
+
+		// Try to construct URL from novel ID
+		const novelId = this.generateNovelId();
+		if (novelId && novelId.startsWith("ranobes-")) {
+			const numericId = novelId.replace("ranobes-", "");
+			if (/^\d+$/.test(numericId)) {
+				// We have a numeric ID, but we need the slug for the full URL
+				// Return null if we can't construct the full URL
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get novel controls configuration for Ranobes
+	 * @returns {Object} Configuration for novel controls UI
+	 */
+	getNovelControlsConfig() {
+		const isNovelPage = this.isNovelPage();
+		const isChapter = this.isChapterPage();
+
+		return {
+			showControls: isNovelPage || isChapter,
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			position: isNovelPage ? "after" : "before",
+			isChapterPage: isChapter,
+			customStyles: {
+				background: "linear-gradient(135deg, #1a2634 0%, #0d1b2a 100%)",
+				borderColor: "#4a7c4e",
+				accentColor: "#4a7c4e",
+			},
+		};
+	}
+
+	/**
+	 * Get insertion point for novel page UI
+	 */
+	getNovelPageUIInsertionPoint() {
+		// For novel info pages
+		if (this.isNovelPage()) {
+			const selectors = [
+				".r-fullstory-spec",
+				".r-fullstory-info",
+				".story-title",
+			];
+			for (const selector of selectors) {
+				const el = document.querySelector(selector);
+				if (el) {
+					return { element: el, position: "after" };
+				}
+			}
+		}
+
+		// For chapter pages
+		const chapterSelectors = ["h1.title", ".chapter-header", "#arrticle"];
+		for (const selector of chapterSelectors) {
+			const el = document.querySelector(selector);
+			if (el) {
+				return { element: el, position: "before" };
+			}
+		}
+
+		return null;
 	}
 
 	// Find the content area on Ranobes
@@ -155,11 +315,35 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			title.remove();
 		});
 
+		// Remove ad-related elements before extracting text
+		const adSelectors = [
+			"script",
+			"style",
+			"iframe",
+			"ins.adsbygoogle",
+			"[class*='ads']",
+			"[class*='advert']",
+			"[id*='ads']",
+			"[id*='advert']",
+			".google-auto-placed",
+			".adsbygoogle",
+			"[data-ad]",
+			"[data-ads]",
+		];
+		adSelectors.forEach((selector) => {
+			contentClone
+				.querySelectorAll(selector)
+				.forEach((el) => el.remove());
+		});
+
 		// Get clean text content
 		let chapterText = contentClone.innerText
 			.trim()
 			.replace(/\n\s+/g, "\n") // Preserve paragraph breaks but remove excess whitespace
 			.replace(/\s{2,}/g, " "); // Replace multiple spaces with a single space
+
+		// Remove ad-related text patterns from the content
+		chapterText = this.removeAdRelatedText(chapterText);
 
 		// Additional cleaning - check the first few lines for titles
 		const titleParts = chapterTitle.split(/[:\-–—]/);
@@ -271,6 +455,69 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		return super.getUIInsertionPoint(contentArea);
 	}
 
+	/**
+	 * Remove ad-related text patterns from content
+	 * @param {string} text - The text content to clean
+	 * @returns {string} Cleaned text without ad-related content
+	 */
+	removeAdRelatedText(text) {
+		if (!text) return text;
+
+		// Patterns to remove - ad-related code snippets and promotional text
+		const adPatterns = [
+			// Google Ads related
+			/\(adsbygoogle\s*=\s*window\.adsbygoogle\s*\|\|\s*\[\]\)\.push\(\{[^}]*\}\);?/gi,
+			/window\.adsbygoogle[^;]*;/gi,
+			/googletag\.[^;]*;/gi,
+			/<ins\s+class="adsbygoogle"[^>]*>.*?<\/ins>/gi,
+
+			// Common ad placeholder text
+			/\[?\s*advertisement\s*\]?/gi,
+			/\[?\s*sponsored\s*(content|link|post)?\s*\]?/gi,
+			/\[?\s*ad\s*\]?/gi,
+
+			// Script-like content that may leak into text
+			/function\s*\([^)]*\)\s*\{[^}]*adsbygoogle[^}]*\}/gi,
+			/var\s+\w+\s*=\s*document\.(createElement|getElementById)[^;]*;/gi,
+
+			// Translator notes about ads (but keep meaningful translator notes)
+			/translator['']?s?\s*note:?\s*.*?ad[s\-]?.*?(removed|deleted|filtered).*?\.?\n?/gi,
+			/\[?\s*TL\s*note:?\s*\]?\s*.*?ad[s]?\s*.*?(removed|omitted).*?\.?\n?/gi,
+
+			// Common ad network snippets
+			/data-ad-client\s*=\s*["'][^"']*["']/gi,
+			/data-ad-slot\s*=\s*["'][^"']*["']/gi,
+
+			// Inline ad markers
+			/---\s*advertisement\s*---/gi,
+			/\*\*\*\s*ad\s*\*\*\*/gi,
+
+			// Common promotional phrases often injected
+			/click\s+here\s+to\s+(read|view)\s+more\s+ads?/gi,
+			/support\s+us\s+by\s+(clicking|viewing)\s+ads?/gi,
+
+			// Code snippets that leak into content
+			/\.push\(\s*\{\s*google_ad_client[^}]*\}\s*\)/gi,
+			/enable_page_level_ads:\s*(true|false)/gi,
+		];
+
+		let cleanedText = text;
+
+		// Apply each pattern
+		for (const pattern of adPatterns) {
+			cleanedText = cleanedText.replace(pattern, "");
+		}
+
+		// Clean up any leftover artifacts
+		cleanedText = cleanedText
+			.replace(/\n{3,}/g, "\n\n") // Remove excessive line breaks
+			.replace(/^\s*[\r\n]/gm, "") // Remove empty lines at start
+			.replace(/\s{3,}/g, " ") // Remove excessive spaces
+			.trim();
+
+		return cleanedText;
+	}
+
 	// Format content after enhancement
 	formatAfterEnhancement(contentArea) {
 		// Apply site-specific styling for Ranobes
@@ -300,7 +547,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			"This is a novel from Ranobes.top." +
 			"Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc." +
 			"Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions." +
-			"In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter" + " And then add breaks to signify the sepeation between author notes and actual chapter." +
+			"In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter" +
+			" And then add breaks to signify the sepeation between author notes and actual chapter." +
 			"Please improve the translation while maintaining the original meaning and flow." +
 			"Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated."
 		);
@@ -309,7 +557,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	/**
 	 * Extract novel metadata for library storage
 	 * Works on both chapter pages and main novel pages
-	 * @returns {Object} Object containing title, author, description, coverUrl
+	 * @returns {Object} Object containing comprehensive metadata
 	 */
 	extractNovelMetadata() {
 		const metadata = {
@@ -318,6 +566,15 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			description: null,
 			coverUrl: null,
 			mainNovelUrl: null,
+			genres: [],
+			tags: [],
+			status: null,
+			translationStatus: null,
+			chapterCount: null,
+			language: null,
+			year: null,
+			translator: null,
+			publisher: null,
 		};
 
 		try {
@@ -325,14 +582,25 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Extract novel title (clean, without chapter info)
 			if (isChapterPage) {
-				// On chapter pages, try breadcrumbs first
-				const breadcrumbLinks =
-					document.querySelectorAll("#dle-speedbar a");
-				if (breadcrumbLinks.length >= 2) {
-					// Get the novel link (second breadcrumb)
-					const novelLink = breadcrumbLinks[1];
-					metadata.title = novelLink.textContent.trim();
-					metadata.mainNovelUrl = novelLink.href;
+				// Primary: Extract from category link (most reliable)
+				const categoryLink = document.querySelector(
+					".category.grey.ellipses a[rel='up'][href*='/novels/']"
+				);
+				if (categoryLink) {
+					metadata.title = categoryLink.textContent.trim();
+					metadata.mainNovelUrl = categoryLink.href;
+				}
+
+				// Fallback: try breadcrumbs
+				if (!metadata.title) {
+					const breadcrumbLinks =
+						document.querySelectorAll("#dle-speedbar a");
+					if (breadcrumbLinks.length >= 2) {
+						// Get the novel link (second breadcrumb)
+						const novelLink = breadcrumbLinks[1];
+						metadata.title = novelLink.textContent.trim();
+						metadata.mainNovelUrl = novelLink.href;
+					}
 				}
 
 				// Fallback: Extract from page title
@@ -373,61 +641,132 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					}
 				}
 			} else {
-				// On main novel pages
-				const titleSelectors = [
-					"h1.entry-title",
-					"h1.title",
-					".post-title h1",
-					'meta[property="og:title"]',
-				];
+				// On main novel pages - extract comprehensive metadata
 
-				for (const selector of titleSelectors) {
-					const el = document.querySelector(selector);
-					if (el) {
-						metadata.title = selector.includes("meta")
-							? el.getAttribute("content")?.trim()
-							: el.textContent.trim();
-						if (metadata.title) break;
-					}
+				// Extract title from h1.title
+				const titleEl = document.querySelector("h1.title");
+				if (titleEl) {
+					// Get just the main title, not the subtitle span
+					const titleText =
+						titleEl.childNodes[0]?.textContent?.trim();
+					metadata.title = titleText || titleEl.textContent.trim();
+					// Remove subtitle if present
+					metadata.title = metadata.title.split("•")[0].trim();
 				}
 
-				// Extract full description from main page
-				const descSelectors = [
-					'meta[name="description"]',
-					'meta[property="og:description"]',
-					".summary",
-					".entry-content p:first-of-type",
-					".synopsis",
-					".novel-description",
-				];
-
-				for (const selector of descSelectors) {
-					const el = document.querySelector(selector);
-					if (el) {
-						if (selector.includes("meta")) {
-							metadata.description = el
-								.getAttribute("content")
-								?.trim();
-						} else {
-							const text = el.textContent.trim();
-							metadata.description =
-								text.length > 500
-									? text.substring(0, 500) + "..."
-									: text;
+				// Fallback title selectors
+				if (!metadata.title) {
+					const titleSelectors = [
+						"h1.entry-title",
+						".post-title h1",
+						'meta[property="og:title"]',
+					];
+					for (const selector of titleSelectors) {
+						const el = document.querySelector(selector);
+						if (el) {
+							metadata.title = selector.includes("meta")
+								? el.getAttribute("content")?.trim()
+								: el.textContent.trim();
+							if (metadata.title) break;
 						}
-						if (metadata.description) break;
 					}
 				}
+
+				// Extract full description from .moreless__full
+				const fullDesc = document.querySelector(".moreless__full");
+				if (fullDesc) {
+					// Get text content, clean up
+					let desc = fullDesc.textContent
+						.replace(/Collapse\s*$/i, "")
+						.replace(/Read more\s*$/i, "")
+						.trim();
+					metadata.description =
+						desc.length > 1000
+							? desc.substring(0, 1000) + "..."
+							: desc;
+				} else {
+					// Fallback to meta description
+					const descMeta = document.querySelector(
+						'meta[name="description"], meta[property="og:description"]'
+					);
+					if (descMeta) {
+						metadata.description = descMeta
+							.getAttribute("content")
+							?.trim();
+					}
+				}
+
+				// Extract genres from .links[itemprop="genre"]
+				const genreContainer =
+					document.querySelector('[itemprop="genre"]');
+				if (genreContainer) {
+					const genreLinks = genreContainer.querySelectorAll("a");
+					genreLinks.forEach((a) => {
+						const genre = a.textContent.trim();
+						if (genre) metadata.genres.push(genre);
+					});
+				}
+
+				// Extract tags/events from [itemprop="keywords"]
+				const keywordsContainer = document.querySelector(
+					'[itemprop="keywords"]'
+				);
+				if (keywordsContainer) {
+					const tagLinks = keywordsContainer.querySelectorAll("a");
+					tagLinks.forEach((a) => {
+						const tag = a.textContent.trim();
+						if (tag) metadata.tags.push(tag);
+					});
+				}
+
+				// Extract status info from .r-fullstory-spec
+				const specList = document.querySelector(".r-fullstory-spec");
+				if (specList) {
+					const listItems = specList.querySelectorAll("li");
+					listItems.forEach((li) => {
+						const text = li.textContent.toLowerCase();
+						if (text.includes("status in coo")) {
+							const link = li.querySelector("a");
+							metadata.status = link?.textContent?.trim() || null;
+						} else if (text.includes("translation")) {
+							const link = li.querySelector("a");
+							metadata.translationStatus =
+								link?.textContent?.trim() || null;
+						} else if (
+							text.includes("in original") ||
+							text.includes("translated")
+						) {
+							const match =
+								li.textContent.match(/(\d+)\s*chapters?/i);
+							if (match) {
+								metadata.chapterCount = parseInt(match[1], 10);
+							}
+						} else if (text.includes("year of publishing")) {
+							const link = li.querySelector("a");
+							metadata.year = link?.textContent?.trim() || null;
+						} else if (text.includes("language")) {
+							const link = li.querySelector("a");
+							metadata.language =
+								link?.textContent?.trim() || null;
+						}
+					});
+				}
+
+				// Set main novel URL to current page for novel pages
+				metadata.mainNovelUrl = window.location.href;
 			}
 
-			// Extract author
+			// Extract author - works on both page types
+			// Prioritize actual author links over generic tag_list which may contain site name
 			const authorSelectors = [
-				'.info_line a[href*="/author/"]',
-				'.tag_list[itemprop="creator"]',
+				'.info_line a[href*="/author/"]', // Most specific - author profile links
 				".author-name",
 				".entry-author a",
-				'meta[name="author"]',
 				'a[rel="author"]',
+				'[itemprop="creator"] a:not([href*="ranobes"])', // Creator but not site name
+				'.tag_list[itemprop="creator"] a:not([href*="ranobes"])', // Avoid site name links
+				'.tag_list[itemprop="creator"]', // Fallback to tag_list content
+				'meta[name="author"]',
 			];
 
 			for (const selector of authorSelectors) {
@@ -440,37 +779,98 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				}
 			}
 
+			// Extract translator
+			const translatorEl = document.querySelector(
+				'[itemprop="translator"] a'
+			);
+			if (translatorEl) {
+				metadata.translator = translatorEl.textContent.trim();
+			}
+
+			// Extract publisher
+			const publisherEl = document.querySelector(
+				'[itemprop="publisher"] a'
+			);
+			if (publisherEl) {
+				metadata.publisher = publisherEl.textContent.trim();
+			}
+
 			// Extract cover image
-			const coverSelectors = [
-				'meta[property="og:image"]',
-				".post-thumbnail img",
-				".novel-cover img",
-				".entry-thumb img",
-				"img.cover",
-				"article img:first-of-type",
-			];
+			// First try the poster image
+			const posterImg = document.querySelector(
+				".r-fullstory-poster .poster img"
+			);
+			if (posterImg) {
+				const src = posterImg.getAttribute("src");
+				if (
+					src &&
+					!src.includes("default") &&
+					!src.includes("placeholder")
+				) {
+					try {
+						metadata.coverUrl = new URL(
+							src,
+							window.location.href
+						).href;
+					} catch (e) {
+						// Invalid URL
+					}
+				}
+			}
 
-			for (const selector of coverSelectors) {
-				const el = document.querySelector(selector);
-				if (el) {
-					const src = selector.includes("meta")
-						? el.getAttribute("content")
-						: el.getAttribute("src");
-
-					if (
-						src &&
-						!src.includes("default") &&
-						!src.includes("placeholder")
-					) {
-						// Make absolute URL
+			// Try background-image from .cover figure
+			if (!metadata.coverUrl) {
+				const coverFigure = document.querySelector(
+					".poster figure.cover"
+				);
+				if (coverFigure) {
+					const bgStyle = coverFigure.style.backgroundImage;
+					const match = bgStyle.match(/url\(['"]?([^'"]+)['"]?\)/);
+					if (match && match[1]) {
 						try {
 							metadata.coverUrl = new URL(
-								src,
+								match[1],
 								window.location.href
 							).href;
-							break;
 						} catch (e) {
-							// Invalid URL, skip
+							// Invalid URL
+						}
+					}
+				}
+			}
+
+			// Fallback cover selectors
+			if (!metadata.coverUrl) {
+				const coverSelectors = [
+					'meta[property="og:image"]',
+					".post-thumbnail img",
+					".novel-cover img",
+					".entry-thumb img",
+					"img.cover",
+					"article img:first-of-type",
+				];
+
+				for (const selector of coverSelectors) {
+					const el = document.querySelector(selector);
+					if (el) {
+						const src = selector.includes("meta")
+							? el.getAttribute("content")
+							: el.getAttribute("src");
+
+						if (
+							src &&
+							!src.includes("default") &&
+							!src.includes("placeholder")
+						) {
+							try {
+								metadata.coverUrl = new URL(
+									src,
+									window.location.href
+								).href;
+								break;
+							} catch (e) {
+								// Invalid URL, skip
+							}
 						}
 					}
 				}

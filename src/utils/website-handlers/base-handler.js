@@ -13,6 +13,64 @@ export class BaseWebsiteHandler {
 		throw new Error("Method canHandle() must be implemented by subclass");
 	}
 
+	/**
+	 * Check if current page is a novel info page (not a chapter)
+	 * For DEDICATED_PAGE type sites, this is where full metadata is available
+	 * @returns {boolean}
+	 */
+	isNovelPage() {
+		// Default: assume not a novel page (most sites use chapter pages)
+		return false;
+	}
+
+	/**
+	 * Get the novel controls configuration for this handler
+	 * Handlers can override this to customize placement and appearance
+	 * @returns {Object} Configuration for novel controls UI
+	 */
+	getNovelControlsConfig() {
+		return {
+			// Whether to show novel controls on this page type
+			showControls: true,
+			// Insertion point for the controls
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			// Position relative to insertion point: 'before', 'after', 'prepend', 'append'
+			position: "before",
+			// Custom CSS styles (optional override)
+			customStyles: null,
+			// Whether this is a chapter page (vs novel info page)
+			isChapterPage: this.isChapterPage(),
+		};
+	}
+
+	/**
+	 * Get insertion point for novel controls UI
+	 * Handlers should override this for site-specific placement
+	 * @returns {Object|null} { element, position } or null
+	 */
+	getNovelPageUIInsertionPoint() {
+		// Common selectors for novel/chapter pages
+		const selectors = [
+			".story-info",
+			".novel-info",
+			".book-info",
+			".chapter-header",
+			".chapter-title",
+			"article header",
+			"h1",
+			".content-wrapper",
+		];
+
+		for (const selector of selectors) {
+			const element = document.querySelector(selector);
+			if (element) {
+				return { element, position: "before" };
+			}
+		}
+
+		return null;
+	}
+
 	// Find the main content element of the page
 	findContentArea() {
 		// Common content selectors across many websites
@@ -105,6 +163,14 @@ export class BaseWebsiteHandler {
 			currentChapter: 1,
 			totalChapters: 1,
 		};
+	}
+
+	// Check if current page is a chapter page (not a listing/index page)
+	// Subclasses should override for site-specific detection
+	isChapterPage() {
+		// Default: assume all pages are chapter pages
+		// This prevents the extension from incorrectly hiding UI on unknown sites
+		return true;
 	}
 
 	// Get ideal insertion point for UI controls

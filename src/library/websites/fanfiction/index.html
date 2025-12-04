@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>FanFiction.net - Novel Library</title>
+		<link rel="stylesheet" href="../shelf-page.css" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../../../icons/logo-dark-32.png"
+		/>
+	</head>
+	<body>
+		<div class="shelf-page-container">
+			<!-- Page Header -->
+			<header class="shelf-page-header">
+				<div class="shelf-page-title">
+					<span
+						class="shelf-page-color-bar"
+						id="color-bar"
+						style="background: #2a4b8d"
+					></span>
+					<span class="shelf-page-icon" id="page-icon">📚</span>
+					<h1 id="page-title">FanFiction.net</h1>
+					<span class="novel-count" id="novel-count">(0 novels)</span>
+				</div>
+				<a href="../../library.html" class="back-link">
+					← Back to Library
+				</a>
+			</header>
+
+			<!-- Stats Summary -->
+			<div class="stats-summary">
+				<div class="stat-card">
+					<span class="stat-value" id="stats-novels">0</span>
+					<span class="stat-label">Stories</span>
+				</div>
+				<div class="stat-card">
+					<span class="stat-value" id="stats-enhanced">0</span>
+					<span class="stat-label">Enhanced Chapters</span>
+				</div>
+				<div class="stat-card">
+					<span class="stat-value" id="stats-chapters">0</span>
+					<span class="stat-label">Total Chapters</span>
+				</div>
+			</div>
+
+			<!-- Filters Section -->
+			<div class="filters-section">
+				<div class="filter-group">
+					<label for="sort-select">Sort by:</label>
+					<select id="sort-select">
+						<option value="recent">Recently Read</option>
+						<option value="added">Date Added</option>
+						<option value="title">Title</option>
+						<option value="chapters">Enhanced Chapters</option>
+					</select>
+				</div>
+				<div class="filter-group">
+					<label for="status-filter">Status:</label>
+					<select id="status-filter">
+						<option value="all">All</option>
+						<option value="ongoing">In-Progress</option>
+						<option value="completed">Complete</option>
+					</select>
+				</div>
+				<div class="filter-group">
+					<label for="fandom-filter">Type:</label>
+					<select id="fandom-filter">
+						<option value="all">All</option>
+						<option value="single">Single Fandom</option>
+						<option value="crossover">Crossovers</option>
+					</select>
+				</div>
+				<div class="filter-group search-input">
+					<label for="search-input">Search:</label>
+					<input
+						type="text"
+						id="search-input"
+						placeholder="Search by title or author..."
+					/>
+				</div>
+			</div>
+
+			<!-- Loading State -->
+			<div class="loading-state" id="loading-state">
+				<div class="loading-spinner"></div>
+				<p>Loading stories...</p>
+			</div>
+
+			<!-- Empty State -->
+			<div class="empty-state" id="empty-state" style="display: none">
+				<span class="empty-icon">📚</span>
+				<h2>No stories from FanFiction.net yet!</h2>
+				<p>
+					Visit a chapter on
+					<a href="https://fanfiction.net" target="_blank"
+						>fanfiction.net</a
+					>
+					to add stories to your library
+				</p>
+			</div>
+
+			<!-- Novel Grid -->
+			<div class="novel-grid" id="novel-grid" style="display: none"></div>
+		</div>
+
+		<script src="../../../lib/browser-polyfill.min.js"></script>
+		<script type="module">
+			import { initShelfPage, registerCustomFilter, applyFiltersAndSort, renderNovels } from "../shelf-page.js";
+
+			// Custom filter for FanFiction fandom type (crossover vs single fandom)
+			function fandomTypeFilter(novels) {
+				const fandomFilter = document.getElementById("fandom-filter");
+				const fandomType = fandomFilter?.value;
+
+				if (!fandomType || fandomType === "all") {
+					return novels;
+				}
+
+				return novels.filter((novel) => {
+					// Check if it's a crossover based on URL or metadata
+					const isCrossover =
+						novel.sourceUrl?.includes("/crossovers/") ||
+						novel.metadata?.isCrossover === true ||
+						(novel.metadata?.fandoms &&
+							novel.metadata.fandoms.length > 1);
+
+					return fandomType === "crossover"
+						? isCrossover
+						: !isCrossover;
+				});
+			}
+
+			// Setup fandom filter event listener
+			function setupFandomFilter() {
+				const fandomFilter = document.getElementById("fandom-filter");
+				if (fandomFilter) {
+					fandomFilter.addEventListener("change", () => {
+						applyFiltersAndSort();
+					});
+				}
+			}
+
+			// Initialize with FanFiction shelf configuration
+			document.addEventListener("DOMContentLoaded", async () => {
+				// Register custom filter before initialization
+				registerCustomFilter(fandomTypeFilter);
+
+				await initShelfPage("fanfiction", {
+					id: "fanfiction",
+					name: "FanFiction.net",
+					icon: "📚",
+					color: "#2a4b8d",
+					primaryDomain: "fanfiction.net",
+				});
+
+				// Set up fandom filter after init
+				setupFandomFilter();
+			});
+		</script>
+	</body>
+</html>

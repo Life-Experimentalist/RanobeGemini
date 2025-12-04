@@ -125,8 +125,12 @@ async function packageSource() {
 	});
 }
 
-// Run the packaging
-packageSource().catch((error) => {
-	console.error("❌ Error packaging source:", error.message);
-	process.exit(1);
-});
+// Run if executed directly
+if (require.main === module) {
+	packageSource().catch((error) => {
+		console.error("❌ Error packaging source:", error.message);
+		process.exit(1);
+	});
+}
+
+module.exports = { packageSource };

@@ -606,7 +606,7 @@ graph TB
 | **shortSummaryPrompt** | string        | Short summary prompt                           | DEFAULT_SHORT_SUMMARY_PROMPT |
 | **permanentPrompt**    | string        | Always-applied instructions                    | DEFAULT_PERMANENT_PROMPT     |
 | **chunkingEnabled**    | boolean       | Enable chunk processing                        | true                         |
-| **chunkSize**          | number        | Characters per chunk                           | 12000                        |
+| **chunkSize**          | number        | Characters per chunk                           | 20000                        |
 | **chunkThreshold**     | number        | Minimum chars to trigger chunking              | 20000                        |
 | **useEmoji**           | boolean       | Add emotional emojis to dialogue               | false                        |
 | **fontSize**           | number        | Enhanced content font size %                   | 100                          |

@@ -10,6 +10,7 @@ import { FanfictionHandler } from "./website-handlers/fanfiction-handler.js";
 import { FanfictionMobileHandler } from "./website-handlers/fanfiction-mobile-handler.js";
 import { AO3Handler } from "./website-handlers/ao3-handler.js";
 import { WebNovelHandler } from "./website-handlers/webnovel-handler.js";
+import { ScribbleHubHandler } from "./website-handlers/scribblehub-handler.js";
 
 /**
  * Registry of all handler classes
@@ -21,6 +22,7 @@ const HANDLER_CLASSES = [
 	FanfictionMobileHandler,
 	AO3Handler,
 	WebNovelHandler,
+	ScribbleHubHandler,
 ];
 
 /**
@@ -83,17 +85,20 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 	if (shelfMeta && shelfMeta.id) {
 		const shelfId = shelfMeta.id.toUpperCase();
 		const expandedDomains = expandWildcards(domains);
+		const isPrimary = shelfMeta.isPrimary !== false; // Default to true if not specified
 
 		if (!SHELF_REGISTRY[shelfId]) {
-			// Create new shelf entry
+			// Create new shelf entry - use all metadata from primary handler
 			SHELF_REGISTRY[shelfId] = {
 				id: shelfMeta.id,
-				name: shelfMeta.name,
-				icon: shelfMeta.icon,
-				color: shelfMeta.color,
+				name: shelfMeta.name || shelfMeta.id,
+				icon: shelfMeta.icon || "📖",
+				emoji: shelfMeta.emoji || "📖",
+				color: shelfMeta.color || "#666",
 				domains: expandedDomains,
 				novelIdPattern: shelfMeta.novelIdPattern,
 				primaryDomain: shelfMeta.primaryDomain,
+				handlerType: HandlerClass.HANDLER_TYPE || "chapter_embedded",
 			};
 		} else {
 			// Merge domains into existing shelf (for mobile/desktop variants)
@@ -103,6 +108,20 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 					...expandedDomains,
 				]),
 			];
+
+			// If this is the primary handler, update display metadata
+			if (isPrimary && shelfMeta.name) {
+				SHELF_REGISTRY[shelfId].name = shelfMeta.name;
+				SHELF_REGISTRY[shelfId].icon =
+					shelfMeta.icon || SHELF_REGISTRY[shelfId].icon;
+				SHELF_REGISTRY[shelfId].emoji =
+					shelfMeta.emoji || SHELF_REGISTRY[shelfId].emoji;
+				SHELF_REGISTRY[shelfId].color =
+					shelfMeta.color || SHELF_REGISTRY[shelfId].color;
+				SHELF_REGISTRY[shelfId].primaryDomain =
+					shelfMeta.primaryDomain ||
+					SHELF_REGISTRY[shelfId].primaryDomain;
+			}
 		}
 	}
 });
@@ -141,6 +160,9 @@ export const FANFICTION_DOMAINS = expandWildcards(
 );
 export const AO3_DOMAINS = expandWildcards(DOMAIN_REGISTRY.AO3 || []);
 export const WEBNOVEL_DOMAINS = expandWildcards(DOMAIN_REGISTRY.WEBNOVEL || []);
+export const SCRIBBLEHUB_DOMAINS = expandWildcards(
+	DOMAIN_REGISTRY.SCRIBBLEHUB || []
+);
 
 /**
  * Checks if a hostname matches any supported domain

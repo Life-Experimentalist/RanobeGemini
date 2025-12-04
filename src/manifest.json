@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.0.0",
+	"version": "3.1.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -27,8 +27,14 @@
 		"storage",
 		"tabs",
 		"notifications",
-		"contextMenus"
+		"contextMenus",
+		"alarms"
 	],
+	"sidebar_action": {
+		"default_icon": "icons/logo-light-48.png",
+		"default_title": "Ranobe Gemini Library",
+		"default_panel": "library/library.html?sidebar=true"
+	},
 	"action": {
 		"default_icon": {
 			"16": "icons/logo-light-16.png",
@@ -82,7 +88,6 @@
 		]
 	},
 	"background": {
-		"service_worker": "background/background.js",
 		"scripts": [
 			"background/background.js"
 		],
@@ -97,9 +102,11 @@
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*"
+				"*://*.webnovel.com/*",
+				"*://*.scribblehub.com/*"
 			],
 			"js": [
+				"lib/browser-polyfill.min.js",
 				"content/content.js"
 			],
 			"css": [
@@ -109,6 +116,29 @@
 			"run_at": "document_idle"
 		}
 	],
+	"commands": {
+		"open-library": {
+			"suggested_key": {
+				"default": "Ctrl+Alt+N",
+				"mac": "Command+Alt+N"
+			},
+			"description": "Open the Novel Library"
+		},
+		"enhance-page": {
+			"suggested_key": {
+				"default": "Ctrl+Alt+E",
+				"mac": "Command+Alt+E"
+			},
+			"description": "Enhance current page"
+		},
+		"summarize-page": {
+			"suggested_key": {
+				"default": "Ctrl+Alt+S",
+				"mac": "Command+Alt+S"
+			},
+			"description": "Generate summary for current page"
+		}
+	},
 	"web_accessible_resources": [
 		{
 			"resources": [
@@ -130,7 +160,8 @@
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*"
+				"*://*.webnovel.com/*",
+				"*://*.scribblehub.com/*"
 			]
 		}
 	]
