@@ -1,4 +1,5 @@
 // Background script for Ranobe Gemini
+import { debugLog, debugError } from "../utils/logger.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -27,7 +28,20 @@ if (typeof browser === "undefined") {
 			DEFAULT_SHORT_SUMMARY_PROMPT,
 		} = constantsModule;
 
-		console.log("Ranobe Gemini: Background script loaded");
+		// Shared chunking utilities used by both background and content scripts
+		let splitContentForProcessing = null;
+		try {
+			const chunkingModule = await import(
+				api.runtime.getURL("utils/chunking.js")
+			);
+			splitContentForProcessing =
+				chunkingModule.splitContentForProcessing ||
+				chunkingModule.default?.splitContentForProcessing;
+		} catch (error) {
+			debugError("Error loading chunking utils:", error);
+		}
+
+		debugLog("Ranobe Gemini: Background script loaded");
 
 		// ============================================================
 		// CROSS-BROWSER KEEP-ALIVE MECHANISM (MV3)
@@ -38,6 +52,10 @@ if (typeof browser === "undefined") {
 
 		const KEEP_ALIVE_ALARM_NAME = "ranobe-gemini-keep-alive";
 		const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES = 0.5; // 30 seconds
+		const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
+		const DEFAULT_BACKUP_RETENTION = 3;
+		const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
+		const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
 		// Detect browser type
 		const isFirefox =
@@ -87,14 +105,14 @@ if (typeof browser === "undefined") {
 					periodInMinutes: intervalMinutes,
 				});
 
-				console.log(
+				debugLog(
 					`[Keep-Alive] Alarm set with interval: ${intervalMinutes} minutes (${
 						isFirefox ? "Firefox" : "Chrome"
 					})`
 				);
 				return true;
 			} catch (error) {
-				console.error("Error setting up keep-alive alarm:", error);
+				debugError("Error setting up keep-alive alarm:", error);
 				return false;
 			}
 		}
@@ -106,8 +124,12 @@ if (typeof browser === "undefined") {
 			alarmApi.onAlarm.addListener((alarm) => {
 				if (alarm.name === KEEP_ALIVE_ALARM_NAME) {
 					// Simple heartbeat - just log to keep the background script alive
-					console.log(
+					debugLog(
 						`[Keep-Alive] Background script heartbeat at ${new Date().toISOString()}`
+					);
+				} else if (alarm.name === AUTO_BACKUP_ALARM_NAME) {
+					performAutoBackup().catch((err) =>
+						debugError("Auto-backup failed:", err)
 					);
 				}
 			});
@@ -116,15 +138,25 @@ if (typeof browser === "undefined") {
 		// Initialize the keep-alive system
 		setupKeepAliveAlarm();
 
+		// Port-based keep-alive for MV3: content scripts open a long-lived port and ping periodically.
+		browser.runtime.onConnect.addListener((port) => {
+			if (port.name !== KEEP_ALIVE_PORT_NAME) return;
+			port.onMessage.addListener((msg) => {
+				if (msg?.type === "ping") {
+					port.postMessage({ type: "pong", ts: Date.now() });
+				}
+			});
+		});
+
 		// Service worker events (Chrome only - Firefox uses event pages)
 		if (isChrome && typeof self !== "undefined" && self.addEventListener) {
 			self.addEventListener("install", () => {
-				console.log("Service worker installed");
+				debugLog("Service worker installed");
 				self.skipWaiting?.();
 			});
 
 			self.addEventListener("activate", (event) => {
-				console.log("Service worker activated");
+				debugLog("Service worker activated");
 				event.waitUntil(self.clients?.claim?.());
 				setupKeepAliveAlarm();
 			});
@@ -133,12 +165,12 @@ if (typeof browser === "undefined") {
 		// Firefox event page: use runtime.onStartup and runtime.onInstalled
 		if (isFirefox) {
 			browser.runtime.onStartup?.addListener(() => {
-				console.log("Firefox: Extension started");
+				debugLog("Firefox: Extension started");
 				setupKeepAliveAlarm();
 			});
 
 			browser.runtime.onInstalled?.addListener(() => {
-				console.log("Firefox: Extension installed/updated");
+				debugLog("Firefox: Extension installed/updated");
 				setupKeepAliveAlarm();
 			});
 		}
@@ -146,6 +178,126 @@ if (typeof browser === "undefined") {
 		// ============================================================
 		// END KEEP-ALIVE MECHANISM
 		// ============================================================
+
+		// ============================================================
+		// BACKUP UTILITIES
+		// ============================================================
+		async function createBackupFile({
+			folder = DEFAULT_BACKUP_FOLDER,
+			saveAs = false,
+			retention = DEFAULT_BACKUP_RETENTION,
+		}) {
+			const downloadsApi = browser.downloads || chrome?.downloads;
+			if (!downloadsApi) {
+				throw new Error("Downloads API not available");
+			}
+
+			const { novelLibrary } = await import(
+				browser.runtime.getURL("utils/novel-library.js")
+			);
+
+			const data = await novelLibrary.exportLibrary();
+			const timestamp = new Date()
+				.toISOString()
+				.replace(/[:T]/g, "-")
+				.replace(/\..+/, "");
+			const filenameOnly = `rg-backup-${timestamp}.json`;
+			const filename = folder
+				? `${folder}/${filenameOnly}`
+				: filenameOnly;
+
+			const blob = new Blob([JSON.stringify(data, null, 2)], {
+				type: "application/json",
+			});
+			const url = URL.createObjectURL(blob);
+
+			const downloadId = await downloadsApi.download({
+				url,
+				filename,
+				saveAs,
+			});
+
+			// Clean up object URL after a short delay
+			setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+			// Update history and persist
+			const stored = await browser.storage.local.get("backupHistory");
+			const history = [
+				{
+					filename,
+					createdAt: Date.now(),
+					exportedAt: data.exportedAt || Date.now(),
+					downloadId,
+				},
+				...(stored.backupHistory || []),
+			].slice(0, retention || DEFAULT_BACKUP_RETENTION);
+
+			await browser.storage.local.set({
+				backupHistory: history,
+				lastBackupAt: Date.now(),
+				backupFolder: folder,
+			});
+
+			return { downloadId, filename, history };
+		}
+
+		async function performAutoBackup() {
+			const prefs = await browser.storage.local.get([
+				"autoBackupEnabled",
+				"backupFolder",
+				"backupRetention",
+			]);
+
+			if (!prefs.autoBackupEnabled) {
+				return { success: false, skipped: true, reason: "disabled" };
+			}
+
+			const retention = prefs.backupRetention || DEFAULT_BACKUP_RETENTION;
+			const folder = prefs.backupFolder || DEFAULT_BACKUP_FOLDER;
+
+			try {
+				const result = await createBackupFile({
+					folder,
+					saveAs: false,
+					retention,
+				});
+				debugLog("Auto-backup created:", result.filename);
+				return { success: true, ...result };
+			} catch (error) {
+				debugError("Auto-backup failed:", error);
+				return { success: false, error: error.message };
+			}
+		}
+
+		async function scheduleAutoBackup() {
+			const prefs = await browser.storage.local.get([
+				"autoBackupEnabled",
+				"backupIntervalDays",
+			]);
+			const enabled = prefs.autoBackupEnabled || false;
+			const intervalDays = prefs.backupIntervalDays || 1;
+
+			if (!browser.alarms) return false;
+
+			// Clear existing alarm
+			try {
+				await browser.alarms.clear(AUTO_BACKUP_ALARM_NAME);
+			} catch (e) {
+				// ignore
+			}
+
+			if (!enabled) return false;
+
+			await browser.alarms.create(AUTO_BACKUP_ALARM_NAME, {
+				periodInMinutes: Math.max(60 * 24 * intervalDays, 60),
+			});
+			return true;
+		}
+
+		// Kick off scheduling on startup
+		scheduleAutoBackup().catch((err) =>
+			console.warn("Auto-backup schedule setup failed:", err?.message)
+		);
 
 		// Global configuration
 		let currentConfig = null;
@@ -182,7 +334,7 @@ if (typeof browser === "undefined") {
 					fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 				};
 			} catch (error) {
-				console.error("Error loading configuration:", error);
+				debugError("Error loading configuration:", error);
 				return {
 					apiKey: "",
 					backupApiKeys: [],
@@ -267,7 +419,7 @@ if (typeof browser === "undefined") {
 
 			while (attempts < maxAttempts) {
 				const apiKey = currentKeyInfo.key;
-				console.log(
+				debugLog(
 					`Attempting API call with key ${currentKeyInfo.index + 1}/${
 						currentKeyInfo.total
 					}`
@@ -295,7 +447,7 @@ if (typeof browser === "undefined") {
 							? parseInt(retryAfter) * 1000
 							: 60000;
 
-						console.log(
+						debugLog(
 							`Rate limit hit on key ${
 								currentKeyInfo.index + 1
 							}. Will try next key.`
@@ -335,7 +487,7 @@ if (typeof browser === "undefined") {
 					};
 				} catch (fetchError) {
 					// Network error or other fetch failure
-					console.error(
+					debugError(
 						`API call failed with key ${currentKeyInfo.index + 1}:`,
 						fetchError
 					);
@@ -390,7 +542,7 @@ if (typeof browser === "undefined") {
 		// Handle messages from content script
 		browser.runtime.onMessage.addListener(
 			(message, sender, sendResponse) => {
-				console.log("Background received message:", message);
+				debugLog("Background received message:", message);
 
 				if (message.action === "ping") {
 					sendResponse({
@@ -400,9 +552,63 @@ if (typeof browser === "undefined") {
 					return true;
 				}
 
+				if (message.action === "createLibraryBackup") {
+					createBackupFile({
+						folder: message.folder,
+						saveAs: message.saveAs === true,
+						retention:
+							message.retention || DEFAULT_BACKUP_RETENTION,
+					})
+						.then((result) =>
+							sendResponse({ success: true, ...result })
+						)
+						.catch((error) =>
+							sendResponse({
+								success: false,
+								error: error.message,
+							})
+						);
+					return true;
+				}
+
+				if (message.action === "restoreLibraryBackup") {
+					(async () => {
+						try {
+							const { novelLibrary } = await import(
+								browser.runtime.getURL("utils/novel-library.js")
+							);
+							const result = await novelLibrary.importLibrary(
+								message.data,
+								message.merge !== false
+							);
+							sendResponse({ success: true, ...result });
+						} catch (error) {
+							sendResponse({
+								success: false,
+								error: error.message,
+							});
+						}
+					})();
+					return true;
+				}
+
+				if (message.action === "syncAutoBackups") {
+					scheduleAutoBackup()
+						.then((scheduled) =>
+							sendResponse({ success: true, scheduled })
+						)
+						.catch((error) =>
+							sendResponse({
+								success: false,
+								error: error.message,
+							})
+						);
+					return true;
+				}
+
 				// Handle cancel enhancement request
 				if (message.action === "cancelEnhancement") {
-					console.log("Enhancement cancellation requested");
+					debugLog("Enhancement cancellation requested");
 					// Set a flag that can be checked during chunk processing
 					isCancellationRequested = true;
 					sendResponse({
@@ -422,7 +628,7 @@ if (typeof browser === "undefined") {
 							});
 						})
 						.catch((error) => {
-							console.error("Error getting model info:", error);
+							debugError("Error getting model info:", error);
 							sendResponse({
 								success: false,
 								error:
@@ -438,12 +644,12 @@ if (typeof browser === "undefined") {
 
 				if (message.action === "processWithGemini") {
 					// DEBUG: Log incoming message content
-					console.log(
+					debugLog(
 						`[processWithGemini] Received message. Content length: ${
 							message.content?.length || 0
 						}`
 					);
-					console.log(
+					debugLog(
 						`[processWithGemini] Content preview (first 200 chars): "${message.content?.substring(
 							0,
 							200
@@ -461,7 +667,7 @@ if (typeof browser === "undefined") {
 							].filter((k) => k && k.trim());
 
 							if (allKeys.length === 0) {
-								console.error(
+								debugError(
 									"[processWithGemini] No API key found. Opening popup for configuration."
 								);
 								// Open the popup for user to add API key
@@ -500,7 +706,7 @@ if (typeof browser === "undefined") {
 								message.content &&
 								message.content.length > chunkSize
 							) {
-								console.log(
+								debugLog(
 									`Content length ${message.content.length} exceeds chunk size ${chunkSize}, using chunked processing`
 								);
 								processContentInChunks(
@@ -517,7 +723,7 @@ if (typeof browser === "undefined") {
 										});
 									})
 									.catch((error) => {
-										console.error(
+										debugError(
 											"Error processing with Gemini in chunks:",
 											error
 										);
@@ -530,7 +736,7 @@ if (typeof browser === "undefined") {
 									});
 							} else {
 								// For shorter content, process as a single piece
-								console.log(
+								debugLog(
 									`Content length ${
 										message.content?.length || 0
 									} is under chunk size ${chunkSize}, processing as single piece`
@@ -551,7 +757,7 @@ if (typeof browser === "undefined") {
 										});
 									})
 									.catch((error) => {
-										console.error(
+										debugError(
 											"Error processing with Gemini:",
 											error
 										);
@@ -565,7 +771,7 @@ if (typeof browser === "undefined") {
 							}
 						})
 						.catch((error) => {
-							console.error("Error loading config:", error);
+							debugError("Error loading config:", error);
 							sendResponse({
 								success: false,
 								error: "Failed to load configuration",
@@ -576,7 +782,7 @@ if (typeof browser === "undefined") {
 
 				// Handler for resuming chunk processing after a rate limit pause
 				if (message.action === "resumeProcessing") {
-					console.log(
+					debugLog(
 						"Resuming processing from chunk",
 						message.startChunkIndex
 					);
@@ -604,7 +810,7 @@ if (typeof browser === "undefined") {
 								try {
 									const chunkIndex =
 										message.startChunkIndex + i;
-									console.log(
+									debugLog(
 										`Resuming chunk ${chunkIndex + 1}/${
 											message.totalChunks
 										}`
@@ -665,14 +871,14 @@ if (typeof browser === "undefined") {
 													failedChunks.length === 0,
 											})
 											.catch((error) =>
-												console.error(
+												debugError(
 													"Error sending resumed chunk result to tab:",
 													error
 												)
 											);
 									}
 								} catch (error) {
-									console.error(
+									debugError(
 										`Error processing resumed chunk:`,
 										error
 									);
@@ -695,7 +901,7 @@ if (typeof browser === "undefined") {
 											error.message.includes("429"));
 
 									if (isRateLimitError) {
-										console.log(
+										debugLog(
 											"Rate limit detected during resume. Pausing processing."
 										);
 
@@ -719,7 +925,7 @@ if (typeof browser === "undefined") {
 													isResumed: true,
 												})
 												.catch((error) =>
-													console.error(
+													debugError(
 														"Error sending rate limit notification during resume:",
 														error
 													)
@@ -742,7 +948,7 @@ if (typeof browser === "undefined") {
 													isResumed: true,
 												})
 												.catch((error) =>
-													console.error(
+													debugError(
 														"Error sending chunk error notification during resume:",
 														error
 													)
@@ -765,7 +971,7 @@ if (typeof browser === "undefined") {
 										),
 									})
 									.catch((error) =>
-										console.error(
+										debugError(
 											"Error sending resume completion notification:",
 											error
 										)
@@ -778,7 +984,7 @@ if (typeof browser === "undefined") {
 								failedChunks: failedChunks.length,
 							});
 						} catch (error) {
-							console.error("Error in resume processing:", error);
+							debugError("Error in resume processing:", error);
 							sendResponse({
 								success: false,
 								error:
@@ -793,7 +999,7 @@ if (typeof browser === "undefined") {
 
 				// Handler for re-enhancing a single chunk
 				if (message.action === "reenhanceChunk") {
-					console.log(`Re-enhancing chunk ${message.chunkIndex}`);
+					debugLog(`Re-enhancing chunk ${message.chunkIndex}`);
 
 					(async () => {
 						try {
@@ -838,7 +1044,7 @@ if (typeof browser === "undefined") {
 								},
 							});
 						} catch (error) {
-							console.error(
+							debugError(
 								`Error re-enhancing chunk ${message.chunkIndex}:`,
 								error
 							);
@@ -866,10 +1072,7 @@ if (typeof browser === "undefined") {
 							sendResponse({ success: true, summary: summary });
 						})
 						.catch((error) => {
-							console.error(
-								"Error summarizing with Gemini:",
-								error
-							);
+							debugError("Error summarizing with Gemini:", error);
 							sendResponse({
 								success: false,
 								error:
@@ -893,7 +1096,7 @@ if (typeof browser === "undefined") {
 							sendResponse({ success: true, summary: summary });
 						})
 						.catch((error) => {
-							console.error(
+							debugError(
 								"Error creating short summary with Gemini:",
 								error
 							);
@@ -920,7 +1123,7 @@ if (typeof browser === "undefined") {
 							});
 						})
 						.catch((error) => {
-							console.error("Error combining summaries:", error);
+							debugError("Error combining summaries:", error);
 							sendResponse({
 								success: false,
 								error:
@@ -941,7 +1144,7 @@ if (typeof browser === "undefined") {
 							height: 550,
 						})
 						.catch((error) => {
-							console.error("Error opening popup:", error);
+							debugError("Error opening popup:", error);
 						});
 					// Send response
 					sendResponse({ success: true });
@@ -990,7 +1193,7 @@ if (typeof browser === "undefined") {
 					fontSize,
 				};
 			} catch (error) {
-				console.error("Error determining model info:", error);
+				debugError("Error determining model info:", error);
 				// Return safe defaults
 				return {
 					modelId: "unknown",
@@ -1001,232 +1204,6 @@ if (typeof browser === "undefined") {
 			}
 		}
 
-		// Function to split content at natural paragraph boundaries
-		function splitContentAtNaturalBoundaries(content, maxChunkSize) {
-			// Start by trying to split at paragraph tags
-			const paragraphs = content.split(
-				/<\/(p|div|section|article|header|h[1-6])>\s*(?=<)/i
-			);
-
-			let chunks = [];
-			let currentChunk = "";
-
-			for (let i = 0; i < paragraphs.length; i++) {
-				const paragraph = paragraphs[i];
-
-				// Skip empty paragraphs
-				if (!paragraph.trim()) continue;
-
-				// If adding this paragraph would exceed the chunk size and we already have content,
-				// finalize the current chunk and start a new one
-				if (
-					currentChunk.length + paragraph.length > maxChunkSize &&
-					currentChunk.length > 0
-				) {
-					chunks.push(currentChunk);
-					currentChunk = paragraph;
-				} else {
-					// Otherwise, add this paragraph to the current chunk
-					currentChunk += paragraph;
-				}
-
-				// If this is not the last paragraph, add the closing tag back
-				if (i < paragraphs.length - 1) {
-					currentChunk += "</p>";
-				}
-			}
-
-			// Add the last chunk if it has content
-			if (currentChunk.length > 0) {
-				chunks.push(currentChunk);
-			}
-
-			// If we couldn't make multiple chunks with paragraph boundaries, try sentence boundaries
-			if (chunks.length <= 1 && content.length > maxChunkSize) {
-				chunks = [];
-				currentChunk = "";
-
-				// Split by sentences (roughly)
-				const sentences = content.split(/(?<=[.!?])\s+/);
-
-				for (const sentence of sentences) {
-					// If adding this sentence would exceed the chunk size and we already have content,
-					// finalize the current chunk and start a new one
-					if (
-						currentChunk.length + sentence.length > maxChunkSize &&
-						currentChunk.length > 0
-					) {
-						chunks.push(currentChunk);
-						currentChunk = sentence;
-					} else {
-						// Otherwise, add this sentence to the current chunk
-						if (currentChunk.length > 0) {
-							currentChunk += " ";
-						}
-						currentChunk += sentence;
-					}
-				}
-
-				// Add the last chunk if it has content
-				if (currentChunk.length > 0) {
-					chunks.push(currentChunk);
-				}
-			}
-
-			console.log(
-				`Split content into ${chunks.length} chunks at natural boundaries`
-			);
-			return chunks;
-		}
-
-		// Function to split content for processing large chapters
-		function splitContentForProcessing(content, maxChunkSize = 20000) {
-			console.log(
-				`[Chunking] Starting splitContentForProcessing with maxChunkSize=${maxChunkSize}`
-			);
-			console.log(
-				`[Chunking] Content length: ${content?.length || 0} chars`
-			);
-
-			// Validate input
-			if (!content || typeof content !== "string") {
-				console.error("[Chunking] Invalid content provided");
-				return [content || ""];
-			}
-
-			// If content is already small enough, return as is
-			if (content.length <= maxChunkSize) {
-				console.log(
-					"[Chunking] Content is small enough, no splitting needed"
-				);
-				return [content];
-			}
-
-			let chunks = [];
-			let splitParts = [];
-
-			// Try multiple splitting strategies in order of preference
-			// Strategy 1: Split on double newlines (paragraph breaks)
-			splitParts = content.split(/\n\s*\n/);
-			console.log(
-				`[Chunking] Strategy 1 (double newlines): ${splitParts.length} parts`
-			);
-
-			// Strategy 2: If no double newlines, try single newlines
-			if (splitParts.length <= 1) {
-				splitParts = content.split(/\n/);
-				console.log(
-					`[Chunking] Strategy 2 (single newlines): ${splitParts.length} parts`
-				);
-			}
-
-			// Strategy 3: If still no luck, try splitting on sentence endings
-			// This handles AO3's plain text which has no line breaks
-			if (splitParts.length <= 1) {
-				// Split on sentence endings (.!?) followed by space and capital letter
-				splitParts = content.split(/(?<=[.!?])\s+(?=[A-Z])/);
-				console.log(
-					`[Chunking] Strategy 3 (sentence boundaries): ${splitParts.length} parts`
-				);
-			}
-
-			// Strategy 4: If still just one part, split on any sentence ending
-			if (splitParts.length <= 1) {
-				splitParts = content.split(/(?<=[.!?])\s+/);
-				console.log(
-					`[Chunking] Strategy 4 (any sentence ending): ${splitParts.length} parts`
-				);
-			}
-
-			// Build chunks from split parts
-			let currentChunk = "";
-
-			for (let i = 0; i < splitParts.length; i++) {
-				const part = splitParts[i];
-				if (!part) continue;
-
-				const separator = currentChunk ? " " : "";
-
-				// If adding this part would exceed the limit, finalize current chunk
-				if (
-					currentChunk.length + separator.length + part.length >
-						maxChunkSize &&
-					currentChunk.length > 0
-				) {
-					chunks.push(currentChunk.trim());
-					currentChunk = part;
-				} else {
-					currentChunk += separator + part;
-				}
-			}
-
-			// Add the final chunk
-			if (currentChunk.trim()) {
-				chunks.push(currentChunk.trim());
-			}
-
-			console.log(
-				`[Chunking] After part-based splitting: ${chunks.length} chunks`
-			);
-
-			// If we have chunks that are still too big, force split them
-			const finalChunks = [];
-			for (const chunk of chunks) {
-				if (chunk.length <= maxChunkSize) {
-					finalChunks.push(chunk);
-				} else {
-					// Force split by words
-					console.log(
-						`[Chunking] Chunk too large (${chunk.length} chars), force splitting by words`
-					);
-					const words = chunk.split(/\s+/);
-					let subChunk = "";
-
-					for (const word of words) {
-						if (
-							subChunk.length + word.length + 1 > maxChunkSize &&
-							subChunk.length > 0
-						) {
-							finalChunks.push(subChunk.trim());
-							subChunk = word;
-						} else {
-							subChunk += (subChunk ? " " : "") + word;
-						}
-					}
-
-					if (subChunk.trim()) {
-						finalChunks.push(subChunk.trim());
-					}
-				}
-			}
-
-			// Filter out any empty chunks
-			const validChunks = finalChunks.filter(
-				(c) => c && c.trim().length > 0
-			);
-
-			console.log(
-				`[Chunking] Final result: ${validChunks.length} chunks`
-			);
-			console.log(
-				`[Chunking] Chunk sizes: ${validChunks
-					.map((c, i) => `[${i}]=${c.length}`)
-					.join(", ")}`
-			);
-
-			// Log first 100 chars of each chunk for debugging
-			validChunks.forEach((chunk, idx) => {
-				console.log(
-					`[Chunking] Chunk ${idx} preview: "${chunk.substring(
-						0,
-						100
-					)}..."`
-				);
-			});
-
-			return validChunks.length > 0 ? validChunks : [content];
-		}
-
 		// Process content in chunks, handling one at a time with rate limit awareness
 		async function processContentInChunks(
 			title,
@@ -1235,19 +1212,19 @@ if (typeof browser === "undefined") {
 			siteSpecificPrompt = "",
 			tabId = null
 		) {
-			console.log(
+			debugLog(
 				`[processContentInChunks] Starting. Content length: ${content?.length}, tabId: ${tabId}`
 			);
 			try {
 				// Load latest config directly from storage for most up-to-date settings
 				currentConfig = await initConfig();
-				console.log(
+				debugLog(
 					`[processContentInChunks] Config loaded. chunkingEnabled: ${currentConfig.chunkingEnabled}, chunkSize: ${currentConfig.chunkSize}`
 				);
 
 				// Check if chunking is enabled
 				if (!currentConfig.chunkingEnabled) {
-					console.log(
+					debugLog(
 						"[processContentInChunks] Chunking is DISABLED. Processing content as a single piece."
 					);
 					return await processContentWithGemini(
@@ -1291,22 +1268,22 @@ if (typeof browser === "undefined") {
 					maxCharsForInput
 				);
 
-				console.log(
+				debugLog(
 					`[processContentInChunks] Model: ${modelInfo.modelId}, Context: ${modelContextSize} tokens`
 				);
-				console.log(
+				debugLog(
 					`[processContentInChunks] Available for input: ~${availableInputTokens} tokens (~${maxCharsForInput} chars)`
 				);
-				console.log(
+				debugLog(
 					`[processContentInChunks] Using effective chunk size: ${effectiveChunkSize} characters`
 				);
-				console.log(
+				debugLog(
 					`[processContentInChunks] Content length: ${content.length}, effectiveChunkSize: ${effectiveChunkSize}`
 				);
 
 				// Only split if content exceeds the chunk size
 				if (content.length <= effectiveChunkSize) {
-					console.log(
+					debugLog(
 						`[processContentInChunks] Content (${content.length}) <= effectiveChunkSize (${effectiveChunkSize}), processing as single piece.`
 					);
 					return await processContentWithGemini(
@@ -1320,28 +1297,46 @@ if (typeof browser === "undefined") {
 					);
 				}
 
-				console.log(
+				debugLog(
 					`[processContentInChunks] Content exceeds chunk size, calling splitContentForProcessing...`
 				);
 				// Split content for processing - improved method with better chunking
-				const contentChunks = splitContentForProcessing(
+				const chunkSplitter = splitContentForProcessing;
+				if (!chunkSplitter) {
+					console.warn(
+						"[processContentInChunks] Chunking utils not available, processing as single piece."
+					);
+					return await processContentWithGemini(
+						title,
+						content,
+						false,
+						null,
+						useEmoji,
+						null,
+						siteSpecificPrompt
+					);
+				}
+				const contentChunks = chunkSplitter(
 					content,
-					effectiveChunkSize
+					effectiveChunkSize,
+					{
+						logPrefix: "[Chunking]",
+					}
 				);
 				const totalChunks = contentChunks.length;
 
-				console.log(
+				debugLog(
 					`[processContentInChunks] Split into ${totalChunks} chunks`
 				);
 
 				// DEBUG: Log each chunk's size and first 100 chars
 				contentChunks.forEach((chunk, idx) => {
-					console.log(
+					debugLog(
 						`[processContentInChunks] Chunk ${idx}: ${
 							chunk?.length || 0
 						} chars, empty=${!chunk || chunk.trim().length === 0}`
 					);
-					console.log(
+					debugLog(
 						`[processContentInChunks] Chunk ${idx} preview: "${chunk?.substring(
 							0,
 							100
@@ -1360,7 +1355,7 @@ if (typeof browser === "undefined") {
 					const error = new Error(
 						"API key is missing. Please set it in the extension popup."
 					);
-					console.error(
+					debugError(
 						"[processContentInChunks] No API key found. Aborting chunk processing."
 					);
 
@@ -1372,7 +1367,7 @@ if (typeof browser === "undefined") {
 								error: error.message,
 							});
 						} catch (msgError) {
-							console.error(
+							debugError(
 								"Error sending API key missing message:",
 								msgError
 							);
@@ -1412,7 +1407,7 @@ if (typeof browser === "undefined") {
 				for (let i = 0; i < totalChunks; i++) {
 					// Check for cancellation before processing each chunk
 					if (isCancellationRequested) {
-						console.log(
+						debugLog(
 							`[processContentInChunks] Cancellation requested at chunk ${
 								i + 1
 							}/${totalChunks}`
@@ -1425,7 +1420,7 @@ if (typeof browser === "undefined") {
 									remainingChunks: totalChunks - i,
 									totalChunks: totalChunks,
 								})
-								.catch(console.error);
+								.catch(debugerror);
 						}
 						break;
 					}
@@ -1436,21 +1431,21 @@ if (typeof browser === "undefined") {
 					while (!processed && retryCount < 3) {
 						// Check cancellation in retry loop too
 						if (isCancellationRequested) {
-							console.log(
+							debugLog(
 								`[processContentInChunks] Cancellation during retry`
 							);
 							break;
 						}
 
 						try {
-							console.log(
+							debugLog(
 								`Processing chunk ${i + 1}/${totalChunks}`
 							);
 
 							// Wait a bit between chunks to avoid rate limiting
 							if (i > 0 || retryCount > 0) {
 								const delay = 1000 * (retryCount + 1); // Increased delay between retries
-								console.log(
+								debugLog(
 									`Waiting ${delay}ms before processing next chunk...`
 								);
 								await new Promise((resolve) =>
@@ -1466,18 +1461,18 @@ if (typeof browser === "undefined") {
 							};
 
 							// DEBUG: Log chunk content before processing
-							console.log(
+							debugLog(
 								`[DEBUG] Chunk ${i} content length: ${
 									chunk?.length || 0
 								}`
 							);
-							console.log(
+							debugLog(
 								`[DEBUG] Chunk ${i} first 200 chars: "${chunk?.substring(
 									0,
 									200
 								)}"`
 							);
-							console.log(
+							debugLog(
 								`[DEBUG] Chunk ${i} is empty: ${
 									!chunk || chunk.trim().length === 0
 								}`
@@ -1485,7 +1480,7 @@ if (typeof browser === "undefined") {
 
 							// CRITICAL: Validate chunk has actual content before sending
 							if (!chunk || chunk.trim().length < 50) {
-								console.error(
+								debugError(
 									`[ERROR] Chunk ${i} is empty or too short (${
 										chunk?.length || 0
 									} chars). Skipping.`
@@ -1542,7 +1537,7 @@ if (typeof browser === "undefined") {
 										),
 									})
 									.catch((error) =>
-										console.error(
+										debugError(
 											"Error sending chunk result to tab:",
 											error
 										)
@@ -1551,7 +1546,7 @@ if (typeof browser === "undefined") {
 
 							processed = true;
 						} catch (error) {
-							console.error(
+							debugError(
 								`Error processing chunk ${
 									i + 1
 								}/${totalChunks} (attempt ${retryCount + 1}):`,
@@ -1574,7 +1569,7 @@ if (typeof browser === "undefined") {
 									waitTime = parseInt(timeMatch[1]) * 1000;
 								}
 
-								console.log(
+								debugLog(
 									`Rate limit detected. Waiting ${
 										waitTime / 1000
 									} seconds before retrying...`
@@ -1593,7 +1588,7 @@ if (typeof browser === "undefined") {
 											retryCount: retryCount,
 										})
 										.catch((error) =>
-											console.error(
+											debugError(
 												"Error sending rate limit notification:",
 												error
 											)
@@ -1615,7 +1610,7 @@ if (typeof browser === "undefined") {
 										);
 									}
 									// Log to keep the service worker active
-									console.log(
+									debugLog(
 										`[Keep-Alive] Rate limit wait: ${Math.round(
 											(waitTime -
 												(Date.now() - startTime)) /
@@ -1630,7 +1625,7 @@ if (typeof browser === "undefined") {
 								// For non-rate limit errors, retry with exponential backoff
 								const backoffTime =
 									Math.pow(2, retryCount) * 3000;
-								console.log(
+								debugLog(
 									`Error processing chunk. Retrying in ${
 										backoffTime / 1000
 									} seconds...`
@@ -1648,7 +1643,7 @@ if (typeof browser === "undefined") {
 											retryCount: retryCount,
 										})
 										.catch((error) =>
-											console.error(
+											debugError(
 												"Error sending chunk error notification:",
 												error
 											)
@@ -1680,7 +1675,7 @@ if (typeof browser === "undefined") {
 											finalFailure: true,
 										})
 										.catch((error) =>
-											console.error(
+											debugError(
 												"Error sending chunk error notification:",
 												error
 											)
@@ -1693,7 +1688,7 @@ if (typeof browser === "undefined") {
 				}
 
 				// Notify that all processing is complete
-				console.log("All chunks processed. Notifying content script.");
+				debugLog("All chunks processed. Notifying content script.");
 
 				// Send complete notification to content script
 				if (tabId) {
@@ -1709,7 +1704,7 @@ if (typeof browser === "undefined") {
 							hasPartialContent: results.length > 0,
 						})
 						.catch((error) =>
-							console.error(
+							debugError(
 								"Error sending completion notification:",
 								error
 							)
@@ -1733,7 +1728,7 @@ if (typeof browser === "undefined") {
 
 				return combinedResult;
 			} catch (error) {
-				console.error("Error in chunk processing:", error);
+				debugError("Error in chunk processing:", error);
 				throw error;
 			}
 		}
@@ -1762,18 +1757,18 @@ if (typeof browser === "undefined") {
 				}
 
 				// Add debugging to verify content is received
-				console.log(
+				debugLog(
 					`[processContentWithGemini] Processing content with length: ${
 						content?.length || 0
 					} characters.`
 				);
-				console.log(
+				debugLog(
 					`[processContentWithGemini] First 200 chars: "${content?.substring(
 						0,
 						200
 					)}..."`
 				);
-				console.log(
+				debugLog(
 					`[processContentWithGemini] Last 200 chars: "...${content?.substring(
 						content.length - 200
 					)}"`
@@ -1790,7 +1785,7 @@ if (typeof browser === "undefined") {
 					}
 				);
 
-				console.log(
+				debugLog(
 					`Preserved ${preservedElements.length} HTML elements (images and game stats boxes)`
 				);
 
@@ -1800,7 +1795,7 @@ if (typeof browser === "undefined") {
 						el.includes('class="game-stats-box"')
 					).length;
 					if (gameBoxCount > 0) {
-						console.log(
+						debugLog(
 							`Found ${gameBoxCount} game stats boxes to preserve`
 						);
 					}
@@ -1822,11 +1817,11 @@ if (typeof browser === "undefined") {
 
 				// Log part information if processing in parts
 				if (isPart && partInfo) {
-					console.log(
+					debugLog(
 						`Processing "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${contentWithPlaceholders.length} characters)`
 					);
 				} else {
-					console.log(
+					debugLog(
 						`Processing "${title}" with Gemini (${contentWithPlaceholders.length} characters)`
 					);
 				}
@@ -1836,13 +1831,13 @@ if (typeof browser === "undefined") {
 					currentConfig.modelEndpoint ||
 					`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
 
-				console.log(`Using model endpoint: ${modelEndpoint}`);
+				debugLog(`Using model endpoint: ${modelEndpoint}`);
 
 				// Get model name for logging
 				const modelName =
 					currentConfig.selectedModelId ||
 					modelEndpoint.split("/").pop().split(":")[0];
-				console.log(`Using model: ${modelName}`);
+				debugLog(`Using model: ${modelName}`);
 
 				// Store model info to pass back to content script
 				const modelInfo = {
@@ -1858,7 +1853,7 @@ if (typeof browser === "undefined") {
 				const shouldUseEmoji =
 					useEmoji !== undefined ? useEmoji : currentConfig.useEmoji;
 				if (shouldUseEmoji) {
-					console.log(
+					debugLog(
 						"Emoji mode is enabled - adding emojis to dialogue"
 					);
 				}
@@ -1989,7 +1984,7 @@ if (typeof browser === "undefined") {
 
 				// Log the request if debug mode is enabled
 				if (currentConfig.debugMode) {
-					console.log("Gemini API Request:", {
+					debugLog("Gemini API Request:", {
 						url: modelEndpoint,
 						requestBody: JSON.parse(JSON.stringify(requestBody)),
 					});
@@ -2005,9 +2000,9 @@ if (typeof browser === "undefined") {
 
 				// Log the response if debug mode is enabled
 				if (currentConfig.debugMode) {
-					console.log("Gemini API Response:", responseData);
+					debugLog("Gemini API Response:", responseData);
 					if (keyUsed > 0) {
-						console.log(`Used backup API key ${keyUsed}`);
+						debugLog(`Used backup API key ${keyUsed}`);
 					}
 				}
 
@@ -2047,7 +2042,7 @@ if (typeof browser === "undefined") {
 						candidate.finishReason === "SAFETY" ||
 						candidate.finishReason === "BLOCKED_REASON_UNSPECIFIED"
 					) {
-						console.error(
+						debugError(
 							"Content blocked by safety filters:",
 							candidate.safetyRatings
 						);
@@ -2062,10 +2057,7 @@ if (typeof browser === "undefined") {
 						!candidate.content.parts ||
 						candidate.content.parts.length === 0
 					) {
-						console.error(
-							"No content parts in response:",
-							candidate
-						);
+						debugError("No content parts in response:", candidate);
 						throw new Error(
 							"Gemini returned no content. This may be due to safety filters or an API issue."
 						);
@@ -2094,7 +2086,7 @@ if (typeof browser === "undefined") {
 					if (generatedText) {
 						// Restore preserved HTML elements if they exist
 						if (preservedElements && preservedElements.length > 0) {
-							console.log(
+							debugLog(
 								`Restoring ${preservedElements.length} HTML elements`
 							);
 							preservedElements.forEach((element, index) => {
@@ -2110,7 +2102,7 @@ if (typeof browser === "undefined") {
 								(el) => el.includes('class="game-stats-box"')
 							).length;
 							if (gameBoxCount > 0) {
-								console.log(
+								debugLog(
 									`Restored ${gameBoxCount} game stats boxes in processed text`
 								);
 							}
@@ -2130,7 +2122,7 @@ if (typeof browser === "undefined") {
 					"No valid response content returned from Gemini API"
 				);
 			} catch (error) {
-				console.error("Gemini API error:", error);
+				debugError("Gemini API error:", error);
 				throw error;
 			}
 		}
@@ -2160,11 +2152,11 @@ if (typeof browser === "undefined") {
 
 				const summaryType = isShort ? "short" : "long";
 				if (isPart && partInfo) {
-					console.log(
+					debugLog(
 						`Creating ${summaryType} summary of "${title}" - Part ${partInfo.current}/${partInfo.total} with Gemini (${content.length} characters)`
 					);
 				} else {
-					console.log(
+					debugLog(
 						`Creating ${summaryType} summary of "${title}" with Gemini (${content.length} characters)`
 					);
 				}
@@ -2235,7 +2227,7 @@ if (typeof browser === "undefined") {
 				};
 
 				if (currentConfig.debugMode) {
-					console.log("Gemini Summarization Request:", {
+					debugLog("Gemini Summarization Request:", {
 						url: modelEndpoint,
 						requestBody: JSON.parse(JSON.stringify(requestBody)),
 					});
@@ -2250,9 +2242,9 @@ if (typeof browser === "undefined") {
 					);
 
 				if (currentConfig.debugMode) {
-					console.log("Gemini Summarization Response:", responseData);
+					debugLog("Gemini Summarization Response:", responseData);
 					if (keyUsed > 0) {
-						console.log(`Used backup API key ${keyUsed}`);
+						debugLog(`Used backup API key ${keyUsed}`);
 					}
 				}
 
@@ -2276,7 +2268,7 @@ if (typeof browser === "undefined") {
 
 				throw new Error("No valid summary returned from Gemini API");
 			} catch (error) {
-				console.error("Gemini API summarization error:", error);
+				debugError("Gemini API summarization error:", error);
 				throw error;
 			}
 		}
@@ -2302,7 +2294,7 @@ if (typeof browser === "undefined") {
 					);
 				}
 
-				console.log(
+				debugLog(
 					`Combining ${partCount} partial summaries for "${title}" with Gemini`
 				);
 
@@ -2365,7 +2357,7 @@ if (typeof browser === "undefined") {
 				};
 
 				if (currentConfig.debugMode) {
-					console.log("Gemini Combination Request:", {
+					debugLog("Gemini Combination Request:", {
 						url: modelEndpoint,
 						requestBody: JSON.parse(JSON.stringify(requestBody)),
 					});
@@ -2380,9 +2372,9 @@ if (typeof browser === "undefined") {
 					);
 
 				if (currentConfig.debugMode) {
-					console.log("Gemini Combination Response:", responseData);
+					debugLog("Gemini Combination Response:", responseData);
 					if (keyUsed > 0) {
-						console.log(`Used backup API key ${keyUsed}`);
+						debugLog(`Used backup API key ${keyUsed}`);
 					}
 				}
 
@@ -2408,7 +2400,7 @@ if (typeof browser === "undefined") {
 					"No valid combined summary returned from Gemini API"
 				);
 			} catch (error) {
-				console.error("Gemini API combination error:", error);
+				debugError("Gemini API combination error:", error);
 				throw error;
 			}
 		}
@@ -2417,16 +2409,16 @@ if (typeof browser === "undefined") {
 		browser.storage.onChanged.addListener(async (changes) => {
 			// Refresh our configuration when storage changes
 			currentConfig = await initConfig();
-			console.log("Configuration updated due to storage changes");
+			debugLog("Configuration updated due to storage changes");
 
 			// Log the key that changed
 			const changedKeys = Object.keys(changes);
-			console.log("Changed settings:", changedKeys);
+			debugLog("Changed settings:", changedKeys);
 		});
 
 		// Setup browser action (icon) click handler
 		browser.action.onClicked.addListener(() => {
-			console.log("Browser action clicked");
+			debugLog("Browser action clicked");
 			// Open the simple popup directly if popup doesn't open
 			browser.windows
 				.create({
@@ -2436,13 +2428,13 @@ if (typeof browser === "undefined") {
 					height: 550,
 				})
 				.catch((error) => {
-					console.error("Error opening popup:", error);
+					debugError("Error opening popup:", error);
 				});
 		});
 
 		// Handle keyboard commands
 		browser.commands.onCommand.addListener(async (command) => {
-			console.log("Command received:", command);
+			debugLog("Command received:", command);
 
 			switch (command) {
 				case "open-library":
@@ -2464,7 +2456,7 @@ if (typeof browser === "undefined") {
 							});
 						}
 					} catch (error) {
-						console.error("Error sending enhance command:", error);
+						debugError("Error sending enhance command:", error);
 					}
 					break;
 
@@ -2481,10 +2473,7 @@ if (typeof browser === "undefined") {
 							});
 						}
 					} catch (error) {
-						console.error(
-							"Error sending summarize command:",
-							error
-						);
+						debugError("Error sending summarize command:", error);
 					}
 					break;
 			}
@@ -2494,10 +2483,10 @@ if (typeof browser === "undefined") {
 		initConfig()
 			.then((config) => {
 				currentConfig = config;
-				console.log("Configuration loaded:", config);
+				debugLog("Configuration loaded:", config);
 			})
 			.catch((error) =>
-				console.error("Config initialization error:", error)
+				debugError("Config initialization error:", error)
 			);
 
 		// Create context menu items for right-click on extension icon
@@ -2527,13 +2516,13 @@ if (typeof browser === "undefined") {
 						contexts: ["action"],
 					});
 
-					console.log("Context menus created successfully");
+					debugLog("Context menus created successfully");
 				})
 				.catch((err) =>
-					console.error("Error creating context menus:", err)
+					debugError("Error creating context menus:", err)
 				);
 		} catch (error) {
-			console.error("Context menus API not available:", error);
+			debugError("Context menus API not available:", error);
 		}
 
 		// Handle context menu clicks
@@ -2553,20 +2542,20 @@ if (typeof browser === "undefined") {
 		});
 
 		// Log the extension startup
-		console.log("Ranobe Gemini extension initialized");
+		debugLog("Ranobe Gemini extension initialized");
 
 		// Fallback heartbeat using setInterval (less reliable in MV3, but works as backup)
 		// Primary keep-alive is handled by chrome.alarms above
 		setInterval(() => {
 			// Only log occasionally to reduce noise
 			if (Math.random() < 0.1) {
-				console.log(
+				debugLog(
 					"[Fallback] Background script heartbeat (setInterval)"
 				);
 			}
 		}, 25000);
 	} catch (error) {
-		console.error("Error importing constants in background script:", error);
+		debugError("Error importing constants in background script:", error);
 
 		// Ensure browser API is available in catch block
 		if (typeof browser === "undefined" && typeof chrome !== "undefined") {
@@ -2581,7 +2570,7 @@ if (typeof browser === "undefined") {
 		const DEFAULT_SUMMARY_PROMPT = `Please provide a concise summary of the following novel chapter content. Focus on the main plot points and character interactions. Keep the summary brief and easy to understand.`;
 		const DEFAULT_SHORT_SUMMARY_PROMPT = `Provide a brief 2-3 paragraph summary focusing on the main events and key character moments.`;
 
-		console.log("Ranobe Gemini: Background script loaded");
+		debugLog("Ranobe Gemini: Background script loaded");
 
 		// Global configuration
 		let currentConfig = null;
@@ -2616,7 +2605,7 @@ if (typeof browser === "undefined") {
 					fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 				};
 			} catch (error) {
-				console.error("Error loading configuration:", error);
+				debugError("Error loading configuration:", error);
 				return {
 					apiKey: "",
 					backupApiKeys: [],
@@ -2741,7 +2730,7 @@ if (typeof browser === "undefined") {
 					fontSize,
 				};
 			} catch (error) {
-				console.error("Error determining model info:", error);
+				debugError("Error determining model info:", error);
 				// Return safe defaults
 				return {
 					modelId: "unknown",

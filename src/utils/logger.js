@@ -11,6 +11,135 @@ export const LogLevel = {
 	NONE: 4,
 };
 
+// Simple debug logger gated by the extension's debug mode setting. This is lightweight so callers
+// can safely replace console.log with debugLog without worrying about availability.
+let debugModeCache = null;
+let lastDebugCheck = 0;
+const DEBUG_CACHE_TTL_MS = 3000;
+const originalConsoleError = console.error.bind(console);
+const originalConsoleLog = console.log.bind(console);
+
+function isPopupDebugEnabledSync() {
+	try {
+		if (typeof window !== "undefined" && window.debugModeCheckbox) {
+			return !!window.debugModeCheckbox.checked;
+		}
+	} catch (err) {
+		// ignore and fall through to async storage read
+	}
+	return null;
+}
+
+async function isDebugEnabledAsync() {
+	try {
+		// Return cached value if it is fresh
+		if (
+			debugModeCache !== null &&
+			Date.now() - lastDebugCheck < DEBUG_CACHE_TTL_MS
+		) {
+			return debugModeCache;
+		}
+
+		if (
+			typeof browser !== "undefined" &&
+			browser.storage &&
+			browser.storage.local
+		) {
+			const { debugMode } = await browser.storage.local.get("debugMode");
+			debugModeCache = !!debugMode;
+			lastDebugCheck = Date.now();
+			return debugModeCache;
+		}
+	} catch (err) {
+		// ignore errors; default to false below
+	}
+	return false;
+}
+
+/**
+ * Debug-only logger. Replace console.log with this to respect the user's debug mode toggle.
+ * Works in popup (sync checkbox) and other extension contexts (async storage lookup).
+ * @param  {...any} args - Arguments to log
+ */
+export function debugLog(...args) {
+	const immediate = isPopupDebugEnabledSync();
+	if (immediate !== null) {
+		if (immediate) originalConsoleLog(...args);
+		return;
+	}
+
+	// Fallback to async storage check for background/content/library contexts
+	isDebugEnabledAsync()
+		.then((enabled) => {
+			if (enabled) {
+				originalConsoleLog(...args);
+			}
+		})
+		.catch(() => {
+			/* swallow logging errors */
+		});
+}
+
+function shouldLogNowSync() {
+	const immediate = isPopupDebugEnabledSync();
+	if (immediate !== null) return immediate;
+	return !!debugModeCache;
+}
+
+/**
+ * Error-only logger that honors the debug toggle. Replace console.error with this when you want
+ * errors hidden unless debug is on.
+ * @param  {...any} args - Arguments to log as errors
+ */
+export function debugError(...args) {
+	if (shouldLogNowSync()) {
+		originalConsoleError(...args);
+		return;
+	}
+
+	// Refresh cache asynchronously so future calls can log promptly when enabled
+	isDebugEnabledAsync().catch(() => {});
+}
+
+// Optional global gating of console.error so that existing error logs also respect debug mode.
+try {
+	if (!console.__rgErrorWrapped) {
+		console.error = (...args) => debugError(...args);
+		console.__rgErrorWrapped = true;
+		// Prime cache asynchronously without forcing output
+		isDebugEnabledAsync().catch(() => {});
+	}
+}
+catch (err) {
+	// ignore
+}
+
+// Gate console.log as well so existing logs are hidden unless debug is enabled.
+try {
+	if (!console.__rgLogWrapped) {
+		console.log = (...args) => {
+			if (shouldLogNowSync()) {
+				originalConsoleLog(...args);
+				return;
+			}
+			isDebugEnabledAsync().catch(() => {});
+		};
+		console.__rgLogWrapped = true;
+		isDebugEnabledAsync().catch(() => {});
+	}
+} catch (err) {
+	// ignore
+}
+
+// Expose globally for non-module scripts that still want a shared debugLog helper.
+try {
+	if (typeof globalThis !== "undefined" && !globalThis.debugLog) {
+		globalThis.debugLog = debugLog;
+	}
+} catch (err) {
+	// ignore
+}
+
 /**
  * Logger class for RanobesGemini extension
  * Provides consistent logging with context, timestamps, and log levels
@@ -241,4 +370,4 @@ export function createLogger(context, minLevel = LogLevel.INFO) {
 }
 
 // Default export for easier importing
-export default { createLogger, LogLevel };
+export default { createLogger, LogLevel, debugLog, debugError };

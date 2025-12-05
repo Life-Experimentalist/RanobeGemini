@@ -2,6 +2,7 @@
  * Base Website Content Handler
  * The abstract class that all website-specific handlers should extend
  */
+import { debugLog, debugError } from "../logger.js";
 
 export class BaseWebsiteHandler {
 	constructor() {
@@ -88,7 +89,7 @@ export class BaseWebsiteHandler {
 		for (const selector of commonSelectors) {
 			const element = document.querySelector(selector);
 			if (element && element.textContent.length > 500) {
-				console.log(
+				debugLog(
 					`Base handler: Found content with selector ${selector}`
 				);
 				return element;
@@ -110,13 +111,13 @@ export class BaseWebsiteHandler {
 		}
 
 		if (bestCandidate && maxLength > 200) {
-			console.log(
+			debugLog(
 				"Base handler: Found content using largest text block method"
 			);
 			return bestCandidate;
 		}
 
-		console.log("Base handler: Could not find content area");
+		debugLog("Base handler: Could not find content area");
 		return null;
 	}
 
@@ -213,7 +214,7 @@ export class BaseWebsiteHandler {
 				return promptsObj[hostname] || "";
 			}
 		} catch (error) {
-			console.error("Error retrieving stored site prompt:", error);
+			debugError("Error retrieving stored site prompt:", error);
 		}
 		return "";
 	}

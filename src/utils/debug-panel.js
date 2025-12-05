@@ -1,5 +1,7 @@
 // Debug panel for RanobesGemini extension
 
+import { debugLog, debugError } from "./logger.js";
+
 /**
  * Creates a debug panel element for displaying trace and debugging information
  *

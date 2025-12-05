@@ -6,12 +6,16 @@
  * Shelf display metadata (name, icon, color, primaryDomain) is inherited from primary.
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class FanfictionMobileHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
 	static SUPPORTED_DOMAINS = [
 		"m.fanfiction.net", // Mobile-specific domain
 	];
+
+	// Ensure mobile handler runs before desktop
+	static PRIORITY = 10;
 
 	// Shelf metadata - SECONDARY handler, shares shelf with desktop FanFiction.net
 	// Only id and novelIdPattern are required for secondary handlers
@@ -176,6 +180,8 @@ When enhancing, improve readability while respecting the author's creative voice
 			status: null,
 			chapterCount: null,
 			mainNovelUrl: this.getNovelPageUrl(),
+			needsDetailPage: true,
+			metadataIncomplete: true,
 		};
 
 		// Try to extract author from mobile page
@@ -195,14 +201,14 @@ When enhancing, improve readability while respecting the author's creative voice
 		// Mobile version uses div#storycontent with class="storycontent nocopy"
 		const contentDiv = document.getElementById("storycontent");
 		if (contentDiv) {
-			console.log("FanFiction Mobile: Found storycontent div");
+			debugLog("FanFiction Mobile: Found storycontent div");
 			return contentDiv;
 		}
 
 		// Fallback: try finding by class
 		const storyContentByClass = document.querySelector(".storycontent");
 		if (storyContentByClass) {
-			console.log("FanFiction Mobile: Found content by class");
+			debugLog("FanFiction Mobile: Found content by class");
 			return storyContentByClass;
 		}
 
@@ -250,7 +256,7 @@ When enhancing, improve readability while respecting the author's creative voice
 	applyEnhancedContent(contentArea, enhancedText) {
 		if (!contentArea || typeof enhancedText !== "string") return 0;
 
-		console.log(
+		debugLog(
 			"FanFiction Mobile applyEnhancedContent: contentArea is",
 			contentArea.id,
 			contentArea.className
@@ -263,7 +269,7 @@ When enhancing, improve readability while respecting the author's creative voice
 
 		if (hasHTMLTags) {
 			// Parse HTML content to extract paragraph text
-			console.log(
+			debugLog(
 				"FanFiction Mobile: Enhanced text contains HTML, parsing..."
 			);
 			const tempDiv = document.createElement("div");
@@ -275,12 +281,12 @@ When enhancing, improve readability while respecting the author's creative voice
 				.map((p) => p.textContent.trim())
 				.filter((text) => text.length > 0);
 
-			console.log(
+			debugLog(
 				`FanFiction Mobile: Extracted ${enhancedParagraphs.length} paragraphs from HTML`
 			);
 		} else {
 			// Plain text - split on double newlines as paragraph boundaries
-			console.log(
+			debugLog(
 				"FanFiction Mobile: Enhanced text is plain text, splitting by newlines..."
 			);
 			enhancedParagraphs = enhancedText
@@ -299,7 +305,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			enhancedParagraphs.length
 		);
 
-		console.log(
+		debugLog(
 			`FanFiction Mobile: Replacing ${replaceCount} existing paragraphs, adding ${
 				enhancedParagraphs.length - replaceCount
 			} new ones`

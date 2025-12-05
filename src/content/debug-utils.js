@@ -1,5 +1,6 @@
 import { extractContent } from "./content.js";
 import { showStatusMessage } from "../utils/ui-utils.js";
+import { debugLog, debugError } from "../utils/logger.js";
 
 // Debug utility function to verify content extraction and API requests
 
@@ -10,9 +11,7 @@ export function debugContentExtraction() {
 		const extractedContent = extractContent();
 
 		if (!extractedContent.found) {
-			console.error(
-				"DEBUG: Content extraction failed - no content found"
-			);
+			debugError("DEBUG: Content extraction failed - no content found");
 			showStatusMessage(
 				"Debug: Content extraction failed - no content found",
 				"error"
@@ -33,7 +32,7 @@ export function debugContentExtraction() {
 		};
 
 		// Log to console
-		console.log("DEBUG CONTENT EXTRACTION:", debugInfo);
+		debugLog("DEBUG CONTENT EXTRACTION:", debugInfo);
 
 		// Create visual debug display
 		const debugDiv = document.createElement("div");
@@ -78,7 +77,7 @@ export function debugContentExtraction() {
 			"info"
 		);
 	} catch (error) {
-		console.error("Debug content extraction error:", error);
+		debugError("Debug content extraction error:", error);
 		showStatusMessage(
 			"Debug: Error during content extraction debugging",
 			"error"

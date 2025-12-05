@@ -3,28 +3,95 @@
  * Manages website-specific content handlers for RanobeGemini extension
  */
 
-import ranobesHandler from "./ranobes-handler.js";
-import fanfictionHandler from "./fanfiction-handler.js";
-import fanfictionMobileHandler from "./fanfiction-mobile-handler.js";
-import ao3Handler from "./ao3-handler.js";
-import webnovelHandler from "./webnovel-handler.js";
-import scribblehubHandler from "./scribblehub-handler.js";
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { HANDLER_MODULES } from "./handler-registry.js";
+import { debugLog, debugError } from "../logger.js";
+
+function matchesHostname(hostname, pattern) {
+	if (!pattern || !hostname) return false;
+	if (pattern.startsWith("*")) {
+		const suffix = pattern.replace(/^\*\.?/, "");
+		return hostname === suffix || hostname.endsWith(`.${suffix}`);
+	}
+	return hostname === pattern || hostname.endsWith(`.${pattern}`);
+}
 
 // Website handler manager
 export class HandlerManager {
 	constructor() {
-		// Register all handlers here
-		// Order matters: more specific handlers (like mobile) should come before generic ones
-		this.handlers = [
-			ranobesHandler,
-			fanfictionMobileHandler, // Check mobile version first
-			fanfictionHandler,
-			ao3Handler,
-			scribblehubHandler,
-			webnovelHandler,
-			// Add more handlers as they are developed
-		];
+		this.handlersPromise = null;
+	}
+
+	async loadHandlers() {
+		if (this.handlersPromise) return this.handlersPromise;
+
+		this.handlersPromise = (async () => {
+			const loadedHandlers = [];
+			for (const modulePath of HANDLER_MODULES) {
+				try {
+					const url = browser.runtime.getURL(
+						`utils/website-handlers/${modulePath}`
+					);
+					const mod = await import(url);
+
+					const candidates = [];
+
+					// Prefer default export if provided
+					if (mod.default) {
+						if (mod.default instanceof BaseWebsiteHandler) {
+							candidates.push(mod.default);
+						} else if (
+							typeof mod.default === "function" &&
+							mod.default.prototype instanceof BaseWebsiteHandler
+						) {
+							candidates.push(new mod.default());
+						}
+					}
+
+					// Fall back to any named exports that extend BaseWebsiteHandler
+					for (const value of Object.values(mod)) {
+						if (!value || value === mod.default) continue;
+						if (value === BaseWebsiteHandler) continue;
+
+						if (value instanceof BaseWebsiteHandler) {
+							candidates.push(value);
+						} else if (
+							typeof value === "function" &&
+							value.prototype instanceof BaseWebsiteHandler
+						) {
+							candidates.push(new value());
+						}
+					}
+
+					// Deduplicate by constructor name to avoid double-loading
+					const uniqueByName = new Map();
+					for (const handler of candidates) {
+						const name = handler?.constructor?.name;
+						if (name && !uniqueByName.has(name)) {
+							uniqueByName.set(name, handler);
+						}
+					}
+
+					loadedHandlers.push(...uniqueByName.values());
+				} catch (importError) {
+					console.warn(
+						`HandlerManager: failed to load ${modulePath}:`,
+						importError
+					);
+				}
+			}
+
+			// Sort by optional PRIORITY (lower number = earlier match)
+			loadedHandlers.sort(
+				(a, b) =>
+					(a?.constructor?.PRIORITY || 100) -
+					(b?.constructor?.PRIORITY || 100)
+			);
+
+			return loadedHandlers;
+		})();
+
+		return this.handlersPromise;
 	}
 
 	/**
@@ -33,56 +100,39 @@ export class HandlerManager {
 	 */
 	async getHandlerForCurrentSite() {
 		const hostname = window.location.hostname;
+		const handlers = await this.loadHandlers();
 
-		try {
-			// Try loading ranobes handler if on a ranobes site
-			if (hostname.includes("ranobes")) {
-				console.log("Loaded ranobes handler");
-				return ranobesHandler;
-			}
-			// Check for mobile fanfiction FIRST (more specific)
-			else if (hostname === "m.fanfiction.net") {
-				console.log("Loaded fanfiction mobile handler");
-				return fanfictionMobileHandler;
-			}
-			// Try loading fanfiction handler if on fanfiction.net (desktop)
-			else if (hostname.includes("fanfiction.net")) {
-				console.log("Loaded fanfiction handler");
-				return fanfictionHandler;
-			}
-			// Try loading AO3 handler if on archiveofourown.org
-			else if (
-				hostname.includes("archiveofourown.org") ||
-				hostname.includes("ao3.org")
-			) {
-				console.log("Loaded AO3 handler");
-				return ao3Handler;
-			}
-			// Try loading ScribbleHub handler
-			else if (hostname.includes("scribblehub.com")) {
-				console.log("Loaded ScribbleHub handler");
-				return scribblehubHandler;
-			}
-			// Try loading WebNovel handler if on webnovel.com
-			else if (
-				hostname.includes("webnovel.com") ||
-				hostname.includes("webnovel.net")
-			) {
-				console.log("Loaded WebNovel handler");
-				return webnovelHandler;
-			}
+		for (const handler of handlers) {
+			try {
+				if (typeof handler?.canHandle === "function") {
+					if (handler.canHandle()) {
+						debugLog(`Loaded handler: ${handler.constructor.name}`);
+						return handler;
+					}
+				}
 
-			// No specific handler found
-			console.log(`No specific handler for hostname: ${hostname}`);
-
-			// Return a generic handler based on the base handler class
-			return new BaseWebsiteHandler();
-		} catch (error) {
-			console.error(`Error loading handler for ${hostname}:`, error);
-			return null;
+				// Fallback: match against SUPPORTED_DOMAINS if provided
+				const domains = handler?.constructor?.SUPPORTED_DOMAINS || [];
+				if (
+					domains.some((domain) => matchesHostname(hostname, domain))
+				) {
+					debugLog(
+						`Loaded handler via SUPPORTED_DOMAINS: ${handler.constructor.name}`
+					);
+					return handler;
+				}
+			} catch (handlerError) {
+				console.warn(
+					"HandlerManager: error evaluating handler",
+					handlerError
+				);
+			}
 		}
+
+		debugLog(`No specific handler for hostname: ${hostname}`);
+		return new BaseWebsiteHandler();
 	}
 }
 
-// Export manager methods
+// Export manager instance
 export default new HandlerManager();

@@ -8,6 +8,7 @@ import {
 	DEFAULT_MODEL_ID,
 	DEFAULT_CHUNK_SIZE,
 } from "../utils/constants.js";
+import { debugLog, debugError } from "../utils/logger.js";
 
 // Default configuration values
 const DEFAULT_CONFIG = {
@@ -33,7 +34,7 @@ async function loadConfig() {
 
 		return config;
 	} catch (error) {
-		console.error("Error loading configuration:", error);
+		debugError("Error loading configuration:", error);
 		return { ...DEFAULT_CONFIG };
 	}
 }
@@ -53,7 +54,7 @@ async function saveConfig(config) {
 		await browser.storage.local.set(cleanConfig);
 		return true;
 	} catch (error) {
-		console.error("Error saving configuration:", error);
+		debugError("Error saving configuration:", error);
 		return false;
 	}
 }

@@ -5,6 +5,7 @@
  * Handler Type: "dedicated_page" - novel metadata only on separate /novels/ pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class RanobesHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -32,12 +33,15 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
 		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html → captures 1206917
 		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html → captures 1206917
+
 		// Read page: /read-1206917.html → captures 1206917
 		// Chapters list: /chapters/1206917/ → captures 1206917
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
 	};
+
+	static PRIORITY = 5;
 
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
@@ -263,19 +267,19 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Look for the main arrticle div (note: it's 'arrticle' not 'article' - ranobes typo)
 		const contentElement = document.querySelector("#arrticle");
 		if (contentElement) {
-			console.log("Ranobes: Found #arrticle content area");
+			debugLog("Ranobes: Found #arrticle content area");
 			return contentElement;
 		}
 
 		// Fallback to .text-chapter
 		const textChapter = document.querySelector(".text-chapter");
 		if (textChapter) {
-			console.log("Ranobes: Found .text-chapter content area");
+			debugLog("Ranobes: Found .text-chapter content area");
 			return textChapter;
 		}
 
 		// Fallback to the base implementation
-		console.log("Ranobes: Falling back to base handler");
+		debugLog("Ranobes: Falling back to base handler");
 		return super.findContentArea();
 	}
 
@@ -410,7 +414,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				}
 			}
 		} catch (error) {
-			console.error("Error getting chapter navigation:", error);
+			debugError("Error getting chapter navigation:", error);
 		}
 
 		// Fallback to default
@@ -422,7 +426,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Look for .text div that wraps the #arrticle
 		const textDiv = document.querySelector(".text");
 		if (textDiv) {
-			console.log("Ranobes: Inserting UI before .text div");
+			debugLog("Ranobes: Inserting UI before .text div");
 			return {
 				element: textDiv,
 				position: "before",
@@ -432,7 +436,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Look for story_tools div - we want to insert before it (after content, before tools)
 		const storyTools = document.querySelector(".story_tools");
 		if (storyTools) {
-			console.log("Ranobes: Inserting UI before .story_tools");
+			debugLog("Ranobes: Inserting UI before .story_tools");
 			return {
 				element: storyTools,
 				position: "before",
@@ -443,7 +447,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// but after the title and possibly other elements
 		const textChapter = document.querySelector(".text-chapter");
 		if (textChapter) {
-			console.log("Ranobes: Inserting UI before .text-chapter");
+			debugLog("Ranobes: Inserting UI before .text-chapter");
 			return {
 				element: textChapter,
 				position: "before",
@@ -451,7 +455,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		}
 
 		// Fallback to default behavior (before article)
-		console.log("Ranobes: Using default UI insertion point");
+		debugLog("Ranobes: Using default UI insertion point");
 		return super.getUIInsertionPoint(contentArea);
 	}
 
@@ -575,6 +579,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			year: null,
 			translator: null,
 			publisher: null,
+			needsDetailPage: false,
+			metadataIncomplete: false,
 		};
 
 		try {
@@ -582,6 +588,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Extract novel title (clean, without chapter info)
 			if (isChapterPage) {
+				metadata.needsDetailPage = true; // Chapter pages do not expose full metadata
 				// Primary: Extract from category link (most reliable)
 				const categoryLink = document.querySelector(
 					".category.grey.ellipses a[rel='up'][href*='/novels/']"
@@ -756,6 +763,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				metadata.mainNovelUrl = window.location.href;
 			}
 
+			// Mark partial metadata when we only saw a chapter page
+			if (isChapterPage && !this.isNovelPage()) {
+				metadata.metadataIncomplete =
+					!metadata.chapterCount ||
+					metadata.genres.length === 0 ||
+					metadata.tags.length === 0;
+			}
+
 			// Extract author - works on both page types
 			// Prioritize actual author links over generic tag_list which may contain site name
 			const authorSelectors = [
@@ -876,10 +891,10 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				}
 			}
 		} catch (error) {
-			console.error("Ranobes: Error extracting metadata:", error);
+			debugError("Ranobes: Error extracting metadata:", error);
 		}
 
-		console.log("Ranobes: Extracted metadata:", metadata);
+		debugLog("Ranobes: Extracted metadata:", metadata);
 		return metadata;
 	}
 }

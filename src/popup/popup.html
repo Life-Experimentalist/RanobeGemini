@@ -182,6 +182,26 @@
 							expressions in text
 						</div>
 					</div>
+
+					<div style="margin-top: 15px">
+						<label style="font-weight: normal">
+							<input type="checkbox" id="formatGameStats" checked />
+							Preserve & restyle RPG / game stat boxes
+						</label>
+						<div class="description">
+							Keeps stat blocks compact and aligned while enhancing content
+						</div>
+					</div>
+
+					<div style="margin-top: 15px">
+						<label style="font-weight: normal">
+							<input type="checkbox" id="centerSceneHeadings" checked />
+							Center scene headings and dividers
+						</label>
+						<div class="description">
+							Centers chapter scene breaks/headings to make them standout a bit
+						</div>
+					</div>
 				</div>
 
 				<!-- <div class="setting">
@@ -326,6 +346,39 @@
 							<span class="stat-value" id="statShelves">0</span>
 							<span class="stat-label">Sites</span>
 						</div>
+					</div>
+				</section>
+
+				<!-- Backups Section -->
+				<section class="library-section backup-section">
+					<div class="section-header">
+						<h4>💾 Library Backups</h4>
+					</div>
+					<div class="backup-actions">
+						<input
+							type="text"
+							id="backupFolder"
+							placeholder="Downloads/RanobeGeminiBackups"
+							title="Folder inside Downloads to save backups"
+							style="flex: 1 1 180px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;"
+						/>
+						<label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #475569;">
+							<input type="checkbox" id="autoBackupToggle" />
+							<span>Auto backup daily (keep last 3)</span>
+						</label>
+						<button id="manualBackupBtn" class="btn btn-primary btn-sm" title="Save backup now">
+							<span class="btn-icon">⬇️</span>
+							<span class="btn-text">Download Backup</span>
+						</button>
+						<button id="restoreBackupBtn" class="btn btn-secondary btn-sm" title="Restore from file">
+							<span class="btn-icon">♻️</span>
+							<span class="btn-text">Restore</span>
+						</button>
+						<input type="file" id="restoreFileInput" accept="application/json" style="display: none;" />
+					</div>
+					<div class="backup-history" id="backupHistory">
+						<strong>Recent backups:</strong>
+						<ul id="backupHistoryList"></ul>
 					</div>
 				</section>
 

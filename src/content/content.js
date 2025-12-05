@@ -1,11 +1,33 @@
+// Lightweight logger bootstrap for content scripts (no top-level imports allowed here)
+let debugLog = console.log.bind(console);
+let debugError = console.error.bind(console);
+(async () => {
+	try {
+		if (typeof browser !== "undefined" && browser.runtime?.getURL) {
+			const url = browser.runtime.getURL("utils/logger.js");
+			const mod = await import(url);
+			debugLog = mod.debugLog || debugLog;
+			debugError = mod.debugError || debugError;
+		}
+	} catch (_err) {
+		// keep console fallbacks
+	}
+})();
+
 // Simplified content script to extract chapter content without relying on imports
-console.log("Ranobe Gemini: Content script loaded");
+
+debugLog("Ranobe Gemini: Content script loaded");
 
 // Note: Import statements need to be modified since content scripts don't support direct ES6 imports
 // We'll need to dynamically load our handler modules
 
 // Initial constants and global state
 let currentHandler = null; // Will store the website-specific handler
+let formattingOptions = {
+	useEmoji: false,
+	formatGameStats: true,
+	centerSceneHeadings: true,
+};
 let hasExtractButton = false;
 let autoExtracted = false;
 var isInitialized = false; // Track if the content script is fully initialized (var to avoid redeclaration)
@@ -13,12 +35,88 @@ let storageManager = null; // Storage manager instance for caching
 let isCachedContent = false; // Track if current page has cached enhanced content
 let currentFontSize = 100; // Font size percentage (default 100%)
 if (window.__RGInitDone) {
-	console.log(
+	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
 	);
 } else {
 	window.__RGInitDone = true;
 	let isBackgroundScriptReady = false; // Track if the background script is ready
+	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
+	let keepAlivePort = null;
+	let keepAliveHeartbeat = null;
+	let debugModeEnabled = false;
+
+	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
+	const __rgOriginalLog = debugLog.bind(console);
+	const __rgOriginalError = debugError.bind(console);
+
+	function applyDebugFlag(enabled) {
+		debugModeEnabled = !!enabled;
+	}
+
+	try {
+		browser.storage.local
+			.get("debugMode")
+			.then((data) => applyDebugFlag(data.debugMode))
+			.catch(() => {});
+		browser.storage.onChanged.addListener((changes, area) => {
+			if (area === "local" && changes.debugMode) {
+				applyDebugFlag(changes.debugMode.newValue);
+			}
+		});
+	} catch (_err) {
+		// ignore storage access errors
+	}
+
+	debugLog = (...args) => {
+		if (debugModeEnabled) __rgOriginalLog(...args);
+	};
+	debugError = (...args) => {
+		if (debugModeEnabled) __rgOriginalError(...args);
+	};
+
+	function startKeepAlivePort() {
+		if (keepAlivePort) return;
+		try {
+			keepAlivePort = browser.runtime.connect({
+				name: KEEP_ALIVE_PORT_NAME,
+			});
+			keepAlivePort.onDisconnect.addListener(() => {
+				keepAlivePort = null;
+				if (keepAliveHeartbeat) {
+					clearInterval(keepAliveHeartbeat);
+					keepAliveHeartbeat = null;
+				}
+			});
+			keepAlivePort.onMessage.addListener((msg) => {
+				if (msg?.type === "pong") {
+					isBackgroundScriptReady = true;
+				}
+			});
+			// Heartbeat every 20s to keep service worker awake
+			keepAliveHeartbeat = setInterval(() => {
+				try {
+					keepAlivePort?.postMessage({
+						type: "ping",
+						ts: Date.now(),
+					});
+				} catch (_err) {
+					// Port may be gone; it will be re-established lazily
+				}
+			}, 20000);
+		} catch (_err) {
+			keepAlivePort = null;
+		}
+	}
+
+	function ensureKeepAlivePort() {
+		if (!keepAlivePort) {
+			startKeepAlivePort();
+		}
+	}
+
+	// Establish keep-alive immediately to reduce first-call failures
+	ensureKeepAlivePort();
 
 	// Device detection for responsive design
 	let isMobileDevice = false;
@@ -65,6 +163,80 @@ if (window.__RGInitDone) {
 		return sanitized;
 	}
 
+	// Preserve selected HTML elements (e.g., images) while allowing content replacement
+	function preserveHtmlElements(html) {
+		if (!html) return { preservedElements: [] };
+
+		const tempDiv = document.createElement("div");
+		tempDiv.innerHTML = html;
+
+		const preservedElements = Array.from(tempDiv.querySelectorAll("img"))
+			.map((el) => el.outerHTML)
+			.filter(Boolean);
+
+		return { preservedElements };
+	}
+
+	// Placeholder preservation for structured stat/game boxes used by some sites
+	function preserveGameStatsBoxes(html) {
+		if (!html || !formattingOptions.formatGameStats) {
+			return { modifiedContent: html || "", preservedBoxes: [] };
+		}
+
+		const temp = document.createElement("div");
+		temp.innerHTML = html;
+
+		const preservedBoxes = [];
+
+		const candidates = temp.querySelectorAll(
+			"pre, .game-stats-box, .stat-block"
+		);
+		candidates.forEach((node) => {
+			const text = node.textContent || "";
+			if (!text || text.length < 20) return;
+
+			// Heuristic: contains multiple colon-separated lines (stats) or table-like spacing
+			const lines = text.split(/\n+/).filter((l) => l.trim().length > 0);
+			const hasStatLines =
+				lines.filter((l) => l.includes(":")).length >= 2;
+			if (!hasStatLines) return;
+
+			// Normalize leading indentation
+			const minIndent = Math.min(
+				...lines
+					.filter((l) => l.trim().length > 0)
+					.map((l) =>
+						l.match(/^\s+/) ? l.match(/^\s+/)[0].length : 0
+					)
+			);
+			const normalized = lines.map((l) => l.slice(minIndent)).join("\n");
+
+			const wrapper = document.createElement("div");
+			wrapper.className = "game-stats-box";
+			wrapper.dataset.uid = `gsb-${preservedBoxes.length}-${Date.now()}`;
+			wrapper.textContent = normalized;
+
+			preservedBoxes.push({ original: node, wrapper });
+			node.replaceWith(wrapper);
+		});
+
+		return { modifiedContent: temp.innerHTML, preservedBoxes };
+	}
+
+	function restoreGameStatsBoxes(html, preservedBoxes = []) {
+		if (!html || preservedBoxes.length === 0) return html || "";
+		const temp = document.createElement("div");
+		temp.innerHTML = html;
+		preservedBoxes.forEach(({ wrapper }) => {
+			const placeholder = temp.querySelector(
+				`.game-stats-box[data-uid="${wrapper.dataset.uid}"]`
+			);
+			if (!placeholder) return;
+			placeholder.replaceWith(wrapper);
+		});
+		return temp.innerHTML;
+	}
+
 	/**
 	 * Sanitizes HTML content while preserving paragraph structure
 	 * Converts <p> tags to proper paragraphs and removes other HTML
@@ -98,7 +270,7 @@ if (window.__RGInitDone) {
 		} else {
 			// No <p> tags - split by double newlines or <br><br>
 			// First normalize <br> tags to newlines
-			let normalized = text.replace(/<br\s*\/?>/gi, "\n");
+			let normalized = text.replace(/<br\s*\/?\?>/gi, "\n");
 			// Remove remaining HTML tags
 			normalized = normalized.replace(/<[^>]*>/g, "");
 			// Split by double newlines
@@ -128,7 +300,7 @@ if (window.__RGInitDone) {
 	function stripHtmlTags(html) {
 		if (!html) return "";
 
-		console.log("[StripTags Final] Input:", html);
+		debugLog("[StripTags Final] Input:", html);
 
 		// Step 0: Remove code block markers first (```html, ```js, etc.)
 		let text = html.replace(
@@ -141,7 +313,7 @@ if (window.__RGInitDone) {
 		// Step 1: Use regex to remove all HTML tags before DOM parsing
 		text = text.replace(/<\/?[^>]+(>|$)/g, "");
 
-		console.log("[StripTags Final] After initial regex:", text);
+		debugLog("[StripTags Final] After initial regex:", text);
 
 		// Step 2: Create a temporary div element to use the browser's HTML parsing
 		const tempDiv = document.createElement("div");
@@ -150,7 +322,7 @@ if (window.__RGInitDone) {
 		// Step 3: Extract text content which automatically removes all HTML tags
 		let textOnly = tempDiv.textContent || tempDiv.innerText || "";
 
-		console.log("[StripTags Final] After textContent:", textOnly);
+		debugLog("[StripTags Final] After textContent:", textOnly);
 
 		// Step 4: Additional regex replacement to catch any potential leftover tags
 		textOnly = textOnly.replace(/<[^>]*>/g, "");
@@ -164,12 +336,12 @@ if (window.__RGInitDone) {
 			.replace(/&#039;/g, "'")
 			.replace(/&nbsp;/g, " ");
 
-		console.log("[StripTags Final] After entity decoding:", textOnly);
+		debugLog("[StripTags Final] After entity decoding:", textOnly);
 
 		// Step 6: Clean up any consecutive whitespace but preserve paragraph breaks
 		textOnly = textOnly.replace(/\s+/g, " ").trim();
 
-		console.log("[StripTags Final] Final output:", textOnly);
+		debugLog("[StripTags Final] Final output:", textOnly);
 
 		return textOnly;
 	}
@@ -180,11 +352,11 @@ if (window.__RGInitDone) {
 			const response = await browser.runtime.sendMessage({
 				action: "ping",
 			});
-			console.log("Background script connection verified:", response);
+			debugLog("Background script connection verified:", response);
 			isBackgroundScriptReady = response && response.success;
 			return isBackgroundScriptReady;
 		} catch (error) {
-			console.error("Background script connection failed:", error);
+			debugError("Background script connection failed:", error);
 			isBackgroundScriptReady = false;
 			return false;
 		}
@@ -204,7 +376,7 @@ if (window.__RGInitDone) {
 					action: "ping",
 				});
 				if (response && response.success) {
-					console.log(
+					debugLog(
 						`Background worker ready (attempt ${
 							i + 1
 						}/${maxRetries})`
@@ -225,7 +397,7 @@ if (window.__RGInitDone) {
 				}
 			}
 		}
-		console.error(
+		debugError(
 			"Background worker failed to wake up after",
 			maxRetries,
 			"attempts"
@@ -248,6 +420,7 @@ if (window.__RGInitDone) {
 		retryDelayMs = 1000
 	) {
 		let lastError = null;
+		ensureKeepAlivePort();
 
 		for (let attempt = 1; attempt <= maxRetries; attempt++) {
 			try {
@@ -278,15 +451,16 @@ if (window.__RGInitDone) {
 					console.warn(
 						`[sendMessageWithRetry] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`
 					);
-					console.log(
+					debugLog(
 						`[sendMessageWithRetry] Waking up background worker before retry...`
 					);
+					ensureKeepAlivePort();
 
 					// Wake up the background worker
 					const workerReady = await wakeUpBackgroundWorker(2, 300);
 
 					if (workerReady) {
-						console.log(
+						debugLog(
 							`[sendMessageWithRetry] Worker woken up, retrying in ${retryDelayMs}ms...`
 						);
 						await new Promise((resolve) =>
@@ -294,7 +468,7 @@ if (window.__RGInitDone) {
 						);
 						continue; // Retry the message
 					} else {
-						console.error(
+						debugError(
 							"[sendMessageWithRetry] Could not wake up background worker"
 						);
 					}
@@ -302,7 +476,7 @@ if (window.__RGInitDone) {
 
 				// If not a disconnection error or last attempt, throw the error
 				if (attempt >= maxRetries) {
-					console.error(
+					debugError(
 						`[sendMessageWithRetry] All ${maxRetries} attempts failed. Last error:`,
 						lastError
 					);
@@ -312,161 +486,6 @@ if (window.__RGInitDone) {
 		}
 
 		throw lastError || new Error("Failed to send message after retries");
-	}
-
-	// Function to identify and protect game stats boxes
-	function preserveGameStatsBoxes(content) {
-		// Replace game stats boxes with placeholders to protect them
-		let preservedBoxes = [];
-
-		// Regex patterns for common game status box formats
-		const patterns = [
-			// Format with multiple status lines:
-			/(\[(?:Status|Attributes|Skills|Stats|Name|Level|HP|MP|SP|Mana|Energy|Class|Strength|Agility|Intelligence|Wisdom|Vitality|Luck|Fame|Title|Achievement)[\s\S]*?\][\s\S]*?(?=\n\n|\n\[|$))/gi,
-
-			// Format with brackets:
-			/(\[[\s\S]*?Name:[\s\S]*?Level:[\s\S]*?\])/gi,
-
-			// Format with asterisks or equals signs as borders:
-			/((?:\*{3,}|={3,})[\s\S]*?(?:Status|Stats|Attributes|Skills)[\s\S]*?(?:\*{3,}|={3,}))/gi,
-
-			// Format with just indentation:
-			/((?:^|\n)[ \t]+Status:[\s\S]*?(?:\n\n|$))/gi,
-		];
-
-		// Check for each pattern
-		let modifiedContent = content;
-
-		patterns.forEach((pattern) => {
-			modifiedContent = modifiedContent.replace(pattern, (match) => {
-				const placeholder = `[GAME_STATS_BOX_${preservedBoxes.length}]`;
-				// Trim the match and remove leading/trailing empty lines
-				const cleanedMatch = match
-					.trim()
-					.replace(/^\s*[\r\n]+/gm, "")
-					.replace(/[\r\n]+\s*$/gm, "");
-				preservedBoxes.push(cleanedMatch);
-				return placeholder;
-			});
-		});
-
-		return {
-			modifiedContent,
-			preservedBoxes,
-		};
-	}
-
-	// Function to restore game stats boxes after enhancement
-	function restoreGameStatsBoxes(content, preservedBoxes) {
-		let restoredContent = content;
-
-		// Replace each placeholder with the original game stats box
-		preservedBoxes.forEach((box, index) => {
-			const placeholder = `[GAME_STATS_BOX_${index}]`;
-
-			// Get the number of lines to help with sizing
-			// Thoroughly clean the box content - trim and remove any empty lines at beginning and end
-			const cleanedBox = box
-				.trim()
-				.replace(/^\s*[\r\n]+/gm, "")
-				.replace(/[\r\n]+\s*$/gm, "");
-
-			const lineCount = cleanedBox.split("\n").length;
-			const longestLine = getLongestLineLength(cleanedBox);
-
-			// Replace placeholder with a properly styled game stats box
-			// Using display: flex and justify-content: center for vertical alignment
-			// Wrap in a container div to ensure each box is on its own line
-			restoredContent = restoredContent.replace(
-				placeholder,
-				`<div class="game-stats-box-container"><div class="game-stats-box" style="padding-top: 0px; margin-top: 0px; width: auto; min-width: ${Math.min(
-					Math.max(longestLine * 8, 300),
-					800
-				)}px; display: flex; flex-direction: column; justify-content: center;">${cleanedBox}</div></div>`
-			);
-		});
-
-		return restoredContent;
-	}
-
-	// Helper function to get the length of the longest line in a text block
-	function getLongestLineLength(text) {
-		if (!text) return 0;
-		const lines = text.split("\n");
-		let maxLength = 0;
-
-		lines.forEach((line) => {
-			const lineLength = line.length;
-			if (lineLength > maxLength) {
-				maxLength = lineLength;
-			}
-		});
-
-		return maxLength;
-	}
-
-	// Function to preserve images and other HTML elements
-	function preserveHtmlElements(content) {
-		const preservedElements = [];
-
-		// First preserve images with all attributes
-		let processedContent = content.replace(
-			/<img\s+[^>]*?src=['"]([^'"]*)['"](.*?)?>/gi,
-			(match) => {
-				const placeholder = `[PRESERVED_IMAGE_${preservedElements.length}]`;
-				preservedElements.push(match);
-				return placeholder;
-			}
-		);
-
-		// Then preserve figure elements with any nested images
-		processedContent = processedContent.replace(
-			/<figure\b[^>]*>[\s\S]*?<\/figure>/gi,
-			(match) => {
-				const placeholder = `[PRESERVED_FIGURE_${preservedElements.length}]`;
-				preservedElements.push(match);
-				return placeholder;
-			}
-		);
-
-		// Preserve other media elements and game stats boxes
-		processedContent = processedContent.replace(
-			/<(iframe|video|audio|source)\s+[^>]*>|<div class="game-stats-box">[\s\S]*?<\/div>/gi,
-			(match) => {
-				const placeholder = `[PRESERVED_ELEMENT_${preservedElements.length}]`;
-				preservedElements.push(match);
-				return placeholder;
-			}
-		);
-
-		console.log(
-			`Preserved ${preservedElements.length} HTML elements (images, figures, and other elements)`
-		);
-
-		return {
-			modifiedContent: processedContent,
-			preservedElements: preservedElements,
-		};
-	}
-
-	// Function to restore preserved HTML elements
-	function restoreHtmlElements(content, preservedElements) {
-		if (!preservedElements || preservedElements.length === 0) {
-			return content;
-		}
-
-		let restoredContent = content;
-
-		// Replace each placeholder with the original preserved element
-		preservedElements.forEach((element, index) => {
-			const placeholder = `[PRESERVED_ELEMENT_${index}]`;
-			restoredContent = restoredContent.replace(
-				new RegExp(placeholder, "g"),
-				element
-			);
-		});
-
-		return restoredContent;
 	}
 
 	// Create an enhanced banner with word count comparison and model info
@@ -958,7 +977,7 @@ if (window.__RGInitDone) {
 			});
 			isCachedContent = true;
 		} catch (error) {
-			console.error("Failed to save chunked state:", error);
+			debugError("Failed to save chunked state:", error);
 		}
 	}
 
@@ -966,12 +985,12 @@ if (window.__RGInitDone) {
 	 * Handle cancellation of enhancement process
 	 */
 	function handleCancelEnhancement() {
-		console.log("Cancelling enhancement process...");
+		debugLog("Cancelling enhancement process...");
 
 		// Send cancel message to background
 		browser.runtime
 			.sendMessage({ action: "cancelEnhancement" })
-			.catch(console.error);
+			.catch(debugerror);
 
 		// Restore original content
 		const contentArea = findContentArea();
@@ -1002,7 +1021,7 @@ if (window.__RGInitDone) {
 	 * @param {number} chunkIndex - The index of the chunk to re-enhance
 	 */
 	async function handleReenhanceChunk(chunkIndex) {
-		console.log(`Re-enhancing chunk ${chunkIndex}...`);
+		debugLog(`Re-enhancing chunk ${chunkIndex}...`);
 
 		const banner = document.querySelector(`.chunk-banner-${chunkIndex}`);
 		if (banner) {
@@ -1029,7 +1048,7 @@ if (window.__RGInitDone) {
 		);
 
 		if (!originalContent) {
-			console.error("No original content found for chunk", chunkIndex);
+			debugError("No original content found for chunk", chunkIndex);
 			showStatusMessage(
 				`Cannot re-enhance chunk ${
 					chunkIndex + 1
@@ -1044,8 +1063,17 @@ if (window.__RGInitDone) {
 			await wakeUpBackgroundWorker();
 
 			// Get settings
-			const settings = await browser.storage.local.get(["useEmoji"]);
+			const settings = await browser.storage.local.get([
+				"useEmoji",
+				"formatGameStats",
+				"centerSceneHeadings",
+			]);
 			const useEmoji = settings.useEmoji === true;
+			formattingOptions.useEmoji = useEmoji;
+			formattingOptions.formatGameStats =
+				settings.formatGameStats !== false;
+			formattingOptions.centerSceneHeadings =
+				settings.centerSceneHeadings !== false;
 
 			// Get prompts
 			let combinedPrompt = currentHandler
@@ -1090,7 +1118,7 @@ if (window.__RGInitDone) {
 				);
 			}
 		} catch (error) {
-			console.error("Error re-enhancing chunk:", error);
+			debugError("Error re-enhancing chunk:", error);
 			updateChunkBannerStatus(chunkIndex, "error", error.message);
 			showStatusMessage(
 				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
@@ -1136,8 +1164,17 @@ if (window.__RGInitDone) {
 			(b) => b.getAttribute("data-chunk-status") === "completed"
 		);
 
+		if (allCompleted) {
+			const button = document.querySelector(".gemini-enhance-btn");
+			if (button) {
+				button.textContent = "🔄 Re-enhance with Gemini";
+				button.disabled = false;
+				button.classList.remove("loading");
+			}
+		}
+
 		if (allCompleted && storageManager) {
-			console.log(
+			debugLog(
 				"All chunks completed, saving combined content to cache..."
 			);
 
@@ -1166,14 +1203,14 @@ if (window.__RGInitDone) {
 					chunkCount: allBanners.length,
 				});
 				isCachedContent = true;
-				console.log("Combined chunked content saved to cache");
+				debugLog("Combined chunked content saved to cache");
 				showStatusMessage(
 					"Enhanced content saved to cache!",
 					"success",
 					3000
 				);
 			} catch (saveError) {
-				console.error("Failed to save combined content:", saveError);
+				debugError("Failed to save combined content:", saveError);
 			}
 		}
 	}
@@ -1210,6 +1247,33 @@ if (window.__RGInitDone) {
 		return paragraphs || `<p>${escapeHtml(content)}</p>`;
 	}
 
+	// Normalize chunk parts by merging tiny leading/trailing pieces into neighbors
+	function normalizeChunkParts(parts, minChunkLength = 200) {
+		const cleanedParts = (parts || [])
+			.map((p) => (typeof p === "string" ? p.trim() : ""))
+			.filter((p) => p.length > 0);
+
+		for (let i = 0; i < cleanedParts.length; i++) {
+			const chunk = cleanedParts[i];
+			if (chunk.length < minChunkLength && cleanedParts[i + 1]) {
+				cleanedParts[i + 1] = `${chunk} ${cleanedParts[i + 1]}`.trim();
+				cleanedParts.splice(i, 1);
+				i -= 1;
+			}
+		}
+
+		if (
+			cleanedParts.length > 1 &&
+			cleanedParts[cleanedParts.length - 1].length < minChunkLength
+		) {
+			cleanedParts[cleanedParts.length - 2] = `${
+				cleanedParts[cleanedParts.length - 2]
+			} ${cleanedParts.pop()}`.trim();
+		}
+
+		return cleanedParts;
+	}
+
 	/**
 	 * Split HTML content into chunks that correspond to text chunks
 	 * Preserves the original HTML structure (p tags, divs, etc.)
@@ -1235,12 +1299,10 @@ if (window.__RGInitDone) {
 		const chunkSizes = textChunks.map((chunk) => chunk.length);
 		const totalTextLength = chunkSizes.reduce((sum, len) => sum + len, 0);
 
-		console.log(
+		debugLog(
 			`[splitHTMLIntoChunks] Total text: ${totalTextLength} chars, ${textChunks.length} chunks`
 		);
-		console.log(
-			`[splitHTMLIntoChunks] Chunk sizes: ${chunkSizes.join(", ")}`
-		);
+		debugLog(`[splitHTMLIntoChunks] Chunk sizes: ${chunkSizes.join(", ")}`);
 
 		// Calculate total HTML text length
 		let totalHtmlTextLength = 0;
@@ -1251,7 +1313,7 @@ if (window.__RGInitDone) {
 			totalHtmlTextLength += elTextLen;
 		}
 
-		console.log(
+		debugLog(
 			`[splitHTMLIntoChunks] HTML has ${childElements.length} elements, ${totalHtmlTextLength} chars of text`
 		);
 
@@ -1262,7 +1324,7 @@ if (window.__RGInitDone) {
 			Math.round(size * scaleFactor)
 		);
 
-		console.log(
+		debugLog(
 			`[splitHTMLIntoChunks] Target HTML chunk sizes: ${targetHtmlChunkSizes.join(
 				", "
 			)}`
@@ -1303,7 +1365,7 @@ if (window.__RGInitDone) {
 				});
 				htmlChunks.push(chunkDiv.innerHTML);
 
-				console.log(
+				debugLog(
 					`[splitHTMLIntoChunks] Created chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars (target: ${targetSize})`
 				);
 
@@ -1334,7 +1396,7 @@ if (window.__RGInitDone) {
 			});
 			htmlChunks.push(chunkDiv.innerHTML);
 
-			console.log(
+			debugLog(
 				`[splitHTMLIntoChunks] Created final chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars`
 			);
 		}
@@ -1343,7 +1405,7 @@ if (window.__RGInitDone) {
 		// If we have fewer HTML chunks than text chunks, pad with formatted text
 		while (htmlChunks.length < textChunks.length) {
 			const missingIndex = htmlChunks.length;
-			console.log(
+			debugLog(
 				`[splitHTMLIntoChunks] Padding missing chunk ${
 					missingIndex + 1
 				} with formatted text`
@@ -1353,7 +1415,7 @@ if (window.__RGInitDone) {
 			);
 		}
 
-		console.log(
+		debugLog(
 			`[splitHTMLIntoChunks] Created ${htmlChunks.length} HTML chunks from ${childElements.length} child elements`
 		);
 
@@ -1456,21 +1518,21 @@ if (window.__RGInitDone) {
 	function removeOriginalWordCount() {
 		const originalWordCount = document.querySelector(".gemini-word-count");
 		if (originalWordCount) {
-			console.log("Removing original word count display");
+			debugLog("Removing original word count display");
 			originalWordCount.parentNode.removeChild(originalWordCount);
 		}
 	}
 
 	// Handler for processed chunks from the background script
 	function handleChunkProcessed(message) {
-		console.log(
+		debugLog(
 			`Received processed chunk ${message.chunkIndex + 1}/${
 				message.totalChunks
 			}`
 		);
 		const contentArea = findContentArea();
 		if (!contentArea) {
-			console.error(
+			debugError(
 				"Unable to find content area for displaying processed chunk"
 			);
 			return;
@@ -1517,7 +1579,7 @@ if (window.__RGInitDone) {
 					chunkContent.setAttribute("data-chunk-enhanced", "true");
 				}
 
-				console.log(
+				debugLog(
 					`Chunk ${
 						chunkIndex + 1
 					} replaced inline with enhanced content`
@@ -1974,7 +2036,7 @@ if (window.__RGInitDone) {
 	 * @param {Object} modelInfo - Information about the model used
 	 */
 	async function finalizeChunkedContent(modelInfo) {
-		console.log("Finalizing chunked content...");
+		debugLog("Finalizing chunked content...");
 
 		// Remove any remaining "pending" or "processing" states
 		const allBanners = document.querySelectorAll(".gemini-chunk-banner");
@@ -2015,31 +2077,7 @@ if (window.__RGInitDone) {
 			5000
 		);
 
-		// Remove any existing summary banner first
-		const existingSummary = document.getElementById(
-			"gemini-main-summary-banner"
-		);
-		if (existingSummary) {
-			existingSummary.remove();
-		}
-
-		// Add main summary banner at the top of chunked content
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content"
-		);
-		if (chunkedContainer && totalChunks > 0) {
-			const summaryBanner = createMainSummaryBanner(
-				modelInfo,
-				totalChunks,
-				completedChunks
-			);
-			chunkedContainer.insertBefore(
-				summaryBanner,
-				chunkedContainer.firstChild
-			);
-		}
-
-		// Also add model attribution if available (at the end)
+		// Add model attribution if available (at the end)
 		if (modelInfo) {
 			addModelAttribution(modelInfo);
 		}
@@ -2058,7 +2096,7 @@ if (window.__RGInitDone) {
 
 	// Handler for chunk processing errors
 	function handleChunkError(message) {
-		console.log(
+		debugLog(
 			`Error processing chunk ${message.chunkIndex + 1}/${
 				message.totalChunks
 			}:`,
@@ -2067,7 +2105,7 @@ if (window.__RGInitDone) {
 
 		const contentArea = findContentArea();
 		if (!contentArea) {
-			console.error("Unable to find content area for displaying error");
+			debugError("Unable to find content area for displaying error");
 			return;
 		}
 
@@ -2099,7 +2137,7 @@ if (window.__RGInitDone) {
 				}
 
 				// Keep the original content visible - don't replace it
-				console.log(
+				debugLog(
 					`Chunk ${
 						chunkIndex + 1
 					} marked as error - original content preserved`
@@ -2135,6 +2173,20 @@ if (window.__RGInitDone) {
 					button.disabled = false;
 					button.classList.remove("loading");
 				}
+			}
+			// If background reported a final failure, still re-enable controls
+			if (message.finalFailure && !message.isComplete) {
+				const button = document.querySelector(".gemini-enhance-btn");
+				if (button) {
+					button.textContent = "🔄 Re-enhance with Gemini";
+					button.disabled = false;
+					button.classList.remove("loading");
+				}
+				showStatusMessage(
+					"Enhancement stopped after an error. You can retry individual chunks.",
+					"warning",
+					5000
+				);
 			}
 
 			return;
@@ -2207,7 +2259,7 @@ if (window.__RGInitDone) {
 									message.unprocessedChunks || [],
 							})
 							.catch((error) => {
-								console.error(
+								debugError(
 									"Error requesting to resume processing:",
 									error
 								);
@@ -2226,13 +2278,13 @@ if (window.__RGInitDone) {
 
 	// Handler for all chunks processed notification
 	function handleAllChunksProcessed(message) {
-		console.log(
+		debugLog(
 			`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`
 		);
 
 		const contentArea = findContentArea();
 		if (!contentArea) {
-			console.error("Unable to find content area for finalizing content");
+			debugError("Unable to find content area for finalizing content");
 			return;
 		}
 
@@ -2298,7 +2350,7 @@ if (window.__RGInitDone) {
 			"gemini-enhanced-container"
 		);
 		if (!enhancedContainer) {
-			console.error("No enhanced container found for finalization");
+			debugError("No enhanced container found for finalization");
 			return;
 		}
 
@@ -2313,8 +2365,8 @@ if (window.__RGInitDone) {
 		const enhancedContent = enhancedContainer.innerHTML;
 		const enhancedText = stripHtmlTags(enhancedContent);
 
-		// Save to cache so it persists on reload
-		if (storageManager && !isCachedContent && enhancedContent) {
+		// Save to cache so it persists on reload (always overwrite with latest)
+		if (storageManager && enhancedContent) {
 			try {
 				await storageManager.saveEnhancedContent(window.location.href, {
 					title: document.title,
@@ -2325,9 +2377,9 @@ if (window.__RGInitDone) {
 					isChunked: true,
 				});
 				isCachedContent = true;
-				console.log("Chunked enhanced content saved to cache");
+				debugLog("Chunked enhanced content saved to cache");
 			} catch (saveError) {
-				console.error(
+				debugError(
 					"Failed to save chunked content to cache:",
 					saveError
 				);
@@ -2340,7 +2392,7 @@ if (window.__RGInitDone) {
 			await addToNovelLibrary(novelContext);
 			await updateChapterProgression();
 		} catch (libraryError) {
-			console.error("Failed to update novel library:", libraryError);
+			debugError("Failed to update novel library:", libraryError);
 		}
 
 		// Create enhanced banner with word count statistics and model info
@@ -2537,7 +2589,7 @@ if (window.__RGInitDone) {
 	// Initialize with device detection
 	async function initializeWithDeviceDetection() {
 		isMobileDevice = detectMobileDevice();
-		console.log(
+		debugLog(
 			`Ranobe Gemini: Initializing for ${
 				isMobileDevice ? "mobile" : "desktop"
 			} device`
@@ -2577,39 +2629,13 @@ if (window.__RGInitDone) {
 	// Load handler modules dynamically
 	async function loadHandlers() {
 		try {
-			// Import the base handler code
-			const baseHandlerUrl = browser.runtime.getURL(
-				"utils/website-handlers/base-handler.js"
-			);
-			const baseHandlerModule = await import(baseHandlerUrl);
 			const handlerManagerUrl = browser.runtime.getURL(
 				"utils/website-handlers/handler-manager.js"
 			);
 
-			// Import specific handlers
-			const ranobesHandlerUrl = browser.runtime.getURL(
-				"utils/website-handlers/ranobes-handler.js"
-			);
-			const fanfictionHandlerUrl = browser.runtime.getURL(
-				"utils/website-handlers/fanfiction-handler.js"
-			);
-
-			// Don't wait for these imports now, we'll use them later when needed
-			console.log("Handler URLs loaded:", {
-				baseHandlerUrl,
-				ranobesHandlerUrl,
-				fanfictionHandlerUrl,
-				handlerManagerUrl,
-			});
-
-			return {
-				baseHandlerUrl,
-				ranobesHandlerUrl,
-				fanfictionHandlerUrl,
-				handlerManagerUrl,
-			};
+			return { handlerManagerUrl };
 		} catch (error) {
-			console.error("Error loading handlers:", error);
+			debugError("Error loading handlers:", error);
 			return null;
 		}
 	}
@@ -2633,7 +2659,7 @@ if (window.__RGInitDone) {
 				typeof handlerManager.getHandlerForCurrentSite === "function"
 			) {
 				const handler = await handlerManager.getHandlerForCurrentSite();
-				console.log(
+				debugLog(
 					"Handler loaded:",
 					handler ? handler.constructor.name : "null"
 				);
@@ -2641,7 +2667,7 @@ if (window.__RGInitDone) {
 			}
 			return null;
 		} catch (error) {
-			console.error("Error getting handler for current site:", error);
+			debugError("Error getting handler for current site:", error);
 			return null;
 		}
 	}
@@ -2655,7 +2681,7 @@ if (window.__RGInitDone) {
 			const storageModule = await import(storageUrl);
 			return storageModule.default || storageModule;
 		} catch (error) {
-			console.error("Error loading storage manager:", error);
+			debugError("Error loading storage manager:", error);
 			return null;
 		}
 	}
@@ -2677,7 +2703,27 @@ if (window.__RGInitDone) {
 			READING_STATUS_INFO = libraryModule.READING_STATUS_INFO;
 			return novelLibrary;
 		} catch (error) {
-			console.error("Error loading novel library:", error);
+			debugError("Error loading novel library:", error);
+			return null;
+		}
+	}
+
+	// Shared chunking utilities loader
+	let chunkingUtils = null;
+	async function loadChunkingUtils() {
+		if (chunkingUtils) return chunkingUtils;
+		try {
+			const chunkingUrl = browser.runtime.getURL("utils/chunking.js");
+			const chunkingModule = await import(chunkingUrl);
+			chunkingUtils = {
+				...chunkingModule,
+				splitContentForProcessing:
+					chunkingModule.splitContentForProcessing ||
+					chunkingModule.default?.splitContentForProcessing,
+			};
+			return chunkingUtils;
+		} catch (error) {
+			debugError("Error loading chunking utils:", error);
 			return null;
 		}
 	}
@@ -2725,7 +2771,7 @@ if (window.__RGInitDone) {
 			);
 
 			if (!novelData) {
-				console.log("Could not create novel data from context");
+				debugLog("Could not create novel data from context");
 				return;
 			}
 
@@ -2752,12 +2798,9 @@ if (window.__RGInitDone) {
 				readAt: Date.now(),
 			});
 
-			console.log(
-				"📚 Novel and chapter added to library:",
-				novelData.title
-			);
+			debugLog("📚 Novel and chapter added to library:", novelData.title);
 		} catch (error) {
-			console.error("Error adding to novel library:", error);
+			debugError("Error adding to novel library:", error);
 		}
 	}
 
@@ -2909,6 +2952,46 @@ if (window.__RGInitDone) {
 			}
 		}
 
+		// ScribbleHub specific extraction
+		else if (hostname.includes("scribblehub.com")) {
+			// Title from breadcrumb link to series
+			const seriesLink = document.querySelector(
+				'.wi_breadcrumb.chapter a[href*="/series/"]'
+			);
+			if (seriesLink) {
+				context.title = seriesLink.textContent.trim();
+			}
+
+			// Author
+			const authorLink = document.querySelector(
+				".auth a[href*='/profile/'], .auth_name a, a[rel='author']"
+			);
+			if (authorLink) {
+				context.author = authorLink.textContent.trim();
+			}
+
+			// Description (only available on series pages, but capture if present)
+			const description = document.querySelector(".wi_fic_desc");
+			if (description) {
+				context.description = description.textContent.trim();
+			}
+
+			// Genres/Tags on series pages
+			const genreEls = document.querySelectorAll(".fic_genre a");
+			if (genreEls.length) {
+				context.genres = Array.from(genreEls).map((el) =>
+					el.textContent.trim()
+				);
+			}
+
+			const tagEls = document.querySelectorAll(".wi_fic_showtags a.stag");
+			if (tagEls.length) {
+				context.tags = Array.from(tagEls).map((el) =>
+					el.textContent.trim()
+				);
+			}
+		}
+
 		// WebNovel specific extraction
 		else if (hostname.includes("webnovel.com")) {
 			// Author
@@ -2940,14 +3023,14 @@ if (window.__RGInitDone) {
 				window.location.href
 			);
 			if (cached) {
-				console.log("Found cached enhanced content");
+				debugLog("Found cached enhanced content");
 				isCachedContent = true;
 				return cached;
 			}
 			isCachedContent = false;
 			return null;
 		} catch (error) {
-			console.error("Error checking cached content:", error);
+			debugError("Error checking cached content:", error);
 			isCachedContent = false;
 			return null;
 		}
@@ -3013,7 +3096,7 @@ if (window.__RGInitDone) {
 	}
 
 	async function initialize() {
-		console.log("Ranobe Gemini: Initializing content script");
+		debugLog("Ranobe Gemini: Initializing content script");
 
 		// Verify background script connection
 		await verifyBackgroundConnection();
@@ -3029,16 +3112,16 @@ if (window.__RGInitDone) {
 			});
 			if (modelInfo && modelInfo.fontSize) {
 				currentFontSize = modelInfo.fontSize;
-				console.log(`Font size setting loaded: ${currentFontSize}%`);
+				debugLog(`Font size setting loaded: ${currentFontSize}%`);
 			}
 		} catch (error) {
-			console.log("Could not load font size setting:", error);
+			debugLog("Could not load font size setting:", error);
 		}
 
 		// Check for cached content
 		const cachedData = await checkCachedContent();
 		if (cachedData && cachedData.enhancedContent) {
-			console.log("Found cached enhanced content, auto-loading...");
+			debugLog("Found cached enhanced content, auto-loading...");
 			// Auto-load the cached content after UI is injected and content area is ready
 			// Use requestAnimationFrame to ensure DOM is fully rendered
 			requestAnimationFrame(() => {
@@ -3052,11 +3135,9 @@ if (window.__RGInitDone) {
 		currentHandler = await getHandlerForCurrentSite();
 
 		if (currentHandler) {
-			console.log(
-				`Using specific handler for ${window.location.hostname}`
-			);
+			debugLog(`Using specific handler for ${window.location.hostname}`);
 		} else {
-			console.log(
+			debugLog(
 				"No specific handler found, using generic extraction methods"
 			);
 		}
@@ -3087,7 +3168,7 @@ if (window.__RGInitDone) {
 		else if (!hasExtractButton && isChapterPage) {
 			injectUI();
 		} else if (!isChapterPage && !isNovelPage) {
-			console.log(
+			debugLog(
 				"Ranobe Gemini: Not a chapter or novel page, skipping UI injection"
 			);
 		}
@@ -3321,7 +3402,7 @@ if (window.__RGInitDone) {
 		}
 
 		if (!novelLibrary) {
-			console.log("Novel library not available for auto-update");
+			debugLog("Novel library not available for auto-update");
 			return;
 		}
 
@@ -3367,14 +3448,14 @@ if (window.__RGInitDone) {
 
 			// Check if handler supports metadata extraction
 			if (typeof currentHandler.extractNovelMetadata !== "function") {
-				console.log("Handler does not support metadata extraction");
+				debugLog("Handler does not support metadata extraction");
 				return;
 			}
 
 			// Extract metadata from current page
 			const metadata = currentHandler.extractNovelMetadata();
 			if (!metadata || !metadata.title) {
-				console.log("Could not extract novel metadata");
+				debugLog("Could not extract novel metadata");
 				return;
 			}
 
@@ -3466,7 +3547,7 @@ if (window.__RGInitDone) {
 						await novelLibrary.saveLibrary(library);
 					}
 
-					console.log(
+					debugLog(
 						"📚 Force-refreshed novel metadata:",
 						metadata.title
 					);
@@ -3488,10 +3569,7 @@ if (window.__RGInitDone) {
 						);
 					}
 					await novelLibrary.updateNovelMetadata(novelId, novelData);
-					console.log(
-						"📚 Auto-updated novel metadata:",
-						metadata.title
-					);
+					debugLog("📚 Auto-updated novel metadata:", metadata.title);
 					if (hasGoodMetadata) {
 						showTimedBanner(
 							`Updated: ${metadata.title}`,
@@ -3509,7 +3587,7 @@ if (window.__RGInitDone) {
 					field: "new novel",
 				});
 				await novelLibrary.addOrUpdateNovel(novelData);
-				console.log("📚 Auto-added novel to library:", metadata.title);
+				debugLog("📚 Auto-added novel to library:", metadata.title);
 
 				const successMessage = hasGoodMetadata
 					? `Added to library: ${metadata.title}`
@@ -3551,10 +3629,10 @@ if (window.__RGInitDone) {
 					url: window.location.href,
 					readAt: Date.now(),
 				});
-				console.log("📖 Updated chapter tracking");
+				debugLog("📖 Updated chapter tracking");
 			}
 		} catch (error) {
-			console.error("Error in auto-update novel:", error);
+			debugError("Error in auto-update novel:", error);
 		}
 	}
 
@@ -3595,7 +3673,7 @@ if (window.__RGInitDone) {
 		for (const selector of commonSelectors) {
 			const element = document.querySelector(selector);
 			if (element) {
-				console.log(
+				debugLog(
 					`Generic: Content area found using selector: ${selector}`
 				);
 				return element;
@@ -3762,7 +3840,7 @@ if (window.__RGInitDone) {
 				button.disabled = false;
 				await handleEnhanceClick();
 			} catch (error) {
-				console.error("Connection error:", error);
+				debugError("Connection error:", error);
 				showStatusMessage(
 					"Error connecting to extension. Please reload the page and try again.",
 					"error"
@@ -3802,7 +3880,7 @@ if (window.__RGInitDone) {
 				button.disabled = false;
 				await handleSummarizeClick(isShort);
 			} catch (error) {
-				console.error("Connection error:", error);
+				debugError("Connection error:", error);
 				showStatusMessage(
 					"Error connecting to extension. Please reload the page and try again.",
 					"error"
@@ -3872,7 +3950,7 @@ if (window.__RGInitDone) {
 
 		// Check if UI already injected
 		if (document.getElementById("rg-novel-controls")) {
-			console.log("Ranobe Gemini: Novel page UI already injected.");
+			debugLog("Ranobe Gemini: Novel page UI already injected.");
 			return;
 		}
 
@@ -4061,7 +4139,7 @@ if (window.__RGInitDone) {
 		);
 
 		hasExtractButton = true; // Prevent duplicate injection
-		console.log("Ranobe Gemini: Novel page UI injected successfully");
+		debugLog("Ranobe Gemini: Novel page UI injected successfully");
 	}
 
 	/**
@@ -4160,7 +4238,7 @@ if (window.__RGInitDone) {
 				await injectNovelPageUI();
 			}
 		} catch (error) {
-			console.error("Error saving novel:", error);
+			debugError("Error saving novel:", error);
 			showTimedBanner("Error saving novel", "warning", 3000);
 		}
 	}
@@ -4180,7 +4258,7 @@ if (window.__RGInitDone) {
 			});
 			showTimedBanner(`Status updated: ${newStatus}`, "success", 2000);
 		} catch (error) {
-			console.error("Error updating reading status:", error);
+			debugError("Error updating reading status:", error);
 			showTimedBanner("Error updating status", "warning", 3000);
 		}
 	}
@@ -4199,7 +4277,7 @@ if (window.__RGInitDone) {
 			// Get current chapter info from handler
 			const chapterNav = currentHandler.getChapterNavigation();
 			if (!chapterNav || chapterNav.currentChapter === null) {
-				console.log("No chapter info available from handler");
+				debugLog("No chapter info available from handler");
 				return;
 			}
 
@@ -4208,9 +4286,7 @@ if (window.__RGInitDone) {
 				window.location.href
 			);
 			if (!novel) {
-				console.log(
-					"Novel not in library, skipping progression update"
-				);
+				debugLog("Novel not in library, skipping progression update");
 				return;
 			}
 
@@ -4225,7 +4301,7 @@ if (window.__RGInitDone) {
 					chapterNav.currentChapter,
 					window.location.href
 				);
-				console.log(
+				debugLog(
 					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`
 				);
 				showTimedBanner(
@@ -4235,7 +4311,7 @@ if (window.__RGInitDone) {
 				);
 			}
 		} catch (error) {
-			console.error("Error updating chapter progression:", error);
+			debugError("Error updating chapter progression:", error);
 		}
 	}
 
@@ -4265,7 +4341,7 @@ if (window.__RGInitDone) {
 				await injectNovelPageUI();
 			}
 		} catch (error) {
-			console.error("Error removing novel:", error);
+			debugError("Error removing novel:", error);
 			showTimedBanner("Error removing novel", "warning", 3000);
 		}
 	}
@@ -4275,7 +4351,113 @@ if (window.__RGInitDone) {
 	 * These appear inline with enhance/summarize controls on chapter pages
 	 * @returns {HTMLElement|null} The novel controls container or null if not applicable
 	 */
-	async function createChapterPageNovelControls() {
+	function insertAtPosition(target, node, position = "before") {
+		if (!target || !node) return;
+		switch (position) {
+			case "after":
+			case "afterend":
+				target.parentNode.insertBefore(node, target.nextSibling);
+				break;
+			case "prepend":
+			case "afterbegin":
+				target.prepend(node);
+				break;
+			case "append":
+			case "beforeend":
+				target.appendChild(node);
+				break;
+			default:
+				target.parentNode.insertBefore(node, target);
+		}
+	}
+
+	function resolveNovelControlsInsertion(config = {}) {
+		let targetElement =
+			config?.insertionPoint?.element ||
+			config?.insertionPoint?.target ||
+			config?.insertionPoint ||
+			null;
+		let position =
+			config?.insertionPoint?.position || config?.position || "after";
+
+		// Fallback: reuse handler-provided novel page insertion point when available
+		if (
+			!targetElement &&
+			typeof currentHandler?.getNovelPageUIInsertionPoint === "function"
+		) {
+			const handlerPoint = currentHandler.getNovelPageUIInsertionPoint();
+			targetElement = handlerPoint?.element || targetElement;
+			position = handlerPoint?.position || position;
+		}
+
+		// Last resort: place below Gemini controls or before content area
+		if (!targetElement) {
+			const mainControls = document.getElementById("gemini-controls");
+			if (mainControls) {
+				targetElement = mainControls;
+				position = "after";
+			} else {
+				targetElement = findContentArea() || document.body.firstChild;
+				position = "before";
+			}
+		}
+
+		return { element: targetElement, position };
+	}
+
+	function placeChapterNovelControls(novelControls, controlsConfig = {}) {
+		if (!novelControls) return;
+
+		const existing = document.getElementById("rg-chapter-novel-controls");
+		if (existing && existing !== novelControls) {
+			const wrapper = existing.closest(".rg-gemini-controls");
+			if (wrapper) {
+				const maybeLabel = wrapper.previousElementSibling;
+				if (
+					maybeLabel &&
+					maybeLabel.classList.contains("rg-gemini-controls-label")
+				) {
+					maybeLabel.remove();
+				}
+				wrapper.remove();
+			} else {
+				existing.remove();
+			}
+		}
+
+		const insertion = resolveNovelControlsInsertion(controlsConfig);
+		if (insertion?.element) {
+			let target = insertion.element;
+			let position = insertion.position;
+
+			if (controlsConfig.wrapInDefinitionList) {
+				const labelText = controlsConfig.dlLabel || "Gemini";
+				const dtLabel = document.createElement("dt");
+				dtLabel.className = "rg-gemini-controls-label";
+				dtLabel.textContent = labelText;
+
+				const ddWrapper = document.createElement("dd");
+				ddWrapper.className = "rg-gemini-controls";
+				novelControls.classList.add("rg-dl-embedded");
+				ddWrapper.appendChild(novelControls);
+
+				if (position === "after" || position === "afterend") {
+					insertAtPosition(target, dtLabel, "after");
+					insertAtPosition(dtLabel, ddWrapper, "after");
+				} else if (position === "beforeend" || position === "append") {
+					target.appendChild(dtLabel);
+					target.appendChild(ddWrapper);
+				} else {
+					insertAtPosition(target, dtLabel, position || "before");
+					insertAtPosition(dtLabel, ddWrapper, "after");
+				}
+			} else {
+				insertAtPosition(target, novelControls, position);
+			}
+		}
+	}
+
+	async function createChapterPageNovelControls(controlsConfig = {}) {
 		const handlerType = getHandlerType();
 
 		// Only for CHAPTER_EMBEDDED handlers on chapter pages
@@ -4293,9 +4475,7 @@ if (window.__RGInitDone) {
 		}
 
 		if (!novelLibrary) {
-			console.log(
-				"Novel library not available for chapter page controls"
-			);
+			debugLog("Novel library not available for chapter page controls");
 			return null;
 		}
 
@@ -4321,6 +4501,17 @@ if (window.__RGInitDone) {
 			border-radius: 6px;
 			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 		`;
+
+		if (controlsConfig.wrapInDefinitionList) {
+			controlsContainer.style.justifyContent = "center";
+			controlsContainer.style.width = "100%";
+			controlsContainer.style.textAlign = "center";
+		}
+
+		// Allow handler to customize styling (e.g., AO3/FanFiction specific palettes)
+		if (controlsConfig?.customStyles) {
+			Object.assign(controlsContainer.style, controlsConfig.customStyles);
+		}
 
 		// Status indicator
 		const statusBadge = document.createElement("span");
@@ -4473,7 +4664,7 @@ if (window.__RGInitDone) {
 
 		// Check if UI already injected
 		if (document.getElementById("gemini-controls")) {
-			console.log("Ranobe Gemini: UI already injected.");
+			debugLog("Ranobe Gemini: UI already injected.");
 			return;
 		}
 
@@ -4619,7 +4810,7 @@ if (window.__RGInitDone) {
 			);
 		}
 
-		console.log(
+		debugLog(
 			`Ranobe Gemini: UI injected successfully for ${
 				isMobileDevice ? "mobile" : "desktop"
 			} view.`
@@ -4632,25 +4823,64 @@ if (window.__RGInitDone) {
 		// These are added asynchronously after main UI
 		setTimeout(async () => {
 			try {
-				const novelControls = await createChapterPageNovelControls();
+				const controlsConfig =
+					currentHandler?.getNovelControlsConfig?.() || {};
+				const novelControls = await createChapterPageNovelControls(
+					controlsConfig
+				);
 				if (novelControls) {
-					// Insert after the main controls container
-					const mainControls =
-						document.getElementById("gemini-controls");
-					if (mainControls && mainControls.parentNode) {
-						mainControls.parentNode.insertBefore(
-							novelControls,
-							mainControls.nextSibling
-						);
-						console.log(
-							"Ranobe Gemini: Novel controls added for chapter page"
-						);
-					}
+					placeChapterNovelControls(novelControls, controlsConfig);
+					debugLog(
+						"Ranobe Gemini: Novel controls added for chapter page"
+					);
 				}
 			} catch (err) {
-				console.log("Could not add novel controls:", err);
+				debugLog("Could not add novel controls:", err);
 			}
 		}, 100);
+
+		// Keep controls alive in case the site re-renders or strips injected nodes
+		startUIKeepAlive();
+	}
+
+	let uiKeepAliveTimer = null;
+	function startUIKeepAlive() {
+		if (uiKeepAliveTimer) return;
+		uiKeepAliveTimer = setInterval(async () => {
+			// Re-inject main controls if the host page wipes them out
+			if (!document.getElementById("gemini-controls")) {
+				console.warn(
+					"Ranobe Gemini: controls missing, re-injecting UI"
+				);
+				injectUI();
+				return;
+			}
+
+			// Recreate chapter-level novel controls if they disappear
+			if (
+				currentHandler?.isChapterPage?.() &&
+				!document.getElementById("rg-chapter-novel-controls")
+			) {
+				try {
+					const controlsConfig =
+						currentHandler?.getNovelControlsConfig?.() || {};
+					const novelControls = await createChapterPageNovelControls(
+						controlsConfig
+					);
+					if (novelControls) {
+						placeChapterNovelControls(
+							novelControls,
+							controlsConfig
+						);
+					}
+				} catch (heartbeatError) {
+					debugLog(
+						"Ranobe Gemini: keep-alive could not re-add controls",
+						heartbeatError
+					);
+				}
+			}
+		}, 15000);
 	}
 
 	// Automatically extract content once the page is loaded
@@ -4658,13 +4888,13 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 
 		if (contentArea) {
-			console.log("Auto-extracting content...");
+			debugLog("Auto-extracting content...");
 			const result = extractContent();
 
 			if (result.found) {
-				console.log("Content automatically extracted:");
-				console.log(`Title: ${result.title}`);
-				console.log(`Content length: ${result.text.length} characters`);
+				debugLog("Content automatically extracted:");
+				debugLog(`Title: ${result.title}`);
+				debugLog(`Content length: ${result.text.length} characters`);
 				autoExtracted = true;
 
 				// Update chapter progression when content is loaded
@@ -4677,7 +4907,7 @@ if (window.__RGInitDone) {
 							window.location.href
 						);
 						if (novel && novel.autoEnhance === true) {
-							console.log(
+							debugLog(
 								"🚀 Auto-enhance enabled for this novel, starting enhancement..."
 							);
 							// Wait a bit for page to stabilize
@@ -4686,10 +4916,7 @@ if (window.__RGInitDone) {
 							}, 1000);
 						}
 					} catch (err) {
-						console.log(
-							"Could not check auto-enhance setting:",
-							err
-						);
+						debugLog("Could not check auto-enhance setting:", err);
 					}
 				}
 			}
@@ -4766,152 +4993,6 @@ if (window.__RGInitDone) {
 		return extractContentGeneric();
 	}
 
-	// Function to intelligently split content for large chapters
-	// CRITICAL: This function must NEVER return empty chunks
-	// NOTE: This function MUST produce identical results to background.js splitContentForProcessing
-	function splitContentForProcessing(content, maxChunkSize = 20000) {
-		console.log(
-			`[splitContentForProcessing] Starting with maxChunkSize=${maxChunkSize}`
-		);
-		console.log(
-			`[splitContentForProcessing] Content length: ${
-				content?.length || 0
-			} chars`
-		);
-
-		// Validate input
-		if (!content || typeof content !== "string") {
-			console.error(
-				"[splitContentForProcessing] Invalid content provided"
-			);
-			return [content || ""];
-		}
-
-		// If content is already small enough, return as is
-		if (content.length <= maxChunkSize) {
-			console.log(
-				"[splitContentForProcessing] Content is small enough, no splitting needed"
-			);
-			return [content];
-		}
-
-		let chunks = [];
-		let splitParts = [];
-
-		// Try multiple splitting strategies in order of preference
-		// Strategy 1: Split on double newlines (paragraph breaks) - MUST match background.js
-		splitParts = content.split(/\n\s*\n/);
-		console.log(
-			`[splitContentForProcessing] Strategy 1 (double newlines): ${splitParts.length} parts`
-		);
-
-		// Strategy 2: If no double newlines, try single newlines
-		if (splitParts.length <= 1) {
-			splitParts = content.split(/\n/);
-			console.log(
-				`[splitContentForProcessing] Strategy 2 (single newlines): ${splitParts.length} parts`
-			);
-		}
-
-		// Strategy 3: If still no luck, try splitting on sentence endings
-		// This handles AO3's plain text which has no line breaks
-		if (splitParts.length <= 1) {
-			// Split on sentence endings (.!?) followed by space and capital letter
-			splitParts = content.split(/(?<=[.!?])\s+(?=[A-Z])/);
-			console.log(
-				`[splitContentForProcessing] Strategy 3 (sentence boundaries): ${splitParts.length} parts`
-			);
-		}
-
-		// Strategy 4: If still just one part, split on any sentence ending
-		if (splitParts.length <= 1) {
-			splitParts = content.split(/(?<=[.!?])\s+/);
-			console.log(
-				`[splitContentForProcessing] Strategy 4 (any sentence ending): ${splitParts.length} parts`
-			);
-		}
-
-		// Build chunks from split parts
-		let currentChunk = "";
-
-		for (let i = 0; i < splitParts.length; i++) {
-			const part = splitParts[i];
-			if (!part) continue;
-
-			const separator = currentChunk ? " " : "";
-
-			// If adding this part would exceed the limit, finalize current chunk
-			if (
-				currentChunk.length + separator.length + part.length >
-					maxChunkSize &&
-				currentChunk.length > 0
-			) {
-				chunks.push(currentChunk.trim());
-				currentChunk = part;
-			} else {
-				currentChunk += separator + part;
-			}
-		}
-
-		// Add the final chunk
-		if (currentChunk.trim()) {
-			chunks.push(currentChunk.trim());
-		}
-
-		console.log(
-			`[splitContentForProcessing] After part-based splitting: ${chunks.length} chunks`
-		);
-
-		// If we have chunks that are still too big, force split them
-		const finalChunks = [];
-		for (const chunk of chunks) {
-			if (chunk.length <= maxChunkSize) {
-				finalChunks.push(chunk);
-			} else {
-				// Force split by words
-				console.log(
-					`[splitContentForProcessing] Chunk too large (${chunk.length} chars), force splitting by words`
-				);
-				const words = chunk.split(/\s+/);
-				let subChunk = "";
-
-				for (const word of words) {
-					if (
-						subChunk.length + word.length + 1 > maxChunkSize &&
-						subChunk.length > 0
-					) {
-						finalChunks.push(subChunk.trim());
-						subChunk = word;
-					} else {
-						subChunk += (subChunk ? " " : "") + word;
-					}
-				}
-
-				if (subChunk.trim()) {
-					finalChunks.push(subChunk.trim());
-				}
-			}
-		}
-
-		// Filter out any empty chunks
-		const validChunks = finalChunks.filter((c) => c && c.trim().length > 0);
-
-		console.log(
-			`Split content into ${validChunks.length} valid chunks for processing`
-		);
-
-		// Log chunk sizes for debugging
-		validChunks.forEach((chunk, idx) => {
-			console.log(
-				`[splitContentForProcessing] Chunk ${idx}: ${
-					chunk.length
-				} chars, preview: "${chunk.substring(0, 80)}..."`
-			);
-		});
-
-		return validChunks.length > 0 ? validChunks : [content];
-	}
-
 	// Handle click event for Summarize button
 	async function handleSummarizeClick(isShort = false) {
 		const summarizeButton = isShort
@@ -4962,7 +5043,7 @@ if (window.__RGInitDone) {
 				throw new Error("Could not extract chapter content.");
 			}
 
-			console.log(
+			debugLog(
 				`Extracted ${
 					content.length
 				} characters for ${summaryType.toLowerCase()} summarization`
@@ -4976,13 +5057,13 @@ if (window.__RGInitDone) {
 			});
 
 			const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
-			console.log(
+			debugLog(
 				`Model max context size for summarization: ${maxContextSize}`
 			);
 
 			// Get approximate token count (rough estimate: 4 chars per token)
 			const estimatedTokenCount = Math.ceil(content.length / 4);
-			console.log(
+			debugLog(
 				`Estimated token count for summarization: ${estimatedTokenCount}`
 			);
 
@@ -5061,7 +5142,7 @@ if (window.__RGInitDone) {
 
 					// Use the new paragraph extraction function to preserve structure
 					const paragraphs = extractParagraphsFromHtml(summary);
-					console.log(
+					debugLog(
 						"[Render] Extracted paragraphs for summary:",
 						paragraphs.length
 					);
@@ -5093,7 +5174,7 @@ if (window.__RGInitDone) {
 				throw new Error("Failed to generate summary.");
 			}
 		} catch (error) {
-			console.error("Error in handleSummarizeClick:", error);
+			debugError("Error in handleSummarizeClick:", error);
 
 			// Special handling for API key missing error - already handled above
 			if (error.message && error.message.includes("API key is missing")) {
@@ -5131,7 +5212,7 @@ if (window.__RGInitDone) {
 		isShort = false
 	) {
 		const summaryType = isShort ? "short" : "long";
-		console.log(
+		debugLog(
 			`Content is large, creating ${summaryType} summary in multiple parts...`
 		);
 		if (statusDiv) {
@@ -5141,9 +5222,20 @@ if (window.__RGInitDone) {
 		// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
 		const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
 
-		// Use our improved content splitting function
-		const parts = splitContentForProcessing(content, charsPerPart);
-		console.log(
+		// Use shared content splitting helper
+		const chunkingModule = await loadChunkingUtils();
+		const splitContentForProcessing =
+			chunkingModule?.splitContentForProcessing;
+		if (!splitContentForProcessing) {
+			console.warn(
+				"Chunking utils unavailable, summarizing content without splitting."
+			);
+		}
+
+		const parts = splitContentForProcessing?.(content, charsPerPart, {
+			logPrefix: "[splitContentForProcessing]",
+		}) || [content];
+		debugLog(
 			`Split content into ${parts.length} parts for ${summaryType} summarization`
 		);
 
@@ -5162,7 +5254,7 @@ if (window.__RGInitDone) {
 				statusDiv.textContent = `Summarizing part ${currentPartNum} of ${parts.length}...`;
 			}
 
-			console.log(
+			debugLog(
 				`Creating ${summaryType} summary for part ${currentPartNum}/${parts.length} (${part.length} characters)`
 			);
 
@@ -5183,22 +5275,19 @@ if (window.__RGInitDone) {
 				});
 
 				if (response && response.success && response.summary) {
-					console.log(
+					debugLog(
 						`Successfully summarized part ${currentPartNum}/${parts.length}`
 					);
 					allPartSummaries.push(response.summary);
 				} else {
-					console.error(
+					debugError(
 						`Error summarizing part ${currentPartNum}:`,
 						response?.error || "Unknown error"
 					);
 					// Continue with other parts even if one fails
 				}
 			} catch (error) {
-				console.error(
-					`Error summarizing part ${currentPartNum}:`,
-					error
-				);
+				debugError(`Error summarizing part ${currentPartNum}:`, error);
 				// Continue with other parts even if one fails
 			}
 
@@ -5237,7 +5326,7 @@ if (window.__RGInitDone) {
 					return finalResponse.combinedSummary;
 				} else {
 					// If the combination failed, just join the summaries with separators
-					console.log("Using fallback approach to combine summaries");
+					debugLog("Using fallback approach to combine summaries");
 					return (
 						`Complete summary of "${title}":\n\n` +
 						allPartSummaries.join("\n\n")
@@ -5245,7 +5334,7 @@ if (window.__RGInitDone) {
 				}
 			} catch (error) {
 				// If there's an error combining, just join them
-				console.error("Error combining summaries:", error);
+				debugError("Error combining summaries:", error);
 				return (
 					`Complete summary of "${title}":\n\n` +
 					allPartSummaries.join("\n\n")
@@ -5269,7 +5358,7 @@ if (window.__RGInitDone) {
 			if (!originalText) return;
 
 			if (originalText.includes("Regenerate")) {
-				// Clear cache and allow regeneration
+				// Clear cache before regeneration but continue to process
 				await storageManager.removeEnhancedContent(
 					window.location.href
 				);
@@ -5296,7 +5385,6 @@ if (window.__RGInitDone) {
 						if (banner) banner.remove();
 					}
 				}
-				return; // Don't proceed to enhance, just clear cache
 			} else {
 				// Try loading cached content
 				try {
@@ -5363,89 +5451,199 @@ if (window.__RGInitDone) {
 				"chunkingEnabled",
 				"chunkSize",
 				"useEmoji",
+				"formatGameStats",
+				"centerSceneHeadings",
 			]);
 			const chunkingEnabled = settings.chunkingEnabled !== false;
 			const chunkSize = settings.chunkSize || 20000; // Same default as background
 			const chunkThreshold = chunkSize; // Use same value for threshold (simplified)
 			const useEmoji = settings.useEmoji === true;
+			formattingOptions.useEmoji = useEmoji;
+			formattingOptions.formatGameStats =
+				settings.formatGameStats !== false; // default true
+			formattingOptions.centerSceneHeadings =
+				settings.centerSceneHeadings !== false; // default true
+
+			// Load chunking helpers (may fall back to single-pass if unavailable)
+			const chunkingModule = chunkingEnabled
+				? await loadChunkingUtils()
+				: null;
+			const splitContentForProcessing =
+				chunkingModule?.splitContentForProcessing;
+			const minChunkLength = chunkingModule?.MIN_CHUNK_LENGTH || 200;
+			if (chunkingEnabled && !splitContentForProcessing) {
+				showStatusMessage(
+					"Chunking helper unavailable. Proceeding without chunking.",
+					"warning",
+					3000
+				);
+			}
 
 			// If chunking is enabled and content is large enough, prepare progressive containers
 			const contentArea = findContentArea();
 			if (!contentArea)
 				throw new Error("Unable to find content area for enhancement");
 
-			const shouldChunk =
+			let shouldChunk =
 				chunkingEnabled &&
+				splitContentForProcessing &&
 				extractedContent.text.length > chunkThreshold;
+
 			if (shouldChunk) {
-				// Split content the same way background will
-				const parts = splitContentForProcessing(
-					extractedContent.text,
-					chunkSize
-				);
-
-				// Store original HTML for restoration/caching
-				const originalHTML = contentArea.innerHTML;
-				contentArea.setAttribute("data-original-html", originalHTML);
-				contentArea.setAttribute(
-					"data-original-text",
-					extractedContent.text
-				);
-				contentArea.setAttribute("data-total-chunks", parts.length);
-
-				// Split HTML into chunks that match text chunks (preserves original formatting)
-				const htmlChunks = splitHTMLIntoChunks(contentArea, parts);
-
-				// Create new structure with inline chunk replacement:
-				// For each chunk, we show a banner + content area that will be replaced in place
-				const chunkedContentContainer = document.createElement("div");
-				chunkedContentContainer.id = "gemini-chunked-content";
-				chunkedContentContainer.style.width = "100%";
-
-				for (let i = 0; i < parts.length; i++) {
-					// Create chunk wrapper
-					const chunkWrapper = document.createElement("div");
-					chunkWrapper.className = "gemini-chunk-wrapper";
-					chunkWrapper.setAttribute("data-chunk-index", i);
-
-					// Add chunk banner (first chunk starts as 'processing', rest as 'pending')
-					const initialStatus = i === 0 ? "processing" : "pending";
-					const banner = createChunkBanner(
-						i,
-						parts.length,
-						initialStatus
+				let parts;
+				try {
+					parts = splitContentForProcessing(
+						extractedContent.text,
+						chunkSize,
+						{ logPrefix: "[splitContentForProcessing]" }
 					);
-					chunkWrapper.appendChild(banner);
-
-					// Add chunk content area with original content (preserving HTML structure)
-					const chunkContent = document.createElement("div");
-					chunkContent.className = "gemini-chunk-content";
-					chunkContent.setAttribute("data-chunk-index", i);
-					chunkContent.setAttribute(
-						"data-original-chunk-content",
-						parts[i]
+				} catch (splitError) {
+					debugError(
+						"Failed to split content for chunking:",
+						splitError
 					);
-					// Store original HTML chunk for show/hide toggle
-					chunkContent.setAttribute(
-						"data-original-chunk-html",
-						htmlChunks[i] || formatOriginalChunkContent(parts[i])
+					showStatusMessage(
+						"Chunking failed; proceeding without chunking.",
+						"warning",
+						4000
 					);
-					// Display original content with preserved HTML structure
-					chunkContent.innerHTML =
-						htmlChunks[i] || formatOriginalChunkContent(parts[i]);
-					chunkWrapper.appendChild(chunkContent);
-
-					chunkedContentContainer.appendChild(chunkWrapper);
+					shouldChunk = false;
 				}
 
-				// Clear and replace content area
-				contentArea.innerHTML = "";
-				contentArea.appendChild(chunkedContentContainer);
+				if (shouldChunk) {
+					parts = normalizeChunkParts(parts, minChunkLength);
+				}
 
-				console.log(
-					`Prepared ${parts.length} chunks for inline replacement with preserved HTML`
-				);
-			} // Get novel-specific custom prompt if available
+				if (!parts || parts.length <= 1) {
+					shouldChunk = false;
+				}
+
+				if (shouldChunk) {
+					const originalHTML = contentArea.innerHTML;
+					try {
+						// Store original HTML for restoration/caching
+						contentArea.setAttribute(
+							"data-original-html",
+							originalHTML
+						);
+						contentArea.setAttribute(
+							"data-original-text",
+							extractedContent.text
+						);
+						contentArea.setAttribute(
+							"data-total-chunks",
+							parts.length
+						);
+
+						// Split HTML into chunks that match text chunks (preserves original formatting)
+						let htmlChunks;
+						try {
+							htmlChunks = splitHTMLIntoChunks(
+								contentArea,
+								parts
+							);
+						} catch (htmlSplitError) {
+							debugError(
+								"Failed to split HTML into chunks:",
+								htmlSplitError
+							);
+							htmlChunks = parts.map((p) =>
+								formatOriginalChunkContent(p)
+							);
+						}
+
+						// Ensure htmlChunks aligns with parts length
+						if (
+							!Array.isArray(htmlChunks) ||
+							htmlChunks.length === 0
+						) {
+							htmlChunks = parts.map((p) =>
+								formatOriginalChunkContent(p)
+							);
+						}
+						while (htmlChunks.length < parts.length) {
+							htmlChunks.push(
+								formatOriginalChunkContent(
+									parts[htmlChunks.length]
+								)
+							);
+						}
+						if (htmlChunks.length > parts.length) {
+							htmlChunks = htmlChunks.slice(0, parts.length);
+						}
+
+						// Create new structure with inline chunk replacement:
+						// For each chunk, we show a banner + content area that will be replaced in place
+						const chunkedContentContainer =
+							document.createElement("div");
+						chunkedContentContainer.id = "gemini-chunked-content";
+						chunkedContentContainer.style.width = "100%";
+
+						for (let i = 0; i < parts.length; i++) {
+							const chunkWrapper = document.createElement("div");
+							chunkWrapper.className = "gemini-chunk-wrapper";
+							chunkWrapper.setAttribute("data-chunk-index", i);
+
+							// Add chunk banner (first chunk starts as 'processing', rest as 'pending')
+							const initialStatus =
+								i === 0 ? "processing" : "pending";
+							const banner = createChunkBanner(
+								i,
+								parts.length,
+								initialStatus
+							);
+							chunkWrapper.appendChild(banner);
+
+							// Add chunk content area with original content (preserving HTML structure)
+							const chunkContent = document.createElement("div");
+							chunkContent.className = "gemini-chunk-content";
+							chunkContent.setAttribute("data-chunk-index", i);
+							chunkContent.setAttribute(
+								"data-original-chunk-content",
+								parts[i]
+							);
+							// Store original HTML chunk for show/hide toggle
+							chunkContent.setAttribute(
+								"data-original-chunk-html",
+								htmlChunks[i] ||
+									formatOriginalChunkContent(parts[i])
+							);
+							// Display original content with preserved HTML structure
+							chunkContent.innerHTML =
+								htmlChunks[i] ||
+								formatOriginalChunkContent(parts[i]);
+							chunkWrapper.appendChild(chunkContent);
+
+							chunkedContentContainer.appendChild(chunkWrapper);
+						}
+
+						// Clear and replace content area
+						contentArea.innerHTML = "";
+						contentArea.appendChild(chunkedContentContainer);
+
+						debugLog(
+							`Prepared ${parts.length} chunks for inline replacement with preserved HTML`
+						);
+					} catch (prepError) {
+						debugError(
+							"Failed to prepare chunked view:",
+							prepError
+						);
+						// Restore original content and fall back to non-chunked processing
+						contentArea.innerHTML = originalHTML;
+						contentArea.removeAttribute("data-original-html");
+						contentArea.removeAttribute("data-original-text");
+						contentArea.removeAttribute("data-total-chunks");
+						shouldChunk = false;
+						showStatusMessage(
+							"Could not prepare chunked content. Proceeding without chunking.",
+							"warning",
+							4000
+						);
+					}
+				}
+			}
+			// Get novel-specific custom prompt if available
 			let novelCustomPrompt = "";
 			if (novelLibrary) {
 				try {
@@ -5454,12 +5652,12 @@ if (window.__RGInitDone) {
 					);
 					if (novel && novel.customPrompt) {
 						novelCustomPrompt = novel.customPrompt;
-						console.log(
+						debugLog(
 							`Using novel-specific prompt for: ${novel.title}`
 						);
 					}
 				} catch (err) {
-					console.log("Could not get novel custom prompt:", err);
+					debugLog("Could not get novel custom prompt:", err);
 				}
 			}
 
@@ -5504,7 +5702,7 @@ if (window.__RGInitDone) {
 				) {
 					replaceContentWithEnhancedVersion(response.result);
 				} else if (hasProgressiveChunks) {
-					console.log(
+					debugLog(
 						"Skipping replaceContentWithEnhancedVersion - chunks already displayed progressively"
 					);
 				}
@@ -5544,7 +5742,7 @@ if (window.__RGInitDone) {
 				}
 			}
 		} catch (error) {
-			console.error("Error in handleEnhanceClick:", error);
+			debugError("Error in handleEnhanceClick:", error);
 			showStatusMessage(`Error: ${error.message}`, "error");
 			if (button) {
 				button.textContent = "✨ Enhance with Gemini";
@@ -5584,7 +5782,7 @@ if (window.__RGInitDone) {
 				: contentArea.innerText || contentArea.textContent;
 
 			// Debug logging to verify HTML structure preservation
-			console.log(
+			debugLog(
 				"replaceContentWithEnhancedVersion: isFromCache =",
 				isFromCache,
 				", originalContent has <p> tags =",
@@ -5610,7 +5808,7 @@ if (window.__RGInitDone) {
 
 			// If content doesn't have <p> tags, convert newlines to paragraphs
 			if (!/<p[\s>]/i.test(sanitizedContent)) {
-				console.log(
+				debugLog(
 					"Enhanced content missing <p> tags, converting newlines to paragraphs"
 				);
 				// Split by double newlines (paragraph breaks)
@@ -5637,7 +5835,7 @@ if (window.__RGInitDone) {
 				supportsTextOnly &&
 				typeof currentHandler.applyEnhancedContent === "function"
 			) {
-				console.log(
+				debugLog(
 					"Handler provides text-only enhancement; delegating paragraph updates..."
 				);
 				currentHandler.applyEnhancedContent(
@@ -5646,10 +5844,10 @@ if (window.__RGInitDone) {
 				);
 				newContent = contentArea.innerText || contentArea.textContent;
 			} else {
-				console.log("Using default full HTML enhancement pathway...");
+				debugLog("Using default full HTML enhancement pathway...");
 				const { preservedElements: originalImages } =
 					preserveHtmlElements(originalContent);
-				console.log(
+				debugLog(
 					`Preserved ${originalImages.length} images from original content`
 				);
 				const {
@@ -5658,7 +5856,7 @@ if (window.__RGInitDone) {
 				} = preserveGameStatsBoxes(sanitizedContent);
 				let contentToDisplay = contentWithPreservedStats;
 				if (preservedBoxes.length > 0) {
-					console.log(
+					debugLog(
 						`Restoring ${preservedBoxes.length} game stats boxes`
 					);
 					contentToDisplay = restoreGameStatsBoxes(
@@ -5707,7 +5905,7 @@ if (window.__RGInitDone) {
 			// Debug: Check if original has <p> tags
 			const originalHasPTags = /<p[\s>]/i.test(originalContent);
 			const enhancedHasPTags = /<p[\s>]/i.test(contentArea.innerHTML);
-			console.log(
+			debugLog(
 				"Stored data attributes. Original length:",
 				originalContent ? originalContent.length : 0,
 				"Enhanced length:",
@@ -5720,7 +5918,7 @@ if (window.__RGInitDone) {
 				enhancedHasPTags
 			);
 			// Log first 500 chars of original to see structure
-			console.log(
+			debugLog(
 				"Original HTML preview:",
 				originalContent ? originalContent.substring(0, 500) : "null"
 			);
@@ -5750,12 +5948,12 @@ if (window.__RGInitDone) {
 					newToggleButton.textContent = showingEnhanced
 						? "Show Original"
 						: "Show Enhanced";
-					console.log(
+					debugLog(
 						"Toggle button found, attaching click handler. showingEnhanced:",
 						showingEnhanced
 					);
 					newToggleButton.addEventListener("click", function (e) {
-						console.log("Toggle button clicked!");
+						debugLog("Toggle button clicked!");
 						e.preventDefault();
 						e.stopPropagation();
 
@@ -5763,7 +5961,7 @@ if (window.__RGInitDone) {
 							contentArea.getAttribute(
 								"data-showing-enhanced"
 							) === "true";
-						console.log(
+						debugLog(
 							"currentlyShowingEnhanced:",
 							currentlyShowingEnhanced
 						);
@@ -5773,7 +5971,7 @@ if (window.__RGInitDone) {
 							const storedOriginal = contentArea.getAttribute(
 								"data-original-content"
 							);
-							console.log(
+							debugLog(
 								"Switching to original. storedOriginal length:",
 								storedOriginal ? storedOriginal.length : 0,
 								"Has <p> tags:",
@@ -5781,7 +5979,7 @@ if (window.__RGInitDone) {
 									? /<p[\s>]/i.test(storedOriginal)
 									: false
 							);
-							console.log(
+							debugLog(
 								"Restoring HTML preview:",
 								storedOriginal
 									? storedOriginal.substring(0, 500)
@@ -5794,21 +5992,19 @@ if (window.__RGInitDone) {
 									"data-showing-enhanced",
 									"false"
 								);
-								console.log(
+								debugLog(
 									"Switched to original content. Actual innerHTML has <p> tags:",
 									/<p[\s>]/i.test(contentArea.innerHTML)
 								);
 							} else {
-								console.error(
-									"No stored original content found!"
-								);
+								debugError("No stored original content found!");
 							}
 						} else {
 							// Switch to enhanced - restore enhanced HTML
 							const storedEnhanced = contentArea.getAttribute(
 								"data-enhanced-content"
 							);
-							console.log(
+							debugLog(
 								"Switching to enhanced. storedEnhanced length:",
 								storedEnhanced ? storedEnhanced.length : 0
 							);
@@ -5832,16 +6028,14 @@ if (window.__RGInitDone) {
 								} else {
 									applyDefaultFormatting(contentArea);
 								}
-								console.log("Switched to enhanced content");
+								debugLog("Switched to enhanced content");
 							} else {
-								console.error(
-									"No stored enhanced content found!"
-								);
+								debugError("No stored enhanced content found!");
 							}
 						}
 
 						// Recursively setup the banner for the new state
-						console.log(
+						debugLog(
 							"Setting up toggle banner for state:",
 							!currentlyShowingEnhanced
 						);
@@ -5881,7 +6075,7 @@ if (window.__RGInitDone) {
 				} else {
 					contentArea.appendChild(newBanner);
 				}
-				console.log(
+				debugLog(
 					"Banner inserted. contentArea:",
 					contentArea.id,
 					"Banner parent:",
@@ -5895,8 +6089,8 @@ if (window.__RGInitDone) {
 			window.scrollTo(0, scrollPosition);
 			showStatusMessage("Content successfully enhanced with Gemini!");
 
-			// Save to cache if storage manager is available
-			if (storageManager && !isCachedContent) {
+			// Save to cache if storage manager is available (always overwrite with latest)
+			if (storageManager) {
 				try {
 					await storageManager.saveEnhancedContent(
 						window.location.href,
@@ -5909,9 +6103,9 @@ if (window.__RGInitDone) {
 						}
 					);
 					isCachedContent = true;
-					console.log("Enhanced content saved to cache");
+					debugLog("Enhanced content saved to cache");
 				} catch (saveError) {
-					console.error("Failed to save to cache:", saveError);
+					debugError("Failed to save to cache:", saveError);
 				}
 			}
 
@@ -5920,7 +6114,7 @@ if (window.__RGInitDone) {
 				const novelContext = extractNovelContext();
 				await addToNovelLibrary(novelContext);
 			} catch (libraryError) {
-				console.error("Failed to add to novel library:", libraryError);
+				debugError("Failed to add to novel library:", libraryError);
 			}
 
 			// Update chapter progression after successful enhancement
@@ -5928,7 +6122,7 @@ if (window.__RGInitDone) {
 
 			return true;
 		} catch (error) {
-			console.error("Error replacing content:", error);
+			debugError("Error replacing content:", error);
 			showStatusMessage(
 				`Error replacing content: ${error.message}`,
 				"error"
@@ -5972,7 +6166,7 @@ if (window.__RGInitDone) {
 				supportsTextOnly &&
 				typeof currentHandler.applyEnhancedContent === "function"
 			) {
-				console.log(
+				debugLog(
 					"Handler provides text-only enhancement for display path; delegating..."
 				);
 				currentHandler.applyEnhancedContent(
@@ -5980,7 +6174,7 @@ if (window.__RGInitDone) {
 					enhancedContent
 				);
 			} else {
-				console.log(
+				debugLog(
 					"Using default full HTML replacement in displayEnhancedContent..."
 				);
 				contentArea.innerHTML = enhancedContent;
@@ -6111,7 +6305,7 @@ if (window.__RGInitDone) {
 
 			return true;
 		} catch (error) {
-			console.error("Error displaying enhanced content:", error);
+			debugError("Error displaying enhanced content:", error);
 			showStatusMessage(`Error: ${error.message}`, "error");
 			return false;
 		}
@@ -6119,7 +6313,7 @@ if (window.__RGInitDone) {
 
 	// Function to display an error message when processing fails
 	function showProcessingError(errorMessage) {
-		console.error("Processing error:", errorMessage);
+		debugError("Processing error:", errorMessage);
 
 		const contentArea = findContentArea();
 		if (!contentArea) return;
@@ -6224,8 +6418,24 @@ if (window.__RGInitDone) {
 
 	// Default formatting to apply after enhancement
 	function applyDefaultFormatting(contentArea) {
-		// DO NOT modify any styling - preserve original formatting
-		// This function is intentionally empty to maintain original styles
+		if (!contentArea) return;
+
+		// Center scene headings/dividers when enabled
+		if (formattingOptions.centerSceneHeadings) {
+			const headingSelectors =
+				"h2, h3, h4, .section-divider, hr.section-divider";
+			contentArea.querySelectorAll(headingSelectors).forEach((el) => {
+				if (el.tagName === "HR") {
+					el.style.marginLeft = "auto";
+					el.style.marginRight = "auto";
+					el.style.width = "60%";
+					return;
+				}
+				el.style.textAlign = "center";
+				el.style.marginLeft = "auto";
+				el.style.marginRight = "auto";
+			});
+		}
 	}
 
 	// Function to add the Gemini processed notice banner
@@ -6308,7 +6518,7 @@ if (window.__RGInitDone) {
 	async function handleGetNovelInfo() {
 		try {
 			if (!currentHandler) {
-				console.log("📚 getNovelInfo: No handler available");
+				debugLog("📚 getNovelInfo: No handler available");
 				return {
 					success: false,
 					error: "No handler available for this page",
@@ -6316,12 +6526,12 @@ if (window.__RGInitDone) {
 			}
 
 			// Get novel metadata from handler
-			console.log("📚 getNovelInfo: Extracting metadata...");
+			debugLog("📚 getNovelInfo: Extracting metadata...");
 			const metadata = await currentHandler.extractNovelMetadata();
-			console.log("📚 getNovelInfo: Raw metadata:", metadata);
+			debugLog("📚 getNovelInfo: Raw metadata:", metadata);
 
 			if (!metadata || !metadata.title) {
-				console.log("📚 getNovelInfo: No valid metadata found");
+				debugLog("📚 getNovelInfo: No valid metadata found");
 				return {
 					success: false,
 					error: "Could not extract novel metadata",
@@ -6405,13 +6615,13 @@ if (window.__RGInitDone) {
 					  }),
 			};
 
-			console.log("📚 getNovelInfo: Returning novelInfo:", novelInfo);
+			debugLog("📚 getNovelInfo: Returning novelInfo:", novelInfo);
 			return {
 				success: true,
 				novelInfo: novelInfo,
 			};
 		} catch (error) {
-			console.error("Error in handleGetNovelInfo:", error);
+			debugError("Error in handleGetNovelInfo:", error);
 			return { success: false, error: error.message };
 		}
 	}
@@ -6446,27 +6656,39 @@ if (window.__RGInitDone) {
 			const result = await novelLibrary.addOrUpdateNovel({
 				title: metadata.title,
 				author: metadata.author,
-				coverUrl: metadata.coverImage,
+				coverUrl: metadata.coverUrl || metadata.coverImage,
 				currentChapter: metadata.currentChapter,
-				totalChapters: metadata.totalChapters,
+				totalChapters:
+					metadata.totalChapters || metadata.metadata?.totalChapters,
 				chapterTitle: metadata.chapterTitle,
 				source: metadata.source || currentHandler.getSiteIdentifier(),
 				sourceUrl: metadata.sourceUrl || window.location.href,
+				mainNovelUrl:
+					metadata.mainNovelUrl ||
+					metadata.sourceUrl ||
+					window.location.href,
 				lastChapterUrl: window.location.href,
 				tags: metadata.tags || [],
+				genres: metadata.genres || [],
+				status: metadata.status,
+				metadata: metadata.metadata || metadata,
+				metadataIncomplete:
+					metadata.metadataIncomplete ||
+					metadata.needsDetailPage ||
+					false,
 				description: metadata.description,
 			});
 
 			return { success: true, novel: result };
 		} catch (error) {
-			console.error("Error in handleAddToLibrary:", error);
+			debugError("Error in handleAddToLibrary:", error);
 			return { success: false, error: error.message };
 		}
 	}
 
 	// Listen for messages from the extension popup or background
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		console.log("Content script received message:", message);
+		debugLog("Content script received message:", message);
 
 		if (message.action === "ping") {
 			sendResponse({ success: true, message: "Content script is alive" });
@@ -6475,7 +6697,7 @@ if (window.__RGInitDone) {
 
 		// Handle API key missing message - stop everything immediately
 		if (message.action === "apiKeyMissing") {
-			console.error("[Content] API key is missing, halting processing");
+			debugError("[Content] API key is missing, halting processing");
 			showStatusMessage(
 				"⚠️ API key is missing. Please configure it in the extension popup.",
 				"error",
@@ -6528,7 +6750,7 @@ if (window.__RGInitDone) {
 
 		// Handle processing cancellation
 		if (message.action === "processingCancelled") {
-			console.log(
+			debugLog(
 				`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`
 			);
 			showStatusMessage(
@@ -6592,7 +6814,7 @@ if (window.__RGInitDone) {
 
 		if (message.action === "settingsUpdated") {
 			// Update any local settings
-			console.log("Settings updated:", message);
+			debugLog("Settings updated:", message);
 			sendResponse({ success: true });
 			return true;
 		}
@@ -6659,7 +6881,7 @@ if (window.__RGInitDone) {
 					);
 					sendResponse({ success: true, result });
 				} catch (error) {
-					console.error("Error updating reading status:", error);
+					debugError("Error updating reading status:", error);
 					sendResponse({
 						success: false,
 						error:
@@ -6675,7 +6897,7 @@ if (window.__RGInitDone) {
 
 	// Test function for game status boxes (can be triggered from the console for verification)
 	window.testGameStatsBox = async function () {
-		console.log("Testing game stats box functionality...");
+		debugLog("Testing game stats box functionality...");
 
 		// Create a sample div to show the test results
 		const testContainer = document.createElement("div");
@@ -6701,7 +6923,7 @@ if (window.__RGInitDone) {
 			});
 
 			if (response && response.success) {
-				console.log("Game stats box test successful:", response);
+				debugLog("Game stats box test successful:", response);
 				testContainer.innerHTML = `
 				<h3>Game Stats Box Test Results:</h3>
 				<p>Test completed. Game stats box preserved: ${
@@ -6713,14 +6935,14 @@ if (window.__RGInitDone) {
 				</div>
 			`;
 			} else {
-				console.error("Game stats box test failed:", response);
+				debugError("Game stats box test failed:", response);
 				testContainer.innerHTML = `
 				<h3>Game Stats Box Test Failed</h3>
 				<p>Error: ${response?.error || "Unknown error"}</p>
 			`;
 			}
 		} catch (error) {
-			console.error("Error testing game stats box:", error);
+			debugError("Error testing game stats box:", error);
 			testContainer.innerHTML = `
 			<h3>Game Stats Box Test Error</h3>
 			<p>Error: ${error.message}</p>

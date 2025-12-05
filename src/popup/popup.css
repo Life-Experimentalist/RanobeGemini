@@ -1256,9 +1256,41 @@ button:disabled {
 	color: #fff;
 }
 
+.status-badge.site {
+	background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+	color: #fff;
+}
+
 .status-badge.not-supported {
 	background: #f8d7da;
 	color: #842029;
+}
+
+/* Backup controls */
+.backup-section {
+	margin-top: 12px;
+	padding: 12px;
+	background: #f7f9ff;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+}
+
+.backup-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 8px;
+}
+
+.backup-history {
+	margin-top: 8px;
+	font-size: 12px;
+	color: #475569;
+}
+
+.backup-history li {
+	margin-bottom: 4px;
 }
 
 /* Novel Card */

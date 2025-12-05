@@ -6,6 +6,7 @@
  * Handler Type: "chapter_embedded" - full novel metadata available on chapter pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class FanfictionHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -16,6 +17,9 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		"www.fanfiction.net",
 		"*.fanfiction.net", // Safety net: catches any other subdomains (EXCEPT m.fanfiction.net - handled by mobile handler)
 	];
+
+	// Priority for auto-selection (lower number = earlier match)
+	static PRIORITY = 20;
 
 	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
@@ -183,7 +187,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				'div[id^="storytext"]:not(#storytext)'
 			);
 			if (childDivs.length > 0) {
-				console.log(
+				debugLog(
 					"FanFiction: Found storytext child div:",
 					childDivs[0].id
 				);
@@ -194,7 +198,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			const storytextClassDivs =
 				parentStorytextDiv.querySelectorAll("div.storytext[id]");
 			if (storytextClassDivs.length > 0) {
-				console.log(
+				debugLog(
 					"FanFiction: Found storytext via class:",
 					storytextClassDivs[0].id
 				);
@@ -202,7 +206,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			}
 
 			// If no child found, use the parent (fallback)
-			console.log("FanFiction: Using parent storytext div");
+			debugLog("FanFiction: Using parent storytext div");
 			return parentStorytextDiv;
 		}
 
@@ -241,7 +245,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		try {
 			const profileTop = document.getElementById("profile_top");
 			if (!profileTop) {
-				console.log("FanFiction: #profile_top not found");
+				debugLog("FanFiction: #profile_top not found");
 				return null;
 			}
 
@@ -255,7 +259,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				if (text && text.length > 20 && !text.startsWith("By:")) {
 					// Check if this looks like a description (not metadata)
 					if (!text.includes("Rated:") && !text.includes("Words:")) {
-						console.log(
+						debugLog(
 							"FanFiction: Found description:",
 							text.substring(0, 100) + "..."
 						);
@@ -275,7 +279,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				) {
 					const text = div.textContent.trim();
 					if (text && text.length > 20) {
-						console.log(
+						debugLog(
 							"FanFiction: Found description via style:",
 							text.substring(0, 100) + "..."
 						);
@@ -284,10 +288,10 @@ When enhancing, improve readability while respecting the author's creative voice
 				}
 			}
 
-			console.log("FanFiction: No description found in #profile_top");
+			debugLog("FanFiction: No description found in #profile_top");
 			return null;
 		} catch (error) {
-			console.error("FanFiction: Error extracting description:", error);
+			debugError("FanFiction: Error extracting description:", error);
 			return null;
 		}
 	}
@@ -313,7 +317,7 @@ When enhancing, improve readability while respecting the author's creative voice
 
 			return null;
 		} catch (error) {
-			console.error("FanFiction: Error extracting author:", error);
+			debugError("FanFiction: Error extracting author:", error);
 			return null;
 		}
 	}
@@ -332,6 +336,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			genres: [],
 			status: "unknown",
 			totalChapters: 0,
+			metadataIncomplete: false,
 			metadata: {
 				isCrossover: false,
 				fandoms: [],
@@ -384,7 +389,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				}
 			}
 		} catch (error) {
-			console.error("FanFiction: Error extracting cover URL:", error);
+			debugError("FanFiction: Error extracting cover URL:", error);
 		}
 
 		// Extract additional metadata from profile
@@ -452,7 +457,7 @@ When enhancing, improve readability while respecting the author's creative voice
 					if (actualFandoms.length > 1) {
 						metadata.metadata.isCrossover = true;
 					}
-					console.log(
+					debugLog(
 						"FanFiction: Extracted fandoms:",
 						fandoms,
 						"hierarchy:",
@@ -467,7 +472,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				);
 				if (infoSpan) {
 					const infoText = infoSpan.textContent;
-					console.log("FanFiction: Raw metadata text:", infoText);
+					debugLog("FanFiction: Raw metadata text:", infoText);
 
 					// Extract rating - look for "Fiction K", "Fiction T", "Fiction M", "Fiction K+", etc.
 					// Format in text: "Rated: Fiction  T" (may have extra spaces)
@@ -476,7 +481,7 @@ When enhancing, improve readability while respecting the author's creative voice
 					);
 					if (ratingMatch) {
 						metadata.metadata.rating = ratingMatch[1].toUpperCase();
-						console.log(
+						debugLog(
 							"FanFiction: Extracted rating:",
 							metadata.metadata.rating
 						);
@@ -488,7 +493,7 @@ When enhancing, improve readability while respecting the author's creative voice
 						.split(/\s+-\s+/)
 						.map((s) => s.trim())
 						.filter((s) => s.length > 0);
-					console.log("FanFiction: Metadata segments:", segments);
+					debugLog("FanFiction: Metadata segments:", segments);
 
 					// Segment 0 typically contains "Rated: Fiction T"
 					// Segment 1 typically contains language (e.g., "English")
@@ -505,7 +510,7 @@ When enhancing, improve readability while respecting the author's creative voice
 							langSegment.length < 20
 						) {
 							metadata.metadata.language = langSegment;
-							console.log(
+							debugLog(
 								"FanFiction: Extracted language:",
 								metadata.metadata.language
 							);
@@ -516,71 +521,66 @@ When enhancing, improve readability while respecting the author's creative voice
 					// Note: Sometimes the metadata text has malformed segments where
 					// "RomanceChapters: 30" appears without proper " - " separator
 					if (segments.length > 2) {
-						let genreSegment = segments[2];
-
-						// First, clean up any "Chapters:" that got merged into the genre segment
-						// This handles cases like "RomanceChapters: 30" -> "Romance"
-						if (genreSegment.includes("Chapters:")) {
-							genreSegment = genreSegment
-								.split("Chapters:")[0]
-								.trim();
-							console.log(
-								"FanFiction: Cleaned genre segment from Chapters:",
-								genreSegment
-							);
-						}
-
-						// Also handle other common metadata fields that might get merged
-						const metadataFields = [
-							"Words:",
-							"Reviews:",
-							"Favs:",
-							"Follows:",
-							"Published:",
-							"Updated:",
-							"Status:",
+						// Collect genre-looking segments until we hit a stat field
+						const stopFields = [
+							"chapters:",
+							"words:",
+							"reviews:",
+							"favs:",
+							"follows:",
+							"published:",
+							"updated:",
+							"status:",
 							"id:",
 						];
-						for (const field of metadataFields) {
-							if (genreSegment.includes(field)) {
-								genreSegment = genreSegment
-									.split(field)[0]
-									.trim();
+
+						const genreSegments = [];
+						for (let i = 2; i < segments.length; i++) {
+							const segment = segments[i];
+							const lower = segment.toLowerCase();
+
+							// Stop once we reach stats-like segment
+							const hitStopField = stopFields.find((field) =>
+								lower.includes(field)
+							);
+
+							// Clean out any stats suffix that got glued to genre text
+							const cleaned = segment
+								.replace(/Chapters:.*/i, "")
+								.replace(/Words:.*/i, "")
+								.replace(/Reviews:.*/i, "")
+								.replace(/Favs:.*/i, "")
+								.replace(/Follows:.*/i, "")
+								.replace(/Published:.*/i, "")
+								.replace(/Updated:.*/i, "")
+								.replace(/Status:.*/i, "")
+								.replace(/id:.*/i, "")
+								.trim();
+
+							if (cleaned) {
+								genreSegments.push(cleaned);
 							}
+
+							if (hitStopField) break;
 						}
 
-						// Genres contain "/" separator (e.g., "Romance/Adventure", "Humor/Drama")
-						// Or can be a single genre like "Romance"
-						if (
-							genreSegment.length > 0 &&
-							(genreSegment.includes("/") ||
-								(genreSegment.length < 30 &&
-									/^[A-Za-z]+$/.test(genreSegment)))
-						) {
-							// Make sure it's not a character segment (characters have dots, brackets, commas)
-							if (
-								!genreSegment.includes(".") &&
-								!genreSegment.includes("[") &&
-								!genreSegment.includes(",")
-							) {
-								const genres = genreSegment
-									.split("/")
-									.map((g) => g.trim())
-									.filter(
-										(g) =>
-											g.length > 0 &&
-											!g.match(/^\d/) &&
-											g !== "Chapters" &&
-											!g.includes(":") // Filter out any remaining metadata markers
-									);
-								if (genres.length > 0) {
-									metadata.genres = genres;
-									console.log(
-										"FanFiction: Extracted genres:",
-										metadata.genres
-									);
-								}
-							}
+						const genreString = genreSegments.join("/");
+						const genres = genreString
+							.split(/[\/,&]/)
+							.map((g) => g.trim())
+							.filter(
+								(g) =>
+									g.length > 0 &&
+									!g.match(/^\d/) &&
+									!g.includes(":")
+							);
+
+						if (genres.length > 0) {
+							metadata.genres = genres;
+							debugLog(
+								"FanFiction: Extracted genres:",
+								metadata.genres
+							);
 						}
 					}
 
@@ -588,7 +588,7 @@ When enhancing, improve readability while respecting the author's creative voice
 					const chaptersMatch = infoText.match(/Chapters:\s*(\d+)/i);
 					if (chaptersMatch) {
 						metadata.totalChapters = parseInt(chaptersMatch[1], 10);
-						console.log(
+						debugLog(
 							"FanFiction: Extracted chapters from text:",
 							metadata.totalChapters
 						);
@@ -606,7 +606,7 @@ When enhancing, improve readability while respecting the author's creative voice
 								chapSelect.querySelectorAll("option");
 							if (options.length > 0) {
 								metadata.totalChapters = options.length;
-								console.log(
+								debugLog(
 									"FanFiction: Extracted chapters from selector:",
 									metadata.totalChapters
 								);
@@ -618,7 +618,7 @@ When enhancing, improve readability while respecting the author's creative voice
 							metadata.totalChapters === 0
 						) {
 							metadata.totalChapters = 1;
-							console.log(
+							debugLog(
 								"FanFiction: Assuming one-shot (single chapter)"
 							);
 						}
@@ -659,6 +659,14 @@ When enhancing, improve readability while respecting the author's creative voice
 							10
 						);
 					}
+
+					// Normalize stats for UI consumption
+					metadata.stats = {
+						words: metadata.metadata.words,
+						reviews: metadata.metadata.reviews,
+						favorites: metadata.metadata.favorites,
+						follows: metadata.metadata.follows,
+					};
 
 					// Extract published date from data-xutime attribute
 					const publishedSpan =
@@ -724,15 +732,30 @@ When enhancing, improve readability while respecting the author's creative voice
 				}
 			}
 		} catch (error) {
-			console.error(
+			debugError(
 				"FanFiction: Error extracting additional metadata:",
 				error
 			);
 		}
 
+		// Surface useful tags for card/modal rendering
+		const combinedTags = new Set();
+		(metadata.genres || []).forEach((g) => combinedTags.add(g));
+		(metadata.metadata?.characters || []).forEach((c) =>
+			combinedTags.add(c)
+		);
+		(metadata.metadata?.fandoms || []).forEach((f) => combinedTags.add(f));
+		metadata.tags = Array.from(combinedTags);
+
+		// Flag metadata that still needs a dedicated refresh
+		metadata.metadataIncomplete =
+			!metadata.totalChapters ||
+			metadata.genres.length === 0 ||
+			!metadata.author;
+
 		// Validate that we're on a valid story page, not the home page
 		if (!this.isChapterPage()) {
-			console.log(
+			debugLog(
 				"FanFiction: Not on a valid story page, returning null metadata"
 			);
 			return null;
@@ -740,13 +763,13 @@ When enhancing, improve readability while respecting the author's creative voice
 
 		// Additional validation: check if we have essential metadata
 		if (!metadata.title || metadata.title === "FanFiction") {
-			console.log(
+			debugLog(
 				"FanFiction: Invalid metadata - likely on home/index page"
 			);
 			return null;
 		}
 
-		console.log("FanFiction: Extracted metadata:", metadata);
+		debugLog("FanFiction: Extracted metadata:", metadata);
 		return metadata;
 	}
 
@@ -767,7 +790,7 @@ When enhancing, improve readability while respecting the author's creative voice
 				};
 			}
 		} catch (error) {
-			console.error("Error getting chapter navigation:", error);
+			debugError("Error getting chapter navigation:", error);
 		}
 
 		// Fallback to default
@@ -799,7 +822,7 @@ When enhancing, improve readability while respecting the author's creative voice
 	applyEnhancedContent(contentArea, enhancedText) {
 		if (!contentArea || typeof enhancedText !== "string") return 0;
 
-		console.log(
+		debugLog(
 			"FanFiction applyEnhancedContent: contentArea is",
 			contentArea.id,
 			contentArea.className
@@ -815,7 +838,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		) {
 			const childDiv = contentArea.querySelector('div[id^="storytext"]');
 			if (childDiv) {
-				console.log(
+				debugLog(
 					"FanFiction: Switching from parent to child div:",
 					childDiv.id
 				);
@@ -830,7 +853,7 @@ When enhancing, improve readability while respecting the author's creative voice
 
 		if (hasHTMLTags) {
 			// Parse HTML content to extract paragraph text
-			console.log("FanFiction: Enhanced text contains HTML, parsing...");
+			debugLog("FanFiction: Enhanced text contains HTML, parsing...");
 			const tempDiv = document.createElement("div");
 			tempDiv.innerHTML = enhancedText;
 
@@ -840,12 +863,12 @@ When enhancing, improve readability while respecting the author's creative voice
 				.map((p) => p.textContent.trim())
 				.filter((text) => text.length > 0);
 
-			console.log(
+			debugLog(
 				`FanFiction: Extracted ${enhancedParagraphs.length} paragraphs from HTML`
 			);
 		} else {
 			// Plain text - split on double newlines as paragraph boundaries
-			console.log(
+			debugLog(
 				"FanFiction: Enhanced text is plain text, splitting by newlines..."
 			);
 			enhancedParagraphs = enhancedText
@@ -863,7 +886,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			enhancedParagraphs.length
 		);
 
-		console.log(
+		debugLog(
 			`FanFiction: Replacing ${replaceCount} existing paragraphs, adding ${
 				enhancedParagraphs.length - replaceCount
 			} new ones`

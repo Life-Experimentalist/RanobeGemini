@@ -17,16 +17,6 @@
 			sizes="32x32"
 			href="../icons/logo-light-32.png"
 		/>
-		<script>
-			// Detect sidebar mode early to prevent layout flash
-			// Only use URL parameter - sidebar mode is explicitly set by manifest
-			(function() {
-				const isSidebar = window.location.search.includes('sidebar=true');
-				if (isSidebar) {
-					document.documentElement.classList.add('sidebar-mode');
-				}
-			})();
-		</script>
 	</head>
 	<body>
 		<div class="library-container">
@@ -563,6 +553,32 @@
 								Remove all novels from your library. This cannot
 								be undone.
 							</p>
+						</div>
+					</div>
+
+					<div class="settings-section">
+						<h3>Reading Status Automation</h3>
+						<div class="settings-item">
+							<label style="display: flex; gap: 8px; align-items: center;">
+								<input type="checkbox" id="auto-hold-toggle" />
+								<span>Auto-set inactive novels to “On Hold”</span>
+							</label>
+							<p class="settings-desc">
+								Moves novels that have not been opened or updated within the configured window to the
+								<em>On Hold</em> status.
+							</p>
+							<label for="auto-hold-days" class="settings-desc" style="display: block; margin-top: 6px;">
+								Inactivity window (days)
+							</label>
+							<input
+								type="number"
+								id="auto-hold-days"
+								min="1"
+								max="90"
+								step="1"
+								value="7"
+								style="width: 120px;"
+							/>
 						</div>
 					</div>
 				</div>

@@ -5,6 +5,7 @@
  * Handler Type: "chapter_embedded" - full novel metadata available on chapter pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class AO3Handler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -18,6 +19,9 @@ export class AO3Handler extends BaseWebsiteHandler {
 		"*.archiveofourown.org", // Safety net: catches any other subdomains
 		"*.ao3.org", // Safety net: catches any other subdomains
 	];
+
+	// Priority for auto-selection (lower number = earlier match)
+	static PRIORITY = 30;
 
 	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
@@ -163,6 +167,8 @@ When enhancing, improve readability while respecting the author's original style
 			showControls: this.isChapterPage(),
 			insertionPoint: this.getNovelPageUIInsertionPoint(),
 			position: "after",
+			wrapInDefinitionList: true,
+			dlLabel: "Gemini",
 			isChapterPage: true,
 			customStyles: {
 				background: "linear-gradient(135deg, #1a1a1a 0%, #2d1f1f 100%)",
@@ -177,10 +183,16 @@ When enhancing, improve readability while respecting the author's original style
 	 * @returns {Object|null} { element, position } or null
 	 */
 	getNovelPageUIInsertionPoint() {
-		// Insert after the work meta (tags, stats area)
+		// Insert at the end of the work metadata block, after stats
 		const workMeta = document.querySelector("dl.work.meta");
 		if (workMeta) {
-			return { element: workMeta, position: "after" };
+			const statsRow = workMeta.querySelector("dd.stats");
+			if (statsRow?.parentElement === workMeta) {
+				return { element: statsRow, position: "after" };
+			}
+
+			// Fallback: append inside the metadata list
+			return { element: workMeta, position: "beforeend" };
 		}
 
 		// Fallback to preface section
@@ -416,7 +428,7 @@ When enhancing, improve readability while respecting the author's original style
 						metadata.metadata.totalChapters = publishedChapters;
 						metadata.totalChapters = publishedChapters;
 						metadata.status = "ongoing";
-						console.log(
+						debugLog(
 							`AO3: Work ongoing with ${publishedChapters} published chapters (totalChapters = ${publishedChapters})`
 						);
 					}
@@ -473,6 +485,27 @@ When enhancing, improve readability while respecting the author's original style
 				const hitsText = hitsEl.textContent.trim().replace(/,/g, "");
 				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
 			}
+
+			// Normalize stats into a single object for UI rendering
+			metadata.stats = {
+				words: metadata.metadata.words,
+				kudos: metadata.metadata.kudos,
+				bookmarks: metadata.metadata.bookmarks,
+				hits: metadata.metadata.hits,
+				comments: metadata.metadata.comments,
+			};
+		}
+
+		// Sync current chapter info from navigation
+		const nav = this.getChapterNavigation?.();
+		if (nav) {
+			if (nav.currentChapter) {
+				metadata.currentChapter = nav.currentChapter;
+			}
+			if (!metadata.totalChapters && nav.totalChapters) {
+				metadata.totalChapters = nav.totalChapters;
+				metadata.metadata.totalChapters = nav.totalChapters;
+			}
 		}
 
 		// Check for explicit status label
@@ -493,20 +526,20 @@ When enhancing, improve readability while respecting the author's original style
 			metadata.coverUrl = coverEl.src;
 		}
 
-		console.log("AO3: Extracted metadata:", metadata);
+		debugLog("AO3: Extracted metadata:", metadata);
 		return metadata;
 	}
 
 	// Find the content area on AO3
 	findContentArea() {
-		console.log("AO3: Looking for content area...");
+		debugLog("AO3: Looking for content area...");
 
 		// AO3's main chapter content is in div.userstuff.module with role="article"
 		const mainContent = document.querySelector(
 			'div.userstuff.module[role="article"]'
 		);
 		if (mainContent) {
-			console.log("AO3: Found main chapter content with role=article");
+			debugLog("AO3: Found main chapter content with role=article");
 			return mainContent;
 		}
 
@@ -515,7 +548,7 @@ When enhancing, improve readability while respecting the author's original style
 			"#chapters .userstuff.module"
 		);
 		if (chaptersContent) {
-			console.log("AO3: Found chapter content in #chapters");
+			debugLog("AO3: Found chapter content in #chapters");
 			return chaptersContent;
 		}
 
@@ -530,12 +563,12 @@ When enhancing, improve readability while respecting the author's original style
 			) {
 				continue;
 			}
-			console.log("AO3: Found general userstuff module");
+			debugLog("AO3: Found general userstuff module");
 			return module;
 		}
 
 		// Fallback to base implementation
-		console.log("AO3: Falling back to base handler");
+		debugLog("AO3: Falling back to base handler");
 		return super.findContentArea();
 	}
 
@@ -593,7 +626,7 @@ When enhancing, improve readability while respecting the author's original style
 				totalChapters: null,
 			};
 		} catch (error) {
-			console.error("Error getting AO3 chapter navigation:", error);
+			debugError("Error getting AO3 chapter navigation:", error);
 			return {
 				hasPrevious: false,
 				hasNext: false,
@@ -682,7 +715,7 @@ When enhancing, improve readability while respecting the author's original style
 				metadata.endNotes = endNotes.textContent.trim();
 			}
 		} catch (error) {
-			console.error("Error extracting AO3 metadata:", error);
+			debugError("Error extracting AO3 metadata:", error);
 		}
 
 		return metadata;
@@ -690,12 +723,12 @@ When enhancing, improve readability while respecting the author's original style
 
 	// Get the best insertion point for UI elements
 	getUIInsertionPoint() {
-		console.log("AO3: Finding UI insertion point...");
+		debugLog("AO3: Finding UI insertion point...");
 
 		// Best place is before the chapter content, after chapter preface
 		const chapterPreface = document.querySelector(".chapter.preface");
 		if (chapterPreface) {
-			console.log("AO3: Inserting after chapter preface");
+			debugLog("AO3: Inserting after chapter preface");
 			return {
 				element: chapterPreface,
 				position: "afterend",
@@ -705,7 +738,7 @@ When enhancing, improve readability while respecting the author's original style
 		// Alternative: before the work content
 		const workContent = document.querySelector("#workskin");
 		if (workContent) {
-			console.log("AO3: Inserting at start of workskin");
+			debugLog("AO3: Inserting at start of workskin");
 			return {
 				element: workContent,
 				position: "afterbegin",
@@ -715,7 +748,7 @@ When enhancing, improve readability while respecting the author's original style
 		// Fallback to before content area
 		const contentArea = this.findContentArea();
 		if (contentArea) {
-			console.log("AO3: Inserting before content area");
+			debugLog("AO3: Inserting before content area");
 			return {
 				element: contentArea,
 				position: "beforebegin",
@@ -723,17 +756,17 @@ When enhancing, improve readability while respecting the author's original style
 		}
 
 		// Final fallback
-		console.log("AO3: Using base UI insertion point");
+		debugLog("AO3: Using base UI insertion point");
 		return super.getUIInsertionPoint();
 	}
 
 	// Extract content with proper formatting
 	extractContent() {
-		console.log("AO3: Extracting content...");
+		debugLog("AO3: Extracting content...");
 
 		const contentArea = this.findContentArea();
 		if (!contentArea) {
-			console.error("AO3: Could not find content area");
+			debugError("AO3: Could not find content area");
 			return {
 				found: false,
 				reason: "Could not locate chapter content on this AO3 page.",
@@ -742,7 +775,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Get the title
 		const title = this.extractTitle();
-		console.log("AO3: Extracted title:", title);
+		debugLog("AO3: Extracted title:", title);
 
 		// Clone the content to avoid modifying the original
 		const contentClone = contentArea.cloneNode(true);
@@ -767,17 +800,9 @@ When enhancing, improve readability while respecting the author's original style
 		const metadata = this.getWorkMetadata();
 		const navigation = this.getChapterNavigation();
 
-		console.log("AO3: Content extracted successfully");
-		console.log(
-			"AO3: HTML content length:",
-			htmlContent.length,
-			"characters"
-		);
-		console.log(
-			"AO3: Text content length:",
-			textContent.length,
-			"characters"
-		);
+		debugLog("AO3: Content extracted successfully");
+		debugLog("AO3: HTML content length:", htmlContent.length, "characters");
+		debugLog("AO3: Text content length:", textContent.length, "characters");
 
 		return {
 			found: true,

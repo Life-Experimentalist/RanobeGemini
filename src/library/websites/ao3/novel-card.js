@@ -4,7 +4,7 @@
  */
 
 import { NovelCardRenderer, registerCardRenderer } from "../novel-card-base.js";
-
+import { debugLog, debugError } from "../../../utils/logger.js";
 /**
  * AO3-specific novel card renderer
  * Displays rich fanfic metadata like ratings, relationships, and fandoms

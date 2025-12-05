@@ -9,6 +9,7 @@
  * Handler Type: "dedicated_page" - novel metadata only on separate /book/ pages
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class WebNovelHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -20,6 +21,8 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		"m.webnovel.com",
 		"*.webnovel.com", // Safety net: catches any other subdomains
 	];
+
+	static PRIORITY = 50;
 
 	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
@@ -333,7 +336,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		setInterval(() => {
 			const currentUrl = window.location.href;
 			if (currentUrl !== this.lastUrl) {
-				console.log("WebNovel: URL changed via navigation");
+				debugLog("WebNovel: URL changed via navigation");
 				this.lastUrl = currentUrl;
 				// Clear processed chapters on URL change
 				this.processedChapters.clear();
@@ -355,7 +358,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 			// Skip if already processed
 			if (this.processedChapters.has(chapterId)) return;
 
-			console.log(`WebNovel: Injecting buttons for chapter ${chapterId}`);
+			debugLog(`WebNovel: Injecting buttons for chapter ${chapterId}`);
 			this.injectButtonsForChapter(chapterContainer, chapterId);
 			this.processedChapters.add(chapterId);
 		});
@@ -464,12 +467,12 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * Handle enhance button click for a specific chapter
 	 */
 	handleEnhanceClick(chapterId) {
-		console.log(`WebNovel: Enhance clicked for chapter ${chapterId}`);
+		debugLog(`WebNovel: Enhance clicked for chapter ${chapterId}`);
 
 		// Extract content for this specific chapter
 		const chapterData = this.extractChapterContent(chapterId);
 		if (!chapterData.found) {
-			console.error("Failed to extract chapter content");
+			debugError("Failed to extract chapter content");
 			alert("Failed to extract chapter content. Please try again.");
 			return;
 		}
@@ -489,12 +492,12 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * Handle summarize button click for a specific chapter
 	 */
 	handleSummarizeClick(chapterId) {
-		console.log(`WebNovel: Summarize clicked for chapter ${chapterId}`);
+		debugLog(`WebNovel: Summarize clicked for chapter ${chapterId}`);
 
 		// Extract content for this specific chapter
 		const chapterData = this.extractChapterContent(chapterId);
 		if (!chapterData.found) {
-			console.error("Failed to extract chapter content");
+			debugError("Failed to extract chapter content");
 			alert("Failed to extract chapter content. Please try again.");
 			return;
 		}
@@ -515,7 +518,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * This is used when buttons are clicked to ensure we get the right chapter
 	 */
 	findContentArea(chapterId = null) {
-		console.log("WebNovel: Looking for content area...");
+		debugLog("WebNovel: Looking for content area...");
 
 		// If chapterId provided, find that specific chapter
 		if (chapterId) {
@@ -523,7 +526,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 				`.cha-content[data-cid="${chapterId}"] .cha-words`
 			);
 			if (specificChapter) {
-				console.log(`WebNovel: Found chapter ${chapterId} content`);
+				debugLog(`WebNovel: Found chapter ${chapterId} content`);
 				return specificChapter;
 			}
 		}
@@ -537,9 +540,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 				const words = container.querySelector(".cha-words");
 				if (words) {
 					const cid = container.getAttribute("data-cid");
-					console.log(
-						`WebNovel: Found visible chapter ${cid} content`
-					);
+					debugLog(`WebNovel: Found visible chapter ${cid} content`);
 					return words;
 				}
 			}
@@ -548,11 +549,11 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Last fallback: just get first chapter
 		const firstChapter = document.querySelector(".cha-words");
 		if (firstChapter) {
-			console.log("WebNovel: Found first chapter content");
+			debugLog("WebNovel: Found first chapter content");
 			return firstChapter;
 		}
 
-		console.log("WebNovel: Falling back to base handler");
+		debugLog("WebNovel: Falling back to base handler");
 		return super.findContentArea();
 	}
 
@@ -588,14 +589,14 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * This ensures we always get the right chapter, not just the first visible one
 	 */
 	extractChapterContent(chapterId) {
-		console.log(`WebNovel: Extracting content for chapter ${chapterId}...`);
+		debugLog(`WebNovel: Extracting content for chapter ${chapterId}...`);
 
 		const chapterContainer = document.querySelector(
 			`.cha-content[data-cid="${chapterId}"]`
 		);
 
 		if (!chapterContainer) {
-			console.error(
+			debugError(
 				`WebNovel: Could not find chapter container ${chapterId}`
 			);
 			return {
@@ -606,7 +607,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		const contentArea = chapterContainer.querySelector(".cha-words");
 		if (!contentArea) {
-			console.error(
+			debugError(
 				`WebNovel: Could not find content area for chapter ${chapterId}`
 			);
 			return {
@@ -622,7 +623,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		const title = titleElement
 			? titleElement.textContent.trim()
 			: `Chapter ${chapterId}`;
-		console.log("WebNovel: Extracted title:", title);
+		debugLog("WebNovel: Extracted title:", title);
 
 		// Clone the content to avoid modifying the original
 		const contentClone = contentArea.cloneNode(true);
@@ -648,13 +649,13 @@ When enhancing, improve readability and grammar while respecting the author's or
 			chapterId: chapterId,
 		};
 
-		console.log("WebNovel: Content extracted successfully");
-		console.log(
+		debugLog("WebNovel: Content extracted successfully");
+		debugLog(
 			"WebNovel: HTML content length:",
 			htmlContent.length,
 			"characters"
 		);
-		console.log(
+		debugLog(
 			"WebNovel: Text content length:",
 			textContent.length,
 			"characters"
@@ -680,7 +681,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * Extracts the first visible chapter
 	 */
 	extractContent() {
-		console.log("WebNovel: Extracting content (legacy method)...");
+		debugLog("WebNovel: Extracting content (legacy method)...");
 
 		// Find first visible chapter
 		const allChapterContainers = document.querySelectorAll(".cha-content");
@@ -714,7 +715,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * Used by the base system if needed, but we handle our own button injection
 	 */
 	getUIInsertionPoint(chapterId = null) {
-		console.log("WebNovel: Finding UI insertion point...");
+		debugLog("WebNovel: Finding UI insertion point...");
 
 		// If chapterId provided, find that specific chapter's insertion point
 		if (chapterId) {
@@ -724,7 +725,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 			if (chapterContainer) {
 				const title = chapterContainer.querySelector(".cha-tit");
 				if (title) {
-					console.log(
+					debugLog(
 						`WebNovel: Inserting after chapter ${chapterId} title`
 					);
 					return {
@@ -740,7 +741,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		for (const title of allTitles) {
 			const rect = title.getBoundingClientRect();
 			if (rect.top >= -100 && rect.top <= window.innerHeight / 2) {
-				console.log("WebNovel: Inserting after visible chapter title");
+				debugLog("WebNovel: Inserting after visible chapter title");
 				return {
 					element: title,
 					position: "afterend",
@@ -757,7 +758,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 			};
 		}
 
-		console.log("WebNovel: Using base UI insertion point");
+		debugLog("WebNovel: Using base UI insertion point");
 		return super.getUIInsertionPoint();
 	}
 

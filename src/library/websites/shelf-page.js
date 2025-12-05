@@ -10,6 +10,7 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
+import { debugLog, debugError } from "../../utils/logger.js";
 
 // Helper to get just the label from READING_STATUS_INFO
 const READING_STATUS_LABELS = Object.fromEntries(
@@ -252,7 +253,7 @@ async function loadShelfNovels() {
 		// Apply initial filters and sort
 		applyFiltersAndSort();
 	} catch (error) {
-		console.error("Error loading shelf novels:", error);
+		debugError("Error loading shelf novels:", error);
 		showError("Failed to load novels");
 	}
 }
@@ -505,7 +506,7 @@ function applyFiltersAndSort() {
 		try {
 			filteredNovels = callback(filteredNovels);
 		} catch (e) {
-			console.error("Custom filter callback error:", e);
+			debugError("Custom filter callback error:", e);
 		}
 	}
 
@@ -741,7 +742,7 @@ function setupCardEventListeners() {
 					`Status updated to ${READING_STATUS_LABELS[newStatus]}`
 				);
 			} catch (error) {
-				console.error("Error updating status:", error);
+				debugError("Error updating status:", error);
 				showToast("Failed to update status", "error");
 			}
 		});
@@ -882,7 +883,7 @@ async function removeNovelFromLibrary(novelId) {
 		await loadShelfNovels();
 		showToast("Novel removed from library");
 	} catch (error) {
-		console.error("Error removing novel:", error);
+		debugError("Error removing novel:", error);
 		showToast("Failed to remove novel", "error");
 	}
 }

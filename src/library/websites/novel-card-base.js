@@ -7,6 +7,7 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
+import { debugLog, debugError } from "../../utils/logger.js";
 
 /**
  * Base novel card renderer class

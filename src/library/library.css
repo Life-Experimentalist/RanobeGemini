@@ -409,14 +409,15 @@ body {
 }
 
 .hover-description {
-	font-size: 0.85rem;
+	font-size: 0.95rem;
 	color: var(--text-secondary);
-	line-height: 1.4;
+	line-height: 1.55;
 	margin-bottom: var(--spacing-md);
+	max-height: 9.5em;
 	overflow: hidden;
 	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	line-clamp: 3;
+	-webkit-line-clamp: 7;
+	line-clamp: 7;
 	-webkit-box-orient: vertical;
 }
 

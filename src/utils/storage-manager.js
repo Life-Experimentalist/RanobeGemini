@@ -3,6 +3,8 @@
  * Manages caching of enhanced content using browser.storage.local
  */
 
+import { debugLog, debugError } from "./logger.js";
+
 export class StorageManager {
 	constructor() {
 		this.DB_KEY_PREFIX = "rg_enhanced_";
@@ -64,10 +66,10 @@ export class StorageManager {
 				[cacheKey]: cacheEntry,
 			});
 
-			console.log("✓ Enhanced content cached for:", url);
+			debugLog("✓ Enhanced content cached for:", url);
 			return true;
 		} catch (error) {
-			console.error("Failed to save enhanced content:", error);
+			debugError("Failed to save enhanced content:", error);
 			return false;
 		}
 	}
@@ -89,18 +91,18 @@ export class StorageManager {
 				const ageInDays =
 					(Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24);
 				if (ageInDays > this.CACHE_EXPIRY_DAYS) {
-					console.log("Cache entry expired, removing:", url);
+					debugLog("Cache entry expired, removing:", url);
 					await this.removeEnhancedContent(url);
 					return null;
 				}
 
-				console.log("✓ Loaded cached enhanced content for:", url);
+				debugLog("✓ Loaded cached enhanced content for:", url);
 				return entry;
 			}
 
 			return null;
 		} catch (error) {
-			console.error("Failed to load enhanced content:", error);
+			debugError("Failed to load enhanced content:", error);
 			return null;
 		}
 	}
@@ -114,10 +116,10 @@ export class StorageManager {
 		try {
 			const cacheKey = this.generateCacheKey(url);
 			await browser.storage.local.remove(cacheKey);
-			console.log("✓ Removed cached content for:", url);
+			debugLog("✓ Removed cached content for:", url);
 			return true;
 		} catch (error) {
-			console.error("Failed to remove cached content:", error);
+			debugError("Failed to remove cached content:", error);
 			return false;
 		}
 	}
@@ -154,14 +156,12 @@ export class StorageManager {
 			}
 
 			if (removedCount > 0) {
-				console.log(
-					`✓ Cleaned up ${removedCount} expired cache entries`
-				);
+				debugLog(`✓ Cleaned up ${removedCount} expired cache entries`);
 			}
 
 			return removedCount;
 		} catch (error) {
-			console.error("Failed to cleanup old cache:", error);
+			debugError("Failed to cleanup old cache:", error);
 			return 0;
 		}
 	}
@@ -186,7 +186,7 @@ export class StorageManager {
 
 			return urls;
 		} catch (error) {
-			console.error("Failed to get cached URLs:", error);
+			debugError("Failed to get cached URLs:", error);
 			return [];
 		}
 	}
@@ -216,7 +216,7 @@ export class StorageManager {
 				cacheExpiryDays: this.CACHE_EXPIRY_DAYS,
 			};
 		} catch (error) {
-			console.error("Failed to get cache stats:", error);
+			debugError("Failed to get cache stats:", error);
 			return {
 				totalEntries: 0,
 				totalSizeKB: 0,
@@ -242,12 +242,12 @@ export class StorageManager {
 
 			if (keysToRemove.length > 0) {
 				await browser.storage.local.remove(keysToRemove);
-				console.log(`✓ Cleared ${keysToRemove.length} cached entries`);
+				debugLog(`✓ Cleared ${keysToRemove.length} cached entries`);
 			}
 
 			return true;
 		} catch (error) {
-			console.error("Failed to clear cache:", error);
+			debugError("Failed to clear cache:", error);
 			return false;
 		}
 	}

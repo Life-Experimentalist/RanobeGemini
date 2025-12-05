@@ -613,29 +613,21 @@ button.ranobes-gemini-btn:disabled {
 
 /* Updated game stats box styling */
 .game-stats-box {
-	font-family: monospace;
-	white-space: pre;
-		background-color: rgba(35, 35, 35, 0.95);
-		border: 1px solid rgba(100, 100, 100, 0.8);
-		border-radius: 6px;
-		padding: 0px 10px 10px 10px;
-		/* No top padding */
-		margin: 20px 0;
-		/* Add vertical margin to separate boxes */
-		overflow-x: auto;
-	line-height: 1.4;
-		font-size: 0.9em;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		clear: both;
-		/* Ensure boxes don't float next to each other */
-		width: 100%;
-		/* Make box take full width to ensure it's on its own line */
-		box-sizing: border-box;
-		/* Ensure padding doesn't affect width */
-		color: #e8e8e8;
-		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+	font-family: 'Courier New', monospace;
+	white-space: pre-wrap;
+	background-color: rgba(35, 35, 35, 0.95);
+	border: 1px solid rgba(100, 100, 100, 0.8);
+	border-radius: 6px;
+	padding: 12px 14px;
+	margin: 16px 0;
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+	line-height: 1.5;
+	font-size: 14px;
+	width: 100%;
+	box-sizing: border-box;
+	color: #e8e8e8;
+	overflow-x: auto;
+	text-align: left;
 }
 
 /* Light mode variant for game stats box */
@@ -651,21 +643,8 @@ button.ranobes-gemini-btn:disabled {
 /* Enhanced game stats box styling for better UX */
 .game-stats-box {
 	position: relative;
-	display: inline-block;
-	min-width: 300px;
-	width: auto;
-	margin: 20px auto;
-	font-family: 'Courier New', monospace;
-	background-color: rgba(35, 35, 35, 0.95);
-	border: 1px solid rgba(100, 100, 100, 0.8);
-	border-radius: 6px;
-	padding: 15px 18px;
-	white-space: pre-wrap;
-	color: #e8e8e8;
-	font-size: 14px;
-	line-height: 1.6;
-	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-	overflow-x: auto;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 /* Additional styling for common RPG status elements inside game-stats-box */

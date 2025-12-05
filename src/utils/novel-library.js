@@ -4,6 +4,7 @@
  * with unified storage across mobile/desktop variants
  */
 
+import { debugLog, debugError } from "./logger.js";
 import { DOMAIN_REGISTRY, SHELF_REGISTRY } from "./domain-constants.js";
 
 /**
@@ -25,7 +26,10 @@ export const READING_STATUS = {
 export const READING_STATUS_INFO = {
 	[READING_STATUS.READING]: { label: "📖 Reading", color: "#4caf50" },
 	[READING_STATUS.COMPLETED]: { label: "✅ Completed", color: "#2196f3" },
-	[READING_STATUS.PLAN_TO_READ]: { label: "📋 Plan to Read", color: "#ff9800" },
+	[READING_STATUS.PLAN_TO_READ]: {
+		label: "📋 Plan to Read",
+		color: "#ff9800",
+	},
 	[READING_STATUS.ON_HOLD]: { label: "⏸️ On Hold", color: "#9e9e9e" },
 	[READING_STATUS.DROPPED]: { label: "❌ Dropped", color: "#f44336" },
 	[READING_STATUS.RE_READING]: { label: "🔁 Re-reading", color: "#9c27b0" },
@@ -99,6 +103,50 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Get library-level settings with defaults applied
+	 * @returns {Promise<Object>} Settings object
+	 */
+	async getSettings() {
+		const defaults = {
+			autoHoldEnabled: true,
+			autoHoldDays: 7,
+		};
+
+		try {
+			const result = await browser.storage.local.get(this.SETTINGS_KEY);
+			return { ...defaults, ...(result[this.SETTINGS_KEY] || {}) };
+		} catch (error) {
+			debugError("Failed to load library settings:", error);
+			return { ...defaults };
+		}
+	}
+
+	/**
+	 * Save library-level settings (merged with existing)
+	 * @param {Object} updates - Partial settings to persist
+	 * @returns {Promise<Object>} Persisted settings
+	 */
+	async saveSettings(updates) {
+		try {
+			const current = await this.getSettings();
+			const merged = {
+				...current,
+				...updates,
+				lastUpdated: Date.now(),
+			};
+
+			await browser.storage.local.set({
+				[this.SETTINGS_KEY]: merged,
+			});
+
+			return merged;
+		} catch (error) {
+			debugError("Failed to save library settings:", error);
+			return updates;
+		}
+	}
+
+	/**
 	 * Initialize the library (load from storage)
 	 * @returns {Promise<Object>} Library data
 	 */
@@ -107,7 +155,7 @@ export class NovelLibrary {
 		await this.migrateOldIdFormat();
 
 		const library = await this.getLibrary();
-		console.log(
+		debugLog(
 			`📚 Novel Library initialized with ${
 				Object.keys(library.novels).length
 			} novels`
@@ -165,12 +213,10 @@ export class NovelLibrary {
 
 			if (migrated > 0) {
 				await this.saveLibrary(library);
-				console.log(
-					`📚 Migrated ${migrated} novels from old ID format`
-				);
+				debugLog(`📚 Migrated ${migrated} novels from old ID format`);
 			}
 		} catch (error) {
-			console.error("Error migrating old ID format:", error);
+			debugError("Error migrating old ID format:", error);
 		}
 	}
 
@@ -190,7 +236,7 @@ export class NovelLibrary {
 				}
 			);
 		} catch (error) {
-			console.error("Failed to get library:", error);
+			debugError("Failed to get library:", error);
 			return {
 				novels: {},
 				shelves: {},
@@ -213,7 +259,7 @@ export class NovelLibrary {
 			});
 			return true;
 		} catch (error) {
-			console.error("Failed to save library:", error);
+			debugError("Failed to save library:", error);
 			return false;
 		}
 	}
@@ -241,7 +287,7 @@ export class NovelLibrary {
 			}
 			return null;
 		} catch (error) {
-			console.error("Error determining shelf for URL:", error);
+			debugError("Error determining shelf for URL:", error);
 			return null;
 		}
 	}
@@ -264,7 +310,7 @@ export class NovelLibrary {
 			}
 			return null;
 		} catch (error) {
-			console.error("Error extracting novel ID:", error);
+			debugError("Error extracting novel ID:", error);
 			return null;
 		}
 	}
@@ -334,7 +380,7 @@ export class NovelLibrary {
 					autoUpdatableFields.includes(key) &&
 					editedFields[key]
 				) {
-					console.log(
+					debugLog(
 						`📚 Skipping auto-update for manually edited field: ${key}`
 					);
 					continue;
@@ -383,7 +429,7 @@ export class NovelLibrary {
 
 		await this.saveLibrary(library);
 
-		console.log(`📚 Novel saved to library: ${novelData.title}`);
+		debugLog(`📚 Novel saved to library: ${novelData.title}`);
 		return library.novels[novelData.id];
 	}
 
@@ -407,7 +453,7 @@ export class NovelLibrary {
 		try {
 			const library = await this.getLibrary();
 			if (!library.novels[novelId]) {
-				console.error(`Novel not found: ${novelId}`);
+				debugError(`Novel not found: ${novelId}`);
 				return null;
 			}
 
@@ -418,10 +464,10 @@ export class NovelLibrary {
 			library.novels[novelId].lastAccessedAt = Date.now();
 
 			await this.saveLibrary(library);
-			console.log(`📚 Updated novel: ${library.novels[novelId].title}`);
+			debugLog(`📚 Updated novel: ${library.novels[novelId].title}`);
 			return library.novels[novelId];
 		} catch (error) {
-			console.error("Error updating novel:", error);
+			debugError("Error updating novel:", error);
 			return null;
 		}
 	}
@@ -439,7 +485,7 @@ export class NovelLibrary {
 			const novel = library.novels[novelId];
 
 			if (!novel) {
-				console.error(`Novel not found: ${novelId}`);
+				debugError(`Novel not found: ${novelId}`);
 				return null;
 			}
 
@@ -459,7 +505,7 @@ export class NovelLibrary {
 				chapterNumber >= 1
 			) {
 				updates.readingStatus = READING_STATUS.READING;
-				console.log(`📚 Auto-status: Plan to Read → Reading`);
+				debugLog(`📚 Auto-status: Plan to Read → Reading`);
 			}
 
 			// If user reaches the last chapter, suggest completion
@@ -471,7 +517,7 @@ export class NovelLibrary {
 					currentStatus === READING_STATUS.RE_READING)
 			) {
 				updates.readingStatus = READING_STATUS.COMPLETED;
-				console.log(
+				debugLog(
 					`📚 Auto-status: ${currentStatus} → Completed (reached chapter ${chapterNumber}/${novel.totalChapters})`
 				);
 			}
@@ -480,12 +526,12 @@ export class NovelLibrary {
 			Object.assign(novel, updates);
 			await this.saveLibrary(library);
 
-			console.log(
+			debugLog(
 				`📚 Progress updated: Ch.${chapterNumber} - ${novel.title}`
 			);
 			return novel;
 		} catch (error) {
-			console.error("Error updating reading progress:", error);
+			debugError("Error updating reading progress:", error);
 			return null;
 		}
 	}
@@ -500,7 +546,7 @@ export class NovelLibrary {
 		try {
 			const library = await this.getLibrary();
 			if (!library.novels[novelId]) {
-				console.error(`Novel not found: ${novelId}`);
+				debugError(`Novel not found: ${novelId}`);
 				return false;
 			}
 
@@ -508,12 +554,12 @@ export class NovelLibrary {
 			library.novels[novelId].lastAccessedAt = Date.now();
 
 			await this.saveLibrary(library);
-			console.log(
+			debugLog(
 				`📝 Updated custom prompt for: ${library.novels[novelId].title}`
 			);
 			return true;
 		} catch (error) {
-			console.error("Error updating novel custom prompt:", error);
+			debugError("Error updating novel custom prompt:", error);
 			return false;
 		}
 	}
@@ -528,26 +574,26 @@ export class NovelLibrary {
 		try {
 			const library = await this.getLibrary();
 			if (!library.novels[novelId]) {
-				console.error(`Novel not found: ${novelId}`);
+				debugError(`Novel not found: ${novelId}`);
 				return false;
 			}
 
 			const novel = library.novels[novelId];
 
 			if (!novel.editedFields) {
-				console.log(`📚 No edited fields to reset for: ${novel.title}`);
+				debugLog(`📚 No edited fields to reset for: ${novel.title}`);
 				return true;
 			}
 
 			if (fields === "all") {
 				novel.editedFields = {};
-				console.log(`📚 Reset all edited fields for: ${novel.title}`);
+				debugLog(`📚 Reset all edited fields for: ${novel.title}`);
 			} else {
 				const fieldsToReset = Array.isArray(fields) ? fields : [fields];
 				for (const field of fieldsToReset) {
 					delete novel.editedFields[field];
 				}
-				console.log(
+				debugLog(
 					`📚 Reset edited fields [${fieldsToReset.join(
 						", "
 					)}] for: ${novel.title}`
@@ -557,7 +603,7 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 			return true;
 		} catch (error) {
-			console.error("Error resetting edited fields:", error);
+			debugError("Error resetting edited fields:", error);
 			return false;
 		}
 	}
@@ -670,11 +716,11 @@ export class NovelLibrary {
 				this.CHAPTERS_KEY_PREFIX + novelId
 			);
 		} catch (error) {
-			console.error("Failed to remove chapters data:", error);
+			debugError("Failed to remove chapters data:", error);
 		}
 
 		await this.saveLibrary(library);
-		console.log(`📚 Novel removed from library: ${novelId}`);
+		debugLog(`📚 Novel removed from library: ${novelId}`);
 		return true;
 	}
 
@@ -700,7 +746,7 @@ export class NovelLibrary {
 		try {
 			const library = await this.getLibrary();
 			if (!library.novels[novelId]) {
-				console.error(`Novel not found: ${novelId}`);
+				debugError(`Novel not found: ${novelId}`);
 				return false;
 			}
 
@@ -708,12 +754,12 @@ export class NovelLibrary {
 			library.novels[novelId].lastAccessedAt = Date.now();
 
 			await this.saveLibrary(library);
-			console.log(
+			debugLog(
 				`📚 Updated reading status for ${library.novels[novelId].title}: ${status}`
 			);
 			return true;
 		} catch (error) {
-			console.error("Error updating reading status:", error);
+			debugError("Error updating reading status:", error);
 			return false;
 		}
 	}
@@ -763,9 +809,7 @@ export class NovelLibrary {
 			const novel = library.novels[novelId];
 
 			if (!novel) {
-				console.log(
-					"Novel Library: Novel not found for metadata update"
-				);
+				debugLog("Novel Library: Novel not found for metadata update");
 				return false;
 			}
 
@@ -790,7 +834,7 @@ export class NovelLibrary {
 				if (newMetadata[field] !== undefined) {
 					// Skip if manually edited
 					if (editedFields[field]) {
-						console.log(`📚 Skipping edited field: ${field}`);
+						debugLog(`📚 Skipping edited field: ${field}`);
 						continue;
 					}
 
@@ -813,7 +857,7 @@ export class NovelLibrary {
 							: !novel[field] || hasValidNewValue;
 
 					if (shouldUpdate) {
-						console.log(
+						debugLog(
 							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`
 						);
 						novel[field] = newMetadata[field];
@@ -847,12 +891,12 @@ export class NovelLibrary {
 				novel.lastAccessedAt = Date.now();
 				library.novels[novelId] = novel;
 				await this.saveLibrary(library);
-				console.log("Novel Library: Updated metadata for", novel.title);
+				debugLog("Novel Library: Updated metadata for", novel.title);
 			}
 
 			return updated;
 		} catch (error) {
-			console.error("Failed to update novel metadata:", error);
+			debugError("Failed to update novel metadata:", error);
 			return false;
 		}
 	}
@@ -900,7 +944,7 @@ export class NovelLibrary {
 
 			return true;
 		} catch (error) {
-			console.error("Failed to update chapter:", error);
+			debugError("Failed to update chapter:", error);
 			return false;
 		}
 	}
@@ -916,7 +960,7 @@ export class NovelLibrary {
 			const result = await browser.storage.local.get(chaptersKey);
 			return result[chaptersKey] || { chapters: {} };
 		} catch (error) {
-			console.error("Failed to get chapters:", error);
+			debugError("Failed to get chapters:", error);
 			return { chapters: {} };
 		}
 	}
@@ -933,7 +977,7 @@ export class NovelLibrary {
 
 		const shelf = this.getShelfForUrl(url);
 		if (!shelf) {
-			console.log("Novel Library: URL not from a supported site");
+			debugLog("Novel Library: URL not from a supported site");
 			return null;
 		}
 
@@ -949,16 +993,14 @@ export class NovelLibrary {
 			// Fallback to library's extraction
 			siteNovelId = this.extractNovelId(url, shelf);
 			if (!siteNovelId) {
-				console.log(
-					"Novel Library: Could not extract novel ID from URL"
-				);
+				debugLog("Novel Library: Could not extract novel ID from URL");
 				return null;
 			}
 			novelId = this.generateNovelId(shelf.id, siteNovelId);
 		}
 
 		if (!novelId) {
-			console.log("Novel Library: Could not generate novel ID");
+			debugLog("Novel Library: Could not generate novel ID");
 			return null;
 		}
 
@@ -1072,7 +1114,7 @@ export class NovelLibrary {
 							imported++;
 						}
 					} catch (err) {
-						console.error(`Error importing novel ${novelId}:`, err);
+						debugError(`Error importing novel ${novelId}:`, err);
 						errors++;
 					}
 				}
@@ -1114,7 +1156,7 @@ export class NovelLibrary {
 								[chaptersKey]: existingChapters,
 							});
 						} catch (err) {
-							console.error(
+							debugError(
 								`Error importing chapters for ${novelId}:`,
 								err
 							);
@@ -1141,12 +1183,12 @@ export class NovelLibrary {
 				}
 			}
 
-			console.log(
+			debugLog(
 				`📚 Library imported: ${imported} new, ${updated} updated, ${errors} errors`
 			);
 			return { success: true, imported, updated, errors };
 		} catch (error) {
-			console.error("Failed to import library:", error);
+			debugError("Failed to import library:", error);
 			return {
 				success: false,
 				imported: 0,
@@ -1174,10 +1216,10 @@ export class NovelLibrary {
 			}
 
 			await browser.storage.local.remove(keysToRemove);
-			console.log("📚 Library cleared");
+			debugLog("📚 Library cleared");
 			return true;
 		} catch (error) {
-			console.error("Failed to clear library:", error);
+			debugError("Failed to clear library:", error);
 			return false;
 		}
 	}
@@ -1276,7 +1318,7 @@ export class NovelLibrary {
 			}
 		}
 
-		console.log(`📚 Found ${duplicateGroups.length} duplicate groups`);
+		debugLog(`📚 Found ${duplicateGroups.length} duplicate groups`);
 		return duplicateGroups;
 	}
 
@@ -1432,7 +1474,7 @@ export class NovelLibrary {
 				});
 				await browser.storage.local.remove(removeChaptersKey);
 			} catch (err) {
-				console.error(`Error merging chapters for ${removeId}:`, err);
+				debugError(`Error merging chapters for ${removeId}:`, err);
 			}
 
 			// Remove the duplicate novel
@@ -1452,7 +1494,7 @@ export class NovelLibrary {
 
 		await this.saveLibrary(library);
 
-		console.log(
+		debugLog(
 			`📚 Merged ${removeIds.length} duplicates into ${novelToKeep.title}`
 		);
 		return {
@@ -1472,7 +1514,7 @@ export class NovelLibrary {
 		const duplicateGroups = await this.findDuplicates(shelfId);
 
 		if (duplicateGroups.length === 0) {
-			console.log("📚 No duplicates found");
+			debugLog("📚 No duplicates found");
 			return { success: true, mergedGroups: 0, totalRemoved: 0 };
 		}
 
@@ -1495,7 +1537,7 @@ export class NovelLibrary {
 			}
 		}
 
-		console.log(
+		debugLog(
 			`📚 Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`
 		);
 		return {

@@ -2,6 +2,8 @@
  * Content utility functions for RanobeGemini
  */
 
+import { debugLog, debugError } from "./logger.js";
+
 /**
  * Strips HTML tags from a string
  * @param {string} html - HTML string to strip tags from

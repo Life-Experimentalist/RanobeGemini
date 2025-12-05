@@ -7,6 +7,7 @@ import {
 	DEFAULT_PERMANENT_PROMPT,
 } from "../utils/constants.js";
 import { novelLibrary, SHELVES } from "../utils/novel-library.js";
+import { debugLog, debugError } from "../utils/logger.js";
 
 document.addEventListener("DOMContentLoaded", async function () {
 	// DOM elements
@@ -30,6 +31,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 		"resetPermanentPrompt"
 	); // Get permanent prompt reset button
 	const debugModeCheckbox = document.getElementById("debugMode");
+
+	// Expose the debug toggle globally so shared debugLog can read it synchronously in the popup.
+	try {
+		if (typeof window !== "undefined") {
+			window.debugModeCheckbox = debugModeCheckbox;
+		}
+	} catch (err) {
+		// ignore
+	}
 	const saveSettingsBtn = document.getElementById("saveSettings");
 	const tabButtons = document.querySelectorAll(".tab-btn");
 	const tabContents = document.querySelectorAll(".tab-content");
@@ -100,6 +110,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const siteIndicator = document.getElementById("siteIndicator");
 	const recentNovelsGrid = document.getElementById("recentNovelsGrid");
 	const emptyState = document.getElementById("emptyState");
+	const chunkingEnabledInput = document.getElementById("chunkingEnabled");
+	const chunkSizeInput = document.getElementById("chunkSize");
+	const formatGameStatsInput = document.getElementById("formatGameStats");
+	const centerSceneHeadingsInput = document.getElementById(
+		"centerSceneHeadings"
+	);
+	const backupFolderInput = document.getElementById("backupFolder");
+	const autoBackupToggle = document.getElementById("autoBackupToggle");
+	const manualBackupBtn = document.getElementById("manualBackupBtn");
+	const restoreBackupBtn = document.getElementById("restoreBackupBtn");
+	const restoreFileInput = document.getElementById("restoreFileInput");
+	const backupHistoryList = document.getElementById("backupHistoryList");
 
 	// Theme elements
 	const themeModeSelect = document.getElementById("themeMode");
@@ -121,6 +143,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Store current page novel data
 	let currentPageNovelData = null;
 	let currentSiteShelfId = null;
+	let backupHistory = [];
+	const BACKUP_RETENTION = 3;
 
 	// Theme defaults
 	const defaultTheme = {
@@ -173,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Apply theme to UI
 			applyTheme(theme);
 		} catch (error) {
-			console.error("Error loading theme:", error);
+			debugError("Error loading theme:", error);
 			applyTheme(defaultTheme);
 		}
 	}
@@ -218,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			applyTheme(theme);
 			showStatus("Theme saved successfully!", "success");
 		} catch (error) {
-			console.error("Error saving theme:", error);
+			debugError("Error saving theme:", error);
 			showStatus("Failed to save theme", "error");
 		}
 	}
@@ -247,7 +271,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			applyTheme(defaultTheme);
 			showStatus("Theme reset to default", "success");
 		} catch (error) {
-			console.error("Error resetting theme:", error);
+			debugError("Error resetting theme:", error);
 			showStatus("Failed to reset theme", "error");
 		}
 	}
@@ -411,9 +435,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Enable resizing of the popup
 	setupResizing();
-	const resizeHandle = document.getElementById("resize-handle");
-	let isResizing = false;
-	let startX, startY, startWidth, startHeight;
 
 	// Function to fetch available Gemini models
 	async function fetchAvailableModels(apiKey) {
@@ -423,21 +444,21 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 
 		try {
-			console.log("Fetching models from Gemini API...");
+			debugLog("Fetching models from Gemini API...");
 			const response = await fetch(
 				`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
 			);
 
-			console.log("API response status:", response.status);
+			debugLog("API response status:", response.status);
 
 			if (!response.ok) {
 				const errorText = await response.text();
-				console.error("API error response:", errorText);
+				debugError("API error response:", errorText);
 				throw new Error(`HTTP error ${response.status}: ${errorText}`);
 			}
 
 			const data = await response.json();
-			console.log("API returned data:", data);
+			debugLog("API returned data:", data);
 
 			// Filter for Gemini models that support text generation
 			const geminiModels = data.models
@@ -459,10 +480,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 					};
 				});
 
-			console.log("Filtered Gemini models:", geminiModels);
+			debugLog("Filtered Gemini models:", geminiModels);
 			return geminiModels;
 		} catch (error) {
-			console.error("Error fetching models:", error);
+			debugError("Error fetching models:", error);
 			return null;
 		}
 	}
@@ -479,7 +500,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Update model selector with available models
 	async function updateModelSelector(apiKey) {
 		try {
-			console.log(
+			debugLog(
 				"updateModelSelector called with apiKey:",
 				apiKey ? "present" : "missing"
 			);
@@ -490,9 +511,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 			modelSelect.disabled = true;
 
 			// Fetch models
-			console.log("Fetching available models...");
+			debugLog("Fetching available models...");
 			const models = await fetchAvailableModels(apiKey);
-			console.log("Fetched models:", models);
+			debugLog("Fetched models:", models);
 
 			if (!models || models.length === 0) {
 				console.warn("No models fetched or empty list");
@@ -563,14 +584,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 				modelsLastFetched: Date.now(),
 			});
 
-			console.log(
+			debugLog(
 				"Model selector updated with",
 				models.length,
 				"models. Selected:",
 				modelSelect.value
 			);
 		} catch (error) {
-			console.error("Error updating model selector:", error);
+			debugError("Error updating model selector:", error);
 			modelSelect.innerHTML =
 				'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
 		} finally {
@@ -588,55 +609,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		adjustHeight();
 		textarea.addEventListener("input", adjustHeight);
 		textarea.addEventListener("focus", adjustHeight);
-	});
-
-	// Function to handle the resizing
-	function handleResize(e) {
-		if (!isResizing) return;
-
-		// Calculate new dimensions
-		const newWidth = startWidth + (e.clientX - startX);
-		const newHeight = startHeight + (e.clientY - startY);
-
-		// Apply minimum dimensions
-		const width = Math.max(320, newWidth);
-		const height = Math.max(400, newHeight);
-
-		// Set the dimensions
-		document.body.style.width = width + "px";
-		document.body.style.height = height + "px";
-
-		// Save dimensions to storage for persistence
-		browser.storage.local.set({
-			popupWidth: width,
-			popupHeight: height,
-		});
-	}
-
-	// Start resizing
-	resizeHandle.addEventListener("mousedown", (e) => {
-		isResizing = true;
-		startX = e.clientX;
-		startY = e.clientY;
-		startWidth = document.body.offsetWidth;
-		startHeight = document.body.offsetHeight;
-
-		// Add event listeners for resize tracking
-		document.addEventListener("mousemove", handleResize);
-		document.addEventListener("mouseup", () => {
-			isResizing = false;
-			document.removeEventListener("mousemove", handleResize);
-		});
-
-		e.preventDefault();
-	});
-
-	// Load saved dimensions
-	browser.storage.local.get(["popupWidth", "popupHeight"]).then((result) => {
-		if (result.popupWidth && result.popupHeight) {
-			document.body.style.width = result.popupWidth + "px";
-			document.body.style.height = result.popupHeight + "px";
-		}
 	});
 
 	// Tab switching functionality
@@ -696,18 +668,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// First ping the background script to ensure it's running
 	try {
-		console.log("Pinging background script...");
+		debugLog("Pinging background script...");
 		const pingResponse = await browser.runtime.sendMessage({
 			action: "ping",
 		});
-		console.log("Background script response:", pingResponse);
+		debugLog("Background script response:", pingResponse);
 
 		if (pingResponse && pingResponse.success) {
-			console.log("Background script is active");
+			debugLog("Background script is active");
 		}
 	} catch (error) {
-		console.error("Error communicating with background script:", error);
-		showStatus("Extension error: Please reload the extension", "error");
+		// Soft-fail: service worker may be asleep—log and continue without alarming the user
+		console.warn("Background script not reachable yet:", error?.message);
 	}
 
 	// Load settings from storage
@@ -759,6 +731,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 		} else {
 			// Default to gemini-2.0-flash if no endpoint is specified
 			modelSelect.value = "gemini-2.0-flash";
+		}
+
+		// Chunking controls
+		if (chunkingEnabledInput) {
+			chunkingEnabledInput.checked = data.chunkingEnabled !== false;
+		}
+		if (chunkSizeInput) {
+			chunkSizeInput.value = data.chunkSize || 20000;
+		}
+
+		if (formatGameStatsInput) {
+			formatGameStatsInput.checked = data.formatGameStats !== false; // default true
+		}
+
+		if (centerSceneHeadingsInput) {
+			centerSceneHeadingsInput.checked =
+				data.centerSceneHeadings !== false; // default true
 		}
 
 		// Set debug mode checkbox
@@ -813,12 +802,20 @@ document.addEventListener("DOMContentLoaded", async function () {
 		backupApiKeys = data.backupApiKeys || [];
 		renderBackupKeys();
 
+		// Load backup preferences
+		const backupFolder = data.backupFolder || "RanobeGeminiBackups";
+		if (backupFolderInput) backupFolderInput.value = backupFolder;
+		if (autoBackupToggle)
+			autoBackupToggle.checked = data.autoBackupEnabled || false;
+		backupHistory = data.backupHistory || [];
+		renderBackupHistory();
+
 		// Set API key rotation strategy
 		if (apiKeyRotationSelect) {
 			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
 		}
 	} catch (error) {
-		console.error("Error loading settings:", error);
+		debugError("Error loading settings:", error);
 		// If settings fail to load, at least set the default prompt
 		if (promptTemplate && !promptTemplate.value) {
 			promptTemplate.value = DEFAULT_PROMPT;
@@ -843,16 +840,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 
 		try {
-			console.log("Saving API key...");
+			debugLog("Saving API key...");
 			await browser.storage.local.set({ apiKey });
-			console.log("API key saved, updating model selector...");
+			debugLog("API key saved, updating model selector...");
 			showStatus("API key saved successfully!", "success");
 
 			// Refresh model list with new API key
 			await updateModelSelector(apiKey);
-			console.log("Model selector updated successfully");
+			debugLog("Model selector updated successfully");
 		} catch (error) {
-			console.error("Error saving API key:", error);
+			debugError("Error saving API key:", error);
 			showStatus("Error saving API key: " + error.message, "error");
 		}
 	});
@@ -888,7 +885,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				);
 			}
 		} catch (error) {
-			console.error("API key test error:", error);
+			debugError("API key test error:", error);
 			showStatus(`Error testing API key: ${error.message}`, "error");
 		} finally {
 			testApiKeyBtn.disabled = false;
@@ -936,13 +933,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 				modelEndpoint: modelEndpoint,
 				debugMode: debugModeCheckbox.checked,
 				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false, // Save emoji setting
+				formatGameStats: formatGameStatsInput?.checked !== false, // default true
+				centerSceneHeadings:
+					centerSceneHeadingsInput?.checked !== false, // default true
 				maxOutputTokens: maxTokens,
 				temperature: temperature,
+				chunkingEnabled: chunkingEnabledInput?.checked !== false,
+				chunkSize: chunkSizeInput
+					? Math.min(
+							Math.max(
+								parseInt(chunkSizeInput.value, 10) || 20000,
+								5000
+							),
+							50000
+					  )
+					: 20000,
 			});
 
 			showStatus("Basic settings saved successfully!", "success");
 		} catch (error) {
-			console.error("Error saving settings:", error);
+			debugError("Error saving settings:", error);
 			showStatus("Error saving settings: " + error.message, "error");
 		}
 	});
@@ -969,7 +979,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				});
 				showStatus("Advanced settings saved successfully!", "success");
 			} catch (error) {
-				console.error("Error saving advanced settings:", error);
+				debugError("Error saving advanced settings:", error);
 				showStatus(
 					"Error saving advanced settings: " + error.message,
 					"error"
@@ -1020,7 +1030,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 				showStatus("Advanced settings reset to defaults", "info");
 			} catch (error) {
-				console.error("Error resetting advanced settings:", error);
+				debugError("Error resetting advanced settings:", error);
 				showStatus(
 					"Error resetting settings: " + error.message,
 					"error"
@@ -1129,7 +1139,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				);
 				showStatus("Full prompt copied to clipboard!", "success");
 			} catch (err) {
-				console.error("Failed to copy:", err);
+				debugError("Failed to copy:", err);
 				showStatus("Failed to copy to clipboard", "error");
 			}
 		});
@@ -1181,7 +1191,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						);
 					}
 				} catch (error) {
-					console.error("Communication error:", error);
+					debugError("Communication error:", error);
 
 					if (
 						error.message?.includes(
@@ -1198,7 +1208,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				}
 			}
 		} catch (error) {
-			console.error("Error enhancing page:", error);
+			debugError("Error enhancing page:", error);
 			showStatus("Error enhancing page: " + error.message, "error");
 		}
 	});
@@ -1467,7 +1477,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						}
 
 						await browser.storage.local.set({ autoEnhanceNovels });
-						console.log(
+						debugLog(
 							"Auto-enhance updated for:",
 							novelId,
 							this.checked
@@ -1475,7 +1485,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					});
 				});
 		} catch (error) {
-			console.error("Error loading novels:", error);
+			debugError("Error loading novels:", error);
 			showStatus("Error loading novels. Please try again.", "error");
 		}
 	}
@@ -1730,15 +1740,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	}
 
-	// Add event listener for open library page button
-	if (openLibraryPageBtn) {
-		openLibraryPageBtn.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html"),
-			});
-		});
-	}
-
 	// Add event listener for quick library button in header
 	const quickLibraryBtn = document.getElementById("quickLibraryBtn");
 	if (quickLibraryBtn) {
@@ -1767,10 +1768,39 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Then load library data
 			await loadLibraryData();
 		} catch (error) {
-			console.error("Error initializing library tab:", error);
+			debugError("Error initializing library tab:", error);
 		} finally {
 			// Hide loading state
 			if (libraryLoading) libraryLoading.style.display = "none";
+		}
+	}
+
+	// Helper: match hostname against wildcard pattern
+	function matchDomainPattern(hostname, pattern) {
+		const normalizedHost = hostname.toLowerCase();
+		const normalizedPattern = pattern.toLowerCase();
+
+		if (normalizedPattern.startsWith("*.")) {
+			const base = normalizedPattern.substring(2);
+			return (
+				normalizedHost === base || normalizedHost.endsWith(`.${base}`)
+			);
+		}
+
+		return normalizedHost === normalizedPattern;
+	}
+
+	// Helper: detect shelf from a URL
+	function getShelfFromUrl(url) {
+		try {
+			const { hostname } = new URL(url);
+			return Object.values(SHELVES).find((shelf) =>
+				(shelf.domains || []).some((pattern) =>
+					matchDomainPattern(hostname, pattern)
+				)
+			);
+		} catch (e) {
+			return null;
 		}
 	}
 
@@ -1802,6 +1832,21 @@ document.addEventListener("DOMContentLoaded", async function () {
 			}
 
 			const currentTab = tabs[0];
+			const shelfForTab = getShelfFromUrl(currentTab.url);
+			const isExtensionPage = currentTab.url.startsWith(
+				browser.runtime.getURL("")
+			);
+
+			// If this is an extension page (library/popup), we don't attempt extraction
+			if (isExtensionPage) {
+				if (pageStatusBadge) {
+					pageStatusBadge.textContent = "Extension page";
+					pageStatusBadge.className = "status-badge site";
+				}
+				if (notSupportedMessage)
+					notSupportedMessage.style.display = "none";
+				return;
+			}
 
 			// Try to communicate with content script
 			try {
@@ -1809,24 +1854,63 @@ document.addEventListener("DOMContentLoaded", async function () {
 					action: "getNovelInfo",
 				});
 
-				console.log("📚 Library: getNovelInfo response:", response);
+				debugLog("📚 Library: getNovelInfo response:", response);
 
 				if (response && response.success && response.novelInfo) {
 					currentPageNovelData = response.novelInfo;
 					currentSiteShelfId = response.novelInfo.shelfId || null;
 					displayCurrentPageNovel(response.novelInfo);
+				} else if (response && !response.success && shelfForTab) {
+					// Supported site but non-novel page: treat as site context only
+					currentSiteShelfId = shelfForTab.id;
+					if (currentNovelCard)
+						currentNovelCard.style.display = "none";
+					if (notSupportedMessage)
+						notSupportedMessage.style.display = "none";
+					if (pageStatusBadge) {
+						pageStatusBadge.textContent = `${shelfForTab.name} site`;
+						pageStatusBadge.className = "status-badge site";
+					}
 				} else if (response && !response.success) {
 					showNotSupported(
 						response.error || "Could not extract novel info"
 					);
+				} else if (!response && shelfForTab) {
+					// No response but domain matches a supported shelf
+					currentSiteShelfId = shelfForTab.id;
+					if (pageStatusBadge) {
+						pageStatusBadge.textContent = `${shelfForTab.name} site`;
+						pageStatusBadge.className = "status-badge site";
+					}
+					if (notSupportedMessage)
+						notSupportedMessage.style.display = "none";
 				} else {
 					showNotSupported("No novel info available");
 				}
 			} catch (error) {
-				console.log(
+				debugLog(
 					"📚 Library: Error communicating with content script:",
 					error
 				);
+				if (
+					(error.message?.includes(
+						"could not establish connection"
+					) ||
+						error.message?.includes(
+							"Receiving end does not exist"
+						)) &&
+					shelfForTab
+				) {
+					// Supported site but non-novel page
+					currentSiteShelfId = shelfForTab.id;
+					if (pageStatusBadge) {
+						pageStatusBadge.textContent = `${shelfForTab.name} site`;
+						pageStatusBadge.className = "status-badge site";
+					}
+					if (notSupportedMessage)
+						notSupportedMessage.style.display = "none";
+					return;
+				}
 				// Content script not available - page not supported
 				if (
 					error.message?.includes("could not establish connection") ||
@@ -1838,7 +1922,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				}
 			}
 		} catch (error) {
-			console.error("Error loading current page info:", error);
+			debugError("Error loading current page info:", error);
 			showNotSupported("Error detecting page");
 		}
 	}
@@ -2133,7 +2217,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				);
 			}
 		} catch (error) {
-			console.error("Error adding to library:", error);
+			debugError("Error adding to library:", error);
 			showStatus("Error: " + error.message, "error");
 		}
 	}
@@ -2159,7 +2243,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				showStatus("Status updated!", "success");
 			}
 		} catch (error) {
-			console.error("Error updating reading status:", error);
+			debugError("Error updating reading status:", error);
 		}
 	}
 
@@ -2324,10 +2408,114 @@ document.addEventListener("DOMContentLoaded", async function () {
 				}
 			}
 		} catch (error) {
-			console.error("Error loading library data:", error);
+			debugError("Error loading library data:", error);
 			if (recentNovelsGrid) {
 				recentNovelsGrid.innerHTML = `<div class="error-message">Failed to load library. <button onclick="loadLibraryData()">Retry</button></div>`;
 			}
+		}
+	}
+
+	// Backup helpers
+	function renderBackupHistory() {
+		if (!backupHistoryList) return;
+		if (!backupHistory || backupHistory.length === 0) {
+			backupHistoryList.innerHTML = "<li>No backups yet</li>";
+			return;
+		}
+
+		backupHistoryList.innerHTML = backupHistory
+			.slice(0, BACKUP_RETENTION)
+			.map((entry) => {
+				const date = new Date(entry.createdAt || entry.exportedAt || 0);
+				const file = escapeHtml(entry.filename || "rg-backup.json");
+				return `<li>${date.toLocaleString()} — ${file}</li>`;
+			})
+			.join("");
+	}
+
+	async function persistBackupPrefs(extra = {}) {
+		const folderValue = (backupFolderInput?.value || "").trim();
+		const backupFolder = folderValue || "RanobeGeminiBackups";
+		const autoBackupEnabled = autoBackupToggle?.checked || false;
+
+		backupHistory = (backupHistory || []).slice(0, BACKUP_RETENTION);
+
+		await browser.storage.local.set({
+			backupFolder,
+			autoBackupEnabled,
+			backupRetention: BACKUP_RETENTION,
+			backupHistory,
+			...extra,
+		});
+
+		// Inform background to reschedule auto backups if needed
+		try {
+			await browser.runtime.sendMessage({
+				action: "syncAutoBackups",
+			});
+		} catch (e) {
+			console.warn("Unable to sync auto backup schedule:", e?.message);
+		}
+	}
+
+	async function triggerManualBackup(saveAs = true) {
+		const folderValue = (backupFolderInput?.value || "").trim();
+		const backupFolder = folderValue || "RanobeGeminiBackups";
+		try {
+			manualBackupBtn?.classList.add("loading");
+			const response = await browser.runtime.sendMessage({
+				action: "createLibraryBackup",
+				saveAs,
+				folder: backupFolder,
+				retention: BACKUP_RETENTION,
+			});
+
+			if (response?.success) {
+				backupHistory = response.history || backupHistory;
+				renderBackupHistory();
+				await persistBackupPrefs({ backupHistory });
+				showStatus("Backup saved", "success");
+			} else {
+				showStatus(
+					response?.error || "Failed to create backup",
+					"error"
+				);
+			}
+		} catch (error) {
+			debugError("Backup failed:", error);
+			showStatus("Backup failed: " + error.message, "error");
+		} finally {
+			manualBackupBtn?.classList.remove("loading");
+		}
+	}
+
+	async function handleRestoreFromFile(file) {
+		if (!file) return;
+		try {
+			const text = await file.text();
+			const data = JSON.parse(text);
+			const response = await browser.runtime.sendMessage({
+				action: "restoreLibraryBackup",
+				data,
+				merge: true,
+			});
+
+			if (response?.success) {
+				showStatus(
+					`Restored ${response.imported || 0} novels (updated ${
+						response.updated || 0
+					})`,
+					"success"
+				);
+				await initializeLibraryTab();
+			} else {
+				showStatus(response?.error || "Restore failed", "error");
+			}
+		} catch (error) {
+			debugError("Restore failed:", error);
+			showStatus("Restore failed: " + error.message, "error");
+		} finally {
+			if (restoreFileInput) restoreFileInput.value = "";
 		}
 	}
 
@@ -2348,6 +2536,41 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	}
 
+	if (manualBackupBtn) {
+		manualBackupBtn.addEventListener("click", () =>
+			triggerManualBackup(true)
+		);
+	}
+
+	if (backupFolderInput) {
+		backupFolderInput.addEventListener("change", () => {
+			persistBackupPrefs();
+		});
+	}
+
+	if (autoBackupToggle) {
+		autoBackupToggle.addEventListener("change", async () => {
+			await persistBackupPrefs();
+			showStatus(
+				autoBackupToggle.checked
+					? "Auto backup enabled"
+					: "Auto backup disabled",
+				"success"
+			);
+		});
+	}
+
+	if (restoreBackupBtn && restoreFileInput) {
+		restoreBackupBtn.addEventListener("click", () =>
+			restoreFileInput.click()
+		);
+		restoreFileInput.addEventListener("change", () => {
+			if (restoreFileInput.files && restoreFileInput.files[0]) {
+				handleRestoreFromFile(restoreFileInput.files[0]);
+			}
+		});
+	}
+
 	/**
 	 * Escape HTML to prevent XSS
 	 */
@@ -2362,6 +2585,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 	function setupResizing() {
 		const resizeHandle = document.getElementById("resize-handle");
 		const sizeIndicator = document.getElementById("sizeIndicator");
+
+		// Guard against missing elements
+		if (!resizeHandle || !sizeIndicator) {
+			return;
+		}
 		let isResizing = false;
 		let startX, startY, startWidth, startHeight;
 
@@ -2560,7 +2788,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				currentWindow: true,
 			});
 			if (!tabs || tabs.length === 0) {
-				console.log("No active tab found");
+				debugLog("No active tab found");
 				return;
 			}
 
@@ -2573,7 +2801,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 				// Check if we got a valid response with a handler
 				if (response && response.success && response.hasHandler) {
-					console.log("Found site handler:", response.siteIdentifier);
+					debugLog("Found site handler:", response.siteIdentifier);
 
 					// Update the site-specific prompts container
 					const container = document.getElementById(
@@ -2670,16 +2898,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 						}
 					}
 				} else {
-					console.log("No site handler found for current page");
+					debugLog("No site handler found for current page");
 				}
 			} catch (error) {
-				console.log("Error communicating with content script:", error);
+				debugLog("Error communicating with content script:", error);
 				// This might happen if the content script isn't loaded on this page
 				// Load any saved site-specific prompts instead
 				loadSavedSitePrompts();
 			}
 		} catch (error) {
-			console.error("Error loading site handler prompts:", error);
+			debugError("Error loading site handler prompts:", error);
 		}
 	}
 
@@ -2763,7 +2991,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				});
 			}
 		} catch (error) {
-			console.error("Error loading saved site prompts:", error);
+			debugError("Error loading saved site prompts:", error);
 		}
 	}
 
@@ -2856,10 +3084,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					permanentPrompt: permanentPrompt,
 				});
 			} catch (error) {
-				console.error(
-					"Error saving prompts to browser storage:",
-					error
-				);
+				debugError("Error saving prompts to browser storage:", error);
 			}
 
 			// Save site-specific prompts
@@ -2880,7 +3105,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 
 	// Log that the popup is initialized
-	console.log("RanobeGemini popup initialized");
+	debugLog("RanobeGemini popup initialized");
 
 	// Load site-specific prompts
 	loadSiteHandlerPrompts();

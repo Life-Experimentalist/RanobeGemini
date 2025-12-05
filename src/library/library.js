@@ -9,6 +9,7 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../utils/novel-library.js";
+import { debugLog, debugError } from "../utils/logger.js";
 
 // State
 let currentView = "shelves";
@@ -16,6 +17,10 @@ let currentSort = "recent";
 let currentStatusFilter = "all";
 let searchQuery = "";
 let allNovels = [];
+let librarySettings = {
+	autoHoldEnabled: true,
+	autoHoldDays: 7,
+};
 
 // DOM Elements
 const elements = {
@@ -116,6 +121,8 @@ const elements = {
 	importBtn: document.getElementById("import-btn"),
 	importFile: document.getElementById("import-file"),
 	clearBtn: document.getElementById("clear-btn"),
+	autoHoldToggle: document.getElementById("auto-hold-toggle"),
+	autoHoldDays: document.getElementById("auto-hold-days"),
 
 	// Carousel
 	carouselSection: document.getElementById("carousel-section"),
@@ -132,17 +139,23 @@ let carouselState = {
 	isPlaying: true,
 	interval: null,
 	itemsPerView: 5,
-	itemsToShow: 10, // Total novels in carousel (configurable)
+	itemsToShow: 10, // Max novels to try to show in carousel
+	uniqueCount: 0, // Actual unique novels available for the carousel
 };
 
 // Detect if running in sidebar (set via manifest URL parameter)
 const isSidebar = window.location.search.includes("sidebar=true");
 
+// Apply sidebar class early to minimize layout flash
+if (isSidebar) {
+	document.documentElement.classList.add("sidebar-mode");
+}
+
 /**
  * Initialize the library page
  */
 async function init() {
-	console.log(
+	debugLog(
 		"📚 Initializing Novel Library Page" +
 			(isSidebar ? " (Sidebar mode)" : "")
 	);
@@ -154,6 +167,9 @@ async function init() {
 
 	// Populate supported sites list dynamically from SHELVES
 	populateSupportedSites();
+
+	// Load saved library-level settings
+	await loadLibrarySettings();
 
 	// Set up event listeners
 	setupEventListeners();
@@ -174,7 +190,7 @@ function setupStorageListener() {
 
 		// Check if library data changed
 		if (changes.rg_novel_library) {
-			console.log("📚 Library data changed externally, refreshing...");
+			debugLog("📚 Library data changed externally, refreshing...");
 			// Debounce the refresh to avoid rapid updates
 			if (window.libraryRefreshTimeout) {
 				clearTimeout(window.libraryRefreshTimeout);
@@ -187,13 +203,95 @@ function setupStorageListener() {
 }
 
 /**
+ * Load library settings (auto-hold, etc.) and sync controls
+ */
+async function loadLibrarySettings() {
+	try {
+		librarySettings = await novelLibrary.getSettings();
+	} catch (error) {
+		debugError("Failed to load library settings:", error);
+		librarySettings = { autoHoldEnabled: true, autoHoldDays: 7 };
+	}
+
+	if (elements.autoHoldToggle) {
+		elements.autoHoldToggle.checked = !!librarySettings.autoHoldEnabled;
+	}
+
+	if (elements.autoHoldDays) {
+		elements.autoHoldDays.value =
+			librarySettings.autoHoldDays || librarySettings.autoHoldDays === 0
+				? librarySettings.autoHoldDays
+				: 7;
+	}
+}
+
+/**
+ * Persist auto-hold setting changes
+ */
+async function persistAutoHoldSettings(updates = {}) {
+	const nextSettings = {
+		...librarySettings,
+		...updates,
+	};
+	librarySettings = await novelLibrary.saveSettings(nextSettings);
+}
+
+/**
+ * Apply auto-hold to novels that have been inactive beyond the configured window
+ */
+async function enforceAutoHold(novels) {
+	if (!librarySettings?.autoHoldEnabled || !Array.isArray(novels)) return;
+
+	const thresholdDays = Math.max(
+		1,
+		parseInt(librarySettings.autoHoldDays, 10) || 7
+	);
+	const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
+	const now = Date.now();
+
+	const updates = [];
+
+	novels.forEach((novel) => {
+		const lastTouch = novel.lastAccessedAt || novel.addedAt || 0;
+		const isProtectedStatus =
+			novel.readingStatus === READING_STATUS.COMPLETED ||
+			novel.readingStatus === READING_STATUS.DROPPED;
+
+		if (
+			!isProtectedStatus &&
+			novel.readingStatus !== READING_STATUS.ON_HOLD &&
+			now - lastTouch > thresholdMs
+		) {
+			updates.push({ id: novel.id, title: novel.title });
+		}
+	});
+
+	if (updates.length === 0) return false;
+
+	for (const novel of updates) {
+		await novelLibrary.updateNovel(novel.id, {
+			readingStatus: READING_STATUS.ON_HOLD,
+		});
+	}
+
+	showNotification(
+		`Moved ${updates.length} novel(s) to On Hold after inactivity.`,
+		"info"
+	);
+
+	return true;
+}
+
+/**
  * Render a shelf icon - supports emoji strings, URL strings, and URL objects
  * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
  * @param {string} className - Optional CSS class name
  * @returns {string} HTML string for the icon
  */
-function renderShelfIcon(icon, className = "") {
-	if (!icon) return `<span class="shelf-icon ${className}">📖</span>`;
+function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
+	if (!icon) {
+		return `<span class="shelf-icon ${className}">${fallbackEmoji}</span>`;
+	}
 
 	// If icon is a simple string
 	if (typeof icon === "string") {
@@ -203,7 +301,7 @@ function renderShelfIcon(icon, className = "") {
 				<img src="${escapeHtml(icon)}" alt=""
 					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 					style="width: 1.5em; height: 1.5em; vertical-align: middle;">
-				<span class="icon-fallback" style="display: none;">📖</span>
+				<span class="icon-fallback" style="display: none;">${fallbackEmoji}</span>
 			</span>`;
 		}
 		// It's an emoji
@@ -212,7 +310,7 @@ function renderShelfIcon(icon, className = "") {
 
 	// If icon is an object with url and fallback
 	if (typeof icon === "object" && icon.url) {
-		const fallback = icon.fallback || "📖";
+		const fallback = icon.fallback || fallbackEmoji;
 		return `<span class="shelf-icon shelf-icon-img ${className}">
 			<img src="${escapeHtml(icon.url)}" alt=""
 				onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
@@ -221,7 +319,7 @@ function renderShelfIcon(icon, className = "") {
 		</span>`;
 	}
 
-	return `<span class="shelf-icon ${className}">📖</span>`;
+	return `<span class="shelf-icon ${className}">${fallbackEmoji}</span>`;
 }
 
 /**
@@ -232,10 +330,10 @@ function renderShelfIcon(icon, className = "") {
  */
 function getIconText(icon, emoji) {
 	if (!icon) return emoji || "📖";
-	// If it's a URL string, return the provided emoji or default
+	// If it's a URL string, prefer emoji fallback instead of leaking URL text
 	if (typeof icon === "string") {
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
-			return icon || emoji || "📖";
+			return emoji || "📖";
 		}
 		return icon;
 	}
@@ -248,8 +346,8 @@ function getIconText(icon, emoji) {
  * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
  * @returns {string} HTML string for the icon
  */
-function renderShelfIconForPlaceholder(icon) {
-	if (!icon) return "📖";
+function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
+	if (!icon) return fallbackEmoji;
 
 	// If icon is a simple string
 	if (typeof icon === "string") {
@@ -258,7 +356,7 @@ function renderShelfIconForPlaceholder(icon) {
 			return `<img src="${escapeHtml(
 				icon
 			)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
-				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">📖</span>`;
+				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallbackEmoji}</span>`;
 		}
 		// It's an emoji
 		return icon;
@@ -266,14 +364,14 @@ function renderShelfIconForPlaceholder(icon) {
 
 	// If icon is an object with url and fallback
 	if (typeof icon === "object" && icon.url) {
-		const fallback = icon.fallback || "📖";
+		const fallback = icon.fallback || fallbackEmoji;
 		return `<img src="${escapeHtml(
 			icon.url
 		)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallback}</span>`;
 	}
 
-	return "📖";
+	return fallbackEmoji;
 }
 
 /**
@@ -436,17 +534,23 @@ async function loadLibrary() {
 		// Clean up any duplicates first
 		const cleanupResult = await novelLibrary.cleanupDuplicates();
 		if (cleanupResult.totalRemoved > 0) {
-			console.log(
+			debugLog(
 				`📚 Cleaned up ${cleanupResult.totalRemoved} duplicate novels`
 			);
 		}
 
-		// Get library stats
-		const stats = await novelLibrary.getStats();
-		updateStats(stats);
-
 		// Get all novels
 		allNovels = await novelLibrary.getRecentNovels();
+
+		// Apply auto-hold based on inactivity
+		const updated = await enforceAutoHold(allNovels);
+		if (updated) {
+			allNovels = await novelLibrary.getRecentNovels();
+		}
+
+		// Get library stats after any updates
+		const stats = await novelLibrary.getStats();
+		updateStats(stats);
 
 		// Check if library is empty
 		if (allNovels.length === 0) {
@@ -463,7 +567,7 @@ async function loadLibrary() {
 		// Render current view
 		renderCurrentView();
 	} catch (error) {
-		console.error("Failed to load library:", error);
+		debugError("Failed to load library:", error);
 		showEmptyState(true);
 	}
 
@@ -491,6 +595,20 @@ function renderCurrentView() {
 	const filteredNovels = filterAndSortNovels();
 
 	// Show/hide reading status filter based on view
+	if (elements.autoHoldToggle) {
+		elements.autoHoldToggle.addEventListener("change", async (e) => {
+			await persistAutoHoldSettings({
+				autoHoldEnabled: e.target.checked,
+			});
+		});
+	}
+	if (elements.autoHoldDays) {
+		elements.autoHoldDays.addEventListener("change", async (e) => {
+			const days = Math.max(1, parseInt(e.target.value, 10) || 7);
+			elements.autoHoldDays.value = days;
+			await persistAutoHoldSettings({ autoHoldDays: days });
+		});
+	}
 	if (elements.readingStatusFilter) {
 		elements.readingStatusFilter.classList.toggle(
 			"hidden",
@@ -784,7 +902,7 @@ function createNovelCardForShelf(novel, shelf) {
 
 	// Generate placeholder content with icon image support
 	const placeholderContent = shelf
-		? renderShelfIconForPlaceholder(shelf.icon)
+		? renderShelfIconForPlaceholder(shelf.icon, shelf.emoji || "📖")
 		: "📖";
 
 	const coverHtml = novel.coverUrl
@@ -909,14 +1027,16 @@ function createNovelCard(novel) {
 	card.dataset.novelId = novel.id;
 
 	const shelf = Object.values(SHELVES).find((s) => s.id === novel.shelfId);
-	const shelfIconText = shelf ? getIconText(shelf.icon, shelf.emoji) : "📖";
+	const shelfIconHtml = shelf
+		? renderShelfIcon(shelf.icon, "site-icon", shelf.emoji || "📖")
+		: renderShelfIcon(null, "site-icon");
 
 	// Fallback to extension logo if cover fails to load
 	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
 
 	// Generate placeholder content with icon image support
 	const placeholderContent = shelf
-		? renderShelfIconForPlaceholder(shelf.icon)
+		? renderShelfIconForPlaceholder(shelf.icon, shelf.emoji || "📖")
 		: "📖";
 
 	const coverHtml = novel.coverUrl
@@ -951,7 +1071,9 @@ function createNovelCard(novel) {
 				<h3 class="novel-card-title">${escapeHtml(novel.title)}</h3>
 				<p class="novel-card-author">${escapeHtml(novel.author || "Unknown")}</p>
 				<div class="novel-card-meta">
-					<span class="meta-badge">${shelfIconText} ${shelf?.name || "Unknown"}</span>
+					<span class="meta-badge">${shelfIconHtml} ${escapeHtml(
+		shelf?.name || "Unknown"
+	)}</span>
 					${
 						novel.enhancedChaptersCount > 0
 							? `<span class="meta-badge enhanced">✨ ${novel.enhancedChaptersCount} enhanced</span>`
@@ -1020,7 +1142,7 @@ async function handleStatusChange(novelId, newStatus) {
 			}`
 		);
 	} catch (error) {
-		console.error("Failed to update reading status:", error);
+		debugError("Failed to update reading status:", error);
 		showNotification("Failed to update status", "error");
 		// Reload to reset dropdown
 		loadLibrary();
@@ -1367,7 +1489,7 @@ async function handleModalStatusChange(e) {
 
 		showNotification("Status updated successfully!");
 	} catch (error) {
-		console.error("Error updating status:", error);
+		debugError("Error updating status:", error);
 		showNotification("Failed to update status");
 	}
 }
@@ -1419,7 +1541,7 @@ async function handleRefreshMetadata() {
 			showToast("No source URL available for this novel", "error");
 		}
 	} catch (error) {
-		console.error("Error refreshing metadata:", error);
+		debugError("Error refreshing metadata:", error);
 		showToast("Failed to reset metadata. Please try again.", "error");
 	}
 }
@@ -1537,7 +1659,7 @@ async function handleSaveEdit(e) {
 
 		showToast("Novel updated successfully!", "success");
 	} catch (error) {
-		console.error("Failed to update novel:", error);
+		debugError("Failed to update novel:", error);
 		showToast("Failed to update novel", "error");
 	}
 }
@@ -1630,7 +1752,7 @@ async function handleExport() {
 		URL.revokeObjectURL(url);
 		alert("Library exported successfully!");
 	} catch (error) {
-		console.error("Export failed:", error);
+		debugError("Export failed:", error);
 		alert("Failed to export library. See console for details.");
 	}
 }
@@ -1696,7 +1818,7 @@ async function handleImport(e) {
 			}
 		}
 	} catch (error) {
-		console.error("Import failed:", error);
+		debugError("Import failed:", error);
 		alert(
 			`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`
 		);
@@ -1756,17 +1878,24 @@ function openModal(modal) {
  * Initialize and populate the carousel with recent novels
  */
 function initCarousel(novels) {
+	stopCarousel(); // Reset any existing auto-scroll interval before rebuilding
+
 	if (!novels || novels.length === 0) {
 		elements.carouselSection.style.display = "none";
+		carouselState.uniqueCount = 0;
+		carouselState.currentIndex = 0;
 		return;
 	}
 
 	elements.carouselSection.style.display = "block";
 
-	// Get top N most recent novels (configurable)
-	const recentNovels = novels
-		.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
-		.slice(0, carouselState.itemsToShow);
+	// Get top N most recent novels (configurable but capped by available count)
+	const sortedNovels = [...novels].sort(
+		(a, b) => b.lastAccessedAt - a.lastAccessedAt
+	);
+	const maxItems = Math.min(carouselState.itemsToShow, sortedNovels.length);
+	const recentNovels = sortedNovels.slice(0, maxItems);
+	carouselState.uniqueCount = recentNovels.length;
 
 	// Duplicate novels for infinite scrolling
 	const infiniteNovels = [...recentNovels, ...recentNovels, ...recentNovels];
@@ -1902,7 +2031,7 @@ function initCarousel(novels) {
 	});
 
 	// Start at the middle set for infinite scrolling
-	carouselState.currentIndex = recentNovels.length;
+	carouselState.currentIndex = carouselState.uniqueCount;
 
 	// Use requestAnimationFrame to ensure layout is complete before positioning
 	requestAnimationFrame(() => {
@@ -1927,6 +2056,14 @@ function initCarousel(novels) {
  */
 function startCarousel() {
 	if (carouselState.interval) clearInterval(carouselState.interval);
+
+	// Do not auto-play if there's 0 or 1 novel
+	if (!carouselState.uniqueCount || carouselState.uniqueCount <= 1) {
+		carouselState.isPlaying = false;
+		elements.carouselPlayPause.textContent = "▶️";
+		elements.carouselPlayPause.title = "Play auto-scroll";
+		return;
+	}
 
 	carouselState.isPlaying = true;
 	elements.carouselPlayPause.textContent = "⏸️";
@@ -1969,7 +2106,7 @@ function moveCarousel(direction) {
 	const items = elements.carouselTrack.children;
 	if (items.length === 0) return;
 
-	const totalNovels = carouselState.itemsToShow;
+	const totalNovels = carouselState.uniqueCount || 0;
 
 	// Don't do anything if we only have one or no items
 	if (totalNovels <= 1) return;
@@ -2013,7 +2150,8 @@ function goToCarouselPage(index) {
 	const items = elements.carouselTrack.children;
 	if (items.length === 0) return;
 
-	const totalNovels = carouselState.itemsToShow;
+	const totalNovels = carouselState.uniqueCount || 0;
+	if (totalNovels === 0) return;
 	// Jump to middle set + requested index
 	carouselState.currentIndex = totalNovels + index;
 
@@ -2041,7 +2179,8 @@ function updateCarouselPosition(animate = true) {
  */
 function updateCarouselIndicators() {
 	const indicators = elements.carouselIndicators.children;
-	const totalNovels = carouselState.itemsToShow;
+	const totalNovels = carouselState.uniqueCount || 0;
+	if (totalNovels === 0) return;
 	const actualIndex = carouselState.currentIndex % totalNovels;
 
 	for (let i = 0; i < indicators.length; i++) {
@@ -2159,14 +2298,14 @@ browser.storage.onChanged.addListener((changes, areaName) => {
 
 	// Check if novels data changed
 	if (changes.novels) {
-		console.log("📚 Storage change detected, reloading library...");
+		debugLog("📚 Storage change detected, reloading library...");
 		// Debounce the reload to avoid rapid refreshes
 		if (window.libraryReloadTimeout) {
 			clearTimeout(window.libraryReloadTimeout);
 		}
 		window.libraryReloadTimeout = setTimeout(async () => {
 			await loadLibrary();
-			console.log("📚 Library reloaded due to storage change");
+			debugLog("📚 Library reloaded due to storage change");
 		}, 500);
 	}
 });

@@ -5,6 +5,7 @@
  * when new handlers are added or domains are modified.
  */
 
+import { debugLog, debugError } from "./logger.js";
 import { RanobesHandler } from "./website-handlers/ranobes-handler.js";
 import { FanfictionHandler } from "./website-handlers/fanfiction-handler.js";
 import { FanfictionMobileHandler } from "./website-handlers/fanfiction-mobile-handler.js";

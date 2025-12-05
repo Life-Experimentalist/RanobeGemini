@@ -10,6 +10,7 @@
  * Chapter pages have enough info to add to library
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { debugLog, debugError } from "../logger.js";
 
 export class ScribbleHubHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -18,6 +19,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		"scribblehub.com",
 		"*.scribblehub.com",
 	];
+
+	static PRIORITY = 40;
 
 	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
@@ -75,7 +78,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Check URL pattern for chapter pages
 		if (pathname.includes("/read/") && pathname.includes("/chapter/")) {
-			console.log("ScribbleHub: Detected chapter page via URL pattern");
+			debugLog("ScribbleHub: Detected chapter page via URL pattern");
 			return true;
 		}
 
@@ -86,7 +89,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		const chapterTitle = document.querySelector(".chapter-title");
 
 		if (chapterContent && chapterTitle) {
-			console.log("ScribbleHub: Detected chapter page via DOM elements");
+			debugLog("ScribbleHub: Detected chapter page via DOM elements");
 			return true;
 		}
 
@@ -95,7 +98,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			".btn-prev, .btn-next, .prenext"
 		);
 		if (hasChapterNav && chapterContent) {
-			console.log("ScribbleHub: Detected chapter page via navigation");
+			debugLog("ScribbleHub: Detected chapter page via navigation");
 			return true;
 		}
 
@@ -117,7 +120,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				!pathname.includes("/stats") &&
 				!pathname.includes("/glossary")
 			) {
-				console.log("ScribbleHub: Detected novel page via URL pattern");
+				debugLog("ScribbleHub: Detected novel page via URL pattern");
 				return true;
 			}
 		}
@@ -128,7 +131,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		const ficImage = document.querySelector(".fic_image img");
 
 		if (ficTitle && ficDesc && ficImage) {
-			console.log("ScribbleHub: Detected novel page via DOM elements");
+			debugLog("ScribbleHub: Detected novel page via DOM elements");
 			return true;
 		}
 
@@ -148,7 +151,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			if (element) {
 				const text = element.innerText?.trim() || "";
 				if (text.length > 100) {
-					console.log(
+					debugLog(
 						`ScribbleHub: Found content area with ${selector}`
 					);
 					return element;
@@ -157,9 +160,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		}
 
 		// Fallback to base implementation
-		console.log(
-			"ScribbleHub: Falling back to base handler for content area"
-		);
+		debugLog("ScribbleHub: Falling back to base handler for content area");
 		return super.findContentArea();
 	}
 
@@ -264,10 +265,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				totalChapters: 0,
 			};
 		} catch (error) {
-			console.error(
-				"ScribbleHub: Error getting chapter navigation:",
-				error
-			);
+			debugError("ScribbleHub: Error getting chapter navigation:", error);
 		}
 
 		return super.getChapterNavigation();
@@ -422,17 +420,20 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			rating: null,
 			ratingCount: null,
 			chaptersPerWeek: null,
+			needsDetailPage: false,
+			metadataIncomplete: false,
 		};
 
 		try {
 			const isOnChapterPage = this.isChapterPage();
 			const isOnNovelPage = this.isNovelPage();
 
-			console.log(
+			debugLog(
 				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`
 			);
 
 			if (isOnChapterPage) {
+				metadata.needsDetailPage = true; // Chapter pages lack full metadata
 				// ===== CHAPTER PAGE EXTRACTION =====
 				const breadcrumbLink = document.querySelector(
 					".wi_breadcrumb.chapter a[href*='/series/']"
@@ -482,7 +483,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 					const options = chapterSelector.querySelectorAll("option");
 					if (options.length > 0) {
 						metadata.totalChapters = options.length;
-						console.log(
+						debugLog(
 							`ScribbleHub: Found ${options.length} chapters from selector`
 						);
 					}
@@ -625,6 +626,14 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				metadata.mainNovelUrl = window.location.href;
 			}
 
+			// Mark incomplete metadata when we only had access to a chapter page
+			if (isOnChapterPage && !isOnNovelPage) {
+				metadata.metadataIncomplete =
+					!metadata.totalChapters ||
+					metadata.genres.length === 0 ||
+					metadata.tags.length === 0;
+			}
+
 			// Fallback title from page title
 			if (!metadata.title) {
 				const pageTitle = document.title;
@@ -639,12 +648,12 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				metadata.mainNovelUrl = this.getNovelPageUrl();
 			}
 		} catch (error) {
-			console.error("ScribbleHub: Error extracting metadata:", error);
+			debugError("ScribbleHub: Error extracting metadata:", error);
 		}
 
 		// Validate that we're on a valid page (chapter or novel page)
 		if (!this.isChapterPage() && !this.isNovelPage()) {
-			console.log(
+			debugLog(
 				"ScribbleHub: Not on a valid novel or chapter page, returning null"
 			);
 			return null;
@@ -652,13 +661,13 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Additional validation: check if we have essential metadata
 		if (!metadata.title || metadata.title === "Scribble Hub") {
-			console.log(
+			debugLog(
 				"ScribbleHub: Invalid metadata - likely on home/index page"
 			);
 			return null;
 		}
 
-		console.log("ScribbleHub: Extracted metadata:", metadata);
+		debugLog("ScribbleHub: Extracted metadata:", metadata);
 		return metadata;
 	}
 

@@ -11,7 +11,7 @@
  */
 
 const KEEPALIVE_INTERVAL = 20000; // 20 seconds - well under the 30 second timeout
-
+import { debugLog, debugError } from "../utils/logger.js";
 /**
  * Send keepalive message to service worker
  * Uses postMessage to the service worker registration
@@ -20,16 +20,19 @@ async function sendKeepAlive() {
 	try {
 		const registration = await navigator.serviceWorker.ready;
 		if (registration.active) {
-			registration.active.postMessage({ type: "keepAlive", timestamp: Date.now() });
+			registration.active.postMessage({
+				type: "keepAlive",
+				timestamp: Date.now(),
+			});
 		}
 	} catch (error) {
 		// Service worker might not be ready yet, that's okay
-		console.log("[Offscreen] Service worker not ready:", error.message);
+		debugLog("[Offscreen] Service worker not ready:", error.message);
 	}
 }
 
 // Start the keepalive interval
-console.log("[Offscreen] Keep-alive document loaded, starting heartbeat...");
+debugLog("[Offscreen] Keep-alive document loaded, starting heartbeat...");
 setInterval(sendKeepAlive, KEEPALIVE_INTERVAL);
 
 // Send initial keepalive immediately
