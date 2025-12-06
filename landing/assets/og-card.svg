@@ -1,0 +1,29 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img"
+    aria-label="Ranobe Gemini preview">
+    <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop stop-color="#0b1628" offset="0%" />
+            <stop stop-color="#0f2038" offset="50%" />
+            <stop stop-color="#0b1628" offset="100%" />
+        </linearGradient>
+        <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop stop-color="#f4a261" offset="0%" />
+            <stop stop-color="#2dd4bf" offset="100%" />
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="630" fill="url(#g)" />
+    <circle cx="180" cy="140" r="180" fill="#f4a261" opacity="0.12" />
+    <circle cx="1080" cy="520" r="200" fill="#2dd4bf" opacity="0.12" />
+    <rect x="120" y="140" rx="32" ry="32" width="520" height="320" fill="rgba(255,255,255,0.06)"
+        stroke="rgba(255,255,255,0.14)" />
+    <rect x="150" y="220" width="380" height="18" rx="9" fill="rgba(255,255,255,0.2)" />
+    <rect x="150" y="260" width="320" height="18" rx="9" fill="rgba(255,255,255,0.2)" />
+    <rect x="150" y="300" width="360" height="18" rx="9" fill="url(#accent)" />
+    <rect x="150" y="340" width="280" height="18" rx="9" fill="rgba(255,255,255,0.2)" />
+    <text x="700" y="250" fill="#e8eef7" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-size="54"
+        font-weight="700">Ranobe Gemini</text>
+    <text x="700" y="310" fill="#9fb3c8" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif"
+        font-size="24">AI-powered web novel companion</text>
+    <text x="700" y="360" fill="#f4a261" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif"
+        font-size="20">Edge + Firefox supported • Drive backups</text>
+</svg>

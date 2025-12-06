@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Ranobe Gemini | AI-powered reading companion</title>
+		<meta
+			name="description"
+			content="Ranobe Gemini enhances web novels with Gemini API-powered summaries, clean reading UI, and seamless import/export. Built for Edge and Firefox, more browsers coming soon."
+		/>
+		<meta
+			name="keywords"
+			content="Ranobe Gemini, web novel, Gemini API, AI summary, Edge extension, Firefox extension, library import export"
+		/>
+		<link rel="canonical" href="https://ranobe.vkrishna04.me/" />
+		<meta name="theme-color" content="#0b1628" />
+		<meta
+			property="og:title"
+			content="Ranobe Gemini | AI-powered reading companion"
+		/>
+		<meta
+			property="og:description"
+			content="Enhance, summarize, and manage your web novels with Gemini AI. Edge and Firefox supported; more browsers coming soon."
+		/>
+		<meta property="og:url" content="https://ranobe.vkrishna04.me/" />
+		<meta property="og:type" content="website" />
+		<meta
+			property="og:image"
+			content="https://ranobe.vkrishna04.me/assets/og-card.svg"
+		/>
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="Ranobe Gemini" />
+		<meta
+			name="twitter:description"
+			content="AI-powered web novel companion for Edge and Firefox."
+		/>
+		<link
+			rel="icon"
+			href="https://raw.githubusercontent.com/Life-Experimentalists/RanobesGemini/main/src/icons/logo-light-32.png"
+			sizes="32x32"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebApplication",
+				"name": "Ranobe Gemini",
+				"url": "https://ranobe.vkrishna04.me/",
+				"applicationCategory": "Productivity",
+				"operatingSystem": "Web",
+				"description": "AI-powered reading companion for web novels with summaries, cleanup, and cloud backups.",
+				"offers": { "@type": "Offer", "price": "0" },
+				"browserRequirements": "Edge, Firefox (more coming soon)",
+				"creator": {
+					"@type": "Organization",
+					"name": "Life-Experimentalist",
+					"url": "https://github.com/Life-Experimentalist/RanobesGemini"
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div class="bg-glow"></div>
+		<div class="bg-dots"></div>
+		<header class="topbar">
+			<div class="brand">
+				<img
+					class="logo-img"
+					src="https://raw.githubusercontent.com/Life-Experimentalists/RanobesGemini/main/src/icons/logo-light-32.png"
+					alt="Ranobe Gemini"
+				/>
+				<div class="meta">
+					<strong>Ranobe Gemini</strong>
+					<span>AI reading companion</span>
+				</div>
+			</div>
+			<nav class="nav">
+				<a href="#features">Features</a>
+				<a href="#how">How it works</a>
+				<a href="#browsers">Browsers</a>
+				<a href="#faq">FAQ</a>
+				<a
+					class="ghost"
+					href="https://github.com/Life-Experimentalist/RanobesGemini"
+					target="_blank"
+					rel="noreferrer"
+					>GitHub</a
+				>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero section fade-slide">
+				<div class="hero-copy">
+					<p class="eyebrow">Edge + Firefox supported • MV3 ready</p>
+					<h1>Read smarter. Summarize faster. Back up safely.</h1>
+					<p class="lede">
+						Ranobe Gemini cleans up chapters and enhances prose with
+						Gemini API. Import or export your library any time.
+						Built for readers of AO3, FanFiction, Ranobes,
+						ScribbleHub, and more.
+					</p>
+					<div class="cta-row">
+						<a
+							class="btn primary"
+							href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank"
+							rel="noreferrer"
+							>Get it for Firefox</a
+						>
+						<a
+							class="btn primarysecondary"
+							href="https://github.com/Life-Experimentalist/RanobesGemini/releases/latest"
+							target="_blank"
+							rel="noreferrer"
+							>Get it for Edge</a
+						>
+						<a class="btn ghost" href="#browsers">Other browsers</a>
+						<button
+							class="btn ghost hidden"
+							id="library-btn"
+							type="button"
+						>
+							Open Library (if installed)
+						</button>
+					</div>
+					<br />
+
+					<p class="micro" id="library-note">
+						Works on Edge & Firefox desktop/mobile.
+					</p>
+					<ul class="pill-list">
+						<li>Gemini-powered enhancement</li>
+						<li>One-click summaries</li>
+						<li>Library import/export</li>
+						<li>Novel library</li>
+					</ul>
+				</div>
+				<div class="hero-visual">
+					<div class="card">
+						<div class="card-header">Chapter Enhancer</div>
+						<div class="card-body">
+							<div class="line bright"></div>
+							<div class="line"></div>
+							<div class="line"></div>
+							<div class="line short"></div>
+						</div>
+						<div class="card-footer">Powered by Gemini AI</div>
+					</div>
+					<div class="floating-badge">Private by default</div>
+					<div class="floating-badge alt">
+						No servers. Local first.
+					</div>
+				</div>
+			</section>
+
+			<section id="features" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">Why readers choose Ranobe Gemini</p>
+					<h2>Built for long-form web novels</h2>
+					<p class="lede">
+						From fanfiction to light novels, Ranobe Gemini keeps
+						your reading flow uninterrupted.
+					</p>
+				</div>
+				<div class="grid features">
+					<div class="feature">
+						<div class="icon">💡</div>
+						<h3>Smart enhancement</h3>
+						<p>
+							Polish translations, fix grammar, and keep tone
+							consistent using Gemini API with site-specific
+							prompts.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">⚡</div>
+						<h3>Instant summaries</h3>
+						<p>
+							Generate concise or detailed summaries for long
+							chapters without leaving the page.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">🛡️</div>
+						<h3>Your data, your choice</h3>
+						<p>
+							No cloud lock-in. Import or export your library JSON
+							in seconds, and keep everything local.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">📚</div>
+						<h3>Unified library</h3>
+						<p>
+							Track novels across AO3, FanFiction, Ranobes,
+							ScribbleHub, and more with shelf-aware metadata.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">🧭</div>
+						<h3>Reader-first UI</h3>
+						<p>
+							Clean controls, inline buttons, and automatic
+							keep-alive so background tasks do not stall.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">🔐</div>
+						<h3>Privacy-first</h3>
+						<p>
+							No account required. Everything runs locally;
+							nothing is uploaded without you exporting it.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section id="how" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">How it works</p>
+					<h2>From install to first summary in minutes</h2>
+				</div>
+				<ol class="steps">
+					<li>
+						<h3>Install</h3>
+						<p>
+							Load the Edge or Firefox build from the latest
+							release. Chromium variants are coming; Safari is not
+							planned.
+						</p>
+					</li>
+					<li>
+						<h3>Pick a chapter</h3>
+						<p>
+							Open a supported site. The extension detects
+							chapters and adds inline controls.
+						</p>
+					</li>
+					<li>
+						<h3>Enhance or summarize</h3>
+						<p>
+							Click Enhance for polished text or Summarize for
+							quick context. Long chapters are chunked safely.
+						</p>
+					</li>
+					<li>
+						<h3>Export anytime</h3>
+						<p>
+							Export your library to JSON for safekeeping and
+							re-import later. No cloud dependency.
+						</p>
+					</li>
+				</ol>
+			</section>
+
+			<section id="browsers" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">Browser support</p>
+					<h2>Ready today, expanding soon</h2>
+					<p class="lede">
+						Edge & Firefox (desktop + mobile sideload) are fully
+						supported. Chromium builds work across other Chromium
+						browsers when sideloaded. Safari is not planned.
+					</p>
+				</div>
+				<div id="browser-grid" class="grid browsers"></div>
+			</section>
+
+			<section class="section fade-slide" id="sites">
+				<div class="section-head">
+					<p class="eyebrow">Integrations</p>
+					<h2>Optimized for the sites you read</h2>
+					<p class="lede">
+						Built-in handlers with site branding. WebNovel is
+						temporarily disabled; new handlers appear here when
+						added.
+					</p>
+				</div>
+				<div id="site-grid" class="grid site-cards"></div>
+			</section>
+
+			<section id="faq" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">FAQ</p>
+					<h2>Answers at a glance</h2>
+				</div>
+				<div class="faq">
+					<article>
+						<h3>What is Ranobe Gemini?</h3>
+						<p>
+							A browser extension that uses Gemini API to enhance
+							and summarize web novel chapters with site-aware
+							prompts.
+						</p>
+					</article>
+					<article>
+						<h3>Do I need an API key?</h3>
+						<p>
+							Yes. Add your Gemini API key in the popup Settings
+							tab. Backup keys and rotation are supported for rate
+							limits.
+						</p>
+					</article>
+					<article>
+						<h3>Which sites are supported?</h3>
+						<p>
+							AO3, FanFiction (desktop + mobile), Ranobes,
+							ScribbleHub. WebNovel is temporarily disabled while
+							we refine it.
+						</p>
+					</article>
+					<article>
+						<h3>How do I import or export?</h3>
+						<p>
+							Popup → Library tab → Export downloads a JSON;
+							Import restores it later. No cloud dependency.
+						</p>
+					</article>
+					<article>
+						<h3>How do I toggle original vs enhanced?</h3>
+						<p>
+							After enhancement, a banner lets you switch between
+							original and enhanced, or delete cached copies.
+						</p>
+					</article>
+					<article>
+						<h3>Which model should I pick?</h3>
+						<p>
+							Gemini 2.0 Flash is balanced; 2.5 Flash is fastest;
+							2.5 Pro is highest quality.
+						</p>
+					</article>
+					<article>
+						<h3>What if enhancement fails?</h3>
+						<p>
+							Test your key in the popup, enable chunking for long
+							chapters, lower temperature, and retry. Check
+							console for errors.
+						</p>
+					</article>
+					<article>
+						<h3>Is it free?</h3>
+						<p>
+							Yes. The extension is open-source. You only pay for
+							Gemini API usage (free tier is generous).
+						</p>
+					</article>
+				</div>
+			</section>
+
+			<section class="section fade-slide" id="sites">
+				<div class="section-head">
+					<p class="eyebrow">Integrations</p>
+					<h2>Optimized for the sites you read</h2>
+					<p class="lede">
+						Built-in handlers with site branding. WebNovel is
+						temporarily disabled; new handlers appear here when
+						added.
+					</p>
+				</div>
+				<div id="site-grid" class="grid site-cards"></div>
+			</section>
+
+			<section id="faq" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">FAQ</p>
+					<h2>Answers at a glance</h2>
+				</div>
+				<div class="faq">
+					<article>
+						<h3>What is Ranobe Gemini?</h3>
+						<p>
+							A browser extension that uses Gemini API to enhance
+							and summarize web novel chapters with site-aware
+							prompts.
+						</p>
+					</article>
+					<article>
+						<h3>Do I need an API key?</h3>
+						<p>
+							Yes. Add your Gemini API key in the popup Settings
+							tab. Backup keys and rotation are supported for rate
+							limits.
+						</p>
+					</article>
+					<article>
+						<h3>Which sites are supported?</h3>
+						<p>
+							AO3, FanFiction (desktop + mobile), Ranobes,
+							ScribbleHub. WebNovel is temporarily disabled while
+							we refine it.
+						</p>
+					</article>
+					<article>
+						<h3>How do I import or export?</h3>
+						<p>
+							Popup → Library tab → Export downloads a JSON;
+							Import restores it later. No cloud dependency.
+						</p>
+					</article>
+					<article>
+						<h3>How do I toggle original vs enhanced?</h3>
+						<p>
+							After enhancement, a banner lets you switch between
+							original and enhanced, or delete cached copies.
+						</p>
+					</article>
+					<article>
+						<h3>Which model should I pick?</h3>
+						<p>
+							Gemini 2.0 Flash is balanced; 2.5 Flash is fastest;
+							2.5 Pro is highest quality.
+						</p>
+					</article>
+					<article>
+						<h3>What if enhancement fails?</h3>
+						<p>
+							Test your key in the popup, enable chunking for long
+							chapters, lower temperature, and retry. Check
+							console for errors.
+						</p>
+					</article>
+					<article>
+						<h3>Is it free?</h3>
+						<p>
+							Yes. The extension is open-source. You only pay for
+							Gemini API usage (free tier is generous).
+						</p>
+					</article>
+				</div>
+			</section>
+
+			<section class="cta section fade-slide">
+				<div class="cta-card">
+					<h2>Ready to read better?</h2>
+					<p>
+						Install the Edge or Firefox build, link Gemini API, and
+						start enhancing chapters in seconds.
+					</p>
+					<div class="cta-row">
+						<a
+							class="btn primary"
+							href="https://github.com/Life-Experimentalist/RanobesGemini/releases/latest"
+							target="_blank"
+							rel="noreferrer"
+							>Download latest</a
+						>
+						<a
+							class="btn ghost"
+							href="https://github.com/Life-Experimentalist/RanobesGemini"
+							target="_blank"
+							rel="noreferrer"
+							>View on GitHub</a
+						>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer">
+			<div class="footer-brand">Ranobe Gemini</div>
+			<div class="footer-links">
+				<a href="./privacy.html">Privacy</a>
+				<a href="./terms.html">Terms</a>
+				<a
+					href="https://github.com/Life-Experimentalist/RanobesGemini"
+					target="_blank"
+					rel="noreferrer"
+					>GitHub</a
+				>
+			</div>
+			<p class="footnote">Built by Life-Experimentalist</p>
+		</footer>
+
+		<script src="./script.js"></script>
+	</body>
+</html>

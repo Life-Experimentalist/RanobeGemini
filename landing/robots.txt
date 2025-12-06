@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ranobe.vkrishna04.me/sitemap.xml

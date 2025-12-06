@@ -137,7 +137,7 @@ Access the extension's settings via the toolbar icon:
 
 ## Adding New Website Support
 
-Please refer to the [docs/ADDING_NEW_WEBSITES.md](docs/ADDING_NEW_WEBSITES.md) guide for instructions on how to extend the extension to support more websites.
+Please refer to the [docs/ADDING_NEW_WEBSITES.md](docs/guides/ADDING_NEW_WEBSITES.md) guide for instructions on how to extend the extension to support more websites.
 
 ## Contributing
 
