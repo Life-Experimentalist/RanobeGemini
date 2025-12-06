@@ -765,6 +765,52 @@ Click to generate preview...</pre
 					</div>
 				</div>
 
+				<div class="setting">
+					<h4 style="margin-bottom: 8px">☁️ Drive Log Backup</h4>
+					<label for="driveClientId">Google OAuth Client ID</label>
+					<input
+						type="text"
+						id="driveClientId"
+						placeholder="xxxxxx.apps.googleusercontent.com"
+						style="margin-bottom: 8px"
+					/>
+					<div class="description" style="margin-bottom: 10px">
+						Uses identity.launchWebAuthFlow with your client ID and Drive
+						file scope (no hosting needed). Tokens stay in the extension.
+					</div>
+					<label for="driveFolderId">Drive Folder ID (optional)</label>
+					<input
+						type="text"
+						id="driveFolderId"
+						placeholder="Drive folder ID for uploads"
+						style="margin-bottom: 8px"
+					/>
+					<div class="button-group" style="gap: 8px">
+						<button id="driveAuthBtn" class="btn btn-secondary btn-sm">
+							Sign in to Drive
+						</button>
+						<button
+							id="driveUploadLogsBtn"
+							class="btn btn-primary btn-sm"
+							title="Export recent debug logs to Drive"
+						>
+							Upload Logs → Drive
+						</button>
+						<button
+							id="driveResetBtn"
+							class="btn btn-secondary btn-sm"
+							title="Forget cached tokens"
+						>
+							Reset Tokens
+						</button>
+					</div>
+					<div
+						id="driveStatus"
+						class="description"
+						style="margin-top: 8px; min-height: 18px"
+					></div>
+				</div>
+
 				<div class="actions">
 					<button
 						id="resetAllAdvanced"

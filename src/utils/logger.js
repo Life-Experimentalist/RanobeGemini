@@ -1,4 +1,5 @@
 // Utility for structured logging and tracing in RanobesGemini
+import * as logStore from "./log-store.js";
 
 /**
  * LogLevel enum - defines the different logging levels
@@ -18,6 +19,8 @@ let lastDebugCheck = 0;
 const DEBUG_CACHE_TTL_MS = 3000;
 const originalConsoleError = console.error.bind(console);
 const originalConsoleLog = console.log.bind(console);
+let persistentLoggingEnabled = true;
+const MAX_LOG_MESSAGE_LENGTH = 8000;
 
 function isPopupDebugEnabledSync() {
 	try {
@@ -64,7 +67,10 @@ async function isDebugEnabledAsync() {
 export function debugLog(...args) {
 	const immediate = isPopupDebugEnabledSync();
 	if (immediate !== null) {
-		if (immediate) originalConsoleLog(...args);
+		if (immediate) {
+			originalConsoleLog(...args);
+			recordPersistent("debug", args);
+		}
 		return;
 	}
 
@@ -73,6 +79,7 @@ export function debugLog(...args) {
 		.then((enabled) => {
 			if (enabled) {
 				originalConsoleLog(...args);
+				recordPersistent("debug", args);
 			}
 		})
 		.catch(() => {
@@ -86,6 +93,46 @@ function shouldLogNowSync() {
 	return !!debugModeCache;
 }
 
+function safeStringify(value) {
+	try {
+		if (value instanceof Error) {
+			return value.stack || value.message || String(value);
+		}
+		if (typeof value === "object") {
+			return JSON.stringify(value);
+		}
+		return String(value);
+	} catch (err) {
+		return "[unserializable]";
+	}
+}
+
+function buildLogEntry(level, args) {
+	const message = args
+		.map((arg) => safeStringify(arg))
+		.join(" ")
+		.slice(0, MAX_LOG_MESSAGE_LENGTH);
+	return {
+		id:
+			typeof crypto !== "undefined" && crypto.randomUUID
+				? crypto.randomUUID()
+				: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+		ts: Date.now(),
+		level,
+		message,
+	};
+}
+
+function recordPersistent(level, args) {
+	if (!persistentLoggingEnabled) return;
+	try {
+		const entry = buildLogEntry(level, args);
+		logStore.appendLog(entry);
+	} catch (err) {
+		// do not break caller on log persistence failure
+	}
+}
+
 /**
  * Error-only logger that honors the debug toggle. Replace console.error with this when you want
  * errors hidden unless debug is on.
@@ -94,6 +141,7 @@ function shouldLogNowSync() {
 export function debugError(...args) {
 	if (shouldLogNowSync()) {
 		originalConsoleError(...args);
+		recordPersistent("error", args);
 		return;
 	}
 
@@ -109,8 +157,7 @@ try {
 		// Prime cache asynchronously without forcing output
 		isDebugEnabledAsync().catch(() => {});
 	}
-}
-catch (err) {
+} catch (err) {
 	// ignore
 }
 
@@ -120,13 +167,14 @@ try {
 		console.log = (...args) => {
 			if (shouldLogNowSync()) {
 				originalConsoleLog(...args);
+				recordPersistent("debug", args);
 				return;
 			}
 			isDebugEnabledAsync().catch(() => {});
 		};
-		console.__rgLogWrapped = true;
-		isDebugEnabledAsync().catch(() => {});
-	}
+			console.__rgLogWrapped = true;
+			isDebugEnabledAsync().catch(() => {});
+		}
 } catch (err) {
 	// ignore
 }
@@ -369,5 +417,47 @@ export function createLogger(context, minLevel = LogLevel.INFO) {
 	return new Logger(context, minLevel);
 }
 
+export function setPersistentLoggingEnabled(enabled) {
+	persistentLoggingEnabled = !!enabled;
+}
+
+export function setMaxPersistentEntries(limit) {
+	if (typeof limit === "number" && limit > 100) {
+		logStore.setMaxEntries(limit);
+	}
+}
+
+export async function getStoredLogs(limit = 1000) {
+	return logStore.getLogs(limit);
+}
+
+export async function exportLogsBlob(options = {}) {
+	return logStore.exportLogsBlob(options);
+}
+
+export async function downloadLogs(options = {}) {
+	return logStore.downloadLogs(options);
+}
+
+export async function clearStoredLogs() {
+	return logStore.clearLogs();
+}
+
+export async function uploadLogsWithAdapter(adapter, options = {}) {
+	return logStore.uploadWithAdapter(adapter, options);
+}
+
 // Default export for easier importing
-export default { createLogger, LogLevel, debugLog, debugError };
+export default {
+	createLogger,
+	LogLevel,
+	debugLog,
+	debugError,
+	setPersistentLoggingEnabled,
+	setMaxPersistentEntries,
+	getStoredLogs,
+	exportLogsBlob,
+	downloadLogs,
+	clearStoredLogs,
+	uploadLogsWithAdapter,
+};

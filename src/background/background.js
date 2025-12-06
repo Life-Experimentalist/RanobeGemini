@@ -1,5 +1,26 @@
 // Background script for Ranobe Gemini
 import { debugLog, debugError } from "../utils/logger.js";
+import {
+	DEFAULT_PROMPT,
+	DEFAULT_MODEL_ENDPOINT,
+	DEFAULT_PERMANENT_PROMPT,
+	DEFAULT_SUMMARY_PROMPT,
+	DEFAULT_SHORT_SUMMARY_PROMPT,
+	KEEP_ALIVE_ALARM_INTERVAL_MINUTES,
+	KEEP_ALIVE_HEARTBEAT_MS,
+	KEEP_ALIVE_HEARTBEAT_JITTER_MS,
+	KEEP_ALIVE_RECONNECT_DELAY_MS,
+	KEEP_ALIVE_MAX_PORT_RETRIES,
+	CHUNK_STAGGER_MS,
+	CHUNK_RETRY_BACKOFF_MS,
+} from "../utils/constants.js";
+import { splitContentForProcessing } from "../utils/chunking.js";
+import {
+	ensureDriveAccessToken,
+	revokeDriveTokens,
+	uploadLogsToDriveWithAdapter,
+} from "../utils/drive.js";
+import { novelLibrary } from "../utils/novel-library.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -13,33 +34,8 @@ if (typeof browser === "undefined") {
 	const browser =
 		typeof globalThis.browser !== "undefined" ? globalThis.browser : chrome;
 
-	// Use a try-catch for the import to handle potential errors
 	try {
-		// Use a dynamic import with browser.runtime.getURL
 		const api = typeof browser !== "undefined" ? browser : chrome;
-		const constantsModule = await import(
-			api.runtime.getURL("utils/constants.js")
-		);
-		const {
-			DEFAULT_PROMPT,
-			DEFAULT_MODEL_ENDPOINT,
-			DEFAULT_PERMANENT_PROMPT,
-			DEFAULT_SUMMARY_PROMPT,
-			DEFAULT_SHORT_SUMMARY_PROMPT,
-		} = constantsModule;
-
-		// Shared chunking utilities used by both background and content scripts
-		let splitContentForProcessing = null;
-		try {
-			const chunkingModule = await import(
-				api.runtime.getURL("utils/chunking.js")
-			);
-			splitContentForProcessing =
-				chunkingModule.splitContentForProcessing ||
-				chunkingModule.default?.splitContentForProcessing;
-		} catch (error) {
-			debugError("Error loading chunking utils:", error);
-		}
 
 		debugLog("Ranobe Gemini: Background script loaded");
 
@@ -51,7 +47,8 @@ if (typeof browser === "undefined") {
 		// This mechanism works for both browsers to ensure responsiveness
 
 		const KEEP_ALIVE_ALARM_NAME = "ranobe-gemini-keep-alive";
-		const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES = 0.5; // 30 seconds
+		const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES =
+		KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
 		const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
 		const DEFAULT_BACKUP_RETENTION = 3;
 		const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
@@ -596,6 +593,50 @@ if (typeof browser === "undefined") {
 					scheduleAutoBackup()
 						.then((scheduled) =>
 							sendResponse({ success: true, scheduled })
+						)
+						.catch((error) =>
+							sendResponse({
+								success: false,
+								error: error.message,
+							})
+						);
+					return true;
+				}
+
+				if (message.action === "ensureDriveAuth") {
+					ensureDriveAccessToken({ interactive: true })
+						.then(() => sendResponse({ success: true }))
+						.catch((error) =>
+							sendResponse({
+								success: false,
+								error: error.message,
+							})
+						);
+					return true;
+				}
+
+				if (message.action === "resetDriveAuth") {
+					revokeDriveTokens()
+						.then(() => sendResponse({ success: true }))
+						.catch((error) =>
+							sendResponse({
+								success: false,
+								error: error.message,
+							})
+						);
+					return true;
+				}
+
+				if (message.action === "uploadLogsToDrive") {
+					uploadLogsToDriveWithAdapter({
+						filename: message.filename || "ranobe-logs.json",
+						folderId: message.folderId,
+					})
+						.then((result) =>
+							sendResponse({
+								success: true,
+								count: result?.count,
+							})
 						)
 						.catch((error) =>
 							sendResponse({

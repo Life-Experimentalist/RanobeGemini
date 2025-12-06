@@ -57,6 +57,9 @@ function createFirefoxManifest(baseManifest) {
 		};
 	}
 
+	// Firefox does not support oauth2 in manifest, avoid warning
+	delete manifest.oauth2;
+
 	return manifest;
 }
 
@@ -68,10 +71,21 @@ function createChromeManifest(baseManifest) {
 
 	// Remove Firefox-specific settings
 	delete manifest.browser_specific_settings;
+	delete manifest.sidebar_action; // Not supported on Chromium/Edge
 
 	// Chrome MV3 only supports service_worker, not scripts array
-	if (manifest.background && manifest.background.scripts) {
-		delete manifest.background.scripts;
+	if (manifest.background) {
+		if (manifest.background.scripts) {
+			// Use the first script as the service worker entry point
+			const sw = Array.isArray(manifest.background.scripts)
+				? manifest.background.scripts[0]
+				: manifest.background.scripts;
+			manifest.background.service_worker =
+				sw || "background/background.js";
+			delete manifest.background.scripts;
+		}
+		// Ensure background is a module service worker (supported in Chromium MV3)
+		manifest.background.type = manifest.background.type || "module";
 	}
 
 	// Remove browser_style if present (Firefox-specific)

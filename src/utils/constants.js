@@ -94,6 +94,21 @@ export const DEFAULT_CHUNK_SIZE = 20000;
 // Default rate limit wait time (in milliseconds)
 export const RATE_LIMIT_WAIT_TIME = 300000; // 5 minutes
 
+// Keep-alive tuning knobs
+export const KEEP_ALIVE_ALARM_INTERVAL_MINUTES = 0.5; // chrome floors to 1 minute
+export const KEEP_ALIVE_HEARTBEAT_MS = 20000; // content->background ping
+export const KEEP_ALIVE_HEARTBEAT_JITTER_MS = 3000; // spread heartbeats across tabs
+export const KEEP_ALIVE_RECONNECT_DELAY_MS = 7000; // wait before re-opening port after drop
+export const KEEP_ALIVE_MAX_PORT_RETRIES = 4; // cap reconnect attempts before giving up until next user action
+
+// Chunking + request throttling
+export const CHUNK_STAGGER_MS = 800; // delay between chunk sends to reduce burst
+export const CHUNK_RETRY_BACKOFF_MS = 5000; // wait before retrying failed chunk
+
+// Default Google Drive OAuth client ID (used unless user overrides in settings)
+export const DEFAULT_DRIVE_CLIENT_ID =
+	"1009134964226-ish1mnbb7a4ob6dmtbkt65q2ont5abmi.apps.googleusercontent.com";
+
 // Emotion emoji mapping for enhancing text with emotional indicators
 export const EMOTION_EMOJIS = {
 	happy: "😊",

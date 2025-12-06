@@ -5,6 +5,7 @@ import {
 	DEFAULT_SUMMARY_PROMPT,
 	DEFAULT_SHORT_SUMMARY_PROMPT,
 	DEFAULT_PERMANENT_PROMPT,
+	DEFAULT_DRIVE_CLIENT_ID,
 } from "../utils/constants.js";
 import { novelLibrary, SHELVES } from "../utils/novel-library.js";
 import { debugLog, debugError } from "../utils/logger.js";
@@ -122,6 +123,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const restoreBackupBtn = document.getElementById("restoreBackupBtn");
 	const restoreFileInput = document.getElementById("restoreFileInput");
 	const backupHistoryList = document.getElementById("backupHistoryList");
+	const driveClientIdInput = document.getElementById("driveClientId");
+	const driveFolderIdInput = document.getElementById("driveFolderId");
+	const driveAuthBtn = document.getElementById("driveAuthBtn");
+	const driveUploadLogsBtn = document.getElementById("driveUploadLogsBtn");
+	const driveResetBtn = document.getElementById("driveResetBtn");
+	const driveStatus = document.getElementById("driveStatus");
 
 	// Theme elements
 	const themeModeSelect = document.getElementById("themeMode");
@@ -748,6 +755,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (centerSceneHeadingsInput) {
 			centerSceneHeadingsInput.checked =
 				data.centerSceneHeadings !== false; // default true
+		}
+
+		if (driveClientIdInput) {
+			driveClientIdInput.value =
+				data.driveClientId || DEFAULT_DRIVE_CLIENT_ID || "";
+		}
+		if (driveFolderIdInput) {
+			driveFolderIdInput.value = data.driveFolderId || "";
+		}
+		if (driveStatus) {
+			driveStatus.textContent = data.driveAuthTokens
+				? "Drive tokens cached"
+				: "Not signed in";
 		}
 
 		// Set debug mode checkbox
@@ -2519,6 +2539,28 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 	}
 
+	function setDriveStatus(text, kind = "info") {
+		if (!driveStatus) return;
+		driveStatus.textContent = text || "";
+		switch (kind) {
+			case "error":
+				driveStatus.style.color = "#d14343";
+				break;
+			case "success":
+				driveStatus.style.color = "#0f9d58";
+				break;
+			default:
+				driveStatus.style.color = "#475569";
+		}
+	}
+
+	async function persistDriveConfig({ clientId, folderId } = {}) {
+		const payload = {};
+		if (clientId !== undefined) payload.driveClientId = clientId;
+		if (folderId !== undefined) payload.driveFolderId = folderId;
+		await browser.storage.local.set(payload);
+	}
+
 	// Setup Library Tab Event Listeners
 	if (openFullLibraryBtn) {
 		openFullLibraryBtn.addEventListener("click", () => {
@@ -2567,6 +2609,97 @@ document.addEventListener("DOMContentLoaded", async function () {
 		restoreFileInput.addEventListener("change", () => {
 			if (restoreFileInput.files && restoreFileInput.files[0]) {
 				handleRestoreFromFile(restoreFileInput.files[0]);
+			}
+		});
+	}
+
+	if (driveClientIdInput) {
+		driveClientIdInput.addEventListener("change", async () => {
+			const value = driveClientIdInput.value.trim();
+			await persistDriveConfig({ clientId: value });
+			setDriveStatus("Client ID saved", "success");
+			try {
+				await browser.runtime.sendMessage({ action: "resetDriveAuth" });
+			} catch (err) {
+				debugError("Failed to reset Drive auth", err);
+			}
+		});
+	}
+
+	if (driveFolderIdInput) {
+		driveFolderIdInput.addEventListener("change", async () => {
+			const value = driveFolderIdInput.value.trim();
+			await persistDriveConfig({ folderId: value });
+			setDriveStatus("Folder saved", "success");
+		});
+	}
+
+	if (driveAuthBtn) {
+		driveAuthBtn.addEventListener("click", async () => {
+			const clientId =
+				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
+			if (!clientId) {
+				setDriveStatus("Add your OAuth client ID first", "error");
+				return;
+			}
+			setDriveStatus("Opening Google sign-in...");
+			try {
+				await browser.runtime.sendMessage({
+					action: "ensureDriveAuth",
+				});
+				setDriveStatus("Drive connected", "success");
+			} catch (err) {
+				setDriveStatus(
+					`Drive auth failed: ${err?.message || err}`,
+					"error"
+				);
+			}
+		});
+	}
+
+	if (driveUploadLogsBtn) {
+		driveUploadLogsBtn.addEventListener("click", async () => {
+			const clientId =
+				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
+			if (!clientId) {
+				setDriveStatus("Add your OAuth client ID first", "error");
+				return;
+			}
+			driveUploadLogsBtn.classList.add("loading");
+			setDriveStatus("Uploading logs to Drive...");
+			try {
+				const folderId = driveFolderIdInput?.value.trim();
+				const resp = await browser.runtime.sendMessage({
+					action: "uploadLogsToDrive",
+					folderId: folderId || undefined,
+				});
+				if (resp?.success) {
+					setDriveStatus(
+						`Uploaded ${resp.count || "logs"} entries to Drive`,
+						"success"
+					);
+				} else {
+					throw new Error(resp?.error || "Upload failed");
+				}
+			} catch (err) {
+				setDriveStatus(
+					`Drive upload failed: ${err?.message || err}`,
+					"error"
+				);
+			} finally {
+				driveUploadLogsBtn.classList.remove("loading");
+			}
+		});
+	}
+
+	if (driveResetBtn) {
+		driveResetBtn.addEventListener("click", async () => {
+			setDriveStatus("Resetting tokens...");
+			try {
+				await browser.runtime.sendMessage({ action: "resetDriveAuth" });
+				setDriveStatus("Drive tokens cleared", "success");
+			} catch (err) {
+				setDriveStatus(`Reset failed: ${err?.message || err}`, "error");
 			}
 		});
 	}

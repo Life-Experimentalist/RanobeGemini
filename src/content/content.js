@@ -44,6 +44,44 @@ if (window.__RGInitDone) {
 	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 	let keepAlivePort = null;
 	let keepAliveHeartbeat = null;
+	let keepAliveReconnectTimer = null;
+	let keepAliveRetryCount = 0;
+	const keepAliveConfigDefaults = {
+		heartbeatMs: 20000,
+		heartbeatJitterMs: 3000,
+		reconnectDelayMs: 7000,
+		maxRetries: 4,
+	};
+	let keepAliveConfig = { ...keepAliveConfigDefaults };
+
+	// Load shared constants for keep-alive tuning when available
+	(async () => {
+		try {
+			if (typeof browser !== "undefined" && browser.runtime?.getURL) {
+				const mod = await import(
+					browser.runtime.getURL("utils/constants.js")
+				);
+				keepAliveConfig = {
+					...keepAliveConfigDefaults,
+					heartbeatMs:
+						mod.KEEP_ALIVE_HEARTBEAT_MS ||
+						keepAliveConfigDefaults.heartbeatMs,
+					heartbeatJitterMs:
+						mod.KEEP_ALIVE_HEARTBEAT_JITTER_MS ||
+						keepAliveConfigDefaults.heartbeatJitterMs,
+					reconnectDelayMs:
+						mod.KEEP_ALIVE_RECONNECT_DELAY_MS ||
+						keepAliveConfigDefaults.reconnectDelayMs,
+					maxRetries:
+						mod.KEEP_ALIVE_MAX_PORT_RETRIES ||
+						keepAliveConfigDefaults.maxRetries,
+				};
+				if (keepAliveHeartbeat) restartKeepAlive();
+			}
+		} catch (_err) {
+			// leave defaults
+		}
+	})();
 	let debugModeEnabled = false;
 
 	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
@@ -75,38 +113,75 @@ if (window.__RGInitDone) {
 		if (debugModeEnabled) __rgOriginalError(...args);
 	};
 
-	function startKeepAlivePort() {
+	function clearKeepAliveTimers() {
+		if (keepAliveHeartbeat) {
+			clearInterval(keepAliveHeartbeat);
+			keepAliveHeartbeat = null;
+		}
+		if (keepAliveReconnectTimer) {
+			clearTimeout(keepAliveReconnectTimer);
+			keepAliveReconnectTimer = null;
+		}
+	}
+
+	function scheduleReconnect(reason) {
+		if (keepAliveReconnectTimer) return;
+		if (keepAliveRetryCount >= keepAliveConfig.maxRetries) return;
+		keepAliveRetryCount += 1;
+		const delay = keepAliveConfig.reconnectDelayMs;
+		keepAliveReconnectTimer = setTimeout(() => {
+			keepAliveReconnectTimer = null;
+			startKeepAlivePort(reason || "retry");
+		}, delay + Math.floor(Math.random() * (keepAliveConfig.heartbeatJitterMs || 0)));
+	}
+
+	function startKeepAlivePort(trigger = "initial") {
 		if (keepAlivePort) return;
+		clearKeepAliveTimers();
 		try {
 			keepAlivePort = browser.runtime.connect({
 				name: KEEP_ALIVE_PORT_NAME,
 			});
 			keepAlivePort.onDisconnect.addListener(() => {
 				keepAlivePort = null;
-				if (keepAliveHeartbeat) {
-					clearInterval(keepAliveHeartbeat);
-					keepAliveHeartbeat = null;
-				}
+				clearKeepAliveTimers();
+				scheduleReconnect("disconnect");
 			});
 			keepAlivePort.onMessage.addListener((msg) => {
 				if (msg?.type === "pong") {
 					isBackgroundScriptReady = true;
+					keepAliveRetryCount = 0;
 				}
 			});
-			// Heartbeat every 20s to keep service worker awake
+			const base = keepAliveConfig.heartbeatMs;
+			const jitter = keepAliveConfig.heartbeatJitterMs || 0;
+			const interval = Math.max(
+				5000,
+				base + Math.floor(Math.random() * jitter)
+			);
 			keepAliveHeartbeat = setInterval(() => {
 				try {
 					keepAlivePort?.postMessage({
 						type: "ping",
 						ts: Date.now(),
+						trigger,
 					});
 				} catch (_err) {
-					// Port may be gone; it will be re-established lazily
+					keepAlivePort = null;
+					scheduleReconnect("postMessage-error");
 				}
-			}, 20000);
+			}, interval);
 		} catch (_err) {
 			keepAlivePort = null;
+			scheduleReconnect("connect-error");
 		}
+	}
+
+	function restartKeepAlive() {
+		keepAlivePort = null;
+		keepAliveRetryCount = 0;
+		clearKeepAliveTimers();
+		startKeepAlivePort("config-change");
 	}
 
 	function ensureKeepAlivePort() {

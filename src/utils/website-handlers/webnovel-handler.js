@@ -776,5 +776,10 @@ When enhancing, improve readability and grammar while respecting the author's or
 	}
 }
 
-// Default export - create an instance
-export default new WebNovelHandler();
+// Default export - only instantiate when running in a window context (content scripts)
+let webNovelHandlerInstance = null;
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+	webNovelHandlerInstance = new WebNovelHandler();
+}
+
+export default webNovelHandlerInstance;

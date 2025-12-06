@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.2.0",
+	"version": "3.3.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -29,7 +29,12 @@
 		"notifications",
 		"contextMenus",
 		"alarms",
-		"downloads"
+		"downloads",
+		"identity"
+	],
+	"host_permissions": [
+		"https://www.googleapis.com/*",
+		"https://accounts.google.com/*"
 	],
 	"sidebar_action": {
 		"default_icon": {
@@ -129,22 +134,22 @@
 	"commands": {
 		"open-library": {
 			"suggested_key": {
-				"default": "Ctrl+Alt+N",
-				"mac": "Command+Alt+N"
+				"default": "Alt+Shift+L",
+				"mac": "Command+Shift+L"
 			},
 			"description": "Open the Novel Library"
 		},
 		"enhance-page": {
 			"suggested_key": {
-				"default": "Ctrl+Alt+E",
-				"mac": "Command+Alt+E"
+				"default": "Alt+Shift+E",
+				"mac": "Command+Shift+E"
 			},
 			"description": "Enhance current page"
 		},
 		"summarize-page": {
 			"suggested_key": {
-				"default": "Ctrl+Alt+S",
-				"mac": "Command+Alt+S"
+				"default": "Alt+Shift+S",
+				"mac": "Command+Shift+S"
 			},
 			"description": "Generate summary for current page"
 		}
@@ -175,5 +180,11 @@
 				"*://*.scribblehub.com/*"
 			]
 		}
-	]
+	],
+	"oauth2": {
+		"client_id": "<your_client_id>.apps.googleusercontent.com",
+		"scopes": [
+			"https://www.googleapis.com/auth/drive.file"
+		]
+	}
 }
