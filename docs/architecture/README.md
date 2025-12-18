@@ -55,6 +55,24 @@ This directory contains technical documentation about the internal architecture,
 
 ---
 
+### [KEEP_ALIVE.md](./KEEP_ALIVE.md)
+**Three-layer keep-alive system documentation**
+
+- Offscreen document heartbeat mechanism (Chrome MV3)
+- Background alarm API and port listener architecture
+- Content script long-lived port connections
+- Timing considerations and browser differences
+- Lifecycle management and debugging tips
+
+**Key Topics:**
+- 🔄 Three-layer redundant keep-alive architecture
+- ⏱️ 20s/30s interval timing rationale
+- 🔌 Port-based heartbeat system
+- 🐛 Debugging and troubleshooting guide
+- 🔧 Chrome vs Firefox implementation differences
+
+---
+
 ## 🔗 Quick Navigation
 
 | Topic                 | Document                                                          | Section                       |
@@ -66,6 +84,7 @@ This directory contains technical documentation about the internal architecture,
 | **Storage Design**    | [ARCHITECTURE.md](./ARCHITECTURE.md#storage-architecture)         | Data persistence patterns     |
 | **API Integration**   | [ARCHITECTURE.md](./ARCHITECTURE.md#api-integration-architecture) | Gemini API communication      |
 | **Domain System**     | [DYNAMIC_DOMAINS.md](./DYNAMIC_DOMAINS.md)                        | Multi-domain support          |
+| **Keep-Alive System** | [KEEP_ALIVE.md](./KEEP_ALIVE.md)                                  | Service worker persistence    |
 
 ---
 

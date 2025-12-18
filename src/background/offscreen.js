@@ -27,7 +27,7 @@ async function sendKeepAlive() {
 		}
 	} catch (error) {
 		// Service worker might not be ready yet, that's okay
-		debugLog("[Offscreen] Service worker not ready:", error.message);
+		debugError("[Offscreen] Service worker not ready:", error.message);
 	}
 }
 

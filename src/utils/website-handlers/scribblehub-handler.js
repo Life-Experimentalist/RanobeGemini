@@ -672,6 +672,66 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	}
 
 	/**
+	 * Extract page metadata for content enhancement context
+	 * Provides site-specific information for AI during content processing
+	 * @returns {Object} Context with author, title, genres, tags, status, description
+	 */
+	extractPageMetadata() {
+		const context = {
+			author: null,
+			title: null,
+			genres: [],
+			tags: [],
+			status: null,
+			description: null,
+			originalUrl: window.location.href,
+		};
+
+		try {
+			// Title from breadcrumb link to series
+			const seriesLink = document.querySelector(
+				'.wi_breadcrumb.chapter a[href*="/series/"]'
+			);
+			if (seriesLink) {
+				context.title = seriesLink.textContent.trim();
+			}
+
+			// Author
+			const authorLink = document.querySelector(
+				".auth a[href*='/profile/'], .auth_name a, a[rel='author']"
+			);
+			if (authorLink) {
+				context.author = authorLink.textContent.trim();
+			}
+
+			// Description (only available on series pages, but capture if present)
+			const description = document.querySelector(".wi_fic_desc");
+			if (description) {
+				context.description = description.textContent.trim();
+			}
+
+			// Genres/Tags on series pages
+			const genreEls = document.querySelectorAll(".fic_genre a");
+			if (genreEls.length) {
+				context.genres = Array.from(genreEls).map((el) =>
+					el.textContent.trim()
+				);
+			}
+
+			const tagEls = document.querySelectorAll(".wi_fic_showtags a.stag");
+			if (tagEls.length) {
+				context.tags = Array.from(tagEls).map((el) =>
+					el.textContent.trim()
+				);
+			}
+		} catch (error) {
+			debugError("ScribbleHub: Error extracting page metadata:", error);
+		}
+
+		return context;
+	}
+
+	/**
 	 * Normalize URL to absolute
 	 * @param {string} url
 	 * @returns {string}

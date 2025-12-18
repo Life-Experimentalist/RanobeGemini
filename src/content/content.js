@@ -2829,6 +2829,14 @@ if (window.__RGInitDone) {
 
 	// Add novel to library when content is enhanced
 	async function addToNovelLibrary(context) {
+		// Validate that this is a valid chapter page (not user/author profile)
+		if (!currentHandler || !currentHandler.isChapterPage?.()) {
+			debugLog(
+				"Skipping library add: Not a chapter page or no valid handler"
+			);
+			return;
+		}
+
 		if (!novelLibrary) {
 			await loadNovelLibrary();
 		}
@@ -2920,169 +2928,34 @@ if (window.__RGInitDone) {
 			}
 		}
 
-		// Site-specific metadata extraction
-		const hostname = window.location.hostname;
-
-		// FanFiction.net specific extraction
-		if (hostname.includes("fanfiction.net")) {
-			// Author from profile link
-			const authorLink = document.querySelector(
-				'#profile_top a[href^="/u/"]'
-			);
-			if (authorLink) {
-				context.author = authorLink.textContent.trim();
-			}
-
-			// Story title (first bold text in profile_top)
-			const storyTitle = document.querySelector(
-				"#profile_top > b.xcontrast_txt"
-			);
-			if (storyTitle) {
-				context.title = storyTitle.textContent.trim();
-			}
-
-			// Get story metadata from info div
-			const infoDiv = document.querySelector("#profile_top .xgray");
-			if (infoDiv) {
-				const infoText = infoDiv.textContent;
-				// Extract genres
-				const genreMatch = infoText.match(
-					/(?:rated|language).*?-\s*([^-]+)\s*-/i
-				);
-				if (genreMatch) {
-					context.genres = genreMatch[1]
-						.split("/")
-						.map((g) => g.trim())
-						.filter(Boolean);
+		// Site-specific metadata extraction - delegate to handler
+		if (
+			currentHandler &&
+			typeof currentHandler.extractPageMetadata === "function"
+		) {
+			try {
+				const pageMetadata = currentHandler.extractPageMetadata();
+				if (pageMetadata) {
+					// Merge handler-provided metadata into context
+					context.author = pageMetadata.author || context.author;
+					context.title = pageMetadata.title || context.title;
+					context.genres = [
+						...(pageMetadata.genres || []),
+						...(context.genres || []),
+					];
+					context.tags = [
+						...(pageMetadata.tags || []),
+						...(context.tags || []),
+					];
+					context.status = pageMetadata.status || context.status;
+					context.description =
+						pageMetadata.description || context.description;
 				}
-			}
-		}
-
-		// AO3 specific extraction
-		else if (hostname.includes("archiveofourown.org")) {
-			// Author
-			const authorLink = document.querySelector(
-				'.byline a[rel="author"]'
-			);
-			if (authorLink) {
-				context.author = authorLink.textContent.trim();
-			}
-
-			// Title
-			const titleEl = document.querySelector(".title.heading");
-			if (titleEl) {
-				context.title = titleEl.textContent.trim();
-			}
-
-			// Tags/Genres
-			const tagLinks = document.querySelectorAll(
-				".fandom.tags a.tag, .freeform.tags a.tag"
-			);
-			context.tags = Array.from(tagLinks).map((a) =>
-				a.textContent.trim()
-			);
-
-			// Status
-			const statusEl = document.querySelector("dd.status");
-			if (statusEl) {
-				context.status = statusEl.textContent.trim().toLowerCase();
-			}
-		}
-
-		// Ranobes specific extraction
-		else if (hostname.includes("ranobes")) {
-			// Extract novel title from breadcrumbs (second link is the novel)
-			const breadcrumbLinks =
-				document.querySelectorAll("#dle-speedbar a");
-			if (breadcrumbLinks.length >= 2) {
-				context.title = breadcrumbLinks[1].textContent.trim();
-			}
-
-			// Fallback: Extract from page title
-			if (!context.title) {
-				const titleMatch = document.title.match(
-					/(.+?)\s*[|\-]\s*Chapter/i
+			} catch (error) {
+				debugError(
+					"Error extracting page metadata from handler:",
+					error
 				);
-				if (titleMatch) {
-					context.title = titleMatch[1].trim();
-				}
-			}
-
-			// Try to extract author if available
-			const authorEl = document.querySelector(
-				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
-			);
-			if (authorEl) {
-				context.author = authorEl.textContent.trim();
-			}
-
-			// Extract description from meta tag
-			const descriptionMeta = document.querySelector(
-				'meta[name="description"]'
-			);
-			if (descriptionMeta) {
-				context.description = descriptionMeta
-					.getAttribute("content")
-					.trim();
-			}
-		}
-
-		// ScribbleHub specific extraction
-		else if (hostname.includes("scribblehub.com")) {
-			// Title from breadcrumb link to series
-			const seriesLink = document.querySelector(
-				'.wi_breadcrumb.chapter a[href*="/series/"]'
-			);
-			if (seriesLink) {
-				context.title = seriesLink.textContent.trim();
-			}
-
-			// Author
-			const authorLink = document.querySelector(
-				".auth a[href*='/profile/'], .auth_name a, a[rel='author']"
-			);
-			if (authorLink) {
-				context.author = authorLink.textContent.trim();
-			}
-
-			// Description (only available on series pages, but capture if present)
-			const description = document.querySelector(".wi_fic_desc");
-			if (description) {
-				context.description = description.textContent.trim();
-			}
-
-			// Genres/Tags on series pages
-			const genreEls = document.querySelectorAll(".fic_genre a");
-			if (genreEls.length) {
-				context.genres = Array.from(genreEls).map((el) =>
-					el.textContent.trim()
-				);
-			}
-
-			const tagEls = document.querySelectorAll(".wi_fic_showtags a.stag");
-			if (tagEls.length) {
-				context.tags = Array.from(tagEls).map((el) =>
-					el.textContent.trim()
-				);
-			}
-		}
-
-		// WebNovel specific extraction
-		else if (hostname.includes("webnovel.com")) {
-			// Author
-			const authorEl = document.querySelector(
-				'.ell.dib.vam a[href*="/profile/"]'
-			);
-			if (authorEl) {
-				context.author = authorEl.textContent.trim();
-			}
-
-			// Title
-			const titleEl =
-				document.querySelector("h1") ||
-				document.querySelector(".pt4.pb4.oh.ell");
-			if (titleEl) {
-				context.title = titleEl.textContent.trim();
 			}
 		}
 
@@ -3569,8 +3442,34 @@ if (window.__RGInitDone) {
 				genres: metadata.genres || [],
 				tags: metadata.tags || [],
 				status: metadata.status || null,
-				// CRITICAL: Ensure totalChapters is set from chapterCount
-				totalChapters: metadata.chapterCount || null,
+				// CRITICAL: Ensure totalChapters is set from chapterCount or totalChapters
+				totalChapters:
+					metadata.totalChapters || metadata.chapterCount || null,
+				// Ensure nested metadata and stats are preserved for site-specific features
+				// Merge top-level metadata fields into nested metadata object for consistency
+				metadata: {
+					...(metadata.metadata || {}),
+					// Also copy top-level fields that belong in metadata
+					...(metadata.rating && { rating: metadata.rating }),
+					...(metadata.language && { language: metadata.language }),
+					...(metadata.publishedDate && {
+						publishedDate: metadata.publishedDate,
+					}),
+					...(metadata.updatedDate && {
+						updatedDate: metadata.updatedDate,
+					}),
+				},
+				// Build stats from both nested stats object and top-level stat fields
+				stats: {
+					...(metadata.stats || {}),
+					// Also copy top-level stat fields for FanFiction compatibility
+					...(metadata.words && { words: metadata.words }),
+					...(metadata.reviews && { reviews: metadata.reviews }),
+					...(metadata.favorites && {
+						favorites: metadata.favorites,
+					}),
+					...(metadata.follows && { follows: metadata.follows }),
+				},
 				lastUpdated: Date.now(),
 				// Only set progress if on a chapter page, otherwise let library set defaults
 				...(isChapter && currentChapterNum
@@ -3784,73 +3683,73 @@ if (window.__RGInitDone) {
 		return button;
 	}
 
-	// Function to create the FanFiction version switcher button (mobile ⟷ desktop)
-	function createFanfictionVersionSwitcher() {
-		const hostname = window.location.hostname;
-		const isMobile = hostname === "m.fanfiction.net";
-		const isDesktop =
-			hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
+	// // Function to create the FanFiction version switcher button (mobile ⟷ desktop)
+	// function createFanfictionVersionSwitcher() {
+	// 	const hostname = window.location.hostname;
+	// 	const isMobile = hostname === "m.fanfiction.net";
+	// 	const isDesktop =
+	// 		hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
 
-		// Only show switcher on FanFiction.net sites
-		if (!isMobile && !isDesktop) {
-			return null;
-		}
+	// 	// Only show switcher on FanFiction.net sites
+	// 	if (!isMobile && !isDesktop) {
+	// 		return null;
+	// 	}
 
-		const button = document.createElement("button");
-		button.id = "fanfiction-version-switcher";
-		button.textContent = isMobile ? "🖥️ Desktop" : "📱 Mobile";
-		button.title = isMobile
-			? "Switch to desktop version"
-			: "Switch to mobile version";
+	// 	const button = document.createElement("button");
+	// 	button.id = "fanfiction-version-switcher";
+	// 	button.textContent = isMobile ? "🖥️ Desktop" : "📱 Mobile";
+	// 	button.title = isMobile
+	// 		? "Switch to desktop version"
+	// 		: "Switch to mobile version";
 
-		// Match the same styling as enhance/summarize buttons but compact
-		button.style.cssText = `
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			padding: 8px 12px;
-			margin: 0;
-			background-color: #222;
-			color: #bab9a0;
-			border: 1px solid #ffffff21;
-			box-shadow: inset 0 0 0 1px #5a5a5a4d;
-			border-radius: 4px;
-			cursor: pointer;
-			font-weight: bold;
-			font-size: 12px;
-			z-index: 1000;
-		`;
+	// 	// Match the same styling as enhance/summarize buttons but compact
+	// 	button.style.cssText = `
+	// 		display: inline-flex;
+	// 		align-items: center;
+	// 		justify-content: center;
+	// 		padding: 8px 12px;
+	// 		margin: 0;
+	// 		background-color: #222;
+	// 		color: #bab9a0;
+	// 		border: 1px solid #ffffff21;
+	// 		box-shadow: inset 0 0 0 1px #5a5a5a4d;
+	// 		border-radius: 4px;
+	// 		cursor: pointer;
+	// 		font-weight: bold;
+	// 		font-size: 12px;
+	// 		z-index: 1000;
+	// 	`;
 
-		button.addEventListener("click", () => {
-			const currentUrl = window.location.href;
-			let newUrl;
+	// 	button.addEventListener("click", () => {
+	// 		const currentUrl = window.location.href;
+	// 		let newUrl;
 
-			if (isMobile) {
-				// Switch to desktop: m.fanfiction.net → www.fanfiction.net
-				newUrl = currentUrl.replace(
-					"m.fanfiction.net",
-					"www.fanfiction.net"
-				);
-			} else {
-				// Switch to mobile: www.fanfiction.net → m.fanfiction.net
-				newUrl = currentUrl.replace(
-					/(?:www\.)?fanfiction\.net/,
-					"m.fanfiction.net"
-				);
-			}
+	// 		if (isMobile) {
+	// 			// Switch to desktop: m.fanfiction.net → www.fanfiction.net
+	// 			newUrl = currentUrl.replace(
+	// 				"m.fanfiction.net",
+	// 				"www.fanfiction.net"
+	// 			);
+	// 		} else {
+	// 			// Switch to mobile: www.fanfiction.net → m.fanfiction.net
+	// 			newUrl = currentUrl.replace(
+	// 				/(?:www\.)?fanfiction\.net/,
+	// 				"m.fanfiction.net"
+	// 			);
+	// 		}
 
-			window.location.href = newUrl;
-		});
+	// 		window.location.href = newUrl;
+	// 	});
 
-		button.addEventListener("mouseover", () => {
-			button.style.backgroundColor = "#333";
-		});
-		button.addEventListener("mouseout", () => {
-			button.style.backgroundColor = "#222";
-		});
+	// 	button.addEventListener("mouseover", () => {
+	// 		button.style.backgroundColor = "#333";
+	// 	});
+	// 	button.addEventListener("mouseout", () => {
+	// 		button.style.backgroundColor = "#222";
+	// 	});
 
-		return button;
-	}
+	// 	return button;
+	// }
 
 	// Function to create the Enhance button
 	function createEnhanceButton() {
@@ -4743,21 +4642,28 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		// Create version switcher container (right-aligned, above main controls)
-		const versionSwitcher = createFanfictionVersionSwitcher();
-		let versionSwitcherContainer = null;
+		// Get site-specific enhancement buttons from handler (if available)
+		const siteEnhancements =
+			currentHandler &&
+			typeof currentHandler.getSiteSpecificEnhancements === "function"
+				? currentHandler.getSiteSpecificEnhancements()
+				: [];
 
-		if (versionSwitcher) {
-			versionSwitcherContainer = document.createElement("div");
-			versionSwitcherContainer.id = "gemini-version-switcher-container";
-			versionSwitcherContainer.style.cssText = `
-				display: flex;
-				justify-content: flex-end;
-				margin-bottom: 8px;
-			`;
-			versionSwitcherContainer.appendChild(versionSwitcher);
+		// Create version switcher container (right-aligned, above main controls) if we have site enhancements
+		let siteEnhancementsContainer = null;
+		if (siteEnhancements && siteEnhancements.length > 0) {
+			siteEnhancementsContainer = document.createElement("div");
+			siteEnhancementsContainer.id = "gemini-site-enhancements-container";
+			siteEnhancementsContainer.style.cssText = `
+			display: flex;
+			justify-content: flex-end;
+			gap: 8px;
+			margin-bottom: 8px;
+		`;
+			siteEnhancements.forEach((btn) => {
+				siteEnhancementsContainer.appendChild(btn);
+			});
 		}
-
 		const controlsContainer = document.createElement("div");
 		controlsContainer.id = "gemini-controls";
 		controlsContainer.style.marginBottom = "10px"; // Add some space below buttons
@@ -4813,9 +4719,9 @@ if (window.__RGInitDone) {
 			insertionPosition === "before" ||
 			insertionPosition === "beforebegin"
 		) {
-			if (versionSwitcherContainer) {
+			if (siteEnhancementsContainer) {
 				insertionPoint.parentNode.insertBefore(
-					versionSwitcherContainer,
+					siteEnhancementsContainer,
 					insertionPoint
 				);
 			}
@@ -4835,16 +4741,16 @@ if (window.__RGInitDone) {
 			insertionPosition === "after" ||
 			insertionPosition === "afterend"
 		) {
-			if (versionSwitcherContainer) {
+			if (siteEnhancementsContainer) {
 				insertionPoint.parentNode.insertBefore(
-					versionSwitcherContainer,
+					siteEnhancementsContainer,
 					insertionPoint.nextSibling
 				);
 			}
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
-				versionSwitcherContainer
-					? versionSwitcherContainer.nextSibling
+				siteEnhancementsContainer
+					? siteEnhancementsContainer.nextSibling
 					: insertionPoint.nextSibling
 			);
 			insertionPoint.parentNode.insertBefore(

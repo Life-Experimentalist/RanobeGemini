@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Ranobe Gemini - Screenshot Gallery</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				font-family: "Space Grotesk", "Inter", system-ui, -apple-system,
+					sans-serif;
+			}
+
+			body {
+				display: flex;
+				background: #050b14;
+			}
+
+			.gallery {
+				width: 100%;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 40px;
+				padding: 40px;
+				align-content: start;
+			}
+
+			.screenshot-container {
+				background: #0b1628;
+				border-radius: 12px;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				overflow: hidden;
+				padding: 20px;
+			}
+
+			.screenshot-label {
+				color: #9fb3c8;
+				font-size: 12px;
+				margin-bottom: 10px;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+			}
+
+			.screenshot {
+				width: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: linear-gradient(135deg, #050b14 0%, #0b1628 100%);
+				border-radius: 8px;
+				overflow: hidden;
+				font-size: 14px;
+				color: #9fb3c8;
+			}
+
+			/* Screenshot 1: Main interface - 1280x800 */
+			.ss1-1280x800 {
+				width: 100%;
+				aspect-ratio: 1280 / 800;
+				background: linear-gradient(
+						135deg,
+						rgba(5, 11, 20, 0.95) 0%,
+						rgba(11, 22, 40, 0.95) 100%
+					),
+					radial-gradient(
+						circle at 20% 20%,
+						rgba(244, 162, 97, 0.1),
+						transparent 25%
+					);
+				display: flex;
+				flex-direction: column;
+				padding: 40px;
+				gap: 20px;
+			}
+
+			.ss-header {
+				display: flex;
+				align-items: center;
+				gap: 16px;
+			}
+
+			.ss-logo {
+				width: 48px;
+				height: 48px;
+				border-radius: 12px;
+				background: linear-gradient(135deg, #f4a261, #2dd4bf);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				color: #0b0f1a;
+				font-size: 24px;
+			}
+
+			.ss-title {
+				font-size: 28px;
+				font-weight: 700;
+				color: #e8eef7;
+			}
+
+			.ss-content {
+				flex: 1;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+			}
+
+			.ss-section {
+				background: rgba(255, 255, 255, 0.04);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 12px;
+				padding: 20px;
+			}
+
+			.ss-section-title {
+				color: #ffb86c;
+				font-size: 14px;
+				font-weight: 600;
+				margin-bottom: 12px;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+			}
+
+			.ss-section-content {
+				color: #9fb3c8;
+				font-size: 13px;
+				line-height: 1.6;
+			}
+
+			.ss-button {
+				background: linear-gradient(135deg, #f4a261, #2dd4bf);
+				color: #0b0f1a;
+				padding: 12px 20px;
+				border-radius: 8px;
+				font-weight: 600;
+				font-size: 13px;
+				border: none;
+				cursor: pointer;
+				margin-top: 16px;
+				display: inline-block;
+			}
+
+			/* Responsive for smaller screens */
+			@media (max-width: 1600px) {
+				.gallery {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="gallery">
+			<!-- Screenshot 1: Main Interface -->
+			<div class="screenshot-container">
+				<div class="screenshot-label">Main Interface (1280x800)</div>
+				<div class="screenshot ss1-1280x800">
+					<div class="ss-header">
+						<div class="ss-logo">RG</div>
+						<div class="ss-title">Ranobe Gemini</div>
+					</div>
+					<div class="ss-content">
+						<div class="ss-section">
+							<div class="ss-section-title">✓ Enhancement</div>
+							<div class="ss-section-content">
+								Polish translations and fix grammar using AI.
+								Site-aware prompts for optimal results.
+							</div>
+							<button class="ss-button">Enhance Chapter</button>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">✓ Summaries</div>
+							<div class="ss-section-content">
+								Generate concise or detailed chapter summaries
+								instantly without leaving the page.
+							</div>
+							<button class="ss-button">Summarize</button>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">✓ Library</div>
+							<div class="ss-section-content">
+								Track novels across AO3, FanFiction, Ranobes,
+								ScribbleHub with shelf-aware metadata.
+							</div>
+							<button class="ss-button">View Library</button>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">✓ Settings</div>
+							<div class="ss-section-content">
+								Configure API keys, select Gemini models,
+								customize prompts, and enable chunking.
+							</div>
+							<button class="ss-button">Settings</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Screenshot 2: Features Overview -->
+			<div class="screenshot-container">
+				<div class="screenshot-label">Features Overview (1280x800)</div>
+				<div class="screenshot ss1-1280x800">
+					<div class="ss-header">
+						<div class="ss-logo">RG</div>
+						<div class="ss-title">Key Features</div>
+					</div>
+					<div class="ss-content">
+						<div class="ss-section">
+							<div class="ss-section-title">
+								🧠 AI Enhancement
+							</div>
+							<div class="ss-section-content">
+								Improve grammar, flow, and readability of
+								translations using Gemini API with site-specific
+								prompts.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								⚡ Fast Summaries
+							</div>
+							<div class="ss-section-content">
+								Get instant chapter summaries highlighting key
+								plot points without reading full text.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								📚 Unified Library
+							</div>
+							<div class="ss-section-content">
+								Manage novels from AO3, FanFiction, Ranobes,
+								ScribbleHub in one organized library.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">🔒 Privacy First</div>
+							<div class="ss-section-content">
+								Everything runs locally. Import/export JSON
+								anytime. No cloud lock-in, no accounts needed.
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Screenshot 3: Supported Sites -->
+			<div class="screenshot-container">
+				<div class="screenshot-label">Supported Sites (1280x800)</div>
+				<div class="screenshot ss1-1280x800">
+					<div class="ss-header">
+						<div class="ss-logo">RG</div>
+						<div class="ss-title">Supported Websites</div>
+					</div>
+					<div class="ss-content">
+						<div class="ss-section">
+							<div class="ss-section-title">📖 Ranobes</div>
+							<div class="ss-section-content">
+								Full support for ranobes.net, .com, .top, .org
+								and variants with automatic domain detection.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								✍️ FanFiction.net
+							</div>
+							<div class="ss-section-content">
+								Enhanced experience on desktop and mobile
+								versions. Inline controls for quick enhancement.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								🏛️ Archive of Our Own
+							</div>
+							<div class="ss-section-content">
+								Full AO3 support across all domains. Works with
+								multi-chapter works and one-shots.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">🎨 ScribbleHub</div>
+							<div class="ss-section-content">
+								Complete ScribbleHub integration with support
+								for series and chapter-by-chapter reads.
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Screenshot 4: Configuration -->
+			<div class="screenshot-container">
+				<div class="screenshot-label">
+					Configuration & Settings (1280x800)
+				</div>
+				<div class="screenshot ss1-1280x800">
+					<div class="ss-header">
+						<div class="ss-logo">RG</div>
+						<div class="ss-title">Customization</div>
+					</div>
+					<div class="ss-content">
+						<div class="ss-section">
+							<div class="ss-section-title">
+								🔑 API Configuration
+							</div>
+							<div class="ss-section-content">
+								Easy setup with Gemini API keys. Backup keys for
+								rate limit management. Rotate keys anytime.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								🤖 Model Selection
+							</div>
+							<div class="ss-section-content">
+								Choose from Gemini 2.0 Flash, 2.5 Flash, or Pro
+								based on speed vs quality needs.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								📝 Custom Prompts
+							</div>
+							<div class="ss-section-content">
+								Tailor enhancement, summary, and permanent
+								prompts for your specific reading preferences.
+							</div>
+						</div>
+						<div class="ss-section">
+							<div class="ss-section-title">
+								⚙️ Advanced Options
+							</div>
+							<div class="ss-section-content">
+								Chunking for long chapters, debug mode,
+								temperature controls, and more fine-tuning.
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

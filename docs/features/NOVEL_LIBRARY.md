@@ -233,6 +233,87 @@ graph LR
 - **Grid Layout**: Responsive card-based design
 - **Novel Cards**: Display cover, title, author, progress
 
+### 3.5. Website Shelf Pages (v3.5.0+)
+
+Dedicated shelf pages for each supported website with advanced filtering, sorting, and analytics.
+
+**Access**: Library → Click shelf icon (e.g., AO3, FanFiction, Ranobes)
+
+#### AO3 Shelf Page
+
+**Browse by Fandom**:
+- Top 20 fandoms displayed as clickable cards
+- Shows work count per fandom
+- Auto-applies fandom filter on click
+
+**Filters**:
+- **Multi-Select** (no limits): Fandoms, Relationships, Characters, Additional Tags
+- **Single-Select**: Rating (General to Explicit), Category (F/M, M/M, Gen, etc.)
+- **Warnings**: Creator Chose Not To Use, Graphic Violence, Major Character Death, No Warnings
+- **Language**: English, Spanish, Chinese, etc.
+- **Completion Status**: Completed, In Progress
+- **Pairing Type**: Gen, Slash, Het, Femslash, Multi, Other
+- **Relationships Type**: Romantic, Platonic, Ambiguous, Familial
+
+**Search**: Title, author, description (case-insensitive)
+
+**Sorting**: Recent visit, date added, total words, kudos, hits, bookmarks, comments
+
+**Analytics** (6 insights):
+- Total Works
+- Enhanced Chapters
+- Total Words
+- Average Rating
+- Reading Progress (percentage)
+- Most Kudos (work with highest kudos count)
+- Newest Addition (most recently added)
+- Most Chapters (work with most chapters enhanced)
+
+#### FanFiction.net Shelf Page
+
+**Filters**:
+- **Multi-Select** (site limits): Fandoms (max 2), Characters (max 4)
+- **Single-Select**: Genre, Language, Rating (K to M), Completion Status
+- **Crossover Filter**: Include/exclude crossover stories
+
+**Search**: Title, author, description
+
+**Sorting**: Recent visit, date added, words, favorites, follows, reviews
+
+**Analytics** (6 insights):
+- Total Stories
+- Enhanced Chapters
+- Total Words
+- Average Favorites
+- Reading Progress
+- Most Favorited
+- Newest Addition
+- Most Chapters
+
+#### Ranobes Shelf Page
+
+**Filters**:
+- **Multi-Select**: Genres, Tags
+- **Single-Select**: Language, Status (Country of Origin), Translation Status
+
+**Search**: Title, author, description
+
+**Sorting**: Recent visit, date added, total words, rating, chapters, views
+
+**Analytics** (6 insights):
+- Total Novels
+- Enhanced Chapters
+- Total Words
+- Average Rating
+- Reading Progress
+- Most Chapters
+- Newest Addition
+- Highest Rated
+
+#### ScribbleHub & WebNovel Shelf Pages
+
+Coming in future releases with similar filtering/analytics capabilities.
+
 ### 4. Novel Metadata
 
 Each novel stores comprehensive metadata:

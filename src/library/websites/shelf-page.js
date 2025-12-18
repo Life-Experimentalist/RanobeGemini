@@ -244,7 +244,7 @@ async function loadShelfNovels() {
 	try {
 		const library = await getNovelLibrary();
 		allNovels = Object.values(library).filter(
-			(novel) => novel.source === currentShelf
+			(novel) => novel.shelfId === currentShelf
 		);
 
 		// Extract available tags

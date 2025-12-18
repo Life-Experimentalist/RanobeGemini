@@ -3,18 +3,24 @@
 > **Index:**
 
 - [Changelog](#changelog)
+	- [\[3.5.0\] - 2025-01-XX](#350---2025-01-xx)
+		- [🎨 Shelf Pages, Analytics \& UX Improvements](#-shelf-pages-analytics--ux-improvements)
+		- [Added](#added)
+		- [Changed](#changed)
+		- [Fixed](#fixed)
+		- [Documentation](#documentation)
 	- [\[3.0.0\] - 2025-11-28](#300---2025-11-28)
 		- [🎉 Major Release: Novel Library System](#-major-release-novel-library-system)
-		- [Added](#added)
+		- [Added](#added-1)
 			- [📚 Novel Library System](#-novel-library-system)
 			- [🔧 Dynamic Shelf System](#-dynamic-shelf-system)
 			- [🎨 UI Enhancements](#-ui-enhancements)
 			- [📖 Metadata Extraction](#-metadata-extraction)
 			- [📝 Documentation Overhaul](#-documentation-overhaul)
-		- [Changed](#changed)
+		- [Changed](#changed-1)
 			- [🏗️ Architecture Improvements](#️-architecture-improvements)
 			- [📚 Documentation](#-documentation)
-		- [Fixed](#fixed)
+		- [Fixed](#fixed-1)
 		- [Developer Experience](#developer-experience)
 			- [Adding New Website Support (Simplified)](#adding-new-website-support-simplified)
 			- [Build Scripts](#build-scripts)
@@ -22,53 +28,80 @@
 			- [Novel Library Schema](#novel-library-schema)
 			- [Shelf Metadata Schema](#shelf-metadata-schema)
 		- [Migration Notes](#migration-notes)
-	- [\[2.8.0\] - 2024-12-15](#280---2024-12-15)
-		- [Migration Notes](#migration-notes-1)
-	- [\[2.9.0\] - 2025-11-25](#290---2025-11-25)
-		- [Summary](#summary)
-		- [Added](#added-1)
-		- [Changed](#changed-1)
-		- [Fixed](#fixed-1)
-	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
-		- [Summary](#summary-1)
-		- [Added](#added-2)
-		- [Changed](#changed-2)
-		- [Fixed](#fixed-2)
-		- [Developer Experience](#developer-experience-1)
-		- [Migration Notes](#migration-notes-2)
-		- [Known Issues](#known-issues)
-	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
-		- [Summary](#summary-2)
-		- [Added](#added-3)
-		- [Changed](#changed-3)
-		- [Fixed](#fixed-3)
-	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
-		- [Summary](#summary-3)
-		- [Added](#added-4)
-		- [Changed](#changed-4)
-		- [Fixed](#fixed-4)
-	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
-		- [Summary](#summary-4)
-		- [Added](#added-5)
-		- [Changed](#changed-5)
-		- [Fixed](#fixed-5)
-	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
-		- [Summary](#summary-5)
-		- [Added](#added-6)
-		- [Changed](#changed-6)
-		- [Fixed](#fixed-6)
-	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
-		- [Added](#added-7)
-		- [Changed](#changed-7)
-		- [Fixed](#fixed-7)
-	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
-		- [Added](#added-8)
-		- [Fixed](#fixed-8)
 
 
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [3.5.0] - 2025-01-XX
+
+### 🎨 Shelf Pages, Analytics & UX Improvements
+
+Version 3.5.0 introduces dedicated website shelf pages with advanced filtering, comprehensive analytics, and significant UX improvements across the library system.
+
+### Added
+
+#### 📊 Website Shelf Pages
+- **AO3 Shelf Page**: Complete filtering system
+  - Browse by Fandom: Clickable fandom cards (top 20 by work count) with auto-filtering
+  - Multi-select filters: Fandoms, Relationships, Characters, Additional Tags (NO selection limits)
+  - Dynamic filters: Rating, Category, Warnings, Language, Completion Status, Pairing Type, Relationships Type
+  - Advanced search: Title, author, description with case-insensitive matching
+  - Sorting: Recent visit, date added, total words, kudos, hits, bookmarks, comments
+  - **6 Analytics Insights**: Total Works, Enhanced Chapters, Total Words, Average Rating, Reading Progress, Most Kudos, Newest Addition, Most Chapters
+  - **Removed AO3 Restrictions**: No longer limits fandoms/characters selection (restrictions were FanFiction.net only)
+
+- **FanFiction.net Shelf Page**: Enhanced filtering
+  - Dynamic filters: Genre, language, rating, completion status, crossover filter
+  - Character/fandom filters: MAX 2 fandoms, MAX 4 characters (site-specific rules)
+  - Advanced search: Title, author, description
+  - Sorting: Recent visit, date added, words, favorites, follows, reviews
+  - **6 Analytics Insights**: Total Stories, Enhanced Chapters, Total Words, Average Favorites, Reading Progress, Most Favorited, Newest Addition, Most Chapters
+
+- **Ranobes Shelf Page**: Genre-focused filtering
+  - Dynamic filters: Genres, tags, language, COO status, translation status
+  - Advanced search: Title, author, description
+  - Sorting: Recent visit, date added, total words, rating, chapters, views
+  - **6 Analytics Insights**: Total Novels, Enhanced Chapters, Total Words, Average Rating, Reading Progress, Most Chapters, Newest Addition, Highest Rated
+
+#### 🎨 Popup Modal Improvements
+- **2-Column Layout**: Novel card modal expanded from 1-column to responsive 2-column grid
+- **Total Words Stat**: Fixed calculation to sum `novel.metadata.words` across all novels
+- **Better Readability**: Increased spacing, improved typography, better visual hierarchy
+
+#### 🏗️ Keep-Alive Architecture Documentation
+- **Three-Layer System**: Comprehensive documentation of extension persistence mechanisms
+  - **Offscreen Document** (`offscreen.js`): 20s postMessage heartbeat to service worker
+  - **Background Alarms** (`background.js`): 30s alarm API + port listener for content scripts
+  - **Content Script Port** (`content.js`): Long-lived port connection with 20s heartbeat pings
+- **New File**: `docs/architecture/KEEP_ALIVE.md` with full implementation details, timing rationale, debugging tips
+
+### Changed
+
+- **AO3 Selection Limits Removed**: Eliminated `MAX_FANDOMS=2` and `MAX_CHARACTERS=4` constants (these were FanFiction.net restrictions incorrectly applied to AO3)
+- **Improved Card Visuals**: Added `cursor: pointer` to Ranobes novel cards for better UX
+- **Enhanced Logging**: Ranobes shelf page now logs detailed debugging info (novel count, sources, visibility states)
+
+### Fixed
+
+- **View on Site Button**: Verified correct behavior - button already uses `sourceUrl` to link to main novel details page (not current reading chapter) across all library pages
+- **Ranobes Visibility**: Added comprehensive console logging to debug novel grid display issues
+
+### Documentation
+
+- **CHANGELOG.md**: Added v3.5.0 entry with all new features
+- **ARCHITECTURE.md**:
+  - Added keep-alive system section with mermaid diagram
+  - Added `offscreen.js` to background script components
+  - Added cross-reference to `KEEP_ALIVE.md`
+- **KEEP_ALIVE.md**: New comprehensive guide covering:
+  - Three-layer architecture with code samples
+  - Timing considerations and browser differences
+  - Lifecycle management and debugging tips
+  - Common issues and troubleshooting
 
 ---
 

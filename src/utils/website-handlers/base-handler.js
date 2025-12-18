@@ -224,4 +224,23 @@ export class BaseWebsiteHandler {
 		// Default implementation returns hostname
 		return window.location.hostname;
 	}
+
+	/**
+	 * Extract page metadata for content enhancement context
+	 * Used for providing site-specific information to AI during processing
+	 * Subclasses should override for site-specific metadata extraction
+	 * @returns {Object} Context with author, title, genres, tags, status, description, etc.
+	 */
+	extractPageMetadata() {
+		// Default implementation: returns basic context
+		return {
+			author: null,
+			title: document.title || null,
+			genres: [],
+			tags: [],
+			status: null,
+			description: null,
+			originalUrl: window.location.href,
+		};
+	}
 }

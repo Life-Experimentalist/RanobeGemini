@@ -477,6 +477,21 @@ function setupEventListeners() {
 		);
 	}
 
+	// Listen for openNovelModal events from shelf pages
+	window.addEventListener("openNovelModal", async (e) => {
+		const { novelId } = e.detail;
+		if (novelId) {
+			try {
+				const novel = await novelLibrary.getNovel(novelId);
+				if (novel) {
+					showNovelDetails(novel);
+				}
+			} catch (error) {
+				debugError("Error opening novel modal:", error);
+			}
+		}
+	});
+
 	// Edit modal
 	elements.editClose.addEventListener("click", () =>
 		closeModal(elements.editModal)
@@ -1401,13 +1416,27 @@ function populateNovelMetadata(novel) {
 	}
 
 	// Work Stats section
-	const stats = metadata.stats || {};
+	// Check both metadata.stats (AO3 style) and metadata directly (FanFiction style)
+	const statsNested = metadata.stats || {};
+	const stats = {
+		words: statsNested.words || metadata.words || null,
+		kudos: statsNested.kudos || metadata.kudos || null,
+		hits: statsNested.hits || metadata.hits || null,
+		bookmarks: statsNested.bookmarks || metadata.bookmarks || null,
+		comments: statsNested.comments || metadata.comments || null,
+		reviews: statsNested.reviews || metadata.reviews || null,
+		favorites: statsNested.favorites || metadata.favorites || null,
+		follows: statsNested.follows || metadata.follows || null,
+	};
 	const hasStats =
 		stats.words ||
 		stats.kudos ||
 		stats.hits ||
 		stats.bookmarks ||
-		stats.comments;
+		stats.comments ||
+		stats.reviews ||
+		stats.favorites ||
+		stats.follows;
 	if (hasStats) {
 		hasAnyMetadata = true;
 		elements.modalWorkStatsSection.style.display = "block";
@@ -1437,6 +1466,22 @@ function populateNovelMetadata(novel) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
 				stats.comments
 			)}</span><span class="work-stat-label">Comments</span></div>`;
+		}
+		// FanFiction-specific stats
+		if (stats.reviews) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.reviews
+			)}</span><span class="work-stat-label">Reviews</span></div>`;
+		}
+		if (stats.favorites) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.favorites
+			)}</span><span class="work-stat-label">Favorites</span></div>`;
+		}
+		if (stats.follows) {
+			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
+				stats.follows
+			)}</span><span class="work-stat-label">Follows</span></div>`;
 		}
 
 		elements.modalWorkStats.innerHTML = statsHtml;

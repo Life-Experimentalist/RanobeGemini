@@ -351,6 +351,7 @@ export class NovelLibrary {
 				"genres",
 				"tags",
 				"metadata",
+				"stats",
 			];
 
 			// Get existing edited fields or initialize empty
@@ -368,8 +369,23 @@ export class NovelLibrary {
 				}
 			}
 
-			// Build the updated novel data
+			// Build the updated novel data - ADDITIVE: never lose existing data
 			const updatedNovel = { ...existingNovel };
+
+			// Helper to check if a value is valid/meaningful
+			const isValidValue = (val) => {
+				if (val === undefined || val === null) return false;
+				if (val === "" || val === "Unknown" || val === "Unknown Novel")
+					return false;
+				if (Array.isArray(val) && val.length === 0) return false;
+				if (
+					typeof val === "object" &&
+					!Array.isArray(val) &&
+					Object.keys(val).length === 0
+				)
+					return false;
+				return true;
+			};
 
 			for (const [key, value] of Object.entries(novelData)) {
 				if (key === "addedAt" || key === "editedFields") continue;
@@ -386,7 +402,45 @@ export class NovelLibrary {
 					continue;
 				}
 
-				updatedNovel[key] = value;
+				// Special handling for metadata and stats - merge objects, preserving existing values
+				if (key === "metadata" || key === "stats") {
+					const existingObj = existingNovel[key] || {};
+					const newObj = value || {};
+
+					// Merge but only keep new values if they are valid
+					const merged = { ...existingObj };
+					for (const [k, v] of Object.entries(newObj)) {
+						if (isValidValue(v)) {
+							merged[k] = v;
+						}
+					}
+					updatedNovel[key] = merged;
+					continue;
+				}
+
+				// For arrays (genres, tags), merge and deduplicate
+				if (Array.isArray(value) && Array.isArray(existingNovel[key])) {
+					if (value.length > 0) {
+						// New data exists, use it but also preserve any unique existing items
+						const merged = [
+							...new Set([...value, ...existingNovel[key]]),
+						];
+						updatedNovel[key] = merged;
+					}
+					// If new array is empty, keep existing
+					continue;
+				}
+
+				// ADDITIVE: Only update if new value is valid
+				// If new value is empty/invalid, keep existing value
+				if (isValidValue(value)) {
+					updatedNovel[key] = value;
+				} else if (isValidValue(existingNovel[key])) {
+					// Keep existing valid value
+					debugLog(
+						`📚 Preserving existing ${key}: ${existingNovel[key]}`
+					);
+				}
 			}
 
 			updatedNovel.lastAccessedAt = now;
@@ -827,7 +881,24 @@ export class NovelLibrary {
 				"totalChapters",
 				"genres",
 				"tags",
+				"metadata",
+				"stats",
 			];
+
+			// Helper to check if a value is valid/meaningful
+			const isValidValue = (val) => {
+				if (val === undefined || val === null) return false;
+				if (val === "" || val === "Unknown" || val === "Unknown Novel")
+					return false;
+				if (Array.isArray(val) && val.length === 0) return false;
+				if (
+					typeof val === "object" &&
+					!Array.isArray(val) &&
+					Object.keys(val).length === 0
+				)
+					return false;
+				return true;
+			};
 
 			// Update auto-updatable fields (skip if manually edited)
 			for (const field of autoUpdatableFields) {
@@ -838,30 +909,73 @@ export class NovelLibrary {
 						continue;
 					}
 
-					// Only update if:
-					// - Novel has no value for this field
-					// - OR newMetadata has a valid value (non-empty, not 'Unknown')
-					const hasValidNewValue =
-						newMetadata[field] &&
-						newMetadata[field] !== "Unknown" &&
-						newMetadata[field] !== "Unknown Novel" &&
-						(Array.isArray(newMetadata[field])
-							? newMetadata[field].length > 0
-							: true);
+					// Special handling for metadata and stats - merge objects, preserving existing
+					if (field === "metadata" || field === "stats") {
+						const existingObj = novel[field] || {};
+						const newObj = newMetadata[field] || {};
+
+						// Merge but only update with valid new values
+						const merged = { ...existingObj };
+						let hasChanges = false;
+						for (const [k, v] of Object.entries(newObj)) {
+							if (isValidValue(v)) {
+								if (merged[k] !== v) hasChanges = true;
+								merged[k] = v;
+							}
+						}
+						if (hasChanges) {
+							novel[field] = merged;
+							debugLog(`📚 Merging ${field}:`, novel[field]);
+							updated = true;
+						}
+						continue;
+					}
+
+					// For arrays, merge and deduplicate if new data exists
+					if (
+						Array.isArray(newMetadata[field]) &&
+						Array.isArray(novel[field])
+					) {
+						if (newMetadata[field].length > 0) {
+							const merged = [
+								...new Set([
+									...newMetadata[field],
+									...novel[field],
+								]),
+							];
+							if (
+								merged.length !== novel[field].length ||
+								!merged.every((v, i) => v === novel[field][i])
+							) {
+								novel[field] = merged;
+								updated = true;
+							}
+						}
+						continue;
+					}
+
+					// ADDITIVE: Only update if new value is valid AND (novel has no value OR new is better)
+					const hasValidNewValue = isValidValue(newMetadata[field]);
+					const hasExistingValue = isValidValue(novel[field]);
 
 					// Special handling for totalChapters - allow 0 to be updated to a positive number
 					const shouldUpdate =
 						field === "totalChapters"
 							? (!novel[field] || novel[field] === 0) &&
 							  hasValidNewValue
-							: !novel[field] || hasValidNewValue;
+							: hasValidNewValue &&
+							  (!hasExistingValue || hasValidNewValue);
 
-					if (shouldUpdate) {
+					if (shouldUpdate && hasValidNewValue) {
 						debugLog(
 							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`
 						);
 						novel[field] = newMetadata[field];
 						updated = true;
+					} else if (!hasValidNewValue && hasExistingValue) {
+						debugLog(
+							`📚 Preserving existing ${field}: ${novel[field]}`
+						);
 					}
 				}
 			} // Direct updates (always apply, not auto-updatable)
@@ -1077,6 +1191,105 @@ export class NovelLibrary {
 			let updated = 0;
 			let errors = 0;
 
+			// Helper to check if a value is valid/meaningful
+			const isValidValue = (val) => {
+				if (val === undefined || val === null) return false;
+				if (val === "" || val === "Unknown" || val === "Unknown Novel")
+					return false;
+				if (Array.isArray(val) && val.length === 0) return false;
+				if (
+					typeof val === "object" &&
+					!Array.isArray(val) &&
+					Object.keys(val).length === 0
+				)
+					return false;
+				return true;
+			};
+
+			// Helper to merge two novels, keeping the best data from both
+			const mergeNovels = (existing, incoming) => {
+				const merged = { ...existing };
+
+				for (const [key, incomingValue] of Object.entries(incoming)) {
+					const existingValue = existing[key];
+
+					// Special timestamp handling
+					if (key === "addedAt") {
+						// Keep the earlier addedAt date
+						merged[key] = Math.min(
+							existingValue || Date.now(),
+							incomingValue || Date.now()
+						);
+						continue;
+					}
+					if (
+						key === "lastAccessedAt" ||
+						key === "lastUpdated" ||
+						key === "lastMetadataUpdate"
+					) {
+						// Keep the later timestamp
+						merged[key] = Math.max(
+							existingValue || 0,
+							incomingValue || 0
+						);
+						continue;
+					}
+					if (
+						key === "enhancedChaptersCount" ||
+						key === "lastReadChapter"
+					) {
+						// Take the higher value
+						merged[key] = Math.max(
+							existingValue || 0,
+							incomingValue || 0
+						);
+						continue;
+					}
+
+					// Special handling for metadata and stats - deep merge
+					if (key === "metadata" || key === "stats") {
+						const existingObj = existingValue || {};
+						const incomingObj = incomingValue || {};
+						const mergedObj = { ...existingObj };
+
+						for (const [k, v] of Object.entries(incomingObj)) {
+							// Only take incoming if it's valid
+							if (isValidValue(v)) {
+								mergedObj[k] = v;
+							}
+						}
+						merged[key] = mergedObj;
+						continue;
+					}
+
+					// For arrays, merge and deduplicate
+					if (
+						Array.isArray(incomingValue) &&
+						Array.isArray(existingValue)
+					) {
+						if (incomingValue.length > 0) {
+							merged[key] = [
+								...new Set([
+									...incomingValue,
+									...existingValue,
+								]),
+							];
+						}
+						// If incoming is empty but existing has data, keep existing
+						continue;
+					}
+
+					// For other fields: only update if incoming is valid
+					// If incoming is invalid but existing is valid, keep existing
+					if (isValidValue(incomingValue)) {
+						merged[key] = incomingValue;
+					}
+					// Otherwise, merged already has existing value from spread
+				}
+
+				return merged;
+			};
+
 			if (merge) {
 				// Merge with existing library
 				const existingLibrary = await this.getLibrary();
@@ -1086,27 +1299,12 @@ export class NovelLibrary {
 				)) {
 					try {
 						if (existingLibrary.novels[novelId]) {
-							// Update existing novel - keep newer data
+							// Update existing novel - use additive merge
 							const existing = existingLibrary.novels[novelId];
-							existingLibrary.novels[novelId] = {
-								...existing,
-								...novel,
-								// Keep the earlier addedAt date
-								addedAt: Math.min(
-									existing.addedAt || Date.now(),
-									novel.addedAt || Date.now()
-								),
-								// Keep the later lastAccessedAt date
-								lastAccessedAt: Math.max(
-									existing.lastAccessedAt || 0,
-									novel.lastAccessedAt || 0
-								),
-								// Combine enhanced chapters count (take max)
-								enhancedChaptersCount: Math.max(
-									existing.enhancedChaptersCount || 0,
-									novel.enhancedChaptersCount || 0
-								),
-							};
+							existingLibrary.novels[novelId] = mergeNovels(
+								existing,
+								novel
+							);
 							updated++;
 						} else {
 							// Add new novel
@@ -1552,3 +1750,21 @@ export class NovelLibrary {
 // Export singleton instance
 export const novelLibrary = new NovelLibrary();
 export default novelLibrary;
+
+/**
+ * Helper function to get novel library (returns novels object)
+ * @returns {Promise<Object>} Library novels object
+ */
+export async function getNovelLibrary() {
+	const lib = await novelLibrary.getLibrary();
+	return lib.novels || {};
+}
+
+/**
+ * Helper function to update a novel in the library
+ * @param {Object} novel - Novel to update
+ * @returns {Promise<boolean>} Success status
+ */
+export async function updateNovelInLibrary(novel) {
+	return await novelLibrary.updateNovel(novel);
+}

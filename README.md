@@ -14,7 +14,7 @@
 
 ---
 
-### A Firefox browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, supporting multiple web novel platforms.
+### A Cross-Platform browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, supporting multiple web novel platforms.
 <br/>
 
 

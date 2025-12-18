@@ -9,8 +9,589 @@
 			rel="icon"
 			type="image/png"
 			sizes="32x32"
-			href="../../../icons/logo-dark-32.png"
+			href="../../../icons/logo-32.png"
 		/>
+		<style>
+			/* Ranobes-specific styles */
+			:root {
+				--ranobes-primary: #4a7c4e;
+				--ranobes-secondary: #3d6940;
+				--ranobes-accent: #6b9e6f;
+				--ranobes-dark: #2d4d30;
+			}
+
+			.shelf-page-color-bar {
+				background: var(--ranobes-primary) !important;
+			}
+
+			/* Card styling */
+			.novel-card {
+				background: linear-gradient(
+					145deg,
+					rgba(74, 124, 78, 0.1) 0%,
+					rgba(45, 77, 48, 0.15) 100%
+				);
+				border: 1px solid rgba(74, 124, 78, 0.3);
+				border-radius: 12px;
+				overflow: hidden;
+				transition: all 0.3s ease;
+				cursor: pointer;
+			}
+
+			.novel-card:hover {
+				transform: translateY(-4px);
+				box-shadow: 0 8px 25px rgba(74, 124, 78, 0.3);
+				border-color: var(--ranobes-primary);
+			}
+
+			/* Novel card layout */
+			.novel-card-cover {
+				position: relative;
+				aspect-ratio: 2/3;
+				background: linear-gradient(135deg, var(--ranobes-primary) 0%, var(--ranobes-dark) 100%);
+				overflow: hidden;
+			}
+
+			.novel-card-cover img {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+			}
+
+			.novel-card-placeholder {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 3rem;
+				background: linear-gradient(135deg, var(--ranobes-primary) 0%, var(--ranobes-dark) 100%);
+			}
+
+			.novel-card-badges {
+				position: absolute;
+				top: 8px;
+				right: 8px;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+			}
+
+			.novel-card-info {
+				padding: 12px;
+			}
+
+			.novel-title {
+				font-size: 0.95rem;
+				font-weight: 600;
+				color: #f1f5f9;
+				margin: 0 0 4px 0;
+				line-height: 1.3;
+				display: -webkit-box;
+				-webkit-line-clamp: 2;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+			}
+
+			.novel-author {
+				font-size: 0.8rem;
+				color: #94a3b8;
+				margin: 0 0 8px 0;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.novel-genres {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 4px;
+				margin-bottom: 8px;
+				min-height: 24px;
+			}
+
+			.novel-stats {
+				display: flex;
+				gap: 12px;
+				font-size: 0.75rem;
+				color: #9ca3af;
+				margin-bottom: 8px;
+			}
+
+			.progress-bar {
+				height: 4px;
+				background: rgba(255, 255, 255, 0.1);
+				border-radius: 2px;
+				overflow: hidden;
+				margin-bottom: 8px;
+			}
+
+			.progress-fill {
+				height: 100%;
+				border-radius: 2px;
+				transition: width 0.3s ease;
+			}
+
+			.reading-status {
+				font-size: 0.75rem;
+				font-weight: 500;
+			}
+
+			/* Novel grid */
+			.novel-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+				gap: 20px;
+			}
+
+			/* Status badges */
+			.status-badge {
+				padding: 2px 8px;
+				border-radius: 4px;
+				font-size: 0.7rem;
+				font-weight: 600;
+				text-transform: uppercase;
+			}
+
+			.status-badge.ongoing {
+				background: rgba(59, 130, 246, 0.2);
+				color: #60a5fa;
+			}
+
+			.status-badge.completed {
+				background: rgba(16, 185, 129, 0.2);
+				color: #34d399;
+			}
+
+			.status-badge.hiatus {
+				background: rgba(245, 158, 11, 0.2);
+				color: #fbbf24;
+			}
+
+			/* Language badge */
+			.language-badge {
+				background: rgba(139, 92, 246, 0.2);
+				color: #a78bfa;
+				padding: 2px 6px;
+				border-radius: 4px;
+				font-size: 0.65rem;
+				font-weight: 500;
+			}
+
+			/* Genre/Tag pills */
+			.genre-pill,
+			.tag-pill {
+				display: inline-block;
+				padding: 2px 8px;
+				margin: 2px;
+				border-radius: 12px;
+				font-size: 0.7rem;
+				background: rgba(74, 124, 78, 0.2);
+				color: var(--ranobes-accent);
+				border: 1px solid rgba(74, 124, 78, 0.3);
+			}
+
+			.genre-pill:hover,
+			.tag-pill:hover {
+				background: rgba(74, 124, 78, 0.4);
+			}
+
+			/* Analytics cards */
+			.analytics-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+				gap: 16px;
+				margin-bottom: 24px;
+			}
+
+			.analytics-card {
+				background: linear-gradient(
+					135deg,
+					rgba(74, 124, 78, 0.15) 0%,
+					rgba(45, 77, 48, 0.2) 100%
+				);
+				border: 1px solid rgba(74, 124, 78, 0.3);
+				border-radius: 12px;
+				padding: 16px;
+				text-align: center;
+			}
+
+			.analytics-card .value {
+				font-size: 1.8rem;
+				font-weight: 700;
+				color: var(--ranobes-accent);
+			}
+
+			.analytics-card .label {
+				font-size: 0.8rem;
+				color: #9ca3af;
+				margin-top: 4px;
+			}
+
+			/* Filter section enhancements */
+			.filter-section {
+				background: rgba(74, 124, 78, 0.08);
+				border: 1px solid rgba(74, 124, 78, 0.2);
+				border-radius: 12px;
+				padding: 20px;
+				margin-bottom: 24px;
+			}
+
+			.filter-row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 16px;
+				margin-bottom: 16px;
+			}
+
+			.filter-row:last-child {
+				margin-bottom: 0;
+			}
+
+			.filter-group {
+				flex: 1;
+				min-width: 180px;
+			}
+
+			.filter-group label {
+				display: block;
+				font-size: 0.75rem;
+				font-weight: 600;
+				color: #9ca3af;
+				margin-bottom: 6px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			.filter-group select,
+			.filter-group input {
+				width: 100%;
+				padding: 10px 12px;
+				background: rgba(30, 41, 59, 0.8);
+				border: 1px solid rgba(74, 124, 78, 0.3);
+				border-radius: 8px;
+				color: #e5e7eb;
+				font-size: 0.9rem;
+				transition: all 0.2s ease;
+			}
+
+			.filter-group select:focus,
+			.filter-group input:focus {
+				outline: none;
+				border-color: var(--ranobes-primary);
+				box-shadow: 0 0 0 3px rgba(74, 124, 78, 0.2);
+			}
+
+			.filter-group select:hover,
+			.filter-group input:hover {
+				border-color: var(--ranobes-accent);
+			}
+
+			/* Search input styling */
+			.search-wrapper {
+				position: relative;
+			}
+
+			.search-wrapper input {
+				padding-left: 40px;
+			}
+
+			.search-wrapper::before {
+				content: "🔍";
+				position: absolute;
+				left: 12px;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: 1rem;
+				opacity: 0.6;
+			}
+
+			/* Active filters display */
+			.active-filters {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin-top: 12px;
+			}
+
+			.active-filter-tag {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 12px;
+				background: var(--ranobes-primary);
+				color: white;
+				border-radius: 16px;
+				font-size: 0.8rem;
+			}
+
+			.active-filter-tag .remove-filter {
+				cursor: pointer;
+				opacity: 0.7;
+				transition: opacity 0.2s;
+			}
+
+			.active-filter-tag .remove-filter:hover {
+				opacity: 1;
+			}
+
+			.clear-all-filters {
+				padding: 4px 12px;
+				background: transparent;
+				border: 1px solid rgba(239, 68, 68, 0.5);
+				color: #ef4444;
+				border-radius: 16px;
+				font-size: 0.8rem;
+				cursor: pointer;
+				transition: all 0.2s;
+			}
+
+			.clear-all-filters:hover {
+				background: rgba(239, 68, 68, 0.1);
+				border-color: #ef4444;
+			}
+
+			/* Modal styling */
+			.modal-overlay {
+				display: none;
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background: rgba(0, 0, 0, 0.8);
+				z-index: 1000;
+				align-items: center;
+				justify-content: center;
+				padding: 20px;
+			}
+
+			.modal-content {
+				background: linear-gradient(
+					145deg,
+					#1e293b 0%,
+					#0f172a 100%
+				);
+				border: 1px solid rgba(74, 124, 78, 0.4);
+				border-radius: 16px;
+				max-width: 1200px;
+				width: 100%;
+				max-height: 90vh;
+				overflow-y: auto;
+				position: relative;
+			}
+
+			.modal-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				padding: 24px 24px 16px;
+				border-bottom: 1px solid rgba(74, 124, 78, 0.2);
+			}
+
+			.modal-title {
+				font-size: 1.5rem;
+				font-weight: 700;
+				color: #f1f5f9;
+				margin: 0;
+			}
+
+			.modal-author {
+				font-size: 0.95rem;
+				color: #94a3b8;
+				margin-top: 4px;
+			}
+
+			.modal-author a {
+				color: var(--ranobes-accent);
+				text-decoration: none;
+			}
+
+			.modal-author a:hover {
+				text-decoration: underline;
+			}
+
+			.modal-close {
+				background: none;
+				border: none;
+				font-size: 1.5rem;
+				color: #94a3b8;
+				cursor: pointer;
+				padding: 4px;
+				transition: color 0.2s;
+			}
+
+			.modal-close:hover {
+				color: #ef4444;
+			}
+
+			.modal-body {
+				padding: 24px;
+				display: grid;
+				grid-template-columns: 200px 1fr;
+				gap: 24px;
+			}
+
+			.modal-cover-section {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+
+			.modal-cover {
+				width: 100%;
+				border-radius: 8px;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			}
+
+			.modal-cover-placeholder {
+				width: 100%;
+				aspect-ratio: 2/3;
+				background: linear-gradient(
+					135deg,
+					var(--ranobes-primary) 0%,
+					var(--ranobes-dark) 100%
+				);
+				border-radius: 8px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 3rem;
+			}
+
+			.modal-details {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+
+			.modal-description {
+				color: #cbd5e1;
+				line-height: 1.7;
+				font-size: 0.95rem;
+			}
+
+			.modal-metadata {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 16px;
+			}
+
+			.metadata-item {
+				background: rgba(74, 124, 78, 0.1);
+				border-radius: 8px;
+				padding: 12px;
+			}
+
+			.metadata-item .label {
+				font-size: 0.7rem;
+				color: #9ca3af;
+				text-transform: uppercase;
+				margin-bottom: 4px;
+			}
+
+			.metadata-item .value {
+				color: #e5e7eb;
+				font-weight: 500;
+			}
+
+			.modal-tags-section {
+				margin-top: 8px;
+			}
+
+			.modal-tags-section h4 {
+				font-size: 0.8rem;
+				color: #9ca3af;
+				text-transform: uppercase;
+				margin-bottom: 8px;
+			}
+
+			.modal-tags {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+			}
+
+			.modal-footer {
+				display: flex;
+				gap: 12px;
+				padding: 16px 24px 24px;
+				border-top: 1px solid rgba(74, 124, 78, 0.2);
+				flex-wrap: wrap;
+			}
+
+			.modal-footer .btn {
+				padding: 10px 20px;
+				border-radius: 8px;
+				font-weight: 600;
+				font-size: 0.9rem;
+				text-decoration: none;
+				cursor: pointer;
+				transition: all 0.2s;
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				border: none;
+			}
+
+			.btn-primary {
+				background: var(--ranobes-primary);
+				color: white;
+			}
+
+			.btn-primary:hover {
+				background: var(--ranobes-secondary);
+				transform: translateY(-1px);
+			}
+
+			.btn-secondary {
+				background: rgba(100, 116, 139, 0.3);
+				color: #e5e7eb;
+				border: 1px solid rgba(100, 116, 139, 0.5);
+			}
+
+			.btn-secondary:hover {
+				background: rgba(100, 116, 139, 0.5);
+			}
+
+			.btn-danger {
+				background: rgba(239, 68, 68, 0.2);
+				color: #f87171;
+				border: 1px solid rgba(239, 68, 68, 0.4);
+			}
+
+			.btn-danger:hover {
+				background: rgba(239, 68, 68, 0.3);
+			}
+
+			/* Responsive */
+			@media (max-width: 768px) {
+				.modal-body {
+					grid-template-columns: 1fr;
+				}
+
+				.modal-cover-section {
+					align-items: center;
+				}
+
+				.modal-cover,
+				.modal-cover-placeholder {
+					max-width: 200px;
+				}
+
+				.modal-metadata {
+					grid-template-columns: 1fr;
+				}
+
+				.filter-row {
+					flex-direction: column;
+				}
+
+				.filter-group {
+					min-width: 100%;
+				}
+			}
+		</style>
 	</head>
 	<body>
 		<div class="shelf-page-container">
@@ -20,9 +601,20 @@
 					<span
 						class="shelf-page-color-bar"
 						id="color-bar"
-						style="background: #4a90d9"
 					></span>
-					<span class="shelf-page-icon" id="page-icon">📖</span>
+					<img
+						id="page-icon-img"
+						src="https://ranobes.top/templates/Dark/images/favicon.ico?v=2"
+						alt="Ranobes"
+						style="
+							width: 32px;
+							height: 32px;
+							display: none;
+							vertical-align: middle;
+							margin-right: 8px;
+						"
+					/>
+					<span class="shelf-page-icon" id="page-icon">🍃</span>
 					<h1 id="page-title">Ranobes</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -31,50 +623,148 @@
 				</a>
 			</header>
 
-			<!-- Stats Summary -->
-			<div class="stats-summary">
-				<div class="stat-card">
-					<span class="stat-value" id="stats-novels">0</span>
-					<span class="stat-label">Novels</span>
+			<!-- Analytics Section -->
+			<div class="analytics-grid" id="analytics-grid">
+				<div class="analytics-card">
+					<div class="value" id="stats-novels">0</div>
+					<div class="label">Total Novels</div>
 				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-enhanced">0</span>
-					<span class="stat-label">Enhanced Chapters</span>
+				<div class="analytics-card">
+					<div class="value" id="stats-chapters">0</div>
+					<div class="label">Total Chapters</div>
 				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-chapters">0</span>
-					<span class="stat-label">Total Chapters</span>
+				<div class="analytics-card">
+					<div class="value" id="stats-enhanced">0</div>
+					<div class="label">Enhanced Chapters</div>
+				</div>
+				<div class="analytics-card">
+					<div class="value" id="stats-words">0</div>
+					<div class="label">Est. Words Read</div>
+				</div>
+				<div class="analytics-card">
+					<div class="value" id="stats-completed">0</div>
+					<div class="label">Completed</div>
+				</div>
+				<div class="analytics-card">
+					<div class="value" id="stats-reading">0</div>
+					<div class="label">Currently Reading</div>
 				</div>
 			</div>
 
-			<!-- Filters Section -->
-			<div class="filters-section">
-				<div class="filter-group">
-					<label for="sort-select">Sort by:</label>
-					<select id="sort-select">
-						<option value="recent">Recently Read</option>
-						<option value="added">Date Added</option>
-						<option value="title">Title</option>
-						<option value="chapters">Enhanced Chapters</option>
-					</select>
+			<!-- Library Insights Section -->
+			<div class="detail-analytics" style="margin-bottom: 24px;">
+				<h3 style="color: #e5e7eb; margin-bottom: 16px;">Library Insights</h3>
+				<div class="analytics-items" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">📚</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Most Chapters</span>
+							<span class="analytics-value" id="most-chapters" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">📏</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Longest Novel</span>
+							<span class="analytics-value" id="longest-novel" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">✨</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Most Enhanced</span>
+							<span class="analytics-value" id="most-enhanced" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">🆕</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Newest Addition</span>
+							<span class="analytics-value" id="newest-addition" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">🏆</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Top Rated</span>
+							<span class="analytics-value" id="top-rated" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
+					<div class="analytics-item" style="display: flex; align-items: center; gap: 12px; background: rgba(74, 124, 78, 0.1); padding: 12px; border-radius: 8px;">
+						<span class="analytics-icon" style="font-size: 1.5rem;">🔥</span>
+						<div class="analytics-detail">
+							<span class="analytics-label" style="font-size: 0.75rem; color: #9ca3af; display: block;">Most Popular</span>
+							<span class="analytics-value" id="most-popular" style="color: #e5e7eb; font-weight: 500;">-</span>
+						</div>
+					</div>
 				</div>
-				<div class="filter-group">
-					<label for="status-filter">Status:</label>
-					<select id="status-filter">
-						<option value="all">All</option>
-						<option value="ongoing">Ongoing</option>
-						<option value="completed">Completed</option>
-						<option value="hiatus">Hiatus</option>
-					</select>
+			</div>
+
+			<!-- Filter Section -->
+			<div class="filter-section" id="filter-section">
+				<div class="filter-row">
+					<div class="filter-group" style="flex: 2;">
+						<label for="search-input">Search</label>
+						<div class="search-wrapper">
+							<input
+								type="text"
+								id="search-input"
+								placeholder="Search by title, author, or tags..."
+							/>
+						</div>
+					</div>
+					<div class="filter-group">
+						<label for="sort-select">Sort By</label>
+						<select id="sort-select">
+							<option value="recent">Recently Read</option>
+							<option value="added">Date Added</option>
+							<option value="title">Title (A-Z)</option>
+							<option value="title-desc">Title (Z-A)</option>
+							<option value="chapters">Chapters (High)</option>
+							<option value="chapters-asc">Chapters (Low)</option>
+						</select>
+					</div>
 				</div>
-				<div class="filter-group search-input">
-					<label for="search-input">Search:</label>
-					<input
-						type="text"
-						id="search-input"
-						placeholder="Search by title or author..."
-					/>
+
+				<div class="filter-row">
+					<div class="filter-group">
+						<label for="reading-status-filter">Reading Status</label>
+						<select id="reading-status-filter">
+							<option value="all">All</option>
+							<option value="reading">Currently Reading</option>
+							<option value="completed">Completed</option>
+							<option value="plan_to_read">Plan to Read</option>
+							<option value="on_hold">On Hold</option>
+							<option value="dropped">Dropped</option>
+						</select>
+					</div>
+					<div class="filter-group">
+						<label for="work-status-filter">Work Status</label>
+						<select id="work-status-filter">
+							<option value="all">All</option>
+							<option value="ongoing">Ongoing</option>
+							<option value="completed">Completed</option>
+							<option value="hiatus">Hiatus</option>
+						</select>
+					</div>
+					<div class="filter-group">
+						<label for="language-filter">Language</label>
+						<select id="language-filter">
+							<option value="all">All Languages</option>
+							<!-- Populated dynamically -->
+						</select>
+					</div>
+					<div class="filter-group">
+						<label for="genre-filter">Genre</label>
+						<select id="genre-filter">
+							<option value="all">All Genres</option>
+							<!-- Populated dynamically -->
+						</select>
+					</div>
 				</div>
+
+				<!-- Active filters display -->
+				<div class="active-filters" id="active-filters"></div>
 			</div>
 
 			<!-- Loading State -->
@@ -85,13 +775,11 @@
 
 			<!-- Empty State -->
 			<div class="empty-state" id="empty-state" style="display: none">
-				<span class="empty-icon">📚</span>
+				<span class="empty-icon">🍃</span>
 				<h2>No novels from Ranobes yet!</h2>
 				<p>
 					Visit a chapter on
-					<a href="https://ranobes.top" target="_blank"
-						>ranobes.top</a
-					>
+					<a href="https://ranobes.top" target="_blank">ranobes.top</a>
 					to add novels to your library
 				</p>
 			</div>
@@ -100,19 +788,68 @@
 			<div class="novel-grid" id="novel-grid" style="display: none"></div>
 		</div>
 
+		<!-- Novel Modal -->
+		<div class="modal-overlay" id="novel-modal">
+			<div id="modal-backdrop" style="position: absolute; inset: 0;"></div>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div>
+						<h2 class="modal-title" id="modal-title">Novel Title</h2>
+						<p class="modal-author" id="modal-author">by Author</p>
+					</div>
+					<button class="modal-close" id="modal-close-btn">×</button>
+				</div>
+				<div class="modal-body">
+					<div class="modal-cover-section">
+						<img
+							class="modal-cover"
+							id="modal-cover"
+							src=""
+							alt="Novel Cover"
+							style="display: none;"
+						/>
+						<div class="modal-cover-placeholder" id="modal-cover-placeholder">
+							🍃
+						</div>
+					</div>
+					<div class="modal-details">
+						<p class="modal-description" id="modal-description">
+							Novel description goes here...
+						</p>
+						<div class="modal-metadata" id="modal-metadata">
+							<!-- Populated dynamically -->
+						</div>
+						<div class="modal-tags-section">
+							<h4>Genres</h4>
+							<div class="modal-tags" id="modal-genres"></div>
+						</div>
+						<div class="modal-tags-section">
+							<h4>Tags</h4>
+							<div class="modal-tags" id="modal-tags"></div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer modal-actions">
+					<a id="modal-continue-btn" class="btn btn-primary" target="_blank">
+						📖 Continue Reading
+					</a>
+					<a id="modal-read-btn" class="btn btn-secondary" target="_blank">
+						🌐 View on Site
+					</a>
+					<button id="modal-refresh-btn" class="btn btn-secondary">
+						🔄 Refresh
+					</button>
+					<button id="modal-edit-btn" class="btn btn-secondary">
+						✏️ Edit
+					</button>
+					<button id="modal-remove-btn" class="btn btn-danger">
+						🗑️ Remove
+					</button>
+				</div>
+			</div>
+		</div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
-		<script type="module">
-			import { initShelfPage } from "../shelf-page.js";
-			// Initialize with Ranobes shelf configuration
-			document.addEventListener("DOMContentLoaded", () => {
-				initShelfPage("ranobes", {
-					id: "ranobes",
-					name: "Ranobes",
-					icon: "📖",
-					color: "#4a90d9",
-					primaryDomain: "ranobes.top",
-				});
-			});
-		</script>
+		<script type="module" src="./shelf-page.js"></script>
 	</body>
 </html>

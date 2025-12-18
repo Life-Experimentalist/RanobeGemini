@@ -5,7 +5,7 @@ const BROWSERS = [
 		status: "ready",
 		description: "Desktop + Android (temporary add-on)",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Firefox_logo%2C_2019.svg",
-		extensionId: "", // moz-extension IDs rotate; detection via postMessage
+		extensionId: "33b0347d-8e94-40d6-a169-249716997cc6", // moz-extension IDs rotate; detection via postMessage
 		cta: {
 			label: "Get it for Firefox",
 			href: "https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/",
@@ -16,10 +16,10 @@ const BROWSERS = [
 		status: "ready",
 		description: "Desktop sideload; mobile sideload limited",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/9/98/Microsoft_Edge_logo_%282019%29.svg",
-		extensionId: "", // set persistent Chromium extension ID if signed with key
+		extensionId: "agbhdkiciomjlifhlfbjanpnhhokaimn", // set persistent Chromium extension ID if signed with key
 		cta: {
 			label: "Get it for Edge",
-			href: "https://github.com/Life-Experimentalist/RanobesGemini/releases/latest/download/dist-chromium.zip",
+			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
 		},
 	},
 	{
@@ -32,7 +32,7 @@ const BROWSERS = [
 		name: "Brave",
 		status: "coming",
 		description: "Supported via Chromium zip; store listing coming",
-		icon: "https://upload.wikimedia.org/wikipedia/en/5/5e/Brave_Browser_logo.svg",
+		icon: "https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png",
 	},
 	{
 		name: "Opera / Vivaldi",
@@ -54,14 +54,14 @@ const SITES = [
 		id: "fanfiction",
 		name: "FanFiction.net",
 		description: "Desktop and mobile handlers",
-		icon: "https://www.fanfiction.net/static/icons3/ff-icon-192.png",
+		icon: "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/landing/assets/fanficiton.ico",
 		status: "ready",
 	},
 	{
 		id: "ranobes",
 		name: "Ranobes",
 		description: "Dedicated novel pages and chapters",
-		icon: "https://ranobes.top/templates/Dark/images/favicon.ico?v=2",
+		icon: "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/landing/assets/ranobes.ico",
 		status: "ready",
 	},
 	{

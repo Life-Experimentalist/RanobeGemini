@@ -39,6 +39,18 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
+		// Taxonomy for shelf page filtering
+		taxonomy: [
+			{ id: "genres", label: "Genres", type: "array" },
+			{ id: "tags", label: "Tags", type: "array" },
+			{ id: "language", label: "Language", type: "string" },
+			{ id: "status", label: "Status (COO)", type: "string" },
+			{
+				id: "translationStatus",
+				label: "Translation Status",
+				type: "string",
+			},
+		],
 	};
 
 	static PRIORITY = 5;
@@ -896,6 +908,64 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		debugLog("Ranobes: Extracted metadata:", metadata);
 		return metadata;
+	}
+
+	/**
+	 * Extract page metadata for content enhancement context
+	 * Provides site-specific information for AI during content processing
+	 * @returns {Object} Context with author, title, genres, tags, status, description
+	 */
+	extractPageMetadata() {
+		const context = {
+			author: null,
+			title: null,
+			genres: [],
+			tags: [],
+			status: null,
+			description: null,
+			originalUrl: window.location.href,
+		};
+
+		try {
+			// Extract novel title from breadcrumbs (second link is the novel)
+			const breadcrumbLinks =
+				document.querySelectorAll("#dle-speedbar a");
+			if (breadcrumbLinks.length >= 2) {
+				context.title = breadcrumbLinks[1].textContent.trim();
+			}
+
+			// Fallback: Extract from page title
+			if (!context.title) {
+				const titleMatch = document.title.match(
+					/(.+?)\s*[|\-]\s*Chapter/i
+				);
+				if (titleMatch) {
+					context.title = titleMatch[1].trim();
+				}
+			}
+
+			// Try to extract author if available
+			const authorEl = document.querySelector(
+				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
+			);
+			if (authorEl) {
+				context.author = authorEl.textContent.trim();
+			}
+
+			// Extract description from meta tag
+			const descriptionMeta = document.querySelector(
+				'meta[name="description"]'
+			);
+			if (descriptionMeta) {
+				context.description = descriptionMeta
+					.getAttribute("content")
+					.trim();
+			}
+		} catch (error) {
+			debugError("Ranobes: Error extracting page metadata:", error);
+		}
+
+		return context;
 	}
 }
 

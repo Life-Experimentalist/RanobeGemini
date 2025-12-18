@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.3.0",
+	"version": "3.4.1",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -13,14 +13,14 @@
 		}
 	},
 	"icons": {
-		"16": "icons/logo-light-16.png",
-		"32": "icons/logo-light-32.png",
-		"48": "icons/logo-light-48.png",
-		"96": "icons/logo-light-96.png",
-		"128": "icons/logo-light-128.png",
-		"256": "icons/logo-light-256.png",
-		"512": "icons/logo-light-512.png",
-		"1024": "icons/logo-light-1024.png"
+		"16": "icons/logo-16.png",
+		"32": "icons/logo-32.png",
+		"48": "icons/logo-48.png",
+		"96": "icons/logo-96.png",
+		"128": "icons/logo-128.png",
+		"256": "icons/logo-256.png",
+		"512": "icons/logo-512.png",
+		"1024": "icons/logo-1024.png"
 	},
 	"permissions": [
 		"activeTab",
@@ -38,74 +38,72 @@
 	],
 	"sidebar_action": {
 		"default_icon": {
-			"16": "icons/logo-light-16.png",
-			"32": "icons/logo-light-32.png",
-			"48": "icons/logo-light-48.png",
-			"96": "icons/logo-light-96.png",
-			"128": "icons/logo-light-128.png",
-			"256": "icons/logo-light-256.png",
-			"512": "icons/logo-light-512.png",
-			"1024": "icons/logo-light-1024.png"
+			"16": "icons/logo-16.png",
+			"32": "icons/logo-32.png",
+			"48": "icons/logo-48.png",
+			"96": "icons/logo-96.png",
+			"128": "icons/logo-128.png",
+			"256": "icons/logo-256.png",
+			"512": "icons/logo-512.png",
+			"1024": "icons/logo-1024.png"
 		},
 		"default_title": "Ranobe Gemini Library",
 		"default_panel": "library/library.html?sidebar=true"
 	},
 	"action": {
 		"default_icon": {
-			"16": "icons/logo-light-16.png",
-			"32": "icons/logo-light-32.png",
-			"48": "icons/logo-light-48.png",
-			"96": "icons/logo-light-96.png",
-			"128": "icons/logo-light-128.png",
-			"256": "icons/logo-light-256.png",
-			"512": "icons/logo-light-512.png",
-			"1024": "icons/logo-light-1024.png"
+			"16": "icons/logo-16.png",
+			"32": "icons/logo-32.png",
+			"48": "icons/logo-48.png",
+			"96": "icons/logo-96.png",
+			"128": "icons/logo-128.png",
+			"256": "icons/logo-256.png",
+			"512": "icons/logo-512.png",
+			"1024": "icons/logo-1024.png"
 		},
 		"default_title": "Ranobe Gemini",
 		"default_popup": "popup/popup.html",
 		"browser_style": false,
 		"theme_icons": [
 			{
-				"dark": "icons/logo-dark-16.png",
-				"light": "icons/logo-light-16.png",
+				"dark": "icons/logo-16.png",
+				"light": "icons/logo-16.png",
 				"size": 16
 			},
 			{
-				"dark": "icons/logo-dark-32.png",
-				"light": "icons/logo-light-32.png",
+				"dark": "icons/logo-32.png",
+				"light": "icons/logo-32.png",
 				"size": 32
 			},
 			{
-				"dark": "icons/logo-dark-48.png",
-				"light": "icons/logo-light-48.png",
+				"dark": "icons/logo-48.png",
+				"light": "icons/logo-48.png",
 				"size": 48
 			},
 			{
-				"dark": "icons/logo-dark-128.png",
-				"light": "icons/logo-light-128.png",
+				"dark": "icons/logo-128.png",
+				"light": "icons/logo-128.png",
 				"size": 128
 			},
 			{
-				"dark": "icons/logo-dark-256.png",
-				"light": "icons/logo-light-256.png",
+				"dark": "icons/logo-256.png",
+				"light": "icons/logo-256.png",
 				"size": 256
 			},
 			{
-				"dark": "icons/logo-dark-512.png",
-				"light": "icons/logo-light-512.png",
+				"dark": "icons/logo-512.png",
+				"light": "icons/logo-512.png",
 				"size": 512
 			},
 			{
-				"dark": "icons/logo-dark-1024.png",
-				"light": "icons/logo-light-1024.png",
+				"dark": "icons/logo-1024.png",
+				"light": "icons/logo-1024.png",
 				"size": 1024
 			}
 		]
 	},
 	"background": {
-		"scripts": [
-			"background/background.js"
-		],
+		"service_worker": "background/background.js",
 		"type": "module"
 	},
 	"content_scripts": [
@@ -116,9 +114,10 @@
 				"*://*.fanfiction.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
+				"*://*.ranobes.org/*",
 				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*",
-				"*://*.scribblehub.com/*"
+				"*://*.scribblehub.com/*",
+				"*://*.webnovel.com/*"
 			],
 			"js": [
 				"lib/browser-polyfill.min.js",
@@ -175,9 +174,10 @@
 				"*://*.fanfiction.net/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
+				"*://*.ranobes.org/*",
 				"*://*.ranobes.top/*",
-				"*://*.webnovel.com/*",
-				"*://*.scribblehub.com/*"
+				"*://*.scribblehub.com/*",
+				"*://*.webnovel.com/*"
 			]
 		}
 	],

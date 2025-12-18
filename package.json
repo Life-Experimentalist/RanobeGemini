@@ -1,11 +1,11 @@
 {
 	"name": "ranobe-gemini",
-	"version": "3.3.0",
+	"version": "3.5.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"scripts": {
 		"build": "node dev/build-cross-platform.js",
 		"watch": "node dev/watch.js",
-		"package": "node dev/package-all.js",
+		"package": "num run update-domains && node dev/package-all.js",
 		"publish": "npm run package && npm run package-source",
 		"package-firefox": "node dev/package-firefox.js",
 		"package-chromium": "node dev/package-chromium.js",
@@ -99,7 +99,7 @@
 		"doc": "docs/",
 		"lib": "src/"
 	},
-	"icon": "src/icons/logo-light-128.png",
+	"icon": "src/icons/icon.png",
 	"keywords": [
 		"browser-extension",
 		"web-novels",
@@ -107,7 +107,7 @@
 		"reading-enhancement",
 		"summarization",
 		"grammar-correction",
-		"lightnovel",
+		"ao3",
 		"fanfiction"
 	]
 }

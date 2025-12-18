@@ -1288,7 +1288,7 @@ body {
 	position: relative;
 	background: var(--bg-secondary);
 	border-radius: var(--radius-lg);
-	max-width: 800px;
+	max-width: 1200px;
 	width: 100%;
 	max-height: 90vh;
 	overflow-y: auto;
@@ -1448,13 +1448,22 @@ body {
 /* Novel Metadata Sections */
 .novel-metadata {
 	margin-bottom: var(--spacing-lg);
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--spacing-md);
 }
 
 .metadata-section {
-	margin-bottom: var(--spacing-lg);
+	margin-bottom: 0;
 	padding: var(--spacing-md);
 	background: var(--bg-tertiary);
 	border-radius: var(--radius-md);
+}
+
+/* Make wide sections span both columns */
+.metadata-section#modal-additional-tags-section,
+.metadata-section#modal-work-stats-section {
+	grid-column: span 2;
 }
 
 .metadata-section h3 {
@@ -1687,6 +1696,16 @@ body {
 
 	.novel-actions {
 		justify-content: center;
+	}
+
+	/* Fall back to single column for metadata on smaller screens */
+	.novel-metadata {
+		grid-template-columns: 1fr;
+	}
+
+	.metadata-section#modal-additional-tags-section,
+	.metadata-section#modal-work-stats-section {
+		grid-column: span 1;
 	}
 }
 
@@ -2032,6 +2051,7 @@ body.sidebar-mode .novel-card-title {
 	line-height: 1.2;
 	margin-bottom: 0;
 	display: -webkit-box;
+	line-clamp: 2;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
@@ -2202,6 +2222,7 @@ html.sidebar-mode .novel-detail-cover {
 
 	body.sidebar-mode .novel-card-title {
 		font-size: 1rem;
+		line-clamp: 2;
 		-webkit-line-clamp: 2;
 	}
 

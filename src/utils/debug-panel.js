@@ -1,4 +1,4 @@
-// Debug panel for RanobesGemini extension
+// Debug panel for RanobeGemini extension
 
 import { debugLog, debugError } from "./logger.js";
 

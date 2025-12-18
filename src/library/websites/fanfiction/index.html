@@ -9,10 +9,10 @@
 			rel="icon"
 			type="image/png"
 			sizes="32x32"
-			href="../../../icons/logo-dark-32.png"
+			href="../../../icons/logo-32.png"
 		/>
 	</head>
-	<body>
+	<body class="fanfiction-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
@@ -22,7 +22,18 @@
 						id="color-bar"
 						style="background: #2a4b8d"
 					></span>
-					<span class="shelf-page-icon" id="page-icon">📚</span>
+					<img
+						src="https://www.fanfiction.net/static/icons3/ff-icon-192.png"
+						alt="FanFiction.net"
+						class="shelf-page-icon-img"
+						id="page-icon-img"
+					/>
+					<span
+						class="shelf-page-icon"
+						id="page-icon"
+						style="display: none"
+						>✍️</span
+					>
 					<h1 id="page-title">FanFiction.net</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -31,57 +42,361 @@
 				</a>
 			</header>
 
-			<!-- Stats Summary -->
-			<div class="stats-summary">
-				<div class="stat-card">
-					<span class="stat-value" id="stats-novels">0</span>
-					<span class="stat-label">Stories</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-enhanced">0</span>
-					<span class="stat-label">Enhanced Chapters</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-chapters">0</span>
-					<span class="stat-label">Total Chapters</span>
+			<!-- Analytics Section -->
+			<div class="analytics-section" id="analytics-section">
+				<div class="analytics-grid">
+					<!-- Stats Summary -->
+					<div class="stats-summary">
+						<div class="stat-card">
+							<span class="stat-value" id="stats-novels">0</span>
+							<span class="stat-label">Stories</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-enhanced"
+								>0</span
+							>
+							<span class="stat-label">Enhanced Chapters</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-words">0</span>
+							<span class="stat-label">Total Words</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-completed"
+								>0</span
+							>
+							<span class="stat-label">Completed Works</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-single"
+								>0</span
+							>
+							<span class="stat-label">Single Fandom</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-crossovers"
+								>0</span
+							>
+							<span class="stat-label">Crossovers</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-avgrating"
+								>-</span
+							>
+							<span class="stat-label">Avg Rating</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-reading"
+								>0%</span
+							>
+							<span class="stat-label">Reading</span>
+						</div>
+					</div>
+
+					<!-- Detail Analytics -->
+					<div class="detail-analytics">
+						<h3>Library Insights</h3>
+						<div class="analytics-items">
+							<div class="analytics-item">
+								<span class="analytics-icon">⭐</span>
+								<div class="analytics-detail">
+									<span class="analytics-label"
+										>Most Favorited</span
+									>
+									<span
+										class="analytics-value"
+										id="most-favorited"
+										>-</span
+									>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">👥</span>
+								<div class="analytics-detail">
+									<span class="analytics-label"
+										>Most Followed</span
+									>
+									<span
+										class="analytics-value"
+										id="most-followed"
+										>-</span
+									>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">💬</span>
+								<div class="analytics-detail">
+									<span class="analytics-label"
+										>Most Reviewed</span
+									>
+									<span
+										class="analytics-value"
+										id="most-reviewed"
+										>-</span
+									>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">📏</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Longest Story</span>
+									<span class="analytics-value" id="longest-story">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">🆕</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Newest Addition</span>
+									<span class="analytics-value" id="newest-addition">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">📚</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Most Chapters</span>
+									<span class="analytics-value" id="most-chapters">-</span>
+								</div>
+							</div>
+						</div>
+						<div class="analytics-chart" id="status-chart-card">
+							<div class="chart-header">
+								<h4>Reading Status Mix</h4>
+								<span
+									class="chart-summary"
+									id="status-chart-summary"
+									>-</span
+								>
+							</div>
+							<div
+								class="bar-chart"
+								id="reading-status-chart"
+							></div>
+							<div
+								class="bar-chart-legend"
+								id="reading-status-legend"
+							></div>
+						</div>
+					</div>
 				</div>
 			</div>
 
-			<!-- Filters Section -->
+			<!-- Filters Section - Compact Design -->
 			<div class="filters-section">
-				<div class="filter-group">
-					<label for="sort-select">Sort by:</label>
-					<select id="sort-select">
-						<option value="recent">Recently Read</option>
-						<option value="added">Date Added</option>
-						<option value="title">Title</option>
-						<option value="chapters">Enhanced Chapters</option>
-					</select>
+				<div class="filter-dropdown-container">
+					<button class="filter-toggle-btn" id="filter-toggle-btn">
+						⚙️ Filters
+						<span
+							class="filter-badge"
+							id="filter-badge"
+							style="display: none"
+							>✓</span
+						>
+					</button>
+					<div class="active-filters" id="active-filters"></div>
+
+					<div
+						class="filter-dropdown"
+						id="filter-dropdown"
+						style="display: none"
+					>
+						<div class="filter-grid">
+							<!-- Sorting & Basics -->
+							<div class="filter-item">
+								<label for="sort-select">Sort by:</label>
+								<select id="sort-select">
+									<option value="recent">
+										Recently Read
+									</option>
+									<option value="added">Date Added</option>
+									<option value="title">Title</option>
+									<option value="chapters">
+										Enhanced Chapters
+									</option>
+									<option value="words">Word Count</option>
+									<option value="favorites">Favorites</option>
+									<option value="follows">Follows</option>
+									<option value="reviews">Reviews</option>
+									<option value="published">
+										Published Date
+									</option>
+									<option value="updated">
+										Updated Date
+									</option>
+									<option value="status">Work Status</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="rating-filter">Rating:</label>
+								<select id="rating-filter">
+									<option value="all">All Ratings</option>
+									<option value="K">K</option>
+									<option value="K+">K+</option>
+									<option value="T">T</option>
+									<option value="M">M</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="work-status-filter"
+									>Work Status:</label
+								>
+								<select id="work-status-filter">
+									<option value="all">All</option>
+									<option value="completed">Completed</option>
+									<option value="ongoing">Ongoing</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="status-filter"
+									>Reading Status:</label
+								>
+								<select id="status-filter">
+									<option value="all">All</option>
+									<option value="plan-to-read">
+										Plan to Read
+									</option>
+									<option value="reading">
+										Currently Reading
+									</option>
+									<option value="completed">Completed</option>
+									<option value="on-hold">On Hold</option>
+									<option value="dropped">Dropped</option>
+									<option value="re-reading">
+										Re-reading
+									</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="fandom-filter">Story Type:</label>
+								<select id="fandom-filter">
+									<option value="all">All Types</option>
+									<option value="single">
+										Single Fandom
+									</option>
+									<option value="crossover">
+										Crossovers
+									</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="language-filter">Language:</label>
+								<select id="language-filter">
+									<option value="all">All Languages</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label>Fandoms (max 2):</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="fandoms-dropdown-toggle">Choose Fandoms</button>
+									<div class="multi-dropdown-panel" id="fandoms-dropdown-panel">
+										<div class="filter-pill-list" id="fandoms-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Genres:</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="genres-dropdown-toggle">Choose Genres</button>
+									<div class="multi-dropdown-panel" id="genres-dropdown-panel">
+										<div class="filter-pill-list" id="genres-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Characters (max 4):</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="characters-dropdown-toggle">Choose Characters</button>
+									<div class="multi-dropdown-panel" id="characters-dropdown-panel">
+										<div class="filter-pill-list" id="characters-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Tags:</label>
+								<div class="multi-dropdown">
+									<div class="tag-match-row">
+										<label for="tags-match-mode" class="tag-match-label">Match:</label>
+										<select id="tags-match-mode" class="tag-match-select">
+											<option value="any">Any tag (OR)</option>
+											<option value="all">All tags (AND)</option>
+										</select>
+									</div>
+									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose Tags</button>
+									<div class="multi-dropdown-panel" id="tags-dropdown-panel">
+										<div class="filter-pill-list" id="tags-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item full-width">
+								<label>Word Count Range:</label>
+								<div class="wordcount-row">
+									<input
+										type="number"
+										id="wordcount-min"
+										placeholder="Min"
+										min="0"
+									/>
+									<span class="range-separator">to</span>
+									<input
+										type="number"
+										id="wordcount-max"
+										placeholder="Max"
+										min="0"
+									/>
+								</div>
+								<p class="filter-hint">
+									Leave blank for no limit
+								</p>
+							</div>
+
+							<div class="filter-item full-width">
+								<button
+									class="clear-filters-btn"
+									id="clear-filters-btn"
+								>
+									Clear All Filters
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div class="filter-group">
-					<label for="status-filter">Status:</label>
-					<select id="status-filter">
-						<option value="all">All</option>
-						<option value="ongoing">In-Progress</option>
-						<option value="completed">Complete</option>
-					</select>
-				</div>
-				<div class="filter-group">
-					<label for="fandom-filter">Type:</label>
-					<select id="fandom-filter">
-						<option value="all">All</option>
-						<option value="single">Single Fandom</option>
-						<option value="crossover">Crossovers</option>
-					</select>
-				</div>
-				<div class="filter-group search-input">
-					<label for="search-input">Search:</label>
+
+				<div class="search-bar-container search-right">
 					<input
 						type="text"
 						id="search-input"
-						placeholder="Search by title or author..."
+						class="search-bar"
+						placeholder="🔍 Search by title or author..."
 					/>
 				</div>
+			</div>
+
+			<!-- Category Navigation for Fandoms -->
+			<div
+				class="category-section"
+				id="category-section"
+				style="display: none"
+			>
+				<div class="category-header">
+					<h3 id="category-title">Browse by Fandom</h3>
+					<button
+						id="back-to-all"
+						class="back-btn"
+						style="display: none"
+					>
+						← Back to All
+					</button>
+				</div>
+				<div class="category-grid" id="category-grid"></div>
 			</div>
 
 			<!-- Loading State -->
@@ -107,59 +422,52 @@
 			<div class="novel-grid" id="novel-grid" style="display: none"></div>
 		</div>
 
+		<!-- Novel Detail Modal -->
+		<div class="modal" id="novel-modal" style="display: none">
+			<div class="modal-backdrop" id="modal-backdrop"></div>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div class="modal-title-section">
+						<img
+							id="modal-cover"
+							src=""
+							alt="Cover"
+							class="modal-cover-img"
+						/>
+						<div class="modal-header-text">
+							<h2 id="modal-title"></h2>
+							<p id="modal-author"></p>
+							<p id="modal-description"></p>
+						</div>
+					</div>
+					<button class="modal-close" id="modal-close-btn">
+						&times;
+					</button>
+				</div>
+				<div class="modal-body">
+					<div id="modal-metadata-container"></div>
+				</div>
+				<div class="modal-footer">
+					<div class="modal-actions-primary">
+						<a id="modal-continue-btn" class="btn btn-primary" target="_blank">Continue Reading</a>
+						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on FanFiction.net</a>
+					</div>
+					<div class="modal-actions-secondary">
+						<button id="modal-refresh-btn" class="btn btn-icon" title="Refresh metadata from source">
+							🔄 Update
+						</button>
+						<button id="modal-edit-btn" class="btn btn-icon" title="Edit novel details">
+							✏️ Edit
+						</button>
+						<button id="modal-remove-btn" class="btn btn-icon btn-danger" title="Remove from library">
+							🗑️ Remove
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
-		<script type="module">
-			import { initShelfPage, registerCustomFilter, applyFiltersAndSort, renderNovels } from "../shelf-page.js";
-
-			// Custom filter for FanFiction fandom type (crossover vs single fandom)
-			function fandomTypeFilter(novels) {
-				const fandomFilter = document.getElementById("fandom-filter");
-				const fandomType = fandomFilter?.value;
-
-				if (!fandomType || fandomType === "all") {
-					return novels;
-				}
-
-				return novels.filter((novel) => {
-					// Check if it's a crossover based on URL or metadata
-					const isCrossover =
-						novel.sourceUrl?.includes("/crossovers/") ||
-						novel.metadata?.isCrossover === true ||
-						(novel.metadata?.fandoms &&
-							novel.metadata.fandoms.length > 1);
-
-					return fandomType === "crossover"
-						? isCrossover
-						: !isCrossover;
-				});
-			}
-
-			// Setup fandom filter event listener
-			function setupFandomFilter() {
-				const fandomFilter = document.getElementById("fandom-filter");
-				if (fandomFilter) {
-					fandomFilter.addEventListener("change", () => {
-						applyFiltersAndSort();
-					});
-				}
-			}
-
-			// Initialize with FanFiction shelf configuration
-			document.addEventListener("DOMContentLoaded", async () => {
-				// Register custom filter before initialization
-				registerCustomFilter(fandomTypeFilter);
-
-				await initShelfPage("fanfiction", {
-					id: "fanfiction",
-					name: "FanFiction.net",
-					icon: "📚",
-					color: "#2a4b8d",
-					primaryDomain: "fanfiction.net",
-				});
-
-				// Set up fandom filter after init
-				setupFandomFilter();
-			});
-		</script>
+		<script type="module" src="./shelf-page.js"></script>
 	</body>
 </html>

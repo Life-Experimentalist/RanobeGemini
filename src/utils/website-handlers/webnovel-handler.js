@@ -294,6 +294,45 @@ When enhancing, improve readability and grammar while respecting the author's or
 	}
 
 	/**
+	 * Extract page metadata for content enhancement context
+	 * Provides site-specific information for AI during content processing
+	 * @returns {Object} Context with author, title, genres, tags, status, description
+	 */
+	extractPageMetadata() {
+		const context = {
+			author: null,
+			title: null,
+			genres: [],
+			tags: [],
+			status: null,
+			description: null,
+			originalUrl: window.location.href,
+		};
+
+		try {
+			// Author
+			const authorEl = document.querySelector(
+				'.ell.dib.vam a[href*="/profile/"]'
+			);
+			if (authorEl) {
+				context.author = authorEl.textContent.trim();
+			}
+
+			// Title
+			const titleEl =
+				document.querySelector("h1") ||
+				document.querySelector(".pt4.pb4.oh.ell");
+			if (titleEl) {
+				context.title = titleEl.textContent.trim();
+			}
+		} catch (error) {
+			debugError("WebNovel: Error extracting page metadata:", error);
+		}
+
+		return context;
+	}
+
+	/**
 	 * Get insertion point for novel page UI
 	 */
 	getNovelPageUIInsertionPoint() {

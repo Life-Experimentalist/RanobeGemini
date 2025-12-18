@@ -2479,28 +2479,41 @@ document.addEventListener("DOMContentLoaded", async function () {
 	}
 
 	async function triggerManualBackup(saveAs = true) {
-		const folderValue = (backupFolderInput?.value || "").trim();
-		const backupFolder = folderValue || "RanobeGeminiBackups";
 		try {
 			manualBackupBtn?.classList.add("loading");
-			const response = await browser.runtime.sendMessage({
-				action: "createLibraryBackup",
-				saveAs,
-				folder: backupFolder,
-				retention: BACKUP_RETENTION,
-			});
 
-			if (response?.success) {
-				backupHistory = response.history || backupHistory;
-				renderBackupHistory();
-				await persistBackupPrefs({ backupHistory });
-				showStatus("Backup saved", "success");
-			} else {
-				showStatus(
-					response?.error || "Failed to create backup",
-					"error"
-				);
-			}
+			// Export library data using novelLibrary
+			const data = await novelLibrary.exportLibrary();
+
+			// Create downloadable JSON file
+			const blob = new Blob([JSON.stringify(data, null, 2)], {
+				type: "application/json",
+			});
+			const url = URL.createObjectURL(blob);
+
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `ranobe-gemini-library-${
+				new Date().toISOString().split("T")[0]
+			}.json`;
+			a.click();
+
+			URL.revokeObjectURL(url);
+
+			// Update backup history
+			const backupEntry = {
+				date: Date.now(),
+				filename: a.download,
+				novelCount: Object.keys(data.library?.novels || {}).length,
+			};
+			backupHistory = [backupEntry, ...backupHistory].slice(
+				0,
+				BACKUP_RETENTION
+			);
+			renderBackupHistory();
+			await persistBackupPrefs({ backupHistory });
+
+			showStatus("Library exported successfully!", "success");
 		} catch (error) {
 			debugError("Backup failed:", error);
 			showStatus("Backup failed: " + error.message, "error");
@@ -2514,26 +2527,43 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			const text = await file.text();
 			const data = JSON.parse(text);
-			const response = await browser.runtime.sendMessage({
-				action: "restoreLibraryBackup",
-				data,
-				merge: true,
-			});
 
-			if (response?.success) {
+			// Validate import data structure
+			if (!data.library || !data.version) {
+				throw new Error("Invalid library backup file format");
+			}
+
+			const novelCount = Object.keys(data.library.novels || {}).length;
+			const choice = confirm(
+				`Found ${novelCount} novels in backup file.\n\n` +
+					`Click OK to MERGE with your existing library (recommended)\n` +
+					`Click Cancel to REPLACE your entire library`
+			);
+
+			const result = await novelLibrary.importLibrary(data, choice);
+
+			if (result.success) {
+				await initializeLibraryTab();
 				showStatus(
-					`Restored ${response.imported || 0} novels (updated ${
-						response.updated || 0
-					})`,
+					`Library ${
+						choice ? "merged" : "restored"
+					} successfully!\n\n` +
+						`• ${result.imported} new novels added\n` +
+						`• ${result.updated} existing novels updated` +
+						(result.errors > 0
+							? `\n• ${result.errors} errors occurred`
+							: ""),
 					"success"
 				);
-				await initializeLibraryTab();
 			} else {
-				showStatus(response?.error || "Restore failed", "error");
+				throw new Error(result.error || "Import failed");
 			}
 		} catch (error) {
 			debugError("Restore failed:", error);
-			showStatus("Restore failed: " + error.message, "error");
+			showStatus(
+				`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`,
+				"error"
+			);
 		} finally {
 			if (restoreFileInput) restoreFileInput.value = "";
 		}

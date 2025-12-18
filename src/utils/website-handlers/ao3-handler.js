@@ -35,6 +35,13 @@ export class AO3Handler extends BaseWebsiteHandler {
 		primaryDomain: "archiveofourown.org",
 		// Path to custom card renderer (relative to src/library/websites/)
 		cardRenderer: "ao3/novel-card.js",
+		// Taxonomy for filtering system
+		taxonomy: [
+			{ id: "fandoms", label: "Fandoms", type: "array" },
+			{ id: "relationships", label: "Relationships", type: "array" },
+			{ id: "characters", label: "Characters", type: "array" },
+			{ id: "additionalTags", label: "Additional Tags", type: "array" },
+		],
 	};
 
 	// Handler type: Full metadata available on chapter pages (no separate info page needed)
@@ -386,7 +393,13 @@ When enhancing, improve readability while respecting the author's original style
 			// Words
 			const wordsEl = statsDl.querySelector("dd.words");
 			if (wordsEl) {
-				const wordsText = wordsEl.textContent.trim().replace(/,/g, "");
+				// First try the data-ao3e-original attribute (from AO3 Enhancements extension)
+				// which has the unmodified number, then fall back to text content
+				const originalWords =
+					wordsEl.getAttribute("data-ao3e-original");
+				const wordsText = (originalWords || wordsEl.textContent)
+					.trim()
+					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.words = parseInt(wordsText, 10) || 0;
 			}
 
@@ -457,32 +470,48 @@ When enhancing, improve readability while respecting the author's original style
 			// Comments
 			const commentsEl = statsDl.querySelector("dd.comments");
 			if (commentsEl) {
-				const commentsText = commentsEl.textContent
+				const originalComments =
+					commentsEl.getAttribute("data-ao3e-original");
+				const commentsText = (
+					originalComments || commentsEl.textContent
+				)
 					.trim()
-					.replace(/,/g, "");
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.comments = parseInt(commentsText, 10) || 0;
 			}
 
 			// Kudos
 			const kudosEl = statsDl.querySelector("dd.kudos");
 			if (kudosEl) {
-				const kudosText = kudosEl.textContent.trim().replace(/,/g, "");
+				const originalKudos =
+					kudosEl.getAttribute("data-ao3e-original");
+				const kudosText = (originalKudos || kudosEl.textContent)
+					.trim()
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.kudos = parseInt(kudosText, 10) || 0;
 			}
 
 			// Bookmarks
 			const bookmarksEl = statsDl.querySelector("dd.bookmarks");
 			if (bookmarksEl) {
-				const bookmarksText = bookmarksEl.textContent
+				const originalBookmarks =
+					bookmarksEl.getAttribute("data-ao3e-original");
+				const bookmarksText = (
+					originalBookmarks || bookmarksEl.textContent
+				)
 					.trim()
-					.replace(/,/g, "");
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.bookmarks = parseInt(bookmarksText, 10) || 0;
 			}
 
 			// Hits
 			const hitsEl = statsDl.querySelector("dd.hits");
 			if (hitsEl) {
-				const hitsText = hitsEl.textContent.trim().replace(/,/g, "");
+				// First try the data-ao3e-original attribute (from AO3 Enhancements extension)
+				const originalHits = hitsEl.getAttribute("data-ao3e-original");
+				const hitsText = (originalHits || hitsEl.textContent)
+					.trim()
+					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
 			}
 
@@ -528,6 +557,57 @@ When enhancing, improve readability while respecting the author's original style
 
 		debugLog("AO3: Extracted metadata:", metadata);
 		return metadata;
+	}
+
+	/**
+	 * Extract page metadata for content enhancement context
+	 * Provides site-specific information for AI during content processing
+	 * @returns {Object} Context with author, title, genres, tags, status, description
+	 */
+	extractPageMetadata() {
+		const context = {
+			author: null,
+			title: null,
+			genres: [],
+			tags: [],
+			status: null,
+			description: null,
+			originalUrl: window.location.href,
+		};
+
+		try {
+			// Author
+			const authorLink = document.querySelector(
+				'.byline a[rel="author"]'
+			);
+			if (authorLink) {
+				context.author = authorLink.textContent.trim();
+			}
+
+			// Title
+			const titleEl = document.querySelector(".title.heading");
+			if (titleEl) {
+				context.title = titleEl.textContent.trim();
+			}
+
+			// Tags/Genres
+			const tagLinks = document.querySelectorAll(
+				".fandom.tags a.tag, .freeform.tags a.tag"
+			);
+			context.tags = Array.from(tagLinks).map((a) =>
+				a.textContent.trim()
+			);
+
+			// Status
+			const statusEl = document.querySelector("dd.status");
+			if (statusEl) {
+				context.status = statusEl.textContent.trim().toLowerCase();
+			}
+		} catch (error) {
+			debugError("AO3: Error extracting page metadata:", error);
+		}
+
+		return context;
 	}
 
 	// Find the content area on AO3

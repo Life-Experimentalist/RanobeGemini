@@ -223,12 +223,15 @@ graph LR
 
 ### 2. Background Script (`background/`)
 
-Persistent service worker handling API communication and processing orchestration.
+Persistent service worker handling API communication, processing orchestration, and extension lifecycle management.
+
+> **See also:** [Keep-Alive Architecture](./KEEP_ALIVE.md) for detailed documentation on service worker persistence mechanisms.
 
 ```mermaid
 graph TB
     subgraph "Background Script"
         A[background.js]
+        A1[offscreen.js]
     end
 
     subgraph "Configuration"
@@ -251,6 +254,12 @@ graph TB
         L[Rate Limit Handler]
     end
 
+    subgraph "Keep-Alive System"
+        KA1[Alarm API]
+        KA2[Port Listener]
+        KA3[Offscreen Heartbeat]
+    end
+
     subgraph "Message Handlers"
         M[ping]
         N[getModelInfo]
@@ -269,6 +278,9 @@ graph TB
     A --> H
     A --> I
     A --> J
+    A --> KA1
+    A --> KA2
+    A1 --> KA3
     J --> K
     J --> L
     A --> M
@@ -287,6 +299,7 @@ graph TB
 | Component                        | Purpose               | Details                                                     |
 | -------------------------------- | --------------------- | ----------------------------------------------------------- |
 | **background.js**                | Service worker        | Persistent background process, manages all API interactions |
+| **offscreen.js/offscreen.html**  | Keep-alive mechanism  | Offscreen document for Chrome MV3 service worker persistence (20s heartbeat) |
 | **initConfig()**                 | Configuration loader  | Loads settings from storage, applies defaults               |
 | **getCurrentApiKey()**           | Key selector          | Returns current API key based on rotation strategy          |
 | **getNextApiKey()**              | Failover handler      | Gets next backup key on rate limit/error                    |
@@ -298,6 +311,8 @@ graph TB
 | **makeApiCallWithRotation()**    | API caller            | Handles API requests with automatic key rotation            |
 | **Key Rotation Logic**           | Failover system       | Round-robin or failover key selection                       |
 | **Rate Limit Handler**           | Error handler         | Detects 429 errors, switches keys, schedules retries        |
+| **Keep-Alive Alarm**             | Service worker lifeline | 30s alarm prevents Chrome MV3 termination                  |
+| **Port Listener**                | Content script bridge | Accepts long-lived port connections for keep-alive pings    |
 | **Message Handlers**             | IPC                   | Listens for content script messages, routes to functions    |
 
 ### 3. Popup Interface (`popup/`)
