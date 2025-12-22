@@ -9,6 +9,13 @@ import {
 } from "../utils/constants.js";
 import { novelLibrary, SHELVES } from "../utils/novel-library.js";
 import { debugLog, debugError } from "../utils/logger.js";
+import {
+	getDefaultSiteSettings,
+	getSiteSettings,
+	isSiteEnabled,
+	saveSiteSettings,
+} from "../utils/site-settings.js";
+import { libraryBackupManager } from "../utils/library-backup-manager.js";
 
 document.addEventListener("DOMContentLoaded", async function () {
 	// DOM elements
@@ -44,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const saveSettingsBtn = document.getElementById("saveSettings");
 	const tabButtons = document.querySelectorAll(".tab-btn");
 	const tabContents = document.querySelectorAll(".tab-content");
-	const maxOutputTokensInput = document.getElementById("maxOutputTokens");
 	const temperatureSlider = document.getElementById("temperatureSlider");
 	const temperatureValue = document.getElementById("temperatureValue");
 	const topPSlider = document.getElementById("topPSlider");
@@ -64,6 +70,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const advancedParamsContent = document.getElementById(
 		"advancedParamsContent"
 	);
+	const siteToggleList = document.getElementById("siteToggleList");
+	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
+
+	// Backup mode controls
+	const backupModeScheduled = document.getElementById("backupModeScheduled");
+	const backupModeContinuous = document.getElementById(
+		"backupModeContinuous"
+	);
 
 	// Backup API Keys elements
 	const backupKeysListContainer = document.getElementById("backupKeysList");
@@ -74,6 +88,37 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Novels tab elements
 	const refreshNovelsBtn = document.getElementById("refreshNovels");
 	const novelsListContainer = document.getElementById("novelsList");
+	const currentNovelInfo = document.getElementById("currentNovelInfo");
+	const suggestedNovelsList = document.getElementById("suggestedNovelsList");
+
+	// Library backup elements
+	const autoBackupEnabled = document.getElementById("autoBackupEnabled");
+	const backupLocation = document.getElementById("backupLocation");
+	const chooseBackupLocation = document.getElementById(
+		"chooseBackupLocation"
+	);
+	const createManualBackup = document.getElementById("createManualBackup");
+	const restoreBackupBtn2 = document.getElementById("restoreBackupBtn");
+	const backupList = document.getElementById("backupList");
+	const mergeModRadios = document.querySelectorAll('input[name="mergeMode"]');
+
+	const CONTINUOUS_BACKUP_DELAY_MINUTES = 5;
+
+	// Receive OAuth tokens from oauth-redirect.html and persist
+	window.addEventListener("message", async (event) => {
+		if (event.data?.source !== "ranobe-gemini-oauth") return;
+		const payload = {
+			accessToken: event.data.accessToken,
+			expiresAt: event.data.expiresAt,
+		};
+		try {
+			await browser.storage.local.set({ googleOAuth: payload });
+			setDriveStatus?.("OAuth token received", "success");
+			showStatus("Google OAuth token saved", "success");
+		} catch (err) {
+			debugError("Failed to store OAuth token", err);
+		}
+	});
 
 	// Library Tab Elements (New)
 	const libraryLoading = document.getElementById("libraryLoading");
@@ -130,6 +175,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const driveResetBtn = document.getElementById("driveResetBtn");
 	const driveStatus = document.getElementById("driveStatus");
 
+	// Google Drive Backup elements
+	const connectDriveBtn = document.getElementById("connectDriveBtn");
+	const disconnectDriveBtn = document.getElementById("disconnectDriveBtn");
+	const backupNowBtn = document.getElementById("backupNowBtn");
+	const viewBackupsBtn = document.getElementById("viewBackupsBtn");
+	const driveNotConnected = document.getElementById("driveNotConnected");
+	const driveConnected = document.getElementById("driveConnected");
+	const driveStatusSpan = document.getElementById("driveStatus");
+	const driveBackupModeRadios = document.querySelectorAll(
+		'input[name="driveBackupMode"]'
+	);
+
 	// Theme elements
 	const themeModeSelect = document.getElementById("themeMode");
 	const accentColorPicker = document.getElementById("accentColorPicker");
@@ -150,8 +207,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Store current page novel data
 	let currentPageNovelData = null;
 	let currentSiteShelfId = null;
+	let siteSettings = {};
 	let backupHistory = [];
 	const BACKUP_RETENTION = 3;
+	const BACKUP_INTERVAL_DAYS = 1;
 
 	// Theme defaults
 	const defaultTheme = {
@@ -212,6 +271,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	function applyTheme(theme) {
 		const root = document.documentElement;
 
+		const toRGBA = (hex, alpha = 0.8) => {
+			if (!/^#([0-9A-Fa-f]{6})$/.test(hex || "")) return null;
+			const r = parseInt(hex.slice(1, 3), 16);
+			const g = parseInt(hex.slice(3, 5), 16);
+			const b = parseInt(hex.slice(5, 7), 16);
+			return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+		};
+
 		// Apply theme mode
 		if (theme.mode === "light") {
 			root.setAttribute("data-theme", "light");
@@ -225,11 +292,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 			root.removeAttribute("data-theme"); // Default to dark
 		}
 
+		const primaryText = theme.textColor || defaultTheme.textColor;
+		const secondaryText = toRGBA(primaryText, 0.78) || primaryText;
+
 		// Apply custom colors
 		root.style.setProperty("--accent-primary", theme.accentPrimary);
 		root.style.setProperty("--accent-secondary", theme.accentSecondary);
 		root.style.setProperty("--container-bg", theme.bgColor);
-		root.style.setProperty("--text-primary", theme.textColor);
+		root.style.setProperty("--text-primary", primaryText);
+		root.style.setProperty("--text-secondary", secondaryText);
+		root.style.setProperty("--text-muted", secondaryText);
 	}
 
 	async function saveTheme() {
@@ -330,6 +402,99 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Load theme on startup
 	loadTheme();
+
+	await loadSiteToggleSettings();
+
+	// Site toggle helpers
+	async function loadSiteToggleSettings() {
+		try {
+			siteSettings = await getSiteSettings();
+		} catch (error) {
+			debugError("Failed to load site settings:", error);
+			siteSettings = getDefaultSiteSettings();
+		}
+		renderSiteToggles();
+	}
+
+	async function persistSiteToggleSettings() {
+		if (!siteToggleList) return siteSettings;
+		const updates = {};
+		const rows = siteToggleList.querySelectorAll(".site-toggle-row");
+		rows.forEach((row) => {
+			const siteId = row.dataset.siteId;
+			const checkbox = row.querySelector("input[type='checkbox']");
+			if (siteId && checkbox) {
+				updates[siteId] = { enabled: checkbox.checked };
+			}
+		});
+
+		if (Object.keys(updates).length === 0) return siteSettings;
+		siteSettings = await saveSiteSettings(updates);
+		return siteSettings;
+	}
+
+	function renderSiteToggles() {
+		if (!siteToggleList) return;
+		const defaults = getDefaultSiteSettings();
+		const shelves = Object.values(SHELVES).sort((a, b) =>
+			(a.name || a.id).localeCompare(b.name || b.id)
+		);
+
+		siteToggleList.innerHTML = "";
+
+		shelves.forEach((shelf) => {
+			const setting = siteSettings[shelf.id] ||
+				defaults[shelf.id] || {
+					enabled: true,
+				};
+			const row = document.createElement("label");
+			row.className = "site-toggle-row";
+			row.dataset.siteId = shelf.id;
+
+			const iconHtml = shelf.icon?.startsWith("http")
+				? `<img src="${shelf.icon}" alt="${shelf.name}" onerror="this.remove()">`
+				: shelf.emoji || "📖";
+			const domainsPreview = (shelf.domains || []).slice(0, 2).join(", ");
+
+			row.innerHTML = `
+				<div class="site-toggle-meta">
+					<span class="site-toggle-icon">${iconHtml}</span>
+					<div>
+						<div class="site-toggle-name">${shelf.name || shelf.id}</div>
+						<div class="site-toggle-domains">${domainsPreview}</div>
+					</div>
+				</div>
+				<div class="site-toggle-control">
+					<input type="checkbox" ${
+						setting.enabled !== false ? "checked" : ""
+					} aria-label="Enable ${shelf.name || shelf.id}">
+				</div>
+			`;
+
+			// Add event listener to checkbox
+			const checkbox = row.querySelector("input[type='checkbox']");
+			if (checkbox) {
+				checkbox.addEventListener("change", async () => {
+					await persistSiteToggleSettings();
+					showStatus(
+						`${shelf.name} ${
+							checkbox.checked ? "enabled" : "disabled"
+						}`,
+						"success"
+					);
+					// Refresh library display if on library tab
+					const activeTab = document.querySelector(
+						".tab-content.active"
+					);
+					if (activeTab && activeTab.id === "library") {
+						await initializeLibraryTab();
+					}
+				});
+			}
+
+			siteToggleList.appendChild(row);
+		});
+	}
 
 	// Backup API Keys Management
 	let backupApiKeys = [];
@@ -641,38 +806,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 	});
 
-	// FAQ functionality
-	const faqQuestions = document.querySelectorAll(".faq-question");
-	faqQuestions.forEach((question) => {
-		question.addEventListener("click", () => {
-			// Toggle active class on the question
-			question.classList.toggle("active");
-
-			// Toggle active class on the answer
-			const answer = question.nextElementSibling;
-			answer.classList.toggle("active");
-
-			// Close other open FAQs (optional, uncomment if you want accordion behavior)
-			// faqQuestions.forEach(q => {
-			//   if (q !== question && q.classList.contains('active')) {
-			//     q.classList.remove('active');
-			//     q.nextElementSibling.classList.remove('active');
-			//   }
-			// });
-		});
-	});
-
-	// Make FAQ "Get API key" link work the same as the main one
-	const faqGetKeyLink = document.getElementById("faqGetKeyLink");
-	if (faqGetKeyLink) {
-		faqGetKeyLink.addEventListener("click", (e) => {
-			e.preventDefault();
-			browser.tabs.create({
-				url: "https://aistudio.google.com/app/api-keys",
-			});
-		});
-	}
-
 	// First ping the background script to ensure it's running
 	try {
 		debugLog("Pinging background script...");
@@ -779,11 +912,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 			useEmojiCheckbox.checked = data.useEmoji || false; // Default to false
 		}
 
-		// Set max output tokens
-		if (maxOutputTokensInput) {
-			maxOutputTokensInput.value = data.maxOutputTokens || 8192;
-		}
-
 		// Set temperature slider
 		if (temperatureSlider && temperatureValue) {
 			const temp =
@@ -827,6 +955,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (backupFolderInput) backupFolderInput.value = backupFolder;
 		if (autoBackupToggle)
 			autoBackupToggle.checked = data.autoBackupEnabled || false;
+		const backupMode = data.backupMode || "scheduled";
+		if (backupModeScheduled)
+			backupModeScheduled.checked = backupMode === "scheduled";
+		if (backupModeContinuous)
+			backupModeContinuous.checked = backupMode === "continuous";
 		backupHistory = data.backupHistory || [];
 		renderBackupHistory();
 
@@ -917,7 +1050,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		const apiKey = apiKeyInput.value.trim();
 		const selectedModelId = modelSelect.value;
 		const useEmojiCheckbox = document.getElementById("useEmoji");
-		const maxTokens = parseInt(maxOutputTokensInput.value, 10) || 8192;
+		const maxTokens = data?.maxOutputTokens || 8192;
 		const temperature = parseFloat(temperatureSlider.value);
 
 		if (!apiKey) {
@@ -997,6 +1130,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 					customEndpoint: customEndpoint,
 					fontSize: fontSize,
 				});
+
+				await persistSiteToggleSettings();
 				showStatus("Advanced settings saved successfully!", "success");
 			} catch (error) {
 				debugError("Error saving advanced settings:", error);
@@ -1037,6 +1172,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 					customEndpointInput.value = "";
 				}
 
+				if (siteToggleList) {
+					siteSettings = await saveSiteSettings(
+						getDefaultSiteSettings()
+					);
+					renderSiteToggles();
+				}
+
 				// Save the reset values
 				await browser.storage.local.set({
 					defaultPrompt: DEFAULT_PROMPT,
@@ -1056,6 +1198,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 					"error"
 				);
 			}
+		});
+	}
+
+	if (resetSiteTogglesBtn) {
+		resetSiteTogglesBtn.addEventListener("click", async () => {
+			siteSettings = await saveSiteSettings(getDefaultSiteSettings());
+			renderSiteToggles();
+			showStatus("Site toggles restored to defaults", "success");
 		});
 	}
 
@@ -1412,6 +1562,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			// Create domain sections
 			sortedDomains.forEach(([domain, domainNovels]) => {
+				const shelf = getShelfByDomain(domain);
+				if (shelf && !isSiteEnabled(siteSettings, shelf.id)) {
+					return;
+				}
 				// Sort novels within domain by last read
 				const sortedNovels = domainNovels.sort((a, b) => {
 					const lastReadA =
@@ -1814,11 +1968,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 	function getShelfFromUrl(url) {
 		try {
 			const { hostname } = new URL(url);
-			return Object.values(SHELVES).find((shelf) =>
+			const shelf = Object.values(SHELVES).find((shelf) =>
 				(shelf.domains || []).some((pattern) =>
 					matchDomainPattern(hostname, pattern)
 				)
 			);
+			if (shelf && !isSiteEnabled(siteSettings, shelf.id)) {
+				return null;
+			}
+			return shelf;
 		} catch (e) {
 			return null;
 		}
@@ -1852,7 +2010,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 			}
 
 			const currentTab = tabs[0];
-			const shelfForTab = getShelfFromUrl(currentTab.url);
+			const { hostname: currentHostname } = new URL(currentTab.url);
+			const rawShelfMatch = Object.values(SHELVES).find((shelf) =>
+				(shelf.domains || []).some((pattern) =>
+					matchDomainPattern(currentHostname, pattern)
+				)
+			);
+			const siteDisabled =
+				rawShelfMatch && !isSiteEnabled(siteSettings, rawShelfMatch.id);
+			const shelfForTab = siteDisabled ? null : rawShelfMatch;
+
+			if (siteDisabled) {
+				showNotSupported(
+					"This site is disabled in settings. Re-enable it in Advanced → Site Toggles."
+				);
+				return;
+			}
 			const isExtensionPage = currentTab.url.startsWith(
 				browser.runtime.getURL("")
 			);
@@ -2274,27 +2447,35 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			// Get library stats
 			const stats = await novelLibrary.getStats();
+			const enabledShelves = new Set(
+				Object.values(SHELVES)
+					.filter((shelf) => isSiteEnabled(siteSettings, shelf.id))
+					.map((shelf) => shelf.id)
+			);
 
 			// Update stats
 			if (statNovels) statNovels.textContent = stats.totalNovels || 0;
 			if (statChapters)
 				statChapters.textContent = stats.totalEnhancedChapters || 0;
 			if (statShelves) {
-				const activeCount = Object.values(stats.shelves || {}).filter(
-					(s) => s.novelCount > 0
+				const activeCount = Object.entries(stats.shelves || {}).filter(
+					([id, s]) => enabledShelves.has(id) && s.novelCount > 0
 				).length;
 				statShelves.textContent = activeCount;
 			}
 
 			// Get recent novels
 			const allRecentNovels = await novelLibrary.getRecentNovels(20);
+			const enabledRecentNovels = allRecentNovels.filter((novel) =>
+				enabledShelves.has(novel.shelfId)
+			);
 
 			// Filter by current site if applicable
-			let displayNovels = allRecentNovels;
+			let displayNovels = enabledRecentNovels;
 			let showingSiteSpecific = false;
 			let currentShelf = null;
 
-			if (currentSiteShelfId) {
+			if (currentSiteShelfId && enabledShelves.has(currentSiteShelfId)) {
 				currentShelf = Object.values(SHELVES).find(
 					(s) => s.id === currentSiteShelfId
 				);
@@ -2446,7 +2627,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 		backupHistoryList.innerHTML = backupHistory
 			.slice(0, BACKUP_RETENTION)
 			.map((entry) => {
-				const date = new Date(entry.createdAt || entry.exportedAt || 0);
+				const timestamp =
+					entry.createdAt ||
+					entry.exportedAt ||
+					entry.date ||
+					entry.timestamp ||
+					Date.now();
+				const date = new Date(timestamp);
 				const file = escapeHtml(entry.filename || "rg-backup.json");
 				return `<li>${date.toLocaleString()} — ${file}</li>`;
 			})
@@ -2457,13 +2644,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 		const folderValue = (backupFolderInput?.value || "").trim();
 		const backupFolder = folderValue || "RanobeGeminiBackups";
 		const autoBackupEnabled = autoBackupToggle?.checked || false;
+		const backupMode = backupModeScheduled?.checked
+			? "scheduled"
+			: "continuous";
 
 		backupHistory = (backupHistory || []).slice(0, BACKUP_RETENTION);
 
 		await browser.storage.local.set({
 			backupFolder,
 			autoBackupEnabled,
+			backupMode,
+			continuousBackupDelayMinutes: CONTINUOUS_BACKUP_DELAY_MINUTES,
 			backupRetention: BACKUP_RETENTION,
+			backupIntervalDays: BACKUP_INTERVAL_DAYS,
 			backupHistory,
 			...extra,
 		});
@@ -2482,38 +2675,31 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			manualBackupBtn?.classList.add("loading");
 
-			// Export library data using novelLibrary
-			const data = await novelLibrary.exportLibrary();
+			const folderValue = (backupFolderInput?.value || "").trim();
+			const backupFolder = folderValue || "RanobeGeminiBackups";
 
-			// Create downloadable JSON file
-			const blob = new Blob([JSON.stringify(data, null, 2)], {
-				type: "application/json",
+			const response = await browser.runtime.sendMessage({
+				action: "createLibraryBackup",
+				folder: backupFolder,
+				saveAs,
+				retention: BACKUP_RETENTION,
 			});
-			const url = URL.createObjectURL(blob);
 
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = `ranobe-gemini-library-${
-				new Date().toISOString().split("T")[0]
-			}.json`;
-			a.click();
+			if (!response?.success) {
+				throw new Error(response?.error || "Backup failed");
+			}
 
-			URL.revokeObjectURL(url);
-
-			// Update backup history
-			const backupEntry = {
-				date: Date.now(),
-				filename: a.download,
-				novelCount: Object.keys(data.library?.novels || {}).length,
-			};
-			backupHistory = [backupEntry, ...backupHistory].slice(
-				0,
-				BACKUP_RETENTION
-			);
+			const stored = await browser.storage.local.get("backupHistory");
+			backupHistory =
+				response.history || stored.backupHistory || backupHistory;
 			renderBackupHistory();
-			await persistBackupPrefs({ backupHistory });
+			await persistBackupPrefs({
+				backupFolder,
+				backupHistory,
+				lastBackupAt: Date.now(),
+			});
 
-			showStatus("Library exported successfully!", "success");
+			showStatus(`Backup saved to ${response.filename}`, "success");
 		} catch (error) {
 			debugError("Backup failed:", error);
 			showStatus("Backup failed: " + error.message, "error");
@@ -2629,6 +2815,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 					: "Auto backup disabled",
 				"success"
 			);
+		});
+	}
+
+	if (backupModeScheduled) {
+		backupModeScheduled.addEventListener("change", () => {
+			if (backupModeScheduled.checked) {
+				persistBackupPrefs({ backupMode: "scheduled" });
+			}
+		});
+	}
+
+	if (backupModeContinuous) {
+		backupModeContinuous.addEventListener("change", () => {
+			if (backupModeContinuous.checked) {
+				persistBackupPrefs({ backupMode: "continuous" });
+			}
 		});
 	}
 
@@ -3267,11 +3469,827 @@ document.addEventListener("DOMContentLoaded", async function () {
 				});
 		});
 
+	// ========== NOVELS TAB HANDLERS ==========
+	/**
+	 * Load and display novels in the tab
+	 */
+	async function loadNovelsTab() {
+		try {
+			const result = await browser.storage.local.get(["novelHistory"]);
+			const novels = result.novelHistory || {};
+			const novelArray = Object.values(novels);
+
+			// Get current novel info if on a supported site
+			await updateCurrentNovelInfo();
+
+			// Load all novels grouped by site
+			await displayNovelsByWebsite(novelArray);
+
+			// If on unsupported page or no current novel, show top 6 recent
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			const currentUrl = tabs[0]?.url || "";
+			const isSupported = ALL_SUPPORTED_DOMAINS.some((domain) =>
+				currentUrl.includes(domain)
+			);
+
+			if (!isSupported || novelArray.length === 0) {
+				await showTopRecentNovels(novelArray);
+			}
+		} catch (error) {
+			debugError("Error loading novels tab:", error);
+			novelsListContainer.innerHTML =
+				'<div class="no-novels">Error loading novels. Try refreshing.</div>';
+		}
+	}
+
+	/**
+	 * Update current novel info section
+	 */
+	async function updateCurrentNovelInfo() {
+		try {
+			const tabs = await browser.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+			if (!tabs[0]) {
+				currentNovelInfo.innerHTML = `
+					<div class="no-current-novel">
+						<p>No current novel detected.</p>
+						<p class="description">Visit a novel page and the extension will track your reading.</p>
+					</div>
+				`;
+				return;
+			}
+
+			const currentUrl = tabs[0].url;
+			const result = await browser.storage.local.get(["novelHistory"]);
+			const novels = result.novelHistory || {};
+
+			// Find novel matching current URL
+			let currentNovel = null;
+			for (const novel of Object.values(novels)) {
+				if (
+					novel.url &&
+					(currentUrl.includes(novel.url) ||
+						novel.url.includes(currentUrl))
+				) {
+					currentNovel = novel;
+					break;
+				}
+			}
+
+			if (currentNovel) {
+				// Get novels from same site
+				const sameSiteNovels = Object.values(novels).filter(
+					(n) =>
+						n.domain === currentNovel.domain &&
+						n.id !== currentNovel.id
+				);
+
+				currentNovelInfo.innerHTML = `
+					<div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15)); padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+						<div style="display: flex; gap: 12px; margin-bottom: 12px;">
+							${
+								currentNovel.coverUrl
+									? `<img src="${escapeHtml(
+											currentNovel.coverUrl
+									  )}" style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px;" alt="Cover" />`
+									: ""
+							}
+							<div style="flex: 1;">
+								<div style="font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 5px;">${escapeHtml(
+									currentNovel.title || "Unknown"
+								)}</div>
+								<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">by ${escapeHtml(
+									currentNovel.author || "Unknown"
+								)}</div>
+								<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+									<span style="font-size: 10px; padding: 2px 8px; background: rgba(76, 175, 80, 0.2); color: #4caf50; border-radius: 10px;">
+										${escapeHtml(currentNovel.status || "Ongoing")}
+									</span>
+									<span style="font-size: 10px; padding: 2px 8px; background: rgba(102, 126, 234, 0.2); color: #667eea; border-radius: 10px;">
+										${currentNovel.totalChapters || "?"} chapters
+									</span>
+									${
+										currentNovel.lastReadChapter
+											? `<span style="font-size: 10px; padding: 2px 8px; background: rgba(255, 152, 0, 0.2); color: #ff9800; border-radius: 10px;">
+										Ch. ${currentNovel.lastReadChapter}
+									</span>`
+											: ""
+									}
+								</div>
+							</div>
+						</div>
+						${
+							currentNovel.description
+								? `<div style="font-size: 11px; color: #999; line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+							${escapeHtml(currentNovel.description)}
+						</div>`
+								: ""
+						}
+					</div>
+
+					${
+						sameSiteNovels.length > 0
+							? `
+						<div style="margin-top: 12px;">
+							<div style="font-size: 12px; font-weight: 600; color: #aaa; margin-bottom: 8px;">
+								📚 More from ${escapeHtml(currentNovel.domain || "this site")}
+							</div>
+							<div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
+								${sameSiteNovels
+									.slice(0, 3)
+									.map(
+										(n) => `
+									<div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; cursor: pointer;" onclick="window.open('${escapeHtml(
+										n.url || "#"
+									)}', '_blank')">
+										<div style="font-weight: 500; color: #e0e0e0;">${escapeHtml(n.title)}</div>
+										<div style="color: #888; font-size: 10px;">by ${escapeHtml(
+											n.author || "Unknown"
+										)}</div>
+									</div>
+								`
+									)
+									.join("")}
+							</div>
+						</div>
+					`
+							: ""
+					}
+				`;
+			} else {
+				// Try to get page info from content script
+				browser.tabs
+					.sendMessage(tabs[0].id, {
+						action: "getPageInfo",
+					})
+					.then((response) => {
+						if (response && response.novelInfo) {
+							const novel = response.novelInfo;
+							currentNovelInfo.innerHTML = `
+								<div style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; border-left: 3px solid #667eea;">
+									<div style="font-size: 14px; font-weight: 500; color: #e0e0e0; margin-bottom: 4px;">${escapeHtml(
+										novel.title || "Unknown"
+									)}</div>
+									<div style="font-size: 12px; color: #aaa; margin-bottom: 3px;">by ${escapeHtml(
+										novel.author || "Unknown"
+									)}</div>
+									<div style="font-size: 11px; color: #888; margin-top: 6px;">
+										<span style="color: #4caf50;">${escapeHtml(
+											novel.status || "Ongoing"
+										)}</span> • ${
+								novel.totalChapters || "?"
+							} chapters
+									</div>
+								</div>
+							`;
+						} else {
+							currentNovelInfo.innerHTML = `
+								<div class="no-current-novel">
+									<p>No current novel detected.</p>
+									<p class="description">Visit a novel page to see details here.</p>
+								</div>
+							`;
+						}
+					})
+					.catch(() => {
+						currentNovelInfo.innerHTML = `
+							<div class="no-current-novel">
+								<p>Visit a supported novel site to see details here.</p>
+							</div>
+						`;
+					});
+			}
+		} catch (error) {
+			debugError("Error updating current novel info:", error);
+		}
+	}
+
+	/**
+	 * Show top 6 recent novels from all sites
+	 */
+	async function showTopRecentNovels(allNovels) {
+		try {
+			if (allNovels.length === 0) {
+				suggestedNovelsList.innerHTML = `
+					<div class="no-suggestions">
+						<p>No novels in your library yet. Start reading to build your collection!</p>
+					</div>
+				`;
+				return;
+			}
+
+			// Get top 6 most recent
+			const recentNovels = allNovels
+				.sort(
+					(a, b) =>
+						new Date(b.lastRead || 0) - new Date(a.lastRead || 0)
+				)
+				.slice(0, 6);
+
+			suggestedNovelsList.innerHTML = `
+				<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+					${recentNovels
+						.map(
+							(novel) => `
+						<div style="padding: 10px; background: rgba(102, 126, 234, 0.05); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.2); cursor: pointer;" onclick="window.open('${escapeHtml(
+							novel.url || "#"
+						)}', '_blank')">
+							${
+								novel.coverUrl
+									? `<img src="${escapeHtml(
+											novel.coverUrl
+									  )}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" alt="Cover" />`
+									: ""
+							}
+							<div style="font-size: 12px; font-weight: 500; color: #e0e0e0; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(
+								novel.title || "Unknown"
+							)}</div>
+							<div style="font-size: 10px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">by ${escapeHtml(
+								novel.author || "Unknown"
+							)}</div>
+							<div style="font-size: 9px; color: #888; margin-top: 4px;">
+								${new Date(novel.lastRead || new Date()).toLocaleDateString()}
+							</div>
+						</div>
+					`
+						)
+						.join("")}
+				</div>
+			`;
+		} catch (error) {
+			debugError("Error showing top recent novels:", error);
+		}
+	}
+
+	/**
+	 * Display novels grouped by website
+	 */
+	async function displayNovelsByWebsite(allNovels) {
+		try {
+			if (allNovels.length === 0) {
+				novelsListContainer.innerHTML =
+					'<div class="no-novels">No novels in your library yet.</div>';
+				return;
+			}
+
+			// Group by domain
+			const novelsByDomain = {};
+			allNovels.forEach((novel) => {
+				const domain = novel.domain || "Unknown";
+				if (!novelsByDomain[domain]) {
+					novelsByDomain[domain] = [];
+				}
+				novelsByDomain[domain].push(novel);
+			});
+
+			// Sort domains by most recent novel
+			const sortedDomains = Object.entries(novelsByDomain).sort(
+				(a, b) => {
+					const latestA = Math.max(
+						...a[1].map((n) => new Date(n.lastRead || 0).getTime())
+					);
+					const latestB = Math.max(
+						...b[1].map((n) => new Date(n.lastRead || 0).getTime())
+					);
+					return latestB - latestA;
+				}
+			);
+
+			// Build HTML
+			let html = `
+				<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+					<div style="font-size: 13px; color: #aaa;">
+						${allNovels.length} novel${allNovels.length !== 1 ? "s" : ""} across ${
+				sortedDomains.length
+			} site${sortedDomains.length !== 1 ? "s" : ""}
+					</div>
+					<button id="showTopRecent" style="padding: 6px 12px; font-size: 11px; background: #667eea; border: none; border-radius: 4px; cursor: pointer; color: white;">
+						🌟 Top 6 Recent
+					</button>
+				</div>
+			`;
+
+			for (const [domain, domainNovels] of sortedDomains) {
+				// Get shelf info for better display
+				const shelf = Object.values(SHELVES).find((s) =>
+					s.domains.some((d) => domain.includes(d))
+				);
+
+				html += `
+					<div class="domain-section" style="margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px; background: rgba(0,0,0,0.2);">
+						<div style="font-weight: bold; margin-bottom: 10px; color: #667eea; display: flex; align-items: center; gap: 8px;">
+							${
+								shelf && shelf.icon
+									? `<span style="font-size: 16px;">${
+											shelf.emoji || shelf.icon
+									  }</span>`
+									: "📖"
+							}
+							<span>${shelf ? shelf.name : domain}</span>
+							<span style="font-size: 11px; font-weight: normal; color: #888;">(${
+								domainNovels.length
+							})</span>
+						</div>
+						<div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+							${domainNovels
+								.sort(
+									(a, b) =>
+										new Date(b.lastRead || 0) -
+										new Date(a.lastRead || 0)
+								)
+								.map(
+									(novel) => `
+								<div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; gap: 10px; align-items: start;" onclick="window.open('${escapeHtml(
+									novel.url || "#"
+								)}', '_blank')">
+									${
+										novel.coverUrl
+											? `<img src="${escapeHtml(
+													novel.coverUrl
+											  )}" style="width: 40px; height: 55px; object-fit: cover; border-radius: 3px; flex-shrink: 0;" alt="Cover" />`
+											: ""
+									}
+									<div style="flex: 1; min-width: 0;">
+										<div style="font-weight: 500; margin-bottom: 3px; word-break: break-word; color: #e0e0e0;">${escapeHtml(
+											novel.title || "Unknown"
+										)}</div>
+										<div style="color: #aaa; font-size: 11px; margin-bottom: 2px;">by ${escapeHtml(
+											novel.author || "Unknown"
+										)}</div>
+										<div style="color: #888; font-size: 10px; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+											<span>📅 ${new Date(novel.lastRead || new Date()).toLocaleDateString()}</span>
+											${novel.lastReadChapter ? `<span>📖 Ch. ${novel.lastReadChapter}</span>` : ""}
+											${
+												novel.enhancedChaptersCount
+													? `<span>✨ ${novel.enhancedChaptersCount} enhanced</span>`
+													: ""
+											}
+										</div>
+									</div>
+								</div>
+							`
+								)
+								.join("")}
+						</div>
+					</div>
+				`;
+			}
+
+			novelsListContainer.innerHTML = html;
+
+			// Add event listener for top recent button
+			const topRecentBtn = document.getElementById("showTopRecent");
+			if (topRecentBtn) {
+				topRecentBtn.addEventListener("click", () => {
+					showTopRecentNovels(allNovels);
+				});
+			}
+		} catch (error) {
+			debugError("Error displaying novels by website:", error);
+		}
+	}
+
+	/**
+	 * Update suggested novels based on reading history
+	 */
+	async function updateSuggestedNovels(allNovels) {
+		// This is now replaced by showTopRecentNovels
+		await showTopRecentNovels(allNovels);
+	}
+
+	// ========== LIBRARY BACKUP HANDLERS ==========
+	/**
+	 * Load and display backup history
+	 */
+	async function loadBackupHistory() {
+		try {
+			const backups = await libraryBackupManager.listBackups();
+
+			if (backups.length === 0) {
+				backupList.innerHTML =
+					'<div class="no-backups" style="text-align: center; padding: 20px; color: #888;">No backups yet. Create your first backup!</div>';
+				return;
+			}
+
+			backupList.innerHTML = backups
+				.map(
+					(backup) => `
+				<div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+					<div style="flex: 1;">
+						<div style="font-weight: 500; color: #e0e0e0; margin-bottom: 3px;">${
+							backup.dateStr
+						}</div>
+						<div style="font-size: 12px; color: #aaa;">
+							${backup.novelCount} novels • ${Math.round(backup.size / 1024)} KB ${
+						backup.isAutomatic
+							? '<span style="color: #4caf50;">(Auto)</span>'
+							: "(Manual)"
+					}
+						</div>
+					</div>
+					<div style="display: flex; gap: 6px;">
+						<button class="backup-restore-btn" data-backup-id="${
+							backup.id
+						}" style="padding: 6px 12px; font-size: 11px; background: #667eea; border: none; border-radius: 4px; cursor: pointer; color: white;">
+							Restore
+						</button>
+						<button class="backup-delete-btn" data-backup-id="${
+							backup.id
+						}" style="padding: 6px 12px; font-size: 11px; background: #db4437; border: none; border-radius: 4px; cursor: pointer; color: white;">
+							Delete
+						</button>
+					</div>
+				</div>
+			`
+				)
+				.join("");
+
+			// Add event listeners for restore and delete
+			document.querySelectorAll(".backup-restore-btn").forEach((btn) => {
+				btn.addEventListener("click", async function () {
+					const backupId = this.dataset.backupId;
+					const mergeMode =
+						document.querySelector(
+							'input[name="mergeMode"]:checked'
+						)?.value || "merge";
+					await handleRestoreBackup(backupId, mergeMode);
+				});
+			});
+
+			document.querySelectorAll(".backup-delete-btn").forEach((btn) => {
+				btn.addEventListener("click", async function () {
+					const backupId = this.dataset.backupId;
+					if (
+						confirm("Are you sure you want to delete this backup?")
+					) {
+						await libraryBackupManager.deleteBackup(backupId);
+						await loadBackupHistory();
+						showStatus("Backup deleted successfully!", "success");
+					}
+				});
+			});
+		} catch (error) {
+			debugError("Error loading backup history:", error);
+		}
+	}
+
+	/**
+	 * Handle restore backup
+	 */
+	async function handleRestoreBackup(backupId, mergeMode) {
+		try {
+			const restored = await libraryBackupManager.restoreBackup(
+				backupId,
+				mergeMode
+			);
+
+			if (restored) {
+				await browser.storage.local.set({
+					novelHistory: restored,
+				});
+
+				showStatus(
+					`Backup restored successfully (${mergeMode} mode)!`,
+					"success"
+				);
+				await loadBackupHistory();
+				await loadNovelsTab();
+			}
+		} catch (error) {
+			debugError("Error restoring backup:", error);
+			showStatus("Failed to restore backup", "error");
+		}
+	}
+
+	/**
+	 * Update Google Drive backup UI based on connection status
+	 */
+	async function updateDriveUI() {
+		try {
+			const tokens = await browser.storage.local.get("driveAuthTokens");
+			const isConnected = !!tokens.driveAuthTokens?.access_token;
+
+			if (isConnected) {
+				driveNotConnected.style.display = "none";
+				driveConnected.style.display = "block";
+				driveStatusSpan.textContent = "🟢 Connected";
+				driveStatusSpan.style.color = "#4CAF50";
+
+				// Load backup mode
+				const prefs = await browser.storage.local.get("backupMode");
+				const mode = prefs.backupMode || "scheduled";
+				document.querySelector(
+					`input[name="driveBackupMode"][value="${mode}"]`
+				).checked = true;
+			} else {
+				driveNotConnected.style.display = "block";
+				driveConnected.style.display = "none";
+				driveStatusSpan.textContent = "⚫ Disconnected";
+				driveStatusSpan.style.color = "#999";
+			}
+		} catch (err) {
+			debugError("Failed to update Drive UI", err);
+		}
+	}
+
+	/**
+	 * Connect to Google Drive via OAuth
+	 */
+	async function handleConnectDrive() {
+		try {
+			connectDriveBtn.disabled = true;
+			connectDriveBtn.textContent = "🔗 Connecting...";
+
+			const clientId = DEFAULT_DRIVE_CLIENT_ID;
+			const redirectUri = browser.identity.getRedirectURL("drive");
+
+			// Build OAuth URL
+			const params = new URLSearchParams({
+				client_id: clientId,
+				redirect_uri: redirectUri,
+				response_type: "code",
+				scope: "https://www.googleapis.com/auth/drive.file",
+				access_type: "offline",
+				prompt: "consent",
+			});
+
+			// Open OAuth redirect page in new tab
+			const oauthUrl = `file:///landing/oauth-redirect.html?${params.toString()}`;
+			browser.tabs.create({ url: browser.runtime.getURL(oauthUrl) });
+
+			showStatus(
+				"Opening Google login... Please authorize the extension.",
+				"info"
+			);
+
+			// Poll for token (wait up to 30 seconds)
+			let attempts = 0;
+			const pollInterval = setInterval(async () => {
+				attempts++;
+				const stored = await browser.storage.local.get(
+					"driveAuthTokens"
+				);
+
+				if (stored.driveAuthTokens?.access_token || attempts > 30) {
+					clearInterval(pollInterval);
+					connectDriveBtn.disabled = false;
+					connectDriveBtn.textContent = "🔗 Connect Google Drive";
+
+					if (stored.driveAuthTokens?.access_token) {
+						showStatus(
+							"✅ Google Drive connected successfully!",
+							"success"
+						);
+						await updateDriveUI();
+					} else {
+						showStatus(
+							"❌ Authentication failed or timed out",
+							"error"
+						);
+					}
+				}
+			}, 1000);
+		} catch (err) {
+			debugError("Failed to connect Drive", err);
+			showStatus("Failed to connect Google Drive", "error");
+			connectDriveBtn.disabled = false;
+			connectDriveBtn.textContent = "🔗 Connect Google Drive";
+		}
+	}
+
+	/**
+	 * Disconnect from Google Drive
+	 */
+	async function handleDisconnectDrive() {
+		if (
+			!confirm(
+				"Disconnect Google Drive? Backups won't sync automatically."
+			)
+		)
+			return;
+
+		try {
+			await browser.storage.local.set({ driveAuthTokens: null });
+			showStatus("Disconnected from Google Drive", "success");
+			await updateDriveUI();
+		} catch (err) {
+			debugError("Failed to disconnect Drive", err);
+			showStatus("Failed to disconnect Google Drive", "error");
+		}
+	}
+
+	/**
+	 * Backup library to Google Drive now
+	 */
+	async function handleBackupNow() {
+		try {
+			backupNowBtn.disabled = true;
+			backupNowBtn.textContent = "📤 Backing up...";
+
+			const response = await browser.runtime.sendMessage({
+				action: "uploadLibraryBackupToDrive",
+				folderId: null,
+				reason: "manual",
+			});
+
+			if (response.success) {
+				showStatus(`✅ Backup uploaded: ${response.name}`, "success");
+			} else {
+				throw new Error(response.error || "Upload failed");
+			}
+		} catch (err) {
+			debugError("Failed to backup to Drive", err);
+			showStatus(`Failed: ${err.message}`, "error");
+		} finally {
+			backupNowBtn.disabled = false;
+			backupNowBtn.textContent = "📤 Backup Now";
+		}
+	}
+
+	/**
+	 * View backups on Google Drive
+	 */
+	async function handleViewBackups() {
+		try {
+			const backups = await browser.runtime.sendMessage({
+				action: "listDriveBackups",
+			});
+
+			if (!backups || backups.length === 0) {
+				showStatus("No backups found on Drive", "info");
+				return;
+			}
+
+			// Build backup list HTML
+			let html =
+				'<div style="max-height: 300px; overflow-y: auto; font-size: 12px">';
+			for (const backup of backups.slice(0, 20)) {
+				const date = new Date(backup.createdTime).toLocaleDateString();
+				const size = backup.size
+					? `${(backup.size / 1024).toFixed(1)} KB`
+					: "Unknown";
+				html += `
+					<div style="padding: 6px; border-bottom: 1px solid #ddd; cursor: pointer"
+						 onclick="restoreFromDrive('${backup.id}')">
+						<div style="font-weight: bold">${backup.name}</div>
+						<div style="color: #666">${date} • ${size}</div>
+					</div>
+				`;
+			}
+			html += "</div>";
+
+			// Show in modal or status
+			showStatus(
+				`Found ${backups.length} backups. Click to restore: ` + html,
+				"info"
+			);
+		} catch (err) {
+			debugError("Failed to list backups", err);
+			showStatus("Failed to load backups", "error");
+		}
+	}
+
+	/**
+	 * Save Drive backup mode preference
+	 */
+	async function handleDriveBackupModeChange(event) {
+		try {
+			const mode = event.target.value;
+			await browser.storage.local.set({ backupMode: mode });
+			showStatus(
+				`Backup mode changed to: ${
+					mode === "scheduled" ? "Daily Scheduled" : "Continuous"
+				}`,
+				"success"
+			);
+		} catch (err) {
+			debugError("Failed to update backup mode", err);
+		}
+	}
+
+	/**
+	 * Handle manual backup creation
+	 */
+	async function handleCreateManualBackup() {
+		try {
+			const result = await browser.storage.local.get(["novelHistory"]);
+			const libraryData = result.novelHistory || {};
+
+			const backup = await libraryBackupManager.createBackup(
+				libraryData,
+				false
+			);
+
+			if (backup) {
+				showStatus(
+					`Backup created: ${backup.novelCount} novels backed up`,
+					"success"
+				);
+				await loadBackupHistory();
+			}
+		} catch (error) {
+			debugError("Error creating backup:", error);
+			showStatus("Failed to create backup", "error");
+		}
+	}
+
+	/**
+	 * Update backup config
+	 */
+	async function updateBackupConfig() {
+		try {
+			const config = {
+				autoBackupEnabled: autoBackupEnabled?.checked || false,
+				mergeMode:
+					document.querySelector('input[name="mergeMode"]:checked')
+						?.value || "merge",
+			};
+
+			await libraryBackupManager.updateConfig(config);
+			showStatus("Backup settings saved!", "success");
+		} catch (error) {
+			debugError("Error updating backup config:", error);
+		}
+	}
+
+	// Attach backup handlers
+	if (refreshNovelsBtn) {
+		refreshNovelsBtn.addEventListener("click", loadNovelsTab);
+	}
+
+	if (createManualBackup) {
+		createManualBackup.addEventListener("click", handleCreateManualBackup);
+	}
+
+	if (autoBackupEnabled) {
+		autoBackupEnabled.addEventListener("change", updateBackupConfig);
+	}
+
+	mergeModRadios.forEach((radio) => {
+		radio.addEventListener("change", updateBackupConfig);
+	});
+
+	// Attach Google Drive backup handlers
+	if (connectDriveBtn) {
+		connectDriveBtn.addEventListener("click", handleConnectDrive);
+	}
+	if (disconnectDriveBtn) {
+		disconnectDriveBtn.addEventListener("click", handleDisconnectDrive);
+	}
+	if (backupNowBtn) {
+		backupNowBtn.addEventListener("click", handleBackupNow);
+	}
+	if (viewBackupsBtn) {
+		viewBackupsBtn.addEventListener("click", handleViewBackups);
+	}
+	driveBackupModeRadios.forEach((radio) => {
+		radio.addEventListener("change", handleDriveBackupModeChange);
+	});
+
+	// Load backups and novels on popup open
+	(async () => {
+		await libraryBackupManager.initializeConfig();
+		const config = await libraryBackupManager.getConfig();
+
+		if (autoBackupEnabled) {
+			autoBackupEnabled.checked = config.autoBackupEnabled || false;
+		}
+
+		document
+			.querySelectorAll('input[name="mergeMode"]')
+			.forEach((radio) => {
+				if (radio.value === (config.mergeMode || "merge")) {
+					radio.checked = true;
+				}
+			});
+
+		await loadBackupHistory();
+		// Update Google Drive UI on popup open
+		await updateDriveUI();
+	})();
+
+	// Load novels when novels tab is opened
+	document.querySelectorAll(".tab-btn").forEach((btn) => {
+		btn.addEventListener("click", async function () {
+			if (this.getAttribute("data-tab") === "novels") {
+				await loadNovelsTab();
+			}
+		});
+	});
+
 	// Log that the popup is initialized
 	debugLog("RanobeGemini popup initialized");
 
 	// Load site-specific prompts
 	loadSiteHandlerPrompts();
+
+	// Initialize info tab with dynamic data
+	initInfoTab();
 
 	// Add tab change listener to update prompts when switching to the prompts tab
 	document.querySelectorAll(".tab-btn").forEach(function (button) {
@@ -3282,4 +4300,48 @@ document.addEventListener("DOMContentLoaded", async function () {
 			}
 		});
 	});
+
+	/**
+	 * Initialize Info tab with dynamic version and supported sites
+	 */
+	async function initInfoTab() {
+		try {
+			// Get version from manifest
+			const manifestUrl = browser.runtime.getURL("manifest.json");
+			const manifestResponse = await fetch(manifestUrl);
+			const manifest = await manifestResponse.json();
+			const version = manifest.version || "Unknown";
+
+			// Update version badge
+			const versionBadge = document.querySelector(".version-badge");
+			if (versionBadge) {
+				versionBadge.textContent = `Version ${version}`;
+			}
+
+			// Build supported sites list from SHELF_REGISTRY
+			const supportedSitesList = document.querySelector(
+				".faq-item:nth-child(3) .faq-answer ul"
+			);
+			if (supportedSitesList && SHELVES) {
+				let sitesHTML = "";
+				Object.values(SHELVES).forEach((shelf) => {
+					const emoji = shelf.emoji || "📚";
+					const primaryDomain =
+						shelf.primaryDomain ||
+						(shelf.domains && shelf.domains[0]) ||
+						"N/A";
+					const allDomains =
+						shelf.domains && shelf.domains.length > 1
+							? shelf.domains.join(", ")
+							: primaryDomain;
+					sitesHTML += `<li>${emoji} <strong>${escapeHtml(
+						shelf.name
+					)}</strong> — <code>${escapeHtml(allDomains)}</code></li>`;
+				});
+				supportedSitesList.innerHTML = sitesHTML;
+			}
+		} catch (error) {
+			debugError("Error initializing info tab:", error);
+		}
+	}
 });

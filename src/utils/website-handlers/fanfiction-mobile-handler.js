@@ -14,6 +14,8 @@ export class FanfictionMobileHandler extends BaseWebsiteHandler {
 		"m.fanfiction.net", // Mobile-specific domain
 	];
 
+	static DEFAULT_ENABLED = false;
+
 	// Ensure mobile handler runs before desktop
 	static PRIORITY = 10;
 

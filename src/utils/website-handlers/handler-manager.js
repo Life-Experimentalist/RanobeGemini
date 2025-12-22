@@ -6,6 +6,7 @@
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { HANDLER_MODULES } from "./handler-registry.js";
 import { debugLog, debugError } from "../logger.js";
+import { getSiteSettings, isSiteEnabled } from "../site-settings.js";
 
 function matchesHostname(hostname, pattern) {
 	if (!pattern || !hostname) return false;
@@ -101,9 +102,24 @@ export class HandlerManager {
 	async getHandlerForCurrentSite() {
 		const hostname = window.location.hostname;
 		const handlers = await this.loadHandlers();
+		const siteSettings = await getSiteSettings();
+		let disabledMatchForHost = false;
 
 		for (const handler of handlers) {
 			try {
+				const domains = handler?.constructor?.SUPPORTED_DOMAINS || [];
+				const shelfId = handler?.constructor?.SHELF_METADATA?.id;
+				const matchesHost = domains.some((domain) =>
+					matchesHostname(hostname, domain)
+				);
+
+				if (shelfId && !isSiteEnabled(siteSettings, shelfId)) {
+					if (matchesHost) {
+						disabledMatchForHost = true;
+					}
+					continue;
+				}
+
 				if (typeof handler?.canHandle === "function") {
 					if (handler.canHandle()) {
 						debugLog(`Loaded handler: ${handler.constructor.name}`);
@@ -112,10 +128,7 @@ export class HandlerManager {
 				}
 
 				// Fallback: match against SUPPORTED_DOMAINS if provided
-				const domains = handler?.constructor?.SUPPORTED_DOMAINS || [];
-				if (
-					domains.some((domain) => matchesHostname(hostname, domain))
-				) {
+				if (matchesHost) {
 					debugLog(
 						`Loaded handler via SUPPORTED_DOMAINS: ${handler.constructor.name}`
 					);
@@ -130,6 +143,10 @@ export class HandlerManager {
 		}
 
 		debugLog(`No specific handler for hostname: ${hostname}`);
+		if (disabledMatchForHost) {
+			debugLog("Site disabled via settings; skipping generic handler");
+			return null;
+		}
 		return new BaseWebsiteHandler();
 	}
 }

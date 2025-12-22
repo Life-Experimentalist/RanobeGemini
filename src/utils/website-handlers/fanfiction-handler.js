@@ -18,6 +18,8 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		"*.fanfiction.net", // Safety net: catches any other subdomains (EXCEPT m.fanfiction.net - handled by mobile handler)
 	];
 
+	static DEFAULT_ENABLED = true;
+
 	// Priority for auto-selection (lower number = earlier match)
 	static PRIORITY = 20;
 

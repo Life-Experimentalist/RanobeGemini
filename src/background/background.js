@@ -19,6 +19,11 @@ import {
 	ensureDriveAccessToken,
 	revokeDriveTokens,
 	uploadLogsToDriveWithAdapter,
+	uploadBlobToDrive,
+	uploadLibraryBackupToDrive,
+	ensureBackupFolder,
+	listDriveBackups,
+	downloadDriveBackup,
 } from "../utils/drive.js";
 import { novelLibrary } from "../utils/novel-library.js";
 
@@ -48,10 +53,11 @@ if (typeof browser === "undefined") {
 
 		const KEEP_ALIVE_ALARM_NAME = "ranobe-gemini-keep-alive";
 		const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES =
-		KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
+			KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
 		const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
 		const DEFAULT_BACKUP_RETENTION = 3;
 		const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
+		const CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES = 5;
 		const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
 		// Detect browser type
@@ -238,41 +244,118 @@ if (typeof browser === "undefined") {
 			return { downloadId, filename, history };
 		}
 
+		async function uploadLibraryBackupToDriveWithHistory({
+			folderId,
+			reason = "scheduled",
+			variant = "versioned",
+		}) {
+			const { novelLibrary } = await import(
+				browser.runtime.getURL("utils/novel-library.js")
+			);
+			const { uploadLibraryBackupToDrive: uploadToDrive } = await import(
+				browser.runtime.getURL("utils/drive.js")
+			);
+
+			const data = await novelLibrary.exportLibrary();
+			const blob = new Blob([JSON.stringify(data, null, 2)], {
+				type: "application/json",
+			});
+
+			const uploadResult = await uploadToDrive(blob, {
+				folderId,
+				variant: variant === "continuous" ? "continuous" : "versioned",
+			});
+
+			const filename = uploadResult.name;
+
+			// Track history for visibility
+			const stored = await browser.storage.local.get("backupHistory");
+			const history = [
+				{
+					filename,
+					createdAt: Date.now(),
+					uploadedToDrive: true,
+					reason,
+					fileId: uploadResult.id,
+					webViewLink: uploadResult?.webViewLink,
+					variant,
+				},
+				...(stored.backupHistory || []),
+			].slice(0, 50); // keep last 50 backup history entries for UI
+
+			await browser.storage.local.set({
+				backupHistory: history,
+				lastBackupAt: Date.now(),
+			});
+
+			return { filename, history, uploadResult };
+		}
+
 		async function performAutoBackup() {
 			const prefs = await browser.storage.local.get([
 				"autoBackupEnabled",
 				"backupFolder",
 				"backupRetention",
+				"backupMode",
+				"driveFolderId",
 			]);
 
 			if (!prefs.autoBackupEnabled) {
 				return { success: false, skipped: true, reason: "disabled" };
 			}
 
+			const mode = prefs.backupMode || "scheduled";
+			if (mode !== "scheduled") {
+				return { success: false, skipped: true, reason: "mode" };
+			}
+
 			const retention = prefs.backupRetention || DEFAULT_BACKUP_RETENTION;
 			const folder = prefs.backupFolder || DEFAULT_BACKUP_FOLDER;
 
 			try {
+				// Prefer Drive if available, fall back to downloads
+				try {
+					const driveResult = await uploadLibraryBackupToDriveWithHistory({
+						folderId: prefs.driveFolderId,
+						reason: "scheduled",
+						variant: "versioned",
+					});
+					debugLog(
+						"Auto-backup uploaded to Drive:",
+						driveResult.filename
+					);
+					return { success: true, ...driveResult, target: "drive" };
+				} catch (driveErr) {
+					debugError(
+						"Drive auto-backup failed, falling back to file:",
+						driveErr
+					);
+				}
+
 				const result = await createBackupFile({
 					folder,
 					saveAs: false,
 					retention,
 				});
 				debugLog("Auto-backup created:", result.filename);
-				return { success: true, ...result };
+				return { success: true, ...result, target: "file" };
 			} catch (error) {
 				debugError("Auto-backup failed:", error);
 				return { success: false, error: error.message };
 			}
 		}
 
+		let continuousBackupTimer = null;
+
 		async function scheduleAutoBackup() {
 			const prefs = await browser.storage.local.get([
 				"autoBackupEnabled",
 				"backupIntervalDays",
+				"backupMode",
 			]);
 			const enabled = prefs.autoBackupEnabled || false;
 			const intervalDays = prefs.backupIntervalDays || 1;
+			const mode = prefs.backupMode || "scheduled";
 
 			if (!browser.alarms) return false;
 
@@ -283,7 +366,7 @@ if (typeof browser === "undefined") {
 				// ignore
 			}
 
-			if (!enabled) return false;
+			if (!enabled || mode !== "scheduled") return false;
 
 			await browser.alarms.create(AUTO_BACKUP_ALARM_NAME, {
 				periodInMinutes: Math.max(60 * 24 * intervalDays, 60),
@@ -291,10 +374,67 @@ if (typeof browser === "undefined") {
 			return true;
 		}
 
+		async function scheduleContinuousBackup() {
+			if (continuousBackupTimer) {
+				clearTimeout(continuousBackupTimer);
+				continuousBackupTimer = null;
+			}
+
+			const prefs = await browser.storage.local.get([
+				"autoBackupEnabled",
+				"backupMode",
+				"continuousBackupDelayMinutes",
+				"driveFolderId",
+			]);
+
+			if (!prefs.autoBackupEnabled) return;
+			if ((prefs.backupMode || "scheduled") !== "continuous") return;
+
+			const delayMinutes =
+				prefs.continuousBackupDelayMinutes ||
+				CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES;
+			const delayMs = Math.max(1, delayMinutes) * 60 * 1000;
+
+			continuousBackupTimer = setTimeout(async () => {
+				try {
+					await uploadLibraryBackupToDriveWithHistory({
+						folderId: prefs.driveFolderId,
+						reason: "continuous",
+						variant: "continuous",
+					});
+					debugLog("Continuous backup uploaded to Drive");
+				} catch (err) {
+					debugError("Continuous backup failed:", err);
+				}
+			}, delayMs);
+		}
+
 		// Kick off scheduling on startup
 		scheduleAutoBackup().catch((err) =>
 			console.warn("Auto-backup schedule setup failed:", err?.message)
 		);
+		scheduleContinuousBackup().catch((err) =>
+			console.warn(
+				"Continuous backup schedule setup failed:",
+				err?.message
+			)
+		);
+
+		browser.storage.onChanged.addListener((changes, area) => {
+			if (area !== "local") return;
+			if (changes.novelHistory) {
+				scheduleContinuousBackup();
+			}
+			if (
+				changes.backupMode ||
+				changes.autoBackupEnabled ||
+				changes.backupIntervalDays ||
+				changes.continuousBackupDelayMinutes
+			) {
+				scheduleAutoBackup();
+				scheduleContinuousBackup();
+			}
+		});
 
 		// Global configuration
 		let currentConfig = null;
@@ -568,21 +708,52 @@ if (typeof browser === "undefined") {
 					return true;
 				}
 
-				if (message.action === "restoreLibraryBackup") {
-					(async () => {
-						try {
-							const { novelLibrary } = await import(
-								browser.runtime.getURL("utils/novel-library.js")
-							);
-							const result = await novelLibrary.importLibrary(
-								message.data,
-								message.merge !== false
-							);
-							sendResponse({ success: true, ...result });
-						} catch (error) {
+				if (message.action === "uploadLibraryBackupToDrive") {
+					uploadLibraryBackupToDriveWithHistory({
+						folderId: message.folderId,
+						reason: message.reason || "manual",
+						variant: message.variant || "versioned",
+					})
+						.then((result) =>
+							sendResponse({ success: true, ...result })
+						)
+						.catch((error) =>
 							sendResponse({
 								success: false,
 								error: error.message,
+							})
+						);
+					return true;
+				}
+
+			if (message.action === "listDriveBackups") {
+				listDriveBackups()
+					.then((backups) =>
+						sendResponse({ success: true, backups })
+					)
+					.catch((error) =>
+						sendResponse({
+							success: false,
+							backups: [],
+							error: error.message,
+						})
+					);
+				return true;
+			}
+
+			if (message.action === "downloadDriveBackup") {
+				downloadDriveBackup(message.fileId)
+					.then((data) =>
+						sendResponse({ success: true, data })
+					)
+					.catch((error) =>
+						sendResponse({
+							success: false,
+							error: error.message,
+						})
+					);
+				return true;
+			}
 							});
 						}
 					})();

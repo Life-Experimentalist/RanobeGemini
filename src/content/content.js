@@ -34,6 +34,8 @@ var isInitialized = false; // Track if the content script is fully initialized (
 let storageManager = null; // Storage manager instance for caching
 let isCachedContent = false; // Track if current page has cached enhanced content
 let currentFontSize = 100; // Font size percentage (default 100%)
+let siteSettings = null; // Per-site enable/disable settings
+let siteSettingsModule = null; // Site settings helper module
 if (window.__RGInitDone) {
 	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
@@ -2767,6 +2769,18 @@ if (window.__RGInitDone) {
 	let READING_STATUS = null;
 	let READING_STATUS_INFO = null;
 
+	// Load site settings helpers
+	async function loadSiteSettingsModule() {
+		try {
+			const settingsUrl = browser.runtime.getURL(
+				"utils/site-settings.js"
+			);
+			return await import(settingsUrl);
+		} catch (error) {
+			debugError("Error loading site settings:", error);
+			return null;
+		}
+	}
 	// Load novel library for tracking novels
 	async function loadNovelLibrary() {
 		try {
@@ -3052,6 +3066,12 @@ if (window.__RGInitDone) {
 		// Load storage manager
 		storageManager = await loadStorageManager();
 
+		// Load per-site settings
+		siteSettingsModule = await loadSiteSettingsModule();
+		if (siteSettingsModule?.getSiteSettings) {
+			siteSettings = await siteSettingsModule.getSiteSettings();
+		}
+
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
 		try {
@@ -3081,6 +3101,26 @@ if (window.__RGInitDone) {
 
 		// Get the appropriate handler for this website
 		currentHandler = await getHandlerForCurrentSite();
+
+		if (!currentHandler) {
+			debugLog(
+				"Site disabled or unsupported; skipping UI injection for this page"
+			);
+			return;
+		}
+
+		const handlerShelfId = currentHandler?.constructor?.SHELF_METADATA?.id;
+		if (
+			siteSettingsModule?.isSiteEnabled &&
+			handlerShelfId &&
+			siteSettings &&
+			!siteSettingsModule.isSiteEnabled(siteSettings, handlerShelfId)
+		) {
+			debugLog(
+				`Site ${handlerShelfId} disabled in settings; skipping UI injection`
+			);
+			return;
+		}
 
 		if (currentHandler) {
 			debugLog(`Using specific handler for ${window.location.hostname}`);

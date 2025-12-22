@@ -3,7 +3,7 @@
  * Handles filtering, sorting, rendering, and navigation for the ScribbleHub library view
  */
 
-import ScribbleHubNovelCard from "./novel-card.js";
+import { ScribbleHubNovelCard } from "./novel-card.js";
 import { ScribbleHubHandler } from "../../../utils/website-handlers/scribblehub-handler.js";
 import { NovelCardRenderer } from "../novel-card-base.js";
 import {

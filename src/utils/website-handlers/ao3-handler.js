@@ -20,6 +20,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 		"*.ao3.org", // Safety net: catches any other subdomains
 	];
 
+	static DEFAULT_ENABLED = true;
+
 	// Priority for auto-selection (lower number = earlier match)
 	static PRIORITY = 30;
 

@@ -5,8 +5,6 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="src/icons/logo-256.png">
-  <source media="(prefers-color-scheme: light)" srcset="src/icons/logo-256.png">
   <img src="src/icons/logo-256.png" alt="Ranobe Gemini Logo" width="256"/>
 </picture>
 

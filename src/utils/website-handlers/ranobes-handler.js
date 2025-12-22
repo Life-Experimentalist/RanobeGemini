@@ -22,6 +22,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		"*.ranobes.org",
 	];
 
+	static DEFAULT_ENABLED = true;
+
 	// Shelf metadata for Novel Library - PRIMARY handler
 	static SHELF_METADATA = {
 		id: "ranobes",

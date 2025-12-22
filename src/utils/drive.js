@@ -2,12 +2,18 @@
 // Uses identity.launchWebAuthFlow with PKCE and stores tokens in extension storage.
 
 import { debugLog, debugError } from "./logger.js";
-import { DEFAULT_DRIVE_CLIENT_ID } from "./constants.js";
+import {
+	DEFAULT_DRIVE_CLIENT_ID,
+	DRIVE_BACKUP_MAX_COUNT,
+	DRIVE_BACKUP_PREFIX,
+	DRIVE_CONTINUOUS_BACKUP_BASENAME,
+	GOOGLE_OAUTH_SCOPES,
+} from "./constants.js";
 
 const TOKEN_KEY = "driveAuthTokens";
 const CLIENT_ID_KEY = "driveClientId";
 const FOLDER_ID_KEY = "driveFolderId";
-const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+const SCOPES = GOOGLE_OAUTH_SCOPES;
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 
@@ -254,4 +260,251 @@ export async function uploadLogsToDriveWithAdapter(adapterOptions = {}) {
 			folderId,
 		});
 	}, adapterOptions);
+}
+
+// Create or get Ranobe Gemini backup folder on Drive
+export async function ensureBackupFolder() {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	let folderId = await getDriveFolderId();
+
+	// If folder ID already stored, return it
+	if (folderId) return folderId;
+
+	try {
+		// Search for existing Ranobe Gemini backup folder
+		const searchQuery = encodeURIComponent(
+			`name='Ranobe Gemini Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false`
+		);
+		const searchResp = await fetch(
+			`https://www.googleapis.com/drive/v3/files?q=${searchQuery}&spaces=drive&fields=files(id,name)&pageSize=1`,
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			}
+		);
+
+		if (searchResp.ok) {
+			const searchData = await searchResp.json();
+			if (searchData.files && searchData.files.length > 0) {
+				folderId = searchData.files[0].id;
+				await saveDriveFolderId(folderId);
+				return folderId;
+			}
+		}
+	} catch (err) {
+		debugError("Error searching for backup folder", err);
+	}
+
+	// Create new backup folder
+	try {
+		const createResp = await fetch(
+			"https://www.googleapis.com/drive/v3/files?fields=id,name",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					name: "Ranobe Gemini Backups",
+					mimeType: "application/vnd.google-apps.folder",
+				}),
+			}
+		);
+
+		if (!createResp.ok) {
+			const err = await createResp.text();
+			throw new Error(
+				`Folder creation failed: ${createResp.status} ${err}`
+			);
+		}
+
+		const createData = await createResp.json();
+		folderId = createData.id;
+		await saveDriveFolderId(folderId);
+		return folderId;
+	} catch (err) {
+		debugError("Failed to create backup folder", err);
+		throw err;
+	}
+}
+
+// Find an existing backup by name within the Drive folder
+async function findDriveBackupByName(folderId, filename) {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	const safeName = filename.replace(/'/g, "\\'");
+	const query = encodeURIComponent(
+		`'${folderId}' in parents and name='${safeName}' and trashed=false`
+	);
+
+	const resp = await fetch(
+		`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime,webViewLink)&pageSize=1`,
+		{
+			headers: { Authorization: `Bearer ${accessToken}` },
+		}
+	);
+
+	if (!resp.ok) return null;
+	const data = await resp.json();
+	return data.files?.[0] || null;
+}
+
+async function updateDriveFile(fileId, blob, { filename, mimeType }) {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	const boundary = `rgdrive-update-${Date.now()}`;
+	const delimiter = `--${boundary}`;
+	const closeDelimiter = `--${boundary}--`;
+	const metadataPart = `${delimiter}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(
+		{
+			name: filename,
+		}
+	)}\r\n`;
+	const dataPartHeader = `${delimiter}\r\nContent-Type: ${mimeType}\r\n\r\n`;
+	const body = new Blob([
+		metadataPart,
+		dataPartHeader,
+		blob,
+		`\r\n${closeDelimiter}`,
+	]);
+
+	const resp = await fetch(
+		`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart&fields=id,name,webViewLink,modifiedTime`,
+		{
+			method: "PATCH",
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				"Content-Type": `multipart/related; boundary=${boundary}`,
+			},
+			body,
+		}
+	);
+
+	if (!resp.ok) {
+		const text = await resp.text();
+		throw new Error(`Drive update failed: ${resp.status} ${text}`);
+	}
+
+	return resp.json();
+}
+
+// Delete oldest backups to maintain a fixed count (excludes the continuous file)
+async function enforceBackupLimit(folderId, maxCount = DRIVE_BACKUP_MAX_COUNT) {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	const query = encodeURIComponent(
+		`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`
+	);
+
+	const resp = await fetch(
+		`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&pageSize=50`,
+		{
+			headers: { Authorization: `Bearer ${accessToken}` },
+		}
+	);
+
+	if (!resp.ok) return;
+	const data = await resp.json();
+	const files = (data.files || []).filter(
+		(file) => file.name !== DRIVE_CONTINUOUS_BACKUP_BASENAME
+	);
+
+	if (files.length <= maxCount) return;
+	const toDelete = files.slice(maxCount);
+
+	for (const file of toDelete) {
+		try {
+			await fetch(
+				`https://www.googleapis.com/drive/v3/files/${file.id}`,
+				{
+					method: "DELETE",
+					headers: { Authorization: `Bearer ${accessToken}` },
+				}
+			);
+		} catch (delErr) {
+			debugError(`Failed to delete old backup ${file.id}`, delErr);
+		}
+	}
+}
+
+// Upload library backup with version naming and fixed-count retention
+export async function uploadLibraryBackupToDrive(backupBlob, options = {}) {
+	const folderId = options.folderId || (await ensureBackupFolder());
+	const variant =
+		options.variant === "continuous" ? "continuous" : "versioned";
+	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+	const filename =
+		variant === "continuous"
+			? DRIVE_CONTINUOUS_BACKUP_BASENAME
+			: `${DRIVE_BACKUP_PREFIX}${timestamp}.json`;
+
+	try {
+		if (variant === "continuous") {
+			const existing = await findDriveBackupByName(folderId, filename);
+			if (existing?.id) {
+				return updateDriveFile(existing.id, backupBlob, {
+					filename,
+					mimeType: "application/json",
+				});
+			}
+		}
+
+		const result = await uploadBlobToDrive(backupBlob, {
+			filename,
+			mimeType: "application/json",
+			folderId,
+		});
+
+		if (variant !== "continuous") {
+			await enforceBackupLimit(folderId);
+		}
+
+		return result;
+	} catch (err) {
+		debugError("Drive backup upload failed", err);
+		throw err;
+	}
+}
+
+// List all backups in the folder (includes continuous file)
+export async function listDriveBackups() {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	const folderId = await getDriveFolderId();
+
+	if (!folderId) return [];
+
+	try {
+		const query = encodeURIComponent(
+			`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`
+		);
+		const resp = await fetch(
+			`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,createdTime,modifiedTime,size,webViewLink)&orderBy=modifiedTime%20desc&pageSize=50`,
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			}
+		);
+
+		if (!resp.ok) return [];
+		const data = await resp.json();
+		return data.files || [];
+	} catch (err) {
+		debugError("Failed to list backups", err);
+		return [];
+	}
+}
+
+// Download a specific backup
+export async function downloadDriveBackup(fileId) {
+	const accessToken = await ensureDriveAccessToken({ interactive: false });
+	try {
+		const resp = await fetch(
+			`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			}
+		);
+
+		if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
+		return resp.json();
+	} catch (err) {
+		debugError("Failed to download backup", err);
+		throw err;
+	}
 }

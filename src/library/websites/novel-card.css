@@ -216,6 +216,31 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 	gap: var(--spacing-md);
+	padding: 0; /* Remove any padding that might cause offset */
+	margin: 0; /* Remove any margin that might cause offset */
+}
+
+/* Fix for horizontal scrolling grids */
+.novel-card-grid.horizontal-scroll {
+	display: flex;
+	overflow-x: auto;
+	gap: var(--spacing-md);
+	padding: var(--spacing-sm) 0; /* Only vertical padding */
+	scroll-padding-left: 0; /* Ensure first item aligns to left */
+	scrollbar-width: thin;
+}
+
+.novel-card-grid.horizontal-scroll .novel-card {
+	flex: 0 0 200px; /* Fixed width for horizontal scroll */
+	min-width: 200px;
+}
+
+.novel-card-grid.horizontal-scroll .novel-card:first-child {
+	margin-left: 0; /* Ensure first card has no left margin */
+}
+
+.novel-card-grid.horizontal-scroll .novel-card:last-child {
+	margin-right: var(--spacing-md); /* Add right padding for last card */
 }
 
 /* Compact Card Variant */

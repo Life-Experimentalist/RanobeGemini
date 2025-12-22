@@ -10,6 +10,12 @@ import {
 	READING_STATUS_INFO,
 } from "../utils/novel-library.js";
 import { debugLog, debugError } from "../utils/logger.js";
+import {
+	filterEnabledShelves,
+	getSiteSettings,
+	isSiteEnabled,
+	SITE_SETTINGS_KEY,
+} from "../utils/site-settings.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
 // Modal renderer registry (site-specific modal metadata renderers)
@@ -58,6 +64,7 @@ let currentSort = "recent";
 let currentStatusFilter = "all";
 let searchQuery = "";
 let allNovels = [];
+let siteSettings = {};
 let librarySettings = {
 	autoHoldEnabled: true,
 	autoHoldDays: 7,
@@ -313,6 +320,7 @@ async function init() {
 	}
 
 	await applyLibraryTheme();
+	await loadSiteToggleSettings();
 
 	// Populate supported sites list dynamically from SHELVES
 	populateSupportedSites();
@@ -348,6 +356,13 @@ function setupStorageListener() {
 				loadLibrary();
 			}, 500);
 		}
+
+		if (changes[SITE_SETTINGS_KEY]) {
+			loadSiteToggleSettings().then(() => {
+				populateSupportedSites();
+				loadLibrary();
+			});
+		}
 	});
 }
 
@@ -371,6 +386,15 @@ async function loadLibrarySettings() {
 			librarySettings.autoHoldDays || librarySettings.autoHoldDays === 0
 				? librarySettings.autoHoldDays
 				: 7;
+	}
+}
+
+async function loadSiteToggleSettings() {
+	try {
+		siteSettings = await getSiteSettings();
+	} catch (error) {
+		debugError("Failed to load site settings:", error);
+		siteSettings = {};
 	}
 }
 
@@ -738,7 +762,9 @@ function populateSupportedSites() {
 	const sitesList = document.getElementById("supported-sites-list");
 	if (!sitesList) return;
 
-	sitesList.innerHTML = Object.values(SHELVES)
+	const enabled = filterEnabledShelves(siteSettings);
+
+	sitesList.innerHTML = enabled
 		.map(
 			(shelf) =>
 				`<li>${renderShelfIcon(shelf.icon, "site-icon")} ${
@@ -885,6 +911,13 @@ async function loadLibrary() {
 			allNovels = await novelLibrary.getRecentNovels();
 		}
 
+		const enabledShelfIds = new Set(
+			filterEnabledShelves(siteSettings).map((shelf) => shelf.id)
+		);
+		allNovels = allNovels.filter((novel) =>
+			enabledShelfIds.has(novel.shelfId)
+		);
+
 		// Get library stats after any updates
 		const stats = await novelLibrary.getStats();
 		updateStats(stats);
@@ -915,14 +948,25 @@ async function loadLibrary() {
  * Update stats display
  */
 function updateStats(stats) {
-	elements.totalNovels.textContent = stats.totalNovels;
-	elements.totalChapters.textContent = stats.totalEnhancedChapters;
+	const enabledShelves = filterEnabledShelves(siteSettings);
+	const enabledShelfIds = new Set(enabledShelves.map((shelf) => shelf.id));
+	const enabledNovels = allNovels || [];
+	const enabledChapters = enabledNovels.reduce(
+		(sum, novel) => sum + (novel.enhancedChaptersCount || 0),
+		0
+	);
+
+	if (elements.totalNovels)
+		elements.totalNovels.textContent = enabledNovels.length;
+	if (elements.totalChapters)
+		elements.totalChapters.textContent = enabledChapters;
 
 	// Count active shelves
-	const activeShelfCount = Object.values(stats.shelves).filter(
-		(s) => s.novelCount > 0
+	const activeShelfCount = Object.entries(stats.shelves || {}).filter(
+		([id, shelfStats]) =>
+			enabledShelfIds.has(id) && (shelfStats?.novelCount || 0) > 0
 	).length;
-	elements.shelfCount.textContent = activeShelfCount;
+	if (elements.shelfCount) elements.shelfCount.textContent = activeShelfCount;
 }
 
 /**
@@ -1127,15 +1171,15 @@ function renderShelvesView(novels) {
 		}
 	}
 
-	// Sort shelves by latest activity (most recent first)
-	const sortedShelves = Object.entries(SHELVES).sort((a, b) => {
-		const activityA = shelfLatestActivity[a[1].id] || 0;
-		const activityB = shelfLatestActivity[b[1].id] || 0;
+	// Sort enabled shelves by latest activity (most recent first)
+	const sortedShelves = filterEnabledShelves(siteSettings).sort((a, b) => {
+		const activityA = shelfLatestActivity[a.id] || 0;
+		const activityB = shelfLatestActivity[b.id] || 0;
 		return activityB - activityA; // Descending order
 	});
 
 	// Render shelves in sorted order
-	for (const [shelfId, shelfDefinition] of sortedShelves) {
+	for (const shelfDefinition of sortedShelves) {
 		const shelfNovels = novelsByShelf[shelfDefinition.id] || [];
 
 		const shelfSection = document.createElement("section");

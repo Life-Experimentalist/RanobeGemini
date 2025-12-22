@@ -105,9 +105,21 @@ export const KEEP_ALIVE_MAX_PORT_RETRIES = 4; // cap reconnect attempts before g
 export const CHUNK_STAGGER_MS = 800; // delay between chunk sends to reduce burst
 export const CHUNK_RETRY_BACKOFF_MS = 5000; // wait before retrying failed chunk
 
-// Default Google Drive OAuth client ID (used unless user overrides in settings)
+// Default Google Drive OAuth client ID (used unless user overrides in popup/settings)
 export const DEFAULT_DRIVE_CLIENT_ID =
-	"1009134964226-ish1mnbb7a4ob6dmtbkt65q2ont5abmi.apps.googleusercontent.com";
+	"1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com";
+
+// Google OAuth scopes required for backup functionality
+// https://www.googleapis.com/auth/drive.file - Create/modify/delete only files created by this app (safest)
+export const GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+
+// Backup configuration constants
+export const DEFAULT_BACKUP_RETENTION_DAYS = 7; // Keep backups for 7 days
+export const DEFAULT_BACKUP_SCHEDULE_HOUR = 2; // Default daily backup at 2 AM
+export const CONTINUOUS_BACKUP_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minute debounce for continuous mode
+export const DRIVE_BACKUP_MAX_COUNT = 3; // Keep at most 3 backups on Drive
+export const DRIVE_BACKUP_PREFIX = "ranobe-library-"; // Prefix for Drive backup files
+export const DRIVE_CONTINUOUS_BACKUP_BASENAME = "ranobe-library-continuous.json"; // Single rolling file for continuous mode
 
 // Emotion emoji mapping for enhancing text with emotional indicators
 export const EMOTION_EMOJIS = {

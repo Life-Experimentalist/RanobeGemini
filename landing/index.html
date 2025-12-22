@@ -273,87 +273,6 @@
 				<div id="browser-grid" class="grid browsers"></div>
 			</section>
 
-			<section class="section fade-slide" id="sites">
-				<div class="section-head">
-					<p class="eyebrow">Integrations</p>
-					<h2>Optimized for the sites you read</h2>
-					<p class="lede">
-						Built-in handlers with site branding. WebNovel is
-						temporarily disabled; new handlers appear here when
-						added.
-					</p>
-				</div>
-				<div id="site-grid" class="grid site-cards"></div>
-			</section>
-
-			<section id="faq" class="section fade-slide">
-				<div class="section-head">
-					<p class="eyebrow">FAQ</p>
-					<h2>Answers at a glance</h2>
-				</div>
-				<div class="faq">
-					<article>
-						<h3>What is Ranobe Gemini?</h3>
-						<p>
-							A browser extension that uses Gemini API to enhance
-							and summarize web novel chapters with site-aware
-							prompts.
-						</p>
-					</article>
-					<article>
-						<h3>Do I need an API key?</h3>
-						<p>
-							Yes. Add your Gemini API key in the popup Settings
-							tab. Backup keys and rotation are supported for rate
-							limits.
-						</p>
-					</article>
-					<article>
-						<h3>Which sites are supported?</h3>
-						<p>
-							AO3, FanFiction (desktop + mobile), Ranobes,
-							ScribbleHub. WebNovel is temporarily disabled while
-							we refine it.
-						</p>
-					</article>
-					<article>
-						<h3>How do I import or export?</h3>
-						<p>
-							Popup → Library tab → Export downloads a JSON;
-							Import restores it later. No cloud dependency.
-						</p>
-					</article>
-					<article>
-						<h3>How do I toggle original vs enhanced?</h3>
-						<p>
-							After enhancement, a banner lets you switch between
-							original and enhanced, or delete cached copies.
-						</p>
-					</article>
-					<article>
-						<h3>Which model should I pick?</h3>
-						<p>
-							Gemini 2.0 Flash is balanced; 2.5 Flash is fastest;
-							2.5 Pro is highest quality.
-						</p>
-					</article>
-					<article>
-						<h3>What if enhancement fails?</h3>
-						<p>
-							Test your key in the popup, enable chunking for long
-							chapters, lower temperature, and retry. Check
-							console for errors.
-						</p>
-					</article>
-					<article>
-						<h3>Is it free?</h3>
-						<p>
-							Yes. The extension is open-source. You only pay for
-							Gemini API usage (free tier is generous).
-						</p>
-					</article>
-				</div>
-			</section>
 
 			<section class="section fade-slide" id="sites">
 				<div class="section-head">
@@ -375,63 +294,111 @@
 				</div>
 				<div class="faq">
 					<article>
-						<h3>What is Ranobe Gemini?</h3>
+						<h3>💡 What is Ranobe Gemini?</h3>
 						<p>
-							A browser extension that uses Gemini API to enhance
-							and summarize web novel chapters with site-aware
-							prompts.
+							Ranobe Gemini is a browser extension that uses Google's
+							Gemini AI to enhance machine-translated web novels,
+							improving readability, grammar, and flow while
+							maintaining the original story integrity. It also provides summaries
+							and site-aware content processing.
 						</p>
 					</article>
 					<article>
-						<h3>Do I need an API key?</h3>
+						<h3>🔑 Do I need an API key?</h3>
 						<p>
-							Yes. Add your Gemini API key in the popup Settings
+							Yes. Add your free Gemini API key from <a href="https://ai.google.dev/" target="_blank" rel="noreferrer">Google AI Studio</a> in the popup Settings
 							tab. Backup keys and rotation are supported for rate
-							limits.
+							limits. The free tier is generous and suitable for most users.
 						</p>
 					</article>
 					<article>
-						<h3>Which sites are supported?</h3>
+						<h3>🌐 Which sites are supported?</h3>
 						<p>
-							AO3, FanFiction (desktop + mobile), Ranobes,
-							ScribbleHub. WebNovel is temporarily disabled while
-							we refine it.
+							Currently supports:
+							<strong>Archive of Our Own</strong> (AO3),
+							<strong>FanFiction.net</strong> (desktop + mobile),
+							<strong>Ranobes</strong>,
+							<strong>ScribbleHub</strong>.
+							WebNovel is temporarily disabled while
+							we refine it. More sites may be added based on user requests.
 						</p>
 					</article>
 					<article>
-						<h3>How do I import or export?</h3>
+						<h3>💾 How does content caching work?</h3>
+						<p>
+							Enhanced chapters are automatically cached for 7 days.
+							When you revisit a chapter, the cached version loads
+							instantly. You can regenerate fresh content or delete
+							the cache using the buttons in the enhanced banner.
+						</p>
+					</article>
+					<article>
+						<h3>📚 How do I import or export?</h3>
 						<p>
 							Popup → Library tab → Export downloads a JSON;
 							Import restores it later. No cloud dependency.
+							You can also use the backup features in the Advanced tab
+							for automatic backup rotation.
 						</p>
 					</article>
 					<article>
-						<h3>How do I toggle original vs enhanced?</h3>
+						<h3>🔄 How do I toggle original vs enhanced?</h3>
 						<p>
-							After enhancement, a banner lets you switch between
-							original and enhanced, or delete cached copies.
+							After enhancement, a banner appears at the top letting you switch between
+							original and enhanced, or delete cached copies. Use the
+							<strong>Show Original</strong> or <strong>Show Enhanced</strong> buttons.
 						</p>
 					</article>
 					<article>
-						<h3>Which model should I pick?</h3>
+						<h3>⚙️ Which model should I pick?</h3>
 						<p>
-							Gemini 2.0 Flash is balanced; 2.5 Flash is fastest;
-							2.5 Pro is highest quality.
+							<strong>Gemini 2.0 Flash</strong> is balanced and recommended for most users;
+							<strong>2.5 Flash</strong> is fastest for quick reads;
+							<strong>2.5 Pro</strong> is highest quality with larger context window but slower.
 						</p>
 					</article>
 					<article>
-						<h3>What if enhancement fails?</h3>
+						<h3>🔧 What if enhancement fails?</h3>
 						<p>
-							Test your key in the popup, enable chunking for long
-							chapters, lower temperature, and retry. Check
-							console for errors.
+							Test your key in the popup (Settings → Test Key), enable chunking for long
+							chapters under Advanced settings, lower temperature to 0.3, and retry. Check
+							console (F12) for detailed errors. Report persistent issues on GitHub.
 						</p>
 					</article>
 					<article>
-						<h3>Is it free?</h3>
+						<h3>🎨 What do advanced parameters do?</h3>
 						<p>
-							Yes. The extension is open-source. You only pay for
-							Gemini API usage (free tier is generous).
+							<strong>Temperature</strong> controls creativity (lower = consistent, higher = creative).
+							<strong>Top-P</strong> limits token diversity.
+							<strong>Top-K</strong> sets maximum tokens per step.
+							<strong>Max Output</strong> sets response length. Use defaults unless you understand these.
+						</p>
+					</article>
+					<article>
+						<h3>📋 What are Custom Prompts?</h3>
+						<p>
+							Custom prompts let you control how Gemini processes content.
+							<strong>Enhancement Prompt</strong> improves translation quality,
+							<strong>Summarization Prompt</strong> creates summaries,
+							<strong>Permanent Prompt</strong> adds global instructions.
+							Reset to defaults if unsure.
+						</p>
+					</article>
+					<article>
+						<h3>💰 Is it free?</h3>
+						<p>
+							Yes! The extension is open-source and free. You only pay for
+							Gemini API usage (free tier is generous). Check
+							<a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noreferrer">Google AI pricing</a>
+							for rate limits.
+						</p>
+					</article>
+					<article>
+						<h3>📖 How does the Library work?</h3>
+						<p>
+							The Library tab tracks all novels you've read, showing
+							current novel details, suggestions, and complete reading history
+							organized by website. Export/import your library as JSON for backups.
 						</p>
 					</article>
 				</div>
@@ -447,17 +414,29 @@
 					<div class="cta-row">
 						<a
 							class="btn primary"
-							href="https://github.com/Life-Experimentalist/RanobeGemini/releases/latest"
+							href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
 							target="_blank"
 							rel="noreferrer"
-							>Download latest</a
+							>Get for Firefox</a
+						>
+						<a
+							class="btn primary"
+							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
+							target="_blank"
+							rel="noreferrer"
+							>Get for Edge</a
+						>
+						<button
+							class="btn ghost"
+							id="cta-library-btn"
+							type="button"
+							style="display: none;"
+							>Open Library</button
 						>
 						<a
 							class="btn ghost"
-							href="https://github.com/Life-Experimentalist/RanobeGemini"
-							target="_blank"
-							rel="noreferrer"
-							>View on GitHub</a
+							href="https://ranobe.vkrishna04.me/#faq"
+							>View FAQ</a
 						>
 					</div>
 				</div>

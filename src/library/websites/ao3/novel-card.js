@@ -1,6 +1,7 @@
 /**
  * @fileoverview AO3 Novel Card Renderer
- * Custom card rendering for Archive of Our Own novels with rich metadata display
+ * Custom card rendering for Archive of Our Own novels with simplified text-only display
+ * No images, focus on metadata and reading progress
  */
 
 import { NovelCardRenderer, registerCardRenderer } from "../novel-card-base.js";
@@ -298,7 +299,6 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		const statusInfo =
 			READING_STATUS_INFO[normalizedReadingKey] ||
 			READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
-		const statusClass = `status-${normalizedReadingKey.replace(/-/g, "_")}`;
 
 		const enhanced = novel.enhancedChaptersCount ?? 0;
 		const chapters = getVal("chapters") || getVal("totalChapters") || 0;
@@ -306,163 +306,73 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			? Math.min(100, Math.round((enhanced / chapters) * 100))
 			: 0;
 
-		// Build all badge chips
+		// Get essential metadata
 		const rating = getVal("rating");
 		const language = getVal("language");
-		const category = getVal("category");
 		const workStatus = getVal("status");
-
-		// Get rating gradient for placeholder
-		const gradientColors = this.getRatingGradient(rating);
-		const categoryIcon = this.getCategoryIcon(category);
-		const shortRating = this.getShortRating(rating);
-
-		// Create beautiful placeholder for AO3 (no cover images)
-		const placeholderMarkup = `
-			<div class="ao3-cover-placeholder" style="background: linear-gradient(145deg, ${gradientColors.primary} 0%, ${gradientColors.secondary} 100%);">
-				<div class="ao3-placeholder-pattern"></div>
-				<div class="ao3-placeholder-content">
-					<span class="ao3-placeholder-rating">${shortRating}</span>
-					<span class="ao3-placeholder-category">${categoryIcon}</span>
-				</div>
-				<div class="ao3-placeholder-icon">🏛️</div>
-			</div>
-		`;
-
-		const ratingBadge = rating
-			? `<span class="chip rating-badge ${this.getRatingClass(
-					rating
-			  )}" title="Content Rating">${this.escapeHtml(rating)}</span>`
-			: "";
-		const languageBadge = language
-			? `<span class="chip chip-ghost" title="Language">${this.escapeHtml(
-					language
-			  )}</span>`
-			: "";
-		const categoryBadge = category
-			? `<span class="chip chip-ghost" title="Category">${this.escapeHtml(
-					category
-			  )}</span>`
-			: "";
-		const workStatusBadge = workStatus
-			? `<span class="chip ${
-					workStatus.toLowerCase() === "completed" ||
-					workStatus.toLowerCase() === "complete"
-						? "chip-success"
-						: "chip-warning"
-			  }" title="Publication Status">${this.escapeHtml(
-					workStatus
-			  )}</span>`
-			: "";
-
-		// Build stats display - prioritize key stats
 		const words = getVal("words", 0);
 		const kudos = getVal("kudos", 0);
 		const hits = getVal("hits", 0);
-		const comments = getVal("comments", 0);
-		const bookmarks = getVal("bookmarks", 0);
-
-		// Compact stats for card
-		const quickStats = [];
-		if (chapters)
-			quickStats.push({ icon: "📖", value: chapters, label: "ch" });
-		if (words)
-			quickStats.push({ icon: "📝", value: words, label: "words" });
-		if (kudos)
-			quickStats.push({ icon: "❤️", value: kudos, label: "kudos" });
-		if (hits) quickStats.push({ icon: "👁️", value: hits, label: "hits" });
-
-		const quickStatsMarkup = quickStats
-			.slice(0, 4)
-			.map(
-				(stat) => `
-					<span class="ao3-quick-stat" title="${stat.label}">
-						${stat.icon} ${this.formatNumber(stat.value)}
-					</span>
-				`
-			)
-			.join("");
-
-		// Build tags - show primary fandom and relationship
 		const fandoms = metadata.fandoms || [];
-		const relationships = metadata.relationships || [];
 		const primaryFandom = fandoms[0] || "";
-		const primaryRelationship = relationships[0] || "";
 
-		const tagsMarkup = `
-			${
-				primaryFandom
-					? `<span class="ao3-tag ao3-tag-fandom" title="${this.escapeHtml(
-							fandoms.join(", ")
-					  )}">${this.escapeHtml(
-							this.truncateText(primaryFandom, 25)
-					  )}${
-							fandoms.length > 1 ? ` +${fandoms.length - 1}` : ""
-					  }</span>`
-					: ""
-			}
-			${
-				primaryRelationship
-					? `<span class="ao3-tag ao3-tag-relationship" title="${this.escapeHtml(
-							relationships.join(", ")
-					  )}">${this.escapeHtml(
-							this.truncateText(primaryRelationship, 30)
-					  )}${
-							relationships.length > 1
-								? ` +${relationships.length - 1}`
-								: ""
-					  }</span>`
-					: ""
-			}
-		`;
+		// Rating badge with simple text styling
+		const ratingClass = this.getRatingClass(rating);
+		const ratingBadge = rating
+			? `<span class="chip rating-badge ${ratingClass}">${this.escapeHtml(rating)}</span>`
+			: "";
+
+		// Status badge
+		const isCompleted = workStatus && (
+			workStatus.toLowerCase() === "completed" ||
+			workStatus.toLowerCase() === "complete"
+		);
+		const statusBadge = workStatus
+			? `<span class="chip ${isCompleted ? "chip-success" : "chip-warning"}">${this.escapeHtml(workStatus)}</span>`
+			: "";
+
+		// Simple stats display
+		const statsText = [];
+		if (chapters) statsText.push(`${this.formatNumber(chapters)} ch`);
+		if (words) statsText.push(`${this.formatNumber(words)} words`);
+		if (kudos) statsText.push(`${this.formatNumber(kudos)} kudos`);
+
+		const statsHTML = statsText.length > 0 ? `<div class="ao3-stats-text">${statsText.join(" • ")}</div>` : "";
+
+		// Fandom display
+		const fandomHTML = primaryFandom
+			? `<div class="ao3-fandom-tag">${this.escapeHtml(this.truncateText(primaryFandom, 40))}</div>`
+			: "";
+
+		// Progress display
+		const progressHTML = chapters > 0
+			? `<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
+			   <div class="ao3-progress-text">✨ ${this.formatNumber(enhanced)}/${this.formatNumber(chapters)}</div>`
+			: "";
 
 		card.innerHTML = `
-			<div class="ao3-card-layout">
-				<div class="ao3-card-left">
-					${placeholderMarkup}
-					<span class="ao3-reading-badge ${statusClass}">${statusInfo.label}</span>
+			<div class="ao3-card-simple">
+				<div class="ao3-card-main">
+					<h3 class="ao3-card-title" title="${this.escapeHtml(novel.title)}">${this.escapeHtml(novel.title)}</h3>
+					<p class="ao3-card-author">by ${this.escapeHtml(novel.author || "Anonymous")}</p>
+
+					<div class="ao3-card-metadata">
+						${ratingBadge}
+						${statusBadge}
+						${language ? `<span class="chip">${this.escapeHtml(language)}</span>` : ""}
+					</div>
+
+					${statsHTML}
+					${fandomHTML}
+
+					<div class="ao3-card-progress">
+						${progressHTML}
+					</div>
 				</div>
-				<div class="ao3-card-right">
-					<div class="ao3-card-header">
-						<h3 class="ao3-card-title" title="${this.escapeHtml(
-							novel.title
-						)}">${this.escapeHtml(novel.title)}</h3>
-						<span class="ao3-card-author">by <strong>${this.escapeHtml(
-							novel.author || "Anonymous"
-						)}</strong></span>
-					</div>
 
-					<div class="ao3-card-badges">
-						${ratingBadge}${categoryBadge}${workStatusBadge}${languageBadge}
-					</div>
-
-					<div class="ao3-card-stats">
-						${quickStatsMarkup}
-					</div>
-
-					<div class="ao3-card-tags">
-						${tagsMarkup}
-					</div>
-
-					<div class="ao3-card-footer">
-						<div class="ao3-progress-section">
-							<div class="ao3-progress-bar">
-								<div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div>
-							</div>
-							<span class="ao3-progress-text">✨ ${this.formatNumber(
-								enhanced
-							)}/${this.formatNumber(
-			chapters
-		)} (${progressPercent}%)</span>
-						</div>
-						${
-							novel.sourceUrl
-								? `<a class="ao3-open-btn" href="${this.escapeHtml(
-										novel.sourceUrl
-								  )}" target="_blank" rel="noreferrer" title="Open on AO3">↗</a>`
-								: ""
-						}
-					</div>
+				<div class="ao3-card-status">
+					<span class="ao3-reading-status" style="background-color: ${statusInfo.color};">${statusInfo.label}</span>
+					${novel.sourceUrl ? `<a class="ao3-link-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer" title="Open on AO3">↗</a>` : ""}
 				</div>
 			</div>
 		`;

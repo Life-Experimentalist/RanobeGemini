@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!DOCTYPE html>
+		<html lang="en">
+			<head>
+				<meta charset="UTF-8" />
+				<title>Ranobe Gemini – Login Complete</title>
+			</head>
+			<body>
+				<script>
+					(function () {
+						const params = new URLSearchParams(
+							window.location.hash.slice(1)
+						);
+						const accessToken = params.get("access_token");
+						const expiresIn = Number(params.get("expires_in") || 0);
+
+						if (!accessToken) {
+							document.body.innerText =
+								"OAuth failed. No access token received.";
+							return;
+						}
+
+						const expiresAt = Date.now() + expiresIn * 1000;
+						window.opener?.postMessage(
+							{
+								source: "ranobe-gemini-oauth",
+								accessToken,
+								expiresAt,
+							},
+							"*"
+						);
+
+						document.body.innerText =
+							"Login successful. You may close this tab.";
+
+						// Best-effort extension detection and redirect (self-contained)
+						const EXT_IDS = {
+							firefox: "33b0347d-8e94-40d6-a169-249716997cc6",
+							edge: "agbhdkiciomjlifhlfbjanpnhhokaimn",
+						};
+
+						function detectBrowser() {
+							const ua = navigator.userAgent.toLowerCase();
+							if (/firefox/.test(ua)) return "firefox";
+							if (/edg/.test(ua)) return "edge";
+							if (/chrome/.test(ua)) return "chrome";
+							return "unknown";
+						}
+
+						function dedupe(list) {
+							const seen = new Set();
+							return list.filter((c) => {
+								const key = `${c.scheme}://${c.id}`;
+								if (!c.id || seen.has(key)) return false;
+								seen.add(key);
+								return true;
+							});
+						}
+
+						function probeExtension({ scheme, id }) {
+							return new Promise((resolve) => {
+								const iframe = document.createElement("iframe");
+								iframe.style.display = "none";
+								iframe.referrerPolicy = "no-referrer";
+								iframe.src = `${scheme}://${id}/library/library.html`;
+								let done = false;
+
+								const cleanup = () => {
+									if (iframe.parentNode)
+										iframe.parentNode.removeChild(iframe);
+								};
+
+								iframe.onload = () => {
+									if (done) return;
+									done = true;
+									cleanup();
+									resolve(
+										`${scheme}://${id}/library/library.html`
+									);
+								};
+
+								iframe.onerror = () => {
+									if (done) return;
+									done = true;
+									cleanup();
+									resolve(null);
+								};
+
+								setTimeout(() => {
+									if (done) return;
+									done = true;
+									cleanup();
+									resolve(null);
+								}, 1200);
+
+								document.body.appendChild(iframe);
+							});
+						}
+
+						async function tryOpenLibrary() {
+							const searchParams = new URLSearchParams(
+								window.location.search
+							);
+							const extParam = searchParams.get("ext_id") || "";
+							const stored =
+								localStorage.getItem("rg_last_ext_id") || "";
+							const browser = detectBrowser();
+
+							const candidates = dedupe([
+								extParam && {
+									scheme: "chrome-extension",
+									id: extParam,
+								},
+								stored && {
+									scheme: "chrome-extension",
+									id: stored,
+								},
+								browser === "firefox"
+									? {
+											scheme: "moz-extension",
+											id: EXT_IDS.firefox,
+									  }
+									: null,
+								browser === "edge" || browser === "chrome"
+									? {
+											scheme: "chrome-extension",
+											id: EXT_IDS.edge,
+									  }
+									: null,
+							]);
+
+							for (const candidate of candidates) {
+								const url = await probeExtension(candidate);
+								if (url) {
+									localStorage.setItem(
+										"rg_last_ext_id",
+										candidate.id
+									);
+									try {
+										window.location.href = url;
+										return;
+									} catch (_) {
+										// ignore and continue
+									}
+								}
+							}
+						}
+
+						tryOpenLibrary();
+						setTimeout(() => window.close(), 800);
+					})();
+				</script>
+			</body>
+		</html>
+	</head>
+</html>

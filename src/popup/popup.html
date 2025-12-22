@@ -28,12 +28,13 @@
 					📚
 				</button>
 			</div>
+
 			<!-- Tab navigation -->
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="settings">
 					Settings
 				</button>
-				<button class="tab-btn" data-tab="library">Library</button>
+				<button class="tab-btn" data-tab="novels">Novels</button>
 				<button class="tab-btn" data-tab="prompts">Prompts</button>
 				<button class="tab-btn" data-tab="advanced">Advanced</button>
 				<button class="tab-btn" data-tab="info">Info & FAQ</button>
@@ -42,61 +43,17 @@
 			<!-- Settings Tab -->
 			<div id="settings" class="tab-content active">
 				<div class="setting">
-					<label for="apiKey">Gemini API Key (Primary):</label>
+					<label for="apiKey">Gemini API Key:</label>
 					<input
 						type="password"
 						id="apiKey"
-						placeholder="Enter your primary API key"
+						placeholder="Enter your API key"
 					/>
 					<div class="button-group">
 						<button id="saveApiKey">Save Key</button>
 						<button id="testApiKey">Test Key</button>
 					</div>
 				</div>
-
-				<!-- Backup API Keys -->
-				<details class="setting backup-keys-section">
-					<summary>
-						🔑 Backup API Keys (for rate limit handling)
-					</summary>
-					<div class="backup-keys-content">
-						<div class="backup-keys-list" id="backupKeysList">
-							<!-- Backup keys will be dynamically added here -->
-						</div>
-						<div class="add-backup-key">
-							<input
-								type="password"
-								id="newBackupKey"
-								placeholder="Enter backup API key"
-								style="flex: 1"
-							/>
-							<button id="addBackupKey" class="btn-small">
-								+ Add
-							</button>
-						</div>
-						<div
-							class="api-rotation-setting"
-							style="margin-top: 10px"
-						>
-							<label for="apiKeyRotation"
-								>Key Rotation Strategy:</label
-							>
-							<select id="apiKeyRotation">
-								<option value="failover">
-									Failover (use backups only on error)
-								</option>
-								<option value="round-robin">
-									Round Robin (rotate through all keys)
-								</option>
-							</select>
-							<div class="description">
-								Failover uses backup keys only when rate
-								limited. Round Robin distributes load across all
-								keys.
-							</div>
-						</div>
-					</div>
-				</details>
 
 				<div class="setting">
 					<label for="modelSelect">Gemini Model:</label>
@@ -123,6 +80,7 @@
 				</div>
 
 				<!-- Temperature moved to Advanced tab -->
+
 				<div class="setting">
 					<label>Processing Options:</label>
 					<div style="margin-top: 8px">
@@ -161,7 +119,7 @@
 								max="50000"
 								step="1000"
 								style="width: 120px"
-								value="20000"
+								value="12000"
 							/>
 							<span
 								class="description"
@@ -182,29 +140,9 @@
 							expressions in text
 						</div>
 					</div>
-
-					<div style="margin-top: 15px">
-						<label style="font-weight: normal">
-							<input type="checkbox" id="formatGameStats" checked />
-							Preserve & restyle RPG / game stat boxes
-						</label>
-						<div class="description">
-							Keeps stat blocks compact and aligned while enhancing content
-						</div>
-					</div>
-
-					<div style="margin-top: 15px">
-						<label style="font-weight: normal">
-							<input type="checkbox" id="centerSceneHeadings" checked />
-							Center scene headings and dividers
-						</label>
-						<div class="description">
-							Centers chapter scene breaks/headings to make them standout a bit
-						</div>
-					</div>
 				</div>
 
-				<!-- <div class="setting">
+				<div class="setting">
 					<label for="maxOutputTokens"
 						>Maximum Output Length (tokens):</label
 					>
@@ -220,7 +158,7 @@
 						Controls maximum length of generated text (higher =
 						longer outputs)
 					</div>
-				</div> -->
+				</div>
 
 				<div class="setting">
 					<label>
@@ -240,164 +178,53 @@
 				</div>
 			</div>
 
-			<!-- Library Tab -->
-			<div id="library" class="tab-content">
-				<!-- Loading State -->
-				<div id="libraryLoading" class="library-loading">
-					<div class="loading-spinner"></div>
-					<span>Loading library...</span>
+			<!-- Novels Tab -->
+			<div id="novels" class="tab-content">
+				<!-- Current Novel Section -->
+				<div class="current-novel-section">
+					<div class="section-header">📖 Currently Reading</div>
+					<div id="currentNovelInfo" class="current-novel-card">
+						<div class="no-current-novel">
+							<p>No current novel detected.</p>
+							<p class="description">
+								Visit a novel page and the extension will track
+								your reading.
+							</p>
+						</div>
+					</div>
 				</div>
 
-				<!-- Current Page Section -->
-				<section id="currentPageSection" class="library-section current-page-section">
+				<!-- Suggested Novels Section -->
+				<div class="suggested-novels-section">
+					<div class="section-header">✨ Suggested Reads</div>
+					<div id="suggestedNovelsList" class="suggested-novels-grid">
+						<div class="no-suggestions">
+							<p>
+								No suggestions yet. Check back after reading a
+								few chapters!
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- All Novels Section -->
+				<div class="all-novels-section">
 					<div class="section-header">
-						<h4>📄 Current Page</h4>
-						<span class="status-badge" id="pageStatusBadge">Detecting...</span>
-					</div>
-
-					<!-- Novel Detected Card -->
-					<div id="currentNovelCard" class="novel-card current-novel-card" style="display: none;">
-						<div class="novel-card-cover" id="currentNovelCover">
-							<div class="cover-placeholder">📖</div>
-						</div>
-						<div class="novel-card-content">
-							<h5 class="novel-title" id="currentNovelTitle">Novel Title</h5>
-							<p class="novel-author" id="currentNovelAuthor">by Author</p>
-
-							<div class="novel-tags" id="currentNovelTags">
-								<span class="tag tag-page-type" id="currentPageTypeTag"></span>
-								<span class="tag tag-status" id="currentStatusTag"></span>
-							</div>
-
-							<div class="novel-chapter-info" id="currentChapterInfo">
-								<span class="chapter-text" id="currentChapterText"></span>
-								<div class="progress-bar" id="currentProgressBar" style="display: none;">
-									<div class="progress-fill" id="currentProgressFill"></div>
-								</div>
-								<span class="progress-percent" id="currentProgressPercent"></span>
-							</div>
-
-							<!-- In Library Details -->
-							<div class="library-details" id="libraryDetails" style="display: none;">
-								<div class="detail-row">
-									<label>Status:</label>
-									<select id="readingStatusSelect" class="status-select">
-										<option value="reading">📖 Reading</option>
-										<option value="plan-to-read">📋 Plan to Read</option>
-										<option value="completed">✅ Completed</option>
-										<option value="on-hold">⏸️ On Hold</option>
-										<option value="dropped">❌ Dropped</option>
-									</select>
-								</div>
-								<div class="detail-row" id="enhancedCountRow">
-									<label>Enhanced:</label>
-									<span id="enhancedCountValue">0 chapters</span>
-								</div>
-								<div class="detail-row genres-row" id="genresRow" style="display: none;">
-									<label>Genres:</label>
-									<div class="genres-list" id="genresList"></div>
-								</div>
-							</div>
-
-							<div class="novel-actions">
-								<button id="addToLibraryBtn" class="btn btn-primary btn-sm">
-									<span class="btn-icon">📚</span>
-									<span class="btn-text">Add to Library</span>
-								</button>
-								<button id="openNovelBtn" class="btn btn-secondary btn-sm" style="display: none;">
-									<span class="btn-icon">📖</span>
-									<span class="btn-text">Open</span>
-								</button>
-							</div>
-						</div>
-					</div>
-
-					<!-- Not Supported Message -->
-					<div id="notSupportedMessage" class="not-supported-message" style="display: none;">
-						<span class="message-icon">ℹ️</span>
-						<span class="message-text" id="notSupportedText">Not a supported novel page</span>
-					</div>
-				</section>
-
-				<!-- Library Overview Section -->
-				<section class="library-section library-overview">
-					<div class="section-header">
-						<h4>📚 Your Library</h4>
-						<div class="header-actions">
-							<button id="openFullLibrary" class="btn btn-primary btn-sm" title="Open Full Library">
-								<span class="btn-icon">📖</span>
-								<span class="btn-text">Full Library</span>
-							</button>
-							<button id="refreshLibrary" class="btn btn-icon-only" title="Refresh">↻</button>
-						</div>
-					</div>
-
-					<!-- Stats Row -->
-					<div class="stats-row" id="libraryStats">
-						<div class="stat-item">
-							<span class="stat-value" id="statNovels">0</span>
-							<span class="stat-label">Novels</span>
-						</div>
-						<div class="stat-item">
-							<span class="stat-value" id="statChapters">0</span>
-							<span class="stat-label">Enhanced</span>
-						</div>
-						<div class="stat-item">
-							<span class="stat-value" id="statShelves">0</span>
-							<span class="stat-label">Sites</span>
-						</div>
-					</div>
-				</section>
-
-				<!-- Backups Section -->
-				<section class="library-section backup-section">
-					<div class="section-header">
-						<h4>💾 Library Backups</h4>
-					</div>
-					<div class="backup-actions">
-						<input
-							type="text"
-							id="backupFolder"
-							placeholder="Downloads/RanobeGeminiBackups"
-							title="Folder inside Downloads to save backups"
-							style="flex: 1 1 180px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;"
-						/>
-						<label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #475569;">
-							<input type="checkbox" id="autoBackupToggle" />
-							<span>Auto backup daily (keep last 3)</span>
-						</label>
-						<button id="manualBackupBtn" class="btn btn-primary btn-sm" title="Save backup now">
-							<span class="btn-icon">⬇️</span>
-							<span class="btn-text">Download Backup</span>
+						📚 Your Library
+						<button
+							id="refreshNovels"
+							class="icon-button"
+							title="Refresh library"
+						>
+							↻
 						</button>
-						<button id="restoreBackupBtn" class="btn btn-secondary btn-sm" title="Restore from file">
-							<span class="btn-icon">♻️</span>
-							<span class="btn-text">Restore</span>
-						</button>
-						<input type="file" id="restoreFileInput" accept="application/json" style="display: none;" />
 					</div>
-					<div class="backup-history" id="backupHistory">
-						<strong>Recent backups:</strong>
-						<ul id="backupHistoryList"></ul>
+					<div class="novels-list" id="novelsList">
+						<div class="no-novels">
+							No novels in your library yet.
+						</div>
 					</div>
-				</section>
-
-				<!-- Recent Novels Section -->
-				<section class="library-section recent-section">
-					<div class="section-header">
-						<h4 id="recentSectionTitle">Recent Novels</h4>
-						<span class="site-indicator" id="siteIndicator" style="display: none;"></span>
-					</div>
-
-					<div class="novels-grid" id="recentNovelsGrid">
-						<!-- Novels will be populated here -->
-					</div>
-
-					<div class="empty-state" id="emptyState" style="display: none;">
-						<span class="empty-icon">📚</span>
-						<p class="empty-text">No novels yet. Start enhancing chapters to build your library!</p>
-					</div>
-				</section>
+				</div>
 			</div>
 
 			<!-- Prompts Tab -->
@@ -413,74 +240,32 @@
 					</button>
 				</div>
 
-				<div class="setting summary-prompts-section">
-					<h4 style="margin-bottom: 12px; color: #495057">
-						📝 Summary Prompts
-					</h4>
-					<p
-						style="
-							font-size: 12px;
-							color: #6c757d;
-							margin-bottom: 15px;
-						"
-					>
-						These are separate prompts used for different summary
-						types. Long summary is for detailed chapter analysis,
-						short summary is for quick overviews.
-					</p>
+				<div class="setting">
+					<label for="summaryPrompt">Summary Prompt:</label>
+					<textarea
+						id="summaryPrompt"
+						placeholder="Instructions for summarization..."
+					></textarea>
+					<button id="resetSummaryPrompt" style="margin-top: 5px">
+						Reset to Default
+					</button>
+				</div>
 
-					<div
-						class="summary-prompt-box"
-						style="
-							background: #f8f9fa;
-							padding: 15px;
-							border-radius: 8px;
-							margin-bottom: 15px;
-							border-left: 4px solid #28a745;
-						"
+				<div class="setting">
+					<label for="shortSummaryPrompt"
+						>Short Summary Prompt:</label
 					>
-						<label
-							for="summaryPrompt"
-							style="color: #28a745; font-weight: 600"
-							>📖 Long Summary Prompt (Detailed Analysis):</label
-						>
-						<textarea
-							id="summaryPrompt"
-							placeholder="Instructions for detailed summarization..."
-							style="margin-top: 8px"
-						></textarea>
-						<button id="resetSummaryPrompt" style="margin-top: 5px">
-							Reset to Default
-						</button>
-					</div>
-
-					<div
-						class="summary-prompt-box"
-						style="
-							background: #f8f9fa;
-							padding: 15px;
-							border-radius: 8px;
-							border-left: 4px solid #17a2b8;
-						"
+					<textarea
+						id="shortSummaryPrompt"
+						placeholder="Instructions for brief summarization..."
+						rows="4"
+					></textarea>
+					<button
+						id="resetShortSummaryPrompt"
+						style="margin-top: 5px"
 					>
-						<label
-							for="shortSummaryPrompt"
-							style="color: #17a2b8; font-weight: 600"
-							>⚡ Short Summary Prompt (Quick Overview):</label
-						>
-						<textarea
-							id="shortSummaryPrompt"
-							placeholder="Instructions for brief summarization..."
-							rows="4"
-							style="margin-top: 8px"
-						></textarea>
-						<button
-							id="resetShortSummaryPrompt"
-							style="margin-top: 5px"
-						>
-							Reset to Default
-						</button>
-					</div>
+						Reset to Default
+					</button>
 				</div>
 
 				<div class="setting">
@@ -582,59 +367,436 @@ Click to generate preview...</pre
 
 			<!-- Advanced Tab -->
 			<div id="advanced" class="tab-content">
+				<!-- Library Backup & Restore -->
+				<div class="setting">
+					<h4 style="margin-bottom: 10px">
+						💾 Library Backup & Restore
+					</h4>
+					<div class="description" style="margin-bottom: 15px">
+						Automatically backup your reading history and library
+						data. Choose local backups or sync with Google Drive.
+					</div>
+
+					<!-- Google Drive Backup Section -->
+					<div style="margin-bottom: 15px; padding: 10px; background: rgba(66, 133, 244, 0.1); border-radius: 6px; border-left: 3px solid #4285F4">
+						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+							<label style="font-weight: bold; color: #4285F4">
+								☁️ Google Drive Backup
+							</label>
+							<span id="driveStatus" style="font-size: 12px; color: #666">
+								Disconnected
+							</span>
+						</div>
+
+						<div id="driveNotConnected" style="margin-bottom: 10px">
+							<p style="font-size: 13px; margin: 0 0 8px 0">
+								Backup your library to Google Drive with automatic version history and easy restore.
+							</p>
+							<button id="connectDriveBtn" class="btn-primary" style="width: 100%; margin-bottom: 8px">
+								🔗 Connect Google Drive
+							</button>
+						</div>
+
+						<div id="driveConnected" style="display: none">
+							<div style="margin-bottom: 8px">
+								<label style="font-weight: bold; font-size: 12px">Backup Mode:</label>
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px">
+									<label style="display: flex; align-items: center; gap: 4px; font-size: 12px">
+										<input type="radio" name="driveBackupMode" id="driveScheduled" value="scheduled" checked />
+										<span>Scheduled</span>
+									</label>
+									<label style="display: flex; align-items: center; gap: 4px; font-size: 12px">
+										<input type="radio" name="driveBackupMode" id="driveContinuous" value="continuous" />
+										<span>Continuous</span>
+									</label>
+								</div>
+								<div class="description" style="font-size: 11px; margin-top: 4px">
+									Scheduled: Daily at set time | Continuous: After library changes (5-min delay)
+								</div>
+							</div>
+
+							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px">
+								<button id="backupNowBtn" class="btn-primary">
+									📤 Backup Now
+								</button>
+								<button id="viewBackupsBtn" class="btn-secondary">
+									📋 View Backups
+								</button>
+							</div>
+
+							<button id="disconnectDriveBtn" class="btn-secondary" style="width: 100%; font-size: 12px; padding: 6px">
+								🔌 Disconnect Drive
+							</button>
+						</div>
+					</div>
+
+					<div style="margin-bottom: 15px">
+						<label
+							style="
+								font-weight: normal;
+								display: flex;
+								gap: 8px;
+								align-items: center;
+							"
+						>
+							<input type="checkbox" id="autoBackupEnabled" />
+							<span>Enable local file backups</span>
+						</label>
+						<div class="description">
+							Save backups to your local downloads folder.
+						</div>
+					</div>
+
+					<div style="margin-bottom: 15px">
+						<label for="backupLocation">Backup Location:</label>
+						<div style="display: flex; gap: 8px">
+							<input
+								type="text"
+								id="backupLocation"
+								readonly
+								placeholder="No location selected"
+								style="flex: 1"
+							/>
+							<button
+								id="chooseBackupLocation"
+								class="btn-secondary"
+								style="padding: 8px 12px"
+							>
+								Choose Folder
+							</button>
+						</div>
+						<div class="description">
+							Where to store backup files (defaults to Downloads)
+						</div>
+					</div>
+
+					<div style="margin-bottom: 15px">
+						<div
+							style="
+								display: grid;
+								grid-template-columns: 1fr 1fr;
+								gap: 8px;
+							"
+						>
+							<button id="createManualBackup" class="btn-primary">
+								💾 Create Backup Now
+							</button>
+							<button id="restoreBackupBtn" class="btn-secondary">
+								📂 Restore Backup
+							</button>
+						</div>
+					</div>
+
+					<!-- Backup List -->
+					<details
+						open
+						style="
+							margin-top: 15px;
+							padding: 12px;
+							background: rgba(0, 0, 0, 0.2);
+							border-radius: 6px;
+						"
+					>
+						<summary
+							style="
+								cursor: pointer;
+								font-weight: bold;
+								margin-bottom: 10px;
+							"
+						>
+							📋 Backup History (Max 3)
+						</summary>
+						<div
+							id="backupList"
+							style="max-height: 300px; overflow-y: auto"
+						>
+							<div
+								class="no-backups"
+								style="
+									text-align: center;
+									padding: 20px;
+									color: #888;
+								"
+							>
+								No backups yet. Create your first backup!
+							</div>
+						</div>
+					</details>
+
+					<!-- Import & Merge Options -->
+					<details
+						style="
+							margin-top: 15px;
+							padding: 12px;
+							background: rgba(0, 0, 0, 0.2);
+							border-radius: 6px;
+						"
+					>
+						<summary
+							style="
+								cursor: pointer;
+								font-weight: bold;
+								margin-bottom: 10px;
+							"
+						>
+							⚙️ Import & Merge Options
+						</summary>
+						<div style="margin-top: 10px">
+							<label
+								style="
+									display: block;
+									margin-bottom: 10px;
+									font-weight: normal;
+								"
+							>
+								<input
+									type="radio"
+									name="mergeMode"
+									value="merge"
+									checked
+								/>
+								<span>🔄 Smart Merge</span>
+							</label>
+							<div
+								class="description"
+								style="margin-left: 20px; margin-bottom: 12px"
+							>
+								Merges backups intelligently: keeps newer
+								entries, combines reading history
+							</div>
+
+							<label
+								style="
+									display: block;
+									margin-bottom: 10px;
+									font-weight: normal;
+								"
+							>
+								<input
+									type="radio"
+									name="mergeMode"
+									value="replace"
+								/>
+								<span>♻️ Replace Current</span>
+							</label>
+							<div
+								class="description"
+								style="margin-left: 20px; margin-bottom: 12px"
+							>
+								Completely replaces current library with backup
+								data
+							</div>
+
+							<label
+								style="
+									display: block;
+									margin-bottom: 10px;
+									font-weight: normal;
+								"
+							>
+								<input
+									type="radio"
+									name="mergeMode"
+									value="append"
+								/>
+								<span>➕ Append Only</span>
+							</label>
+							<div class="description" style="margin-left: 20px">
+								Adds only new novels from backup, doesn't
+								overwrite existing entries
+							</div>
+						</div>
+					</details>
+				</div>
+
+				<!-- Website Controls: toggle supported sites on/off -->
+				<div class="setting">
+					<h4 style="margin-bottom: 8px">🌐 Site Toggles</h4>
+					<div class="description" style="margin-bottom: 8px">
+						Turn off a site to hide enhance buttons and library
+						shelves for it.
+					</div>
+					<div id="siteToggleList" class="site-toggle-list"></div>
+					<div class="actions" style="margin-top: 12px">
+						<button id="resetSiteToggles" class="btn-secondary">
+							Restore Site Defaults
+						</button>
+					</div>
+				</div>
+
 				<!-- Theme Settings -->
 				<div class="setting">
 					<h4 style="margin-bottom: 15px">🎨 Theme Settings</h4>
 
-					<div class="slider-block" style="margin-bottom: 20px;">
+					<div class="slider-block" style="margin-bottom: 20px">
 						<label for="themeMode">Theme Mode</label>
-						<select id="themeMode" style="width: 100%; padding: 10px; border-radius: 6px;">
+						<select
+							id="themeMode"
+							style="
+								width: 100%;
+								padding: 10px;
+								border-radius: 6px;
+							"
+						>
 							<option value="dark">Dark Mode (Default)</option>
 							<option value="light">Light Mode</option>
-							<option value="auto">Auto (System Preference)</option>
+							<option value="auto">
+								Auto (System Preference)
+							</option>
 						</select>
-						<div class="description">Choose your preferred theme</div>
+						<div class="description">
+							Choose your preferred theme
+						</div>
 					</div>
 
-					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+					<div
+						style="
+							display: grid;
+							grid-template-columns: 1fr 1fr;
+							gap: 15px;
+							margin-top: 15px;
+						"
+					>
 						<div>
 							<label for="accentColorPicker">Accent Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input type="color" id="accentColorPicker" value="#667eea" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
-								<input type="text" id="accentColorText" value="#667eea" style="flex: 1; padding: 8px;" placeholder="#667eea">
+							<div
+								style="
+									display: flex;
+									gap: 10px;
+									align-items: center;
+								"
+							>
+								<input
+									type="color"
+									id="accentColorPicker"
+									value="#667eea"
+									style="
+										width: 60px;
+										height: 40px;
+										border: none;
+										border-radius: 6px;
+										cursor: pointer;
+									"
+								/>
+								<input
+									type="text"
+									id="accentColorText"
+									value="#667eea"
+									style="flex: 1; padding: 8px"
+									placeholder="#667eea"
+								/>
 							</div>
 						</div>
 
 						<div>
-							<label for="accentSecondaryPicker">Accent Secondary</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input type="color" id="accentSecondaryPicker" value="#764ba2" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
-								<input type="text" id="accentSecondaryText" value="#764ba2" style="flex: 1; padding: 8px;" placeholder="#764ba2">
+							<label for="accentSecondaryPicker"
+								>Accent Secondary</label
+							>
+							<div
+								style="
+									display: flex;
+									gap: 10px;
+									align-items: center;
+								"
+							>
+								<input
+									type="color"
+									id="accentSecondaryPicker"
+									value="#764ba2"
+									style="
+										width: 60px;
+										height: 40px;
+										border: none;
+										border-radius: 6px;
+										cursor: pointer;
+									"
+								/>
+								<input
+									type="text"
+									id="accentSecondaryText"
+									value="#764ba2"
+									style="flex: 1; padding: 8px"
+									placeholder="#764ba2"
+								/>
 							</div>
 						</div>
 
 						<div>
-							<label for="backgroundColorPicker">Background Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input type="color" id="backgroundColorPicker" value="#16213e" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
-								<input type="text" id="backgroundColorText" value="#16213e" style="flex: 1; padding: 8px;" placeholder="#16213e">
+							<label for="backgroundColorPicker"
+								>Background Color</label
+							>
+							<div
+								style="
+									display: flex;
+									gap: 10px;
+									align-items: center;
+								"
+							>
+								<input
+									type="color"
+									id="backgroundColorPicker"
+									value="#16213e"
+									style="
+										width: 60px;
+										height: 40px;
+										border: none;
+										border-radius: 6px;
+										cursor: pointer;
+									"
+								/>
+								<input
+									type="text"
+									id="backgroundColorText"
+									value="#16213e"
+									style="flex: 1; padding: 8px"
+									placeholder="#16213e"
+								/>
 							</div>
 						</div>
 
 						<div>
 							<label for="textColorPicker">Text Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input type="color" id="textColorPicker" value="#e0e0e0" style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
-								<input type="text" id="textColorText" value="#e0e0e0" style="flex: 1; padding: 8px;" placeholder="#e0e0e0">
+							<div
+								style="
+									display: flex;
+									gap: 10px;
+									align-items: center;
+								"
+							>
+								<input
+									type="color"
+									id="textColorPicker"
+									value="#e0e0e0"
+									style="
+										width: 60px;
+										height: 40px;
+										border: none;
+										border-radius: 6px;
+										cursor: pointer;
+									"
+								/>
+								<input
+									type="text"
+									id="textColorText"
+									value="#e0e0e0"
+									style="flex: 1; padding: 8px"
+									placeholder="#e0e0e0"
+								/>
 							</div>
 						</div>
 					</div>
 
-					<div class="actions" style="margin-top: 15px;">
-						<button id="resetTheme" style="background-color: #db4437;">
+					<div class="actions" style="margin-top: 15px">
+						<button
+							id="resetTheme"
+							style="background-color: #db4437"
+						>
 							Reset Theme to Default
 						</button>
-						<button id="saveTheme" style="float: right; background-color: #34a853;">
+						<button
+							id="saveTheme"
+							style="float: right; background-color: #34a853"
+						>
 							Save Theme
 						</button>
 					</div>
@@ -733,20 +895,9 @@ Click to generate preview...</pre
 				</div>
 
 				<div class="setting">
-					<label for="maxOutputTokens"
-						>Maximum Output Length (tokens):</label
-					>
-					<input
-						type="number"
-						id="maxOutputTokens"
-						min="1000"
-						max="32768"
-						step="512"
-						value="8192"
-					/>
 					<div class="description">
-						Controls maximum length of generated text (higher =
-						longer outputs)
+						Output length is managed automatically by the selected
+						model (we fall back to a safe limit of about 8k tokens).
 					</div>
 				</div>
 
@@ -775,10 +926,13 @@ Click to generate preview...</pre
 						style="margin-bottom: 8px"
 					/>
 					<div class="description" style="margin-bottom: 10px">
-						Uses identity.launchWebAuthFlow with your client ID and Drive
-						file scope (no hosting needed). Tokens stay in the extension.
+						Uses identity.launchWebAuthFlow with your client ID and
+						Drive file scope (no hosting needed). Tokens stay in the
+						extension.
 					</div>
-					<label for="driveFolderId">Drive Folder ID (optional)</label>
+					<label for="driveFolderId"
+						>Drive Folder ID (optional)</label
+					>
 					<input
 						type="text"
 						id="driveFolderId"
@@ -786,7 +940,10 @@ Click to generate preview...</pre
 						style="margin-bottom: 8px"
 					/>
 					<div class="button-group" style="gap: 8px">
-						<button id="driveAuthBtn" class="btn btn-secondary btn-sm">
+						<button
+							id="driveAuthBtn"
+							class="btn btn-secondary btn-sm"
+						>
 							Sign in to Drive
 						</button>
 						<button
@@ -827,12 +984,11 @@ Click to generate preview...</pre
 				</div>
 			</div>
 
-			<!-- About Tab -->
 			<!-- Info & FAQ Tab -->
 			<div id="info" class="tab-content">
 				<div class="info-header">
 					<h3>📚 Ranobe Gemini</h3>
-					<p class="version-badge">Version 3.0.0</p>
+					<p class="version-badge">Version 3.x.x</p>
 				</div>
 
 				<div class="about-section">
@@ -849,51 +1005,6 @@ Click to generate preview...</pre
 						websites, providing instant enhancement, summarization,
 						and intelligent content caching for offline access.
 					</p>
-				</div>
-
-				<div class="about-section">
-					<h4>🚀 Key Features</h4>
-					<ul class="feature-list">
-						<li>
-							<strong>Smart Enhancement:</strong> Improves
-							grammar, flow, and readability while preserving
-							character voices and story elements
-						</li>
-						<li>
-							<strong>Content Caching:</strong> Automatically
-							caches enhanced chapters for 7 days with regenerate
-							and delete options
-						</li>
-						<li>
-							<strong>Chapter Summarization:</strong> Generate
-							concise summaries focusing on key plot points and
-							character development
-						</li>
-						<li>
-							<strong>Multi-Site Support:</strong> Works with
-							Ranobes.net, FanFiction.net, and Archive of Our Own
-							(AO3)
-						</li>
-						<li>
-							<strong>Customizable Prompts:</strong> Fine-tune
-							enhancement and summarization behavior with custom
-							prompts
-						</li>
-						<li>
-							<strong>Advanced AI Parameters:</strong> Control
-							temperature, top-P, top-K, and output length for
-							precise results
-						</li>
-						<li>
-							<strong>Large Chapter Handling:</strong>
-							Automatically splits and processes lengthy chapters
-							to avoid token limits
-						</li>
-						<li>
-							<strong>Multiple Models:</strong> Choose from Gemini
-							2.0 Flash, 2.5 Flash, or 2.5 Pro based on your needs
-						</li>
-					</ul>
 				</div>
 
 				<div class="about-section">
@@ -1009,235 +1120,77 @@ Click to generate preview...</pre
 					</div>
 				</div>
 
-				<div class="about-section credits">
-					<p>
-						Developed with ❤️ by
-						<a
-							href="https://github.com/Life-Experimentalist"
-							target="_blank"
-							class="inline-link"
-						>
-							Life-Experimentalist
-						</a>
+				<div class="about-section" style="text-align: center">
+					<h3>❓ Need Help?</h3>
+					<p style="margin-bottom: 20px">
+						For frequently asked questions, detailed guides, and
+						comprehensive documentation, visit our website.
 					</p>
-					<p>
-						Powered by
+					<div
+						style="
+							display: flex;
+							gap: 12px;
+							justify-content: center;
+							flex-wrap: wrap;
+						"
+					>
 						<a
-							href="https://ai.google.dev/"
+							href="https://ranobe.vkrishna04.me/#faq"
 							target="_blank"
-							class="inline-link"
+							class="support-button"
+							style="flex: 1; min-width: 200px; max-width: 250px"
 						>
-							Google Gemini API
+							📚 View FAQ
 						</a>
-					</p>
-				</div>
-
-				<!-- Divider -->
-				<hr
-					style="
-						margin: 40px 0;
-						border: none;
-						border-top: 2px solid #e9ecef;
-					"
-				/>
-
-				<h3>❓ Frequently Asked Questions</h3>
-
-				<div class="faq-item">
-					<div class="faq-question">💡 What is Ranobe Gemini?</div>
-					<div class="faq-answer">
-						Ranobe Gemini is a browser extension that uses Google's
-						Gemini AI to enhance machine-translated web novels,
-						improving readability, grammar, and flow while
-						maintaining the original story integrity.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">🔑 Do I need an API key?</div>
-					<div class="faq-answer">
-						Yes, you need a free Gemini API key from
-						<a href="#" id="faqGetKeyLink" class="inline-link"
-							>Google AI Studio</a
-						>. The free tier is generous and suitable for most
-						users.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						🌐 Which websites are supported?
-					</div>
-					<div class="faq-answer">
-						Currently supports:
-						<ul>
-							<li>
-								<strong>Ranobes.net</strong> (ranobes.net,
-								ranobes.com, ranobes.top)
-							</li>
-							<li>
-								<strong>FanFiction.net</strong> (fanfiction.net,
-								m.fanfiction.net)
-							</li>
-							<li>
-								<strong>Archive of Our Own</strong>
-								(archiveofourown.org, ao3.org)
-							</li>
-						</ul>
-						More sites may be added based on user requests.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						💾 How does content caching work?
-					</div>
-					<div class="faq-answer">
-						Enhanced chapters are automatically cached for 7 days.
-						When you revisit a chapter, the cached version loads
-						instantly. You can regenerate fresh content or delete
-						the cache using the buttons in the enhanced banner.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						⚙️ Which Gemini model should I use?
-					</div>
-					<div class="faq-answer">
-						<ul>
-							<li>
-								<strong>Gemini 2.0 Flash:</strong> Recommended
-								for most users - balanced speed and quality
-							</li>
-							<li>
-								<strong>Gemini 2.5 Flash:</strong> Faster
-								processing, good for quick reads
-							</li>
-							<li>
-								<strong>Gemini 2.5 Pro:</strong> Best quality,
-								larger context window, slower processing
-							</li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						🎨 What do the advanced parameters do?
-					</div>
-					<div class="faq-answer">
-						<ul>
-							<li>
-								<strong>Temperature (0.0-1.0):</strong> Controls
-								creativity. Lower = consistent, Higher =
-								creative
-							</li>
-							<li>
-								<strong>Top-P (0.0-1.0):</strong> Nucleus
-								sampling - limits token diversity
-							</li>
-							<li>
-								<strong>Top-K (1-40):</strong> Maximum tokens
-								considered per step
-							</li>
-							<li>
-								<strong>Max Output (1024-8192):</strong> Maximum
-								response length in tokens
-							</li>
-						</ul>
-						Use defaults unless you understand these parameters.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						🔧 What if enhancement fails?
-					</div>
-					<div class="faq-answer">
-						Try these solutions:
-						<ol>
-							<li>Verify your API key in Settings → Test Key</li>
-							<li>Check you're on a supported website</li>
-							<li>
-								Enable "Split large chapters automatically" for
-								long content
-							</li>
-							<li>Try a different Gemini model</li>
-							<li>
-								Lower temperature to 0.3 for more reliable
-								output
-							</li>
-							<li>
-								Check browser console (F12) for detailed errors
-							</li>
-							<li>Report persistent issues on GitHub</li>
-						</ol>
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">📋 What are Custom Prompts?</div>
-					<div class="faq-answer">
-						Custom prompts let you control how Gemini processes
-						content:
-						<ul>
-							<li>
-								<strong>Enhancement Prompt:</strong>
-								Instructions for improving translation quality
-							</li>
-							<li>
-								<strong>Summarization Prompt:</strong>
-								Instructions for creating chapter summaries
-							</li>
-							<li>
-								<strong>Permanent Prompt:</strong> Global
-								instructions added to all requests
-							</li>
-						</ul>
-						Reset to defaults if you're unsure about changes.
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">
-						🔄 How do I toggle between original and enhanced?
-					</div>
-					<div class="faq-answer">
-						After enhancement, a banner appears at the top with:
-						<ul>
-							<li>
-								<strong>Show Original</strong> button - switches
-								to original text
-							</li>
-							<li>
-								<strong>Show Enhanced</strong> button - returns
-								to enhanced version
-							</li>
-							<li>
-								<strong>🗑️ Delete</strong> button - removes
-								cached content (for cached chapters)
-							</li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="faq-item">
-					<div class="faq-question">💰 Is this free to use?</div>
-					<div class="faq-answer">
-						Yes! The extension is free and open-source. You only
-						need a free Gemini API key from Google. The free tier
-						includes generous usage limits suitable for regular
-						novel reading. Check the
 						<a
-							href="https://ai.google.dev/gemini-api/docs/pricing"
+							href="https://ranobe.vkrishna04.me/"
 							target="_blank"
-							class="inline-link"
-							>Google AI Studio pricing page</a
+							class="support-button"
+							style="flex: 1; min-width: 200px; max-width: 250px"
 						>
-						for current rate limits and details.
+							🌐 Visit Website
+						</a>
+						<a
+							href="https://github.com/Life-Experimentalist/RanobeGemini/issues"
+							target="_blank"
+							class="support-button"
+							style="flex: 1; min-width: 200px; max-width: 250px"
+						>
+							🐛 Report Issues
+						</a>
 					</div>
 				</div>
+			</div>
+
+			<!-- Divider -->
+			<hr
+				style="
+					margin: 40px 0;
+					border: none;
+					border-top: 2px solid #e9ecef;
+				"
+			/>
+			<div class="about-section credits">
+				<p>
+					Developed with ❤️ by
+					<a
+						href="https://github.com/Life-Experimentalist"
+						target="_blank"
+						class="inline-link"
+					>
+						Life-Experimentalist
+					</a>
+				</p>
+				<p>
+					Powered by
+					<a
+						href="https://ai.google.dev/"
+						target="_blank"
+						class="inline-link"
+					>
+						Google Gemini API
+					</a>
+				</p>
 			</div>
 
 			<div id="status"></div>

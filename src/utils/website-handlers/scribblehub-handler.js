@@ -20,6 +20,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		"*.scribblehub.com",
 	];
 
+	static DEFAULT_ENABLED = true;
+
 	static PRIORITY = 40;
 
 	// Shelf metadata for Novel Library - PRIMARY handler

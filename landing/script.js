@@ -3,7 +3,7 @@ const BROWSERS = [
 	{
 		name: "Firefox",
 		status: "ready",
-		description: "Desktop + Android (temporary add-on)",
+		description: "Desktop + mobile add-on",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Firefox_logo%2C_2019.svg",
 		extensionId: "33b0347d-8e94-40d6-a169-249716997cc6", // moz-extension IDs rotate; detection via postMessage
 		cta: {
@@ -19,7 +19,7 @@ const BROWSERS = [
 		extensionId: "agbhdkiciomjlifhlfbjanpnhhokaimn", // set persistent Chromium extension ID if signed with key
 		cta: {
 			label: "Get it for Edge",
-			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+			href: "https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn",
 		},
 	},
 	{
@@ -27,19 +27,31 @@ const BROWSERS = [
 		status: "coming",
 		description: "Chromium zip works when sideloaded; store build coming",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/e/e1/Google_Chrome_icon_%28February_2022%29.svg",
+		cta: {
+			label: "Side Load",
+			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+		},
 	},
 	{
 		name: "Brave",
 		status: "coming",
 		description: "Supported via Chromium zip; store listing coming",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png",
+		cta: {
+			label: "Side Load",
+			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+		},
 	},
-	{
-		name: "Opera / Vivaldi",
-		status: "coming",
-		description: "Works with -chromium.zip side-load; store builds planned",
-		icon: "https://upload.wikimedia.org/wikipedia/commons/4/49/Opera_2015_icon.svg",
-	},
+	// {
+	// 	name: "Opera / Vivaldi",
+	// 	status: "coming",
+	// 	description: "Works with Chromium.zip side-load; store builds planned",
+	// 	icon: "https://upload.wikimedia.org/wikipedia/commons/4/49/Opera_2015_icon.svg",
+	// 	cta: {
+	// 		label: "Side Load",
+	// 		href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+	// 	},
+	// },
 ];
 
 const SITES = [
@@ -54,7 +66,7 @@ const SITES = [
 		id: "fanfiction",
 		name: "FanFiction.net",
 		description: "Desktop and mobile handlers",
-		icon: "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/landing/assets/fanficiton.ico",
+		icon: "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/landing/assets/fanfiction.ico",
 		status: "ready",
 	},
 	{
@@ -305,6 +317,7 @@ async function detectExtension() {
 	if (pinged) {
 		extensionDetected = true;
 		updateLibraryButton();
+		updateCtaLibraryButton();
 		return;
 	}
 
@@ -316,6 +329,7 @@ async function detectExtension() {
 			extensionDetected = true;
 			libraryUrl = result.url;
 			updateLibraryButton();
+			updateCtaLibraryButton();
 			return;
 		}
 	}
@@ -326,12 +340,43 @@ async function detectExtension() {
 	}
 }
 
+// Detect browser type
+function detectBrowser() {
+	const userAgent = navigator.userAgent.toLowerCase();
+	if (/firefox/.test(userAgent)) return "firefox";
+	if (/edg/.test(userAgent)) return "edge";
+	if (/chrome/.test(userAgent)) return "chrome";
+	return "unknown";
+}
+
+// Build library URL based on browser
+function buildLibraryUrl() {
+	const browser = detectBrowser();
+
+	if (browser === "firefox") {
+		// Firefox uses manifest ID
+		return "moz-extension://33b0347d-8e94-40d6-a169-249716997cc6/library/library.html";
+	} else if (browser === "edge" || browser === "chrome") {
+		// Try to use detected extension ID from BROWSERS array
+		const edgeBrowser = BROWSERS.find((b) => b.name === "Edge");
+		if (edgeBrowser?.extensionId) {
+			return `chrome-extension://${edgeBrowser.extensionId}/library/library.html`;
+		}
+	}
+
+	return libraryUrl || null;
+}
+
 libraryBtn?.addEventListener("click", async () => {
 	if (extensionDetected) {
-		const target =
-			libraryUrl ||
-			"chrome-extension://ranobegemini/library/library.html#open";
-		window.open(target, "_blank", "noopener,noreferrer");
+		const target = buildLibraryUrl();
+		if (target) {
+			window.open(target, "_blank", "noopener,noreferrer");
+		} else {
+			alert(
+				"Could not determine extension URL. Please open the library from the extension popup."
+			);
+		}
 		return;
 	}
 
@@ -345,6 +390,28 @@ libraryBtn?.addEventListener("click", async () => {
 		browsersSection?.scrollIntoView({ behavior: "smooth", block: "start" });
 	}
 });
+
+// Also handle CTA library button
+const ctaLibraryBtn = document.getElementById("cta-library-btn");
+if (ctaLibraryBtn) {
+	ctaLibraryBtn.addEventListener("click", () => {
+		const target = buildLibraryUrl();
+		if (target) {
+			window.open(target, "_blank", "noopener,noreferrer");
+		} else {
+			alert(
+				"Could not determine extension URL. Please open the library from the extension popup."
+			);
+		}
+	});
+}
+
+// Show CTA library button if extension detected
+function updateCtaLibraryButton() {
+	if (ctaLibraryBtn && extensionDetected) {
+		ctaLibraryBtn.style.display = "inline-block";
+	}
+}
 
 // Simple scroll reveal
 const observer = new IntersectionObserver(

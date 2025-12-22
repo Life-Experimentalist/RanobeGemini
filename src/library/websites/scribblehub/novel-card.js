@@ -162,11 +162,10 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		card.className = "novel-card scribblehub-card";
 		card.dataset.novelId = novel.id;
 
-		const config = this.shelfConfig;
 		const metadata = novel.metadata || {};
 		const statsObj = novel.stats || {};
 
-		// Flexible getters so we can read from top-level, metadata, or stats
+		// Flexible getters
 		const getVal = (key, fallback = null) => {
 			if (novel[key] !== undefined && novel[key] !== null)
 				return novel[key];
@@ -176,16 +175,6 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 				return statsObj[key];
 			return fallback;
 		};
-		const coverUrl = novel.coverUrl || "";
-		const fallbackCover = this.getFallbackCover(config);
-		// Use data attributes instead of inline onerror to avoid CSP violations
-		const coverMarkup = coverUrl
-			? `<img class="novel-cover-img" src="${this.escapeHtml(
-					coverUrl
-			  )}" alt="${this.escapeHtml(
-					novel.title
-			  )}" data-fallback="${fallbackCover}" loading="lazy">`
-			: `<div class="novel-cover-placeholder">📚</div>`;
 
 		const readingKeyRaw =
 			novel.readingStatus ||
@@ -195,231 +184,104 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const statusInfo =
 			READING_STATUS_INFO[normalizedReadingKey] ||
 			READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
-		const statusClass = `status-${normalizedReadingKey.replace(/-/g, "_")}`;
 
 		const enhanced = novel.enhancedChaptersCount ?? 0;
 		const chapters = getVal("totalChapters") || getVal("chapterCount") || 0;
 		const progressPercent = chapters
 			? Math.min(100, Math.round((enhanced / chapters) * 100))
 			: 0;
-		const progressLabel = chapters
-			? `${this.formatNumber(enhanced)}/${this.formatNumber(
-					chapters
-			  )} enhanced`
-			: `${this.formatNumber(enhanced)} enhanced`;
 
-		// Build all badge chips
+		// Essential metadata
 		const rating = getVal("rating");
 		const language = getVal("language");
 		const isCrossover = !!getVal("isCrossover", false);
 		const workStatus = getVal("status");
-
-		const ratingBadge = rating
-			? `<span class="chip rating-badge ${this.normalizeRatingClass(
-					rating
-			  )}" title="Content Rating">${rating}</span>`
-			: "";
-		const languageBadge = language
-			? `<span class="chip chip-ghost" title="Language">${this.escapeHtml(
-					language
-			  )}</span>`
-			: "";
-		const typeBadge =
-			isCrossover !== undefined
-				? `<span class="chip ${
-						isCrossover ? "chip-crossover" : "chip-ghost"
-				  }" title="Work Type">${
-						isCrossover ? "Crossover" : "Single Fandom"
-				  }</span>`
-				: "";
-		const workStatusBadge = workStatus
-			? `<span class="chip ${
-					workStatus.toLowerCase() === "completed"
-						? "chip-success"
-						: "chip-warning"
-			  }" title="Publication Status">${this.escapeHtml(
-					workStatus
-			  )}</span>`
-			: "";
-
-		// Build comprehensive stats display
-		const stats = [];
-		if (chapters)
-			stats.push({ icon: "📖", label: "Chapters", value: chapters });
-
 		const words = getVal("words", 0);
 		const reviews = getVal("reviews", 0);
 		const favorites = getVal("favorites", 0);
-		const follows = getVal("follows", 0);
-		const publishedDate = getVal("publishedDate");
-		const updatedDate = getVal("updatedDate");
 
-		if (words) stats.push({ icon: "📝", label: "Words", value: words });
-		if (reviews)
-			stats.push({
-				icon: "💬",
-				label: "Reviews",
-				value: reviews,
-			});
-		if (favorites)
-			stats.push({
-				icon: "⭐",
-				label: "Favorites",
-				value: favorites,
-			});
-		if (follows)
-			stats.push({
-				icon: "👥",
-				label: "Follows",
-				value: follows,
-			});
-		if (publishedDate)
-			stats.push({
-				icon: "📅",
-				label: "Published",
-				value: this.formatDateShort(publishedDate),
-				isDate: true,
-			});
-		if (updatedDate)
-			stats.push({
-				icon: "🔄",
-				label: "Updated",
-				value: this.formatDateShort(updatedDate),
-				isDate: true,
-			});
-
-		const statMarkup = stats
-			.map(
-				(stat) => `
-					<div class="card-stat-badge" title="${this.escapeHtml(stat.label)}">
-						<span class="card-stat-label">${this.escapeHtml(stat.label)}</span>
-						<span class="card-stat-value">${this.escapeHtml(
-							stat.isDate
-								? stat.value
-								: this.formatNumber(stat.value)
-						)}</span>
-					</div>
-				`
-			)
-			.join("");
-
-		// Build fandom, genre, and character tags
+		// Get tag buckets
 		const buckets = this.buildTagBuckets(novel);
-		const fandoms = [...buckets.fandoms].slice(0, 3);
-		const genres = [...buckets.genres].slice(0, 4);
-		const characters = [...buckets.characters].slice(0, 5);
+		const primaryGenre = [...buckets.genres][0] || "";
 
-		const renderTagGroup = (label, items, className, max = null) => {
-			if (!items || items.length === 0) return "";
-			const display = max ? items.slice(0, max) : items;
-			const remaining = max ? Math.max(0, items.length - max) : 0;
-			const markup = display
-				.map(
-					(tag) =>
-						`<span class="tag ${className}">${this.escapeHtml(
-							tag
-						)}</span>`
-				)
-				.join("");
-			const moreTag =
-				remaining > 0
-					? `<span class="tag-more">+${remaining}</span>`
-					: "";
-			return `
-				<div class="tag-group">
-					<span class="tag-group-label">${label}</span>
-					<div class="tag-group-items">${markup}${moreTag}</div>
-				</div>
-			`;
-		};
-
-		const fandomMarkup = renderTagGroup(
-			"Fandoms",
-			fandoms,
-			"tag-fandom",
-			3
-		);
-		const genreMarkup = renderTagGroup("Genres", genres, "tag-genre", 4);
-		const characterMarkup = renderTagGroup(
-			"Characters",
-			characters,
-			"tag-character",
-			5
-		);
-
-		// Story ID badge
-		const storyIdMarkup = metadata.storyId
-			? `<div class="story-id-badge">Story ID: <code>${this.escapeHtml(
-					metadata.storyId
-			  )}</code></div>`
+		// Simple rating badge
+		const ratingClass = this.normalizeRatingClass(rating);
+		const ratingBadge = rating
+			? `<span class="chip rating-badge ${ratingClass}">${this.escapeHtml(
+					rating
+			  )}</span>`
 			: "";
 
+		// Status badge
+		const isCompleted =
+			workStatus && workStatus.toLowerCase() === "completed";
+		const statusBadge = workStatus
+			? `<span class="chip ${
+					isCompleted ? "chip-success" : "chip-warning"
+			  }">${this.escapeHtml(workStatus)}</span>`
+			: "";
+
+		// Quick stats
+		const statsText = [];
+		if (chapters) statsText.push(`${this.formatNumber(chapters)} ch`);
+		if (words) statsText.push(`${this.formatNumber(words)} words`);
+		if (favorites) statsText.push(`${this.formatNumber(favorites)} fav`);
+
+		const statsHTML =
+			statsText.length > 0
+				? `<div class="sh-stats-text">${statsText.join(" • ")}</div>`
+				: "";
+
+		// Genre tag
+		const genreHTML = primaryGenre
+			? `<div class="sh-genre-tag">${this.escapeHtml(
+					this.truncateText(primaryGenre, 40)
+			  )}</div>`
+			: "";
+
+		// Progress bar
+		const progressHTML =
+			chapters > 0
+				? `<div class="sh-progress-bar"><div class="sh-progress-fill" style="width: ${progressPercent}%;"></div></div>
+			   <div class="sh-progress-text">✨ ${this.formatNumber(
+					enhanced
+				)}/${this.formatNumber(chapters)}</div>`
+				: "";
+
 		card.innerHTML = `
-			<div class="fanfic-card-horizontal">
-				${
-					coverUrl
-						? `<img class="fanfic-bg-blur" src="${this.escapeHtml(
-								coverUrl
-						  )}" alt="" aria-hidden="true" loading="lazy">`
-						: ""
-				}
-				<div class="fanfic-cover-wrapper">
-					${coverMarkup}
-					<span class="novel-status-badge ${statusClass}">${statusInfo.label}</span>
+			<div class="sh-card-content">
+				<div class="sh-card-main">
+					<h3 class="sh-card-title" title="${this.escapeHtml(
+						novel.title
+					)}">${this.escapeHtml(novel.title)}</h3>
+					<p class="sh-card-author">by ${this.escapeHtml(novel.author || "Unknown")}</p>
+
+					<div class="sh-card-metadata">
+						${ratingBadge}
+						${statusBadge}
+						${language ? `<span class="chip">${this.escapeHtml(language)}</span>` : ""}
+						${isCrossover ? `<span class="chip">Crossover</span>` : ""}
+					</div>
+
+					${statsHTML}
+					${genreHTML}
+
+					<div class="sh-card-progress">
+						${progressHTML}
+					</div>
 				</div>
 
-				<div class="fanfic-main-content">
-					<div class="fanfic-head">
-						<h3 class="fanfic-title" title="${this.escapeHtml(
-							novel.title
-						)}">${this.escapeHtml(novel.title)}</h3>
-						<div class="fanfic-meta-row">
-							<span class="fanfic-author">by <strong>${this.escapeHtml(
-								novel.author || "Unknown"
-							)}</strong></span>
-							<div class="fanfic-badges-inline">
-								${ratingBadge}
-							</div>
-						</div>
-						<div class="fanfic-meta-row fanfic-meta-row-secondary">
-							<div class="fanfic-badges-inline">
-								${languageBadge}${typeBadge}${workStatusBadge}
-							</div>
-						</div>
-					</div>
-
-					<div class="fanfic-enhancement-strip">
-						<div class="progress-bar-slim">
-							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
-						</div>
-						<span class="enhancement-text">✨ <strong>${this.formatNumber(
-							enhanced
-						)}</strong> / ${this.formatNumber(
-			chapters
-		)} enhanced <span class="dim">(${progressPercent}%)</span></span>
-					</div>
-
-					${statMarkup ? `<div class="card-stats-bar">${statMarkup}</div>` : ""}
-
-					<div class="fanfic-tags-area">
-						${fandomMarkup}${genreMarkup}${characterMarkup}
-					</div>
-
-					<div class="fanfic-foot">
-						${storyIdMarkup}
-						<div class="fanfic-actions-right">
-							<span class="status-pill-small" style="background: ${statusInfo.color}">${
-			statusInfo.label
-		}</span>
-							${
-								novel.sourceUrl
-									? `<a class="action-btn" href="${this.escapeHtml(
-											novel.sourceUrl
-									  )}" target="_blank" rel="noreferrer">Open ↗</a>`
-									: ""
-							}
-						</div>
-					</div>
+				<div class="sh-card-status">
+					<span class="sh-reading-status" style="background-color: ${
+						statusInfo.color
+					};">${statusInfo.label}</span>
+					${
+						novel.sourceUrl
+							? `<a class="sh-link-btn" href="${this.escapeHtml(
+									novel.sourceUrl
+							  )}" target="_blank" rel="noreferrer" title="Open on ScribbleHub">↗</a>`
+							: ""
+					}
 				</div>
 			</div>
 		`;
@@ -429,9 +291,6 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 				this.onCardClick(novel);
 			}
 		});
-
-		// Set up image error handling after card is in DOM
-		this.setupImageErrorHandlers(card);
 
 		return card;
 	}
@@ -970,6 +829,17 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 				font-size: 12px;
 			}
 		`;
+	}
+
+	/**
+	 * Truncate text with ellipsis
+	 * @param {string} text - Text to truncate
+	 * @param {number} maxLength - Maximum length
+	 * @returns {string} Truncated text
+	 */
+	static truncateText(text, maxLength) {
+		if (!text || text.length <= maxLength) return text;
+		return text.substring(0, maxLength - 1) + "…";
 	}
 }
 

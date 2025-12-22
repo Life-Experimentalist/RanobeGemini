@@ -22,6 +22,8 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		"*.webnovel.com", // Safety net: catches any other subdomains
 	];
 
+	static DEFAULT_ENABLED = false;
+
 	static PRIORITY = 50;
 
 	// Shelf metadata for Novel Library - PRIMARY handler

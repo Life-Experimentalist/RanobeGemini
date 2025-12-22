@@ -83,10 +83,13 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 	});
 
 	// Build shelf registry from handler metadata
-	if (shelfMeta && shelfMeta.id) {
+    if (shelfMeta && shelfMeta.id) {
 		const shelfId = shelfMeta.id.toUpperCase();
 		const expandedDomains = expandWildcards(domains);
 		const isPrimary = shelfMeta.isPrimary !== false; // Default to true if not specified
+		// Only primary handlers should control the default enabled state
+		const enabledByDefault =
+			isPrimary && HandlerClass.DEFAULT_ENABLED !== false;
 
 		if (!SHELF_REGISTRY[shelfId]) {
 			// Create new shelf entry - use all metadata from primary handler
@@ -100,6 +103,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 				novelIdPattern: shelfMeta.novelIdPattern,
 				primaryDomain: shelfMeta.primaryDomain,
 				handlerType: HandlerClass.HANDLER_TYPE || "chapter_embedded",
+				enabledByDefault,
 			};
 		} else {
 			// Merge domains into existing shelf (for mobile/desktop variants)
@@ -122,6 +126,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 				SHELF_REGISTRY[shelfId].primaryDomain =
 					shelfMeta.primaryDomain ||
 					SHELF_REGISTRY[shelfId].primaryDomain;
+				SHELF_REGISTRY[shelfId].enabledByDefault = enabledByDefault;
 			}
 		}
 	}

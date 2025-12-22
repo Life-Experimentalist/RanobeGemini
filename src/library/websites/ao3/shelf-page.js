@@ -48,6 +48,7 @@ const DEFAULT_FILTERS = {
 	characters: [],
 	tags: [],
 	tagsMode: "any",
+	fandomsMode: "any",
 	wordCountMin: "",
 	wordCountMax: "",
 	sort: "recent",
@@ -939,9 +940,16 @@ function applyFiltersAndSort() {
 	}
 
 	if (Array.isArray(fandoms) && fandoms.length > 0) {
+		const fandomsMode = filterState.fandomsMode || "any";
 		filteredNovels = filteredNovels.filter((n) => {
 			const storyFandoms = n.metadata?.fandoms || [];
-			return storyFandoms.some((f) => fandoms.includes(f));
+			if (fandomsMode === "all") {
+				// ALL mode: story must include all selected fandoms
+				return fandoms.every((f) => storyFandoms.includes(f));
+			} else {
+				// ANY mode: story must include at least one selected fandom
+				return storyFandoms.some((f) => fandoms.includes(f));
+			}
 		});
 	}
 
@@ -1073,17 +1081,33 @@ function setupFandomNav(novels) {
 
 	document.getElementById("category-section").style.display = "block";
 
-	let html = `<div class="fandom-grid">`;
+	let html = `
+		<div class="fandom-grid-header">
+			<h3 class="fandom-grid-title">Browse by Fandom</h3>
+			<div class="fandom-grid-controls">
+				<select id="fandom-match-mode" class="fandom-match-select" title="Filter mode">
+					<option value="any">Match ANY</option>
+					<option value="all">Match ALL</option>
+				</select>
+				<button id="clear-fandoms" class="clear-fandoms-btn" style="display: none;">Clear Selection</button>
+			</div>
+		</div>
+		<div class="fandom-grid">`;
+
 	// Sort by count, then alphabetically
 	const sortedFandoms = [...fandomCounts.entries()].sort((a, b) => {
 		if (b[1] !== a[1]) return b[1] - a[1];
 		return a[0].localeCompare(b[0]);
 	});
 
-	sortedFandoms.slice(0, 20).forEach(([fandom, count]) => {
+	sortedFandoms.slice(0, 30).forEach(([fandom, count]) => {
+		const isSelected = (filterState.fandoms || []).includes(fandom);
 		html += `
-			<button class="fandom-card" data-fandom="${encodeURIComponent(fandom)}">
-				<span class="fandom-icon">📚</span>
+			<button class="fandom-card ${
+				isSelected ? "selected" : ""
+			}" data-fandom="${encodeURIComponent(
+			fandom
+		)}" aria-pressed="${isSelected}">
 				<span class="fandom-name">${escapeHtml(fandom)}</span>
 				<span class="fandom-count">${count} ${count === 1 ? "work" : "works"}</span>
 			</button>
@@ -1093,10 +1117,59 @@ function setupFandomNav(novels) {
 
 	categoryGrid.innerHTML = html;
 
+	// Set up match mode selector
+	const matchModeSelect = document.getElementById("fandom-match-mode");
+	if (matchModeSelect) {
+		matchModeSelect.value = filterState.fandomsMode || "any";
+		matchModeSelect.addEventListener("change", () => {
+			filterState.fandomsMode = matchModeSelect.value;
+			persistFilters();
+			if ((filterState.fandoms || []).length > 0) {
+				applyFiltersAndSort();
+			}
+		});
+	}
+
+	// Set up clear button
+	const clearBtn = document.getElementById("clear-fandoms");
+	if (clearBtn) {
+		if ((filterState.fandoms || []).length > 0) {
+			clearBtn.style.display = "inline-block";
+		}
+		clearBtn.addEventListener("click", () => {
+			filterState.fandoms = [];
+			applyFilterStateToUI();
+			persistFilters();
+			applyFiltersAndSort();
+			setupFandomNav(allNovels);
+		});
+	}
+
 	categoryGrid.querySelectorAll(".fandom-card").forEach((card) => {
 		card.addEventListener("click", () => {
 			const fandom = decodeURIComponent(card.dataset.fandom);
-			filterState.fandoms = [fandom];
+			const currentFandoms = filterState.fandoms || [];
+
+			if (currentFandoms.includes(fandom)) {
+				// Remove if already selected
+				filterState.fandoms = currentFandoms.filter(
+					(f) => f !== fandom
+				);
+				card.classList.remove("selected");
+				card.setAttribute("aria-pressed", "false");
+			} else {
+				// Add to selection
+				filterState.fandoms = [...currentFandoms, fandom];
+				card.classList.add("selected");
+				card.setAttribute("aria-pressed", "true");
+			}
+
+			// Update clear button visibility
+			if (clearBtn) {
+				clearBtn.style.display =
+					filterState.fandoms.length > 0 ? "inline-block" : "none";
+			}
+
 			applyFilterStateToUI();
 			persistFilters();
 			applyFiltersAndSort();
