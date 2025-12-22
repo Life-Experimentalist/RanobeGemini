@@ -3,16 +3,17 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>ScribbleHub - Novel Library</title>
-		<link rel="stylesheet" href="../shelf-page.css" />
+	<title>ScribbleHub - Novel Library</title>
+	<link rel="stylesheet" href="../shelf-page.css" />
+	<link rel="stylesheet" href="./style.css" />
 		<link
 			rel="icon"
 			type="image/png"
 			sizes="32x32"
-			href="../../../icons/logo-32.png"
+			href="../../../icons/icon.png"
 		/>
 	</head>
-	<body>
+	<body class="scribblehub-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
@@ -22,7 +23,18 @@
 						id="color-bar"
 						style="background: #6c5ce7"
 					></span>
-					<span class="shelf-page-icon" id="page-icon">📖</span>
+					<img
+						src="https://www.scribblehub.com/favicon.ico"
+						alt="ScribbleHub"
+						class="shelf-page-icon-img"
+						id="page-icon-img"
+					/>
+					<span
+						class="shelf-page-icon"
+						id="page-icon"
+						style="display: none"
+						>✨</span
+					>
 					<h1 id="page-title">ScribbleHub</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -31,88 +43,423 @@
 				</a>
 			</header>
 
-			<!-- Stats Summary -->
-			<div class="stats-summary">
-				<div class="stat-card">
-					<span class="stat-value" id="stats-novels">0</span>
-					<span class="stat-label">Series</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-enhanced">0</span>
-					<span class="stat-label">Enhanced Chapters</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-chapters">0</span>
-					<span class="stat-label">Total Chapters</span>
+			<!-- Analytics Section -->
+			<div class="analytics-section" id="analytics-section">
+				<div class="analytics-grid">
+					<!-- Stats Summary -->
+					<div class="stats-summary">
+						<div class="stat-card">
+							<span class="stat-value" id="stats-novels">0</span>
+							<span class="stat-label">Novels</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-enhanced"
+								>0</span
+							>
+							<span class="stat-label">Enhanced Chapters</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-words">0</span>
+							<span class="stat-label">Total Words</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-completed"
+								>0</span
+							>
+							<span class="stat-label">Completed</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-avgrating"
+								>-</span
+							>
+							<span class="stat-label">Avg Rating</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-reading"
+								>0%</span
+							>
+							<span class="stat-label">Reading</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-languages"
+								>-</span
+							>
+							<span class="stat-label">Languages</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-avglength"
+								>-</span
+							>
+							<span class="stat-label">Avg Chapter Count</span>
+						</div>
+					</div>
+
+					<!-- Detail Analytics -->
+					<div class="detail-analytics">
+						<h3>Library Insights</h3>
+						<div class="analytics-items">
+							<div class="analytics-item">
+								<span class="analytics-icon">⭐</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Highest Rated</span>
+									<span class="analytics-value" id="highest-rated">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">📈</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Most Popular</span>
+									<span class="analytics-value" id="most-popular">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">🌐</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Languages</span>
+									<span class="analytics-value" id="language-count">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">📏</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Longest Novel</span>
+									<span class="analytics-value" id="longest-novel">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">🆕</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Newest Addition</span>
+									<span class="analytics-value" id="newest-addition">-</span>
+								</div>
+							</div>
+							<div class="analytics-item">
+								<span class="analytics-icon">📚</span>
+								<div class="analytics-detail">
+									<span class="analytics-label">Most Chapters</span>
+									<span class="analytics-value" id="most-chapters">-</span>
+								</div>
+							</div>
+						</div>
+						<div class="analytics-chart" id="status-chart-card">
+							<div class="chart-header">
+								<h4>Reading Status Mix</h4>
+								<span
+									class="chart-summary"
+									id="status-chart-summary"
+									>-</span
+								>
+							</div>
+							<div
+								class="bar-chart"
+								id="reading-status-chart"
+							></div>
+							<div
+								class="bar-chart-legend"
+								id="reading-status-legend"
+							></div>
+						</div>
+					</div>
 				</div>
 			</div>
 
-			<!-- Filters Section -->
+			<!-- Filters Section - Compact Design -->
 			<div class="filters-section">
-				<div class="filter-group">
-					<label for="sort-select">Sort by:</label>
-					<select id="sort-select">
-						<option value="recent">Recently Read</option>
-						<option value="added">Date Added</option>
-						<option value="title">Title</option>
-						<option value="chapters">Enhanced Chapters</option>
-					</select>
+				<div class="filter-dropdown-container">
+					<button class="filter-toggle-btn" id="filter-toggle-btn">
+						⚙️ Filters
+						<span
+							class="filter-badge"
+							id="filter-badge"
+							style="display: none"
+							>✓</span
+						>
+					</button>
+					<div class="active-filters" id="active-filters"></div>
+
+					<div
+						class="filter-dropdown"
+						id="filter-dropdown"
+						style="display: none"
+					>
+						<div class="filter-grid">
+							<!-- Sorting & Basics -->
+							<div class="filter-item">
+								<label for="sort-select">Sort by:</label>
+								<select id="sort-select">
+									<option value="recent">
+										Recently Read
+									</option>
+									<option value="added">Date Added</option>
+									<option value="title">Title</option>
+									<option value="chapters">
+										Enhanced Chapters
+									</option>
+									<option value="words">Word Count</option>
+									<option value="favorites">Favorites</option>
+									<option value="follows">Follows</option>
+									<option value="reviews">Reviews</option>
+									<option value="published">
+										Published Date
+									</option>
+									<option value="updated">
+										Updated Date
+									</option>
+									<option value="status">Work Status</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="rating-filter">Rating:</label>
+								<select id="rating-filter">
+									<option value="all">All Ratings</option>
+									<option value="K">K</option>
+									<option value="K+">K+</option>
+									<option value="T">T</option>
+									<option value="M">M</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="work-status-filter"
+									>Work Status:</label
+								>
+								<select id="work-status-filter">
+									<option value="all">All</option>
+									<option value="completed">Completed</option>
+									<option value="ongoing">Ongoing</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="status-filter"
+									>Reading Status:</label
+								>
+								<select id="status-filter">
+									<option value="all">All</option>
+									<option value="plan-to-read">
+										Plan to Read
+									</option>
+									<option value="reading">
+										Currently Reading
+									</option>
+									<option value="completed">Completed</option>
+									<option value="on-hold">On Hold</option>
+									<option value="dropped">Dropped</option>
+									<option value="re-reading">
+										Re-reading
+									</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="fandom-filter">Story Type:</label>
+								<select id="fandom-filter">
+									<option value="all">All Types</option>
+									<option value="single">
+										Single Fandom
+									</option>
+									<option value="crossover">
+										Crossovers
+									</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label for="language-filter">Language:</label>
+								<select id="language-filter">
+									<option value="all">All Languages</option>
+								</select>
+							</div>
+
+							<div class="filter-item">
+								<label>Fandoms (max 2):</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="fandoms-dropdown-toggle">Choose Fandoms</button>
+									<div class="multi-dropdown-panel" id="fandoms-dropdown-panel">
+										<div class="filter-pill-list" id="fandoms-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Genres:</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="genres-dropdown-toggle">Choose Genres</button>
+									<div class="multi-dropdown-panel" id="genres-dropdown-panel">
+										<div class="filter-pill-list" id="genres-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Characters (max 4):</label>
+								<div class="multi-dropdown">
+									<button type="button" class="multi-dropdown-toggle" id="characters-dropdown-toggle">Choose Characters</button>
+									<div class="multi-dropdown-panel" id="characters-dropdown-panel">
+										<div class="filter-pill-list" id="characters-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item">
+								<label>Tags:</label>
+								<div class="multi-dropdown">
+									<div class="tag-match-row">
+										<label for="tags-match-mode" class="tag-match-label">Match:</label>
+										<select id="tags-match-mode" class="tag-match-select">
+											<option value="any">Any tag (OR)</option>
+											<option value="all">All tags (AND)</option>
+										</select>
+									</div>
+									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose Tags</button>
+									<div class="multi-dropdown-panel" id="tags-dropdown-panel">
+										<div class="filter-pill-list" id="tags-filter"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="filter-item full-width">
+								<label>Word Count Range:</label>
+								<div class="wordcount-row">
+									<input
+										type="number"
+										id="wordcount-min"
+										placeholder="Min"
+										min="0"
+									/>
+									<span class="range-separator">to</span>
+									<input
+										type="number"
+										id="wordcount-max"
+										placeholder="Max"
+										min="0"
+									/>
+								</div>
+								<p class="filter-hint">
+									Leave blank for no limit
+								</p>
+							</div>
+
+							<div class="filter-item full-width">
+								<button
+									class="clear-filters-btn"
+									id="clear-filters-btn"
+								>
+									Clear All Filters
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div class="filter-group">
-					<label for="status-filter">Status:</label>
-					<select id="status-filter">
-						<option value="all">All</option>
-						<option value="ongoing">Ongoing</option>
-						<option value="completed">Completed</option>
-						<option value="hiatus">Hiatus</option>
-					</select>
-				</div>
-				<div class="filter-group search-input">
-					<label for="search-input">Search:</label>
+
+				<div class="search-bar-container search-right">
 					<input
 						type="text"
 						id="search-input"
-						placeholder="Search by title or author..."
+						class="search-bar"
+						placeholder="🔍 Search by title or author..."
 					/>
 				</div>
+			</div>
+
+			<!-- Category Navigation for Fandoms -->
+			<div
+				class="category-section"
+				id="category-section"
+				style="display: none"
+			>
+				<div class="category-header">
+					<h3 id="category-title">Browse by Fandom</h3>
+					<button
+						id="back-to-all"
+						class="back-btn"
+						style="display: none"
+					>
+						← Back to All
+					</button>
+				</div>
+				<div class="category-grid" id="category-grid"></div>
 			</div>
 
 			<!-- Loading State -->
 			<div class="loading-state" id="loading-state">
 				<div class="loading-spinner"></div>
-				<p>Loading series...</p>
+				<p>Loading stories...</p>
 			</div>
 
 			<!-- Empty State -->
 			<div class="empty-state" id="empty-state" style="display: none">
-				<span class="empty-icon">📖</span>
-				<h2>No series from ScribbleHub yet!</h2>
-				<p>
-					Visit a chapter on
-					<a href="https://www.scribblehub.com" target="_blank"
-						>scribblehub.com</a
-					>
-					to add series to your library
-				</p>
-			</div>
-
+				<span class="empty-icon">📚</span>
+			<h2>No novels from ScribbleHub yet!</h2>
+			<p>
+				Visit a chapter on
+				<a href="https://scribblehub.com" target="_blank"
+					>scribblehub.com</a
+				>
+				to add novels to your library
 			<!-- Novel Grid -->
 			<div class="novel-grid" id="novel-grid" style="display: none"></div>
 		</div>
 
+		<!-- Novel Detail Modal -->
+		<div class="modal" id="novel-modal" style="display: none">
+			<div class="modal-backdrop" id="modal-backdrop"></div>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div class="modal-title-section">
+						<img
+							id="modal-cover"
+							src=""
+							alt="Cover"
+							class="modal-cover-img"
+						/>
+						<div class="modal-header-text">
+							<h2 id="modal-title"></h2>
+							<p id="modal-author"></p>
+							<p id="modal-description"></p>
+						</div>
+					</div>
+					<button class="modal-close" id="modal-close-btn">
+						&times;
+					</button>
+				</div>
+				<div class="modal-body">
+					<div id="modal-metadata-container"></div>
+				</div>
+				<div class="modal-footer">
+					<div class="modal-status-section">
+						<div class="status-label">Reading Status:</div>
+						<div class="status-buttons">
+							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To Read</button>
+							<button class="status-btn" data-status="reading" title="Currently Reading">📖 Reading</button>
+							<button class="status-btn" data-status="completed" title="Completed">✅ Completed</button>
+							<button class="status-btn" data-status="on-hold" title="On Hold">⏸️ On Hold</button>
+							<button class="status-btn" data-status="dropped" title="Dropped">❌ Dropped</button>
+							<button class="status-btn" data-status="rereading" title="Re-reading">🔁 Re-reading</button>
+						</div>
+					</div>
+					<div class="modal-actions-divider"></div>
+					<div class="modal-actions-primary">
+						<a id="modal-continue-btn" class="btn btn-primary" target="_blank">Continue Reading</a>
+						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on ScribbleHub</a>
+					</div>
+					<div class="modal-actions-secondary">
+						<button id="modal-refresh-btn" class="btn btn-icon" title="Refresh metadata from source">
+							🔄 Update
+						</button>
+						<button id="modal-edit-btn" class="btn btn-icon" title="Edit novel details">
+							✏️ Edit
+						</button>
+						<button id="modal-remove-btn" class="btn btn-icon btn-danger" title="Remove from library">
+							🗑️ Remove
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
-		<script type="module">
-			import { initShelfPage } from "../shelf-page.js";
-			// Initialize with ScribbleHub shelf configuration
-			document.addEventListener("DOMContentLoaded", () => {
-				initShelfPage("scribblehub", {
-					id: "scribblehub",
-					name: "ScribbleHub",
-					icon: "https://www.scribblehub.com/favicon.ico",
-					color: "#6c5ce7",
-					primaryDomain: "www.scribblehub.com",
-				});
-			});
-		</script>
+		<script type="module" src="./shelf-page.js"></script>
 	</body>
 </html>

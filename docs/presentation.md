@@ -82,7 +82,7 @@ style: |
 
 #### Enhancing Web Novel Translations with AI
 
-![bg right:40% 80%](../src/icons/logo-light-1024.png)
+![bg right:40% 80%](../src/icons/logo-1024.png)
 
 ---
 

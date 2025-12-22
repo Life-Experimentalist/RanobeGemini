@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "node dev/build-cross-platform.js",
 		"watch": "node dev/watch.js",
-		"package": "num run update-domains && node dev/package-all.js",
+		"package": "npm run update-domains && node dev/package-all.js",
 		"publish": "npm run package && npm run package-source",
 		"package-firefox": "node dev/package-firefox.js",
 		"package-chromium": "node dev/package-chromium.js",

@@ -299,7 +299,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Try to find the title from the heading
 		const heading = document.querySelector("h1.title");
 		if (heading) {
-			return heading.textContent.trim();
+			// Ranobes headings sometimes include " by Author"; strip the author suffix
+			return heading.textContent.trim().replace(/\s+by\s+.+$/i, "");
 		}
 
 		// Fallback to the default title extraction (page title)

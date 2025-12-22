@@ -196,8 +196,13 @@ When enhancing, improve readability while respecting the author's creative voice
 		const isDesktop =
 			hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
 
-		// Only show switcher on FanFiction.net sites
+		// Only show switcher on chapter pages of FanFiction.net sites
 		if (!isMobile && !isDesktop) {
+			return [];
+		}
+
+		// Only show on chapter pages
+		if (!this.isChapterPage()) {
 			return [];
 		}
 

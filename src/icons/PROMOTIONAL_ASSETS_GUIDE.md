@@ -128,7 +128,7 @@ src/icons/
 ├── promotional-tile-440x280.html       # Small tile (440×280px)
 ├── promotional-tile-1400x560.html      # Large tile (1400×560px)
 ├── screenshots-gallery.html             # 4 screenshots (1280×800px each)
-├── logo-light-256.png                   # Logo asset (referenced in tiles)
+├── logo-256.png                   # Logo asset (referenced in tiles)
 └── [exported PNGs]                      # After rendering HTML files
 ```
 
@@ -172,9 +172,9 @@ All promotional assets use the Ranobe Gemini brand palette:
    - Crop to specified dimensions
 
 ### Logo References
-- All tiles reference `logo-light-256.png` from the icons directory
+- All tiles reference `logo-256.png` from the icons directory
 - Light variant ensures visibility on dark background
-- Alternative: Use `logo-dark-256.png` for light backgrounds
+- Alternative: Use `logo-256.png` for light backgrounds
 
 ---
 

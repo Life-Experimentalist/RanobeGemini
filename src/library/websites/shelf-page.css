@@ -5,26 +5,26 @@
 
 /* Import base styles from parent library.css */
 :root {
-	/* Colors - Dark mode by default */
-	--bg-primary: #1a1b1e;
-	--bg-secondary: #25262b;
-	--bg-tertiary: #2c2e33;
-	--bg-card: #2c2e33;
-	--bg-card-hover: #373a40;
-	--text-primary: #e9ecef;
-	--text-secondary: #adb5bd;
-	--text-muted: #868e96;
-	--primary-color: #5c7cfa;
-	--primary-hover: #748ffc;
-	--border-color: #373a40;
-	--success-color: #51cf66;
-	--warning-color: #fcc419;
-	--error-color: #ff6b6b;
+	/* Colors - dark by default */
+	--bg-primary: #0f172a;
+	--bg-secondary: #111827;
+	--bg-tertiary: #1f2937;
+	--bg-card: #1f2937;
+	--bg-card-hover: #2b3544;
+	--text-primary: #e5e7eb;
+	--text-secondary: #9ca3af;
+	--text-muted: #6b7280;
+	--primary-color: #4b5563;
+	--primary-hover: #6b7280;
+	--border-color: #2f3644;
+	--success-color: #22c55e;
+	--warning-color: #f59e0b;
+	--error-color: #ef4444;
 
 	/* Shadows */
-	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.35);
 
 	/* Spacing */
 	--spacing-xs: 4px;
@@ -44,24 +44,21 @@
 	--transition-normal: 250ms ease;
 }
 
-/* Light mode */
-@media (prefers-color-scheme: light) {
-	:root {
-		--bg-primary: #f8f9fa;
-		--bg-secondary: #ffffff;
-		--bg-tertiary: #f1f3f5;
-		--bg-card: #ffffff;
-		--bg-card-hover: #f8f9fa;
-		--text-primary: #212529;
-		--text-secondary: #495057;
-		--text-muted: #868e96;
-		--primary-color: #4263eb;
-		--primary-hover: #5c7cfa;
-		--border-color: #dee2e6;
-		--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
-		--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-		--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-	}
+:root[data-theme="light"] {
+	--bg-primary: #f3f4f6;
+	--bg-secondary: #ffffff;
+	--bg-tertiary: #e5e7eb;
+	--bg-card: #ffffff;
+	--bg-card-hover: #f3f4f6;
+	--text-primary: #111827;
+	--text-secondary: #374151;
+	--text-muted: #6b7280;
+	--primary-color: #4b5563;
+	--primary-hover: #6b7280;
+	--border-color: #e5e7eb;
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.12);
+	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.16);
 }
 
 * {
@@ -241,7 +238,7 @@ body {
 	background: var(--bg-secondary);
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-lg);
-	max-width: 700px;
+	max-width: 1080px;
 	width: 100%;
 	max-height: 90vh;
 	overflow-y: auto;

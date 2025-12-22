@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.4.1",
+	"version": "3.5.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -13,9 +13,10 @@
 		}
 	},
 	"icons": {
-		"16": "icons/logo-16.png",
-		"32": "icons/logo-32.png",
-		"48": "icons/logo-48.png",
+		"16": "icons/icon.png",
+		"32": "icons/icon.png",
+		"48": "icons/icon.png",
+		"64": "icons/icon.png",
 		"96": "icons/logo-96.png",
 		"128": "icons/logo-128.png",
 		"256": "icons/logo-256.png",
@@ -38,9 +39,10 @@
 	],
 	"sidebar_action": {
 		"default_icon": {
-			"16": "icons/logo-16.png",
-			"32": "icons/logo-32.png",
-			"48": "icons/logo-48.png",
+			"16": "icons/icon.png",
+			"32": "icons/icon.png",
+			"48": "icons/icon.png",
+			"64": "icons/icon.png",
 			"96": "icons/logo-96.png",
 			"128": "icons/logo-128.png",
 			"256": "icons/logo-256.png",
@@ -52,9 +54,10 @@
 	},
 	"action": {
 		"default_icon": {
-			"16": "icons/logo-16.png",
-			"32": "icons/logo-32.png",
-			"48": "icons/logo-48.png",
+			"16": "icons/icon.png",
+			"32": "icons/icon.png",
+			"48": "icons/icon.png",
+			"64": "icons/icon.png",
 			"96": "icons/logo-96.png",
 			"128": "icons/logo-128.png",
 			"256": "icons/logo-256.png",
@@ -66,19 +69,29 @@
 		"browser_style": false,
 		"theme_icons": [
 			{
-				"dark": "icons/logo-16.png",
-				"light": "icons/logo-16.png",
+				"dark": "icons/icon.png",
+				"light": "icons/icon.png",
 				"size": 16
 			},
 			{
-				"dark": "icons/logo-32.png",
-				"light": "icons/logo-32.png",
+				"dark": "icons/icon.png",
+				"light": "icons/icon.png",
 				"size": 32
 			},
 			{
-				"dark": "icons/logo-48.png",
-				"light": "icons/logo-48.png",
+				"dark": "icons/icon.png",
+				"light": "icons/icon.png",
 				"size": 48
+			},
+			{
+				"dark": "icons/logo-64.png",
+				"light": "icons/logo-64.png",
+				"size": 64
+			},
+			{
+				"dark": "icons/logo-96.png",
+				"light": "icons/logo-96.png",
+				"size": 96
 			},
 			{
 				"dark": "icons/logo-128.png",
@@ -182,7 +195,7 @@
 		}
 	],
 	"oauth2": {
-		"client_id": "<your_client_id>.apps.googleusercontent.com",
+		"client_id": "1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com",
 		"scopes": [
 			"https://www.googleapis.com/auth/drive.file"
 		]

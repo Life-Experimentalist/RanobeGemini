@@ -9,7 +9,7 @@
 			rel="icon"
 			type="image/png"
 			sizes="32x32"
-			href="../../../icons/logo-32.png"
+			href="../../../icons/icon.png"
 		/>
 	</head>
 	<body class="ao3-page">
@@ -354,6 +354,18 @@
 					<div id="modal-metadata-container"></div>
 				</div>
 				<div class="modal-footer">
+					<div class="modal-status-section">
+						<div class="status-label">Reading Status:</div>
+						<div class="status-buttons">
+							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To Read</button>
+							<button class="status-btn" data-status="reading" title="Currently Reading">📖 Reading</button>
+							<button class="status-btn" data-status="completed" title="Completed">✅ Completed</button>
+							<button class="status-btn" data-status="on-hold" title="On Hold">⏸️ On Hold</button>
+							<button class="status-btn" data-status="dropped" title="Dropped">❌ Dropped</button>
+							<button class="status-btn" data-status="rereading" title="Re-reading">🔁 Re-reading</button>
+						</div>
+					</div>
+					<div class="modal-actions-divider"></div>
 					<div class="modal-actions-primary">
 						<a id="modal-continue-btn" class="btn btn-primary ao3-read-btn" target="_blank">Continue Reading</a>
 						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on AO3</a>

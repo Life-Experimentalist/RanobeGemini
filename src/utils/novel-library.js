@@ -227,14 +227,16 @@ export class NovelLibrary {
 	async getLibrary() {
 		try {
 			const result = await browser.storage.local.get(this.LIBRARY_KEY);
-			return (
+			const library =
 				result[this.LIBRARY_KEY] || {
 					novels: {},
 					shelves: {},
 					lastUpdated: null,
 					version: "1.0",
-				}
-			);
+				};
+
+			await this.applyStaleStatusRules(library);
+			return library;
 		} catch (error) {
 			debugError("Failed to get library:", error);
 			return {
@@ -243,6 +245,46 @@ export class NovelLibrary {
 				lastUpdated: null,
 				version: "1.0",
 			};
+		}
+	}
+
+	/**
+	 * Auto-adjust stale reading statuses:
+	 * - If a novel hasn't been touched for 7+ days and is still READING:
+	 *   - If at chapter 1 or the novel only has 1 chapter → PLAN_TO_READ
+	 *   - Otherwise → ON_HOLD
+	 * Completed remains user-controlled.
+	 * @param {Object} library
+	 */
+	async applyStaleStatusRules(library) {
+		if (!library || !library.novels) return;
+
+		const now = Date.now();
+		const thresholdMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+		let changed = false;
+
+		for (const novel of Object.values(library.novels)) {
+			const lastActivity =
+				novel.lastAccessedAt || novel.lastUpdated || novel.addedAt;
+			if (!lastActivity || now - lastActivity < thresholdMs) continue;
+
+			if (novel.readingStatus === READING_STATUS.READING) {
+				const lastReadChapter = novel.lastReadChapter || 0;
+				const totalChapters = novel.totalChapters || 0;
+
+				if (lastReadChapter <= 1 || totalChapters <= 1) {
+					novel.readingStatus = READING_STATUS.PLAN_TO_READ;
+				} else {
+					novel.readingStatus = READING_STATUS.ON_HOLD;
+				}
+
+				novel.lastAccessedAt = now;
+				changed = true;
+			}
+		}
+
+		if (changed) {
+			await this.saveLibrary(library);
 		}
 	}
 

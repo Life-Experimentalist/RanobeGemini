@@ -159,7 +159,7 @@ export class NovelCardRenderer {
 		}
 		// Use browser extension API to get logo
 		if (typeof browser !== "undefined" && browser.runtime) {
-			return browser.runtime.getURL("icons/logo-light-128.png");
+			return browser.runtime.getURL("icons/logo-256.png");
 		}
 		return "";
 	}

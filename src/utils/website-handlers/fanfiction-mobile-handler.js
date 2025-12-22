@@ -165,6 +165,60 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 
 	/**
+	 * Get site-specific enhancement buttons for FanFiction.net mobile
+	 * These buttons are injected into the control panel alongside enhance/summarize
+	 * @returns {Array<HTMLElement>} Array of button elements
+	 */
+	getSiteSpecificEnhancements() {
+		// Only show on chapter pages
+		if (!this.isChapterPage()) {
+			return [];
+		}
+
+		const button = document.createElement("button");
+		button.id = "fanfiction-version-switcher";
+		button.textContent = "🖥️ Desktop";
+		button.title = "Switch to desktop version";
+
+		// Match the same styling as enhance/summarize buttons but compact
+		button.style.cssText = `
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 12px;
+			margin: 0;
+			background-color: #222;
+			color: #bab9a0;
+			border: 1px solid #ffffff21;
+			box-shadow: inset 0 0 0 1px #5a5a5a4d;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: bold;
+			font-size: 12px;
+			z-index: 1000;
+		`;
+
+		button.addEventListener("click", () => {
+			const currentUrl = window.location.href;
+			// Switch from m.fanfiction.net to www.fanfiction.net
+			const newUrl = currentUrl.replace(
+				"m.fanfiction.net",
+				"www.fanfiction.net"
+			);
+			window.location.href = newUrl;
+		});
+
+		button.addEventListener("mouseover", () => {
+			button.style.backgroundColor = "#333";
+		});
+		button.addEventListener("mouseout", () => {
+			button.style.backgroundColor = "#222";
+		});
+
+		return [button];
+	}
+
+	/**
 	 * Extract basic metadata from mobile page
 	 * Note: Mobile version has limited metadata, prefer desktop for full details
 	 * @returns {Object}

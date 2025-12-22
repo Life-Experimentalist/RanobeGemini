@@ -9,6 +9,7 @@ import { NovelCardRenderer } from "../novel-card-base.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	updateNovelInLibrary,
 } from "../../../utils/novel-library.js";
 
 const CANONICAL_LABELS = new Map();
@@ -675,6 +676,36 @@ function showNovelModal(novel) {
 		FanFictionNovelCard.renderModalMetadata(novel);
 	}
 
+	// Setup reading status buttons
+	const statusButtons = document.querySelectorAll(".status-btn");
+	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+	statusButtons.forEach((btn) => {
+		const status = btn.getAttribute("data-status");
+
+		// Set active state
+		if (status === currentStatus) {
+			btn.classList.add("active");
+		} else {
+			btn.classList.remove("active");
+		}
+
+		// Add click handler
+		btn.onclick = async () => {
+			const updatedNovel = { ...novel, readingStatus: status };
+			await updateNovelInLibrary(updatedNovel);
+
+			// Update button states
+			statusButtons.forEach((b) => {
+				if (b.getAttribute("data-status") === status) {
+					b.classList.add("active");
+				} else {
+					b.classList.remove("active");
+				}
+			});
+		};
+	});
+
 	// CSS is now handled in shelf-page.css
 
 	modal.style.display = "flex";
@@ -1144,7 +1175,10 @@ function updateAnalytics(novels) {
 		(sum, n) => sum + (n.enhancedChaptersCount || 0),
 		0
 	);
-	const totalWords = novels.reduce((sum, n) => sum + n.metadata?.words, 0);
+	const totalWords = novels.reduce(
+		(sum, n) => sum + (n.metadata?.words || n.words || 0),
+		0
+	);
 	const readingBuckets = novels.reduce((acc, novel) => {
 		const key =
 			normalizeReadingStatus(novel.readingStatus) ||

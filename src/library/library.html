@@ -9,13 +9,7 @@
 			rel="icon"
 			type="image/png"
 			sizes="32x32"
-			href="../icons/logo-32.png"
-		/>
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="../icons/logo-light-32.png"
+			href="../icons/icon.png"
 		/>
 	</head>
 	<body>
@@ -25,15 +19,11 @@
 				<div class="header-content">
 					<div class="logo-section">
 						<img
-							src="../icons/logo-light-48.png"
+							src="../icons/icon.png"
 							alt="Ranobe Gemini"
-							class="logo light-mode-icon"
+							class="logo light-mode-icon dark-mode-icon"
 						/>
-						<!-- <img
-							src="../icons/logo-dark-48.png"
-							alt="Ranobe Gemini"
-							class="logo dark-mode-icon"
-						/> -->
+
 						<h1>Novel Library</h1>
 					</div>
 					<div class="header-actions">
@@ -74,16 +64,28 @@
 					</div>
 				</div>
 				<div class="carousel-footer">
-					<button class="carousel-btn" id="carousel-prev" title="Previous">
+					<button
+						class="carousel-btn"
+						id="carousel-prev"
+						title="Previous"
+					>
 						◀
 					</button>
 					<div class="carousel-indicators" id="carousel-indicators">
 						<!-- Indicators will be populated by JavaScript -->
 					</div>
-					<button class="carousel-btn" id="carousel-play-pause" title="Pause auto-scroll">
+					<button
+						class="carousel-btn"
+						id="carousel-play-pause"
+						title="Pause auto-scroll"
+					>
 						⏸️
 					</button>
-					<button class="carousel-btn" id="carousel-next" title="Next">
+					<button
+						class="carousel-btn"
+						id="carousel-next"
+						title="Next"
+					>
 						▶
 					</button>
 				</div>
@@ -125,7 +127,11 @@
 					<button class="view-btn" data-view="all" title="All Novels">
 						📋 All
 					</button>
-					<button class="view-btn" data-view="lists" title="Reading Lists">
+					<button
+						class="view-btn"
+						data-view="lists"
+						title="Reading Lists"
+					>
 						📖 Lists
 					</button>
 				</div>
@@ -141,26 +147,58 @@
 			</div>
 
 			<!-- Reading Status Filter (shown in Lists view) -->
-			<div id="reading-status-filter" class="reading-status-filter hidden">
-				<button class="status-filter-btn active" style="align-items: center;" data-status="all" title="All Novels">
+			<div
+				id="reading-status-filter"
+				class="reading-status-filter hidden"
+			>
+				<button
+					class="status-filter-btn active"
+					style="align-items: center"
+					data-status="all"
+					title="All Novels"
+				>
 					📚 All
 				</button>
-				<button class="status-filter-btn" data-status="reading" title="Currently Reading">
+				<button
+					class="status-filter-btn"
+					data-status="reading"
+					title="Currently Reading"
+				>
 					📖 Reading
 				</button>
-				<button class="status-filter-btn" data-status="completed" title="Completed">
+				<button
+					class="status-filter-btn"
+					data-status="completed"
+					title="Completed"
+				>
 					✅ Completed
 				</button>
-				<button class="status-filter-btn" data-status="plan-to-read" title="Plan to Read">
+				<button
+					class="status-filter-btn"
+					data-status="plan-to-read"
+					title="Plan to Read"
+				>
 					📋 Plan to Read
 				</button>
-				<button class="status-filter-btn" data-status="on-hold" title="On Hold">
+				<button
+					class="status-filter-btn"
+					data-status="on-hold"
+					title="On Hold"
+				>
 					⏸️ On Hold
 				</button>
-				<button class="status-filter-btn" data-status="dropped" title="Dropped">
+				<button
+					class="status-filter-btn"
+					data-status="dropped"
+					title="Dropped"
+				>
 					❌ Dropped
 				</button>
-				<button class="status-filter-btn" data-status="re-reading" title="Re-reading">
+				<button
+					class="status-filter-btn"
+					data-status="re-reading"
+					title="Re-reading"
+				>
 					🔁 Re-reading
 				</button>
 			</div>
@@ -190,7 +228,9 @@
 
 				<!-- Reading Lists View -->
 				<div id="lists-view" class="view-content">
-					<h2 class="section-title" id="lists-title">Reading Lists</h2>
+					<h2 class="section-title" id="lists-title">
+						Reading Lists
+					</h2>
 					<div id="lists-stats" class="lists-stats">
 						<!-- Reading status counts will be shown here -->
 					</div>
@@ -296,52 +336,118 @@
 							</div>
 
 							<!-- Website-specific metadata section -->
-							<div class="novel-metadata" id="modal-metadata-container" style="display: none;">
+							<div
+								class="novel-metadata"
+								id="modal-metadata-container"
+								style="display: none"
+							>
 								<!-- Rating/Warnings section for AO3/fanfic sites -->
-								<div class="metadata-section" id="modal-rating-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-rating-section"
+									style="display: none"
+								>
 									<h3>Rating & Warnings</h3>
 									<div class="metadata-row">
-										<span class="metadata-label">Rating:</span>
-										<span id="modal-rating" class="rating-badge"></span>
+										<span class="metadata-label"
+											>Rating:</span
+										>
+										<span
+											id="modal-rating"
+											class="rating-badge"
+										></span>
 									</div>
-									<div class="metadata-row" id="modal-warnings-row" style="display: none;">
-										<span class="metadata-label">Warnings:</span>
-										<div id="modal-warnings" class="tag-list warning-tags"></div>
+									<div
+										class="metadata-row"
+										id="modal-warnings-row"
+										style="display: none"
+									>
+										<span class="metadata-label"
+											>Warnings:</span
+										>
+										<div
+											id="modal-warnings"
+											class="tag-list warning-tags"
+										></div>
 									</div>
-									<div class="metadata-row" id="modal-categories-row" style="display: none;">
-										<span class="metadata-label">Categories:</span>
-										<div id="modal-categories" class="tag-list category-tags"></div>
+									<div
+										class="metadata-row"
+										id="modal-categories-row"
+										style="display: none"
+									>
+										<span class="metadata-label"
+											>Categories:</span
+										>
+										<div
+											id="modal-categories"
+											class="tag-list category-tags"
+										></div>
 									</div>
 								</div>
 
 								<!-- Fandoms section -->
-								<div class="metadata-section" id="modal-fandoms-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-fandoms-section"
+									style="display: none"
+								>
 									<h3>Fandoms</h3>
-									<div id="modal-fandoms" class="tag-list fandom-tags"></div>
+									<div
+										id="modal-fandoms"
+										class="tag-list fandom-tags"
+									></div>
 								</div>
 
 								<!-- Relationships section -->
-								<div class="metadata-section" id="modal-relationships-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-relationships-section"
+									style="display: none"
+								>
 									<h3>Relationships</h3>
-									<div id="modal-relationships" class="tag-list relationship-tags"></div>
+									<div
+										id="modal-relationships"
+										class="tag-list relationship-tags"
+									></div>
 								</div>
 
 								<!-- Characters section -->
-								<div class="metadata-section" id="modal-characters-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-characters-section"
+									style="display: none"
+								>
 									<h3>Characters</h3>
-									<div id="modal-characters" class="tag-list character-tags"></div>
+									<div
+										id="modal-characters"
+										class="tag-list character-tags"
+									></div>
 								</div>
 
 								<!-- Additional Tags section -->
-								<div class="metadata-section" id="modal-additional-tags-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-additional-tags-section"
+									style="display: none"
+								>
 									<h3>Additional Tags</h3>
-									<div id="modal-additional-tags" class="tag-list additional-tags"></div>
+									<div
+										id="modal-additional-tags"
+										class="tag-list additional-tags"
+									></div>
 								</div>
 
 								<!-- Work Stats section -->
-								<div class="metadata-section" id="modal-work-stats-section" style="display: none;">
+								<div
+									class="metadata-section"
+									id="modal-work-stats-section"
+									style="display: none"
+								>
 									<h3>Work Stats</h3>
-									<div class="work-stats-grid" id="modal-work-stats"></div>
+									<div
+										class="work-stats-grid"
+										id="modal-work-stats"
+									></div>
 								</div>
 							</div>
 
@@ -559,15 +665,28 @@
 					<div class="settings-section">
 						<h3>Reading Status Automation</h3>
 						<div class="settings-item">
-							<label style="display: flex; gap: 8px; align-items: center;">
+							<label
+								style="
+									display: flex;
+									gap: 8px;
+									align-items: center;
+								"
+							>
 								<input type="checkbox" id="auto-hold-toggle" />
-								<span>Auto-set inactive novels to “On Hold”</span>
+								<span
+									>Auto-set inactive novels to “On Hold”</span
+								>
 							</label>
 							<p class="settings-desc">
-								Moves novels that have not been opened or updated within the configured window to the
+								Moves novels that have not been opened or
+								updated within the configured window to the
 								<em>On Hold</em> status.
 							</p>
-							<label for="auto-hold-days" class="settings-desc" style="display: block; margin-top: 6px;">
+							<label
+								for="auto-hold-days"
+								class="settings-desc"
+								style="display: block; margin-top: 6px"
+							>
 								Inactivity window (days)
 							</label>
 							<input
@@ -577,7 +696,7 @@
 								max="90"
 								step="1"
 								value="7"
-								style="width: 120px;"
+								style="width: 120px"
 							/>
 						</div>
 					</div>

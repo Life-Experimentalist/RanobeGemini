@@ -9,13 +9,14 @@ import { NovelCardRenderer } from "../novel-card-base.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	updateNovelInLibrary,
 } from "../../../utils/novel-library.js";
 
 const CANONICAL_LABELS = new Map();
 
 const CATEGORY_LOOKUP = {
 	fandoms: new Set(),
-	relationships: new Set(),	
+	relationships: new Set(),
 	characters: new Set(),
 	additionalTags: new Set(),
 };
@@ -652,6 +653,36 @@ function showNovelModal(novel) {
 			}
 		};
 	}
+
+	// Setup reading status buttons
+	const statusButtons = document.querySelectorAll(".status-btn");
+	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+	statusButtons.forEach((btn) => {
+		const status = btn.getAttribute("data-status");
+
+		// Set active state
+		if (status === currentStatus) {
+			btn.classList.add("active");
+		} else {
+			btn.classList.remove("active");
+		}
+
+		// Add click handler
+		btn.onclick = async () => {
+			const updatedNovel = { ...novel, readingStatus: status };
+			await updateNovelInLibrary(updatedNovel);
+
+			// Update button states
+			statusButtons.forEach((b) => {
+				if (b.getAttribute("data-status") === status) {
+					b.classList.add("active");
+				} else {
+					b.classList.remove("active");
+				}
+			});
+		};
+	});
 
 	modal.style.display = "flex";
 

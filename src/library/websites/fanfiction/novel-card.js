@@ -758,6 +758,48 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 					</div>
 				</div>
 
+				<!-- Fandoms, Characters, Genres in 3-column row -->
+				<div class="fanfic-modal-three-columns">
+					<!-- Fandoms Column -->
+					${
+						fandoms.length > 0
+							? `
+					<div class="fanfic-modal-column">
+						<h4 class="modal-section-title">Fandoms</h4>
+						<div class="tags-list">
+							${renderTagList(fandoms, "tag-fandom")}
+						</div>
+					</div>`
+							: ""
+					}
+
+					<!-- Characters Column -->
+					${
+						characters.length > 0
+							? `
+					<div class="fanfic-modal-column">
+						<h4 class="modal-section-title">Characters</h4>
+						<div class="tags-list">
+							${renderTagList(characters, "tag-character")}
+						</div>
+					</div>`
+							: ""
+					}
+
+					<!-- Genres Column -->
+					${
+						genres.length > 0
+							? `
+					<div class="fanfic-modal-column">
+						<h4 class="modal-section-title">Genres</h4>
+						<div class="tags-list">
+							${renderTagList(genres, "tag-genre")}
+						</div>
+					</div>`
+							: ""
+					}
+				</div>
+
 				<!-- Statistics Grid -->
 				<div class="fanfic-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
@@ -772,45 +814,6 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 						${renderStat("Story ID", storyId, "🆔")}
 					</div>
 				</div>
-
-				<!-- Fandoms -->
-				${
-					fandoms.length > 0
-						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Fandoms</h4>
-					<div class="tags-list">
-						${renderTagList(fandoms, "tag-fandom")}
-					</div>
-				</div>`
-						: ""
-				}
-
-				<!-- Genres -->
-				${
-					genres.length > 0
-						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Genres</h4>
-					<div class="tags-list">
-						${renderTagList(genres, "tag-genre")}
-					</div>
-				</div>`
-						: ""
-				}
-
-				<!-- Characters -->
-				${
-					characters.length > 0
-						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Characters</h4>
-					<div class="tags-list">
-						${renderTagList(characters, "tag-character")}
-					</div>
-				</div>`
-						: ""
-				}
 
 				<!-- Other Tags -->
 				${

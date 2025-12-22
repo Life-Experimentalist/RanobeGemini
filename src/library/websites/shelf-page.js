@@ -12,6 +12,44 @@ import {
 } from "../../utils/novel-library.js";
 import { debugLog, debugError } from "../../utils/logger.js";
 
+// Theme defaults shared with popup/library
+const defaultTheme = {
+	mode: "dark",
+	accentPrimary: "#4b5563",
+	accentSecondary: "#6b7280",
+	bgColor: "#0f172a",
+	textColor: "#e5e7eb",
+};
+
+const themePalettes = {
+	dark: {
+		"primary-color": "#4b5563",
+		"primary-hover": "#6b7280",
+		"bg-primary": "#0f172a",
+		"bg-secondary": "#111827",
+		"bg-tertiary": "#1f2937",
+		"bg-card": "#1f2937",
+		"bg-card-hover": "#2b3544",
+		"text-primary": "#e5e7eb",
+		"text-secondary": "#9ca3af",
+		"text-muted": "#6b7280",
+		"border-color": "#2f3644",
+	},
+	light: {
+		"primary-color": "#4b5563",
+		"primary-hover": "#6b7280",
+		"bg-primary": "#f3f4f6",
+		"bg-secondary": "#ffffff",
+		"bg-tertiary": "#e5e7eb",
+		"bg-card": "#ffffff",
+		"bg-card-hover": "#f3f4f6",
+		"text-primary": "#111827",
+		"text-secondary": "#374151",
+		"text-muted": "#6b7280",
+		"border-color": "#e5e7eb",
+	},
+};
+
 // Helper to get just the label from READING_STATUS_INFO
 const READING_STATUS_LABELS = Object.fromEntries(
 	Object.entries(READING_STATUS_INFO).map(([key, value]) => [
@@ -39,6 +77,59 @@ let availableTags = new Set();
 // Custom filter callbacks registered by specific shelf pages
 let customFilterCallbacks = [];
 
+async function applyShelfTheme() {
+	try {
+		const result =
+			typeof browser !== "undefined" && browser.storage?.local
+				? await browser.storage.local.get("themeSettings")
+				: {};
+		const theme = result.themeSettings || defaultTheme;
+		setThemeVariables(theme);
+	} catch (error) {
+		debugError("Failed to apply shelf theme:", error);
+		setThemeVariables(defaultTheme);
+	}
+}
+
+function setThemeVariables(theme) {
+	const root = document.documentElement;
+	const mode = theme.mode || "dark";
+	const palette = themePalettes[mode === "light" ? "light" : "dark"];
+
+	if (mode === "light") {
+		root.setAttribute("data-theme", "light");
+	} else if (mode === "auto") {
+		const prefersDark = window.matchMedia(
+			"(prefers-color-scheme: dark)"
+		).matches;
+		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+	} else {
+		root.removeAttribute("data-theme");
+	}
+
+	Object.entries(palette).forEach(([key, value]) => {
+		root.style.setProperty(`--${key}`, value);
+	});
+
+	// Respect custom overrides
+	if (theme.accentPrimary)
+		root.style.setProperty("--primary-color", theme.accentPrimary);
+	if (theme.accentSecondary)
+		root.style.setProperty("--primary-hover", theme.accentSecondary);
+	if (theme.bgColor) root.style.setProperty("--bg-primary", theme.bgColor);
+	if (theme.textColor)
+		root.style.setProperty("--text-primary", theme.textColor);
+}
+
+function setupThemeListener() {
+	if (typeof browser === "undefined" || !browser.storage?.onChanged) return;
+
+	browser.storage.onChanged.addListener((changes, area) => {
+		if (area !== "local" || !changes.themeSettings) return;
+		applyShelfTheme();
+	});
+}
+
 /**
  * Register a custom filter callback to extend filtering logic
  * @param {Function} callback - Function that receives novels array and returns filtered array
@@ -57,6 +148,9 @@ export function registerCustomFilter(callback) {
 export async function initShelfPage(shelfId, config = {}) {
 	currentShelf = shelfId;
 	shelfConfig = config;
+
+	await applyShelfTheme();
+	setupThemeListener();
 
 	// Setup UI elements
 	setupFilterControls();

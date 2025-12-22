@@ -156,10 +156,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Theme defaults
 	const defaultTheme = {
 		mode: "dark",
-		accentPrimary: "#667eea",
-		accentSecondary: "#764ba2",
-		bgColor: "#16213e",
-		textColor: "#e0e0e0",
+		accentPrimary: "#4b5563",
+		accentSecondary: "#6b7280",
+		bgColor: "#111827",
+		textColor: "#e5e7eb",
 	};
 
 	// Theme Management Functions

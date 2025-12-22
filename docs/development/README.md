@@ -107,13 +107,15 @@ This directory contains documentation for developers working on the RanobeGemini
 
 ### Development Tasks
 
-| Task                | Command                   | Purpose                      |
-| ------------------- | ------------------------- | ---------------------------- |
-| **Watch & Build**   | `npm run watch`           | Auto-rebuild on file changes |
-| **Build Once**      | `npm run build`           | Single production build      |
-| **Package Firefox** | `npm run package:firefox` | Create distributable .xpi    |
-| **Package Source**  | `npm run package:source`  | Create source code archive   |
-| **Update Domains**  | `npm run update-domains`  | Regenerate manifest domains  |
+| Task                 | Command                    | Purpose                      |
+| -------------------- | -------------------------- | ---------------------------- |
+| **Watch & Build**    | `npm run watch`            | Auto-rebuild on file changes |
+| **Build Once**       | `npm run build`            | Single production build      |
+| **Package Firefox**  | `npm run package-firefox`  | Create distributable .xpi    |
+| **Package Chromium** | `npm run package-chromium` | Create distributable .zip    |
+| **Package Source**   | `npm run package-source`   | Create source code archive   |
+| **Package All**      | `npm run package`          | Refresh domains + build all  |
+| **Update Domains**   | `npm run update-domains`   | Regenerate manifest domains  |
 
 ### File Structure for Developers
 
@@ -316,9 +318,15 @@ localStorage.setItem('rg_debug', 'true');
 2. **Update [CHANGELOG.md](../CHANGELOG.md)** with changes
 3. **Run build:** `npm run build`
 4. **Test thoroughly** on all supported sites
-5. **Package:** `npm run package:firefox` and `npm run package:source`
-6. **Create GitHub release** with packages
-7. **Submit to Firefox Add-ons** if needed
+5. **Package:** `npm run package` (runs domain refresh + multi-target) or target builds via `npm run package-firefox`, `npm run package-chromium`
+6. **Package source:** `npm run package-source`
+7. **Create GitHub release** with packages
+8. **Submit to Firefox Add-ons** if needed
+
+**Packaging order (npm):**
+- `npm run update-domains`
+- `npm run package` (or `npm run package-firefox` / `npm run package-chromium` for single-target rebuilds)
+- `npm run package-source`
 
 ### Version Numbering
 

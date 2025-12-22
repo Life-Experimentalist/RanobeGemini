@@ -10,6 +10,47 @@ import {
 	READING_STATUS_INFO,
 } from "../utils/novel-library.js";
 import { debugLog, debugError } from "../utils/logger.js";
+// import { getCardRenderer } from "./websites/novel-card-base.js";
+
+// Modal renderer registry (site-specific modal metadata renderers)
+const MODAL_RENDERER_CONFIG = {
+	ranobes: {
+		path: "./websites/ranobes/novel-card.js",
+		exportName: "RanobesNovelCard",
+	},
+	fanfiction: {
+		path: "./websites/fanfiction/novel-card.js",
+		exportName: "FanFictionNovelCard",
+	},
+	ao3: {
+		path: "./websites/ao3/novel-card.js",
+		exportName: "AO3CardRenderer",
+	},
+	scribblehub: {
+		path: "./websites/scribblehub/novel-card.js",
+		exportName: "ScribbleHubNovelCard",
+	},
+};
+const modalRendererCache = {};
+const modalStylesInjected = new Set();
+
+// Prefix site-specific modal CSS so it only affects the modal when that site's
+// metadata is being rendered. This prevents styles from leaking into the main
+// library UI.
+function scopeModalCss(cssText, scopeSelector) {
+	if (!cssText || !scopeSelector) return cssText;
+	return cssText
+		.split("}")
+		.map((block) => {
+			const parts = block.split("{");
+			if (parts.length < 2) return block;
+			const selector = parts[0].trim();
+			const rules = parts.slice(1).join("{");
+			if (!selector || selector.startsWith("@")) return block; // Skip @media/@keyframes
+			return `${scopeSelector} ${selector} {${rules}}`;
+		})
+		.join("}");
+}
 
 // State
 let currentView = "shelves";
@@ -21,6 +62,71 @@ let librarySettings = {
 	autoHoldEnabled: true,
 	autoHoldDays: 7,
 };
+
+// Shared theme defaults (mirrors popup defaults)
+const defaultTheme = {
+	mode: "auto",
+	accentPrimary: "#4b5563",
+	accentSecondary: "#6b7280",
+	bgColor: "#0f172a",
+	textColor: "#e5e7eb",
+};
+
+const themePalettes = {
+	dark: {
+		"primary-color": "#4b5563",
+		"primary-hover": "#6b7280",
+		"secondary-color": "#9ca3af",
+		"danger-color": "#ef4444",
+		"success-color": "#22c55e",
+		"bg-primary": "#0f172a",
+		"bg-secondary": "#111827",
+		"bg-tertiary": "#1f2937",
+		"bg-card": "#1f2937",
+		"bg-card-hover": "#2b3544",
+		"text-primary": "#e5e7eb",
+		"text-secondary": "#9ca3af",
+		"text-muted": "#6b7280",
+		"border-color": "#2f3644",
+		"border-light": "#3b4454",
+	},
+	light: {
+		"primary-color": "#4b5563",
+		"primary-hover": "#6b7280",
+		"secondary-color": "#6b7280",
+		"danger-color": "#ef4444",
+		"success-color": "#22c55e",
+		"bg-primary": "#f3f4f6",
+		"bg-secondary": "#ffffff",
+		"bg-tertiary": "#e5e7eb",
+		"bg-card": "#ffffff",
+		"bg-card-hover": "#f3f4f6",
+		"text-primary": "#111827",
+		"text-secondary": "#374151",
+		"text-muted": "#6b7280",
+		"border-color": "#e5e7eb",
+		"border-light": "#d1d5db",
+	},
+};
+
+// Track metadata refresh snapshots to show before/after banners
+const REFRESH_PREFIX = "rg-refresh-snapshot-";
+const REFRESH_TAB_TIMEOUT_MS = 18000; // Allow extra time for slower sites before auto-closing refresh tab
+
+function getRefreshTabTimeout(url) {
+	if (!url) return REFRESH_TAB_TIMEOUT_MS;
+
+	try {
+		const { hostname } = new URL(url);
+		// Some sites render slowly; give them more breathing room
+		if (hostname.includes("archiveofourown")) return 22000;
+		if (hostname.includes("ranobes")) return 20000;
+		if (hostname.includes("scribblehub")) return 20000;
+		return REFRESH_TAB_TIMEOUT_MS;
+	} catch (_err) {
+		return REFRESH_TAB_TIMEOUT_MS;
+	}
+}
 
 // DOM Elements
 const elements = {
@@ -133,6 +239,47 @@ const elements = {
 	carouselNext: document.getElementById("carousel-next"),
 };
 
+async function applyLibraryTheme() {
+	try {
+		const result = await browser.storage.local.get("themeSettings");
+		const theme = result.themeSettings || defaultTheme;
+		setThemeVariables(theme);
+	} catch (error) {
+		debugError("Failed to apply theme settings:", error);
+		setThemeVariables(defaultTheme);
+	}
+}
+
+function setThemeVariables(theme) {
+	const root = document.documentElement;
+	const mode = theme.mode || "dark";
+	const palette = themePalettes[mode === "light" ? "light" : "dark"];
+
+	if (mode === "light") {
+		root.setAttribute("data-theme", "light");
+	} else if (mode === "auto") {
+		const prefersDark = window.matchMedia(
+			"(prefers-color-scheme: dark)"
+		).matches;
+		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+	} else {
+		root.removeAttribute("data-theme");
+	}
+
+	Object.entries(palette).forEach(([key, value]) => {
+		root.style.setProperty(`--${key}`, value);
+	});
+
+	// Respect custom colors when provided
+	if (theme.accentPrimary)
+		root.style.setProperty("--primary-color", theme.accentPrimary);
+	if (theme.accentSecondary)
+		root.style.setProperty("--primary-hover", theme.accentSecondary);
+	if (theme.bgColor) root.style.setProperty("--bg-primary", theme.bgColor);
+	if (theme.textColor)
+		root.style.setProperty("--text-primary", theme.textColor);
+}
+
 // Carousel State
 let carouselState = {
 	currentIndex: 0,
@@ -164,6 +311,8 @@ async function init() {
 	if (isSidebar) {
 		document.body.classList.add("sidebar-mode");
 	}
+
+	await applyLibraryTheme();
 
 	// Populate supported sites list dynamically from SHELVES
 	populateSupportedSites();
@@ -234,6 +383,11 @@ async function persistAutoHoldSettings(updates = {}) {
 		...updates,
 	};
 	librarySettings = await novelLibrary.saveSettings(nextSettings);
+
+	// React to theme updates from popup
+	if (changes.themeSettings) {
+		applyLibraryTheme();
+	}
 }
 
 /**
@@ -253,13 +407,15 @@ async function enforceAutoHold(novels) {
 
 	novels.forEach((novel) => {
 		const lastTouch = novel.lastAccessedAt || novel.addedAt || 0;
+		const status = novel.readingStatus;
 		const isProtectedStatus =
-			novel.readingStatus === READING_STATUS.COMPLETED ||
-			novel.readingStatus === READING_STATUS.DROPPED;
+			status === READING_STATUS.COMPLETED ||
+			status === READING_STATUS.DROPPED;
 
+		// Only move active Reading items to On Hold after inactivity
 		if (
+			status === READING_STATUS.READING &&
 			!isProtectedStatus &&
-			novel.readingStatus !== READING_STATUS.ON_HOLD &&
 			now - lastTouch > thresholdMs
 		) {
 			updates.push({ id: novel.id, title: novel.title });
@@ -299,7 +455,6 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<span class="shelf-icon shelf-icon-img ${className}">
 				<img src="${escapeHtml(icon)}" alt=""
-					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 					style="width: 1.5em; height: 1.5em; vertical-align: middle;">
 				<span class="icon-fallback" style="display: none;">${fallbackEmoji}</span>
 			</span>`;
@@ -313,7 +468,6 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
 		const fallback = icon.fallback || fallbackEmoji;
 		return `<span class="shelf-icon shelf-icon-img ${className}">
 			<img src="${escapeHtml(icon.url)}" alt=""
-				onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 				style="width: 1.5em; height: 1.5em; vertical-align: middle;">
 			<span class="icon-fallback" style="display: none;">${fallback}</span>
 		</span>`;
@@ -355,7 +509,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<img src="${escapeHtml(
 				icon
-			)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
+			)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallbackEmoji}</span>`;
 		}
 		// It's an emoji
@@ -367,7 +521,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 		const fallback = icon.fallback || fallbackEmoji;
 		return `<img src="${escapeHtml(
 			icon.url
-		)}" alt="" class="placeholder-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 3rem; height: 3rem; object-fit: contain;">
+		)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallback}</span>`;
 	}
 
@@ -387,9 +541,7 @@ function renderShelfIconOverlay(icon) {
 		// Check if it's a URL
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<div class="novel-icon-overlay">
-				<img src="${escapeHtml(
-					icon
-				)}" alt="" class="overlay-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+				<img src="${escapeHtml(icon)}" alt="" class="overlay-icon-img">
 				<span class="overlay-icon-fallback" style="display: none;">📖</span>
 			</div>`;
 		}
@@ -401,14 +553,182 @@ function renderShelfIconOverlay(icon) {
 	if (typeof icon === "object" && icon.url) {
 		const fallback = icon.fallback || "📖";
 		return `<div class="novel-icon-overlay">
-				<img src="${escapeHtml(
-					icon.url
-				)}" alt="" class="overlay-icon-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+				<img src="${escapeHtml(icon.url)}" alt="" class="overlay-icon-img">
 				<span class="overlay-icon-fallback" style="display: none;">${fallback}</span>
 			</div>`;
 	}
 
 	return '<span class="novel-icon-overlay">📖</span>';
+}
+
+// Attach fallback handlers for small icon images used in shelf badges/placeholders
+function attachIconFallbacks(root = document) {
+	root.querySelectorAll(".shelf-icon-img img").forEach((img) => {
+		const fallback = img.nextElementSibling;
+		if (!fallback) return;
+		img.addEventListener("error", () => {
+			img.style.display = "none";
+			fallback.style.display = "inline";
+		});
+	});
+
+	root.querySelectorAll(".placeholder-icon-img").forEach((img) => {
+		const fallback = img.nextElementSibling;
+		if (!fallback) return;
+		img.addEventListener("error", () => {
+			img.style.display = "none";
+			fallback.style.display = "flex";
+		});
+	});
+
+	root.querySelectorAll(".overlay-icon-img").forEach((img) => {
+		const fallback = img.nextElementSibling;
+		if (!fallback) return;
+		img.addEventListener("error", () => {
+			img.style.display = "none";
+			fallback.style.display = "flex";
+		});
+	});
+
+	root.querySelectorAll("img.meta-icon[data-fallback-emoji]").forEach(
+		(img) => {
+			img.addEventListener("error", () => {
+				const emoji = img.dataset.fallbackEmoji || "📖";
+				const span = document.createElement("span");
+				span.textContent = emoji;
+				img.replaceWith(span);
+			});
+		}
+	);
+}
+
+function createCoverPlaceholder(content, extraClasses = []) {
+	const placeholder = document.createElement("div");
+	placeholder.className = "novel-cover-placeholder";
+	extraClasses.forEach((cls) => placeholder.classList.add(cls));
+	placeholder.innerHTML = content || "📖";
+	return placeholder;
+}
+
+function initCoverImage(imgEl, sources, placeholderContent) {
+	if (!imgEl) return;
+	const srcList = (sources || []).filter(Boolean);
+	let index = 0;
+	const extraClasses = imgEl.classList.contains("carousel-cover")
+		? ["carousel-cover-placeholder"]
+		: [];
+	const placeholder = createCoverPlaceholder(
+		placeholderContent,
+		extraClasses
+	);
+	const tryNext = () => {
+		if (index >= srcList.length) {
+			imgEl.replaceWith(placeholder);
+			return;
+		}
+		imgEl.src = srcList[index++];
+	};
+	imgEl.addEventListener("error", () => tryNext());
+	tryNext();
+}
+
+function getShelfById(shelfId) {
+	if (!shelfId) return null;
+	const direct = SHELVES[shelfId];
+	if (direct) return direct;
+	const upper = shelfId.toUpperCase();
+	if (SHELVES[upper]) return SHELVES[upper];
+	const lower = shelfId.toLowerCase();
+	return SHELVES[lower] || null;
+}
+
+function injectModalStyles(cssText, key, scopeSelector) {
+	if (!cssText || modalStylesInjected.has(key)) return;
+	const styleEl = document.createElement("style");
+	styleEl.dataset.modalStyles = `modal-style-${key}`;
+	styleEl.textContent = scopeSelector
+		? scopeModalCss(cssText, scopeSelector)
+		: cssText;
+	document.head.appendChild(styleEl);
+	modalStylesInjected.add(key);
+}
+
+async function loadModalRendererForShelf(shelfId) {
+	if (!shelfId) return null;
+	const key = shelfId.toLowerCase();
+	if (modalRendererCache[key]) return modalRendererCache[key];
+	const cfg = MODAL_RENDERER_CONFIG[key];
+	if (!cfg) return null;
+	try {
+		const mod = await import(cfg.path);
+		const renderer =
+			mod[cfg.exportName] ||
+			mod.default ||
+			Object.values(mod).find((val) => val?.renderModalMetadata);
+		modalRendererCache[key] = renderer || null;
+		if (renderer?.getCustomStyles) {
+			const scopeSelector = `.modal[data-modal-site="${key}"]`;
+			injectModalStyles(renderer.getCustomStyles(), key, scopeSelector);
+		}
+		return renderer || null;
+	} catch (err) {
+		debugError(`Failed to load modal renderer for ${key}:`, err);
+		modalRendererCache[key] = null;
+		return null;
+	}
+}
+
+async function renderNovelMetadataForShelf(novel) {
+	if (!novel?.shelfId) return false;
+
+	const renderer = await loadModalRendererForShelf(novel.shelfId);
+	if (!renderer?.renderModalMetadata) {
+		debugLog(`No modal renderer found for shelf: ${novel.shelfId}`);
+		return false;
+	}
+
+	try {
+		if (!elements.modalMetadataContainer) {
+			debugLog("modal-metadata-container element not found");
+			return false;
+		}
+
+		elements.modalMetadataContainer.style.display = "block";
+		elements.modalMetadataContainer.innerHTML = "";
+		elements.modalMetadataContainer.dataset.shelfId = novel.shelfId;
+
+		renderer.renderModalMetadata(novel);
+
+		const hasContent =
+			elements.modalMetadataContainer.innerHTML.trim().length > 0;
+		if (!hasContent) {
+			debugLog(
+				`Modal renderer for ${novel.shelfId} produced no content; falling back`
+			);
+			return false;
+		}
+
+		debugLog(`Modal metadata rendered by: ${novel.shelfId}`);
+		return true;
+	} catch (err) {
+		debugError(`Error rendering modal metadata for ${novel.shelfId}:`, err);
+		return false;
+	}
+}
+
+function getHandlerTypeForNovel(novel) {
+	const shelf = getShelfById(novel?.shelfId);
+	return (
+		novel?.metadata?.handlerType || shelf?.handlerType || "chapter_embedded"
+	);
+}
+
+function resolveMetadataRefreshUrl(novel) {
+	const handlerType = getHandlerTypeForNovel(novel);
+	if (handlerType === "chapter_embedded") {
+		return novel.lastReadUrl || novel.sourceUrl || novel.lastReadChapterUrl;
+	}
+	return novel.sourceUrl || novel.lastReadUrl || novel.lastReadChapterUrl;
 }
 
 /**
@@ -426,6 +746,8 @@ function populateSupportedSites() {
 				}</li>`
 		)
 		.join("");
+
+	attachIconFallbacks(sitesList);
 }
 
 /**
@@ -484,7 +806,7 @@ function setupEventListeners() {
 			try {
 				const novel = await novelLibrary.getNovel(novelId);
 				if (novel) {
-					showNovelDetails(novel);
+					openNovelDetail(novel);
 				}
 			} catch (error) {
 				debugError("Error opening novel modal:", error);
@@ -913,7 +1235,7 @@ function createNovelCardForShelf(novel, shelf) {
 	card.dataset.novelId = novel.id;
 
 	// Fallback to extension logo if cover fails to load
-	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
 
 	// Generate placeholder content with icon image support
 	const placeholderContent = shelf
@@ -921,7 +1243,9 @@ function createNovelCardForShelf(novel, shelf) {
 		: "📖";
 
 	const coverHtml = novel.coverUrl
-		? `<img src="${novel.coverUrl}" alt="Cover" class="novel-cover" loading="lazy" onerror="this.src='${fallbackLogo}'; this.onerror=null;">`
+		? `<img data-cover-src="${escapeHtml(
+				novel.coverUrl
+		  )}" alt="Cover" class="novel-cover" loading="lazy">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -1005,6 +1329,30 @@ function createNovelCardForShelf(novel, shelf) {
 		await handleStatusChange(novel.id, newStatus);
 	});
 
+	// Attach cover fallback using inline onerror
+	const coverImg = card.querySelector(".novel-cover");
+	if (coverImg && novel.coverUrl) {
+		const shelfIconUrl = shelf?.icon?.startsWith?.("http")
+			? shelf.icon
+			: null;
+		coverImg.src = novel.coverUrl;
+		coverImg.onerror = () => {
+			if (shelfIconUrl) {
+				coverImg.src = shelfIconUrl;
+				coverImg.onerror = () => {
+					coverImg.src = fallbackLogo;
+					coverImg.onerror = null;
+				};
+			} else {
+				coverImg.src = fallbackLogo;
+				coverImg.onerror = null;
+			}
+		};
+	} else if (coverImg) {
+		coverImg.src = fallbackLogo;
+	}
+	attachIconFallbacks(card);
+
 	card.addEventListener("click", () => openNovelDetail(novel));
 
 	return card;
@@ -1047,7 +1395,7 @@ function createNovelCard(novel) {
 		: renderShelfIcon(null, "site-icon");
 
 	// Fallback to extension logo if cover fails to load
-	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
 
 	// Generate placeholder content with icon image support
 	const placeholderContent = shelf
@@ -1055,7 +1403,9 @@ function createNovelCard(novel) {
 		: "📖";
 
 	const coverHtml = novel.coverUrl
-		? `<img src="${novel.coverUrl}" alt="Cover" class="novel-cover" loading="lazy" onerror="this.src='${fallbackLogo}'; this.onerror=null;">`
+		? `<img data-cover-src="${escapeHtml(
+				novel.coverUrl
+		  )}" alt="Cover" class="novel-cover" loading="lazy">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -1188,37 +1538,48 @@ function showNotification(message, type = "success") {
 /**
  * Open novel detail modal
  */
-function openNovelDetail(novel) {
-	const shelf = Object.values(SHELVES).find((s) => s.id === novel.shelfId);
-	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+async function openNovelDetail(novel) {
+	const shelf = getShelfById(novel.shelfId);
+	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
+
+	// Tag modal with site id for scoped styling
+	if (elements.novelModal) {
+		elements.novelModal.dataset.modalSite = shelf?.id || "";
+	}
 
 	// Use shelf/website icon as fallback instead of main logo
 	const shelfFallback =
-		shelf?.icon && shelf.icon.startsWith("http")
+		shelf?.icon && shelf.icon.startsWith?.("http")
 			? shelf.icon
 			: fallbackLogo;
 
-	// Set cover with fallback to shelf icon
-	if (novel.coverUrl) {
-		elements.modalCover.src = novel.coverUrl;
-		elements.modalCover.onerror = function () {
-			// Try shelf icon first, then fall back to main logo
-			if (this.src !== shelfFallback && shelfFallback !== fallbackLogo) {
-				this.src = shelfFallback;
-			} else {
-				this.src = fallbackLogo;
-				this.onerror = null;
-			}
-		};
+	// Set cover with fallback using inline onerror
+	if (elements.modalCover) {
 		elements.modalCover.style.display = "block";
-	} else {
-		// No cover URL - use shelf icon if available, otherwise main logo
-		elements.modalCover.src = shelfFallback;
-		elements.modalCover.onerror = function () {
-			this.src = fallbackLogo;
-			this.onerror = null;
-		};
-		elements.modalCover.style.display = "block";
+		if (novel.coverUrl) {
+			elements.modalCover.src = novel.coverUrl;
+			elements.modalCover.onerror = () => {
+				if (shelfFallback && shelfFallback !== fallbackLogo) {
+					elements.modalCover.src = shelfFallback;
+					elements.modalCover.onerror = () => {
+						elements.modalCover.src = fallbackLogo;
+						elements.modalCover.onerror = null;
+					};
+				} else {
+					elements.modalCover.src = fallbackLogo;
+					elements.modalCover.onerror = null;
+				}
+			};
+		} else if (shelfFallback) {
+			elements.modalCover.src = shelfFallback;
+			elements.modalCover.onerror = () => {
+				elements.modalCover.src = fallbackLogo;
+				elements.modalCover.onerror = null;
+			};
+		} else {
+			elements.modalCover.src = fallbackLogo;
+			elements.modalCover.onerror = null;
+		}
 	}
 
 	// Set basic info
@@ -1229,6 +1590,7 @@ function openNovelDetail(novel) {
 	elements.modalShelf.innerHTML = shelf
 		? `${renderShelfIcon(shelf.icon, "site-icon")} ${shelf.name}`
 		: "Unknown";
+	attachIconFallbacks(elements.modalShelf);
 
 	// Set reading status selector with options from READING_STATUS_INFO
 	if (elements.modalStatusSelector) {
@@ -1283,12 +1645,72 @@ function openNovelDetail(novel) {
 		elements.modalGenresContainer.style.display = "none";
 	}
 
-	// Populate rich metadata from novel.metadata
-	populateNovelMetadata(novel);
+	// Populate rich metadata from site-specific renderer (fallback to generic)
+	const renderedBySite = await renderNovelMetadataForShelf(novel);
+	if (!renderedBySite) {
+		populateNovelMetadata(novel);
+	}
+
+	// Wire up .status-btn elements added by site-specific renderers
+	const statusButtons = document.querySelectorAll(".status-btn");
+	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+	statusButtons.forEach((btn) => {
+		const status = btn.getAttribute("data-status");
+
+		// Set active state
+		if (status === currentStatus) {
+			btn.classList.add("active");
+		} else {
+			btn.classList.remove("active");
+		}
+
+		// Add click handler
+		btn.onclick = async () => {
+			try {
+				await novelLibrary.updateNovel(novel.id, {
+					readingStatus: status,
+				});
+
+				// Update button states
+				statusButtons.forEach((b) => {
+					if (b.getAttribute("data-status") === status) {
+						b.classList.add("active");
+					} else {
+						b.classList.remove("active");
+					}
+				});
+
+				// Update the dropdown selector if present
+				if (elements.modalStatusSelector) {
+					elements.modalStatusSelector.value = status;
+				}
+
+				// Update the status badge
+				const statusInfo = READING_STATUS_INFO[status];
+				if (elements.modalStatus && statusInfo) {
+					elements.modalStatus.textContent = statusInfo.label;
+				}
+
+				// Refresh the library view
+				await loadLibrary();
+
+				showNotification("Status updated successfully!");
+			} catch (error) {
+				debugError("Error updating status:", error);
+				showNotification("Failed to update status");
+			}
+		};
+	});
 
 	// Set action buttons
-	elements.modalContinueBtn.href = novel.lastReadUrl || novel.sourceUrl;
-	elements.modalSourceBtn.href = novel.sourceUrl;
+	const refreshTarget = resolveMetadataRefreshUrl(novel);
+	elements.modalContinueBtn.href =
+		novel.lastReadUrl || novel.sourceUrl || "#";
+	elements.modalSourceBtn.href = refreshTarget || novel.sourceUrl || "#";
+	if (elements.modalRefreshBtn) {
+		elements.modalRefreshBtn.dataset.refreshUrl = refreshTarget || "";
+	}
 
 	// Store current novel ID for removal
 	elements.modalRemoveBtn.dataset.novelId = novel.id;
@@ -1577,11 +1999,13 @@ async function handleRefreshMetadata() {
 		// Close the modal
 		closeModal(elements.novelModal);
 
-		// Navigate to the novel's source page to fetch fresh data
-		const novelUrl = novel.sourceUrl || novel.lastReadUrl;
-		if (novelUrl) {
+		// Navigate to the best URL for refresh (handler-type aware)
+		const preferredUrl =
+			elements.modalRefreshBtn?.dataset.refreshUrl ||
+			resolveMetadataRefreshUrl(novel);
+		if (preferredUrl) {
 			// Open in a new tab so user can see the refresh happen
-			window.open(novelUrl, "_blank");
+			window.open(preferredUrl, "_blank");
 		} else {
 			showToast("No source URL available for this novel", "error");
 		}
@@ -1660,9 +2084,15 @@ function updateCoverPreview(url) {
 		return;
 	}
 
-	elements.editCoverPreview.innerHTML = `<img src="${escapeHtml(
-		url
-	)}" alt="Cover preview" onerror="this.outerHTML='<span class=\\'preview-error\\'>Invalid image URL</span>'">`;
+	const img = document.createElement("img");
+	img.alt = "Cover preview";
+	img.addEventListener("error", () => {
+		elements.editCoverPreview.innerHTML =
+			"<span class='preview-error'>Invalid image URL</span>";
+	});
+	img.src = url;
+	elements.editCoverPreview.innerHTML = "";
+	elements.editCoverPreview.appendChild(img);
 }
 
 /**
@@ -1940,22 +2370,32 @@ function initCarousel(novels) {
 	);
 	const maxItems = Math.min(carouselState.itemsToShow, sortedNovels.length);
 	const recentNovels = sortedNovels.slice(0, maxItems);
-	carouselState.uniqueCount = recentNovels.length;
+	// Rotate so the first item moves to the end (prevents initial half-hidden card)
+	const displayNovels =
+		recentNovels.length > 1
+			? [...recentNovels.slice(1), recentNovels[0]]
+			: recentNovels;
+	carouselState.uniqueCount = displayNovels.length;
 
 	// Duplicate novels for infinite scrolling
-	const infiniteNovels = [...recentNovels, ...recentNovels, ...recentNovels];
+	const infiniteNovels = [
+		...displayNovels,
+		...displayNovels,
+		...displayNovels,
+	];
 
 	// Fallback to extension logo if cover fails to load
-	const fallbackLogo = browser.runtime.getURL("icons/logo-light-128.png");
+	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
 
 	// Populate carousel track
 	elements.carouselTrack.innerHTML = "";
 	infiniteNovels.forEach((novel, index) => {
-		const shelf = SHELVES[novel.shelfId];
+		const shelf =
+			SHELVES[novel.shelfId] || SHELVES[novel.shelfId.toUpperCase()];
 		const item = document.createElement("div");
 		item.className = "carousel-item";
 		item.dataset.novelId = novel.id;
-		item.dataset.originalIndex = index % recentNovels.length;
+		item.dataset.originalIndex = index % displayNovels.length;
 
 		// Use shelf emoji as fallback for icon (now available from SHELF_REGISTRY)
 		const shelfEmoji = shelf?.emoji || "📖";
@@ -1971,7 +2411,9 @@ function initCarousel(novels) {
 			? shelf.icon.startsWith("http")
 				? `<img src="${escapeHtml(
 						shelf.icon
-				  )}" alt="" class="meta-icon" onerror="this.outerHTML='${shelfEmoji}';" style="width: 1em; height: 1em; vertical-align: middle;">`
+				  )}" alt="" class="meta-icon" data-fallback-emoji="${escapeHtml(
+						shelfEmoji
+				  )}" style="width: 1em; height: 1em; vertical-align: middle;">`
 				: shelf.icon
 			: shelfEmoji;
 
@@ -1989,27 +2431,39 @@ function initCarousel(novels) {
 				? `<span class="carousel-tag-more">+${moreTagsCount}</span>`
 				: "";
 
-		// Determine cover source and fallback chain
-		const coverSrc = novel.coverUrl || shelfCoverFallback;
-		const coverFallbackChain = novel.coverUrl
-			? `this.onerror=function(){this.src='${fallbackLogo}';this.onerror=null;}; this.src='${shelfCoverFallback}';`
-			: `this.src='${fallbackLogo}'; this.onerror=null;`;
+		// Determine cover source list for fallback handling
+		const coverSrcList = [
+			novel.coverUrl,
+			shelfCoverFallback,
+			fallbackLogo,
+		].filter(Boolean);
+
+		const siteBadge = shelf
+			? `<span class="website-badge" style="background: ${
+					shelf.color || "#666"
+			  }">${shelfIconSmall} ${escapeHtml(shelf.name)}</span>`
+			: "";
+
+		const hoverDescription =
+			novel.description?.trim() ||
+			(novel.tags?.length
+				? `Tags: ${novel.tags.slice(0, 4).join(", ")}`
+				: "No summary available");
+		const hoverReadingLine = novel.lastReadChapter
+			? `Ch. ${novel.lastReadChapter}${
+					novel.totalChapters ? `/${novel.totalChapters}` : ""
+			  }`
+			: "Not started";
+		const hoverTiming = formatRelativeTime(novel.lastAccessedAt);
 
 		item.innerHTML = `
 			<div class="carousel-item-image-wrapper">
-				<img src="${coverSrc}" alt="${escapeHtml(novel.title)}"
-					 onerror="${coverFallbackChain}">
+				${siteBadge ? `<div class="carousel-site-chip">${siteBadge}</div>` : ""}
+				<img data-cover-src="${escapeHtml(novel.coverUrl || "")}" alt="${escapeHtml(
+			novel.title
+		)}" class="carousel-cover">
 			</div>
 			<div class="carousel-item-info">
-				${
-					shelf
-						? `<div class="carousel-item-website">
-					<span class="website-badge" style="background: ${
-						shelf.color || "#666"
-					}">${shelfIconSmall} ${escapeHtml(shelf.name)}</span>
-				</div>`
-						: ""
-				}
 				<h3 class="carousel-item-title">${escapeHtml(novel.title)}</h3>
 				<p class="carousel-item-author">by ${escapeHtml(
 					novel.author || "Unknown Author"
@@ -2026,12 +2480,11 @@ function initCarousel(novels) {
 				<div class="hover-details-content">
 					<h4>${escapeHtml(novel.title)}</h4>
 					<p class="hover-author">by ${escapeHtml(novel.author || "Unknown")}</p>
-					<p class="hover-description">${escapeHtml(
-						novel.description || "No description available"
-					)}</p>
+					<p class="hover-description">${escapeHtml(hoverDescription)}</p>
 					<div class="hover-stats">
-						<span>📖 ${novel.totalChapters || "?"} chapters</span>
+						<span>📖 ${hoverReadingLine}</span>
 						<span>✨ ${novel.enhancedChaptersCount || 0} enhanced</span>
+						<span>⏱ ${hoverTiming}</span>
 					</div>
 					<div class="hover-actions">
 						<button class="hover-btn hover-continue" data-novel-id="${
@@ -2071,6 +2524,21 @@ function initCarousel(novels) {
 				openNovelDetail(novel);
 			});
 		}
+
+		const coverImg = item.querySelector(".carousel-cover");
+		if (coverImg && coverSrcList.length > 0) {
+			const [primary, ...fallbacks] = coverSrcList;
+			coverImg.src = primary;
+			let fallbackIndex = 0;
+			coverImg.onerror = () => {
+				if (fallbackIndex < fallbacks.length) {
+					coverImg.src = fallbacks[fallbackIndex++];
+				} else {
+					coverImg.onerror = null;
+				}
+			};
+		}
+		attachIconFallbacks(item);
 
 		elements.carouselTrack.appendChild(item);
 	});

@@ -725,9 +725,10 @@ if (typeof browser === "undefined") {
 										title: "Ranobe Gemini",
 										message:
 											"Please configure your API key in the extension settings.",
-										iconUrl: browser.runtime.getURL(
-											"icons/logo-light-48.png"
-										),
+										iconUrl:
+											browser.runtime.getURL(
+												"icons/icon.png"
+											),
 									});
 								}
 								// Send error response to content script
@@ -1425,9 +1426,7 @@ if (typeof browser === "undefined") {
 							title: "Ranobe Gemini",
 							message:
 								"Please configure your API key in the extension settings.",
-							iconUrl: browser.runtime.getURL(
-								"icons/logo-light-48.png"
-							),
+							iconUrl: browser.runtime.getURL("icons/icon.png"),
 						});
 					}
 

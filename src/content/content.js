@@ -3922,10 +3922,16 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		// Check if UI already injected
-		if (document.getElementById("rg-novel-controls")) {
-			debugLog("Ranobe Gemini: Novel page UI already injected.");
-			return;
+		// Check if UI already injected (dedupe any accidental duplicates)
+		const existingNovelControls =
+			document.querySelectorAll("#rg-novel-controls");
+		if (existingNovelControls.length) {
+			const [primary, ...extras] = existingNovelControls;
+			extras.forEach((el) => el.remove());
+			if (primary.isConnected) {
+				debugLog("Ranobe Gemini: Novel page UI already injected.");
+				return;
+			}
 		}
 
 		// Load novel library
