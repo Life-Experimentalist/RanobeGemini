@@ -1,0 +1,136 @@
+{
+	"manifest_version": 3,
+	"name": "Ranobe Gemini",
+	"version": "3.6.0",
+	"description": "Enhances reading experience for web novels using Gemini AI",
+	"icons": {
+		"16": "icons/logo-16.png",
+		"32": "icons/logo-32.png",
+		"48": "icons/logo-48.png",
+		"64": "icons/logo-64.png",
+		"96": "icons/logo-96.png",
+		"128": "icons/logo-128.png",
+		"256": "icons/logo-256.png",
+		"512": "icons/logo-512.png",
+		"1024": "icons/logo-1024.png"
+	},
+	"permissions": [
+		"activeTab",
+		"storage",
+		"tabs",
+		"notifications",
+		"contextMenus",
+		"alarms",
+		"downloads",
+		"identity",
+		"sidepanel"
+	],
+	"host_permissions": [
+		"https://www.googleapis.com/*",
+		"https://accounts.google.com/*"
+	],
+	"side_panel": {
+		"default_path": "library/library.html?sidebar=true"
+	},
+	"action": {
+		"default_icon": {
+			"16": "icons/logo-16.png",
+			"32": "icons/logo-32.png",
+			"48": "icons/logo-48.png",
+			"64": "icons/logo-64.png",
+			"96": "icons/logo-96.png",
+			"128": "icons/logo-128.png",
+			"256": "icons/logo-256.png",
+			"512": "icons/logo-512.png",
+			"1024": "icons/logo-1024.png"
+		},
+		"default_title": "Ranobe Gemini",
+		"default_popup": "popup/popup.html"
+	},
+	"background": {
+		"service_worker": "background/background.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"*://*.ao3.org/*",
+				"*://*.archiveofourown.org/*",
+				"*://*.fanfiction.net/*",
+				"*://*.ranobes.com/*",
+				"*://*.ranobes.net/*",
+				"*://*.ranobes.org/*",
+				"*://*.ranobes.top/*",
+				"*://*.scribblehub.com/*",
+				"*://*.webnovel.com/*"
+			],
+			"js": [
+				"lib/browser-polyfill.min.js",
+				"content/content.js"
+			],
+			"css": [
+				"content/content.css",
+				"content/gemini-styles.css"
+			],
+			"run_at": "document_idle"
+		}
+	],
+	"commands": {
+		"open-library": {
+			"suggested_key": {
+				"default": "Alt+Shift+L",
+				"mac": "Command+Shift+L"
+			},
+			"description": "Open the Novel Library"
+		},
+		"enhance-page": {
+			"suggested_key": {
+				"default": "Alt+Shift+E",
+				"mac": "Command+Shift+E"
+			},
+			"description": "Enhance current page"
+		},
+		"summarize-page": {
+			"suggested_key": {
+				"default": "Alt+Shift+S",
+				"mac": "Command+Shift+S"
+			},
+			"description": "Generate summary for current page"
+		}
+	},
+	"incognito": "spanning",
+	"web_accessible_resources": [
+		{
+			"resources": [
+				"lib/browser-polyfill.min.js",
+				"icons/*.png",
+				"utils/*.js",
+				"utils/website-handlers/*.js",
+				"content/content.*",
+				"config/config.js",
+				"popup/*.html",
+				"popup/*.js",
+				"library/*.html",
+				"library/*.css",
+				"library/*.js"
+			],
+			"matches": [
+				"*://*.ao3.org/*",
+				"*://*.archiveofourown.org/*",
+				"*://*.fanfiction.net/*",
+				"*://*.ranobes.com/*",
+				"*://*.ranobes.net/*",
+				"*://*.ranobes.org/*",
+				"*://*.ranobes.top/*",
+				"*://*.scribblehub.com/*",
+				"*://*.webnovel.com/*"
+			]
+		}
+	],
+	"oauth2": {
+		"client_id": "1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com",
+		"scopes": [
+			"https://www.googleapis.com/auth/drive.file"
+		]
+	}
+}

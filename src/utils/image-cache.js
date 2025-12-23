@@ -6,7 +6,7 @@
 const DB_NAME = "RanobeGeminiImageCache";
 const DB_VERSION = 1;
 const STORE_NAME = "images";
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
 let dbInstance = null;
 

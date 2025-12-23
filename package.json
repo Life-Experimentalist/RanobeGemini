@@ -3,14 +3,16 @@
 	"version": "3.6.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"scripts": {
-		"build": "node dev/build-cross-platform.js",
-		"watch": "node dev/watch.js",
-		"package": "npm run update-domains && node dev/package-all.js",
-		"publish": "npm run package && npm run package-source",
-		"package-firefox": "node dev/package-firefox.js",
-		"package-chromium": "node dev/package-chromium.js",
-		"package-source": "node dev/package-source.js",
-		"update-domains": "node dev/generate-manifest-domains.js"
+		"build": "node dev/build.js",
+		"build:firefox": "node dev/build.js --firefox",
+		"build:chromium": "node dev/build.js --chromium",
+		"package": "node dev/build.js --package",
+		"package:firefox": "node dev/build.js --firefox --package",
+		"package:chromium": "node dev/build.js --chromium --package",
+		"package:source": "node dev/build.js --source",
+		"publish": "node dev/build.js --package --source",
+		"update-domains": "node dev/build.js --update",
+		"watch": "node dev/watch.js"
 	},
 	"dependencies": {
 		"webextension-polyfill": "^0.12.0"
@@ -33,9 +35,6 @@
 		"name": "VKrishna04",
 		"email": "github@vkrishna04.me",
 		"url": "https://vkrishna04.me"
-	},
-	"dist": {
-		"shasum": "abc123"
 	},
 	"license": "Apache-2.0",
 	"repository": {

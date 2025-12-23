@@ -4019,7 +4019,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			});
 
 			// Open OAuth redirect page in new tab
-			const oauthUrl = `file:///landing/oauth-redirect.html?${params.toString()}`;
+			const oauthUrl = `https://ranobe.vkrishna04.me/oauth-redirect.html?${params.toString()}`;
 			browser.tabs.create({ url: browser.runtime.getURL(oauthUrl) });
 
 			showStatus(

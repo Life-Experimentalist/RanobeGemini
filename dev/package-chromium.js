@@ -100,7 +100,12 @@ OS:      ${platform()}
 			resolve();
 		});
 
+		output.on("error", (err) => reject(err));
 		archive.on("error", (err) => reject(err));
+		archive.on("warning", (err) => {
+			if (err.code !== "ENOENT") reject(err);
+		});
+
 		archive.pipe(output);
 		archive.glob("**/*", {
 			cwd: resolvePath(SOURCE_DIR),

@@ -3,9 +3,12 @@
 > **Index:**
 
 - [Changelog](#changelog)
-	- [\[3.5.0\] - 2025-01-XX](#350---2025-01-xx)
+	- [\[3.5.0\] - 2025-12-20](#350---2025-12-20)
 		- [🎨 Shelf Pages, Analytics \& UX Improvements](#-shelf-pages-analytics--ux-improvements)
 		- [Added](#added)
+			- [📊 Website Shelf Pages](#-website-shelf-pages)
+			- [🎨 Popup Modal Improvements](#-popup-modal-improvements)
+			- [🏗️ Keep-Alive Architecture Documentation](#️-keep-alive-architecture-documentation)
 		- [Changed](#changed)
 		- [Fixed](#fixed)
 		- [Documentation](#documentation)
@@ -28,6 +31,46 @@
 			- [Novel Library Schema](#novel-library-schema)
 			- [Shelf Metadata Schema](#shelf-metadata-schema)
 		- [Migration Notes](#migration-notes)
+	- [\[2.9.0\] - 2025-11-25](#290---2025-11-25)
+		- [Summary](#summary)
+		- [Added](#added-2)
+		- [Changed](#changed-2)
+		- [Fixed](#fixed-2)
+	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
+		- [Summary](#summary-1)
+		- [Added](#added-3)
+		- [Changed](#changed-3)
+		- [Fixed](#fixed-3)
+		- [Developer Experience](#developer-experience-1)
+		- [Migration Notes](#migration-notes-1)
+		- [Known Issues](#known-issues)
+	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
+		- [Summary](#summary-2)
+		- [Added](#added-4)
+		- [Changed](#changed-4)
+		- [Fixed](#fixed-4)
+	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
+		- [Summary](#summary-3)
+		- [Added](#added-5)
+		- [Changed](#changed-5)
+		- [Fixed](#fixed-5)
+	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
+		- [Summary](#summary-4)
+		- [Added](#added-6)
+		- [Changed](#changed-6)
+		- [Fixed](#fixed-6)
+	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
+		- [Summary](#summary-5)
+		- [Added](#added-7)
+		- [Changed](#changed-7)
+		- [Fixed](#fixed-7)
+	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
+		- [Added](#added-8)
+		- [Changed](#changed-8)
+		- [Fixed](#fixed-8)
+	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
+		- [Added](#added-9)
+		- [Fixed](#fixed-9)
 
 
 All notable changes to the RanobeGemini extension are documented in this file.
@@ -36,7 +79,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [3.5.0] - 2025-01-XX
+## [3.5.0] - 2025-12-20
 
 ### 🎨 Shelf Pages, Analytics & UX Improvements
 

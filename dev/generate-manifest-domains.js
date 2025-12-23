@@ -1,13 +1,12 @@
 /**
  * Generate Manifest Domains
- * Automatically updates manifest.json with domains from handlers
+ * Automatically updates both Firefox and Chromium manifest files with domains from handlers
  * Run this script when adding new handler domains
  */
 
 const fs = require("fs");
 const path = require("path");
 
-// Find root directory
 function findRootDir() {
 	let currentDir = __dirname;
 	while (currentDir !== path.dirname(currentDir)) {
@@ -20,10 +19,9 @@ function findRootDir() {
 }
 
 const ROOT_DIR = findRootDir();
-const MANIFEST_PATH = path.join(ROOT_DIR, "src", "manifest.json");
+const MANIFEST_FIREFOX = path.join(ROOT_DIR, "src", "manifest-firefox.json");
+const MANIFEST_CHROMIUM = path.join(ROOT_DIR, "src", "manifest-chromium.json");
 
-// Read all handler files and extract SUPPORTED_DOMAINS
-// Only extracts explicit domains, skips wildcards to avoid duplicates
 function extractDomainsFromHandlers() {
 	const handlersDir = path.join(ROOT_DIR, "src", "utils", "website-handlers");
 	const handlerFiles = fs
@@ -38,18 +36,15 @@ function extractDomainsFromHandlers() {
 		const filePath = path.join(handlersDir, file);
 		const content = fs.readFileSync(filePath, "utf8");
 
-		// Extract SUPPORTED_DOMAINS array using regex
 		const match = content.match(
 			/static\s+SUPPORTED_DOMAINS\s*=\s*\[([\s\S]*?)\]/
 		);
 		if (match) {
 			const domainsStr = match[1];
-			// Extract quoted strings
 			const domains = domainsStr.match(/"([^"]+)"|'([^']+)'/g);
 			if (domains) {
 				domains.forEach((domain) => {
 					const cleanDomain = domain.replace(/["']/g, "").trim();
-					// Skip comments, empty strings, and wildcards
 					if (
 						cleanDomain &&
 						!cleanDomain.startsWith("//") &&
@@ -65,57 +60,52 @@ function extractDomainsFromHandlers() {
 	return [...explicitDomains].sort();
 }
 
-// Generate match patterns for manifest.json
-// Uses *://*.domain.com/* format which covers the domain and all subdomains
 function generateMatchPatterns(domains) {
 	const patterns = new Set();
 
 	domains.forEach((domain) => {
-		// Remove www. prefix to get base domain for broader matching
 		const baseDomain = domain.replace(/^www\./, "").replace(/^m\./, "");
-		// Add pattern for the base domain (covers all subdomains)
 		patterns.add(`*://*.${baseDomain}/*`);
 	});
 
 	return [...patterns].sort();
 }
 
-// Update manifest.json
-function updateManifest() {
-	console.log("📝 Reading manifest.json...");
-	const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, "utf8"));
+function updateManifest(manifestPath, platform) {
+	console.log(`\n📝 Reading ${platform} manifest...`);
+	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-	console.log("🔍 Extracting domains from handlers...");
+	console.log(`🔍 Extracting domains from handlers...`);
 	const domains = extractDomainsFromHandlers();
-	console.log(`Found ${domains.length} unique domains:`);
-	domains.forEach(domain => console.log(`  - ${domain}`));
+	console.log(`Found ${domains.length} unique domains`);
 
-	console.log("\n🔨 Generating match patterns...");
+	console.log(`🔨 Generating match patterns...`);
 	const matches = generateMatchPatterns(domains);
 
-	// Update content_scripts matches
 	if (manifest.content_scripts && manifest.content_scripts[0]) {
 		manifest.content_scripts[0].matches = matches;
-		console.log(`✅ Updated content_scripts matches (${matches.length} patterns)`);
+		console.log(`✅ Updated content_scripts (${matches.length} patterns)`);
 	}
 
-	// Update web_accessible_resources matches
 	if (manifest.web_accessible_resources && manifest.web_accessible_resources[0]) {
 		manifest.web_accessible_resources[0].matches = matches;
-		console.log(`✅ Updated web_accessible_resources matches (${matches.length} patterns)`);
+		console.log(`✅ Updated web_accessible_resources (${matches.length} patterns)`);
 	}
 
-	// Write back to manifest.json
-	console.log("\n💾 Writing updated manifest.json...");
-	fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, "\t"));
-
-	console.log("✨ Manifest updated successfully!\n");
+	console.log(`💾 Writing ${platform} manifest...`);
+	fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, "\t"));
+	console.log(`✨ ${platform} manifest updated`);
 }
 
-// Run the update
 try {
-	updateManifest();
+	console.log("🔄 Updating manifest domains for all platforms...");
+
+	updateManifest(MANIFEST_FIREFOX, "Firefox");
+	updateManifest(MANIFEST_CHROMIUM, "Chromium");
+
+	console.log("\n✨ All manifests updated successfully!");
 } catch (error) {
-	console.error("❌ Error updating manifest:", error.message);
+	console.error("❌ Error updating manifests:", error.message);
 	process.exit(1);
 }
+
