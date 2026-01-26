@@ -78,6 +78,7 @@ export const SHELVES = SHELF_REGISTRY;
  * @property {number} addedAt - Timestamp when added to library
  * @property {number} lastAccessedAt - Timestamp of last access
  * @property {number} enhancedChaptersCount - Number of enhanced chapters
+ * @property {boolean} autoEnhance - Whether to automatically enhance chapters for this novel
  * @property {Object} metadata - Additional site-specific metadata
  * @property {Object} editedFields - Fields that have been manually edited by user
  */

@@ -154,11 +154,13 @@ function build(platform) {
 }
 
 // Task: Package
-async function packagePlatform(platform) {
-	console.log(`\n📦 Packaging ${platform}...`);
+async function packagePlatform(platform, version) {
+	console.log(`\n📦 Packaging ${platform} (v${version})...`);
 	try {
 		const scriptPath = path.join(__dirname, `package-${platform}.js`);
-		execSync(`node "${scriptPath}"`, { stdio: "inherit" });
+		execSync(`node "${scriptPath}" --version "${version}"`, {
+			stdio: "inherit",
+		});
 		console.log(`✅ ${platform} packaged successfully.`);
 	} catch (error) {
 		console.error(`❌ Failed to package ${platform}:`, error.message);
@@ -177,28 +179,28 @@ async function main() {
 			(!args.includes("--firefox") && !args.includes("--chromium")),
 		package: args.includes("--package"),
 		source: args.includes("--source"),
-		update:
-			args.includes("--update") ||
-			args.includes("--package") ||
-			args.includes("--all") ||
-			args.length === 0,
+		update: args.includes("--update"),
 		clean: args.includes("--clean"),
 	};
 
 	if (options.clean) clean();
 
-	// Always generate registry and update domains for a full build
+	// Always generate registry, but only update domains if explicitly requested or during packaging
 	generateHandlerRegistry();
-	if (options.update) updateDomains();
+	if (options.update || options.package) updateDomains();
 
 	const platforms = [];
 	if (options.all || options.firefox) platforms.push("firefox");
 	if (options.all || options.chromium) platforms.push("chromium");
 
+	const packageJson = JSON.parse(
+		fs.readFileSync(path.join(ROOT_DIR, "package.json"), "utf8"),
+	);
+
 	for (const platform of platforms) {
 		build(platform);
 		if (options.package) {
-			await packagePlatform(platform);
+			await packagePlatform(platform, packageJson.version);
 		}
 	}
 

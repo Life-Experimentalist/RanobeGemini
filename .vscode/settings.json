@@ -12,8 +12,15 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"authorid",
+		"avgrating",
+		"COOLDOWN",
+		"googleusercontent",
 		"noimagefound",
+		"plantoread",
+		"qblnrbhvo",
 		"scribblehub",
-		"showtags"
+		"showtags",
+		"sidepanel",
+		"wordcount"
 	],
 }

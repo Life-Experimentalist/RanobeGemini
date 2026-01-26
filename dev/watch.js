@@ -88,11 +88,15 @@ function handleFileChange(filename) {
 		return;
 	}
 
+	// Ignore generated files and build artifacts
 	if (
 		filename.includes("node_modules") ||
 		filename.includes(".git") ||
 		filename.includes("releases") ||
 		filename.includes("dist") ||
+		filename.includes("manifest-firefox.json") ||
+		filename.includes("manifest-chromium.json") ||
+		filename.includes("handler-registry.js") ||
 		filename.endsWith(".tmp") ||
 		filename.endsWith("docs") ||
 		filename.endsWith("history") ||
