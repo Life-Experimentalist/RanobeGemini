@@ -3,6 +3,8 @@
  * Centralized configuration values used throughout the extension
  */
 
+defaultDebugMode = false;
+
 // Default prompt template for Gemini AI
 export const DEFAULT_PROMPT = `**CRITICAL INSTRUCTION:** You are enhancing EXISTING text only. You must NEVER generate new content, create new stories, or add content that doesn't exist in the provided text. Your ONLY task is to improve the writing quality of the EXACT content given to you below. If no content is provided or the content is empty, respond with "ERROR: No content provided for enhancement."
 

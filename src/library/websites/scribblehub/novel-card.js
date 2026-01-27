@@ -7,8 +7,10 @@ import { NovelCardRenderer } from "../novel-card-base.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import { getBaseModalStyles, getScribbleHubStyles } from "../modal-styles.js";
 
 const CARD_CANONICAL_LABELS = new Map();
 
@@ -34,7 +36,143 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			color: "#6c5ce7",
 		};
 	}
+	/**
+	 * Show ScribbleHub-specific novel detail modal
+	 * @param {Object} novel - The novel to show
+	 * @returns {Promise<boolean>} True if handled
+	 */
+	static async showModal(novel) {
+		const modal = document.getElementById("novel-modal");
+		if (!modal) return false;
 
+		const titleEl = document.getElementById("modal-title");
+		if (titleEl) titleEl.textContent = novel.title || "";
+
+		const authorEl = document.getElementById("modal-author");
+		const authorUrl = novel.metadata?.authorUrl;
+		if (authorEl) {
+			if (authorUrl) {
+				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+					novel.author || "Unknown",
+				)}</a>`;
+			} else {
+				authorEl.textContent = `${novel.author || "Unknown"}`;
+			}
+		}
+
+		const descriptionEl = document.getElementById("modal-description");
+		if (descriptionEl) descriptionEl.textContent = novel.description || "";
+
+		const coverImg = document.getElementById("modal-cover");
+		const coverContainer = document.getElementById("modal-cover-container");
+
+		if (coverContainer) {
+			coverContainer.innerHTML = "";
+			if (novel.coverUrl && coverImg) {
+				coverImg.src = novel.coverUrl;
+				coverImg.style.display = "block";
+				coverImg.onerror = () => {
+					coverImg.src = this.shelfConfig.icon;
+				};
+				if (!coverContainer.contains(coverImg))
+					coverContainer.appendChild(coverImg);
+			} else if (coverImg) {
+				coverImg.src = this.shelfConfig.icon;
+				coverImg.style.display = "block";
+			}
+		} else if (coverImg) {
+			if (novel.coverUrl) {
+				coverImg.src = novel.coverUrl;
+				coverImg.style.display = "block";
+			} else {
+				coverImg.src = this.shelfConfig.icon;
+				coverImg.style.display = "block";
+			}
+		}
+
+		// Restore generic stats
+		const genericStats = document.querySelector(".novel-stats");
+		if (genericStats) genericStats.style.display = "";
+
+		// Hide custom metadata if not used
+		const metadataContainer = document.getElementById(
+			"modal-metadata-container",
+		);
+		if (metadataContainer) {
+			if (this.renderModalMetadata) {
+				metadataContainer.style.display = "block";
+				if (genericStats) genericStats.style.display = "none";
+				this.renderModalMetadata(novel);
+			} else {
+				metadataContainer.style.display = "none";
+			}
+		}
+
+		const continueBtn = document.getElementById("modal-continue-btn");
+		if (continueBtn) {
+			const lastReadUrl =
+				novel.lastReadChapterUrl ||
+				novel.currentChapterUrl ||
+				novel.sourceUrl;
+			if (lastReadUrl) {
+				continueBtn.href = lastReadUrl;
+				continueBtn.style.display = "inline-flex";
+			} else {
+				continueBtn.style.display = "none";
+			}
+		}
+
+		const readBtn = document.getElementById("modal-source-btn");
+		if (readBtn && novel.sourceUrl) {
+			readBtn.href = novel.sourceUrl;
+			readBtn.style.display = "inline-flex";
+		}
+
+		const modalRemoveBtn = document.getElementById("modal-remove-btn");
+		if (modalRemoveBtn) modalRemoveBtn.dataset.novelId = novel.id;
+
+		const modalStatus = document.getElementById("modal-status");
+		if (modalStatus) modalStatus.dataset.novelId = novel.id;
+
+		const statusButtons = document.querySelectorAll(".status-btn");
+		const currentStatus =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+		statusButtons.forEach((btn) => {
+			const status = btn.getAttribute("data-status");
+			if (status === currentStatus) {
+				btn.classList.add("active");
+			} else {
+				btn.classList.remove("active");
+			}
+
+			btn.onclick = async () => {
+				if (!novelLibrary) return;
+				try {
+					await novelLibrary.updateNovel(novel.id, {
+						readingStatus: status,
+					});
+					statusButtons.forEach((b) => {
+						if (b.getAttribute("data-status") === status)
+							b.classList.add("active");
+						else b.classList.remove("active");
+					});
+					if (modalStatus && READING_STATUS_INFO[status]) {
+						modalStatus.textContent =
+							READING_STATUS_INFO[status].label;
+					}
+				} catch (e) {
+					console.error(e);
+				}
+			};
+		});
+
+		modal.classList.remove("hidden");
+		modal.classList.add("active");
+		document.body.style.overflow = "hidden";
+
+		return true;
+	}
 	static resetTaxonomy() {
 		CARD_CANONICAL_LABELS.clear();
 		Object.values(CARD_CATEGORY_LOOKUP).forEach((set) => set.clear());
@@ -70,28 +208,28 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		novels.forEach((novel) => {
 			const metadata = novel.metadata || {};
 			(metadata.fandoms || []).forEach((f) =>
-				this.registerLabel(f, "fandoms")
+				this.registerLabel(f, "fandoms"),
 			);
 			(novel.fandoms || []).forEach((f) =>
-				this.registerLabel(f, "fandoms")
+				this.registerLabel(f, "fandoms"),
 			);
 			(metadata.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(novel.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(metadata.characters || []).forEach((c) =>
-				this.registerLabel(c, "characters")
+				this.registerLabel(c, "characters"),
 			);
 			(novel.characters || []).forEach((c) =>
-				this.registerLabel(c, "characters")
+				this.registerLabel(c, "characters"),
 			);
 			(metadata.contentTypes || []).forEach((ct) =>
-				this.registerLabel(ct, "contentTypes")
+				this.registerLabel(ct, "contentTypes"),
 			);
 			(novel.contentTypes || []).forEach((ct) =>
-				this.registerLabel(ct, "contentTypes")
+				this.registerLabel(ct, "contentTypes"),
 			);
 			(metadata.tags || []).forEach((t) => this.registerLabel(t, "tags"));
 			(novel.tags || []).forEach((t) => this.registerLabel(t, "tags"));
@@ -208,8 +346,8 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const ratingClass = this.normalizeRatingClass(rating);
 		const ratingBadge = rating
 			? `<span class="chip rating-badge ${ratingClass}">${this.escapeHtml(
-					rating
-			  )}</span>`
+					rating,
+				)}</span>`
 			: "";
 
 		// Status badge
@@ -218,7 +356,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const statusBadge = workStatus
 			? `<span class="chip ${
 					isCompleted ? "chip-success" : "chip-warning"
-			  }">${this.escapeHtml(workStatus)}</span>`
+				}">${this.escapeHtml(workStatus)}</span>`
 			: "";
 
 		// Quick stats
@@ -235,8 +373,8 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		// Genre tag
 		const genreHTML = primaryGenre
 			? `<div class="sh-genre-tag">${this.escapeHtml(
-					this.truncateText(primaryGenre, 40)
-			  )}</div>`
+					this.truncateText(primaryGenre, 40),
+				)}</div>`
 			: "";
 
 		// Progress bar
@@ -244,7 +382,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			chapters > 0
 				? `<div class="sh-progress-bar"><div class="sh-progress-fill" style="width: ${progressPercent}%;"></div></div>
 			   <div class="sh-progress-text">✨ ${this.formatNumber(
-					enhanced
+					enhanced,
 				)}/${this.formatNumber(chapters)}</div>`
 				: "";
 
@@ -252,7 +390,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			<div class="sh-card-content">
 				<div class="sh-card-main">
 					<h3 class="sh-card-title" title="${this.escapeHtml(
-						novel.title
+						novel.title,
 					)}">${this.escapeHtml(novel.title)}</h3>
 					<p class="sh-card-author">by ${this.escapeHtml(novel.author || "Unknown")}</p>
 
@@ -278,8 +416,8 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 					${
 						novel.sourceUrl
 							? `<a class="sh-link-btn" href="${this.escapeHtml(
-									novel.sourceUrl
-							  )}" target="_blank" rel="noreferrer" title="Open on ScribbleHub">↗</a>`
+									novel.sourceUrl,
+								)}" target="_blank" rel="noreferrer" title="Open on ScribbleHub">↗</a>`
 							: ""
 					}
 				</div>
@@ -301,7 +439,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 	 */
 	static setupImageErrorHandlers(container) {
 		const images = container.querySelectorAll(
-			"img.novel-cover-img[data-fallback]"
+			"img.novel-cover-img[data-fallback]",
 		);
 		images.forEach((img) => {
 			const originalSrc = img.src;
@@ -330,8 +468,8 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		if (metadata.rating) {
 			badges.push(
 				`<span class="rating-badge ${this.normalizeRatingClass(
-					metadata.rating
-				)}">${metadata.rating}</span>`
+					metadata.rating,
+				)}">${metadata.rating}</span>`,
 			);
 		}
 		if (novel.status || metadata.status) {
@@ -342,15 +480,15 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 					: "status-ongoing";
 			badges.push(
 				`<span class="meta-badge ${statusClass}">${this.escapeHtml(
-					workStatus
-				)}</span>`
+					workStatus,
+				)}</span>`,
 			);
 		}
 		if (metadata.language) {
 			badges.push(
 				`<span class="meta-badge">${this.escapeHtml(
-					metadata.language
-				)}</span>`
+					metadata.language,
+				)}</span>`,
 			);
 		}
 
@@ -398,7 +536,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const genres = [...buckets.genres].slice(0, MAX_CARD_GENRES);
 		const characters = [...buckets.characters].slice(
 			0,
-			MAX_CARD_CHARACTERS
+			MAX_CARD_CHARACTERS,
 		);
 		const contentTypes = [...buckets.contentTypes].slice(0, 2);
 		const misc = [...buckets.tags].slice(0, MAX_CARD_MISC_TAGS);
@@ -438,14 +576,13 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		`;
 	}
 	/**
-	 * Render FanFiction-specific metadata in the modal
+	 * Render ScribbleHub-specific metadata in the modal
 	 * @param {Object} novel - Novel data
 	 */
 	static renderModalMetadata(novel) {
 		const container = document.getElementById("modal-metadata-container");
 		if (!container) return;
 
-		// Robust data retrieval: Check top-level, metadata object, and stats object
 		const metadata = novel.metadata || {};
 		const stats = novel.stats || {};
 
@@ -467,55 +604,22 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			return [];
 		};
 
-		// Extract values using the robust helper
-		const rating = getVal("rating", "Unknown");
+		const rating = getVal("rating"); // ScribbleHub doesn't always have explicit "T/M" rating, but metadata might
 		const language = getVal("language", "English");
 		const status = getVal("status", "Unknown");
-		const isCrossover = getVal("isCrossover", false);
-		const totalChapters = getVal("totalChapters", 0);
+		const chapters = getVal("totalChapters") || getVal("chapterCount") || 0;
 		const words = getVal("words", 0);
-		const reviews = getVal("reviews", 0);
+		const views = getVal("views", 0);
 		const favorites = getVal("favorites", 0);
-		const follows = getVal("follows", 0);
+		const readers = getVal("readers", 0);
+		const reviews = getVal("reviews", 0);
 		const publishedDate = getVal("publishedDate");
 		const updatedDate = getVal("updatedDate");
-		const storyId = getVal("storyId");
 
-		// Extract arrays
-		const fandoms = getArray("fandoms");
 		const genres = getArray("genres");
-		const characters = getArray("characters");
-		const contentTypes = getArray("contentTypes"); // or from hierarchy
+		const tags = getArray("tags");
+		const fandoms = getArray("fandoms");
 
-		// Fallback for tags if not found in standard keys
-		let miscTags = getArray("tags");
-		if (miscTags.length === 0 && metadata.tags) {
-			miscTags = Array.from(metadata.tags);
-		}
-		// Filter out duplicates from miscTags that are already in other categories
-		const knownTags = new Set([
-			...fandoms,
-			...genres,
-			...characters,
-			...contentTypes,
-		]);
-		miscTags = miscTags.filter((t) => !knownTags.has(t));
-
-		// Helper to render a tag list
-		const renderTagList = (items, extraClass = "") => {
-			if (!items || items.length === 0)
-				return '<span class="no-data">None</span>';
-			return items
-				.map(
-					(item) =>
-						`<span class="tag ${extraClass}">${this.escapeHtml(
-							item
-						)}</span>`
-				)
-				.join("");
-		};
-
-		// Helper to render a stat item
 		const renderStat = (label, value, icon = "") => {
 			if (value === undefined || value === null) return "";
 			return `
@@ -526,129 +630,76 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			`;
 		};
 
-		// Format dates
-		const formatDate = (dateStr) => {
-			if (!dateStr) return "Unknown";
-			try {
-				return new Date(dateStr).toLocaleDateString(undefined, {
-					year: "numeric",
-					month: "long",
-					day: "numeric",
-				});
-			} catch (e) {
-				return dateStr;
-			}
-		};
+		const styles = getBaseModalStyles() + getScribbleHubStyles();
 
-		let html = `
-			<div class="fanfic-modal-grid">
-				<!-- Primary Metadata Row -->
-				<div class="fanfic-modal-row primary-meta">
+		const html = `
+			${styles}
+			<div class="site-modal-grid scribblehub-modal-grid">
+				<div class="site-modal-row primary-meta">
+					${
+						rating
+							? `<div class="meta-group"><span class="meta-label">Rating</span><span class="chip rating-badge">${this.escapeHtml(rating)}</span></div>`
+							: ""
+					}
 					<div class="meta-group">
-						<span class="meta-label">Fandom</span>
-						<span class="chip chip-primary" title="${this.escapeHtml(
-							fandoms.join(" & ")
-						)}">${
-			fandoms.length > 0
-				? this.escapeHtml(
-						fandoms.length > 1
-							? `${fandoms[0]} +${fandoms.length - 1}`
-							: fandoms[0]
-				  )
-				: "Unknown"
-		}</span>
-					</div>
-					<div class="meta-group">
-						<span class="meta-label">Rating</span>
-						<span class="chip rating-badge ${this.normalizeRatingClass(rating)}">${
-			rating || "Unknown"
-		}</span>
+						<span class="meta-label">Status</span>
+						<span class="chip ${status.toLowerCase() === "completed" ? "chip-success" : "chip-warning"}">${this.escapeHtml(status)}</span>
 					</div>
 					<div class="meta-group">
 						<span class="meta-label">Language</span>
-						<span class="chip chip-ghost">${this.escapeHtml(language || "English")}</span>
-					</div>
-					<div class="meta-group">
-						<span class="meta-label">Status</span>
-						<span class="chip ${
-							status.toLowerCase() === "completed"
-								? "chip-success"
-								: "chip-warning"
-						}">${this.escapeHtml(status || "Unknown")}</span>
-					</div>
-					<div class="meta-group">
-						<span class="meta-label">Type</span>
-						<span class="chip ${isCrossover ? "chip-crossover" : "chip-ghost"}">${
-			isCrossover ? "Crossover" : "Single Fandom"
-		}</span>
+						<span class="chip chip-ghost">${this.escapeHtml(language)}</span>
 					</div>
 				</div>
 
-				<!-- Statistics Grid -->
-				<div class="fanfic-modal-section">
+				<div class="site-modal-section scribblehub-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
-					<div class="fanfic-stats-grid-large">
-						${renderStat("Chapters", this.formatNumber(totalChapters), "📖")}
-						${renderStat("Words", this.formatNumber(words), "📝")}
-						${renderStat("Reviews", this.formatNumber(reviews), "💬")}
+					<div class="site-stats-grid scribblehub-stats-grid">
+						${renderStat("Chapters", this.formatNumber(chapters), "📖")}
+						${renderStat("Readers", this.formatNumber(readers), "👥")}
+						${renderStat("Views", this.formatNumber(views), "👁️")}
 						${renderStat("Favorites", this.formatNumber(favorites), "⭐")}
-						${renderStat("Follows", this.formatNumber(follows), "👥")}
-						${renderStat("Published", formatDate(publishedDate), "📅")}
-						${renderStat("Updated", formatDate(updatedDate), "🔄")}
-						${renderStat("Story ID", storyId, "🆔")}
+						${renderStat("Reviews", this.formatNumber(reviews), "💬")}
+						${publishedDate ? renderStat("Published", new Date(publishedDate).toLocaleDateString(), "📅") : ""}
+						${updatedDate ? renderStat("Updated", new Date(updatedDate).toLocaleDateString(), "🔄") : ""}
 					</div>
 				</div>
 
-				<!-- Fandoms -->
 				${
-					fandoms.length > 0
+					fandoms.length
 						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Fandoms</h4>
-					<div class="tags-list">
-						${renderTagList(fandoms, "tag-fandom")}
+					<div class="scribblehub-modal-section">
+						<h4 class="modal-section-title">Fandoms</h4>
+						<div class="tags-list">
+							${fandoms.map((f) => `<span class="tag tag-fandom">${this.escapeHtml(f)}</span>`).join("")}
+						</div>
 					</div>
-				</div>`
+				`
 						: ""
 				}
 
-				<!-- Genres -->
 				${
-					genres.length > 0
+					genres.length
 						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Genres</h4>
-					<div class="tags-list">
-						${renderTagList(genres, "tag-genre")}
+					<div class="scribblehub-modal-section">
+						<h4 class="modal-section-title">Genres</h4>
+						<div class="tags-list">
+							${genres.map((g) => `<span class="tag tag-genre">${this.escapeHtml(g)}</span>`).join("")}
+						</div>
 					</div>
-				</div>`
+				`
 						: ""
 				}
 
-				<!-- Characters -->
 				${
-					characters.length > 0
+					tags.length
 						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Characters</h4>
-					<div class="tags-list">
-						${renderTagList(characters, "tag-character")}
+					<div class="scribblehub-modal-section">
+						<h4 class="modal-section-title">Tags</h4>
+						<div class="tags-list">
+							${tags.map((t) => `<span class="tag">${this.escapeHtml(t)}</span>`).join("")}
+						</div>
 					</div>
-				</div>`
-						: ""
-				}
-
-				<!-- Other Tags -->
-				${
-					miscTags.length > 0 || contentTypes.length > 0
-						? `
-				<div class="fanfic-modal-section">
-					<h4 class="modal-section-title">Tags & Content</h4>
-					<div class="tags-list">
-						${renderTagList(contentTypes, "tag-source")}
-						${renderTagList(miscTags)}
-					</div>
-				</div>`
+				`
 						: ""
 				}
 			</div>

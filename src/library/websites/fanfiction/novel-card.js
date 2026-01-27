@@ -7,8 +7,10 @@ import { NovelCardRenderer } from "../novel-card-base.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import { getBaseModalStyles, getFanFictionStyles } from "../modal-styles.js";
 
 const CARD_CANONICAL_LABELS = new Map();
 
@@ -49,6 +51,139 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		};
 	}
 
+	/**
+	 * Show FanFiction-specific novel detail modal
+	 * @param {Object} novel - The novel to show
+	 * @returns {Promise<boolean>} True if handled
+	 */
+	static async showModal(novel) {
+		const modal = document.getElementById("novel-modal");
+		if (!modal) return false;
+
+		const titleEl = document.getElementById("modal-title");
+		if (titleEl) titleEl.textContent = novel.title || "";
+
+		const authorEl = document.getElementById("modal-author");
+		const authorUrl = novel.metadata?.authorUrl;
+		if (authorEl) {
+			if (authorUrl) {
+				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+					novel.author || "Unknown",
+				)}</a>`;
+			} else {
+				authorEl.textContent = `${novel.author || "Unknown"}`;
+			}
+		}
+
+		const descriptionEl = document.getElementById("modal-description");
+		if (descriptionEl) descriptionEl.textContent = novel.description || "";
+
+		const coverImg = document.getElementById("modal-cover");
+		const coverContainer = document.getElementById("modal-cover-container");
+
+		if (coverContainer) {
+			coverContainer.innerHTML = "";
+			if (novel.coverUrl && coverImg) {
+				coverImg.src = novel.coverUrl;
+				coverImg.style.display = "block";
+				coverImg.onerror = () => {
+					coverImg.src = this.shelfConfig.icon;
+				};
+				if (!coverContainer.contains(coverImg))
+					coverContainer.appendChild(coverImg);
+			} else if (coverImg) {
+				coverImg.src = this.shelfConfig.icon;
+				coverImg.style.display = "block";
+			}
+		} else if (coverImg) {
+			if (novel.coverUrl) {
+				coverImg.src = novel.coverUrl;
+				coverImg.style.display = "block";
+			} else {
+				coverImg.src = this.shelfConfig.icon;
+				coverImg.style.display = "block";
+			}
+		}
+
+		if (this.renderModalMetadata) {
+			const metadataContainer = document.getElementById(
+				"modal-metadata-container",
+			);
+			if (metadataContainer) {
+				metadataContainer.style.display = "block";
+				// Hide generic stats
+				const genericStats = document.querySelector(".novel-stats");
+				if (genericStats) genericStats.style.display = "none";
+			}
+			this.renderModalMetadata(novel);
+		}
+
+		const continueBtn = document.getElementById("modal-continue-btn");
+		if (continueBtn) {
+			const lastReadUrl =
+				novel.lastReadChapterUrl ||
+				novel.currentChapterUrl ||
+				novel.sourceUrl;
+			if (lastReadUrl) {
+				continueBtn.href = lastReadUrl;
+				continueBtn.style.display = "inline-flex";
+			} else {
+				continueBtn.style.display = "none";
+			}
+		}
+
+		const readBtn = document.getElementById("modal-source-btn");
+		if (readBtn && novel.sourceUrl) {
+			readBtn.href = novel.sourceUrl;
+			readBtn.style.display = "inline-flex";
+		}
+
+		const modalRemoveBtn = document.getElementById("modal-remove-btn");
+		if (modalRemoveBtn) modalRemoveBtn.dataset.novelId = novel.id;
+
+		const modalStatus = document.getElementById("modal-status");
+		if (modalStatus) modalStatus.dataset.novelId = novel.id;
+
+		const statusButtons = document.querySelectorAll(".status-btn");
+		const currentStatus =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+		statusButtons.forEach((btn) => {
+			const status = btn.getAttribute("data-status");
+			if (status === currentStatus) {
+				btn.classList.add("active");
+			} else {
+				btn.classList.remove("active");
+			}
+
+			btn.onclick = async () => {
+				if (!novelLibrary) return;
+				try {
+					await novelLibrary.updateNovel(novel.id, {
+						readingStatus: status,
+					});
+					statusButtons.forEach((b) => {
+						if (b.getAttribute("data-status") === status)
+							b.classList.add("active");
+						else b.classList.remove("active");
+					});
+					if (modalStatus && READING_STATUS_INFO[status]) {
+						modalStatus.textContent =
+							READING_STATUS_INFO[status].label;
+					}
+				} catch (e) {
+					console.error(e);
+				}
+			};
+		});
+
+		modal.classList.remove("hidden");
+		modal.classList.add("active");
+		document.body.style.overflow = "hidden";
+
+		return true;
+	}
+
 	static resetTaxonomy() {
 		CARD_CANONICAL_LABELS.clear();
 		Object.values(CARD_CATEGORY_LOOKUP).forEach((set) => set.clear());
@@ -83,7 +218,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		if (!label) return false;
 		return CARD_DOMAIN_TYPES.some(
 			(domain) =>
-				domain.toLowerCase() === label.toString().trim().toLowerCase()
+				domain.toLowerCase() === label.toString().trim().toLowerCase(),
 		);
 	}
 
@@ -102,16 +237,16 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		novels.forEach((novel) => {
 			const metadata = novel.metadata || {};
 			(metadata.fandoms || []).forEach((f) =>
-				this.registerLabel(f, "fandoms")
+				this.registerLabel(f, "fandoms"),
 			);
 			(metadata.characters || []).forEach((c) =>
-				this.registerLabel(c, "characters")
+				this.registerLabel(c, "characters"),
 			);
 			(metadata.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(novel.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(metadata.tags || []).forEach((t) => this.registerLabel(t, "tags"));
 			(novel.tags || []).forEach((t) => this.registerLabel(t, "tags"));
@@ -214,10 +349,10 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		// Use data attributes instead of inline onerror to avoid CSP violations
 		const coverMarkup = coverUrl
 			? `<img class="novel-cover-img" src="${this.escapeHtml(
-					coverUrl
-			  )}" alt="${this.escapeHtml(
-					novel.title
-			  )}" data-fallback="${fallbackCover}" loading="lazy">`
+					coverUrl,
+				)}" alt="${this.escapeHtml(
+					novel.title,
+				)}" data-fallback="${fallbackCover}" loading="lazy">`
 			: `<div class="novel-cover-placeholder">📚</div>`;
 
 		const readingKeyRaw =
@@ -237,8 +372,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			: 0;
 		const progressLabel = chapters
 			? `${this.formatNumber(enhanced)}/${this.formatNumber(
-					chapters
-			  )} enhanced`
+					chapters,
+				)} enhanced`
 			: `${this.formatNumber(enhanced)} enhanced`;
 
 		// Build all badge chips
@@ -249,30 +384,30 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 
 		const ratingBadge = rating
 			? `<span class="chip rating-badge ${this.normalizeRatingClass(
-					rating
-			  )}" title="Content Rating">${rating}</span>`
+					rating,
+				)}" title="Content Rating">${rating}</span>`
 			: "";
 		const languageBadge = language
 			? `<span class="chip chip-ghost" title="Language">${this.escapeHtml(
-					language
-			  )}</span>`
+					language,
+				)}</span>`
 			: "";
 		const typeBadge =
 			isCrossover !== undefined
 				? `<span class="chip ${
 						isCrossover ? "chip-crossover" : "chip-ghost"
-				  }" title="Work Type">${
+					}" title="Work Type">${
 						isCrossover ? "Crossover" : "Single Fandom"
-				  }</span>`
+					}</span>`
 				: "";
 		const workStatusBadge = workStatus
 			? `<span class="chip ${
 					workStatus.toLowerCase() === "completed"
 						? "chip-success"
 						: "chip-warning"
-			  }" title="Publication Status">${this.escapeHtml(
-					workStatus
-			  )}</span>`
+				}" title="Publication Status">${this.escapeHtml(
+					workStatus,
+				)}</span>`
 			: "";
 
 		// Build comprehensive stats display
@@ -329,10 +464,10 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 						<span class="card-stat-value">${this.escapeHtml(
 							stat.isDate
 								? stat.value
-								: this.formatNumber(stat.value)
+								: this.formatNumber(stat.value),
 						)}</span>
 					</div>
-				`
+				`,
 			)
 			.join("");
 
@@ -350,8 +485,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				.map(
 					(tag) =>
 						`<span class="tag ${className}">${this.escapeHtml(
-							tag
-						)}</span>`
+							tag,
+						)}</span>`,
 				)
 				.join("");
 			const moreTag =
@@ -370,21 +505,21 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			"Fandoms",
 			fandoms,
 			"tag-fandom",
-			3
+			3,
 		);
 		const genreMarkup = renderTagGroup("Genres", genres, "tag-genre", 4);
 		const characterMarkup = renderTagGroup(
 			"Characters",
 			characters,
 			"tag-character",
-			5
+			5,
 		);
 
 		// Story ID badge
 		const storyIdMarkup = metadata.storyId
 			? `<div class="story-id-badge">Story ID: <code>${this.escapeHtml(
-					metadata.storyId
-			  )}</code></div>`
+					metadata.storyId,
+				)}</code></div>`
 			: "";
 
 		card.innerHTML = `
@@ -392,8 +527,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				${
 					coverUrl
 						? `<img class="fanfic-bg-blur" src="${this.escapeHtml(
-								coverUrl
-						  )}" alt="" aria-hidden="true" loading="lazy">`
+								coverUrl,
+							)}" alt="" aria-hidden="true" loading="lazy">`
 						: ""
 				}
 				<div class="fanfic-cover-wrapper">
@@ -404,11 +539,11 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				<div class="fanfic-main-content">
 					<div class="fanfic-head">
 						<h3 class="fanfic-title" title="${this.escapeHtml(
-							novel.title
+							novel.title,
 						)}">${this.escapeHtml(novel.title)}</h3>
 						<div class="fanfic-meta-row">
 							<span class="fanfic-author">by <strong>${this.escapeHtml(
-								novel.author || "Unknown"
+								novel.author || "Unknown",
 							)}</strong></span>
 							<div class="fanfic-badges-inline">
 								${ratingBadge}
@@ -426,10 +561,10 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
 						<span class="enhancement-text">✨ <strong>${this.formatNumber(
-							enhanced
+							enhanced,
 						)}</strong> / ${this.formatNumber(
-			chapters
-		)} enhanced <span class="dim">(${progressPercent}%)</span></span>
+							chapters,
+						)} enhanced <span class="dim">(${progressPercent}%)</span></span>
 					</div>
 
 					${statMarkup ? `<div class="card-stats-bar">${statMarkup}</div>` : ""}
@@ -442,13 +577,13 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 						${storyIdMarkup}
 						<div class="fanfic-actions-right">
 							<span class="status-pill-small" style="background: ${statusInfo.color}">${
-			statusInfo.label
-		}</span>
+								statusInfo.label
+							}</span>
 							${
 								novel.sourceUrl
 									? `<a class="action-btn" href="${this.escapeHtml(
-											novel.sourceUrl
-									  )}" target="_blank" rel="noreferrer">Open ↗</a>`
+											novel.sourceUrl,
+										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""
 							}
 						</div>
@@ -475,7 +610,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 	 */
 	static setupImageErrorHandlers(container) {
 		const images = container.querySelectorAll(
-			"img.novel-cover-img[data-fallback]"
+			"img.novel-cover-img[data-fallback]",
 		);
 		images.forEach((img) => {
 			const originalSrc = img.src;
@@ -504,8 +639,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		if (metadata.rating) {
 			badges.push(
 				`<span class="rating-badge ${this.normalizeRatingClass(
-					metadata.rating
-				)}">${metadata.rating}</span>`
+					metadata.rating,
+				)}">${metadata.rating}</span>`,
 			);
 		}
 		if (novel.status || metadata.status) {
@@ -516,15 +651,15 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 					: "status-ongoing";
 			badges.push(
 				`<span class="meta-badge ${statusClass}">${this.escapeHtml(
-					workStatus
-				)}</span>`
+					workStatus,
+				)}</span>`,
 			);
 		}
 		if (metadata.language) {
 			badges.push(
 				`<span class="meta-badge">${this.escapeHtml(
-					metadata.language
-				)}</span>`
+					metadata.language,
+				)}</span>`,
 			);
 		}
 
@@ -572,7 +707,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const genres = [...buckets.genres].slice(0, MAX_CARD_GENRES);
 		const characters = [...buckets.characters].slice(
 			0,
-			MAX_CARD_CHARACTERS
+			MAX_CARD_CHARACTERS,
 		);
 		const contentTypes = [...buckets.contentTypes].slice(0, 2);
 		const misc = [...buckets.tags].slice(0, MAX_CARD_MISC_TAGS);
@@ -683,8 +818,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				.map(
 					(item) =>
 						`<span class="tag ${extraClass}">${this.escapeHtml(
-							item
-						)}</span>`
+							item,
+						)}</span>`,
 				)
 				.join("");
 		};
@@ -714,29 +849,32 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			}
 		};
 
+		const styles = getBaseModalStyles() + getFanFictionStyles();
+
 		let html = `
-			<div class="fanfic-modal-grid">
+			${styles}
+			<div class="site-modal-grid fanfic-modal-grid">
 				<!-- Primary Metadata Row -->
-				<div class="fanfic-modal-row primary-meta">
+				<div class="site-modal-row primary-meta">
 					<div class="meta-group">
 						<span class="meta-label">Fandom</span>
 						<span class="chip chip-primary" title="${this.escapeHtml(
-							fandoms.join(" & ")
+							fandoms.join(" & "),
 						)}">${
-			fandoms.length > 0
-				? this.escapeHtml(
-						fandoms.length > 1
-							? `${fandoms[0]} +${fandoms.length - 1}`
-							: fandoms[0]
-				  )
-				: "Unknown"
-		}</span>
+							fandoms.length > 0
+								? this.escapeHtml(
+										fandoms.length > 1
+											? `${fandoms[0]} +${fandoms.length - 1}`
+											: fandoms[0],
+									)
+								: "Unknown"
+						}</span>
 					</div>
 					<div class="meta-group">
 						<span class="meta-label">Rating</span>
 						<span class="chip rating-badge ${this.normalizeRatingClass(rating)}">${
-			rating || "Unknown"
-		}</span>
+							rating || "Unknown"
+						}</span>
 					</div>
 					<div class="meta-group">
 						<span class="meta-label">Language</span>
@@ -753,8 +891,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 					<div class="meta-group">
 						<span class="meta-label">Type</span>
 						<span class="chip ${isCrossover ? "chip-crossover" : "chip-ghost"}">${
-			isCrossover ? "Crossover" : "Single Fandom"
-		}</span>
+							isCrossover ? "Crossover" : "Single Fandom"
+						}</span>
 					</div>
 				</div>
 
@@ -801,9 +939,9 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				</div>
 
 				<!-- Statistics Grid -->
-				<div class="fanfic-modal-section">
+				<div class="site-modal-section fanfic-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
-					<div class="fanfic-stats-grid-large">
+					<div class="site-stats-grid fanfic-stats-grid-large">
 						${renderStat("Chapters", this.formatNumber(totalChapters), "📖")}
 						${renderStat("Words", this.formatNumber(words), "📝")}
 						${renderStat("Reviews", this.formatNumber(reviews), "💬")}
@@ -878,6 +1016,616 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 	 */
 	static getCustomStyles() {
 		return `
+			/* Modal Styles */
+			.modal {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				z-index: 1000;
+				display: none; /* Toggled by JS */
+				align-items: center;
+				justify-content: center;
+				padding: 20px;
+			}
+
+			.modal-backdrop {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background: rgba(0, 0, 0, 0.7);
+				backdrop-filter: blur(4px);
+				cursor: pointer;
+			}
+
+			.modal-content {
+				position: relative;
+				z-index: 1001;
+				background: var(--bg-secondary);
+				border-radius: var(--radius-lg);
+				box-shadow: var(--shadow-lg);
+				max-width: 1080px;
+				width: 100%;
+				max-height: 90vh;
+				overflow-y: auto;
+				color: var(--text-primary);
+				border: 1px solid var(--border-color);
+			}
+
+			.modal-header {
+				display: flex;
+				gap: var(--spacing-lg);
+				padding: var(--spacing-lg);
+				border-bottom: 1px solid var(--border-color);
+				position: relative;
+				background: var(--bg-tertiary);
+			}
+
+			.modal-title-section {
+				display: flex;
+				gap: var(--spacing-md);
+				flex: 1;
+			}
+
+			.modal-cover-img {
+				width: 100px;
+				height: 150px;
+				object-fit: cover;
+				border-radius: var(--radius-md);
+				box-shadow: var(--shadow-md);
+			}
+
+			.modal-header-text {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-sm);
+			}
+
+			.modal-header-text h2 {
+				margin: 0;
+				font-size: 1.5rem;
+				font-weight: 700;
+				color: var(--text-primary);
+				line-height: 1.3;
+			}
+
+			.modal-header-text p {
+				margin: 0;
+				font-size: 0.95rem;
+				color: var(--text-secondary);
+			}
+
+			.modal-header-text p:nth-of-type(3) {
+				font-size: 0.9rem;
+				color: var(--text-muted);
+				line-height: 1.5;
+				margin-top: var(--spacing-xs);
+				display: -webkit-box;
+				-webkit-line-clamp: 4;
+				line-clamp: 4;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+			}
+
+			.modal-close {
+				position: absolute;
+				top: var(--spacing-md);
+				right: var(--spacing-md);
+				width: 32px;
+				height: 32px;
+				border: none;
+				background: transparent;
+				color: var(--text-muted);
+				font-size: 24px;
+				cursor: pointer;
+				border-radius: var(--radius-sm);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				transition: all var(--transition-fast);
+			}
+
+			.modal-close:hover {
+				background: var(--bg-card-hover);
+				color: var(--text-primary);
+			}
+
+			.modal-body {
+				padding: var(--spacing-lg);
+			}
+
+			.modal-status-section {
+				padding: var(--spacing-lg);
+				border-top: 1px solid var(--border-color);
+				border-bottom: 1px solid var(--border-color);
+				background: var(--bg-secondary);
+			}
+
+			.status-label {
+				display: block;
+				font-size: 0.85rem;
+				font-weight: 700;
+				color: var(--text-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				margin-bottom: var(--spacing-md);
+			}
+
+			.status-buttons {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--spacing-sm);
+			}
+
+			.status-btn {
+				flex: 1;
+				min-width: 100px;
+				padding: 8px 12px;
+				background: var(--bg-card);
+				border: 2px solid var(--border-color);
+				border-radius: var(--radius-sm);
+				font-size: 0.9rem;
+				font-weight: 500;
+				color: var(--text-primary);
+				cursor: pointer;
+				transition: all var(--transition-fast);
+				white-space: nowrap;
+			}
+
+			.status-btn:hover {
+				border-color: var(--primary-color);
+				background: var(--bg-tertiary);
+				transform: translateY(-1px);
+				box-shadow: var(--shadow-sm);
+			}
+
+			.status-btn.active {
+				background: var(--primary-color);
+				border-color: var(--primary-color);
+				color: #fff;
+				font-weight: 600;
+			}
+
+			.modal-metadata-section {
+				margin-bottom: var(--spacing-lg);
+				padding-bottom: var(--spacing-md);
+				border-bottom: 1px solid var(--border-color);
+			}
+
+			.modal-metadata-section:last-child {
+				border-bottom: none;
+				margin-bottom: 0;
+				padding-bottom: 0;
+			}
+
+			.modal-metadata-section h4 {
+				margin: 0 0 var(--spacing-sm) 0;
+				font-size: 0.85rem;
+				font-weight: 700;
+				color: var(--text-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			.modal-metadata-content {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+				gap: var(--spacing-sm);
+			}
+
+			.tag {
+				display: inline-block;
+				padding: 4px 12px;
+				background: var(--bg-tertiary);
+				border: 1px solid var(--border-color);
+				border-radius: 99px;
+				font-size: 0.85rem;
+				color: var(--text-secondary);
+				transition: all var(--transition-fast);
+			}
+
+			.tag:hover {
+				border-color: var(--primary-color);
+				color: var(--primary-color);
+			}
+
+			.rating-badge {
+				display: inline-block;
+				padding: 4px 12px;
+				border-radius: var(--radius-sm);
+				font-weight: 700;
+				font-size: 0.8rem;
+				text-transform: uppercase;
+				text-align: center;
+				min-width: 40px;
+			}
+
+			.rating-k {
+				background: var(--success-color);
+				color: #fff;
+			}
+			.rating-kp {
+				background: #8bc34a;
+				color: #fff;
+			}
+			.rating-t {
+				background: var(--warning-color);
+				color: #000;
+			}
+			.rating-m {
+				background: var(--error-color);
+				color: #fff;
+			}
+
+			.tag.crossover {
+				background: linear-gradient(135deg, #667eea, #764ba2);
+				color: white;
+				border: none;
+			}
+
+			.tag.single-fandom {
+				background: var(--primary-color);
+				color: white;
+				border: none;
+			}
+
+			.character-tag {
+				background: rgba(252, 196, 25, 0.1);
+				border-color: rgba(252, 196, 25, 0.3);
+				color: var(--warning-color);
+			}
+
+			.modal-work-stats {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+				gap: var(--spacing-md);
+			}
+
+			.stat-item {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: var(--spacing-sm) var(--spacing-md);
+				background: var(--bg-tertiary);
+				border-radius: var(--radius-md);
+				border: 1px solid var(--border-color);
+				font-size: 0.9rem;
+			}
+
+			.stat-label {
+				color: var(--text-muted);
+			}
+
+			.stat-value {
+				font-weight: 600;
+				color: var(--text-primary);
+			}
+
+			.modal-footer {
+				padding: var(--spacing-lg);
+				border-top: 1px solid var(--border-color);
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-md);
+				background: var(--bg-tertiary);
+				border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+			}
+
+			.modal-status-section {
+				width: 100%;
+				padding-bottom: var(--spacing-md);
+				border-bottom: 1px solid var(--border-color);
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-sm);
+			}
+
+			.modal-actions-divider {
+				display: none;
+			}
+
+			.modal-actions-primary,
+			.modal-actions-secondary {
+				display: flex;
+				gap: var(--spacing-md);
+				align-items: center;
+				flex-wrap: wrap;
+				width: 100%;
+			}
+
+			.modal-actions-primary {
+				flex: 1;
+			}
+
+			.modal-actions-secondary {
+				margin-left: auto;
+			}
+
+			.status-label {
+				display: block;
+				font-size: 0.85rem;
+				font-weight: 700;
+				color: var(--text-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				margin-bottom: var(--spacing-sm);
+			}
+
+			.status-buttons {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--spacing-sm);
+				width: 100%;
+			}
+
+			.status-btn {
+				flex: 1;
+				min-width: 85px;
+				padding: 8px 12px;
+				background: var(--bg-card);
+				border: 2px solid var(--border-color);
+				border-radius: var(--radius-sm);
+				font-size: 0.9rem;
+				font-weight: 500;
+				color: var(--text-primary);
+				cursor: pointer;
+				transition: all var(--transition-fast);
+				white-space: nowrap;
+				text-align: center;
+			}
+
+			.status-btn:hover {
+				border-color: var(--primary-color);
+				background: var(--bg-tertiary);
+				transform: translateY(-1px);
+				box-shadow: var(--shadow-sm);
+			}
+
+			.status-btn.active {
+				background: var(--primary-color);
+				border-color: var(--primary-color);
+				color: #fff;
+				font-weight: 600;
+			}
+
+			.btn {
+				padding: 8px 20px;
+				border-radius: var(--radius-md);
+				border: none;
+				font-weight: 600;
+				font-size: 0.95rem;
+				cursor: pointer;
+				transition: all var(--transition-fast);
+				text-decoration: none;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.btn-primary {
+				background: var(--primary-color);
+				color: white;
+			}
+
+			.btn-primary:hover {
+				background: var(--primary-hover);
+				transform: translateY(-1px);
+				box-shadow: var(--shadow-md);
+			}
+
+			@media (max-width: 600px) {
+				.modal-content {
+					max-width: 100%;
+					height: 100%;
+					max-height: 100%;
+					border-radius: 0;
+				}
+
+				.modal-header {
+					flex-direction: column;
+					gap: var(--spacing-md);
+				}
+
+				.modal-cover-img {
+					width: 80px;
+					height: 120px;
+				}
+			}
+
+			/* FanFiction Modal Specifics */
+			.fanfic-modal-grid {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-lg);
+			}
+
+			.fanfic-modal-row.primary-meta {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--spacing-lg);
+				padding: var(--spacing-md);
+				background: var(--bg-tertiary);
+				border-radius: var(--radius-md);
+				border: 1px solid var(--border-color);
+				align-items: center;
+			}
+
+			.meta-group {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-xs);
+			}
+
+			.meta-label {
+				font-size: 0.75rem;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: var(--text-muted);
+				font-weight: 700;
+			}
+
+			.chip {
+				display: inline-flex;
+				align-items: center;
+				padding: 4px 12px;
+				border-radius: 99px;
+				font-size: 0.85rem;
+				font-weight: 600;
+				background: var(--bg-card);
+				border: 1px solid var(--border-color);
+				color: var(--text-primary);
+				white-space: nowrap;
+			}
+
+			.chip-ghost {
+				background: transparent;
+				border-color: var(--border-color);
+				color: var(--text-secondary);
+			}
+
+			.chip-success {
+				background: rgba(81, 207, 102, 0.15);
+				color: var(--success-color);
+				border-color: rgba(81, 207, 102, 0.3);
+			}
+
+			.chip-warning {
+				background: rgba(252, 196, 25, 0.15);
+				color: var(--warning-color);
+				border-color: rgba(252, 196, 25, 0.3);
+			}
+
+			.chip-crossover {
+				background: linear-gradient(
+					135deg,
+					rgba(102, 126, 234, 0.2),
+					rgba(118, 75, 162, 0.2)
+				);
+				color: #a5b3ff;
+				border: 1px solid rgba(118, 75, 162, 0.3);
+			}
+
+			.fanfic-modal-section {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-md);
+			}
+
+			.fanfic-modal-three-columns {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: var(--spacing-lg);
+				margin-bottom: var(--spacing-lg);
+			}
+
+			.fanfic-modal-column {
+				display: flex;
+				flex-direction: column;
+				gap: var(--spacing-md);
+			}
+
+			.modal-section-title {
+				font-size: 1rem;
+				font-weight: 600;
+				color: var(--text-primary);
+				border-bottom: 1px solid var(--border-color);
+				padding-bottom: var(--spacing-sm);
+				margin: 0;
+			}
+
+			.fanfic-stats-grid-large {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+				gap: var(--spacing-md);
+			}
+
+			.modal-stat-item {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				padding: var(--spacing-md);
+				background: var(--bg-tertiary);
+				border-radius: var(--radius-md);
+				border: 1px solid var(--border-color);
+				transition: transform var(--transition-fast);
+			}
+
+			.modal-stat-item:hover {
+				transform: translateY(-2px);
+				border-color: var(--primary-color);
+			}
+
+			.modal-stat-label {
+				font-size: 0.85rem;
+				color: var(--text-muted);
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+
+			.modal-stat-value {
+				font-size: 1.1rem;
+				font-weight: 600;
+				color: var(--text-primary);
+			}
+
+			.tags-list {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--spacing-sm);
+			}
+
+			/* Tag Colors */
+			.tag-fandom {
+				background: rgba(66, 99, 235, 0.15);
+				color: #748ffc;
+				border-color: rgba(66, 99, 235, 0.3);
+			}
+
+			.tag-genre {
+				background: rgba(32, 201, 151, 0.15);
+				color: #20c997;
+				border-color: rgba(32, 201, 151, 0.3);
+			}
+
+			.tag-character {
+				background: rgba(252, 196, 25, 0.15);
+				color: #fcc419;
+				border-color: rgba(252, 196, 25, 0.3);
+			}
+
+			.tag-source {
+				background: rgba(255, 107, 107, 0.15);
+				color: #ff6b6b;
+				border-color: rgba(255, 107, 107, 0.3);
+			}
+
+			/* Ensure rating colors override chip default */
+			.chip.rating-k {
+				background: var(--success-color);
+				color: #fff;
+				border-color: var(--success-color);
+			}
+			.chip.rating-kp {
+				background: #8bc34a;
+				color: #fff;
+				border-color: #8bc34a;
+			}
+			.chip.rating-t {
+				background: var(--warning-color);
+				color: #000;
+				border-color: var(--warning-color);
+			}
+			.chip.rating-m {
+				background: var(--error-color);
+				color: #fff;
+				border-color: var(--error-color);
+			}
+
 			/* Acrylic background for modal */
 			.modal-backdrop {
 				background: linear-gradient(135deg, rgba(42, 75, 141, 0.1) 0%, rgba(118, 75, 162, 0.08) 100%),

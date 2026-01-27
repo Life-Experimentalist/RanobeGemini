@@ -7,7 +7,6 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
-import { debugLog, debugError } from "../../utils/logger.js";
 
 /**
  * Base novel card renderer class
@@ -61,7 +60,7 @@ export class NovelCardRenderer {
 			<div class="novel-card-info">
 				<h3 class="novel-card-title">${this.escapeHtml(novel.title)}</h3>
 				<p class="novel-card-author">by ${this.escapeHtml(
-					novel.author || "Unknown"
+					novel.author || "Unknown",
 				)}</p>
 				${this.renderCardMeta(novel, config)}
 				${this.renderCardTags(novel)}
@@ -138,8 +137,8 @@ export class NovelCardRenderer {
 					.map(
 						(tag) =>
 							`<span class="card-tag">${this.escapeHtml(
-								tag
-							)}</span>`
+								tag,
+							)}</span>`,
 					)
 					.join("")}
 				${moreCount > 0 ? `<span class="card-tag-more">+${moreCount}</span>` : ""}
@@ -176,6 +175,17 @@ export class NovelCardRenderer {
 			bubbles: true,
 		});
 		document.dispatchEvent(event);
+	}
+
+	/**
+	 * Show the novel detail modal
+	 * Designed to be overridden by subclasses to provide custom modal experiences.
+	 * @param {Object} novel - The novel to show
+	 * @returns {Promise<boolean>} True if handled, false to fallback to default
+	 */
+	static async showModal(novel) {
+		// Default implementation returns false to trigger fallback
+		return false;
 	}
 
 	/**

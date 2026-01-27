@@ -9,8 +9,10 @@ import { debugLog, debugError } from "../../../utils/logger.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import { getBaseModalStyles, getAO3Styles } from "../modal-styles.js";
 
 /**
  * AO3-specific novel card renderer
@@ -119,22 +121,22 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				${
 					rating
 						? `<span class="rating-badge-small ${ratingClass}">${this.escapeHtml(
-								rating
-						  )}</span>`
+								rating,
+							)}</span>`
 						: ""
 				}
 				${
 					words
 						? `<span class="meta-item" title="Word count">📝 ${this.formatNumber(
-								words
-						  )}</span>`
+								words,
+							)}</span>`
 						: ""
 				}
 				${
 					kudos
 						? `<span class="meta-item" title="Kudos">❤️ ${this.formatNumber(
-								kudos
-						  )}</span>`
+								kudos,
+							)}</span>`
 						: ""
 				}
 			</div>
@@ -183,9 +185,9 @@ export class AO3CardRenderer extends NovelCardRenderer {
 					.map(
 						(item) => `
 					<span class="card-tag card-tag-${item.type}">${this.escapeHtml(
-							item.text
-						)}</span>
-				`
+						item.text,
+					)}</span>
+				`,
 					)
 					.join("")}
 				${
@@ -323,10 +325,10 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			: "";
 
 		// Status badge
-		const isCompleted = workStatus && (
-			workStatus.toLowerCase() === "completed" ||
-			workStatus.toLowerCase() === "complete"
-		);
+		const isCompleted =
+			workStatus &&
+			(workStatus.toLowerCase() === "completed" ||
+				workStatus.toLowerCase() === "complete");
 		const statusBadge = workStatus
 			? `<span class="chip ${isCompleted ? "chip-success" : "chip-warning"}">${this.escapeHtml(workStatus)}</span>`
 			: "";
@@ -337,7 +339,10 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		if (words) statsText.push(`${this.formatNumber(words)} words`);
 		if (kudos) statsText.push(`${this.formatNumber(kudos)} kudos`);
 
-		const statsHTML = statsText.length > 0 ? `<div class="ao3-stats-text">${statsText.join(" • ")}</div>` : "";
+		const statsHTML =
+			statsText.length > 0
+				? `<div class="ao3-stats-text">${statsText.join(" • ")}</div>`
+				: "";
 
 		// Fandom display
 		const fandomHTML = primaryFandom
@@ -345,10 +350,11 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			: "";
 
 		// Progress display
-		const progressHTML = chapters > 0
-			? `<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
+		const progressHTML =
+			chapters > 0
+				? `<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
 			   <div class="ao3-progress-text">✨ ${this.formatNumber(enhanced)}/${this.formatNumber(chapters)}</div>`
-			: "";
+				: "";
 
 		card.innerHTML = `
 			<div class="ao3-card-simple">
@@ -403,7 +409,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 	 */
 	static setupImageErrorHandlers(container) {
 		const images = container.querySelectorAll(
-			"img.novel-cover-img[data-fallback]"
+			"img.novel-cover-img[data-fallback]",
 		);
 		images.forEach((img) => {
 			const originalSrc = img.src;
@@ -483,8 +489,8 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				.map(
 					(item) =>
 						`<span class="tag ${extraClass}">${this.escapeHtml(
-							item
-						)}</span>`
+							item,
+						)}</span>`,
 				)
 				.join("");
 		};
@@ -514,15 +520,18 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			}
 		};
 
+		const styles = getBaseModalStyles() + getAO3Styles();
+
 		let html = `
-			<div class="ao3-modal-grid">
+			${styles}
+			<div class="site-modal-grid ao3-modal-grid">
 				<!-- Primary Metadata Row -->
-				<div class="ao3-modal-row primary-meta">
+				<div class="site-modal-row primary-meta">
 					<div class="meta-group">
 						<span class="meta-label">Rating</span>
 						<span class="chip rating-badge ${this.getRatingClass(rating)}">${
-			rating || "Not Rated"
-		}</span>
+							rating || "Not Rated"
+						}</span>
 					</div>
 					<div class="meta-group">
 						<span class="meta-label">Category</span>
@@ -544,9 +553,9 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				</div>
 
 				<!-- Statistics Grid -->
-				<div class="ao3-modal-section">
+				<div class="site-modal-section ao3-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
-					<div class="ao3-stats-grid-large">
+					<div class="site-stats-grid ao3-stats-grid-large">
 						${renderStat("Chapters", this.formatNumber(chapters), "📖")}
 						${renderStat("Words", this.formatNumber(words), "📝")}
 						${renderStat("Kudos", this.formatNumber(kudos), "❤️")}
@@ -627,6 +636,208 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		`;
 
 		container.innerHTML = html;
+	}
+
+	/**
+	 * Show AO3-specific novel detail modal
+	 * @param {Object} novel - The novel to show
+	 * @returns {Promise<boolean>} True if handled
+	 */
+	static async showModal(novel) {
+		const modal = document.getElementById("novel-modal");
+		if (!modal) return false;
+
+		const metadata = novel.metadata || {};
+		const rating = metadata.rating || novel.rating || "";
+
+		// Basic Info
+		const titleEl = document.getElementById("modal-title");
+		if (titleEl) titleEl.textContent = novel.title || "";
+
+		const authorEl = document.getElementById("modal-author");
+		if (authorEl) {
+			authorEl.textContent = `${novel.author || "Anonymous"}`;
+		}
+
+		const descriptionEl = document.getElementById("modal-description");
+		if (descriptionEl) descriptionEl.textContent = novel.description || "";
+
+		// Handle cover/placeholder - AO3 has no covers
+		const coverContainer = document.getElementById("modal-cover-container");
+		const coverImg = document.getElementById("modal-cover");
+
+		if (coverContainer) {
+			// Ensure styling is applied
+			// Create a placeholder since AO3 has no cover images
+			const gradientColors = this.getRatingGradient(rating);
+			const shortRating = this.getShortRating(rating);
+			const category = metadata.category || "";
+			const categoryIcon = this.getCategoryIcon(category);
+
+			const placeholderHTML = `
+				<div class="ao3-modal-placeholder" style="background: linear-gradient(145deg, ${gradientColors.primary} 0%, ${gradientColors.secondary} 100%); width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px;">
+					<div class="ao3-modal-placeholder-pattern"></div>
+					<div class="ao3-modal-placeholder-content" style="z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; color: white;">
+						<span class="ao3-modal-placeholder-rating" style="font-size: 2rem; font-weight: bold;">${shortRating}</span>
+						<span class="ao3-modal-placeholder-category" style="font-size: 1.2rem;">${categoryIcon}</span>
+						<span class="ao3-modal-placeholder-icon" style="position: absolute; bottom: 8px; right: 8px; opacity: 0.5;">🏛️</span>
+					</div>
+				</div>
+			`;
+
+			// Check if we need to create a wrapper or just append
+			// We want to PRESERVE the existing img element but hide it
+			const img = document.getElementById("modal-cover");
+			if (img) img.style.display = "none";
+
+			// Remove existing placeholder if any
+			const existing = coverContainer.querySelector(
+				".ao3-modal-placeholder",
+			);
+			if (existing) existing.remove();
+
+			// Insert new placeholder
+			coverContainer.insertAdjacentHTML("beforeend", placeholderHTML);
+		} else if (coverImg) {
+			// Fallback to old behavior if container doesn't exist
+			coverImg.style.display = "none";
+		}
+
+		// Render Metadata
+		const metadataContainer = document.getElementById(
+			"modal-metadata-container",
+		);
+		if (metadataContainer) {
+			metadataContainer.style.display = "block";
+			// Hide generic stats as they duplicate info or are irrelevant
+			const genericStats = document.querySelector(".novel-stats");
+			if (genericStats) genericStats.style.display = "none";
+		}
+		if (this.renderModalMetadata) {
+			this.renderModalMetadata(novel);
+		}
+
+		// Set up action buttons
+		const continueBtn = document.getElementById("modal-continue-btn");
+		if (continueBtn) {
+			// Use last read chapter URL or source URL
+			const continueUrl = novel.lastChapterUrl || novel.sourceUrl;
+			if (continueUrl) {
+				continueBtn.href = continueUrl;
+				continueBtn.style.display = "inline-flex";
+			} else {
+				continueBtn.style.display = "none";
+			}
+		}
+
+		const readBtn = document.getElementById("modal-source-btn"); // modal-read-btn in shelf-page vs modal-source-btn in library.js
+		// library.js elements uses modal-source-btn. shelf-page uses modal-read-btn.
+		// I should check library.html IDs.
+		// library.js says: modalSourceBtn: document.getElementById("modal-source-btn")
+		if (readBtn) {
+			if (novel.sourceUrl) {
+				readBtn.href = novel.sourceUrl;
+				readBtn.style.display = "inline-flex";
+			} else {
+				readBtn.style.display = "none";
+			}
+		}
+
+		// Remove button logic is handled by library.js global listeners or needs to be re-attached?
+		// library.js attaches generic listeners to some buttons (refresh, remove) BUT in openDefaultNovelDetail it updates their datasets.
+		// The modal is single instance. Listeners are attached ONCE in setupEventListeners of library.js usually.
+		// Wait, openDefaultNovelDetail re-attaches?
+		// openDefaultNovelDetail sets elements.modalRemoveBtn.dataset.novelId = novel.id;
+		// library.js setupEventListeners calls handleRemoveNovel which reads dataset.novelId.
+		// So I just need to update the dataset.
+
+		const removeBtn = document.getElementById("modal-remove-btn");
+		if (removeBtn) {
+			removeBtn.dataset.novelId = novel.id;
+		}
+
+		const editBtn = document.getElementById("modal-edit-btn");
+		if (editBtn) {
+			// library.js handles the generic edit button click if we don't override it.
+			// But here we're inside showModal, we might have prevented default behavior if we cloned the node or something.
+			// But we are just accessing the existing node. The existing listeners from library.js persist unless we replace the node.
+			// However, library.js listeners use closure variables like `currentlyOpenNovelId`.
+			// `openNovelDetail` in library.js DOES NOT set `currentlyOpenNovelId` or similar global variable seen in `library.js` earlier?
+			// Actually, `openDefaultNovelDetail` sets `elements.modalStatus.dataset.novelId = novel.id;` and library.js relies on that dataset id.
+			// So if we set dataset attributes correctly, library.js listeners MIGHT work.
+			// Let's check library.js listeners again.
+		}
+
+		// Critical: Set the dataset ID on the status badge or similar so generic listeners know which novel.
+		// In library.js:
+		/*
+        elements.modalStatus.dataset.novelId = novel.id;
+        */
+		const modalStatus = document.getElementById("modal-status");
+		if (modalStatus) {
+			modalStatus.dataset.novelId = novel.id;
+		}
+
+		const modalRemoveBtn = document.getElementById("modal-remove-btn");
+		if (modalRemoveBtn) {
+			modalRemoveBtn.dataset.novelId = novel.id;
+		}
+
+		// Setup reading status buttons - these often need re-attaching because
+		// library.js might not have attached permanent listeners to them if they are dynamically updated.
+		// Wait, library.js `openDefaultNovelDetail` attaches listeners each time.
+		// If we don't call `openDefaultNovelDetail`, those listeners are NOT attached.
+		// So we MUST attach them.
+
+		// Setup reading status buttons
+		const statusButtons = document.querySelectorAll(".status-btn");
+		const currentStatus =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+		statusButtons.forEach((btn) => {
+			const status = btn.getAttribute("data-status");
+
+			// Set active state
+			if (status === currentStatus) {
+				btn.classList.add("active");
+			} else {
+				btn.classList.remove("active");
+			}
+
+			// Add click handler
+			btn.onclick = async () => {
+				if (!novelLibrary) return;
+
+				try {
+					await novelLibrary.updateNovel(novel.id, {
+						readingStatus: status,
+					});
+
+					// Update button states
+					statusButtons.forEach((b) => {
+						if (b.getAttribute("data-status") === status) {
+							b.classList.add("active");
+						} else {
+							b.classList.remove("active");
+						}
+					});
+
+					// Update status badge text
+					if (modalStatus && READING_STATUS_INFO[status]) {
+						modalStatus.textContent =
+							READING_STATUS_INFO[status].label;
+					}
+				} catch (err) {
+					debugError("Failed to update status", err);
+				}
+			};
+		});
+
+		// Open the modal
+		modal.classList.remove("hidden");
+		document.body.style.overflow = "hidden";
+
+		return true;
 	}
 
 	/**

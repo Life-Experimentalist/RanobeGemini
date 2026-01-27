@@ -564,7 +564,7 @@ function showNovelModal(novel) {
 
 	const authorEl = document.getElementById("modal-author");
 	if (authorEl) {
-		authorEl.textContent = `by ${novel.author || "Anonymous"}`;
+		authorEl.textContent = `${novel.author || "Anonymous"}`;
 	}
 
 	const descriptionEl = document.getElementById("modal-description");

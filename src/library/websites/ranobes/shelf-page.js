@@ -516,11 +516,11 @@ function showNovelModal(novel) {
 	const authorUrl = novel.metadata?.authorUrl;
 	if (authorEl) {
 		if (authorUrl) {
-			authorEl.innerHTML = `by <a href="${authorUrl}" target="_blank" rel="noreferrer">${escapeHtml(
+			authorEl.innerHTML = `<a href="${authorUrl}" target="_blank" rel="noreferrer">${escapeHtml(
 				novel.author || "Unknown"
 			)}</a>`;
 		} else {
-			authorEl.textContent = `by ${novel.author || "Unknown"}`;
+			authorEl.textContent = `${novel.author || "Unknown"}`;
 		}
 	}
 

@@ -18,25 +18,7 @@ import {
 } from "../utils/site-settings.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
-// Modal renderer registry (site-specific modal metadata renderers)
-const MODAL_RENDERER_CONFIG = {
-	ranobes: {
-		path: "./websites/ranobes/novel-card.js",
-		exportName: "RanobesNovelCard",
-	},
-	fanfiction: {
-		path: "./websites/fanfiction/novel-card.js",
-		exportName: "FanFictionNovelCard",
-	},
-	ao3: {
-		path: "./websites/ao3/novel-card.js",
-		exportName: "AO3CardRenderer",
-	},
-	scribblehub: {
-		path: "./websites/scribblehub/novel-card.js",
-		exportName: "ScribbleHubNovelCard",
-	},
-};
+// Modal renderer cache
 const modalRendererCache = {};
 const modalStylesInjected = new Set();
 
@@ -292,7 +274,7 @@ let carouselState = {
 	currentIndex: 0,
 	isPlaying: true,
 	interval: null,
-	itemsPerView: 5,
+	itemsPerView: 4,
 	itemsToShow: 10, // Max novels to try to show in carousel
 	uniqueCount: 0, // Actual unique novels available for the carousel
 };
@@ -681,14 +663,20 @@ async function loadModalRendererForShelf(shelfId) {
 	if (!shelfId) return null;
 	const key = shelfId.toLowerCase();
 	if (modalRendererCache[key]) return modalRendererCache[key];
-	const cfg = MODAL_RENDERER_CONFIG[key];
-	if (!cfg) return null;
+
 	try {
-		const mod = await import(cfg.path);
+		// Dynamic import based on shelf ID
+		// Note: This relies on the convention that the renderer is available at ./websites/{shelfId}/novel-card.js
+		const mod = await import(`./websites/${key}/novel-card.js`);
 		const renderer =
-			mod[cfg.exportName] ||
 			mod.default ||
-			Object.values(mod).find((val) => val?.renderModalMetadata);
+			Object.values(mod).find(
+				(val) =>
+					val?.renderCard ||
+					val?.renderModalMetadata ||
+					val?.showModal,
+			);
+
 		modalRendererCache[key] = renderer || null;
 		if (renderer?.getCustomStyles) {
 			const scopeSelector = `.modal[data-modal-site="${key}"]`;
@@ -696,7 +684,9 @@ async function loadModalRendererForShelf(shelfId) {
 		}
 		return renderer || null;
 	} catch (err) {
-		debugError(`Failed to load modal renderer for ${key}:`, err);
+		// Only log error if it's not a "module not found" error, which is expected for unsupported sites
+		// But debugLog is fine.
+		debugLog(`No site-specific renderer found for ${key}: ${err.message}`);
 		modalRendererCache[key] = null;
 		return null;
 	}
@@ -1581,10 +1571,65 @@ function showNotification(message, type = "success") {
 
 /**
  * Open novel detail modal
+ * Delegates to site-specific renderer if available
  */
 async function openNovelDetail(novel) {
+	const shelfId = novel.shelfId;
+	let handled = false;
+
+	if (shelfId) {
+		const renderer = await loadModalRendererForShelf(shelfId);
+		if (renderer && typeof renderer.showModal === "function") {
+			try {
+				debugLog(`Using custom modal for ${shelfId}`);
+				handled = await renderer.showModal(novel);
+			} catch (e) {
+				debugError(`Error in custom modal for ${shelfId}:`, e);
+			}
+		}
+	}
+
+	if (!handled) {
+		await openDefaultNovelDetail(novel);
+	}
+}
+
+/**
+ * Default implementation of novel detail modal
+ */
+async function openDefaultNovelDetail(novel) {
 	const shelf = getShelfById(novel.shelfId);
 	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
+
+	// Reset visibility of generic elements (restoring state from site-specific modifications)
+	const genericStats = document.querySelector(".novel-stats");
+	if (genericStats) genericStats.style.display = "";
+
+	const metadataContainer = document.getElementById(
+		"modal-metadata-container",
+	);
+	if (metadataContainer) metadataContainer.style.display = "none";
+
+	const coverContainer = document.getElementById("modal-cover-container");
+	if (coverContainer) {
+		// Restore standard cover image if it was replaced/removed
+		if (!document.getElementById("modal-cover")) {
+			coverContainer.innerHTML =
+				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" />';
+			// Re-bind cached element reference if possible, or we just rely on getElementById for robust code here?
+			// Since 'elements' object is cached at startup, its modalCover property is now stale (pointing to detached node).
+			// We must update the cached reference.
+			if (elements)
+				elements.modalCover = document.getElementById("modal-cover");
+		} else {
+			// Just clear any siblings (placeholders) but keep the image?
+			// Actually simplest is to just reset InnerHTML always to be safe
+			coverContainer.innerHTML =
+				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" />';
+			if (elements)
+				elements.modalCover = document.getElementById("modal-cover");
+		}
+	}
 
 	// Tag modal with site id for scoped styling
 	if (elements.novelModal) {
@@ -1681,7 +1726,8 @@ async function openNovelDetail(novel) {
 	if (novel.genres && novel.genres.length > 0) {
 		elements.modalGenres.innerHTML = novel.genres
 			.map(
-				(genre) => `<span class="genre-tag">${escapeHtml(genre)}</span>`
+				(genre) =>
+					`<span class="genre-tag">${escapeHtml(genre)}</span>`,
 			)
 			.join("");
 		elements.modalGenresContainer.style.display = "block";

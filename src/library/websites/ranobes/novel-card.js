@@ -7,8 +7,10 @@ import { NovelCardRenderer } from "../novel-card-base.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import { getBaseModalStyles, getRanobesStyles } from "../modal-styles.js";
 
 const CARD_CANONICAL_LABELS = new Map();
 
@@ -30,6 +32,169 @@ export class RanobesNovelCard extends NovelCardRenderer {
 			emoji: "🍃",
 			color: "#4a7c4e",
 		};
+	}
+
+	/**
+	 * Show Ranobes-specific novel detail modal
+	 * @param {Object} novel - The novel to show
+	 * @returns {Promise<boolean>} True if handled
+	 */
+	static async showModal(novel) {
+		const modal = document.getElementById("novel-modal");
+		if (!modal) return false;
+
+		const titleEl = document.getElementById("modal-title");
+		if (titleEl) titleEl.textContent = novel.title || "";
+
+		// Custom Author Logic with Link
+		const authorEl = document.getElementById("modal-author");
+		const authorUrl = novel.metadata?.authorUrl;
+		if (authorEl) {
+			if (authorUrl) {
+				// Determine base URL if authorUrl is relative? Usually it's absolute or relative to site.
+				// Assuming absolute or handled by browser base if irrelevant.
+				// Ranobes authorUrl likely from metadata.
+				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+					novel.author || "Unknown",
+				)}</a>`;
+			} else {
+				authorEl.textContent = `${novel.author || "Unknown"}`;
+			}
+		}
+
+		const descriptionEl = document.getElementById("modal-description");
+		if (descriptionEl) descriptionEl.textContent = novel.description || "";
+
+		const coverImg = document.getElementById("modal-cover");
+		const coverContainer = document.getElementById("modal-cover-container");
+
+		// Hide placeholder container if it was shown by other renderers
+		if (coverContainer) {
+			// Remove previous AO3-style content if any or just hide it?
+			// Better to hide it or clear it.
+			// library.js default uses coverImg directly if present.
+			// If we have custom container from AO3, we should ensure coverImg is visible if we want cover.
+			// If library.html has coverImg, use it.
+
+			// Note: library.js 'openDefault' toggles coverImg display.
+			if (novel.coverUrl) {
+				if (coverImg) {
+					coverImg.src = novel.coverUrl;
+					coverImg.style.display = "block";
+					coverImg.onerror = () => {
+						coverImg.src = this.shelfConfig.icon;
+					};
+				}
+				// If there is a container wrapper (like in AO3 impl), we might need to reset it.
+				// But assuming library.html structure is standard.
+				coverContainer.innerHTML = ""; // Clear placeholders
+				if (coverImg && !coverContainer.contains(coverImg)) {
+					coverContainer.appendChild(coverImg);
+				}
+			} else {
+				if (coverImg) coverImg.style.display = "none";
+			}
+		} else if (coverImg) {
+			if (novel.coverUrl) {
+				coverImg.src = novel.coverUrl;
+				coverImg.style.display = "block";
+			} else {
+				coverImg.style.display = "none";
+			}
+		}
+
+		// Restore generic stats visibility
+		// We hide it if we are rendering custom metadata
+		const genericStats = document.querySelector(".novel-stats");
+
+		// Hide custom metadata container if not used or clear it
+		const metadataContainer = document.getElementById(
+			"modal-metadata-container",
+		);
+		if (metadataContainer) {
+			if (this.renderModalMetadata) {
+				metadataContainer.style.display = "block";
+				if (genericStats) genericStats.style.display = "none";
+				this.renderModalMetadata(novel);
+			} else {
+				// Fallback to generic stats if no metadata renderer
+				metadataContainer.style.display = "none";
+				if (genericStats) genericStats.style.display = "";
+			}
+		}
+
+		// Buttons
+		const continueBtn = document.getElementById("modal-continue-btn");
+		if (continueBtn) {
+			const lastReadUrl =
+				novel.lastReadChapterUrl ||
+				novel.currentChapterUrl ||
+				novel.sourceUrl;
+			if (lastReadUrl) {
+				continueBtn.href = lastReadUrl;
+				continueBtn.style.display = "inline-flex";
+			} else {
+				continueBtn.style.display = "none";
+			}
+		}
+
+		const readBtn = document.getElementById("modal-source-btn");
+		if (readBtn && novel.sourceUrl) {
+			readBtn.href = novel.sourceUrl;
+			// Custom Text for Ranobes
+			// readBtn.textContent = "View on Ranobes"; // Or keep icon?
+			// library.js default is usually icon + "Source" or just icon.
+			// ranobes/shelf-page.js set textContent to "View on Site".
+			// But preserving icon is better if library.css expects it.
+			// Let's assume we keep default styling but ensure href is set.
+			readBtn.style.display = "inline-flex";
+		}
+
+		const modalRemoveBtn = document.getElementById("modal-remove-btn");
+		if (modalRemoveBtn) modalRemoveBtn.dataset.novelId = novel.id;
+
+		const modalStatus = document.getElementById("modal-status");
+		if (modalStatus) modalStatus.dataset.novelId = novel.id;
+
+		// Status Buttons
+		const statusButtons = document.querySelectorAll(".status-btn");
+		const currentStatus =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+
+		statusButtons.forEach((btn) => {
+			const status = btn.getAttribute("data-status");
+			if (status === currentStatus) {
+				btn.classList.add("active");
+			} else {
+				btn.classList.remove("active");
+			}
+
+			btn.onclick = async () => {
+				if (!novelLibrary) return;
+				try {
+					await novelLibrary.updateNovel(novel.id, {
+						readingStatus: status,
+					});
+					statusButtons.forEach((b) => {
+						if (b.getAttribute("data-status") === status)
+							b.classList.add("active");
+						else b.classList.remove("active");
+					});
+					if (modalStatus && READING_STATUS_INFO[status]) {
+						modalStatus.textContent =
+							READING_STATUS_INFO[status].label;
+					}
+				} catch (e) {
+					console.error(e);
+				}
+			};
+		});
+
+		modal.classList.remove("hidden");
+		modal.classList.add("active");
+		document.body.style.overflow = "hidden";
+
+		return true;
 	}
 
 	static resetTaxonomy() {
@@ -67,10 +232,10 @@ export class RanobesNovelCard extends NovelCardRenderer {
 		novels.forEach((novel) => {
 			const metadata = novel.metadata || {};
 			(metadata.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(novel.genres || []).forEach((g) =>
-				this.registerLabel(g, "genres")
+				this.registerLabel(g, "genres"),
 			);
 			(metadata.tags || []).forEach((t) => this.registerLabel(t, "tags"));
 			(novel.tags || []).forEach((t) => this.registerLabel(t, "tags"));
@@ -140,10 +305,10 @@ export class RanobesNovelCard extends NovelCardRenderer {
 		// Use data attributes instead of inline onerror to avoid CSP violations
 		const coverMarkup = coverUrl
 			? `<img class="novel-cover-img" src="${this.escapeHtml(
-					coverUrl
-			  )}" alt="${this.escapeHtml(
-					novel.title
-			  )}" data-fallback="${fallbackCover}" loading="lazy">`
+					coverUrl,
+				)}" alt="${this.escapeHtml(
+					novel.title,
+				)}" data-fallback="${fallbackCover}" loading="lazy">`
 			: `<div class="novel-cover-placeholder">📚</div>`;
 
 		const readingKeyRaw =
@@ -163,8 +328,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 			: 0;
 		const progressLabel = chapters
 			? `${this.formatNumber(enhanced)}/${this.formatNumber(
-					chapters
-			  )} enhanced`
+					chapters,
+				)} enhanced`
 			: `${this.formatNumber(enhanced)} enhanced`;
 
 		// Build all badge chips
@@ -175,35 +340,35 @@ export class RanobesNovelCard extends NovelCardRenderer {
 
 		const ratingBadge = rating
 			? `<span class="chip rating-badge" title="Rating">${this.escapeHtml(
-					rating
-			  )}</span>`
+					rating,
+				)}</span>`
 			: "";
 		const languageBadge = language
 			? `<span class="chip chip-ghost" title="Language">${this.escapeHtml(
-					language
-			  )}</span>`
+					language,
+				)}</span>`
 			: "";
 		const workStatusBadge = workStatus
 			? `<span class="chip ${
 					workStatus.toLowerCase() === "completed"
 						? "chip-success"
 						: workStatus.toLowerCase() === "hiatus"
-						? "chip-warning"
-						: "chip-ghost"
-			  }" title="Country of Origin Status">${this.escapeHtml(
-					workStatus
-			  )}</span>`
+							? "chip-warning"
+							: "chip-ghost"
+				}" title="Country of Origin Status">${this.escapeHtml(
+					workStatus,
+				)}</span>`
 			: "";
 		const translationStatusBadge = translationStatus
 			? `<span class="chip ${
 					translationStatus.toLowerCase() === "completed"
 						? "chip-success"
 						: translationStatus.toLowerCase() === "dropped"
-						? "chip-error"
-						: "chip-warning"
-			  }" title="Translation Status">${this.escapeHtml(
-					translationStatus
-			  )}</span>`
+							? "chip-error"
+							: "chip-warning"
+				}" title="Translation Status">${this.escapeHtml(
+					translationStatus,
+				)}</span>`
 			: "";
 
 		// Build comprehensive stats display
@@ -241,10 +406,10 @@ export class RanobesNovelCard extends NovelCardRenderer {
 						<span class="card-stat-value">${this.escapeHtml(
 							stat.isDate
 								? stat.value
-								: this.formatNumber(stat.value)
+								: this.formatNumber(stat.value),
 						)}</span>
 					</div>
-				`
+				`,
 			)
 			.join("");
 
@@ -261,8 +426,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				.map(
 					(tag) =>
 						`<span class="tag ${className}">${this.escapeHtml(
-							tag
-						)}</span>`
+							tag,
+						)}</span>`,
 				)
 				.join("");
 			const moreTag =
@@ -285,8 +450,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				${
 					coverUrl
 						? `<img class="ranobes-bg-blur" src="${this.escapeHtml(
-								coverUrl
-						  )}" alt="" aria-hidden="true" loading="lazy">`
+								coverUrl,
+							)}" alt="" aria-hidden="true" loading="lazy">`
 						: ""
 				}
 				<div class="ranobes-cover-wrapper">
@@ -297,11 +462,11 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				<div class="ranobes-main-content">
 					<div class="ranobes-head">
 						<h3 class="ranobes-title" title="${this.escapeHtml(
-							novel.title
+							novel.title,
 						)}">${this.escapeHtml(novel.title)}</h3>
 						<div class="ranobes-meta-row">
 							<span class="ranobes-author">by <strong>${this.escapeHtml(
-								novel.author || "Unknown"
+								novel.author || "Unknown",
 							)}</strong></span>
 							<div class="ranobes-badges-inline">
 								${ratingBadge}
@@ -319,10 +484,10 @@ export class RanobesNovelCard extends NovelCardRenderer {
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
 						<span class="enhancement-text">✨ <strong>${this.formatNumber(
-							enhanced
+							enhanced,
 						)}</strong> / ${this.formatNumber(
-			chapters
-		)} enhanced <span class="dim">(${progressPercent}%)</span></span>
+							chapters,
+						)} enhanced <span class="dim">(${progressPercent}%)</span></span>
 					</div>
 
 					${statMarkup ? `<div class="card-stats-bar">${statMarkup}</div>` : ""}
@@ -334,13 +499,13 @@ export class RanobesNovelCard extends NovelCardRenderer {
 					<div class="ranobes-foot">
 						<div class="ranobes-actions-right">
 							<span class="status-pill-small" style="background: ${statusInfo.color}">${
-			statusInfo.label
-		}</span>
+								statusInfo.label
+							}</span>
 							${
 								novel.sourceUrl
 									? `<a class="action-btn" href="${this.escapeHtml(
-											novel.sourceUrl
-									  )}" target="_blank" rel="noreferrer">Open ↗</a>`
+											novel.sourceUrl,
+										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""
 							}
 						</div>
@@ -367,7 +532,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 	 */
 	static setupImageErrorHandlers(container) {
 		const images = container.querySelectorAll(
-			"img.novel-cover-img[data-fallback]"
+			"img.novel-cover-img[data-fallback]",
 		);
 		images.forEach((img) => {
 			const originalSrc = img.src;
@@ -397,8 +562,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 		if (metadata.rating) {
 			badges.push(
 				`<span class="rating-badge">${this.escapeHtml(
-					metadata.rating
-				)}</span>`
+					metadata.rating,
+				)}</span>`,
 			);
 		}
 		if (novel.status || metadata.status) {
@@ -409,22 +574,22 @@ export class RanobesNovelCard extends NovelCardRenderer {
 					: "status-ongoing";
 			badges.push(
 				`<span class="meta-badge ${statusClass}">${this.escapeHtml(
-					workStatus
-				)}</span>`
+					workStatus,
+				)}</span>`,
 			);
 		}
 		if (metadata.language) {
 			badges.push(
 				`<span class="meta-badge">${this.escapeHtml(
-					metadata.language
-				)}</span>`
+					metadata.language,
+				)}</span>`,
 			);
 		}
 		if (metadata.translationStatus) {
 			badges.push(
 				`<span class="meta-badge">${this.escapeHtml(
-					metadata.translationStatus
-				)}</span>`
+					metadata.translationStatus,
+				)}</span>`,
 			);
 		}
 
@@ -538,8 +703,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				.map(
 					(item) =>
 						`<span class="tag ${extraClass}">${this.escapeHtml(
-							item
-						)}</span>`
+							item,
+						)}</span>`,
 				)
 				.join("");
 		};
@@ -569,10 +734,13 @@ export class RanobesNovelCard extends NovelCardRenderer {
 			}
 		};
 
+		const styles = getBaseModalStyles() + getRanobesStyles();
+
 		let html = `
-			<div class="ranobes-modal-grid">
+			${styles}
+			<div class="site-modal-grid ranobes-modal-grid">
 				<!-- Primary Metadata Row -->
-				<div class="ranobes-modal-row primary-meta">
+				<div class="site-modal-row primary-meta">
 					<div class="meta-group">
 						<span class="meta-label">Rating</span>
 						<span class="chip rating-badge">${rating || "Unknown"}</span>
@@ -587,8 +755,8 @@ export class RanobesNovelCard extends NovelCardRenderer {
 							status.toLowerCase() === "completed"
 								? "chip-success"
 								: status.toLowerCase() === "hiatus"
-								? "chip-warning"
-								: "chip-ghost"
+									? "chip-warning"
+									: "chip-ghost"
 						}">${this.escapeHtml(status || "Unknown")}</span>
 					</div>
 					<div class="meta-group">
@@ -597,18 +765,18 @@ export class RanobesNovelCard extends NovelCardRenderer {
 							translationStatus.toLowerCase() === "completed"
 								? "chip-success"
 								: translationStatus.toLowerCase() === "dropped"
-								? "chip-error"
-								: "chip-warning"
+									? "chip-error"
+									: "chip-warning"
 						}">${this.escapeHtml(
-			translationStatus || "Unknown"
-		)}</span>
+							translationStatus || "Unknown",
+						)}</span>
 					</div>
 				</div>
 
 				<!-- Statistics Grid -->
-				<div class="ranobes-modal-section">
+				<div class="site-modal-section ranobes-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
-					<div class="ranobes-stats-grid-large">
+					<div class="site-stats-grid ranobes-stats-grid-large">
 						${renderStat("Chapters", this.formatNumber(totalChapters), "📖")}
 						${renderStat("Words", this.formatNumber(words), "📝")}
 						${renderStat("Views", this.formatNumber(views), "👁️")}
