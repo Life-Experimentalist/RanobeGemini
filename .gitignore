@@ -13,5 +13,5 @@ ranobe-gemini-library-2025-12-05.json
 client_secret_1009134964226-ish1mnbb7a4ob6dmtbkt65q2ont5abmi.apps.googleusercontent.com.json
 ranobe-gemini-library-*
 Changes.md
-.vscode/
+.vscode/*
 !.vscode/tasks.json

@@ -6,18 +6,85 @@ import {
 	DEFAULT_SHORT_SUMMARY_PROMPT,
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_DRIVE_CLIENT_ID,
+	DEFAULT_DEBUG_MODE,
 } from "../utils/constants.js";
-import { novelLibrary, SHELVES } from "../utils/novel-library.js";
 import { debugLog, debugError } from "../utils/logger.js";
-import {
-	getDefaultSiteSettings,
-	getSiteSettings,
-	isSiteEnabled,
-	saveSiteSettings,
-} from "../utils/site-settings.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
+import {
+	notificationManager,
+	NotificationType,
+	notifySuccess,
+	notifyError,
+	notifyInfo,
+	notifyWarning,
+} from "../utils/notification-manager.js";
 
-document.addEventListener("DOMContentLoaded", async function () {
+let novelLibrary = null;
+let SHELVES = {};
+let siteSettingsApi = null;
+let depsReady = false;
+
+async function ensureLibraryDeps() {
+	if (depsReady) return true;
+	try {
+		const [libModule, siteModule] = await Promise.all([
+			import("../utils/novel-library.js"),
+			import("../utils/site-settings.js"),
+		]);
+		novelLibrary = libModule.novelLibrary;
+		SHELVES = libModule.SHELVES || {};
+		siteSettingsApi = siteModule;
+		depsReady = true;
+		return true;
+	} catch (error) {
+		debugError("Failed to load library dependencies:", error);
+		return false;
+	}
+}
+
+function isSiteEnabledSafe(settings, shelfId) {
+	if (
+		!siteSettingsApi ||
+		typeof siteSettingsApi.isSiteEnabled !== "function"
+	) {
+		return true;
+	}
+	return siteSettingsApi.isSiteEnabled(settings, shelfId);
+}
+
+// Wrap everything in a try-catch to prevent catastrophic failures
+try {
+	// Initialize notification manager early
+	notificationManager.initialize().catch((err) => {
+		console.error("Failed to initialize notification manager:", err);
+	});
+
+	document.addEventListener("DOMContentLoaded", async function () {
+		// Wrap initialization in try-catch
+		try {
+			await initializePopup();
+		} catch (error) {
+			console.error("Fatal error initializing popup:", error);
+			// Show error in UI
+			const statusDiv = document.getElementById("status");
+			if (statusDiv) {
+				statusDiv.textContent =
+					"Error loading popup. Please reload the extension.";
+				statusDiv.className = "error";
+			}
+		}
+	});
+} catch (error) {
+	debugError("Critical error in popup script:", error);
+}
+
+async function initializePopup() {
+	try {
+		window.__popupJsReady = true;
+	} catch (_err) {
+		debugError("Failed to set window.__popupJsReady flag in popup.", _err);
+	}
+
 	// DOM elements
 	const apiKeyInput = document.getElementById("apiKey");
 	const saveApiKeyBtn = document.getElementById("saveApiKey");
@@ -32,11 +99,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt"); // Get summary prompt reset button
 	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt"); // Get short summary prompt textarea
 	const resetShortSummaryPromptBtn = document.getElementById(
-		"resetShortSummaryPrompt"
+		"resetShortSummaryPrompt",
 	); // Get short summary prompt reset button
 	const permanentPrompt = document.getElementById("permanentPrompt"); // Get permanent prompt textarea
 	const resetPermanentPromptBtn = document.getElementById(
-		"resetPermanentPrompt"
+		"resetPermanentPrompt",
 	); // Get permanent prompt reset button
 	const debugModeCheckbox = document.getElementById("debugMode");
 
@@ -53,6 +120,70 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const tabContents = document.querySelectorAll(".tab-content");
 	const temperatureSlider = document.getElementById("temperatureSlider");
 	const temperatureValue = document.getElementById("temperatureValue");
+
+	// ===== CRITICAL: Setup tab switching IMMEDIATELY =====
+	// This must run before any async code that might fail
+	console.log(
+		"Setting up tab switching...",
+		tabButtons.length,
+		"buttons found",
+	);
+
+	if (tabButtons.length > 0 && tabContents.length > 0) {
+		tabButtons.forEach((button) => {
+			button.addEventListener("click", () => {
+				console.log("Tab clicked:", button.getAttribute("data-tab"));
+
+				// Remove active class from all buttons and contents
+				tabButtons.forEach((btn) => btn.classList.remove("active"));
+				tabContents.forEach((content) =>
+					content.classList.remove("active"),
+				);
+
+				// Add active class to clicked button
+				button.classList.add("active");
+
+				// Show corresponding content
+				const tabId = button.getAttribute("data-tab");
+				const targetContent = document.getElementById(tabId);
+				if (targetContent) {
+					targetContent.classList.add("active");
+					console.log("Tab switched to:", tabId);
+				} else {
+					console.error("Tab content not found for:", tabId);
+				}
+
+				// Special handling for specific tabs (called after tab is already shown)
+				setTimeout(() => {
+					try {
+						if (
+							tabId === "library" &&
+							typeof initializeLibraryTab === "function"
+						) {
+							initializeLibraryTab();
+						} else if (
+							tabId === "notifications" &&
+							typeof initNotificationsTab === "function"
+						) {
+							initNotificationsTab();
+						} else if (
+							tabId === "advanced" &&
+							typeof loadSiteToggleSettings === "function"
+						) {
+							loadSiteToggleSettings();
+						}
+					} catch (e) {
+						console.error("Error in tab initialization:", e);
+					}
+				}, 0);
+			});
+		});
+		console.log("Tab switching setup complete!");
+	} else {
+		console.error("Tab switching failed - buttons or contents not found!");
+	}
+	// ===== END CRITICAL SECTION =====
+
 	const topPSlider = document.getElementById("topPSlider");
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
@@ -61,14 +192,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const fontSizeValue = document.getElementById("fontSizeValue");
 	const customEndpointInput = document.getElementById("customEndpoint");
 	const saveAdvancedSettingsBtn = document.getElementById(
-		"saveAdvancedSettings"
+		"saveAdvancedSettings",
 	);
 	const resetAllAdvancedBtn = document.getElementById("resetAllAdvanced");
 	const toggleAdvancedParamsBtn = document.getElementById(
-		"toggleAdvancedParams"
+		"toggleAdvancedParams",
 	);
 	const advancedParamsContent = document.getElementById(
-		"advancedParamsContent"
+		"advancedParamsContent",
 	);
 	const siteToggleList = document.getElementById("siteToggleList");
 	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
@@ -76,7 +207,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Backup mode controls
 	const backupModeScheduled = document.getElementById("backupModeScheduled");
 	const backupModeContinuous = document.getElementById(
-		"backupModeContinuous"
+		"backupModeContinuous",
 	);
 
 	// Backup API Keys elements
@@ -95,7 +226,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const autoBackupEnabled = document.getElementById("autoBackupEnabled");
 	const backupLocation = document.getElementById("backupLocation");
 	const chooseBackupLocation = document.getElementById(
-		"chooseBackupLocation"
+		"chooseBackupLocation",
 	);
 	const createManualBackup = document.getElementById("createManualBackup");
 	const restoreBackupBtn2 = document.getElementById("restoreBackupBtn");
@@ -135,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const currentProgressBar = document.getElementById("currentProgressBar");
 	const currentProgressFill = document.getElementById("currentProgressFill");
 	const currentProgressPercent = document.getElementById(
-		"currentProgressPercent"
+		"currentProgressPercent",
 	);
 	const libraryDetails = document.getElementById("libraryDetails");
 	const readingStatusSelect = document.getElementById("readingStatusSelect");
@@ -160,7 +291,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const chunkSizeInput = document.getElementById("chunkSize");
 	const formatGameStatsInput = document.getElementById("formatGameStats");
 	const centerSceneHeadingsInput = document.getElementById(
-		"centerSceneHeadings"
+		"centerSceneHeadings",
 	);
 	const backupFolderInput = document.getElementById("backupFolder");
 	const autoBackupToggle = document.getElementById("autoBackupToggle");
@@ -184,7 +315,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const driveConnected = document.getElementById("driveConnected");
 	const driveStatusSpan = document.getElementById("driveStatus");
 	const driveBackupModeRadios = document.querySelectorAll(
-		'input[name="driveBackupMode"]'
+		'input[name="driveBackupMode"]',
 	);
 
 	// Theme elements
@@ -192,17 +323,31 @@ document.addEventListener("DOMContentLoaded", async function () {
 	const accentColorPicker = document.getElementById("accentColorPicker");
 	const accentColorText = document.getElementById("accentColorText");
 	const accentSecondaryPicker = document.getElementById(
-		"accentSecondaryPicker"
+		"accentSecondaryPicker",
 	);
 	const accentSecondaryText = document.getElementById("accentSecondaryText");
 	const backgroundColorPicker = document.getElementById(
-		"backgroundColorPicker"
+		"backgroundColorPicker",
 	);
 	const backgroundColorText = document.getElementById("backgroundColorText");
 	const textColorPicker = document.getElementById("textColorPicker");
 	const textColorText = document.getElementById("textColorText");
 	const saveThemeBtn = document.getElementById("saveTheme");
 	const resetThemeBtn = document.getElementById("resetTheme");
+
+	// Notification Tab Elements
+	const notificationBadge = document.getElementById("notificationBadge");
+	const notificationsContainer = document.getElementById(
+		"notificationsContainer",
+	);
+	const totalNotifsSpan = document.getElementById("totalNotifs");
+	const unreadNotifsSpan = document.getElementById("unreadNotifs");
+	const markAllReadBtn = document.getElementById("markAllReadBtn");
+	const clearNotificationsBtn = document.getElementById(
+		"clearNotificationsBtn",
+	);
+	const filterButtons = document.querySelectorAll(".filter-btn");
+	let currentNotificationFilter = "all";
 
 	// Store current page novel data
 	let currentPageNovelData = null;
@@ -285,7 +430,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		} else if (theme.mode === "auto") {
 			// Use system preference
 			const prefersDark = window.matchMedia(
-				"(prefers-color-scheme: dark)"
+				"(prefers-color-scheme: dark)",
 			).matches;
 			root.setAttribute("data-theme", prefersDark ? "dark" : "light");
 		} else {
@@ -403,15 +548,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Load theme on startup
 	loadTheme();
 
-	await loadSiteToggleSettings();
-
 	// Site toggle helpers
 	async function loadSiteToggleSettings() {
+		const depsOk = await ensureLibraryDeps();
+		if (!depsOk) {
+			siteSettings = {};
+			return;
+		}
 		try {
-			siteSettings = await getSiteSettings();
+			siteSettings = await siteSettingsApi.getSiteSettings();
 		} catch (error) {
 			debugError("Failed to load site settings:", error);
-			siteSettings = getDefaultSiteSettings();
+			siteSettings = siteSettingsApi.getDefaultSiteSettings();
 		}
 		renderSiteToggles();
 	}
@@ -429,15 +577,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 		});
 
 		if (Object.keys(updates).length === 0) return siteSettings;
-		siteSettings = await saveSiteSettings(updates);
+		if (!siteSettingsApi) return siteSettings;
+		siteSettings = await siteSettingsApi.saveSiteSettings(updates);
 		return siteSettings;
 	}
 
 	function renderSiteToggles() {
 		if (!siteToggleList) return;
-		const defaults = getDefaultSiteSettings();
+		if (!siteSettingsApi || !Object.keys(SHELVES).length) return;
+		const defaults = siteSettingsApi.getDefaultSiteSettings();
 		const shelves = Object.values(SHELVES).sort((a, b) =>
-			(a.name || a.id).localeCompare(b.name || b.id)
+			(a.name || a.id).localeCompare(b.name || b.id),
 		);
 
 		siteToggleList.innerHTML = "";
@@ -480,11 +630,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 						`${shelf.name} ${
 							checkbox.checked ? "enabled" : "disabled"
 						}`,
-						"success"
+						"success",
 					);
 					// Refresh library display if on library tab
 					const activeTab = document.querySelector(
-						".tab-content.active"
+						".tab-content.active",
 					);
 					if (activeTab && activeTab.id === "library") {
 						await initializeLibraryTab();
@@ -618,7 +768,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			debugLog("Fetching models from Gemini API...");
 			const response = await fetch(
-				`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+				`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
 			);
 
 			debugLog("API response status:", response.status);
@@ -639,8 +789,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 						model.name.includes("gemini") &&
 						model.supportedGenerationMethods &&
 						model.supportedGenerationMethods.includes(
-							"generateContent"
-						)
+							"generateContent",
+						),
 				)
 				.map((model) => {
 					// Extract the model name from the full path
@@ -674,7 +824,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			debugLog(
 				"updateModelSelector called with apiKey:",
-				apiKey ? "present" : "missing"
+				apiKey ? "present" : "missing",
 			);
 
 			// Show loading state
@@ -760,7 +910,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				"Model selector updated with",
 				models.length,
 				"models. Selected:",
-				modelSelect.value
+				modelSelect.value,
 			);
 		} catch (error) {
 			debugError("Error updating model selector:", error);
@@ -783,29 +933,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 		textarea.addEventListener("focus", adjustHeight);
 	});
 
-	// Tab switching functionality
-	tabButtons.forEach((button) => {
-		button.addEventListener("click", () => {
-			// Remove active class from all buttons and contents
-			tabButtons.forEach((btn) => btn.classList.remove("active"));
-			tabContents.forEach((content) =>
-				content.classList.remove("active")
-			);
-
-			// Add active class to clicked button
-			button.classList.add("active");
-
-			// Show corresponding content
-			const tabId = button.getAttribute("data-tab");
-			document.getElementById(tabId).classList.add("active");
-
-			// Special handling for library tab
-			if (tabId === "library") {
-				initializeLibraryTab();
-			}
-		});
-	});
-
 	// First ping the background script to ensure it's running
 	try {
 		debugLog("Pinging background script...");
@@ -824,9 +951,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Load settings from storage
 	try {
+		const debugPref = await browser.storage.local.get("debugMode");
+		if (typeof debugPref.debugMode !== "boolean") {
+			await browser.storage.local.set({ debugMode: DEFAULT_DEBUG_MODE });
+		}
+
 		const data = await browser.storage.local.get();
 
-		if (data.apiKey) {
+		if (data.apiKey && apiKeyInput && !apiKeyInput.value) {
 			apiKeyInput.value = data.apiKey;
 
 			// If we have an API key, load available models
@@ -841,20 +973,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 		}
 
 		// Always set the prompt template - this fixes the empty box issue
-		promptTemplate.value = data.defaultPrompt || DEFAULT_PROMPT;
+		if (promptTemplate && !promptTemplate.value) {
+			promptTemplate.value = data.defaultPrompt || DEFAULT_PROMPT;
+		}
 
 		// Load summary prompt
-		summaryPrompt.value = data.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+		if (summaryPrompt && !summaryPrompt.value) {
+			summaryPrompt.value = data.summaryPrompt || DEFAULT_SUMMARY_PROMPT;
+		}
 
 		// Load short summary prompt
-		if (shortSummaryPrompt) {
+		if (shortSummaryPrompt && !shortSummaryPrompt.value) {
 			shortSummaryPrompt.value =
 				data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT;
 		}
 
 		// Load permanent prompt
-		permanentPrompt.value =
-			data.permanentPrompt || DEFAULT_PERMANENT_PROMPT;
+		if (permanentPrompt && !permanentPrompt.value) {
+			permanentPrompt.value =
+				data.permanentPrompt || DEFAULT_PERMANENT_PROMPT;
+		}
 
 		// Set model selection based on saved endpoint
 		if (data.modelEndpoint) {
@@ -1034,7 +1172,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} else {
 				showStatus(
 					"API key appears invalid or no models available",
-					"error"
+					"error",
 				);
 			}
 		} catch (error) {
@@ -1050,7 +1188,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 		const apiKey = apiKeyInput.value.trim();
 		const selectedModelId = modelSelect.value;
 		const useEmojiCheckbox = document.getElementById("useEmoji");
-		const maxTokens = data?.maxOutputTokens || 8192;
+		const stored = await browser.storage.local.get("maxOutputTokens");
+		const maxTokens = stored?.maxOutputTokens || 8192;
 		const temperature = parseFloat(temperatureSlider.value);
 
 		if (!apiKey) {
@@ -1063,12 +1202,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 			let modelEndpoint;
 
 			// Try to find the model endpoint from stored available models
-			const storedData = await browser.storage.local.get(
-				"availableModels"
-			);
+			const storedData =
+				await browser.storage.local.get("availableModels");
 			if (storedData.availableModels) {
 				const selectedModel = storedData.availableModels.find(
-					(m) => m.id === selectedModelId
+					(m) => m.id === selectedModelId,
 				);
 				if (selectedModel) {
 					modelEndpoint = selectedModel.endpoint;
@@ -1096,10 +1234,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 					? Math.min(
 							Math.max(
 								parseInt(chunkSizeInput.value, 10) || 20000,
-								5000
+								5000,
 							),
-							50000
-					  )
+							50000,
+						)
 					: 20000,
 			});
 
@@ -1137,7 +1275,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				debugError("Error saving advanced settings:", error);
 				showStatus(
 					"Error saving advanced settings: " + error.message,
-					"error"
+					"error",
 				);
 			}
 		});
@@ -1173,10 +1311,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 				}
 
 				if (siteToggleList) {
-					siteSettings = await saveSiteSettings(
-						getDefaultSiteSettings()
-					);
-					renderSiteToggles();
+					const depsOk = await ensureLibraryDeps();
+					if (depsOk && siteSettingsApi) {
+						siteSettings = await siteSettingsApi.saveSiteSettings(
+							siteSettingsApi.getDefaultSiteSettings(),
+						);
+						renderSiteToggles();
+					}
 				}
 
 				// Save the reset values
@@ -1195,7 +1336,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				debugError("Error resetting advanced settings:", error);
 				showStatus(
 					"Error resetting settings: " + error.message,
-					"error"
+					"error",
 				);
 			}
 		});
@@ -1203,9 +1344,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	if (resetSiteTogglesBtn) {
 		resetSiteTogglesBtn.addEventListener("click", async () => {
-			siteSettings = await saveSiteSettings(getDefaultSiteSettings());
-			renderSiteToggles();
-			showStatus("Site toggles restored to defaults", "success");
+			const depsOk = await ensureLibraryDeps();
+			if (depsOk && siteSettingsApi) {
+				siteSettings = await siteSettingsApi.saveSiteSettings(
+					siteSettingsApi.getDefaultSiteSettings(),
+				);
+				renderSiteToggles();
+				showStatus("Site toggles restored to defaults", "success");
+			}
 		});
 	}
 
@@ -1240,7 +1386,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	// Full Prompt Preview functionality
 	const fullPromptPreview = document.getElementById("fullPromptPreview");
 	const refreshPromptPreviewBtn = document.getElementById(
-		"refreshPromptPreview"
+		"refreshPromptPreview",
 	);
 	const copyFullPromptBtn = document.getElementById("copyFullPrompt");
 
@@ -1253,7 +1399,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// Get site-specific prompts
 		let sitePrompts = "";
 		const sitePromptsContainer = document.getElementById(
-			"siteSpecificPromptsContainer"
+			"siteSpecificPromptsContainer",
 		);
 		if (sitePromptsContainer) {
 			const sitePromptItems =
@@ -1261,7 +1407,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			sitePromptItems.forEach((item) => {
 				const siteName = item.querySelector(".site-name")?.value;
 				const sitePromptContent = item.querySelector(
-					".site-prompt-content"
+					".site-prompt-content",
 				)?.value;
 				if (siteName && sitePromptContent) {
 					sitePrompts += `\n--- ${siteName} ---\n${sitePromptContent}\n`;
@@ -1296,7 +1442,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	if (refreshPromptPreviewBtn) {
 		refreshPromptPreviewBtn.addEventListener(
 			"click",
-			generateFullPromptPreview
+			generateFullPromptPreview,
 		);
 	}
 
@@ -1305,7 +1451,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			generateFullPromptPreview();
 			try {
 				await navigator.clipboard.writeText(
-					fullPromptPreview.textContent
+					fullPromptPreview.textContent,
 				);
 				showStatus("Full prompt copied to clipboard!", "success");
 			} catch (err) {
@@ -1317,7 +1463,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	// Auto-generate preview when the details element is opened
 	const promptPreviewSection = document.querySelector(
-		".prompt-preview-section"
+		".prompt-preview-section",
 	);
 	if (promptPreviewSection) {
 		promptPreviewSection.addEventListener("toggle", (e) => {
@@ -1348,7 +1494,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					// First ping the content script to make sure it's responsive
 					const processResponse = await browser.tabs.sendMessage(
 						tabs[0].id,
-						{ action: "processWithGemini" }
+						{ action: "processWithGemini" },
 					);
 
 					if (processResponse && processResponse.success) {
@@ -1357,7 +1503,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						showStatus(
 							"Error: " +
 								(processResponse?.error || "Unknown error"),
-							"error"
+							"error",
 						);
 					}
 				} catch (error) {
@@ -1365,12 +1511,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 					if (
 						error.message?.includes(
-							"could not establish connection"
+							"could not establish connection",
 						)
 					) {
 						showStatus(
 							"Error: This page is not supported by the extension.",
-							"error"
+							"error",
 						);
 					} else {
 						showStatus("Error: " + error.message, "error");
@@ -1409,7 +1555,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} catch (error) {
 				showStatus(
 					"Error refreshing models: " + error.message,
-					"error"
+					"error",
 				);
 			} finally {
 				refreshModelsBtn.disabled = false;
@@ -1438,7 +1584,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	});
 
 	// Helper function to show status messages
-	function showStatus(message, type) {
+	async function showStatus(message, type, options = {}) {
 		statusDiv.textContent = message;
 		statusDiv.className = type || "";
 
@@ -1448,6 +1594,45 @@ document.addEventListener("DOMContentLoaded", async function () {
 				statusDiv.textContent = "";
 				statusDiv.className = "";
 			}, 3000);
+		}
+
+		// Log to notification system
+		try {
+			const notificationType =
+				type === "success"
+					? NotificationType.SUCCESS
+					: type === "error"
+						? NotificationType.ERROR
+						: type === "info"
+							? NotificationType.INFO
+							: type === "warning"
+								? NotificationType.WARNING
+								: NotificationType.INFO;
+
+			// Get current tab URL if available
+			let currentUrl = null;
+			try {
+				const tabs = await browser.tabs.query({
+					active: true,
+					currentWindow: true,
+				});
+				currentUrl = tabs[0]?.url || null;
+			} catch (e) {
+				// Ignore error getting tab URL
+			}
+
+			await notificationManager.add({
+				type: notificationType,
+				message,
+				url: currentUrl,
+				source: "popup",
+				...options,
+			});
+
+			// Update notification badge
+			updateNotificationBadge();
+		} catch (error) {
+			console.error("Failed to log notification:", error);
 		}
 	}
 
@@ -1515,6 +1700,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 		showStatus("Loading novels...", "info");
 
 		try {
+			const depsOk = await ensureLibraryDeps();
+			if (!depsOk) {
+				showStatus("Novel history unavailable in popup", "error");
+				return;
+			}
+
 			// Get novels from storage
 			const result = await browser.storage.local.get(["novelHistory"]);
 			const novels = result.novelHistory || {};
@@ -1545,25 +1736,25 @@ document.addEventListener("DOMContentLoaded", async function () {
 					const latestA = Math.max(
 						...a[1].map(([_, novel]) =>
 							new Date(
-								novel.lastRead || "1970-01-01T00:00:00.000Z"
-							).getTime()
-						)
+								novel.lastRead || "1970-01-01T00:00:00.000Z",
+							).getTime(),
+						),
 					);
 					const latestB = Math.max(
 						...b[1].map(([_, novel]) =>
 							new Date(
-								novel.lastRead || "1970-01-01T00:00:00.000Z"
-							).getTime()
-						)
+								novel.lastRead || "1970-01-01T00:00:00.000Z",
+							).getTime(),
+						),
 					);
 					return latestB - latestA;
-				}
+				},
 			);
 
 			// Create domain sections
 			sortedDomains.forEach(([domain, domainNovels]) => {
 				const shelf = getShelfByDomain(domain);
-				if (shelf && !isSiteEnabled(siteSettings, shelf.id)) {
+				if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
 					return;
 				}
 				// Sort novels within domain by last read
@@ -1584,7 +1775,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				`Loaded ${Object.keys(novels).length} novels from ${
 					sortedDomains.length
 				} sites.`,
-				"success"
+				"success",
 			);
 
 			// Add event listeners for domain toggles
@@ -1595,7 +1786,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					novelsList.classList.toggle("collapsed");
 					const icon = this.querySelector(".toggle-icon");
 					icon.textContent = novelsList.classList.contains(
-						"collapsed"
+						"collapsed",
 					)
 						? "▶"
 						: "▼";
@@ -1609,7 +1800,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					toggle.addEventListener("click", function () {
 						const chapters =
 							this.closest(".novel-item").querySelector(
-								".novel-chapters"
+								".novel-chapters",
 							);
 						chapters.classList.toggle("active");
 						this.textContent = chapters.classList.contains("active")
@@ -1646,7 +1837,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 							}
 						} else {
 							autoEnhanceNovels = autoEnhanceNovels.filter(
-								(id) => id !== novelId
+								(id) => id !== novelId,
 							);
 						}
 
@@ -1654,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						debugLog(
 							"Auto-enhance updated for:",
 							novelId,
-							this.checked
+							this.checked,
 						);
 					});
 				});
@@ -1747,8 +1938,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 			${iconHtml}
 			<span class="domain-name">${shelfName}</span>
 			<span class="domain-count">${novels.length} ${
-			novels.length === 1 ? "novel" : "novels"
-		}</span>
+				novels.length === 1 ? "novel" : "novels"
+			}</span>
 		`;
 
 		const novelsList = document.createElement("div");
@@ -1809,7 +2000,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			if (statsItems.length > 0) {
 				extendedInfoHtml += `<div class="novel-stats">${statsItems.join(
-					" • "
+					" • ",
 				)}</div>`;
 			}
 
@@ -1821,7 +2012,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			if (engagementItems.length > 0) {
 				extendedInfoHtml += `<div class="novel-engagement">${engagementItems.join(
-					" • "
+					" • ",
 				)}</div>`;
 			}
 
@@ -1936,6 +2127,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (libraryLoading) libraryLoading.style.display = "flex";
 
 		try {
+			const depsOk = await ensureLibraryDeps();
+			if (!depsOk) {
+				showStatus("Library data unavailable in popup", "error");
+				return;
+			}
+
 			// Load current page info first (determines site-specific filtering)
 			await loadCurrentPageInfo();
 
@@ -1970,10 +2167,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const { hostname } = new URL(url);
 			const shelf = Object.values(SHELVES).find((shelf) =>
 				(shelf.domains || []).some((pattern) =>
-					matchDomainPattern(hostname, pattern)
-				)
+					matchDomainPattern(hostname, pattern),
+				),
 			);
-			if (shelf && !isSiteEnabled(siteSettings, shelf.id)) {
+			if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
 				return null;
 			}
 			return shelf;
@@ -2013,21 +2210,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const { hostname: currentHostname } = new URL(currentTab.url);
 			const rawShelfMatch = Object.values(SHELVES).find((shelf) =>
 				(shelf.domains || []).some((pattern) =>
-					matchDomainPattern(currentHostname, pattern)
-				)
+					matchDomainPattern(currentHostname, pattern),
+				),
 			);
 			const siteDisabled =
-				rawShelfMatch && !isSiteEnabled(siteSettings, rawShelfMatch.id);
+				rawShelfMatch &&
+				!isSiteEnabledSafe(siteSettings, rawShelfMatch.id);
 			const shelfForTab = siteDisabled ? null : rawShelfMatch;
 
 			if (siteDisabled) {
 				showNotSupported(
-					"This site is disabled in settings. Re-enable it in Advanced → Site Toggles."
+					"This site is disabled in settings. Re-enable it in Advanced → Site Toggles.",
 				);
 				return;
 			}
 			const isExtensionPage = currentTab.url.startsWith(
-				browser.runtime.getURL("")
+				browser.runtime.getURL(""),
 			);
 
 			// If this is an extension page (library/popup), we don't attempt extraction
@@ -2066,7 +2264,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					}
 				} else if (response && !response.success) {
 					showNotSupported(
-						response.error || "Could not extract novel info"
+						response.error || "Could not extract novel info",
 					);
 				} else if (!response && shelfForTab) {
 					// No response but domain matches a supported shelf
@@ -2083,14 +2281,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} catch (error) {
 				debugLog(
 					"📚 Library: Error communicating with content script:",
-					error
+					error,
 				);
 				if (
 					(error.message?.includes(
-						"could not establish connection"
+						"could not establish connection",
 					) ||
 						error.message?.includes(
-							"Receiving end does not exist"
+							"Receiving end does not exist",
 						)) &&
 					shelfForTab
 				) {
@@ -2152,14 +2350,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 		if (currentNovelCover) {
 			if (novelInfo.coverUrl) {
 				currentNovelCover.innerHTML = `<img src="${escapeHtml(
-					novelInfo.coverUrl
+					novelInfo.coverUrl,
 				)}" alt="Cover" class="cover-image" onerror="this.parentElement.innerHTML='<div class=\\'cover-placeholder\\'>${shelfEmoji}</div>'">`;
 			} else {
 				const iconHtml =
 					shelfIcon && shelfIcon.startsWith("http")
 						? `<img src="${escapeHtml(
-								shelfIcon
-						  )}" alt="" class="cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
+								shelfIcon,
+							)}" alt="" class="cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
 						: shelfEmoji;
 				currentNovelCover.innerHTML = `<div class="cover-placeholder">${iconHtml}</div>`;
 			}
@@ -2242,8 +2440,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 					100,
 					Math.round(
 						(novelInfo.currentChapter / novelInfo.totalChapters) *
-							100
-					)
+							100,
+					),
 				);
 				currentProgressBar.style.display = "block";
 				currentProgressFill.style.width = `${progress}%`;
@@ -2267,7 +2465,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					readingStatusSelect.onchange = async () => {
 						await updateReadingStatus(
 							novelInfo.novelId,
-							readingStatusSelect.value
+							readingStatusSelect.value,
 						);
 					};
 				}
@@ -2295,13 +2493,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 							.map(
 								(g) =>
 									`<span class="genre-tag">${escapeHtml(
-										g
-									)}</span>`
+										g,
+									)}</span>`,
 							)
 							.join("");
 						if (moreCount > 0) {
 							genresList.innerHTML += `<span class="genre-tag more" title="${escapeHtml(
-								genres.slice(3).join(", ")
+								genres.slice(3).join(", "),
 							)}">+${moreCount}</span>`;
 						}
 						genresRow.style.display = "flex";
@@ -2382,7 +2580,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					currentPageNovelData?.isInLibrary
 						? "Novel updated!"
 						: "Novel added to library!",
-					"success"
+					"success",
 				);
 
 				// Update UI
@@ -2406,7 +2604,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} else {
 				showStatus(
 					"Failed: " + (response?.error || "Unknown error"),
-					"error"
+					"error",
 				);
 			}
 		} catch (error) {
@@ -2445,12 +2643,20 @@ document.addEventListener("DOMContentLoaded", async function () {
 	 */
 	async function loadLibraryData() {
 		try {
+			const depsOk = await ensureLibraryDeps();
+			if (!depsOk || !novelLibrary) {
+				showStatus("Library data unavailable in popup", "error");
+				return;
+			}
+
 			// Get library stats
 			const stats = await novelLibrary.getStats();
 			const enabledShelves = new Set(
 				Object.values(SHELVES)
-					.filter((shelf) => isSiteEnabled(siteSettings, shelf.id))
-					.map((shelf) => shelf.id)
+					.filter((shelf) =>
+						isSiteEnabledSafe(siteSettings, shelf.id),
+					)
+					.map((shelf) => shelf.id),
 			);
 
 			// Update stats
@@ -2459,7 +2665,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				statChapters.textContent = stats.totalEnhancedChapters || 0;
 			if (statShelves) {
 				const activeCount = Object.entries(stats.shelves || {}).filter(
-					([id, s]) => enabledShelves.has(id) && s.novelCount > 0
+					([id, s]) => enabledShelves.has(id) && s.novelCount > 0,
 				).length;
 				statShelves.textContent = activeCount;
 			}
@@ -2467,7 +2673,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Get recent novels
 			const allRecentNovels = await novelLibrary.getRecentNovels(20);
 			const enabledRecentNovels = allRecentNovels.filter((novel) =>
-				enabledShelves.has(novel.shelfId)
+				enabledShelves.has(novel.shelfId),
 			);
 
 			// Filter by current site if applicable
@@ -2477,10 +2683,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			if (currentSiteShelfId && enabledShelves.has(currentSiteShelfId)) {
 				currentShelf = Object.values(SHELVES).find(
-					(s) => s.id === currentSiteShelfId
+					(s) => s.id === currentSiteShelfId,
 				);
 				const siteNovels = allRecentNovels.filter(
-					(n) => n.shelfId === currentSiteShelfId
+					(n) => n.shelfId === currentSiteShelfId,
 				);
 
 				if (siteNovels.length > 0) {
@@ -2507,10 +2713,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 						currentShelf.icon &&
 						currentShelf.icon.startsWith("http")
 							? `<img src="${escapeHtml(
-									currentShelf.icon
-							  )}" alt="" class="site-icon" onerror="this.outerHTML='${
+									currentShelf.icon,
+								)}" alt="" class="site-icon" onerror="this.outerHTML='${
 									currentShelf.emoji || "📖"
-							  }'">`
+								}'">`
 							: currentShelf.emoji || "📖";
 					siteIndicator.innerHTML = iconHtml;
 					siteIndicator.style.display = "inline-flex";
@@ -2528,7 +2734,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 							showingSiteSpecific
 								? `No novels from ${
 										currentShelf?.name || "this site"
-								  } yet. Start enhancing!`
+									} yet. Start enhancing!`
 								: "No novels yet. Start enhancing chapters to build your library!";
 						emptyState.style.display = "flex";
 					}
@@ -2538,7 +2744,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					recentNovelsGrid.innerHTML = displayNovels
 						.map((novel) => {
 							const shelf = Object.values(SHELVES).find(
-								(s) => s.id === novel.shelfId
+								(s) => s.id === novel.shelfId,
 							);
 							const shelfEmoji = shelf?.emoji || "📖";
 							const shelfIcon = shelf?.icon;
@@ -2548,14 +2754,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 							let coverHtml;
 							if (novel.coverUrl) {
 								coverHtml = `<img src="${escapeHtml(
-									novel.coverUrl
+									novel.coverUrl,
 								)}" alt="" class="novel-cover-img" onerror="this.outerHTML='<div class=\\'novel-cover-placeholder\\'>${shelfEmoji}</div>'">`;
 							} else {
 								const iconHtml =
 									shelfIcon && shelfIcon.startsWith("http")
 										? `<img src="${escapeHtml(
-												shelfIcon
-										  )}" alt="" class="novel-cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
+												shelfIcon,
+											)}" alt="" class="novel-cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
 										: shelfEmoji;
 								coverHtml = `<div class="novel-cover-placeholder">${iconHtml}</div>`;
 							}
@@ -2568,15 +2774,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 								${
 									shelfIcon && shelfIcon.startsWith("http")
 										? `<img src="${escapeHtml(
-												shelfIcon
-										  )}" alt="" onerror="this.outerHTML='${shelfEmoji}'">`
+												shelfIcon,
+											)}" alt="" onerror="this.outerHTML='${shelfEmoji}'">`
 										: shelfEmoji
 								}
 							</span>`;
 
 							return `
 							<div class="novel-grid-item" data-url="${escapeHtml(
-								novel.lastReadUrl || novel.sourceUrl
+								novel.lastReadUrl || novel.sourceUrl,
 							)}" title="${escapeHtml(novel.title)}">
 								<div class="novel-cover">
 									${coverHtml}
@@ -2723,7 +2929,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const choice = confirm(
 				`Found ${novelCount} novels in backup file.\n\n` +
 					`Click OK to MERGE with your existing library (recommended)\n` +
-					`Click Cancel to REPLACE your entire library`
+					`Click Cancel to REPLACE your entire library`,
 			);
 
 			const result = await novelLibrary.importLibrary(data, choice);
@@ -2739,7 +2945,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						(result.errors > 0
 							? `\n• ${result.errors} errors occurred`
 							: ""),
-					"success"
+					"success",
 				);
 			} else {
 				throw new Error(result.error || "Import failed");
@@ -2748,7 +2954,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			debugError("Restore failed:", error);
 			showStatus(
 				`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`,
-				"error"
+				"error",
 			);
 		} finally {
 			if (restoreFileInput) restoreFileInput.value = "";
@@ -2796,7 +3002,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	if (manualBackupBtn) {
 		manualBackupBtn.addEventListener("click", () =>
-			triggerManualBackup(true)
+			triggerManualBackup(true),
 		);
 	}
 
@@ -2813,7 +3019,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				autoBackupToggle.checked
 					? "Auto backup enabled"
 					: "Auto backup disabled",
-				"success"
+				"success",
 			);
 		});
 	}
@@ -2836,7 +3042,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 	if (restoreBackupBtn && restoreFileInput) {
 		restoreBackupBtn.addEventListener("click", () =>
-			restoreFileInput.click()
+			restoreFileInput.click(),
 		);
 		restoreFileInput.addEventListener("change", () => {
 			if (restoreFileInput.files && restoreFileInput.files[0]) {
@@ -2883,7 +3089,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} catch (err) {
 				setDriveStatus(
 					`Drive auth failed: ${err?.message || err}`,
-					"error"
+					"error",
 				);
 			}
 		});
@@ -2908,7 +3114,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				if (resp?.success) {
 					setDriveStatus(
 						`Uploaded ${resp.count || "logs"} entries to Drive`,
-						"success"
+						"success",
 					);
 				} else {
 					throw new Error(resp?.error || "Upload failed");
@@ -2916,7 +3122,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			} catch (err) {
 				setDriveStatus(
 					`Drive upload failed: ${err?.message || err}`,
-					"error"
+					"error",
 				);
 			} finally {
 				driveUploadLogsBtn.classList.remove("loading");
@@ -3048,7 +3254,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		// Update size indicator
 		function updateSizeIndicator(width, height) {
 			sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(
-				height
+				height,
 			)}`;
 		}
 
@@ -3087,19 +3293,19 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const sitePrompt = getSiteSpecificPrompt(currentHandler);
 			// Create or update site-specific prompt UI
 			const container = document.getElementById(
-				"siteSpecificPromptsContainer"
+				"siteSpecificPromptsContainer",
 			);
 
 			if (container) {
 				const existingSitePrompt = container.querySelector(
-					`[data-site="${currentSite}"]`
+					`[data-site="${currentSite}"]`,
 				);
 
 				if (sitePrompt && sitePrompt.length > 0) {
 					if (existingSitePrompt) {
 						// Update existing prompt
 						existingSitePrompt.querySelector(
-							".prompt-text"
+							".prompt-text",
 						).textContent = sitePrompt;
 					} else {
 						// Create new prompt element
@@ -3170,7 +3376,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 					// Update the site-specific prompts container
 					const container = document.getElementById(
-						"siteSpecificPromptsContainer"
+						"siteSpecificPromptsContainer",
 					);
 					const noPromptsElement =
 						document.getElementById("noSitePrompts");
@@ -3183,13 +3389,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 						// Add or update the site-specific prompt
 						let sitePromptElement = container.querySelector(
-							`[data-site="${response.siteIdentifier}"]`
+							`[data-site="${response.siteIdentifier}"]`,
 						);
 
 						if (!sitePromptElement) {
 							// Create new site prompt element from template
 							const template = document.querySelector(
-								".site-prompt-template"
+								".site-prompt-template",
 							);
 							if (template) {
 								// Clone the template
@@ -3198,13 +3404,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 									.cloneNode(true);
 								sitePromptElement.setAttribute(
 									"data-site",
-									response.siteIdentifier
+									response.siteIdentifier,
 								);
 
 								// Set site name
 								const siteNameElement =
 									sitePromptElement.querySelector(
-										".site-name"
+										".site-name",
 									);
 								if (siteNameElement) {
 									siteNameElement.textContent =
@@ -3214,7 +3420,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 								// Set prompt content
 								const textarea =
 									sitePromptElement.querySelector(
-										".site-prompt-content"
+										".site-prompt-content",
 									);
 								if (textarea) {
 									textarea.value =
@@ -3226,7 +3432,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 								// Add remove button functionality
 								const removeButton =
 									sitePromptElement.querySelector(
-										".remove-site-prompt"
+										".remove-site-prompt",
 									);
 								if (removeButton) {
 									removeButton.addEventListener(
@@ -3235,7 +3441,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 											sitePromptElement.remove();
 											if (
 												container.querySelectorAll(
-													".site-prompt-item"
+													".site-prompt-item",
 												).length === 0
 											) {
 												if (noPromptsElement) {
@@ -3243,7 +3449,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 														"block";
 												}
 											}
-										}
+										},
 									);
 								}
 
@@ -3252,7 +3458,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						} else {
 							// Update existing site prompt
 							const textarea = sitePromptElement.querySelector(
-								".site-prompt-content"
+								".site-prompt-content",
 							);
 							if (textarea) {
 								textarea.value =
@@ -3284,7 +3490,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			const promptsObj = JSON.parse(savedPrompts);
 			const container = document.getElementById(
-				"siteSpecificPromptsContainer"
+				"siteSpecificPromptsContainer",
 			);
 			const noPromptsElement = document.getElementById("noSitePrompts");
 
@@ -3306,7 +3512,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				// Add each saved prompt
 				Object.entries(promptsObj).forEach(([site, prompt]) => {
 					const template = document.querySelector(
-						".site-prompt-template"
+						".site-prompt-template",
 					);
 					if (template) {
 						// Clone the template
@@ -3325,7 +3531,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 						// Set prompt content
 						const textarea = promptItem.querySelector(
-							".site-prompt-content"
+							".site-prompt-content",
 						);
 						if (textarea) {
 							textarea.value = prompt;
@@ -3333,14 +3539,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 						// Add remove button functionality
 						const removeButton = promptItem.querySelector(
-							".remove-site-prompt"
+							".remove-site-prompt",
 						);
 						if (removeButton) {
 							removeButton.addEventListener("click", function () {
 								promptItem.remove();
 								if (
 									container.querySelectorAll(
-										".site-prompt-item"
+										".site-prompt-item",
 									).length === 0
 								) {
 									if (noPromptsElement) {
@@ -3365,7 +3571,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		.getElementById("addSitePrompt")
 		.addEventListener("click", function () {
 			const container = document.getElementById(
-				"siteSpecificPromptsContainer"
+				"siteSpecificPromptsContainer",
 			);
 			const noPromptsElement = document.getElementById("noSitePrompts");
 			const template = document.querySelector(".site-prompt-template");
@@ -3390,7 +3596,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 				// Add remove button functionality
 				const removeButton = newPrompt.querySelector(
-					".remove-site-prompt"
+					".remove-site-prompt",
 				);
 				if (removeButton) {
 					removeButton.addEventListener("click", function () {
@@ -3432,7 +3638,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				: DEFAULT_SHORT_SUMMARY_PROMPT;
 			localStorage.setItem(
 				"geminiShortSummaryPrompt",
-				shortSummaryPrompt
+				shortSummaryPrompt,
 			);
 
 			// Save permanent prompt
@@ -3475,6 +3681,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 	 */
 	async function loadNovelsTab() {
 		try {
+			const depsOk = await ensureLibraryDeps();
+			if (!depsOk) {
+				showStatus("Novel history unavailable in popup", "error");
+				return;
+			}
+
 			const result = await browser.storage.local.get(["novelHistory"]);
 			const novels = result.novelHistory || {};
 			const novelArray = Object.values(novels);
@@ -3491,8 +3703,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 				currentWindow: true,
 			});
 			const currentUrl = tabs[0]?.url || "";
-			const isSupported = ALL_SUPPORTED_DOMAINS.some((domain) =>
-				currentUrl.includes(domain)
+			const supportedDomains = Object.values(SHELVES)
+				.flatMap((shelf) => shelf.domains || [])
+				.filter(Boolean);
+			const isSupported = supportedDomains.some((domain) =>
+				currentUrl.includes(domain),
 			);
 
 			if (!isSupported || novelArray.length === 0) {
@@ -3546,7 +3761,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				const sameSiteNovels = Object.values(novels).filter(
 					(n) =>
 						n.domain === currentNovel.domain &&
-						n.id !== currentNovel.id
+						n.id !== currentNovel.id,
 				);
 
 				currentNovelInfo.innerHTML = `
@@ -3555,16 +3770,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 							${
 								currentNovel.coverUrl
 									? `<img src="${escapeHtml(
-											currentNovel.coverUrl
-									  )}" style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px;" alt="Cover" />`
+											currentNovel.coverUrl,
+										)}" style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px;" alt="Cover" />`
 									: ""
 							}
 							<div style="flex: 1;">
 								<div style="font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 5px;">${escapeHtml(
-									currentNovel.title || "Unknown"
+									currentNovel.title || "Unknown",
 								)}</div>
 								<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">by ${escapeHtml(
-									currentNovel.author || "Unknown"
+									currentNovel.author || "Unknown",
 								)}</div>
 								<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
 									<span style="font-size: 10px; padding: 2px 8px; background: rgba(76, 175, 80, 0.2); color: #4caf50; border-radius: 10px;">
@@ -3605,14 +3820,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 									.map(
 										(n) => `
 									<div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; cursor: pointer;" onclick="window.open('${escapeHtml(
-										n.url || "#"
+										n.url || "#",
 									)}', '_blank')">
 										<div style="font-weight: 500; color: #e0e0e0;">${escapeHtml(n.title)}</div>
 										<div style="color: #888; font-size: 10px;">by ${escapeHtml(
-											n.author || "Unknown"
+											n.author || "Unknown",
 										)}</div>
 									</div>
-								`
+								`,
 									)
 									.join("")}
 							</div>
@@ -3633,17 +3848,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 							currentNovelInfo.innerHTML = `
 								<div style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; border-left: 3px solid #667eea;">
 									<div style="font-size: 14px; font-weight: 500; color: #e0e0e0; margin-bottom: 4px;">${escapeHtml(
-										novel.title || "Unknown"
+										novel.title || "Unknown",
 									)}</div>
 									<div style="font-size: 12px; color: #aaa; margin-bottom: 3px;">by ${escapeHtml(
-										novel.author || "Unknown"
+										novel.author || "Unknown",
 									)}</div>
 									<div style="font-size: 11px; color: #888; margin-top: 6px;">
 										<span style="color: #4caf50;">${escapeHtml(
-											novel.status || "Ongoing"
+											novel.status || "Ongoing",
 										)}</span> • ${
-								novel.totalChapters || "?"
-							} chapters
+											novel.totalChapters || "?"
+										} chapters
 									</div>
 								</div>
 							`;
@@ -3687,7 +3902,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const recentNovels = allNovels
 				.sort(
 					(a, b) =>
-						new Date(b.lastRead || 0) - new Date(a.lastRead || 0)
+						new Date(b.lastRead || 0) - new Date(a.lastRead || 0),
 				)
 				.slice(0, 6);
 
@@ -3697,26 +3912,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 						.map(
 							(novel) => `
 						<div style="padding: 10px; background: rgba(102, 126, 234, 0.05); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.2); cursor: pointer;" onclick="window.open('${escapeHtml(
-							novel.url || "#"
+							novel.url || "#",
 						)}', '_blank')">
 							${
 								novel.coverUrl
 									? `<img src="${escapeHtml(
-											novel.coverUrl
-									  )}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" alt="Cover" />`
+											novel.coverUrl,
+										)}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" alt="Cover" />`
 									: ""
 							}
 							<div style="font-size: 12px; font-weight: 500; color: #e0e0e0; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(
-								novel.title || "Unknown"
+								novel.title || "Unknown",
 							)}</div>
 							<div style="font-size: 10px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">by ${escapeHtml(
-								novel.author || "Unknown"
+								novel.author || "Unknown",
 							)}</div>
 							<div style="font-size: 9px; color: #888; margin-top: 4px;">
 								${new Date(novel.lastRead || new Date()).toLocaleDateString()}
 							</div>
 						</div>
-					`
+					`,
 						)
 						.join("")}
 				</div>
@@ -3751,13 +3966,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 			const sortedDomains = Object.entries(novelsByDomain).sort(
 				(a, b) => {
 					const latestA = Math.max(
-						...a[1].map((n) => new Date(n.lastRead || 0).getTime())
+						...a[1].map((n) => new Date(n.lastRead || 0).getTime()),
 					);
 					const latestB = Math.max(
-						...b[1].map((n) => new Date(n.lastRead || 0).getTime())
+						...b[1].map((n) => new Date(n.lastRead || 0).getTime()),
 					);
 					return latestB - latestA;
-				}
+				},
 			);
 
 			// Build HTML
@@ -3765,8 +3980,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 				<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
 					<div style="font-size: 13px; color: #aaa;">
 						${allNovels.length} novel${allNovels.length !== 1 ? "s" : ""} across ${
-				sortedDomains.length
-			} site${sortedDomains.length !== 1 ? "s" : ""}
+							sortedDomains.length
+						} site${sortedDomains.length !== 1 ? "s" : ""}
 					</div>
 					<button id="showTopRecent" style="padding: 6px 12px; font-size: 11px; background: #667eea; border: none; border-radius: 4px; cursor: pointer; color: white;">
 						🌟 Top 6 Recent
@@ -3777,7 +3992,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			for (const [domain, domainNovels] of sortedDomains) {
 				// Get shelf info for better display
 				const shelf = Object.values(SHELVES).find((s) =>
-					s.domains.some((d) => domain.includes(d))
+					s.domains.some((d) => domain.includes(d)),
 				);
 
 				html += `
@@ -3787,7 +4002,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 								shelf && shelf.icon
 									? `<span style="font-size: 16px;">${
 											shelf.emoji || shelf.icon
-									  }</span>`
+										}</span>`
 									: "📖"
 							}
 							<span>${shelf ? shelf.name : domain}</span>
@@ -3800,26 +4015,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 								.sort(
 									(a, b) =>
 										new Date(b.lastRead || 0) -
-										new Date(a.lastRead || 0)
+										new Date(a.lastRead || 0),
 								)
 								.map(
 									(novel) => `
 								<div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; gap: 10px; align-items: start;" onclick="window.open('${escapeHtml(
-									novel.url || "#"
+									novel.url || "#",
 								)}', '_blank')">
 									${
 										novel.coverUrl
 											? `<img src="${escapeHtml(
-													novel.coverUrl
-											  )}" style="width: 40px; height: 55px; object-fit: cover; border-radius: 3px; flex-shrink: 0;" alt="Cover" />`
+													novel.coverUrl,
+												)}" style="width: 40px; height: 55px; object-fit: cover; border-radius: 3px; flex-shrink: 0;" alt="Cover" />`
 											: ""
 									}
 									<div style="flex: 1; min-width: 0;">
 										<div style="font-weight: 500; margin-bottom: 3px; word-break: break-word; color: #e0e0e0;">${escapeHtml(
-											novel.title || "Unknown"
+											novel.title || "Unknown",
 										)}</div>
 										<div style="color: #aaa; font-size: 11px; margin-bottom: 2px;">by ${escapeHtml(
-											novel.author || "Unknown"
+											novel.author || "Unknown",
 										)}</div>
 										<div style="color: #888; font-size: 10px; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
 											<span>📅 ${new Date(novel.lastRead || new Date()).toLocaleDateString()}</span>
@@ -3832,7 +4047,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 										</div>
 									</div>
 								</div>
-							`
+							`,
 								)
 								.join("")}
 						</div>
@@ -3886,10 +4101,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 						}</div>
 						<div style="font-size: 12px; color: #aaa;">
 							${backup.novelCount} novels • ${Math.round(backup.size / 1024)} KB ${
-						backup.isAutomatic
-							? '<span style="color: #4caf50;">(Auto)</span>'
-							: "(Manual)"
-					}
+								backup.isAutomatic
+									? '<span style="color: #4caf50;">(Auto)</span>'
+									: "(Manual)"
+							}
 						</div>
 					</div>
 					<div style="display: flex; gap: 6px;">
@@ -3905,7 +4120,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 						</button>
 					</div>
 				</div>
-			`
+			`,
 				)
 				.join("");
 
@@ -3915,7 +4130,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 					const backupId = this.dataset.backupId;
 					const mergeMode =
 						document.querySelector(
-							'input[name="mergeMode"]:checked'
+							'input[name="mergeMode"]:checked',
 						)?.value || "merge";
 					await handleRestoreBackup(backupId, mergeMode);
 				});
@@ -3945,7 +4160,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 		try {
 			const restored = await libraryBackupManager.restoreBackup(
 				backupId,
-				mergeMode
+				mergeMode,
 			);
 
 			if (restored) {
@@ -3955,7 +4170,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 				showStatus(
 					`Backup restored successfully (${mergeMode} mode)!`,
-					"success"
+					"success",
 				);
 				await loadBackupHistory();
 				await loadNovelsTab();
@@ -3984,7 +4199,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				const prefs = await browser.storage.local.get("backupMode");
 				const mode = prefs.backupMode || "scheduled";
 				document.querySelector(
-					`input[name="driveBackupMode"][value="${mode}"]`
+					`input[name="driveBackupMode"][value="${mode}"]`,
 				).checked = true;
 			} else {
 				driveNotConnected.style.display = "block";
@@ -4024,16 +4239,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			showStatus(
 				"Opening Google login... Please authorize the extension.",
-				"info"
+				"info",
 			);
 
 			// Poll for token (wait up to 30 seconds)
 			let attempts = 0;
 			const pollInterval = setInterval(async () => {
 				attempts++;
-				const stored = await browser.storage.local.get(
-					"driveAuthTokens"
-				);
+				const stored =
+					await browser.storage.local.get("driveAuthTokens");
 
 				if (stored.driveAuthTokens?.access_token || attempts > 30) {
 					clearInterval(pollInterval);
@@ -4043,13 +4257,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 					if (stored.driveAuthTokens?.access_token) {
 						showStatus(
 							"✅ Google Drive connected successfully!",
-							"success"
+							"success",
 						);
 						await updateDriveUI();
 					} else {
 						showStatus(
 							"❌ Authentication failed or timed out",
-							"error"
+							"error",
 						);
 					}
 				}
@@ -4068,7 +4282,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 	async function handleDisconnectDrive() {
 		if (
 			!confirm(
-				"Disconnect Google Drive? Backups won't sync automatically."
+				"Disconnect Google Drive? Backups won't sync automatically.",
 			)
 		)
 			return;
@@ -4146,7 +4360,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 			// Show in modal or status
 			showStatus(
 				`Found ${backups.length} backups. Click to restore: ` + html,
-				"info"
+				"info",
 			);
 		} catch (err) {
 			debugError("Failed to list backups", err);
@@ -4165,7 +4379,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 				`Backup mode changed to: ${
 					mode === "scheduled" ? "Daily Scheduled" : "Continuous"
 				}`,
-				"success"
+				"success",
 			);
 		} catch (err) {
 			debugError("Failed to update backup mode", err);
@@ -4182,13 +4396,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			const backup = await libraryBackupManager.createBackup(
 				libraryData,
-				false
+				false,
 			);
 
 			if (backup) {
 				showStatus(
 					`Backup created: ${backup.novelCount} novels backed up`,
-					"success"
+					"success",
 				);
 				await loadBackupHistory();
 			}
@@ -4320,7 +4534,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 			// Build supported sites list from SHELF_REGISTRY
 			const supportedSitesList = document.querySelector(
-				".faq-item:nth-child(3) .faq-answer ul"
+				".faq-item:nth-child(3) .faq-answer ul",
 			);
 			if (supportedSitesList && SHELVES) {
 				let sitesHTML = "";
@@ -4335,7 +4549,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 							? shelf.domains.join(", ")
 							: primaryDomain;
 					sitesHTML += `<li>${emoji} <strong>${escapeHtml(
-						shelf.name
+						shelf.name,
 					)}</strong> — <code>${escapeHtml(allDomains)}</code></li>`;
 				});
 				supportedSitesList.innerHTML = sitesHTML;
@@ -4344,4 +4558,239 @@ document.addEventListener("DOMContentLoaded", async function () {
 			debugError("Error initializing info tab:", error);
 		}
 	}
-});
+
+	/**
+	 * Initialize Notifications Tab
+	 */
+	async function initNotificationsTab() {
+		try {
+			await notificationManager.initialize();
+			loadNotifications();
+			updateNotificationBadge();
+		} catch (error) {
+			debugError("Error initializing notifications tab:", error);
+		}
+	}
+
+	/**
+	 * Load and display notifications
+	 */
+	function loadNotifications() {
+		const notifications = notificationManager.getAll({
+			type:
+				currentNotificationFilter === "all"
+					? null
+					: currentNotificationFilter,
+		});
+
+		// Update stats
+		const stats = notificationManager.getStats();
+		if (totalNotifsSpan) totalNotifsSpan.textContent = stats.total;
+		if (unreadNotifsSpan) unreadNotifsSpan.textContent = stats.unread;
+
+		// Clear container
+		if (!notificationsContainer) return;
+
+		if (notifications.length === 0) {
+			notificationsContainer.innerHTML = `
+				<div class="no-notifications">
+					<p>📭</p>
+					<p>No notifications</p>
+					<p class="description">${
+						currentNotificationFilter === "all"
+							? "Notifications will appear here as you use the extension"
+							: `No ${currentNotificationFilter} notifications`
+					}</p>
+				</div>
+			`;
+			return;
+		}
+
+		// Build notifications HTML
+		notificationsContainer.innerHTML = notifications
+			.map((notif) => renderNotification(notif))
+			.join("");
+
+		// Add event listeners
+		notificationsContainer
+			.querySelectorAll(".notification-item")
+			.forEach((item) => {
+				const id = item.dataset.id;
+				item.addEventListener("click", async () => {
+					await notificationManager.markAsRead(id);
+					item.classList.remove("unread");
+					updateNotificationBadge();
+				});
+			});
+
+		notificationsContainer
+			.querySelectorAll(".notification-action-btn")
+			.forEach((btn) => {
+				btn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					const action = btn.dataset.action;
+					const id = btn.closest(".notification-item").dataset.id;
+					if (action === "delete") {
+						deleteNotification(id);
+					}
+				});
+			});
+	}
+
+	/**
+	 * Render a single notification
+	 */
+	function renderNotification(notif) {
+		const relativeTime = formatRelativeTime(notif.timestamp);
+		const fullTime = new Date(notif.timestamp).toLocaleString();
+
+		return `
+			<div class="notification-item ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
+				<div class="notification-header">
+					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
+					<span class="notification-time" title="${fullTime}">${relativeTime}</span>
+				</div>
+				${notif.title ? `<div class="notification-title">${escapeHtml(notif.title)}</div>` : ""}
+				<div class="notification-message">${escapeHtml(notif.message)}</div>
+				${renderNotificationMeta(notif)}
+				<div class="notification-actions">
+					<button class="notification-action-btn" data-action="delete">🗑️ Delete</button>
+				</div>
+			</div>
+		`;
+	}
+
+	/**
+	 * Render notification metadata
+	 */
+	function renderNotificationMeta(notif) {
+		let metaHTML = "";
+
+		if (notif.url || notif.novelData || notif.source) {
+			metaHTML += '<div class="notification-meta">';
+
+			if (notif.url) {
+				metaHTML += `
+					<div class="notification-meta-item">
+						<a href="${escapeHtml(notif.url)}" target="_blank" class="notification-url">
+							🔗 ${escapeHtml(truncateUrl(notif.url))}
+						</a>
+					</div>
+				`;
+			}
+
+			if (notif.source) {
+				metaHTML += `
+					<div class="notification-meta-item">
+						<strong>Source:</strong> ${escapeHtml(notif.source)}
+					</div>
+				`;
+			}
+
+			if (notif.novelData) {
+				metaHTML += `
+					<div class="notification-novel-data">
+						<div class="notification-novel-title">${escapeHtml(notif.novelData.title || "Unknown Novel")}</div>
+						<div class="notification-novel-meta">
+							${notif.novelData.author ? `by ${escapeHtml(notif.novelData.author)}` : ""}
+							${notif.novelData.currentChapter ? ` • Ch. ${notif.novelData.currentChapter}` : ""}
+						</div>
+					</div>
+				`;
+			}
+
+			metaHTML += "</div>";
+		}
+
+		return metaHTML;
+	}
+
+	/**
+	 * Truncate URL for display
+	 */
+	function truncateUrl(url) {
+		try {
+			const urlObj = new URL(url);
+			const path =
+				urlObj.pathname.length > 30
+					? urlObj.pathname.substring(0, 30) + "..."
+					: urlObj.pathname;
+			return `${urlObj.hostname}${path}`;
+		} catch (e) {
+			return url.length > 50 ? url.substring(0, 50) + "..." : url;
+		}
+	}
+
+	/**
+	 * Delete a notification
+	 */
+	async function deleteNotification(id) {
+		await notificationManager.delete(id);
+		loadNotifications();
+		updateNotificationBadge();
+	}
+
+	/**
+	 * Update notification badge
+	 */
+	function updateNotificationBadge() {
+		if (!notificationBadge) return;
+
+		const unreadCount = notificationManager.getUnreadCount();
+		if (unreadCount > 0) {
+			notificationBadge.textContent =
+				unreadCount > 99 ? "99+" : unreadCount;
+			notificationBadge.style.display = "inline-block";
+		} else {
+			notificationBadge.style.display = "none";
+		}
+	}
+
+	// Notification tab event listeners
+	if (filterButtons) {
+		filterButtons.forEach((btn) => {
+			btn.addEventListener("click", () => {
+				filterButtons.forEach((b) => b.classList.remove("active"));
+				btn.classList.add("active");
+				currentNotificationFilter = btn.dataset.filter;
+				loadNotifications();
+			});
+		});
+	}
+
+	if (markAllReadBtn) {
+		markAllReadBtn.addEventListener("click", async () => {
+			await notificationManager.markAllAsRead();
+			loadNotifications();
+			updateNotificationBadge();
+			showStatus("All notifications marked as read", "success");
+		});
+	}
+
+	if (clearNotificationsBtn) {
+		clearNotificationsBtn.addEventListener("click", async () => {
+			if (
+				confirm(
+					"Are you sure you want to clear all notifications? This cannot be undone.",
+				)
+			) {
+				await notificationManager.clearAll();
+				loadNotifications();
+				updateNotificationBadge();
+				showStatus("All notifications cleared", "info");
+			}
+		});
+	}
+
+	// Add listener for tab switching to notifications tab
+	document.querySelectorAll(".tab-btn").forEach((button) => {
+		button.addEventListener("click", () => {
+			if (button.getAttribute("data-tab") === "notifications") {
+				initNotificationsTab();
+			}
+		});
+	});
+
+	// Initialize notifications on startup
+	initNotificationsTab();
+}

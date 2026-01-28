@@ -3,7 +3,8 @@
  * Centralized configuration values used throughout the extension
  */
 
-defaultDebugMode = false;
+export const DEFAULT_DEBUG_MODE = false;
+export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
 
 // Default prompt template for Gemini AI
 export const DEFAULT_PROMPT = `**CRITICAL INSTRUCTION:** You are enhancing EXISTING text only. You must NEVER generate new content, create new stories, or add content that doesn't exist in the provided text. Your ONLY task is to improve the writing quality of the EXACT content given to you below. If no content is provided or the content is empty, respond with "ERROR: No content provided for enhancement."
@@ -84,7 +85,7 @@ export const DEFAULT_PERMANENT_PROMPT =
 	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 // Default model ID
-export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
+export const DEFAULT_MODEL_ID = "gemini-3-flash";
 
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
