@@ -284,12 +284,12 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 		// Flexible getters
 		const getVal = (key, fallback = null) => {
-			if (novel[key] !== undefined && novel[key] !== null)
-				return novel[key];
 			if (metadata[key] !== undefined && metadata[key] !== null)
 				return metadata[key];
 			if (statsObj[key] !== undefined && statsObj[key] !== null)
 				return statsObj[key];
+			if (novel[key] !== undefined && novel[key] !== null)
+				return novel[key];
 			return fallback;
 		};
 
@@ -303,9 +303,14 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
 
 		const enhanced = novel.enhancedChaptersCount ?? 0;
-		const chapters = getVal("chapters") || getVal("totalChapters") || 0;
+		const chapters = getVal("totalChapters") || getVal("chapters") || 0;
+		const currentChapter =
+			getVal("lastReadChapter") || getVal("currentChapter") || 0;
+		const safeCurrent = chapters
+			? Math.min(currentChapter || 0, chapters)
+			: currentChapter || 0;
 		const progressPercent = chapters
-			? Math.min(100, Math.round((enhanced / chapters) * 100))
+			? Math.min(100, Math.round((safeCurrent / chapters) * 100))
 			: 0;
 
 		// Get essential metadata
@@ -317,6 +322,10 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		const hits = getVal("hits", 0);
 		const fandoms = metadata.fandoms || [];
 		const primaryFandom = fandoms[0] || "";
+		const coverUrl = getVal("coverUrl") || getVal("cover") || "";
+		const hasCover =
+			typeof coverUrl === "string" && coverUrl.trim().length > 0;
+		const safeCoverUrl = hasCover ? this.escapeHtml(coverUrl) : "";
 
 		// Rating badge with simple text styling
 		const ratingClass = this.getRatingClass(rating);
@@ -350,29 +359,52 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			: "";
 
 		// Progress display
+		const progressLabel = chapters
+			? `📖 ${this.formatNumber(safeCurrent)} / ${this.formatNumber(chapters)}`
+			: `📖 ${this.formatNumber(safeCurrent)}`;
 		const progressHTML =
-			chapters > 0
-				? `<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
-			   <div class="ao3-progress-text">✨ ${this.formatNumber(enhanced)}/${this.formatNumber(chapters)}</div>`
+			chapters > 0 || safeCurrent > 0 || enhanced > 0
+				? `
+					<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
+					<div class="ao3-progress-text">${progressLabel}</div>
+					<div class="ao3-progress-subtext">✨ ${this.formatNumber(enhanced)} enhanced</div>
+				`
 				: "";
 
 		card.innerHTML = `
 			<div class="ao3-card-simple">
-				<div class="ao3-card-main">
-					<h3 class="ao3-card-title" title="${this.escapeHtml(novel.title)}">${this.escapeHtml(novel.title)}</h3>
-					<p class="ao3-card-author">by ${this.escapeHtml(novel.author || "Anonymous")}</p>
+				<div class="ao3-card-layout ${hasCover ? "has-cover" : "no-cover"}">
+					${
+						hasCover
+							? `
+								<div class="ao3-card-cover">
+									<img
+										class="novel-cover-img"
+										src="${safeCoverUrl}"
+										alt="${this.escapeHtml(novel.title || "Novel cover")}"
+										data-fallback=""
+										loading="lazy"
+									/>
+								</div>
+							`
+							: ""
+					}
+					<div class="ao3-card-main">
+						<h3 class="ao3-card-title" title="${this.escapeHtml(novel.title)}">${this.escapeHtml(novel.title)}</h3>
+						<p class="ao3-card-author">by ${this.escapeHtml(novel.author || "Anonymous")}</p>
 
-					<div class="ao3-card-metadata">
-						${ratingBadge}
-						${statusBadge}
-						${language ? `<span class="chip">${this.escapeHtml(language)}</span>` : ""}
-					</div>
+						<div class="ao3-card-metadata">
+							${ratingBadge}
+							${statusBadge}
+							${language ? `<span class="chip">${this.escapeHtml(language)}</span>` : ""}
+						</div>
 
-					${statsHTML}
-					${fandomHTML}
+						${statsHTML}
+						${fandomHTML}
 
-					<div class="ao3-card-progress">
-						${progressHTML}
+						<div class="ao3-card-progress">
+							${progressHTML}
+						</div>
 					</div>
 				</div>
 
@@ -388,6 +420,8 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				this.onCardClick(novel);
 			}
 		});
+
+		this.setupImageErrorHandlers(card);
 
 		return card;
 	}
@@ -425,7 +459,10 @@ export class AO3CardRenderer extends NovelCardRenderer {
 			img.addEventListener("error", function () {
 				if (fallback && this.src !== fallback) {
 					this.src = fallback;
+					return;
 				}
+				const wrapper = this.closest(".ao3-card-cover");
+				if (wrapper) wrapper.remove();
 			});
 		});
 	}
@@ -442,12 +479,12 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		const stats = metadata.stats || {};
 
 		const getVal = (key, fallback = null) => {
-			if (novel[key] !== undefined && novel[key] !== null)
-				return novel[key];
 			if (metadata[key] !== undefined && metadata[key] !== null)
 				return metadata[key];
 			if (stats[key] !== undefined && stats[key] !== null)
 				return stats[key];
+			if (novel[key] !== undefined && novel[key] !== null)
+				return novel[key];
 			return fallback;
 		};
 
@@ -662,45 +699,37 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		const descriptionEl = document.getElementById("modal-description");
 		if (descriptionEl) descriptionEl.textContent = novel.description || "";
 
-		// Handle cover/placeholder - AO3 has no covers
+		// Handle cover only when available
 		const coverContainer = document.getElementById("modal-cover-container");
 		const coverImg = document.getElementById("modal-cover");
+		const coverUrl =
+			novel.coverUrl || metadata.coverUrl || metadata.cover || "";
+		const safeCoverUrl = coverUrl ? this.escapeHtml(coverUrl) : "";
 
 		if (coverContainer) {
-			// Ensure styling is applied
-			// Create a placeholder since AO3 has no cover images
-			const gradientColors = this.getRatingGradient(rating);
-			const shortRating = this.getShortRating(rating);
-			const category = metadata.category || "";
-			const categoryIcon = this.getCategoryIcon(category);
-
-			const placeholderHTML = `
-				<div class="ao3-modal-placeholder" style="background: linear-gradient(145deg, ${gradientColors.primary} 0%, ${gradientColors.secondary} 100%); width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 8px;">
-					<div class="ao3-modal-placeholder-pattern"></div>
-					<div class="ao3-modal-placeholder-content" style="z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; color: white;">
-						<span class="ao3-modal-placeholder-rating" style="font-size: 2rem; font-weight: bold;">${shortRating}</span>
-						<span class="ao3-modal-placeholder-category" style="font-size: 1.2rem;">${categoryIcon}</span>
-						<span class="ao3-modal-placeholder-icon" style="position: absolute; bottom: 8px; right: 8px; opacity: 0.5;">🏛️</span>
-					</div>
-				</div>
-			`;
-
-			// Check if we need to create a wrapper or just append
-			// We want to PRESERVE the existing img element but hide it
-			const img = document.getElementById("modal-cover");
-			if (img) img.style.display = "none";
-
-			// Remove existing placeholder if any
-			const existing = coverContainer.querySelector(
-				".ao3-modal-placeholder",
-			);
-			if (existing) existing.remove();
-
-			// Insert new placeholder
-			coverContainer.insertAdjacentHTML("beforeend", placeholderHTML);
+			if (coverUrl) {
+				coverContainer.style.display = "";
+				coverContainer.innerHTML = `
+					<img
+						id="modal-cover"
+						class="modal-cover-img"
+						src="${safeCoverUrl}"
+						alt="${this.escapeHtml(novel.title || "Novel cover")}"
+						loading="lazy"
+						onerror="this.closest('.modal-cover-container')?.remove();"
+					/>
+				`;
+			} else {
+				coverContainer.innerHTML = "";
+				coverContainer.style.display = "none";
+			}
 		} else if (coverImg) {
-			// Fallback to old behavior if container doesn't exist
-			coverImg.style.display = "none";
+			if (coverUrl) {
+				coverImg.src = coverUrl;
+				coverImg.style.display = "block";
+			} else {
+				coverImg.style.display = "none";
+			}
 		}
 
 		// Render Metadata

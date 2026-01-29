@@ -11,6 +11,7 @@ import {
 	READING_STATUS_INFO,
 	updateNovelInLibrary,
 } from "../../../utils/novel-library.js";
+import { loadImageWithCache } from "../../../utils/image-cache.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -49,6 +50,7 @@ const DEFAULT_FILTERS = {
 	tags: [],
 	tagsMode: "any",
 	fandomsMode: "any",
+	fandomsView: "dropdown",
 	wordCountMin: "",
 	wordCountMax: "",
 	sort: "recent",
@@ -516,21 +518,35 @@ function renderNovels(novels = filteredNovels) {
 	grid.innerHTML = "";
 	novels.forEach((novel) => {
 		try {
-			const renderer = AO3CardRenderer || NovelCardRenderer;
-			const cardElement = renderer.renderCard(novel);
+			let cardElement = null;
+			if (
+				AO3CardRenderer &&
+				typeof AO3CardRenderer.renderCard === "function"
+			) {
+				cardElement = AO3CardRenderer.renderCard(novel);
+			} else {
+				cardElement = NovelCardRenderer.renderCard(novel);
+			}
 			grid.appendChild(cardElement);
 		} catch (error) {
 			console.error("Error rendering novel card:", error);
-			const fallbackCard = document.createElement("div");
-			fallbackCard.className = "novel-card";
-			fallbackCard.dataset.novelId = novel.id;
-			fallbackCard.innerHTML = `
-				<div class="novel-card-info">
-					<h3 class="novel-title">${novel.title}</h3>
-					<p class="novel-author">${novel.author || "Unknown"}</p>
-				</div>
-			`;
-			grid.appendChild(fallbackCard);
+			try {
+				const fallbackRenderer = NovelCardRenderer;
+				const fallbackCard = fallbackRenderer.renderCard(novel);
+				grid.appendChild(fallbackCard);
+			} catch (fallbackError) {
+				console.error("Fallback card render failed:", fallbackError);
+				const minimalCard = document.createElement("div");
+				minimalCard.className = "novel-card";
+				minimalCard.dataset.novelId = novel.id;
+				minimalCard.innerHTML = `
+					<div class="novel-card-info">
+						<h3 class="novel-title">${novel.title}</h3>
+						<p class="novel-author">${novel.author || "Unknown"}</p>
+					</div>
+				`;
+				grid.appendChild(minimalCard);
+			}
 		}
 	});
 
@@ -570,30 +586,46 @@ function showNovelModal(novel) {
 	const descriptionEl = document.getElementById("modal-description");
 	if (descriptionEl) descriptionEl.textContent = novel.description || "";
 
-	// Handle cover/placeholder - AO3 has no covers
+	// Handle cover only when available
 	const coverContainer = document.getElementById("modal-cover-container");
 	const coverImg = document.getElementById("modal-cover");
+	const coverUrl =
+		novel.coverUrl || metadata.coverUrl || metadata.cover || "";
+	const safeCoverUrl = coverUrl ? escapeHtml(coverUrl) : "";
 
 	if (coverContainer) {
-		// Create a placeholder since AO3 has no cover images
-		const gradientColors = AO3CardRenderer.getRatingGradient(rating);
-		const shortRating = AO3CardRenderer.getShortRating(rating);
-		const category = metadata.category || "";
-		const categoryIcon = AO3CardRenderer.getCategoryIcon(category);
-
-		coverContainer.innerHTML = `
-			<div class="ao3-modal-placeholder" style="background: linear-gradient(145deg, ${gradientColors.primary} 0%, ${gradientColors.secondary} 100%);">
-				<div class="ao3-modal-placeholder-pattern"></div>
-				<div class="ao3-modal-placeholder-content">
-					<span class="ao3-modal-placeholder-rating">${shortRating}</span>
-					<span class="ao3-modal-placeholder-category">${categoryIcon}</span>
-					<span class="ao3-modal-placeholder-icon">🏛️</span>
-				</div>
-			</div>
-		`;
+		if (coverUrl) {
+			coverContainer.style.display = "";
+			coverContainer.innerHTML = `
+				<img
+					class="modal-cover-img"
+					src="${safeCoverUrl}"
+					alt="${novel.title ? `${novel.title} cover` : "Novel cover"}"
+					loading="lazy"
+				/>
+			`;
+			const injectedImg =
+				coverContainer.querySelector(".modal-cover-img");
+			if (injectedImg) {
+				loadImageWithCache(injectedImg, coverUrl).catch(() => {});
+				injectedImg.addEventListener("error", () => {
+					coverContainer.remove();
+				});
+			}
+		} else {
+			coverContainer.innerHTML = "";
+			coverContainer.style.display = "none";
+		}
 	} else if (coverImg) {
-		// Fallback to old behavior if container doesn't exist
-		coverImg.style.display = "none";
+		if (coverUrl) {
+			loadImageWithCache(coverImg, coverUrl).catch(() => {});
+			coverImg.style.display = "block";
+			coverImg.addEventListener("error", () => {
+				coverImg.style.display = "none";
+			});
+		} else {
+			coverImg.style.display = "none";
+		}
 	}
 
 	if (AO3CardRenderer && AO3CardRenderer.renderModalMetadata) {
@@ -632,12 +664,8 @@ function showNovelModal(novel) {
 	const editBtn = document.getElementById("modal-edit-btn");
 	if (editBtn) {
 		editBtn.onclick = () => {
-			// Open edit in main library
-			window.dispatchEvent(
-				new CustomEvent("openEditModal", {
-					detail: { novelId: novel.id },
-				})
-			);
+			openEditModal(novel);
+			closeModal();
 		};
 	}
 
@@ -646,7 +674,7 @@ function showNovelModal(novel) {
 		removeBtn.onclick = async () => {
 			if (
 				confirm(
-					`Remove "${novel.title}" from your library? This cannot be undone.`
+					`Remove "${novel.title}" from your library? This cannot be undone.`,
 				)
 			) {
 				await removeNovelFromLibrary(novel.id);
@@ -657,10 +685,10 @@ function showNovelModal(novel) {
 
 	// Setup reading status buttons
 	const statusButtons = document.querySelectorAll(".status-btn");
-	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	const currentStatus = normalizeModalStatus(novel.readingStatus);
 
 	statusButtons.forEach((btn) => {
-		const status = btn.getAttribute("data-status");
+		const status = normalizeModalStatus(btn.getAttribute("data-status"));
 
 		// Set active state
 		if (status === currentStatus) {
@@ -673,10 +701,21 @@ function showNovelModal(novel) {
 		btn.onclick = async () => {
 			const updatedNovel = { ...novel, readingStatus: status };
 			await updateNovelInLibrary(updatedNovel);
+			const idx = allNovels.findIndex((n) => n.id === novel.id);
+			if (idx >= 0) allNovels[idx] = updatedNovel;
+			const filteredIdx = filteredNovels.findIndex(
+				(n) => n.id === novel.id,
+			);
+			if (filteredIdx >= 0) filteredNovels[filteredIdx] = updatedNovel;
+
+			applyFiltersAndSort();
 
 			// Update button states
 			statusButtons.forEach((b) => {
-				if (b.getAttribute("data-status") === status) {
+				if (
+					normalizeModalStatus(b.getAttribute("data-status")) ===
+					status
+				) {
 					b.classList.add("active");
 				} else {
 					b.classList.remove("active");
@@ -1041,6 +1080,7 @@ function applyFiltersAndSort() {
 	renderActiveFilters();
 	renderNovels();
 	updateAnalytics(filteredNovels);
+	setupFandomNav(allNovels);
 	persistFilters();
 }
 
@@ -1056,18 +1096,34 @@ function normalizeReadingStatus(status) {
 		case "currently-reading":
 		case "in-progress":
 			return READING_STATUS.READING;
+		case "rereading":
+			return READING_STATUS.RE_READING;
 		default:
 			return normalized;
 	}
 }
 
-function setupFandomNav(novels) {
-	const categoryGrid = document.getElementById("category-grid");
-	if (!categoryGrid) return;
+function normalizeModalStatus(status) {
+	if (!status) return READING_STATUS.PLAN_TO_READ;
+	return normalizeReadingStatus(status) || READING_STATUS.PLAN_TO_READ;
+}
 
+function setupFandomNav(novels) {
+	const filterContainer = document.getElementById("fandom-filter-section");
+	const categoryGrid = document.getElementById("category-grid");
+	const renderTarget = filterContainer || categoryGrid;
+	if (!renderTarget) return;
+
+	if (filterContainer) {
+		const categorySection = document.getElementById("category-section");
+		if (categorySection) categorySection.style.display = "none";
+	}
+
+	const baseNovels =
+		(filterState.fandomsMode || "any") === "all" ? filteredNovels : novels;
 	const fandomCounts = new Map();
 
-	novels.forEach((novel) => {
+	baseNovels.forEach((novel) => {
 		const fandoms = novel.metadata?.fandoms || [];
 		fandoms.forEach((fandom) => {
 			fandomCounts.set(fandom, (fandomCounts.get(fandom) || 0) + 1);
@@ -1075,24 +1131,44 @@ function setupFandomNav(novels) {
 	});
 
 	if (fandomCounts.size === 0) {
-		document.getElementById("category-section").style.display = "none";
+		const categorySection = document.getElementById("category-section");
+		if (categorySection) categorySection.style.display = "none";
 		return;
 	}
 
-	document.getElementById("category-section").style.display = "block";
+	const categorySection = document.getElementById("category-section");
+	if (categorySection) categorySection.style.display = "block";
+
+	const viewMode = filterState.fandomsView || "dropdown";
 
 	let html = `
 		<div class="fandom-grid-header">
-			<h3 class="fandom-grid-title">Browse by Fandom</h3>
 			<div class="fandom-grid-controls">
 				<select id="fandom-match-mode" class="fandom-match-select" title="Filter mode">
 					<option value="any">Match ANY</option>
 					<option value="all">Match ALL</option>
 				</select>
+				<div class="fandom-view-toggle" role="group" aria-label="Fandom view">
+					<button type="button" class="view-toggle-btn ${
+						viewMode === "dropdown" ? "active" : ""
+					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">☰</button>
+					<button type="button" class="view-toggle-btn ${
+						viewMode === "grid" ? "active" : ""
+					}" data-view="grid" aria-label="Grid view" title="Grid view">▦</button>
+				</div>
 				<button id="clear-fandoms" class="clear-fandoms-btn" style="display: none;">Clear Selection</button>
 			</div>
+			<div class="fandom-grid-actions">
+				<div class="multi-dropdown">
+					<button type="button" class="multi-dropdown-toggle" id="fandoms-nav-toggle">Choose Fandoms</button>
+					<div class="multi-dropdown-panel" id="fandoms-nav-panel">
+						<div class="filter-pill-list fandom-dropdown-list" id="fandoms-nav-list"></div>
+					</div>
+				</div>
+			</div>
 		</div>
-		<div class="fandom-grid">`;
+		<div class="fandom-grid-container" data-view="${viewMode}">
+			<div class="fandom-grid">`;
 
 	// Sort by count, then alphabetically
 	const sortedFandoms = [...fandomCounts.entries()].sort((a, b) => {
@@ -1100,25 +1176,45 @@ function setupFandomNav(novels) {
 		return a[0].localeCompare(b[0]);
 	});
 
-	sortedFandoms.slice(0, 30).forEach(([fandom, count]) => {
+	sortedFandoms.slice(0, 60).forEach(([fandom, count]) => {
+		if (!count) return;
 		const isSelected = (filterState.fandoms || []).includes(fandom);
+		const safeName = escapeHtml(fandom);
 		html += `
 			<button class="fandom-card ${
 				isSelected ? "selected" : ""
 			}" data-fandom="${encodeURIComponent(
-			fandom
-		)}" aria-pressed="${isSelected}">
-				<span class="fandom-name">${escapeHtml(fandom)}</span>
+				fandom,
+			)}" aria-pressed="${isSelected}">
+				<span class="fandom-name">${safeName}</span>
 				<span class="fandom-count">${count} ${count === 1 ? "work" : "works"}</span>
 			</button>
 		`;
 	});
-	html += `</div>`;
+	html += `</div></div>`;
 
-	categoryGrid.innerHTML = html;
+	renderTarget.innerHTML = html;
+
+	const dropdownList = renderTarget.querySelector("#fandoms-nav-list");
+	if (dropdownList) {
+		dropdownList.innerHTML = sortedFandoms
+			.filter(([, count]) => count > 0)
+			.map(([fandom, count]) => {
+				const safeName = escapeHtml(fandom);
+				const isSelected = (filterState.fandoms || []).includes(fandom);
+				return `
+					<label class="filter-pill ${isSelected ? "active" : ""}">
+						<input type="checkbox" value="${safeName}" ${isSelected ? "checked" : ""} />
+						<span class="pill-label">${safeName}</span>
+						<span class="pill-count">${count}</span>
+					</label>
+				`;
+			})
+			.join("");
+	}
 
 	// Set up match mode selector
-	const matchModeSelect = document.getElementById("fandom-match-mode");
+	const matchModeSelect = renderTarget.querySelector("#fandom-match-mode");
 	if (matchModeSelect) {
 		matchModeSelect.value = filterState.fandomsMode || "any";
 		matchModeSelect.addEventListener("change", () => {
@@ -1127,11 +1223,22 @@ function setupFandomNav(novels) {
 			if ((filterState.fandoms || []).length > 0) {
 				applyFiltersAndSort();
 			}
+			setupFandomNav(allNovels);
 		});
 	}
 
+	const viewToggleButtons = renderTarget.querySelectorAll(".view-toggle-btn");
+	viewToggleButtons.forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const view = btn.dataset.view;
+			filterState.fandomsView = view;
+			persistFilters();
+			setupFandomNav(allNovels);
+		});
+	});
+
 	// Set up clear button
-	const clearBtn = document.getElementById("clear-fandoms");
+	const clearBtn = renderTarget.querySelector("#clear-fandoms");
 	if (clearBtn) {
 		if ((filterState.fandoms || []).length > 0) {
 			clearBtn.style.display = "inline-block";
@@ -1145,45 +1252,113 @@ function setupFandomNav(novels) {
 		});
 	}
 
-	categoryGrid.querySelectorAll(".fandom-card").forEach((card) => {
+	const updateSelection = (fandom, isSelected) => {
+		const currentFandoms = filterState.fandoms || [];
+		if (isSelected) {
+			if (currentFandoms.length >= 2) {
+				return;
+			}
+			if (!currentFandoms.includes(fandom)) {
+				filterState.fandoms = [...currentFandoms, fandom];
+			}
+		} else {
+			filterState.fandoms = currentFandoms.filter((f) => f !== fandom);
+		}
+
+		if (clearBtn) {
+			clearBtn.style.display =
+				filterState.fandoms.length > 0 ? "inline-block" : "none";
+		}
+
+		applyFilterStateToUI();
+		persistFilters();
+		applyFiltersAndSort();
+		document
+			.getElementById("novel-grid")
+			?.scrollIntoView({ behavior: "smooth" });
+	};
+
+	renderTarget.querySelectorAll(".fandom-card").forEach((card) => {
 		card.addEventListener("click", () => {
 			const fandom = decodeURIComponent(card.dataset.fandom);
-			const currentFandoms = filterState.fandoms || [];
-
-			if (currentFandoms.includes(fandom)) {
-				// Remove if already selected
-				filterState.fandoms = currentFandoms.filter(
-					(f) => f !== fandom
-				);
-				card.classList.remove("selected");
-				card.setAttribute("aria-pressed", "false");
-			} else {
-				// Add to selection
-				filterState.fandoms = [...currentFandoms, fandom];
-				card.classList.add("selected");
-				card.setAttribute("aria-pressed", "true");
-			}
-
-			// Update clear button visibility
-			if (clearBtn) {
-				clearBtn.style.display =
-					filterState.fandoms.length > 0 ? "inline-block" : "none";
-			}
-
-			applyFilterStateToUI();
-			persistFilters();
-			applyFiltersAndSort();
-			document
-				.getElementById("novel-grid")
-				.scrollIntoView({ behavior: "smooth" });
+			const isSelected = !(filterState.fandoms || []).includes(fandom);
+			updateSelection(fandom, isSelected);
 		});
 	});
+
+	const dropdownToggle = renderTarget.querySelector("#fandoms-nav-toggle");
+	const dropdownPanel = renderTarget.querySelector("#fandoms-nav-panel");
+	if (dropdownToggle && dropdownPanel) {
+		dropdownToggle.addEventListener("click", () => {
+			dropdownPanel.classList.toggle("open");
+		});
+	}
+
+	if (dropdownList) {
+		dropdownList
+			.querySelectorAll("input[type='checkbox']")
+			.forEach((input) => {
+				input.addEventListener("change", () => {
+					const fandom = input.value;
+					const isSelected = input.checked;
+					if (isSelected && (filterState.fandoms || []).length >= 2) {
+						input.checked = false;
+						return;
+					}
+					updateSelection(fandom, isSelected);
+				});
+			});
+	}
 }
 
 function escapeHtml(text) {
 	const div = document.createElement("div");
 	div.textContent = text;
 	return div.innerHTML;
+}
+
+function setInsightTarget(valueId, novel, text) {
+	const valueEl = document.getElementById(valueId);
+	if (!valueEl) return;
+	valueEl.textContent = text || "-";
+	const item = valueEl.closest(".analytics-item");
+	if (!item) return;
+	if (novel && novel.id) {
+		item.dataset.novelId = novel.id;
+		item.classList.add("analytics-clickable");
+		item.setAttribute("role", "button");
+		item.tabIndex = 0;
+	} else {
+		item.removeAttribute("data-novel-id");
+		item.classList.remove("analytics-clickable");
+		item.removeAttribute("role");
+		item.removeAttribute("tabindex");
+	}
+}
+
+function setupInsightClicks() {
+	const container = document.querySelector(".analytics-items");
+	if (!container || container.dataset.bound === "true") return;
+	container.dataset.bound = "true";
+
+	const openFromItem = (item) => {
+		if (!item?.dataset?.novelId) return;
+		const novel = allNovels.find((n) => n.id === item.dataset.novelId);
+		if (novel) showNovelModal(novel);
+	};
+
+	container.addEventListener("click", (event) => {
+		const item = event.target.closest(".analytics-item");
+		openFromItem(item);
+	});
+
+	container.addEventListener("keydown", (event) => {
+		if (event.key !== "Enter" && event.key !== " ") return;
+		const item = event.target.closest(".analytics-item");
+		if (!item?.dataset?.novelId) return;
+		event.preventDefault();
+		openFromItem(item);
+	});
 }
 
 function updateAnalytics(novels) {
@@ -1201,12 +1376,13 @@ function updateAnalytics(novels) {
 		setStatText("stats-hits", "0");
 		setStatText("stats-avgrating", "-");
 		setStatText("stats-reading", "0%");
-		setStatText("most-kudos", "-");
-		setStatText("most-hits", "-");
-		setStatText("most-comments", "-");
-		setStatText("longest-work", "-");
-		setStatText("newest-addition", "-");
-		setStatText("most-chapters", "-");
+		setStatText("stats-avg-words", "-");
+		setInsightTarget("most-kudos", null, "-");
+		setInsightTarget("most-hits", null, "-");
+		setInsightTarget("most-comments", null, "-");
+		setInsightTarget("longest-work", null, "-");
+		setInsightTarget("newest-addition", null, "-");
+		setInsightTarget("most-chapters", null, "-");
 
 		renderReadingStatusChart({});
 		return;
@@ -1230,7 +1406,9 @@ function updateAnalytics(novels) {
 		0
 	);
 	const completedWorks = novels.filter(
-		(n) => (n.status || "").toLowerCase() === "completed"
+		(n) =>
+			(n.metadata?.status || n.status || "").toLowerCase() ===
+			"completed",
 	).length;
 
 	const readingBuckets = novels.reduce((acc, novel) => {
@@ -1263,6 +1441,7 @@ function updateAnalytics(novels) {
 	});
 	const avgRating =
 		ratedCount > 0 ? (totalRating / ratedCount).toFixed(1) : "-";
+	const avgWords = totalNovels > 0 ? Math.round(totalWords / totalNovels) : 0;
 
 	setStatText("stats-novels", totalNovels.toLocaleString());
 	setStatText("stats-enhanced", totalEnhanced.toLocaleString());
@@ -1272,6 +1451,7 @@ function updateAnalytics(novels) {
 	setStatText("stats-hits", formatNumber(totalHits));
 	setStatText("stats-avgrating", avgRating);
 	setStatText("stats-reading", `${readingPercent}%`);
+	setStatText("stats-avg-words", formatNumber(avgWords));
 
 	// Library insights
 	let mostKudos = null;
@@ -1340,46 +1520,55 @@ function updateAnalytics(novels) {
 		}
 	});
 
-	setStatText(
+	setInsightTarget(
 		"most-kudos",
+		mostKudos,
 		mostKudos
 			? `${mostKudos.title} (${formatNumber(
-					getStatVal(mostKudos, "kudos")
-			  )})`
-			: "-"
+					getStatVal(mostKudos, "kudos"),
+				)})`
+			: "-",
 	);
-	setStatText(
+	setInsightTarget(
 		"most-hits",
+		mostHits,
 		mostHits
 			? `${mostHits.title} (${formatNumber(
-					getStatVal(mostHits, "hits")
-			  )})`
-			: "-"
+					getStatVal(mostHits, "hits"),
+				)})`
+			: "-",
 	);
-	setStatText(
+	setInsightTarget(
 		"most-comments",
+		mostComments,
 		mostComments
 			? `${mostComments.title} (${formatNumber(
-					getStatVal(mostComments, "comments")
-			  )})`
-			: "-"
+					getStatVal(mostComments, "comments"),
+				)})`
+			: "-",
 	);
-	setStatText(
+	setInsightTarget(
 		"longest-work",
+		longest,
 		longest
 			? `${longest.title} (${formatNumber(getStatVal(longest, "words"))})`
-			: "-"
+			: "-",
 	);
-	setStatText("newest-addition", newestAddition ? newestAddition.title : "-");
-	setStatText(
+	setInsightTarget(
+		"newest-addition",
+		newestAddition,
+		newestAddition ? newestAddition.title : "-",
+	);
+	setInsightTarget(
 		"most-chapters",
+		mostChapters,
 		mostChapters
 			? `${mostChapters.title} (${
 					mostChapters.totalChapters ||
 					mostChapters.metadata?.chapters ||
 					0
-			  })`
-			: "-"
+				})`
+			: "-",
 	);
 
 	renderReadingStatusChart(readingBuckets, totalNovels);
@@ -1672,6 +1861,7 @@ async function initializeAO3Shelf() {
 		populateDynamicFilters();
 		setupFandomNav(allNovels);
 		setupFilters();
+		setupInsightClicks();
 		applyFiltersAndSort();
 	} catch (error) {
 		console.error(
@@ -1744,6 +1934,16 @@ async function refreshNovelMetadata(novelId) {
 		console.error("Error refreshing metadata:", error);
 		showToast("Failed to refresh metadata", "error");
 	}
+}
+
+function openEditModal(novel) {
+	const targetUrl =
+		typeof browser !== "undefined" && browser.runtime?.getURL
+			? browser.runtime.getURL(
+					`library.html?edit=${encodeURIComponent(novel.id)}`,
+				)
+			: `../../library.html?edit=${encodeURIComponent(novel.id)}`;
+	window.open(targetUrl, "_blank", "noopener");
 }
 
 /**

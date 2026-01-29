@@ -4451,10 +4451,15 @@ if (window.__RGInitDone) {
 			let position = insertion.position;
 
 			if (controlsConfig.wrapInDefinitionList) {
-				const labelText = controlsConfig.dlLabel || "Gemini";
+				const labelText = controlsConfig.dlLabel || "Ranobe Gemini";
 				const dtLabel = document.createElement("dt");
 				dtLabel.className = "rg-gemini-controls-label";
-				dtLabel.textContent = labelText;
+				const labelLink = document.createElement("a");
+				labelLink.href = "https://ranobe.vkrishna04.me/";
+				labelLink.textContent = labelText;
+				labelLink.target = "_blank";
+				labelLink.rel = "noopener noreferrer";
+				dtLabel.appendChild(labelLink);
 
 				const ddWrapper = document.createElement("dd");
 				ddWrapper.className = "rg-gemini-controls";
@@ -4568,6 +4573,8 @@ if (window.__RGInitDone) {
 				font-weight: 600;
 				font-size: 12px;
 				transition: all 0.2s ease;
+				white-space: nowrap;
+				flex: 0 0 auto;
 			`;
 			btn.addEventListener("mouseover", () => {
 				btn.style.filter = "brightness(1.1)";
@@ -4612,6 +4619,12 @@ if (window.__RGInitDone) {
 				border-radius: 4px;
 				cursor: pointer;
 				font-size: 12px;
+				min-width: 140px;
+				max-width: 180px;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				overflow: hidden;
+				flex: 0 0 auto;
 			`;
 
 			const statusOptions = getReadingStatusOptions();
@@ -6501,36 +6514,52 @@ if (window.__RGInitDone) {
 
 	// Shows a status message on the page
 	function showStatusMessage(message, type = "info") {
-		// Create message element
-		const messageDiv = document.createElement("div");
-		messageDiv.textContent = message;
-		messageDiv.classList.add("extraction-message");
-
-		// Style based on message type - match sample page styling
 		const bgColor = type === "error" ? "#622020" : "#2c494f";
 		const textColor = "#bab9a0";
 
+		let host = document.getElementById("rg-status-host");
+		let root = host && host.shadowRoot ? host.shadowRoot : null;
+
+		if (!host) {
+			host = document.createElement("div");
+			host.id = "rg-status-host";
+			host.style.cssText =
+				"position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2147483647; pointer-events: none;";
+			try {
+				root = host.attachShadow({ mode: "open" });
+			} catch (_err) {
+				root = host;
+			}
+			document.documentElement.appendChild(host);
+		}
+
+		const messageDiv = document.createElement("div");
+		messageDiv.textContent = message;
+		messageDiv.classList.add("extraction-message");
 		messageDiv.style.cssText = `
+    all: initial;
+    display: block;
     background-color: ${bgColor};
     color: ${textColor};
-    padding: 15px;
-    margin: 15px 0;
-    border-radius: 4px;
-    font-weight: bold;
+    padding: 14px 18px;
+    margin: 0;
+    border-radius: 6px;
+    font-weight: 700;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 14px;
     text-align: center;
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    max-width: 80%;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    max-width: 80vw;
     border: 1px solid #ffffff21;
+    pointer-events: none;
   `;
 
-		document.body.appendChild(messageDiv);
+		if (root) {
+			root.appendChild(messageDiv);
+		} else {
+			document.documentElement.appendChild(messageDiv);
+		}
 
-		// Remove the message after 5 seconds
 		setTimeout(() => {
 			if (messageDiv.parentNode) {
 				messageDiv.parentNode.removeChild(messageDiv);

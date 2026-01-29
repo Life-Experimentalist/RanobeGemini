@@ -266,11 +266,29 @@ body {
 }
 
 .modal-cover-img {
-	width: 100px;
-	height: 150px;
+	width: 100%;
+	height: 100%;
 	object-fit: cover;
 	border-radius: var(--radius-md);
 	box-shadow: var(--shadow-md);
+}
+
+.ao3-page .modal-cover-container {
+	width: 96px;
+	height: 134px;
+	aspect-ratio: 5 / 7;
+	flex-shrink: 0;
+}
+
+.ao3-page .modal-cover-container {
+	width: 100px;
+	height: 140px;
+	aspect-ratio: 5 / 7;
+	flex-shrink: 0;
+}
+
+.modal-cover-container:empty {
+	display: none;
 }
 
 .modal-header-text {
@@ -827,19 +845,24 @@ body {
 
 /* Stats Summary */
 .stats-summary {
-	display: flex;
-	gap: var(--spacing-lg);
-	margin-bottom: var(--spacing-lg);
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-md);
 }
 
 .stat-card {
 	background: var(--bg-secondary);
-	padding: var(--spacing-md);
+	padding: var(--spacing-sm) var(--spacing-md);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border-color);
-	min-width: 150px;
+	min-height: 92px;
 	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
 }
 
 .stat-value {
@@ -851,6 +874,7 @@ body {
 .stat-label {
 	font-size: 0.875rem;
 	color: var(--text-muted);
+	white-space: normal;
 }
 
 /* Shelf Filters Row */
@@ -1251,6 +1275,12 @@ body {
 	overflow: visible;
 }
 
+.filter-fandom-section {
+	margin: 0 var(--spacing-md) var(--spacing-md);
+	padding-top: var(--spacing-md);
+	border-top: 1px solid var(--border-color);
+}
+
 .filter-item {
 	display: flex;
 	flex-direction: column;
@@ -1363,6 +1393,11 @@ body {
 	box-shadow: var(--shadow-lg);
 	z-index: 1100;
 	overflow-y: auto;
+	display: none;
+}
+
+.multi-dropdown-panel.open {
+	display: block;
 }
 
 .rating-badge {
@@ -1922,6 +1957,38 @@ body {
 	cursor: pointer;
 }
 
+.ao3-card-layout {
+	display: flex;
+	gap: var(--spacing-md);
+	align-items: stretch;
+}
+
+.ao3-card-layout.has-cover {
+	min-height: 100px;
+}
+
+.ao3-card-layout.no-cover {
+	flex-direction: column;
+}
+
+.ao3-card-cover {
+	width: 72px;
+	height: 100px;
+	aspect-ratio: 5 / 7;
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	background: var(--bg-tertiary);
+	box-shadow: var(--shadow-sm);
+	flex-shrink: 0;
+}
+
+.ao3-card-cover img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
 .ao3-card-simple:hover {
 	transform: translateY(-2px);
 	box-shadow: var(--shadow-md);
@@ -1934,11 +2001,12 @@ body {
 	flex-direction: column;
 	gap: var(--spacing-sm);
 	overflow: hidden;
+	min-height: 100px;
 }
 
 .ao3-card-title {
-	font-size: 1rem;
-	font-weight: 600;
+	font-size: 1.05rem;
+	font-weight: 700;
 	color: var(--text-primary);
 	line-height: 1.3;
 	display: -webkit-box;
@@ -2005,6 +2073,10 @@ body {
 	color: var(--text-muted);
 }
 
+.ao3-progress-subtext {
+	font-size: 0.7rem;
+	color: var(--text-secondary);
+}
 .ao3-card-status {
 	display: flex;
 	justify-content: space-between;
@@ -2074,6 +2146,64 @@ body {
 	display: flex;
 	align-items: center;
 	gap: var(--spacing-sm);
+}
+
+.fandom-grid-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	margin-left: auto;
+}
+
+.fandom-view-toggle {
+	display: inline-flex;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+}
+
+.view-toggle-btn {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	background: var(--bg-card);
+	border: none;
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.view-toggle-btn.active {
+	background: var(--primary-color);
+	color: #fff;
+}
+
+.view-toggle-btn:hover {
+	color: var(--text-primary);
+}
+
+.fandom-grid-container[data-view="dropdown"] {
+	display: none;
+}
+
+.fandom-dropdown-list {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--spacing-xs);
+}
+
+.fandom-dropdown-list .filter-pill {
+	justify-content: space-between;
+}
+
+.pill-count {
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	font-size: 0.75rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-sm);
 }
 
 .fandom-match-select {

@@ -177,7 +177,7 @@ When enhancing, improve readability while respecting the author's original style
 			insertionPoint: this.getNovelPageUIInsertionPoint(),
 			position: "after",
 			wrapInDefinitionList: true,
-			dlLabel: "Gemini",
+			dlLabel: "Ranobe Gemini",
 			isChapterPage: true,
 			customStyles: {
 				background: "linear-gradient(135deg, #1a1a1a 0%, #2d1f1f 100%)",

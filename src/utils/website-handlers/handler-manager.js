@@ -28,14 +28,16 @@ export class HandlerManager {
 
 		this.handlersPromise = (async () => {
 			const loadedHandlers = [];
+			const initialized = new Set();
 			for (const modulePath of HANDLER_MODULES) {
 				try {
 					const url = browser.runtime.getURL(
-						`utils/website-handlers/${modulePath}`
+						`utils/website-handlers/${modulePath}`,
 					);
 					const mod = await import(url);
 
 					const candidates = [];
+					const classCandidates = [];
 
 					// Prefer default export if provided
 					if (mod.default) {
@@ -45,6 +47,7 @@ export class HandlerManager {
 							typeof mod.default === "function" &&
 							mod.default.prototype instanceof BaseWebsiteHandler
 						) {
+							classCandidates.push(mod.default);
 							candidates.push(new mod.default());
 						}
 					}
@@ -60,8 +63,25 @@ export class HandlerManager {
 							typeof value === "function" &&
 							value.prototype instanceof BaseWebsiteHandler
 						) {
+							classCandidates.push(value);
 							candidates.push(new value());
 						}
+					}
+
+					for (const handlerClass of classCandidates) {
+						const name = handlerClass?.name;
+						if (!name || initialized.has(name)) continue;
+						if (typeof handlerClass.initialize === "function") {
+							try {
+								handlerClass.initialize();
+							} catch (initError) {
+								console.warn(
+									`HandlerManager: initialize failed for ${name}:`,
+									initError,
+								);
+							}
+						}
+						initialized.add(name);
 					}
 
 					// Deduplicate by constructor name to avoid double-loading
@@ -77,7 +97,7 @@ export class HandlerManager {
 				} catch (importError) {
 					console.warn(
 						`HandlerManager: failed to load ${modulePath}:`,
-						importError
+						importError,
 					);
 				}
 			}

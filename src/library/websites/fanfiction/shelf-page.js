@@ -11,6 +11,7 @@ import {
 	READING_STATUS_INFO,
 	updateNovelInLibrary,
 } from "../../../utils/novel-library.js";
+import { loadImageWithCache } from "../../../utils/image-cache.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -64,6 +65,7 @@ const DEFAULT_FILTERS = {
 	characters: [],
 	tags: [],
 	tagsMode: "any",
+	fandomsView: "dropdown",
 	wordCountMin: "",
 	wordCountMax: "",
 	sort: "recent",
@@ -612,8 +614,11 @@ function showNovelModal(novel) {
 
 	const coverImg = document.getElementById("modal-cover");
 	if (coverImg && novel.coverUrl) {
-		coverImg.src = novel.coverUrl;
+		loadImageWithCache(coverImg, novel.coverUrl).catch(() => {});
 		coverImg.style.display = "block";
+		coverImg.addEventListener("error", () => {
+			coverImg.style.display = "none";
+		});
 	} else if (coverImg) {
 		coverImg.style.display = "none";
 	}
@@ -643,7 +648,7 @@ function showNovelModal(novel) {
 	const refreshBtn = document.getElementById("modal-refresh-btn");
 	if (refreshBtn) {
 		refreshBtn.onclick = () => {
-			refreshNovelMetadata(novel.id);
+			refreshNovelMetadata(novel);
 			closeModal();
 		};
 	}
@@ -678,10 +683,10 @@ function showNovelModal(novel) {
 
 	// Setup reading status buttons
 	const statusButtons = document.querySelectorAll(".status-btn");
-	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	const currentStatus = normalizeModalStatus(novel.readingStatus);
 
 	statusButtons.forEach((btn) => {
-		const status = btn.getAttribute("data-status");
+		const status = normalizeModalStatus(btn.getAttribute("data-status"));
 
 		// Set active state
 		if (status === currentStatus) {
@@ -694,10 +699,21 @@ function showNovelModal(novel) {
 		btn.onclick = async () => {
 			const updatedNovel = { ...novel, readingStatus: status };
 			await updateNovelInLibrary(updatedNovel);
+			const idx = allNovels.findIndex((n) => n.id === novel.id);
+			if (idx >= 0) allNovels[idx] = updatedNovel;
+			const filteredIdx = filteredNovels.findIndex(
+				(n) => n.id === novel.id,
+			);
+			if (filteredIdx >= 0) filteredNovels[filteredIdx] = updatedNovel;
+
+			applyFiltersAndSort();
 
 			// Update button states
 			statusButtons.forEach((b) => {
-				if (b.getAttribute("data-status") === status) {
+				if (
+					normalizeModalStatus(b.getAttribute("data-status")) ===
+					status
+				) {
 					b.classList.add("active");
 				} else {
 					b.classList.remove("active");
@@ -913,9 +929,16 @@ function normalizeReadingStatus(status) {
 		case "currently-reading":
 		case "in-progress":
 			return READING_STATUS.READING;
+		case "rereading":
+			return READING_STATUS.RE_READING;
 		default:
 			return normalized;
 	}
+}
+
+function normalizeModalStatus(status) {
+	if (!status) return READING_STATUS.PLAN_TO_READ;
+	return normalizeReadingStatus(status) || READING_STATUS.PLAN_TO_READ;
 }
 
 function normalizeRatingClass(rating) {
@@ -993,8 +1016,15 @@ function getNovelCharacters(novel) {
 }
 
 function setupFandomNav(novels) {
+	const filterContainer = document.getElementById("fandom-filter-section");
 	const categoryGrid = document.getElementById("category-grid");
-	if (!categoryGrid) return;
+	const renderTarget = filterContainer || categoryGrid;
+	if (!renderTarget) return;
+
+	if (filterContainer) {
+		const categorySection = document.getElementById("category-section");
+		if (categorySection) categorySection.style.display = "none";
+	}
 
 	const singleFandoms = new Map();
 	const crossoverPairs = new Map();
@@ -1015,14 +1045,37 @@ function setupFandomNav(novels) {
 		}
 	});
 
-	let html = "";
+	const viewMode = filterState.fandomsView || "dropdown";
+
+	let html = `
+		<div class="fandom-grid-header">
+			<div class="fandom-grid-controls">
+				<div class="fandom-view-toggle" role="group" aria-label="Fandom view">
+					<button type="button" class="view-toggle-btn ${
+						viewMode === "dropdown" ? "active" : ""
+					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">☰</button>
+					<button type="button" class="view-toggle-btn ${
+						viewMode === "grid" ? "active" : ""
+					}" data-view="grid" aria-label="Grid view" title="Grid view">▦</button>
+				</div>
+			</div>
+			<div class="fandom-grid-actions">
+				<div class="multi-dropdown">
+					<button type="button" class="multi-dropdown-toggle" id="fandoms-nav-toggle">Choose Fandoms</button>
+					<div class="multi-dropdown-panel" id="fandoms-nav-panel">
+						<div class="filter-pill-list fandom-dropdown-list" id="fandoms-nav-list"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="fandom-grid-container" data-view="${viewMode}">`;
 
 	if (singleFandoms.size > 0) {
 		html += `<div class="category-group"><h4>Single Fandom Stories</h4><div class="fandom-grid">`;
 		singleFandoms.forEach((count, fandom) => {
 			html += `
 				<button class="fandom-card single" data-fandom="${encodeURIComponent(
-					fandom
+					fandom,
 				)}" data-type="single">
 					<span class="fandom-icon">📖</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
@@ -1038,84 +1091,113 @@ function setupFandomNav(novels) {
 		crossoverPairs.forEach((otherFandoms, fandom) => {
 			html += `
 				<button class="fandom-card crossover" data-fandom="${encodeURIComponent(
-					fandom
+					fandom,
 				)}" data-type="crossover">
 					<span class="fandom-icon">🔀</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
 					<span class="fandom-count">${otherFandoms.size} ${
-				otherFandoms.size === 1 ? "crossover" : "crossovers"
-			}</span>
+						otherFandoms.size === 1 ? "crossover" : "crossovers"
+					}</span>
 				</button>
 			`;
 		});
 		html += `</div></div>`;
 	}
 
-	categoryGrid.innerHTML = html;
+	html += `</div>`;
 
-	categoryGrid.querySelectorAll(".fandom-card").forEach((card) => {
+	renderTarget.innerHTML = html;
+
+	const dropdownList = renderTarget.querySelector("#fandoms-nav-list");
+	if (dropdownList) {
+		const dropdownItems = [];
+		singleFandoms.forEach((count, fandom) => {
+			dropdownItems.push({ fandom, count, type: "single", icon: "📖" });
+		});
+		crossoverPairs.forEach((otherFandoms, fandom) => {
+			dropdownItems.push({
+				fandom,
+				count: otherFandoms.size,
+				type: "crossover",
+				icon: "🔀",
+			});
+		});
+
+		dropdownList.innerHTML = dropdownItems
+			.sort(
+				(a, b) => b.count - a.count || a.fandom.localeCompare(b.fandom),
+			)
+			.map((item) => {
+				const safeName = escapeHtml(item.fandom);
+				return `
+					<button type="button" class="fandom-dropdown-item" data-fandom="${encodeURIComponent(
+						item.fandom,
+					)}" data-type="${item.type}">
+						<span class="pill-icon">${item.icon}</span>
+						<span class="pill-label">${safeName}</span>
+						<span class="pill-count">${item.count}</span>
+					</button>
+				`;
+			})
+			.join("");
+	}
+
+	renderTarget.querySelectorAll(".fandom-card").forEach((card) => {
 		card.addEventListener("click", () => {
 			const fandom = decodeURIComponent(card.dataset.fandom);
 			const type = card.dataset.type;
 			handleFandomClick(fandom, type);
 		});
 	});
+
+	const viewToggleButtons = renderTarget.querySelectorAll(".view-toggle-btn");
+	viewToggleButtons.forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const view = btn.dataset.view;
+			filterState.fandomsView = view;
+			persistFilters();
+			setupFandomNav(allNovels);
+		});
+	});
+
+	const dropdownToggle = renderTarget.querySelector("#fandoms-nav-toggle");
+	const dropdownPanel = renderTarget.querySelector("#fandoms-nav-panel");
+	if (dropdownToggle && dropdownPanel) {
+		dropdownToggle.addEventListener("click", () => {
+			dropdownPanel.classList.toggle("open");
+		});
+	}
+
+	if (dropdownList) {
+		dropdownList
+			.querySelectorAll(".fandom-dropdown-item")
+			.forEach((button) => {
+				button.addEventListener("click", () => {
+					const fandom = decodeURIComponent(button.dataset.fandom);
+					const type = button.dataset.type;
+					handleFandomClick(fandom, type);
+				});
+			});
+	}
 }
 
 function handleFandomClick(fandom, type) {
-	const backBtn = document.getElementById("back-to-all");
-	const categoryTitle = document.getElementById("category-title");
-	const categoryGrid = document.getElementById("category-grid");
-
 	selectedFandom = fandom;
 
 	if (type === "crossover") {
-		const crossoverPartners = new Map();
-		allNovels.forEach((novel) => {
+		const filtered = allNovels.filter((novel) => {
 			const isCrossover = novel.metadata?.isCrossover === true;
 			const fandoms = novel.metadata?.fandoms || [];
-
-			if (isCrossover && fandoms.includes(fandom)) {
-				fandoms.forEach((otherFandom) => {
-					if (otherFandom !== fandom) {
-						crossoverPartners.set(
-							otherFandom,
-							(crossoverPartners.get(otherFandom) || 0) + 1
-						);
-					}
-				});
-			}
+			return isCrossover && fandoms.includes(fandom);
 		});
-
-		categoryTitle.textContent = `${fandom} Crossovers`;
-		backBtn.style.display = "inline-block";
-
-		let html = `<div class="fandom-grid">`;
-		crossoverPartners.forEach((count, partner) => {
-			html += `
-				<button class="fandom-card partner" data-partner="${encodeURIComponent(
-					partner
-				)}">
-					<span class="fandom-icon">×</span>
-					<span class="fandom-name">${escapeHtml(partner)}</span>
-					<span class="fandom-count">${count} ${count === 1 ? "story" : "stories"}</span>
-				</button>
-			`;
-		});
-		html += `</div>`;
-
-		categoryGrid.innerHTML = html;
-		categoryGrid
-			.querySelectorAll(".fandom-card.partner")
-			.forEach((card) => {
-				card.addEventListener("click", () => {
-					const partner = decodeURIComponent(card.dataset.partner);
-					filterNovelsByFandomPair(fandom, partner);
-				});
-			});
+		renderNovels(filtered);
 	} else {
 		filterNovelsBySingleFandom(fandom);
 	}
+
+	document
+		.getElementById("novel-grid")
+		.scrollIntoView({ behavior: "smooth" });
 }
 
 function filterNovelsByFandomPair(fandom1, fandom2) {
@@ -1149,22 +1231,67 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
+function setInsightTarget(valueId, novel, text) {
+	const valueEl = document.getElementById(valueId);
+	if (!valueEl) return;
+	valueEl.textContent = text || "-";
+	const item = valueEl.closest(".analytics-item");
+	if (!item) return;
+	if (novel && novel.id) {
+		item.dataset.novelId = novel.id;
+		item.classList.add("analytics-clickable");
+		item.setAttribute("role", "button");
+		item.tabIndex = 0;
+	} else {
+		item.removeAttribute("data-novel-id");
+		item.classList.remove("analytics-clickable");
+		item.removeAttribute("role");
+		item.removeAttribute("tabindex");
+	}
+}
+
+function setupInsightClicks() {
+	const container = document.querySelector(".analytics-items");
+	if (!container || container.dataset.bound === "true") return;
+	container.dataset.bound = "true";
+
+	const openFromItem = (item) => {
+		if (!item?.dataset?.novelId) return;
+		const novel = allNovels.find((n) => n.id === item.dataset.novelId);
+		if (novel) showNovelModal(novel);
+	};
+
+	container.addEventListener("click", (event) => {
+		const item = event.target.closest(".analytics-item");
+		openFromItem(item);
+	});
+
+	container.addEventListener("keydown", (event) => {
+		if (event.key !== "Enter" && event.key !== " ") return;
+		const item = event.target.closest(".analytics-item");
+		if (!item?.dataset?.novelId) return;
+		event.preventDefault();
+		openFromItem(item);
+	});
+}
+
 function updateAnalytics(novels) {
 	if (!novels || novels.length === 0) {
 		document.getElementById("stats-novels").textContent = "0";
 		document.getElementById("stats-enhanced").textContent = "0";
 		document.getElementById("stats-words").textContent = "0";
+		document.getElementById("stats-avg-words").textContent = "-";
 		document.getElementById("stats-reading").textContent = "0%";
 		document.getElementById("stats-avgrating").textContent = "-";
 		document.getElementById("stats-completed").textContent = "0";
 		document.getElementById("stats-single").textContent = "0";
 		document.getElementById("stats-crossovers").textContent = "0";
-		document.getElementById("most-favorited").textContent = "-";
-		document.getElementById("most-followed").textContent = "-";
-		document.getElementById("most-reviewed").textContent = "-";
-		document.getElementById("longest-story").textContent = "-";
-		document.getElementById("newest-addition").textContent = "-";
-		document.getElementById("most-chapters").textContent = "-";
+		setInsightTarget("most-favorited", null, "-");
+		setInsightTarget("most-followed", null, "-");
+		setInsightTarget("most-reviewed", null, "-");
+		setInsightTarget("longest-story", null, "-");
+		setInsightTarget("newest-addition", null, "-");
+		setInsightTarget("most-chapters", null, "-");
 
 		renderReadingStatusChart({});
 		return;
@@ -1179,6 +1306,7 @@ function updateAnalytics(novels) {
 		(sum, n) => sum + (n.metadata?.words || n.words || 0),
 		0
 	);
+	const avgWords = totalNovels > 0 ? Math.round(totalWords / totalNovels) : 0;
 	const readingBuckets = novels.reduce((acc, novel) => {
 		const key =
 			normalizeReadingStatus(novel.readingStatus) ||
@@ -1221,6 +1349,8 @@ function updateAnalytics(novels) {
 		totalEnhanced.toLocaleString();
 	document.getElementById("stats-words").textContent =
 		formatNumber(totalWords);
+	document.getElementById("stats-avg-words").textContent =
+		formatNumber(avgWords);
 	document.getElementById("stats-completed").textContent =
 		completedWorks.toLocaleString();
 	document.getElementById("stats-crossovers").textContent =
@@ -1293,28 +1423,50 @@ function updateAnalytics(novels) {
 		}
 	});
 
-	document.getElementById("most-favorited").textContent = mostFavorited
-		? `${mostFavorited.title} (${mostFavorited.metadata?.favorites || 0})`
-		: "-";
-	document.getElementById("most-followed").textContent = mostFollowed
-		? `${mostFollowed.title} (${mostFollowed.metadata?.follows || 0})`
-		: "-";
-	document.getElementById("most-reviewed").textContent = mostReviewed
-		? `${mostReviewed.title} (${mostReviewed.metadata?.reviews || 0})`
-		: "-";
-	document.getElementById("longest-story").textContent = longest
-		? `${longest.title} (${formatNumber(longest.metadata?.words || 0)})`
-		: "-";
-	document.getElementById("newest-addition").textContent = newestAddition
-		? newestAddition.title
-		: "-";
-	document.getElementById("most-chapters").textContent = mostChapters
-		? `${mostChapters.title} (${
-				mostChapters.totalChapters ||
-				mostChapters.metadata?.chapters ||
-				0
-		  })`
-		: "-";
+	setInsightTarget(
+		"most-favorited",
+		mostFavorited,
+		mostFavorited
+			? `${mostFavorited.title} (${mostFavorited.metadata?.favorites || 0})`
+			: "-",
+	);
+	setInsightTarget(
+		"most-followed",
+		mostFollowed,
+		mostFollowed
+			? `${mostFollowed.title} (${mostFollowed.metadata?.follows || 0})`
+			: "-",
+	);
+	setInsightTarget(
+		"most-reviewed",
+		mostReviewed,
+		mostReviewed
+			? `${mostReviewed.title} (${mostReviewed.metadata?.reviews || 0})`
+			: "-",
+	);
+	setInsightTarget(
+		"longest-story",
+		longest,
+		longest
+			? `${longest.title} (${formatNumber(longest.metadata?.words || 0)})`
+			: "-",
+	);
+	setInsightTarget(
+		"newest-addition",
+		newestAddition,
+		newestAddition ? newestAddition.title : "-",
+	);
+	setInsightTarget(
+		"most-chapters",
+		mostChapters,
+		mostChapters
+			? `${mostChapters.title} (${
+					mostChapters.totalChapters ||
+					mostChapters.metadata?.chapters ||
+					0
+				})`
+			: "-",
+	);
 
 	renderReadingStatusChart(readingBuckets, totalNovels);
 }
@@ -1660,6 +1812,7 @@ async function initializeFanFictionShelf() {
 		populateDynamicFilters();
 		setupFandomNav(allNovels);
 		setupFandomFilter();
+		setupInsightClicks();
 		applyFiltersAndSort();
 	} catch (error) {
 		console.error(
@@ -1715,10 +1868,10 @@ function showToast(message, type = "success") {
 async function removeNovelFromLibrary(novelId) {
 	try {
 		const result = await browser.storage.local.get("rg_novel_library");
-		const library = result.rg_novel_library || {};
+		const library = result.rg_novel_library || { novels: {} };
 
-		if (library[novelId]) {
-			delete library[novelId];
+		if (library.novels && library.novels[novelId]) {
+			delete library.novels[novelId];
 			await browser.storage.local.set({ rg_novel_library: library });
 
 			// Refresh the display
@@ -1734,17 +1887,25 @@ async function removeNovelFromLibrary(novelId) {
 	}
 }
 
-function refreshNovelMetadata(novelId) {
-	// Dispatch event to main library to handle refresh
-	window.dispatchEvent(
-		new CustomEvent("refreshNovelMetadata", { detail: { novelId } })
-	);
-	showToast("Refresh requested - visit the novel page to update", "info");
+function refreshNovelMetadata(novel) {
+	const url = novel?.url || novel?.sourceUrl || "";
+	if (!url) {
+		showToast("No source URL available for refresh", "error");
+		return;
+	}
+	window.open(url, "_blank", "noopener,noreferrer");
+	showToast("Opened source page to refresh metadata", "info");
 }
 
 function openEditModal(novel) {
-	// Dispatch event to main library to handle edit
-	window.dispatchEvent(
-		new CustomEvent("openEditModal", { detail: { novel } })
-	);
+	const id = novel?.id || "";
+	if (!id) {
+		showToast("Missing novel id for edit", "error");
+		return;
+	}
+	const baseUrl =
+		typeof browser !== "undefined" && browser?.runtime?.getURL
+			? browser.runtime.getURL("library/library.html")
+			: "../library.html";
+	window.open(`${baseUrl}?edit=${encodeURIComponent(id)}`, "_blank");
 }

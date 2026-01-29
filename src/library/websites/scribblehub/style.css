@@ -1039,19 +1039,24 @@ body {
 
 /* Stats Summary */
 .stats-summary {
-	display: flex;
-	gap: var(--spacing-lg);
-	margin-bottom: var(--spacing-lg);
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-md);
 }
 
 .stat-card {
 	background: var(--bg-secondary);
-	padding: var(--spacing-md);
+	padding: var(--spacing-sm) var(--spacing-md);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border-color);
-	min-width: 150px;
+	min-height: 92px;
 	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
 }
 
 .stat-value {
@@ -1063,6 +1068,7 @@ body {
 .stat-label {
 	font-size: 0.875rem;
 	color: var(--text-muted);
+	white-space: normal;
 }
 
 /* Shelf Filters Row */
@@ -1845,19 +1851,19 @@ body {
 
 .analytics-grid {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: var(--spacing-lg);
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+	gap: var(--spacing-md);
 }
 
 .stats-summary {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-	gap: var(--spacing-md);
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--spacing-sm);
 }
 
 .stat-card {
 	background: var(--bg-tertiary);
-	padding: var(--spacing-md);
+	padding: var(--spacing-sm) var(--spacing-md);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border-color);
 	display: flex;
@@ -1865,6 +1871,8 @@ body {
 	align-items: center;
 	justify-content: center;
 	text-align: center;
+	min-height: 92px;
+	gap: 4px;
 }
 
 .stat-value {
@@ -1877,6 +1885,7 @@ body {
 .stat-label {
 	font-size: 0.8rem;
 	color: var(--text-secondary);
+	white-space: normal;
 }
 
 .detail-analytics {
@@ -1893,7 +1902,7 @@ body {
 
 .analytics-items {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 	gap: var(--spacing-md);
 }
 
@@ -1914,7 +1923,7 @@ body {
 .analytics-detail {
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .analytics-label {
@@ -1926,9 +1935,10 @@ body {
 	font-size: 0.9rem;
 	font-weight: 600;
 	color: var(--text-primary);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	white-space: normal;
+	overflow: visible;
+	text-overflow: clip;
+	word-break: break-word;
 }
 
 .analytics-chart {
@@ -2595,6 +2605,10 @@ body {
 	font-size: 0.75rem;
 	color: var(--text-muted);
 }
+
+.sh-progress-subtext {
+	font-size: 0.7rem;
+	color: var(--text-secondary);
 
 .sh-card-status {
 	display: flex;

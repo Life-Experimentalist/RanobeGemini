@@ -159,7 +159,7 @@ export class NovelLibrary {
 		debugLog(
 			`📚 Novel Library initialized with ${
 				Object.keys(library.novels).length
-			} novels`
+			} novels`,
 		);
 		return library;
 	}
@@ -198,9 +198,8 @@ export class NovelLibrary {
 					const oldChaptersKey = this.CHAPTERS_KEY_PREFIX + oldId;
 					const newChaptersKey = this.CHAPTERS_KEY_PREFIX + newId;
 
-					const chaptersResult = await browser.storage.local.get(
-						oldChaptersKey
-					);
+					const chaptersResult =
+						await browser.storage.local.get(oldChaptersKey);
 					if (chaptersResult[oldChaptersKey]) {
 						await browser.storage.local.set({
 							[newChaptersKey]: chaptersResult[oldChaptersKey],
@@ -228,15 +227,17 @@ export class NovelLibrary {
 	async getLibrary() {
 		try {
 			const result = await browser.storage.local.get(this.LIBRARY_KEY);
-			const library =
-				result[this.LIBRARY_KEY] || {
-					novels: {},
-					shelves: {},
-					lastUpdated: null,
-					version: "1.0",
-				};
+			const library = result[this.LIBRARY_KEY] || {
+				novels: {},
+				shelves: {},
+				lastUpdated: null,
+				version: "1.0",
+			};
 
 			await this.applyStaleStatusRules(library);
+			if (this.normalizeFanfictionMetadata(library)) {
+				await this.saveLibrary(library);
+			}
 			return library;
 		} catch (error) {
 			debugError("Failed to get library:", error);
@@ -247,6 +248,139 @@ export class NovelLibrary {
 				version: "1.0",
 			};
 		}
+	}
+
+	/**
+	 * Normalize FanFiction character/relationship metadata for existing novels.
+	 * - Relationship groups come from bracketed names and are capped at 4.
+	 * - Characters are cleaned of bracket fragments and status tokens.
+	 * @param {Object} library
+	 * @returns {boolean} Whether changes were applied.
+	 */
+	normalizeFanfictionMetadata(library) {
+		if (!library || !library.novels) return false;
+		let changed = false;
+
+		const cleanName = (value) =>
+			String(value || "")
+				.replace(/[\[\]]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+
+		const isInvalidToken = (value) => {
+			if (!value) return true;
+			const cleaned = value.trim();
+			if (!cleaned) return true;
+			if (/^\d+$/.test(cleaned)) return true;
+			if (/^\-?\s*status\s*:/i.test(cleaned)) return true;
+			if (/^\-?\s*complete\s*\-?$/i.test(cleaned)) return true;
+			if (
+				/^\-?\s*complete\s*\-?$/i.test(cleaned.replace(/\s*\-\s*/g, ""))
+			)
+				return true;
+			return false;
+		};
+
+		const addUnique = (list, value) => {
+			if (!value) return;
+			if (!list.includes(value)) list.push(value);
+		};
+
+		for (const novel of Object.values(library.novels)) {
+			const shelfId = (novel.shelfId || "").toLowerCase();
+			if (shelfId !== "fanfiction") continue;
+
+			const meta = novel.metadata || {};
+			let novelChanged = false;
+			const sourceTags = Array.isArray(novel.tags) ? novel.tags : [];
+			const sourceGenres = Array.isArray(novel.genres)
+				? novel.genres
+				: [];
+			const sourceCharacters = Array.isArray(meta.characters)
+				? meta.characters
+				: [];
+
+			const relationshipSet = new Set();
+			const relationships = [];
+
+			const addRelationshipGroup = (group) => {
+				const cleaned = group
+					.map((c) => cleanName(c))
+					.filter((c) => !isInvalidToken(c))
+					.slice(0, 4);
+				if (cleaned.length < 2) return;
+				const key = cleaned.join("|");
+				if (relationshipSet.has(key)) return;
+				relationshipSet.add(key);
+				relationships.push(cleaned);
+			};
+
+			// Existing relationships
+			if (Array.isArray(meta.relationships)) {
+				meta.relationships.forEach((group) => {
+					if (Array.isArray(group)) addRelationshipGroup(group);
+				});
+			}
+
+			// Extract bracketed relationships from tags/genres
+			const combined = [...sourceTags, ...sourceGenres].join(", ");
+			const bracketMatches = combined.match(/\[([^\]]+)\]/g) || [];
+			bracketMatches.forEach((bracket) => {
+				const inside = bracket.replace(/[\[\]]/g, "").trim();
+				if (!inside) return;
+				addRelationshipGroup(inside.split(","));
+			});
+
+			const characterList = [];
+			[...sourceCharacters, ...sourceTags, ...sourceGenres].forEach(
+				(entry) => {
+					const cleaned = cleanName(entry);
+					if (isInvalidToken(cleaned)) return;
+					addUnique(characterList, cleaned);
+				},
+			);
+
+			relationships.forEach((group) => {
+				group.forEach((c) => addUnique(characterList, c));
+			});
+
+			const prevChars = Array.isArray(meta.characters)
+				? meta.characters
+				: [];
+			const prevRels = Array.isArray(meta.relationships)
+				? meta.relationships
+				: [];
+
+			const charsChanged =
+				JSON.stringify(prevChars) !== JSON.stringify(characterList);
+			const relChanged =
+				JSON.stringify(prevRels) !== JSON.stringify(relationships);
+
+			if (charsChanged) {
+				if (characterList.length) {
+					meta.characters = characterList;
+				} else {
+					delete meta.characters;
+				}
+				novelChanged = true;
+			}
+
+			if (relChanged) {
+				if (relationships.length) {
+					meta.relationships = relationships;
+				} else {
+					delete meta.relationships;
+				}
+				novelChanged = true;
+			}
+
+			if (novelChanged) {
+				novel.metadata = meta;
+				changed = true;
+			}
+		}
+
+		return changed;
 	}
 
 	/**
@@ -440,7 +574,7 @@ export class NovelLibrary {
 					editedFields[key]
 				) {
 					debugLog(
-						`📚 Skipping auto-update for manually edited field: ${key}`
+						`📚 Skipping auto-update for manually edited field: ${key}`,
 					);
 					continue;
 				}
@@ -481,7 +615,7 @@ export class NovelLibrary {
 				} else if (isValidValue(existingNovel[key])) {
 					// Keep existing valid value
 					debugLog(
-						`📚 Preserving existing ${key}: ${existingNovel[key]}`
+						`📚 Preserving existing ${key}: ${existingNovel[key]}`,
 					);
 				}
 			}
@@ -520,7 +654,7 @@ export class NovelLibrary {
 
 		// Recount novels for this shelf
 		library.shelves[novelData.shelfId].novelCount = Object.values(
-			library.novels
+			library.novels,
 		).filter((n) => n.shelfId === novelData.shelfId).length;
 		library.shelves[novelData.shelfId].lastUpdated = now;
 
@@ -615,7 +749,7 @@ export class NovelLibrary {
 			) {
 				updates.readingStatus = READING_STATUS.COMPLETED;
 				debugLog(
-					`📚 Auto-status: ${currentStatus} → Completed (reached chapter ${chapterNumber}/${novel.totalChapters})`
+					`📚 Auto-status: ${currentStatus} → Completed (reached chapter ${chapterNumber}/${novel.totalChapters})`,
 				);
 			}
 
@@ -624,7 +758,7 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 
 			debugLog(
-				`📚 Progress updated: Ch.${chapterNumber} - ${novel.title}`
+				`📚 Progress updated: Ch.${chapterNumber} - ${novel.title}`,
 			);
 			return novel;
 		} catch (error) {
@@ -652,7 +786,7 @@ export class NovelLibrary {
 
 			await this.saveLibrary(library);
 			debugLog(
-				`📝 Updated custom prompt for: ${library.novels[novelId].title}`
+				`📝 Updated custom prompt for: ${library.novels[novelId].title}`,
 			);
 			return true;
 		} catch (error) {
@@ -692,8 +826,8 @@ export class NovelLibrary {
 				}
 				debugLog(
 					`📚 Reset edited fields [${fieldsToReset.join(
-						", "
-					)}] for: ${novel.title}`
+						", ",
+					)}] for: ${novel.title}`,
 				);
 			}
 
@@ -741,7 +875,7 @@ export class NovelLibrary {
 	async getRecentNovels(limit = 0) {
 		const library = await this.getLibrary();
 		let novels = Object.values(library.novels).sort(
-			(a, b) => b.lastAccessedAt - a.lastAccessedAt
+			(a, b) => b.lastAccessedAt - a.lastAccessedAt,
 		);
 
 		if (limit > 0) {
@@ -763,7 +897,7 @@ export class NovelLibrary {
 			totalNovels: novels.length,
 			totalEnhancedChapters: novels.reduce(
 				(sum, n) => sum + (n.enhancedChaptersCount || 0),
-				0
+				0,
 			),
 			shelves: {},
 		};
@@ -777,7 +911,7 @@ export class NovelLibrary {
 				novelCount: shelfNovels.length,
 				enhancedChapters: shelfNovels.reduce(
 					(sum, n) => sum + (n.enhancedChaptersCount || 0),
-					0
+					0,
 				),
 			};
 		}
@@ -803,14 +937,14 @@ export class NovelLibrary {
 		// Update shelf stats
 		if (library.shelves[shelfId]) {
 			library.shelves[shelfId].novelCount = Object.values(
-				library.novels
+				library.novels,
 			).filter((n) => n.shelfId === shelfId).length;
 		}
 
 		// Also remove chapters data
 		try {
 			await browser.storage.local.remove(
-				this.CHAPTERS_KEY_PREFIX + novelId
+				this.CHAPTERS_KEY_PREFIX + novelId,
 			);
 		} catch (error) {
 			debugError("Failed to remove chapters data:", error);
@@ -852,7 +986,7 @@ export class NovelLibrary {
 
 			await this.saveLibrary(library);
 			debugLog(
-				`📚 Updated reading status for ${library.novels[novelId].title}: ${status}`
+				`📚 Updated reading status for ${library.novels[novelId].title}: ${status}`,
 			);
 			return true;
 		} catch (error) {
@@ -1005,19 +1139,19 @@ export class NovelLibrary {
 					const shouldUpdate =
 						field === "totalChapters"
 							? (!novel[field] || novel[field] === 0) &&
-							  hasValidNewValue
+								hasValidNewValue
 							: hasValidNewValue &&
-							  (!hasExistingValue || hasValidNewValue);
+								(!hasExistingValue || hasValidNewValue);
 
 					if (shouldUpdate && hasValidNewValue) {
 						debugLog(
-							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`
+							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`,
 						);
 						novel[field] = newMetadata[field];
 						updated = true;
 					} else if (!hasValidNewValue && hasExistingValue) {
 						debugLog(
-							`📚 Preserving existing ${field}: ${novel[field]}`
+							`📚 Preserving existing ${field}: ${novel[field]}`,
 						);
 					}
 				}
@@ -1086,7 +1220,7 @@ export class NovelLibrary {
 
 			// Update enhanced chapters count in novel
 			const enhancedCount = Object.values(chapters.chapters).filter(
-				(ch) => ch.isEnhanced
+				(ch) => ch.isEnhanced,
 			).length;
 
 			const library = await this.getLibrary();
@@ -1261,7 +1395,7 @@ export class NovelLibrary {
 						// Keep the earlier addedAt date
 						merged[key] = Math.min(
 							existingValue || Date.now(),
-							incomingValue || Date.now()
+							incomingValue || Date.now(),
 						);
 						continue;
 					}
@@ -1273,7 +1407,7 @@ export class NovelLibrary {
 						// Keep the later timestamp
 						merged[key] = Math.max(
 							existingValue || 0,
-							incomingValue || 0
+							incomingValue || 0,
 						);
 						continue;
 					}
@@ -1284,7 +1418,7 @@ export class NovelLibrary {
 						// Take the higher value
 						merged[key] = Math.max(
 							existingValue || 0,
-							incomingValue || 0
+							incomingValue || 0,
 						);
 						continue;
 					}
@@ -1338,7 +1472,7 @@ export class NovelLibrary {
 				const existingLibrary = await this.getLibrary();
 
 				for (const [novelId, novel] of Object.entries(
-					data.library.novels || {}
+					data.library.novels || {},
 				)) {
 					try {
 						if (existingLibrary.novels[novelId]) {
@@ -1346,7 +1480,7 @@ export class NovelLibrary {
 							const existing = existingLibrary.novels[novelId];
 							existingLibrary.novels[novelId] = mergeNovels(
 								existing,
-								novel
+								novel,
 							);
 							updated++;
 						} else {
@@ -1364,7 +1498,7 @@ export class NovelLibrary {
 				for (const [shelfId, shelf] of Object.entries(SHELVES)) {
 					existingLibrary.shelves[shelf.id] = {
 						novelCount: Object.values(
-							existingLibrary.novels
+							existingLibrary.novels,
 						).filter((n) => n.shelfId === shelf.id).length,
 						lastUpdated: Date.now(),
 					};
@@ -1375,14 +1509,13 @@ export class NovelLibrary {
 				// Merge chapters data
 				if (data.chapters) {
 					for (const [novelId, chapters] of Object.entries(
-						data.chapters
+						data.chapters,
 					)) {
 						try {
 							const chaptersKey =
 								this.CHAPTERS_KEY_PREFIX + novelId;
-							const result = await browser.storage.local.get(
-								chaptersKey
-							);
+							const result =
+								await browser.storage.local.get(chaptersKey);
 							const existingChapters = result[chaptersKey] || {
 								chapters: {},
 							};
@@ -1399,7 +1532,7 @@ export class NovelLibrary {
 						} catch (err) {
 							debugError(
 								`Error importing chapters for ${novelId}:`,
-								err
+								err,
 							);
 						}
 					}
@@ -1415,7 +1548,7 @@ export class NovelLibrary {
 				if (data.chapters) {
 					const chaptersToSave = {};
 					for (const [novelId, chapters] of Object.entries(
-						data.chapters
+						data.chapters,
 					)) {
 						chaptersToSave[this.CHAPTERS_KEY_PREFIX + novelId] =
 							chapters;
@@ -1425,7 +1558,7 @@ export class NovelLibrary {
 			}
 
 			debugLog(
-				`📚 Library imported: ${imported} new, ${updated} updated, ${errors} errors`
+				`📚 Library imported: ${imported} new, ${updated} updated, ${errors} errors`,
 			);
 			return { success: true, imported, updated, errors };
 		} catch (error) {
@@ -1600,7 +1733,7 @@ export class NovelLibrary {
 			};
 
 			novelToKeep = novels.reduce((best, current) =>
-				scoreNovel(current) > scoreNovel(best) ? current : best
+				scoreNovel(current) > scoreNovel(best) ? current : best,
 			);
 		}
 
@@ -1698,7 +1831,7 @@ export class NovelLibrary {
 
 				// Merge chapters, preferring enhanced ones
 				for (const [chapterId, chapter] of Object.entries(
-					removeChapters.chapters || {}
+					removeChapters.chapters || {},
 				)) {
 					const existingChapter = keepChapters.chapters[chapterId];
 					if (
@@ -1728,7 +1861,7 @@ export class NovelLibrary {
 		// Update shelf stats
 		if (novelToKeep.shelfId && library.shelves[novelToKeep.shelfId]) {
 			library.shelves[novelToKeep.shelfId].novelCount = Object.values(
-				library.novels
+				library.novels,
 			).filter((n) => n.shelfId === novelToKeep.shelfId).length;
 			library.shelves[novelToKeep.shelfId].lastUpdated = Date.now();
 		}
@@ -1736,7 +1869,7 @@ export class NovelLibrary {
 		await this.saveLibrary(library);
 
 		debugLog(
-			`📚 Merged ${removeIds.length} duplicates into ${novelToKeep.title}`
+			`📚 Merged ${removeIds.length} duplicates into ${novelToKeep.title}`,
 		);
 		return {
 			success: true,
@@ -1779,7 +1912,7 @@ export class NovelLibrary {
 		}
 
 		debugLog(
-			`📚 Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`
+			`📚 Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`,
 		);
 		return {
 			success: errors.length === 0,
@@ -1808,6 +1941,13 @@ export async function getNovelLibrary() {
  * @param {Object} novel - Novel to update
  * @returns {Promise<boolean>} Success status
  */
-export async function updateNovelInLibrary(novel) {
-	return await novelLibrary.updateNovel(novel);
+export async function updateNovelInLibrary(novelOrId, updates = {}) {
+	if (novelOrId && typeof novelOrId === "object") {
+		const novelId = novelOrId.id;
+		if (!novelId) return null;
+		return await novelLibrary.updateNovel(novelId, novelOrId);
+	}
+
+	if (!novelOrId) return null;
+	return await novelLibrary.updateNovel(novelOrId, updates);
 }

@@ -2770,7 +2770,9 @@ function updateCarouselPosition(animate = true) {
 	if (!track.children[0]) return;
 
 	const itemWidth = track.children[0].offsetWidth || 0;
-	const gap = 16; // --spacing-md
+	const computedStyle = window.getComputedStyle(track);
+	const gapValue = computedStyle.columnGap || computedStyle.gap || "0px";
+	const gap = parseFloat(gapValue) || 0;
 	const translateX = -(carouselState.currentIndex * (itemWidth + gap));
 
 	track.style.transition = animate ? "transform 0.5s ease-in-out" : "none";

@@ -44,6 +44,25 @@ Please maintain:
 - Preserve the narrative flow and pacing
 When enhancing, improve readability while respecting the author's creative voice and the source material.`;
 
+	static initialize() {
+		try {
+			const { hostname, pathname, search, hash } = window.location;
+			const isBareDomain = hostname === "fanfiction.net";
+			const isStoryPath = /^\/s\/\d+/.test(pathname);
+			const isMobileUA =
+				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+				window.innerWidth <= 768;
+			if (isBareDomain && isStoryPath && isMobileUA) {
+				const target = `https://m.fanfiction.net${pathname}${search}${hash}`;
+				if (window.location.href !== target) {
+					window.location.replace(target);
+				}
+			}
+		} catch (_err) {
+			// no-op
+		}
+	}
+
 	constructor() {
 		super();
 		this.selectors = {
@@ -121,7 +140,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		}
 		return window.location.href.replace(
 			"m.fanfiction.net",
-			"www.fanfiction.net"
+			"www.fanfiction.net",
 		);
 	}
 
@@ -205,7 +224,7 @@ When enhancing, improve readability while respecting the author's creative voice
 			// Switch from m.fanfiction.net to www.fanfiction.net
 			const newUrl = currentUrl.replace(
 				"m.fanfiction.net",
-				"www.fanfiction.net"
+				"www.fanfiction.net",
 			);
 			window.location.href = newUrl;
 		});
@@ -278,7 +297,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		const contentDiv = document.getElementById("content");
 		if (contentDiv) {
 			const titleElement = contentDiv.querySelector(
-				"div[align='center'] b"
+				"div[align='center'] b",
 			);
 			if (titleElement) {
 				return titleElement.textContent.trim();
@@ -315,7 +334,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		debugLog(
 			"FanFiction Mobile applyEnhancedContent: contentArea is",
 			contentArea.id,
-			contentArea.className
+			contentArea.className,
 		);
 
 		// Check if the enhanced text contains HTML tags
@@ -326,7 +345,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		if (hasHTMLTags) {
 			// Parse HTML content to extract paragraph text
 			debugLog(
-				"FanFiction Mobile: Enhanced text contains HTML, parsing..."
+				"FanFiction Mobile: Enhanced text contains HTML, parsing...",
 			);
 			const tempDiv = document.createElement("div");
 			tempDiv.innerHTML = enhancedText;
@@ -338,12 +357,12 @@ When enhancing, improve readability while respecting the author's creative voice
 				.filter((text) => text.length > 0);
 
 			debugLog(
-				`FanFiction Mobile: Extracted ${enhancedParagraphs.length} paragraphs from HTML`
+				`FanFiction Mobile: Extracted ${enhancedParagraphs.length} paragraphs from HTML`,
 			);
 		} else {
 			// Plain text - split on double newlines as paragraph boundaries
 			debugLog(
-				"FanFiction Mobile: Enhanced text is plain text, splitting by newlines..."
+				"FanFiction Mobile: Enhanced text is plain text, splitting by newlines...",
 			);
 			enhancedParagraphs = enhancedText
 				.replace(/\r/g, "")
@@ -354,17 +373,17 @@ When enhancing, improve readability while respecting the author's creative voice
 
 		// Get all existing paragraphs
 		const originalParagraphEls = Array.from(
-			contentArea.querySelectorAll("p")
+			contentArea.querySelectorAll("p"),
 		);
 		const replaceCount = Math.min(
 			originalParagraphEls.length,
-			enhancedParagraphs.length
+			enhancedParagraphs.length,
 		);
 
 		debugLog(
 			`FanFiction Mobile: Replacing ${replaceCount} existing paragraphs, adding ${
 				enhancedParagraphs.length - replaceCount
-			} new ones`
+			} new ones`,
 		);
 
 		// Replace existing paragraphs

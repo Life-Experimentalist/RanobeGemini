@@ -367,14 +367,17 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 
 		const enhanced = novel.enhancedChaptersCount ?? 0;
 		const chapters = getVal("totalChapters") || getVal("chapterCount") || 0;
+		const currentChapter =
+			getVal("lastReadChapter") || getVal("currentChapter") || 0;
+		const safeCurrent = chapters
+			? Math.min(currentChapter || 0, chapters)
+			: currentChapter || 0;
 		const progressPercent = chapters
-			? Math.min(100, Math.round((enhanced / chapters) * 100))
+			? Math.min(100, Math.round((safeCurrent / chapters) * 100))
 			: 0;
 		const progressLabel = chapters
-			? `${this.formatNumber(enhanced)}/${this.formatNumber(
-					chapters,
-				)} enhanced`
-			: `${this.formatNumber(enhanced)} enhanced`;
+			? `${this.formatNumber(safeCurrent)} / ${this.formatNumber(chapters)}`
+			: `${this.formatNumber(safeCurrent)}`;
 
 		// Build all badge chips
 		const rating = getVal("rating");
@@ -560,11 +563,9 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 						<div class="progress-bar-slim">
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
-						<span class="enhancement-text">✨ <strong>${this.formatNumber(
+						<span class="enhancement-text">📖 <strong>${progressLabel}</strong> • ✨ ${this.formatNumber(
 							enhanced,
-						)}</strong> / ${this.formatNumber(
-							chapters,
-						)} enhanced <span class="dim">(${progressPercent}%)</span></span>
+						)} enhanced</span>
 					</div>
 
 					${statMarkup ? `<div class="card-stats-bar">${statMarkup}</div>` : ""}

@@ -85,6 +85,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Check if current page is a chapter page (not a listing/index page)
 	isChapterPage() {
+		if (/^\/chapters\/\d+\/?$/.test(window.location.pathname)) {
+			return false;
+		}
 		// Check if URL contains chapter indicators
 		if (
 			window.location.pathname.includes("/chapter-") ||
@@ -132,6 +135,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	 * @returns {boolean} True if this is a novel info/description page
 	 */
 	isNovelPage() {
+		if (/^\/chapters\/\d+\/?$/.test(window.location.pathname)) {
+			return false;
+		}
 		// Novel info pages typically have the .r-fullstory structure
 		if (document.querySelector(".r-fullstory")) {
 			return true;

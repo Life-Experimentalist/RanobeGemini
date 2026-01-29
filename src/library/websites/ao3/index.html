@@ -5,6 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Archive of Our Own - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
+		<link rel="stylesheet" href="./style.css" />
 		<link
 			rel="icon"
 			type="image/png"
@@ -27,7 +28,6 @@
 						alt="Archive of Our Own"
 						class="shelf-page-icon-img"
 						id="page-icon-img"
-						onerror="this.style.display='none'; document.getElementById('page-icon').style.display='inline';"
 					/>
 					<span
 						class="shelf-page-icon"
@@ -79,6 +79,10 @@
 						<div class="stat-card">
 							<span class="stat-value" id="stats-reading">0%</span>
 							<span class="stat-label">Reading</span>
+						</div>
+						<div class="stat-card">
+							<span class="stat-value" id="stats-avg-words">-</span>
+							<span class="stat-label">Avg Words</span>
 						</div>
 					</div>
 
@@ -226,7 +230,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label>Fandoms (max 2):</label>
+								<label>Fandoms:</label>
 								<div class="multi-dropdown">
 									<button type="button" class="multi-dropdown-toggle" id="fandoms-dropdown-toggle">Choose Fandoms</button>
 									<div class="multi-dropdown-panel" id="fandoms-dropdown-panel">
@@ -288,6 +292,7 @@
 								</button>
 							</div>
 						</div>
+						<div class="filter-fandom-section" id="fandom-filter-section"></div>
 					</div>
 				</div>
 
@@ -301,19 +306,7 @@
 				</div>
 			</div>
 
-			<!-- Category Navigation for Fandoms -->
-			<div class="category-section" id="category-section" style="display: none">
-				<div class="category-header">
-					<h3 id="category-title">Browse by Fandom</h3>
-					<button id="back-to-all" class="back-btn" style="display: none">
-						← Back to All
-					</button>
-				</div>
-				<div class="category-grid" id="category-grid"></div>
-			</div>
 
-			<br />
-			<br />
 
 			<!-- Loading State -->
 			<div class="loading-state" id="loading-state">

@@ -325,8 +325,13 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 
 		const enhanced = novel.enhancedChaptersCount ?? 0;
 		const chapters = getVal("totalChapters") || getVal("chapterCount") || 0;
+		const currentChapter =
+			getVal("lastReadChapter") || getVal("currentChapter") || 0;
+		const safeCurrent = chapters
+			? Math.min(currentChapter || 0, chapters)
+			: currentChapter || 0;
 		const progressPercent = chapters
-			? Math.min(100, Math.round((enhanced / chapters) * 100))
+			? Math.min(100, Math.round((safeCurrent / chapters) * 100))
 			: 0;
 
 		// Essential metadata
@@ -378,12 +383,14 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			: "";
 
 		// Progress bar
+		const progressLabel = chapters
+			? `📖 ${this.formatNumber(safeCurrent)} / ${this.formatNumber(chapters)}`
+			: `📖 ${this.formatNumber(safeCurrent)}`;
 		const progressHTML =
-			chapters > 0
+			chapters > 0 || safeCurrent > 0 || enhanced > 0
 				? `<div class="sh-progress-bar"><div class="sh-progress-fill" style="width: ${progressPercent}%;"></div></div>
-			   <div class="sh-progress-text">✨ ${this.formatNumber(
-					enhanced,
-				)}/${this.formatNumber(chapters)}</div>`
+			   <div class="sh-progress-text">${progressLabel}</div>
+			   <div class="sh-progress-subtext">✨ ${this.formatNumber(enhanced)} enhanced</div>`
 				: "";
 
 		card.innerHTML = `
