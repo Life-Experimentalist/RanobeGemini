@@ -6,7 +6,12 @@
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { HANDLER_MODULES } from "./handler-registry.js";
 import { debugLog, debugError } from "../logger.js";
-import { getSiteSettings, isSiteEnabled } from "../site-settings.js";
+import {
+	getSiteSettings,
+	getDomainSettings,
+	isSiteEnabled,
+	isDomainEnabled,
+} from "../site-settings.js";
 
 function matchesHostname(hostname, pattern) {
 	if (!pattern || !hostname) return false;
@@ -123,6 +128,7 @@ export class HandlerManager {
 		const hostname = window.location.hostname;
 		const handlers = await this.loadHandlers();
 		const siteSettings = await getSiteSettings();
+		const domainSettings = await getDomainSettings();
 		let disabledMatchForHost = false;
 
 		for (const handler of handlers) {
@@ -134,6 +140,13 @@ export class HandlerManager {
 				);
 
 				if (shelfId && !isSiteEnabled(siteSettings, shelfId)) {
+					if (matchesHost) {
+						disabledMatchForHost = true;
+					}
+					continue;
+				}
+
+				if (!isDomainEnabled(domainSettings, hostname)) {
 					if (matchesHost) {
 						disabledMatchForHost = true;
 					}

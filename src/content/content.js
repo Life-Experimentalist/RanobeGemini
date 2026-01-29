@@ -36,6 +36,7 @@ let isCachedContent = false; // Track if current page has cached enhanced conten
 let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
+let lastKnownNovelData = null; // Cached novel data for notifications
 if (window.__RGInitDone) {
 	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
@@ -3349,6 +3350,21 @@ if (window.__RGInitDone) {
 
 		document.body.appendChild(banner);
 
+		logNotification({
+			type,
+			message,
+			title: options.title,
+			novelData: options.novelData,
+			metadata: {
+				bannerType: type,
+				duration,
+				field: options.field,
+				actionText: options.actionButton?.text || null,
+				actionUrl: options.actionButton?.url || null,
+			},
+			source: options.source || "content",
+		});
+
 		// Auto-dismiss after duration (if not 0)
 		if (duration > 0) {
 			setTimeout(() => {
@@ -3446,6 +3462,7 @@ if (window.__RGInitDone) {
 				debugLog("Could not extract novel metadata");
 				return;
 			}
+			cacheNovelData(buildNovelDataFromMetadata(metadata));
 
 			// Generate novel ID using handler or fallback method
 			let novelId = getNovelIdFromCurrentPage();
@@ -5210,6 +5227,17 @@ if (window.__RGInitDone) {
 					summaryDisplay.appendChild(summaryContentContainer);
 				}
 				statusDiv.textContent = "Summary generated successfully!";
+				logNotification({
+					type: "success",
+					message: `${summaryType} summary generated`,
+					title: `${summaryType} summary`,
+					novelData: await resolveNovelDataForNotification(),
+					metadata: {
+						summaryType,
+						isShort,
+						length: summary.length,
+					},
+				});
 			} else {
 				throw new Error("Failed to generate summary.");
 			}
@@ -5228,6 +5256,16 @@ if (window.__RGInitDone) {
 					summaryDisplay.style.display = "block"; // Keep display visible to show error
 				}
 			}
+			logNotification({
+				type: "error",
+				message: `${summaryType} summary failed: ${error.message}`,
+				title: `${summaryType} summary failed`,
+				novelData: await resolveNovelDataForNotification(),
+				metadata: {
+					summaryType,
+					isShort,
+				},
+			});
 		} finally {
 			summarizeButton.disabled = false;
 			summarizeButton.textContent = originalButtonText; // restore original label
@@ -6127,7 +6165,22 @@ if (window.__RGInitDone) {
 			setupToggleBanner(true);
 
 			window.scrollTo(0, scrollPosition);
-			showStatusMessage("Content successfully enhanced with Gemini!");
+			showStatusMessage(
+				"Content successfully enhanced with Gemini!",
+				"success",
+				5000,
+				{
+					metadata: {
+						source: isFromCache ? "cache" : "fresh",
+						model:
+							modelInfo?.name ||
+							modelInfo?.model ||
+							modelInfo?.id ||
+							null,
+						contentLength: newContent?.length || null,
+					},
+				},
+			);
 
 			// Save to cache if storage manager is available (always overwrite with latest)
 			if (storageManager) {
@@ -6512,8 +6565,103 @@ if (window.__RGInitDone) {
 		contentArea.insertBefore(noticeContainer, contentArea.firstChild);
 	}
 
+	function normalizeNotificationType(type) {
+		switch (type) {
+			case "success":
+				return "success";
+			case "error":
+				return "error";
+			case "warning":
+				return "warning";
+			case "action":
+			case "banner":
+				return "banner";
+			case "updating":
+				return "info";
+			default:
+				return "info";
+		}
+	}
+
+	function buildNovelDataFromMetadata(metadata) {
+		if (!metadata) return null;
+		return {
+			id: metadata.id,
+			title: metadata.title,
+			author: metadata.author,
+			currentChapter: metadata.currentChapter,
+			totalChapters: metadata.totalChapters,
+			source: metadata.source,
+			sourceUrl: metadata.sourceUrl,
+			mainNovelUrl: metadata.mainNovelUrl,
+		};
+	}
+
+	function cacheNovelData(novelData) {
+		if (!novelData) return lastKnownNovelData;
+		const cached = {
+			id: novelData.id,
+			title: novelData.title,
+			author: novelData.author,
+			currentChapter: novelData.currentChapter,
+			totalChapters: novelData.totalChapters,
+			source: novelData.source,
+			sourceUrl: novelData.sourceUrl,
+			mainNovelUrl: novelData.mainNovelUrl,
+		};
+		lastKnownNovelData = cached;
+		return cached;
+	}
+
+	async function resolveNovelDataForNotification() {
+		if (lastKnownNovelData) return lastKnownNovelData;
+		if (novelLibrary && typeof novelLibrary.getNovelByUrl === "function") {
+			try {
+				const novel = await novelLibrary.getNovelByUrl(
+					window.location.href,
+				);
+				if (novel) {
+					return cacheNovelData(novel);
+				}
+			} catch (_err) {
+				// ignore lookup failures
+			}
+		}
+		return null;
+	}
+
+	async function logNotification({
+		type,
+		message,
+		title,
+		novelData,
+		metadata,
+		source,
+	}) {
+		try {
+			await browser.runtime.sendMessage({
+				action: "logNotification",
+				type: normalizeNotificationType(type),
+				message,
+				title: title || document.title,
+				url: window.location.href,
+				novelData:
+					novelData || (await resolveNovelDataForNotification()),
+				metadata,
+				source: source || "content",
+			});
+		} catch (_error) {
+			// Avoid breaking page flow if notification logging fails
+		}
+	}
+
 	// Shows a status message on the page
-	function showStatusMessage(message, type = "info") {
+	function showStatusMessage(
+		message,
+		type = "info",
+		duration = 5000,
+		options = {},
+	) {
 		const bgColor = type === "error" ? "#622020" : "#2c494f";
 		const textColor = "#bab9a0";
 
@@ -6560,11 +6708,20 @@ if (window.__RGInitDone) {
 			document.documentElement.appendChild(messageDiv);
 		}
 
+		logNotification({
+			type,
+			message,
+			title: options.title,
+			novelData: options.novelData,
+			metadata: options.metadata,
+			source: options.source || "content",
+		});
+
 		setTimeout(() => {
 			if (messageDiv.parentNode) {
 				messageDiv.parentNode.removeChild(messageDiv);
 			}
-		}, 5000);
+		}, duration);
 	}
 
 	/**
@@ -6672,6 +6829,7 @@ if (window.__RGInitDone) {
 			};
 
 			debugLog("📚 getNovelInfo: Returning novelInfo:", novelInfo);
+			cacheNovelData(novelInfo);
 			return {
 				success: true,
 				novelInfo: novelInfo,
@@ -6735,9 +6893,29 @@ if (window.__RGInitDone) {
 				description: metadata.description,
 			});
 
+			const cachedNovel = cacheNovelData(result);
+			logNotification({
+				type: "success",
+				message: "Novel saved to library",
+				title: metadata.title,
+				novelData: cachedNovel,
+				metadata: {
+					action: "library-save",
+					source:
+						metadata.source || currentHandler.getSiteIdentifier(),
+				},
+			});
+
 			return { success: true, novel: result };
 		} catch (error) {
 			debugError("Error in handleAddToLibrary:", error);
+			logNotification({
+				type: "error",
+				message: `Failed to save novel: ${error.message}`,
+				metadata: {
+					action: "library-save",
+				},
+			});
 			return { success: false, error: error.message };
 		}
 	}

@@ -2581,6 +2581,15 @@ async function initializePopup() {
 						? "Novel updated!"
 						: "Novel added to library!",
 					"success",
+					{
+						title:
+							response?.novel?.title ||
+							currentPageNovelData?.title,
+						novelData: response?.novel || currentPageNovelData,
+						metadata: {
+							action: "library-save",
+						},
+					},
 				);
 
 				// Update UI
@@ -2605,11 +2614,24 @@ async function initializePopup() {
 				showStatus(
 					"Failed: " + (response?.error || "Unknown error"),
 					"error",
+					{
+						title: "Library save failed",
+						novelData: currentPageNovelData,
+						metadata: {
+							action: "library-save",
+						},
+					},
 				);
 			}
 		} catch (error) {
 			debugError("Error adding to library:", error);
-			showStatus("Error: " + error.message, "error");
+			showStatus("Error: " + error.message, "error", {
+				title: "Library save failed",
+				novelData: currentPageNovelData,
+				metadata: {
+					action: "library-save",
+				},
+			});
 		}
 	}
 
@@ -2631,7 +2653,13 @@ async function initializePopup() {
 			});
 
 			if (response && response.success) {
-				showStatus("Status updated!", "success");
+				showStatus("Status updated!", "success", {
+					title: "Reading status updated",
+					novelData: currentPageNovelData,
+					metadata: {
+						status,
+					},
+				});
 			}
 		} catch (error) {
 			debugError("Error updating reading status:", error);
@@ -4565,8 +4593,8 @@ async function initializePopup() {
 	async function initNotificationsTab() {
 		try {
 			await notificationManager.initialize();
-			loadNotifications();
-			updateNotificationBadge();
+			await loadNotifications();
+			await updateNotificationBadge();
 		} catch (error) {
 			debugError("Error initializing notifications tab:", error);
 		}
@@ -4575,18 +4603,41 @@ async function initializePopup() {
 	/**
 	 * Load and display notifications
 	 */
-	function loadNotifications() {
-		const notifications = notificationManager.getAll({
-			type:
-				currentNotificationFilter === "all"
-					? null
-					: currentNotificationFilter,
-		});
+	async function loadNotifications() {
+		const filterType =
+			currentNotificationFilter === "all"
+				? null
+				: currentNotificationFilter;
+
+		let notifications = [];
+		let stats = null;
+		try {
+			const response = await browser.runtime.sendMessage({
+				action: "getNotifications",
+				type: filterType,
+			});
+			if (response?.success) {
+				notifications = response.notifications || [];
+				stats = response.stats || null;
+			} else {
+				throw new Error(response?.error || "Notification fetch failed");
+			}
+		} catch (_error) {
+			notifications = notificationManager.getAll({ type: filterType });
+			stats = notificationManager.getStats();
+		}
 
 		// Update stats
-		const stats = notificationManager.getStats();
-		if (totalNotifsSpan) totalNotifsSpan.textContent = stats.total;
-		if (unreadNotifsSpan) unreadNotifsSpan.textContent = stats.unread;
+		if (stats) {
+			if (totalNotifsSpan) totalNotifsSpan.textContent = stats.total;
+			if (unreadNotifsSpan) unreadNotifsSpan.textContent = stats.unread;
+		} else {
+			const fallbackStats = notificationManager.getStats();
+			if (totalNotifsSpan)
+				totalNotifsSpan.textContent = fallbackStats.total;
+			if (unreadNotifsSpan)
+				unreadNotifsSpan.textContent = fallbackStats.unread;
+		}
 
 		// Clear container
 		if (!notificationsContainer) return;
@@ -4617,9 +4668,16 @@ async function initializePopup() {
 			.forEach((item) => {
 				const id = item.dataset.id;
 				item.addEventListener("click", async () => {
-					await notificationManager.markAsRead(id);
+					try {
+						await browser.runtime.sendMessage({
+							action: "markNotificationRead",
+							id,
+						});
+					} catch (_err) {
+						await notificationManager.markAsRead(id);
+					}
 					item.classList.remove("unread");
-					updateNotificationBadge();
+					await updateNotificationBadge();
 				});
 			});
 
@@ -4699,10 +4757,48 @@ async function initializePopup() {
 				`;
 			}
 
+			if (notif.metadata && Object.keys(notif.metadata).length > 0) {
+				metaHTML += `
+					<div class="notification-meta-item notification-meta-details">
+						<strong>Details:</strong>
+						${renderNotificationMetadataList(notif.metadata)}
+					</div>
+				`;
+			}
+
 			metaHTML += "</div>";
 		}
 
 		return metaHTML;
+	}
+
+	function renderNotificationMetadataList(metadata) {
+		const entries = Object.entries(metadata)
+			.filter(([, value]) => value !== undefined && value !== null)
+			.slice(0, 8);
+
+		if (entries.length === 0) return "";
+
+		const items = entries
+			.map(([key, value]) => {
+				let displayValue = value;
+				if (typeof value === "object") {
+					try {
+						displayValue = JSON.stringify(value);
+					} catch (_err) {
+						displayValue = "[Object]";
+					}
+				}
+				const text = String(displayValue);
+				const trimmed =
+					text.length > 120 ? `${text.slice(0, 117)}...` : text;
+				return `<div class="notification-meta-detail"><strong>${escapeHtml(
+					key,
+				)}:</strong> ${escapeHtml(trimmed)}</div>`;
+			})
+			.join("");
+
+		return `<div class="notification-meta-details-list">${items}</div>`;
 	}
 
 	/**
@@ -4725,18 +4821,37 @@ async function initializePopup() {
 	 * Delete a notification
 	 */
 	async function deleteNotification(id) {
-		await notificationManager.delete(id);
-		loadNotifications();
-		updateNotificationBadge();
+		try {
+			await browser.runtime.sendMessage({
+				action: "deleteNotification",
+				id,
+			});
+		} catch (_err) {
+			await notificationManager.delete(id);
+		}
+		await loadNotifications();
+		await updateNotificationBadge();
 	}
 
 	/**
 	 * Update notification badge
 	 */
-	function updateNotificationBadge() {
+	async function updateNotificationBadge() {
 		if (!notificationBadge) return;
-
-		const unreadCount = notificationManager.getUnreadCount();
+		let unreadCount = 0;
+		try {
+			const response = await browser.runtime.sendMessage({
+				action: "getNotifications",
+				limit: 0,
+			});
+			if (response?.success && response.stats) {
+				unreadCount = response.stats.unread || 0;
+			} else {
+				unreadCount = notificationManager.getUnreadCount();
+			}
+		} catch (_error) {
+			unreadCount = notificationManager.getUnreadCount();
+		}
 		if (unreadCount > 0) {
 			notificationBadge.textContent =
 				unreadCount > 99 ? "99+" : unreadCount;
@@ -4749,20 +4864,26 @@ async function initializePopup() {
 	// Notification tab event listeners
 	if (filterButtons) {
 		filterButtons.forEach((btn) => {
-			btn.addEventListener("click", () => {
+			btn.addEventListener("click", async () => {
 				filterButtons.forEach((b) => b.classList.remove("active"));
 				btn.classList.add("active");
 				currentNotificationFilter = btn.dataset.filter;
-				loadNotifications();
+				await loadNotifications();
 			});
 		});
 	}
 
 	if (markAllReadBtn) {
 		markAllReadBtn.addEventListener("click", async () => {
-			await notificationManager.markAllAsRead();
-			loadNotifications();
-			updateNotificationBadge();
+			try {
+				await browser.runtime.sendMessage({
+					action: "markAllNotificationsRead",
+				});
+			} catch (_err) {
+				await notificationManager.markAllAsRead();
+			}
+			await loadNotifications();
+			await updateNotificationBadge();
 			showStatus("All notifications marked as read", "success");
 		});
 	}
@@ -4774,9 +4895,15 @@ async function initializePopup() {
 					"Are you sure you want to clear all notifications? This cannot be undone.",
 				)
 			) {
-				await notificationManager.clearAll();
-				loadNotifications();
-				updateNotificationBadge();
+				try {
+					await browser.runtime.sendMessage({
+						action: "clearNotifications",
+					});
+				} catch (_err) {
+					await notificationManager.clearAll();
+				}
+				await loadNotifications();
+				await updateNotificationBadge();
 				showStatus("All notifications cleared", "info");
 			}
 		});
