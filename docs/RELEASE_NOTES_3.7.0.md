@@ -25,6 +25,64 @@ Previously, the extension only worked with "Chrome Extension" type OAuth credent
 - Have more flexibility in OAuth setup
 - Choose the credential type that fits their needs
 
+#### User-Configured OAuth (NEW!)
+- **No Default Credentials**: Users now configure their own Google Cloud OAuth credentials
+  - Paste JSON credentials directly from Google Cloud Console
+  - Automatic parsing of "Web application" or "Desktop app" credential JSON
+  - Smart redirect URI validation per browser type
+  - Clear setup instructions in the popup
+
+---
+
+### 💾 Comprehensive Backup System (NEW!)
+
+#### Full Extension Backup
+- **Everything in One File**: Create complete backups including:
+  - Novel library with all reading progress
+  - All Gemini API keys (primary and backup)
+  - Custom prompts (main, summary, short summary, permanent)
+  - Site-specific prompts and settings
+  - Theme preferences
+  - Model configuration
+  - Google Drive OAuth credentials (encrypted)
+  - Library settings (auto-hold, etc.)
+
+#### Rolling Auto-Backups
+- **Automatic Protection**: Browser storage keeps up to 5 recent backups
+  - Triggered automatically when library changes
+  - Quick restore without needing external files
+  - View, restore, or delete individual backups from popup
+  - Toggle auto-backups on/off per preference
+
+#### Easy Migration
+- Export from one browser, import to another
+- Share settings across devices
+- Recover from accidental data loss
+
+---
+
+### 📊 Anonymous Analytics (Opt-Out) (NEW!)
+
+#### CFlair-Counter Integration
+- **Anonymous View Tracking**: Uses [CFlair-Counter](https://github.com/Life-Experimentalist/CFlair-Counter) for simple view counts
+  - **Enabled by default** (opt-out model)
+  - First-run dialog informs users about analytics
+  - Can be disabled anytime in Library Settings
+
+#### What's Collected
+- Anonymous view counts per feature (via CFlair-Counter API)
+- Error reports (if enabled separately)
+
+#### What's NEVER Collected
+- ❌ API keys or credentials
+- ❌ Novel reading history or library data
+- ❌ Personal information of any kind
+
+#### Custom Webhook Support
+- Send diagnostics to your own endpoint (in addition to CFlair-Counter)
+- Useful for self-hosted debugging
+- Fully transparent data flow
+
 ---
 
 ### 📢 Enhanced Notification System
@@ -140,7 +198,7 @@ Previously, the extension only worked with "Chrome Extension" type OAuth credent
 
 #### If You Use Google Drive Backup
 1. **Chrome Extension Type Credentials**: No action required - everything works as before
-2. **Web Application Type Credentials**: 
+2. **Web Application Type Credentials**:
    - Open popup → Advanced tab
    - Expand "Advanced setup (optional)"
    - Enter your Client Secret (starts with `GOCSPX-`)

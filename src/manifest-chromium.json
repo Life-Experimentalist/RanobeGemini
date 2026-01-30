@@ -22,8 +22,7 @@
 		"contextMenus",
 		"alarms",
 		"downloads",
-		"identity",
-		"sidepanel"
+		"identity"
 	],
 	"host_permissions": [
 		"https://www.googleapis.com/*",

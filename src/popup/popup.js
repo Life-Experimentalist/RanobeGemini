@@ -11,6 +11,19 @@ import {
 import { debugLog, debugError } from "../utils/logger.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import {
+	createComprehensiveBackup,
+	restoreComprehensiveBackup,
+	createRollingBackup,
+	listRollingBackups,
+	getRollingBackup,
+	deleteRollingBackup,
+	parseOAuthCredentials,
+	validateRedirectUris,
+	downloadBackupAsFile,
+	readBackupFromFile,
+	BACKUP_OPTIONS,
+} from "../utils/comprehensive-backup.js";
+import {
 	notificationManager,
 	NotificationType,
 	notifySuccess,
@@ -18,6 +31,9 @@ import {
 	notifyInfo,
 	notifyWarning,
 } from "../utils/notification-manager.js";
+
+// Log that imports completed successfully
+debugLog("popup.js: All module imports completed successfully");
 
 let novelLibrary = null;
 let SHELVES = {};
@@ -223,13 +239,13 @@ async function initializePopup() {
 	const suggestedNovelsList = document.getElementById("suggestedNovelsList");
 
 	// Library backup elements
-	const autoBackupEnabled = document.getElementById("autoBackupEnabled");
+	const autoBackupCheckbox = document.getElementById("autoBackupEnabled");
 	const backupLocation = document.getElementById("backupLocation");
 	const chooseBackupLocation = document.getElementById(
 		"chooseBackupLocation",
 	);
 	const createManualBackup = document.getElementById("createManualBackup");
-	const restoreBackupBtn2 = document.getElementById("restoreBackupBtn");
+	// restoreBackupBtn2 removed as duplicate
 	const backupList = document.getElementById("backupList");
 	const mergeModRadios = document.querySelectorAll('input[name="mergeMode"]');
 
@@ -278,14 +294,42 @@ async function initializePopup() {
 		"centerSceneHeadings",
 	);
 	const backupFolderInput = document.getElementById("backupFolder");
-	const autoBackupToggle = document.getElementById("autoBackupToggle");
-	const manualBackupBtn = document.getElementById("manualBackupBtn");
+	// autoBackupToggle removed (consolidated with autoBackupCheckbox)
+	// manualBackupBtn removed (consolidated with createManualBackup)
 	const restoreBackupBtn = document.getElementById("restoreBackupBtn");
 	const restoreFileInput = document.getElementById("restoreFileInput");
 	const backupHistoryList = document.getElementById("backupHistoryList");
 	const driveClientIdInput = document.getElementById("driveClientId");
 	const driveClientSecretInput = document.getElementById("driveClientSecret");
+	const showClientSecretToggle = document.getElementById("showClientSecret");
 	const driveFolderIdInput = document.getElementById("driveFolderId");
+
+	// OAuth JSON parsing elements
+	const oauthJsonPaste = document.getElementById("oauthJsonPaste");
+	const parseOAuthJsonBtn = document.getElementById("parseOAuthJson");
+	const oauthParseResult = document.getElementById("oauthParseResult");
+	const saveOAuthSettingsBtn = document.getElementById("saveOAuthSettings");
+
+	// Comprehensive backup elements
+	const createComprehensiveBackupBtn = document.getElementById(
+		"createComprehensiveBackup",
+	);
+	const restoreComprehensiveBackupBtn = document.getElementById(
+		"restoreComprehensiveBackup",
+	);
+	const comprehensiveBackupFile = document.getElementById(
+		"comprehensiveBackupFile",
+	);
+	const backupIncludeApiKeys = document.getElementById(
+		"backupIncludeApiKeys",
+	);
+	const backupIncludeCredentials = document.getElementById(
+		"backupIncludeCredentials",
+	);
+	const rollingBackupList = document.getElementById("rollingBackupList");
+	const createRollingBackupBtn = document.getElementById(
+		"createRollingBackup",
+	);
 
 	// Google Drive Backup elements
 	const connectDriveBtn = document.getElementById("connectDriveBtn");
@@ -1075,8 +1119,8 @@ async function initializePopup() {
 		// Load backup preferences
 		const backupFolder = data.backupFolder || "RanobeGeminiBackups";
 		if (backupFolderInput) backupFolderInput.value = backupFolder;
-		if (autoBackupToggle)
-			autoBackupToggle.checked = data.autoBackupEnabled || false;
+		if (autoBackupCheckbox)
+			autoBackupCheckbox.checked = data.autoBackupEnabled || false;
 		const backupMode = data.backupMode || "scheduled";
 		backupHistory = data.backupHistory || [];
 		renderBackupHistory();
@@ -2857,7 +2901,7 @@ async function initializePopup() {
 	async function persistBackupPrefs(extra = {}) {
 		const folderValue = (backupFolderInput?.value || "").trim();
 		const backupFolder = folderValue || "RanobeGeminiBackups";
-		const autoBackupEnabled = autoBackupToggle?.checked || false;
+		const autoBackupEnabled = autoBackupCheckbox?.checked || false;
 		const storedPrefs = await browser.storage.local.get("backupMode");
 		const backupMode =
 			extra.backupMode || storedPrefs.backupMode || "scheduled";
@@ -2887,7 +2931,7 @@ async function initializePopup() {
 
 	async function triggerManualBackup(saveAs = true) {
 		try {
-			manualBackupBtn?.classList.add("loading");
+			createManualBackup?.classList.add("loading");
 
 			const folderValue = (backupFolderInput?.value || "").trim();
 			const backupFolder = folderValue || "RanobeGeminiBackups";
@@ -2918,7 +2962,7 @@ async function initializePopup() {
 			debugError("Backup failed:", error);
 			showStatus("Backup failed: " + error.message, "error");
 		} finally {
-			manualBackupBtn?.classList.remove("loading");
+			createManualBackup?.classList.remove("loading");
 		}
 	}
 
@@ -2993,8 +3037,8 @@ async function initializePopup() {
 		});
 	}
 
-	if (manualBackupBtn) {
-		manualBackupBtn.addEventListener("click", () =>
+	if (createManualBackup) {
+		createManualBackup.addEventListener("click", () =>
 			triggerManualBackup(true),
 		);
 	}
@@ -3005,11 +3049,11 @@ async function initializePopup() {
 		});
 	}
 
-	if (autoBackupToggle) {
-		autoBackupToggle.addEventListener("change", async () => {
+	if (autoBackupCheckbox) {
+		autoBackupCheckbox.addEventListener("change", async () => {
 			await persistBackupPrefs();
 			showStatus(
-				autoBackupToggle.checked
+				autoBackupCheckbox.checked
 					? "Auto backup enabled"
 					: "Auto backup disabled",
 				"success",
@@ -3588,6 +3632,17 @@ async function initializePopup() {
 	 */
 	async function loadNovelsTab() {
 		try {
+			if (
+				!novelsListContainer ||
+				!suggestedNovelsList ||
+				!currentNovelInfo
+			) {
+				debugLog(
+					"Novels tab elements missing; skipping novels tab render.",
+				);
+				return;
+			}
+
 			const depsOk = await ensureLibraryDeps();
 			if (!depsOk) {
 				showStatus("Novel history unavailable in popup", "error");
@@ -3622,8 +3677,10 @@ async function initializePopup() {
 			}
 		} catch (error) {
 			debugError("Error loading novels tab:", error);
-			novelsListContainer.innerHTML =
-				'<div class="no-novels">Error loading novels. Try refreshing.</div>';
+			if (novelsListContainer) {
+				novelsListContainer.innerHTML =
+					'<div class="no-novels">Error loading novels. Try refreshing.</div>';
+			}
 		}
 	}
 
@@ -3632,6 +3689,9 @@ async function initializePopup() {
 	 */
 	async function updateCurrentNovelInfo() {
 		try {
+			if (!currentNovelInfo) {
+				return;
+			}
 			const tabs = await browser.tabs.query({
 				active: true,
 				currentWindow: true,
@@ -3779,11 +3839,13 @@ async function initializePopup() {
 						}
 					})
 					.catch(() => {
-						currentNovelInfo.innerHTML = `
-							<div class="no-current-novel">
-								<p>Visit a supported novel site to see details here.</p>
-							</div>
-						`;
+						if (currentNovelInfo) {
+							currentNovelInfo.innerHTML = `
+								<div class="no-current-novel">
+									<p>Visit a supported novel site to see details here.</p>
+								</div>
+							`;
+						}
 					});
 			}
 		} catch (error) {
@@ -3796,6 +3858,9 @@ async function initializePopup() {
 	 */
 	async function showTopRecentNovels(allNovels) {
 		try {
+			if (!suggestedNovelsList) {
+				return;
+			}
 			if (allNovels.length === 0) {
 				suggestedNovelsList.innerHTML = `
 					<div class="no-suggestions">
@@ -3853,6 +3918,9 @@ async function initializePopup() {
 	 */
 	async function displayNovelsByWebsite(allNovels) {
 		try {
+			if (!novelsListContainer) {
+				return;
+			}
 			if (allNovels.length === 0) {
 				novelsListContainer.innerHTML =
 					'<div class="no-novels">No novels in your library yet.</div>';
@@ -3990,6 +4058,9 @@ async function initializePopup() {
 	 */
 	async function loadBackupHistory() {
 		try {
+			if (!backupList) {
+				return;
+			}
 			const backups = await libraryBackupManager.listBackups();
 
 			if (backups.length === 0) {
@@ -4164,9 +4235,16 @@ async function initializePopup() {
 			connectDriveBtn.disabled = true;
 			connectDriveBtn.textContent = "🔗 Connecting...";
 
+			const saved = await browser.storage.local.get([
+				"driveClientId",
+				"driveClientSecret",
+			]);
+			const clientIdInput = driveClientIdInput?.value.trim();
+			const clientSecretInput = driveClientSecretInput?.value.trim();
 			const clientId =
-				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
-			const clientSecret = driveClientSecretInput?.value.trim() || "";
+				clientIdInput || saved.driveClientId || DEFAULT_DRIVE_CLIENT_ID;
+			const clientSecret =
+				clientSecretInput || saved.driveClientSecret || "";
 
 			await browser.storage.local.set({
 				driveClientId: clientId,
@@ -4382,6 +4460,312 @@ async function initializePopup() {
 	if (driveSyncNowBtn) {
 		driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);
 	}
+	if (showClientSecretToggle && driveClientSecretInput) {
+		// Initialize checkbox state - default unchecked (password hidden)
+		showClientSecretToggle.checked = false;
+		driveClientSecretInput.type = "password";
+
+		showClientSecretToggle.addEventListener("change", () => {
+			driveClientSecretInput.type = showClientSecretToggle.checked
+				? "text"
+				: "password";
+		});
+	}
+
+	// ===== OAuth JSON Parsing Handlers =====
+	if (parseOAuthJsonBtn) {
+		parseOAuthJsonBtn.addEventListener("click", async () => {
+			const jsonText = oauthJsonPaste?.value?.trim();
+			if (!jsonText) {
+				showOAuthParseResult(
+					"Please paste your OAuth JSON first",
+					"error",
+				);
+				return;
+			}
+
+			const result = parseOAuthCredentials(jsonText);
+			if (!result.valid) {
+				showOAuthParseResult(`❌ ${result.error}`, "error");
+				return;
+			}
+
+			// Validate redirect URIs
+			const uriValidation = validateRedirectUris(result.redirectUris);
+
+			// Apply credentials to inputs
+			if (driveClientIdInput) driveClientIdInput.value = result.clientId;
+			if (driveClientSecretInput)
+				driveClientSecretInput.value = result.clientSecret || "";
+			if (showClientSecretToggle && driveClientSecretInput) {
+				showClientSecretToggle.checked = true;
+				driveClientSecretInput.type = "text";
+			}
+
+			let message = `✅ Parsed ${result.type} credentials\n`;
+			message += `Client ID: ${result.clientId.substring(0, 20)}...`;
+
+			if (uriValidation.warnings.length > 0) {
+				message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
+			}
+
+			showOAuthParseResult(
+				message,
+				uriValidation.valid ? "success" : "warning",
+			);
+
+			try {
+				const existing = await browser.storage.local.get([
+					"driveFolderId",
+				]);
+				const folderId =
+					driveFolderIdInput?.value.trim() ||
+					existing.driveFolderId ||
+					"";
+
+				await browser.storage.local.set({
+					driveClientId: result.clientId,
+					driveClientSecret: result.clientSecret || "",
+					driveFolderId: folderId,
+				});
+
+				showStatus("✅ OAuth settings saved!", "success");
+				await updateDriveUI();
+			} catch (err) {
+				debugError("Failed to save OAuth settings", err);
+				showStatus("❌ Failed to save OAuth settings", "error");
+			}
+		});
+	}
+
+	function showOAuthParseResult(message, type = "info") {
+		if (!oauthParseResult) return;
+		oauthParseResult.style.display = "block";
+		oauthParseResult.textContent = message;
+		oauthParseResult.style.color =
+			type === "error"
+				? "#ef4444"
+				: type === "success"
+					? "#22c55e"
+					: type === "warning"
+						? "#f59e0b"
+						: "#9ca3af";
+	}
+
+	if (saveOAuthSettingsBtn) {
+		saveOAuthSettingsBtn.addEventListener("click", async () => {
+			const clientId = driveClientIdInput?.value.trim() || "";
+			const clientSecret = driveClientSecretInput?.value.trim() || "";
+			const folderId = driveFolderIdInput?.value.trim() || "";
+
+			if (!clientId) {
+				showStatus("Please enter a Client ID", "error");
+				return;
+			}
+
+			await browser.storage.local.set({
+				driveClientId: clientId,
+				driveClientSecret: clientSecret,
+				driveFolderId: folderId,
+			});
+
+			showStatus("✅ OAuth settings saved!", "success");
+			if (typeof showOAuthParseResult === "function") {
+				showOAuthParseResult(
+					"✅ OAuth settings saved successfully",
+					"success",
+				);
+			}
+			if (driveClientIdInput) driveClientIdInput.value = clientId;
+			if (driveClientSecretInput)
+				driveClientSecretInput.value = clientSecret;
+			if (driveFolderIdInput) driveFolderIdInput.value = folderId;
+			await updateDriveUI();
+		});
+	}
+
+	// ===== Comprehensive Backup Handlers =====
+	if (createComprehensiveBackupBtn) {
+		createComprehensiveBackupBtn.addEventListener("click", async () => {
+			try {
+				createComprehensiveBackupBtn.disabled = true;
+				createComprehensiveBackupBtn.textContent = "⏳ Creating...";
+
+				const backup = await createComprehensiveBackup({
+					type: BACKUP_OPTIONS.FULL,
+					includeApiKeys: backupIncludeApiKeys?.checked ?? true,
+					includeCredentials:
+						backupIncludeCredentials?.checked ?? false,
+				});
+
+				downloadBackupAsFile(backup);
+				showStatus(
+					`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
+					"success",
+				);
+			} catch (error) {
+				debugError("Comprehensive backup failed:", error);
+				showStatus(`❌ Backup failed: ${error.message}`, "error");
+			} finally {
+				createComprehensiveBackupBtn.disabled = false;
+				createComprehensiveBackupBtn.textContent = "💾 Full Backup";
+			}
+		});
+	}
+
+	if (restoreComprehensiveBackupBtn) {
+		restoreComprehensiveBackupBtn.addEventListener("click", () => {
+			comprehensiveBackupFile?.click();
+		});
+	}
+
+	if (comprehensiveBackupFile) {
+		comprehensiveBackupFile.addEventListener("change", async (e) => {
+			const file = e.target.files?.[0];
+			if (!file) return;
+
+			try {
+				const backup = await readBackupFromFile(file);
+
+				if (!backup.version || !backup.data) {
+					throw new Error("Invalid backup file format");
+				}
+
+				const novelCount = backup.metadata?.novelCount || 0;
+				const hasApiKey = backup.metadata?.hasApiKey;
+				const hasCredentials = backup.metadata?.hasDriveCredentials;
+
+				const confirmMsg =
+					`Restore this backup?\n\n` +
+					`• ${novelCount} novels\n` +
+					`• API Key: ${hasApiKey ? "Yes" : "No"}\n` +
+					`• OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n` +
+					`Mode: MERGE (preserves existing data)`;
+
+				if (!confirm(confirmMsg)) {
+					e.target.value = "";
+					return;
+				}
+
+				const result = await restoreComprehensiveBackup(backup, {
+					mode: "merge",
+					restoreApiKeys: hasApiKey && confirm("Restore API keys?"),
+					restoreCredentials:
+						hasCredentials && confirm("Restore OAuth credentials?"),
+				});
+
+				if (result.success) {
+					showStatus(
+						`✅ Restored ${result.restoredKeys.length} items!`,
+						"success",
+					);
+					// Reload popup to reflect changes
+					setTimeout(() => location.reload(), 1500);
+				}
+			} catch (error) {
+				debugError("Restore failed:", error);
+				showStatus(`❌ Restore failed: ${error.message}`, "error");
+			}
+
+			e.target.value = "";
+		});
+	}
+
+	// ===== Rolling Backup Handlers =====
+	async function loadRollingBackups() {
+		if (!rollingBackupList) return;
+
+		const backups = await listRollingBackups();
+
+		if (backups.length === 0) {
+			rollingBackupList.innerHTML = `
+				<div class="no-backups" style="text-align: center; padding: 15px; color: #888; font-size: 12px">
+					No rolling backups yet. Enable auto-backup or create one manually.
+				</div>`;
+			return;
+		}
+
+		rollingBackupList.innerHTML = backups
+			.map(
+				(b) => `
+			<div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 6px; font-size: 12px">
+				<div>
+					<div style="font-weight: 500">${b.dateStr}</div>
+					<div style="color: #888; font-size: 11px">${b.novelCount} novels • ${b.reason}</div>
+				</div>
+				<div style="display: flex; gap: 4px">
+					<button class="rolling-restore" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">↩️</button>
+					<button class="rolling-download" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">💾</button>
+					<button class="rolling-delete" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px; color: #ef4444">🗑️</button>
+				</div>
+			</div>
+		`,
+			)
+			.join("");
+
+		// Attach event listeners
+		rollingBackupList
+			.querySelectorAll(".rolling-restore")
+			.forEach((btn) => {
+				btn.addEventListener("click", async () => {
+					const backup = await getRollingBackup(btn.dataset.key);
+					if (
+						backup &&
+						confirm("Restore this backup? (Merge mode)")
+					) {
+						await restoreComprehensiveBackup(backup, {
+							mode: "merge",
+						});
+						showStatus("✅ Backup restored!", "success");
+						setTimeout(() => location.reload(), 1000);
+					}
+				});
+			});
+
+		rollingBackupList
+			.querySelectorAll(".rolling-download")
+			.forEach((btn) => {
+				btn.addEventListener("click", async () => {
+					const backup = await getRollingBackup(btn.dataset.key);
+					if (backup) {
+						downloadBackupAsFile(backup);
+					}
+				});
+			});
+
+		rollingBackupList.querySelectorAll(".rolling-delete").forEach((btn) => {
+			btn.addEventListener("click", async () => {
+				if (confirm("Delete this backup?")) {
+					await deleteRollingBackup(btn.dataset.key);
+					await loadRollingBackups();
+					showStatus("Backup deleted", "success");
+				}
+			});
+		});
+	}
+
+	if (createRollingBackupBtn) {
+		createRollingBackupBtn.addEventListener("click", async () => {
+			try {
+				createRollingBackupBtn.disabled = true;
+				createRollingBackupBtn.textContent = "⏳ Creating...";
+
+				await createRollingBackup("manual");
+				await loadRollingBackups();
+				showStatus("✅ Rolling backup created!", "success");
+			} catch (error) {
+				debugError("Rolling backup failed:", error);
+				showStatus(`❌ Failed: ${error.message}`, "error");
+			} finally {
+				createRollingBackupBtn.disabled = false;
+				createRollingBackupBtn.textContent =
+					"➕ Create Rolling Backup Now";
+			}
+		});
+	}
+
+	// Load rolling backups on popup open
+	loadRollingBackups();
 
 	// Load backups and novels on popup open
 	(async () => {
@@ -4744,7 +5128,7 @@ async function initializePopup() {
 		}
 		if (unreadCount > 0) {
 			notificationBadge.textContent =
-				unreadCount > 99 ? "99+" : unreadCount;
+				unreadCount > 999 ? "999+" : unreadCount;
 			notificationBadge.style.display = "inline-block";
 		} else {
 			notificationBadge.style.display = "none";

@@ -3,7 +3,7 @@
  * Centralized configuration values used throughout the extension
  */
 
-export const DEFAULT_DEBUG_MODE = false;
+export const DEFAULT_DEBUG_MODE = true;
 export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
 
 // Default prompt template for Gemini AI
@@ -108,9 +108,17 @@ export const KEEP_ALIVE_MAX_PORT_RETRIES = 4; // cap reconnect attempts before g
 export const CHUNK_STAGGER_MS = 800; // delay between chunk sends to reduce burst
 export const CHUNK_RETRY_BACKOFF_MS = 5000; // wait before retrying failed chunk
 
-// Default Google Drive OAuth client ID (used unless user overrides in popup/settings)
-export const DEFAULT_DRIVE_CLIENT_ID =
-	"1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com";
+// Google Drive OAuth - No default credentials, user must configure their own
+// See docs/guides/GOOGLE_DRIVE_BACKUP_SETUP.md for setup instructions
+export const DEFAULT_DRIVE_CLIENT_ID = "";
+export const DEFAULT_DRIVE_CLIENT_SECRET = "";
+
+// Expected redirect URIs for OAuth validation
+export const OAUTH_REDIRECT_URIS = {
+	web: "https://ranobe.vkrishna04.me/oauth-redirect.html",
+	chrome: "https://achemoeefcaafoiepmikeiocahcjkjop.chromiumapp.org/drive",
+	firefox: "https://118c432092a1998774ae13e72eca8365acc21858.extensions.allizom.org/drive"
+};
 
 // Google OAuth scopes required for backup functionality
 // https://www.googleapis.com/auth/drive.file - Create/modify/delete only files created by this app (safest)
@@ -123,6 +131,46 @@ export const CONTINUOUS_BACKUP_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minute debounce
 export const DRIVE_BACKUP_MAX_COUNT = 3; // Keep at most 3 backups on Drive
 export const DRIVE_BACKUP_PREFIX = "ranobe-library-"; // Prefix for Drive backup files
 export const DRIVE_CONTINUOUS_BACKUP_BASENAME = "ranobe-library-continuous.json"; // Single rolling file for continuous mode
+
+// Auto "On Hold" settings
+export const DEFAULT_AUTO_HOLD_ENABLED = true;
+export const DEFAULT_AUTO_HOLD_DAYS = 7;
+
+// Telemetry settings (opt-in only)
+export const TELEMETRY_ENDPOINT = ""; // User must configure if they want telemetry
+export const TELEMETRY_ENABLED_DEFAULT = false;
+
+// Comprehensive backup includes these storage keys
+export const COMPREHENSIVE_BACKUP_KEYS = [
+	"novelHistory",           // Library data
+	"apiKey",                 // Gemini API key
+	"backupApiKeys",          // Backup API keys
+	"selectedModel",          // Selected model
+	"customModelEndpoint",    // Custom endpoint
+	"promptTemplate",         // Main prompt
+	"summaryPrompt",          // Summary prompt
+	"shortSummaryPrompt",     // Short summary prompt
+	"permanentPrompt",        // Permanent prompt
+	"siteSpecificPrompts",    // Site-specific prompts
+	"chunkingEnabled",        // Chunking setting
+	"chunkSize",              // Chunk size
+	"useEmoji",               // Emoji setting
+	"maxOutputTokens",        // Max tokens
+	"temperature",            // Temperature
+	"topP",                   // Top P
+	"topK",                   // Top K
+	"debugMode",              // Debug mode
+	"driveClientId",          // OAuth client ID (if user wants to backup)
+	"driveClientSecret",      // OAuth client secret (if user wants to backup)
+	"driveFolderId",          // Drive folder ID
+	"backupMode",             // Backup mode
+	"siteSettings",           // Per-site settings
+	"autoHoldEnabled",        // Auto hold enabled
+	"autoHoldDays",           // Auto hold days
+	"librarySettings",        // Library settings
+	"themeSettings",          // Theme settings
+	"fontSize",               // Font size
+];
 
 // Emotion emoji mapping for enhancing text with emotional indicators
 export const EMOTION_EMOJIS = {

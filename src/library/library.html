@@ -53,6 +53,41 @@
 				</div>
 			</header>
 
+			<!-- Telemetry Opt-out Banner -->
+			<div
+				id="telemetry-banner"
+				class="hidden"
+				style="
+					margin: 12px 16px 0;
+					padding: 12px 16px;
+					border: 1px solid var(--border-color);
+					border-radius: 8px;
+					background: var(--bg-tertiary);
+					color: var(--text-primary);
+					display: flex;
+					gap: 12px;
+					align-items: center;
+					justify-content: space-between;
+					flex-wrap: wrap;
+				"
+			>
+				<div style="display: flex; gap: 10px; align-items: center;">
+					<span style="font-size: 16px;">📊</span>
+					<span style="font-size: 13px; line-height: 1.4;">
+						We collect anonymous usage counts to improve Ranobe Gemini.
+						You can opt out now or anytime in Settings.
+					</span>
+				</div>
+				<div style="display: flex; gap: 8px; align-items: center;">
+					<button id="telemetry-banner-disable" class="btn btn-secondary">
+						Opt Out
+					</button>
+					<button id="telemetry-banner-keep" class="btn btn-primary">
+						Keep Enabled
+					</button>
+				</div>
+			</div>
+
 			<!-- Recent Novels Carousel -->
 			<div class="carousel-section" id="carousel-section">
 				<div class="carousel-header">
@@ -705,6 +740,110 @@
 							/>
 						</div>
 					</div>
+
+					<div class="settings-section">
+						<h3>Comprehensive Backup</h3>
+						<p class="settings-desc" style="margin-bottom: 12px;">
+							Create a full backup including library, API keys, prompts, and all settings.
+						</p>
+						<div class="settings-item" style="display: flex; gap: 8px; flex-wrap: wrap;">
+							<button id="comprehensive-backup-btn" class="btn btn-secondary">
+								💾 Full Backup
+							</button>
+							<button id="comprehensive-restore-btn" class="btn btn-secondary">
+								📂 Restore Full Backup
+							</button>
+							<input
+								type="file"
+								id="comprehensive-restore-file"
+								accept=".json"
+								class="hidden"
+							/>
+						</div>
+						<div class="settings-item" style="margin-top: 12px;">
+							<label style="display: flex; gap: 8px; align-items: center;">
+								<input type="checkbox" id="rolling-backup-toggle" checked />
+								<span>Enable rolling auto-backups</span>
+							</label>
+							<p class="settings-desc">
+								Automatically save backups when changes are made. Keeps up to 5 recent backups in browser storage.
+							</p>
+						</div>
+					</div>
+
+					<div class="settings-section">
+						<h3>Analytics & Diagnostics</h3>
+						<div class="settings-item">
+							<label style="display: flex; gap: 8px; align-items: center;">
+								<input type="checkbox" id="telemetry-toggle" checked />
+								<span>Share anonymous usage data</span>
+							</label>
+							<p class="settings-desc">
+								Help improve Ranobe Gemini by sharing anonymous view counts (via CFlair-Counter).
+								<strong>Enabled by default.</strong> No personal data, reading history, or API keys are ever collected.
+							</p>
+						</div>
+						<div class="settings-item" id="telemetry-details" style="margin-top: 12px;">
+							<label style="display: flex; gap: 8px; align-items: center;">
+								<input type="checkbox" id="send-errors-toggle" checked />
+								<span>Send error reports</span>
+							</label>
+							<p class="settings-desc">
+								Automatically report errors to help fix bugs faster.
+							</p>
+							<div style="margin-top: 12px;">
+								<label for="webhook-url" class="settings-desc" style="display: block;">
+									Custom webhook URL (optional, for developers)
+								</label>
+								<input
+									type="url"
+									id="webhook-url"
+									placeholder="https://your-webhook-endpoint.com"
+									style="width: 100%; margin-top: 4px; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary);"
+								/>
+								<p class="settings-desc" style="margin-top: 4px;">
+									Send diagnostics to your own endpoint in addition to CFlair-Counter.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Telemetry Consent Modal (First Run) -->
+		<div id="telemetry-consent-modal" class="modal hidden">
+			<div class="modal-backdrop"></div>
+			<div class="modal-content modal-small" style="max-width: 480px;">
+				<h2>📊 Anonymous Usage Analytics</h2>
+				<p style="margin: 16px 0; line-height: 1.6;">
+					Ranobe Gemini collects anonymous usage statistics to help improve the extension.
+					This is <strong>enabled by default</strong> but you can opt out anytime.
+				</p>
+				<div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; margin: 16px 0;">
+					<h4 style="margin: 0 0 12px 0; font-size: 14px;">What we collect:</h4>
+					<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+						<li>Anonymous view counts (via CFlair-Counter)</li>
+						<li>Feature usage counts (no content, just counts)</li>
+						<li>Error reports (optional, helps fix bugs)</li>
+					</ul>
+					<h4 style="margin: 16px 0 12px 0; font-size: 14px;">What we NEVER collect:</h4>
+					<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+						<li>API keys or credentials</li>
+						<li>Novel reading history or library data</li>
+						<li>Personal information of any kind</li>
+					</ul>
+				</div>
+				<p style="margin: 16px 0; font-size: 13px; color: var(--text-secondary);">
+					You can change this setting anytime in Library Settings → Analytics & Diagnostics.
+				</p>
+				<div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+					<button id="telemetry-decline-btn" class="btn btn-secondary">
+						Opt Out
+					</button>
+					<button id="telemetry-accept-btn" class="btn btn-primary">
+						Keep Enabled
+					</button>
 				</div>
 			</div>
 		</div>

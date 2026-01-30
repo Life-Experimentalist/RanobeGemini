@@ -454,20 +454,39 @@ Click to generate preview...</pre
 
 						<details style="margin-top: 10px">
 							<summary style="cursor: pointer; font-weight: 600; font-size: 12px; color: #9fb3c8">
-								Advanced setup (optional)
+								🔧 OAuth Setup (Required for Google Drive)
 							</summary>
 							<div style="margin-top: 10px; display: grid; gap: 10px">
+								<div style="padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; border-left: 3px solid #ffc107">
+									<p style="font-size: 11px; margin: 0 0 8px 0; color: #ffc107">
+										⚠️ You need to create your own OAuth credentials (free, takes 2 minutes).
+										<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank" style="color: #4285F4">Setup Guide →</a>
+									</p>
+								</div>
+
+								<div>
+									<label for="oauthJsonPaste" style="font-size: 12px; font-weight: bold">Paste OAuth JSON (Recommended)</label>
+									<textarea
+										id="oauthJsonPaste"
+										placeholder='Paste your client_secret_*.json file contents here...'
+										style="width: 100%; height: 80px; font-family: monospace; font-size: 10px; resize: vertical"
+									></textarea>
+									<button id="parseOAuthJson" class="btn-secondary" style="width: 100%; margin-top: 4px; font-size: 11px">
+										📋 Parse & Apply Credentials
+									</button>
+									<div id="oauthParseResult" class="description" style="font-size: 11px; margin-top: 4px; display: none"></div>
+								</div>
+
+								<div style="text-align: center; font-size: 11px; color: #666">— or enter manually —</div>
+
 								<div>
 									<label for="driveClientId" style="font-size: 12px">Google OAuth Client ID</label>
 									<input
 										id="driveClientId"
 										type="text"
-										placeholder="Optional: custom client ID"
+										placeholder="Required: your OAuth client ID"
 										style="width: 100%"
 									/>
-									<div class="description" style="font-size: 11px">
-										Only needed for private setups. Default works out of the box.
-									</div>
 								</div>
 
 								<div>
@@ -475,11 +494,15 @@ Click to generate preview...</pre
 									<input
 										id="driveClientSecret"
 										type="password"
-										placeholder="Required if using Web Application Client ID"
+										placeholder="Required for Web Application type"
 										style="width: 100%"
 									/>
+									<label style="display: flex; gap: 6px; align-items: center; margin-top: 6px; font-size: 11px; color: #9ca3af;">
+										<input type="checkbox" id="showClientSecret" />
+										<span>Show client secret</span>
+									</label>
 									<div class="description" style="font-size: 11px">
-										Required for "Web application" client types (usually starts with "GOCSPX-"). "Chrome Extension" types don't need this.
+										Usually starts with "GOCSPX-". Required for Web Application credentials.
 									</div>
 								</div>
 
@@ -488,13 +511,19 @@ Click to generate preview...</pre
 									<input
 										id="driveFolderId"
 										type="text"
-										placeholder="Uploads go to root when empty"
+										placeholder="Leave empty to auto-create backup folder"
 										style="width: 100%"
 									/>
 									<div class="description" style="font-size: 11px">
-										Optional: store backups in a specific Drive folder.
+										Optional. Specify a Google Drive folder ID where backups will be stored.
+										Leave empty to create a new 'RanobeGeminiBackups' folder automatically.
+										Find folder ID in Drive: Open folder → URL shows folders/[ID].
 									</div>
 								</div>
+
+								<button id="saveOAuthSettings" class="btn-primary" style="width: 100%; font-size: 11px">
+									💾 Save OAuth Settings
+								</button>
 							</div>
 						</details>
 					</div>
@@ -509,54 +538,45 @@ Click to generate preview...</pre
 							"
 						>
 							<input type="checkbox" id="autoBackupEnabled" />
-							<span>Enable local file backups</span>
+							<span>Enable automatic rolling backups</span>
 						</label>
 						<div class="description">
-							Save backups to your local downloads folder.
+							Creates browser-stored backups automatically when your library changes.
 						</div>
 					</div>
 
-					<div style="margin-bottom: 15px">
-						<label for="backupLocation">Backup Location:</label>
-						<div style="display: flex; gap: 8px">
-							<input
-								type="text"
-								id="backupLocation"
-								readonly
-								placeholder="No location selected"
-								style="flex: 1"
-							/>
-							<button
-								id="chooseBackupLocation"
-								class="btn-secondary"
-								style="padding: 8px 12px"
-							>
-								Choose Folder
+					<!-- Comprehensive Backup Options -->
+					<div style="margin-bottom: 15px; padding: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 6px">
+						<label style="font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block">
+							📦 Comprehensive Backup
+						</label>
+						<div class="description" style="margin-bottom: 8px">
+							Create a complete backup including all settings, prompts, API keys, and library data.
+						</div>
+
+						<div style="display: grid; gap: 6px; margin-bottom: 10px">
+							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+								<input type="checkbox" id="backupIncludeApiKeys" checked />
+								<span>Include API keys</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+								<input type="checkbox" id="backupIncludeCredentials" />
+								<span>Include OAuth credentials</span>
+							</label>
+						</div>
+
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+							<button id="createComprehensiveBackup" class="btn-primary">
+								💾 Full Backup
+							</button>
+							<button id="restoreComprehensiveBackup" class="btn-secondary">
+								📂 Restore Full
 							</button>
 						</div>
-						<div class="description">
-							Where to store backup files (defaults to Downloads)
-						</div>
+						<input type="file" id="comprehensiveBackupFile" accept=".json" style="display: none" />
 					</div>
 
-					<div style="margin-bottom: 15px">
-						<div
-							style="
-								display: grid;
-								grid-template-columns: 1fr 1fr;
-								gap: 8px;
-							"
-						>
-							<button id="createManualBackup" class="btn-primary">
-								💾 Create Backup Now
-							</button>
-							<button id="restoreBackupBtn" class="btn-secondary">
-								📂 Restore Backup
-							</button>
-						</div>
-					</div>
-
-					<!-- Backup List -->
+					<!-- Rolling Backups (Browser Storage) -->
 					<details
 						open
 						style="
@@ -573,21 +593,69 @@ Click to generate preview...</pre
 								margin-bottom: 10px;
 							"
 						>
-							📋 Backup History (Max 3)
+							🔄 Rolling Backups (Browser Storage, Max 5)
 						</summary>
 						<div
-							id="backupList"
-							style="max-height: 300px; overflow-y: auto"
+							id="rollingBackupList"
+							style="max-height: 200px; overflow-y: auto"
 						>
 							<div
 								class="no-backups"
 								style="
 									text-align: center;
-									padding: 20px;
+									padding: 15px;
 									color: #888;
+									font-size: 12px;
 								"
 							>
-								No backups yet. Create your first backup!
+								No rolling backups yet. Enable auto-backup or create one manually.
+							</div>
+						</div>
+						<button id="createRollingBackup" class="btn-secondary" style="width: 100%; margin-top: 8px; font-size: 12px">
+							➕ Create Rolling Backup Now
+						</button>
+					</details>
+
+					<!-- Legacy Backup List -->
+					<details
+						style="
+							margin-top: 15px;
+							padding: 12px;
+							background: rgba(0, 0, 0, 0.2);
+							border-radius: 6px;
+						"
+					>
+						<summary
+							style="
+								cursor: pointer;
+								font-weight: bold;
+								margin-bottom: 10px;
+							"
+						>
+							📋 Quick Backups (Library Only, Max 3)
+						</summary>
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px">
+							<button id="createManualBackup" class="btn-primary">
+								💾 Quick Backup
+							</button>
+							<button id="restoreBackupBtn" class="btn-secondary">
+								📂 Restore
+							</button>
+						</div>
+						<div
+							id="backupList"
+							style="max-height: 200px; overflow-y: auto"
+						>
+							<div
+								class="no-backups"
+								style="
+									text-align: center;
+									padding: 15px;
+									color: #888;
+									font-size: 12px;
+								"
+							>
+								No quick backups yet.
 							</div>
 						</div>
 					</details>

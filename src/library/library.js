@@ -16,6 +16,21 @@ import {
 	isSiteEnabled,
 	SITE_SETTINGS_KEY,
 } from "../utils/site-settings.js";
+import {
+	createComprehensiveBackup,
+	restoreComprehensiveBackup,
+	downloadBackupAsFile,
+	readBackupFromFile,
+} from "../utils/comprehensive-backup.js";
+import {
+	getTelemetryConfig,
+	saveTelemetryConfig,
+	isFirstRun,
+	markFirstRunComplete,
+	optInTelemetry,
+	optOutTelemetry,
+	trackFeatureUsage,
+} from "../utils/telemetry.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
 // Modal renderer cache
@@ -182,13 +197,13 @@ const elements = {
 	modalFandomsSection: document.getElementById("modal-fandoms-section"),
 	modalFandoms: document.getElementById("modal-fandoms"),
 	modalRelationshipsSection: document.getElementById(
-		"modal-relationships-section"
+		"modal-relationships-section",
 	),
 	modalRelationships: document.getElementById("modal-relationships"),
 	modalCharactersSection: document.getElementById("modal-characters-section"),
 	modalCharacters: document.getElementById("modal-characters"),
 	modalAdditionalTagsSection: document.getElementById(
-		"modal-additional-tags-section"
+		"modal-additional-tags-section",
 	),
 	modalAdditionalTags: document.getElementById("modal-additional-tags"),
 	modalWorkStatsSection: document.getElementById("modal-work-stats-section"),
@@ -218,6 +233,30 @@ const elements = {
 	clearBtn: document.getElementById("clear-btn"),
 	autoHoldToggle: document.getElementById("auto-hold-toggle"),
 	autoHoldDays: document.getElementById("auto-hold-days"),
+
+	// Comprehensive Backup
+	comprehensiveBackupBtn: document.getElementById("comprehensive-backup-btn"),
+	comprehensiveRestoreBtn: document.getElementById(
+		"comprehensive-restore-btn",
+	),
+	comprehensiveRestoreFile: document.getElementById(
+		"comprehensive-restore-file",
+	),
+	rollingBackupToggle: document.getElementById("rolling-backup-toggle"),
+
+	// Telemetry Settings
+	telemetryToggle: document.getElementById("telemetry-toggle"),
+	telemetryDetails: document.getElementById("telemetry-details"),
+	sendErrorsToggle: document.getElementById("send-errors-toggle"),
+	webhookUrl: document.getElementById("webhook-url"),
+
+	// Telemetry Consent Modal
+	telemetryConsentModal: document.getElementById("telemetry-consent-modal"),
+	telemetryAcceptBtn: document.getElementById("telemetry-accept-btn"),
+	telemetryDeclineBtn: document.getElementById("telemetry-decline-btn"),
+	telemetryBanner: document.getElementById("telemetry-banner"),
+	telemetryBannerDisable: document.getElementById("telemetry-banner-disable"),
+	telemetryBannerKeep: document.getElementById("telemetry-banner-keep"),
 
 	// Carousel
 	carouselSection: document.getElementById("carousel-section"),
@@ -293,7 +332,7 @@ if (isSidebar) {
 async function init() {
 	debugLog(
 		"📚 Initializing Novel Library Page" +
-			(isSidebar ? " (Sidebar mode)" : "")
+			(isSidebar ? " (Sidebar mode)" : ""),
 	);
 
 	// Add sidebar class to body if in sidebar
@@ -310,6 +349,9 @@ async function init() {
 	// Load saved library-level settings
 	await loadLibrarySettings();
 
+	// Load telemetry settings
+	await loadTelemetrySettings();
+
 	// Set up event listeners
 	setupEventListeners();
 
@@ -318,6 +360,9 @@ async function init() {
 
 	// Load library data
 	await loadLibrary();
+
+	// Check for first run telemetry consent
+	await checkFirstRunConsent();
 }
 
 /**
@@ -381,6 +426,61 @@ async function loadSiteToggleSettings() {
 }
 
 /**
+ * Load telemetry settings and sync UI controls
+ */
+async function loadTelemetrySettings() {
+	try {
+		const config = await getTelemetryConfig();
+
+		if (elements.telemetryToggle) {
+			elements.telemetryToggle.checked = !!config.enabled;
+		}
+
+		// Always show telemetry details since it's opt-out
+		if (elements.telemetryDetails) {
+			elements.telemetryDetails.style.display = "block";
+		}
+
+		if (elements.sendErrorsToggle) {
+			elements.sendErrorsToggle.checked = !!config.sendErrorReports;
+		}
+
+		if (elements.webhookUrl) {
+			elements.webhookUrl.value = config.customWebhookUrl || "";
+		}
+
+		// Load rolling backup setting
+		if (elements.rollingBackupToggle) {
+			const result = await browser.storage.local.get("rg_rolling_backup_enabled");
+			elements.rollingBackupToggle.checked = result.rg_rolling_backup_enabled !== false; // Default to true
+		}
+	} catch (error) {
+		debugError("Failed to load telemetry settings:", error);
+	}
+}
+
+/**
+ * Check for first run and show telemetry consent modal
+ */
+async function checkFirstRunConsent() {
+	try {
+		const firstRun = await isFirstRun();
+		const config = await getTelemetryConfig();
+
+		// Only show banner on first run if consent hasn't been shown yet
+		if (firstRun && !config.consentShown) {
+			if (elements.telemetryBanner) {
+				elements.telemetryBanner.classList.remove("hidden");
+			}
+		} else if (elements.telemetryBanner) {
+			elements.telemetryBanner.classList.add("hidden");
+		}
+	} catch (error) {
+		debugError("Failed to check first run consent:", error);
+	}
+}
+
+/**
  * Persist auto-hold setting changes
  */
 async function persistAutoHoldSettings(updates = {}) {
@@ -389,11 +489,6 @@ async function persistAutoHoldSettings(updates = {}) {
 		...updates,
 	};
 	librarySettings = await novelLibrary.saveSettings(nextSettings);
-
-	// React to theme updates from popup
-	if (changes.themeSettings) {
-		applyLibraryTheme();
-	}
 }
 
 /**
@@ -745,6 +840,18 @@ function resolveMetadataRefreshUrl(novel) {
 	return novel.sourceUrl || novel.lastReadUrl || novel.lastReadChapterUrl;
 }
 
+function applyModalActionVisibility(novel) {
+	const handlerType = getHandlerTypeForNovel(novel);
+	if (!elements.modalSourceBtn) return;
+
+	if (handlerType === "chapter_embedded") {
+		elements.modalSourceBtn.style.display = "none";
+		elements.modalSourceBtn.removeAttribute("href");
+	} else {
+		elements.modalSourceBtn.style.display = "inline-flex";
+	}
+}
+
 /**
  * Populate the supported sites list from SHELVES
  */
@@ -785,7 +892,7 @@ function setupEventListeners() {
 	if (elements.statusFilterBtns) {
 		elements.statusFilterBtns.forEach((btn) => {
 			btn.addEventListener("click", () =>
-				handleStatusFilterChange(btn.dataset.status)
+				handleStatusFilterChange(btn.dataset.status),
 			);
 		});
 	}
@@ -795,15 +902,15 @@ function setupEventListeners() {
 
 	// Settings
 	elements.settingsBtn.addEventListener("click", () =>
-		openModal(elements.settingsModal)
+		openModal(elements.settingsModal),
 	);
 	elements.settingsClose.addEventListener("click", () =>
-		closeModal(elements.settingsModal)
+		closeModal(elements.settingsModal),
 	);
 
 	// Novel modal
 	elements.modalClose.addEventListener("click", () =>
-		closeModal(elements.novelModal)
+		closeModal(elements.novelModal),
 	);
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);
 	elements.modalRefreshBtn.addEventListener("click", handleRefreshMetadata);
@@ -811,7 +918,7 @@ function setupEventListeners() {
 	if (elements.modalStatusSelector) {
 		elements.modalStatusSelector.addEventListener(
 			"change",
-			handleModalStatusChange
+			handleModalStatusChange,
 		);
 	}
 
@@ -832,29 +939,165 @@ function setupEventListeners() {
 
 	// Edit modal
 	elements.editClose.addEventListener("click", () =>
-		closeModal(elements.editModal)
+		closeModal(elements.editModal),
 	);
 	elements.editCancelBtn.addEventListener("click", () =>
-		closeModal(elements.editModal)
+		closeModal(elements.editModal),
 	);
 	elements.editForm.addEventListener("submit", handleSaveEdit);
 	elements.editCover.addEventListener(
 		"input",
-		debounce(handleCoverPreview, 500)
+		debounce(handleCoverPreview, 500),
 	);
 
 	// Settings actions
 	elements.exportBtn.addEventListener("click", handleExport);
 	elements.importBtn.addEventListener("click", () =>
-		elements.importFile.click()
+		elements.importFile.click(),
 	);
 	elements.importFile.addEventListener("change", handleImport);
 	elements.clearBtn.addEventListener("click", handleClearLibrary);
 
+	// Comprehensive backup
+	if (elements.comprehensiveBackupBtn) {
+		elements.comprehensiveBackupBtn.addEventListener(
+			"click",
+			handleComprehensiveBackup,
+		);
+	}
+	if (elements.comprehensiveRestoreBtn) {
+		elements.comprehensiveRestoreBtn.addEventListener("click", () =>
+			elements.comprehensiveRestoreFile?.click(),
+		);
+	}
+	if (elements.comprehensiveRestoreFile) {
+		elements.comprehensiveRestoreFile.addEventListener(
+			"change",
+			handleComprehensiveRestore,
+		);
+	}
+	if (elements.rollingBackupToggle) {
+		elements.rollingBackupToggle.addEventListener("change", async (e) => {
+			await browser.storage.local.set({
+				rg_rolling_backup_enabled: e.target.checked,
+			});
+			showNotification(
+				e.target.checked
+					? "Rolling backups enabled"
+					: "Rolling backups disabled",
+				"info",
+			);
+		});
+	}
+
+	// Telemetry settings
+	if (elements.telemetryToggle) {
+		elements.telemetryToggle.addEventListener("change", async (e) => {
+			const enabled = e.target.checked;
+			if (enabled) {
+				await optInTelemetry();
+				showNotification(
+					"Analytics enabled. Thank you for helping improve Ranobe Gemini!",
+					"success",
+				);
+			} else {
+				await optOutTelemetry();
+				showNotification(
+					"Analytics disabled. You can re-enable anytime.",
+					"info",
+				);
+			}
+		});
+	}
+	if (elements.sendErrorsToggle) {
+		elements.sendErrorsToggle.addEventListener("change", async (e) => {
+			await saveTelemetryConfig({ sendErrorReports: e.target.checked });
+		});
+	}
+	if (elements.webhookUrl) {
+		elements.webhookUrl.addEventListener("change", async (e) => {
+			await saveTelemetryConfig({
+				customWebhookUrl: e.target.value.trim(),
+			});
+			if (e.target.value.trim()) {
+				showNotification("Custom webhook URL saved", "success");
+			}
+		});
+	}
+
+	// Telemetry consent modal (opt-out notification)
+	if (elements.telemetryAcceptBtn) {
+		elements.telemetryAcceptBtn.addEventListener("click", async () => {
+			// Keep enabled (default)
+			await markFirstRunComplete();
+			closeModal(elements.telemetryConsentModal);
+			showNotification(
+				"Thank you for helping improve Ranobe Gemini!",
+				"success",
+			);
+		});
+	}
+	if (elements.telemetryDeclineBtn) {
+		elements.telemetryDeclineBtn.addEventListener("click", async () => {
+			await optOutTelemetry();
+			await markFirstRunComplete();
+			closeModal(elements.telemetryConsentModal);
+			// Update UI
+			if (elements.telemetryToggle) {
+				elements.telemetryToggle.checked = false;
+			}
+			showNotification(
+				"Analytics disabled. You can re-enable anytime in Settings.",
+				"info",
+			);
+		});
+	}
+
+	// Telemetry opt-out banner
+	if (elements.telemetryBannerDisable) {
+		elements.telemetryBannerDisable.addEventListener("click", async () => {
+			await optOutTelemetry();
+			await saveTelemetryConfig({
+				consentShown: true,
+				consentDate: Date.now(),
+			});
+			await markFirstRunComplete();
+			if (elements.telemetryToggle) {
+				elements.telemetryToggle.checked = false;
+			}
+			if (elements.telemetryBanner) {
+				elements.telemetryBanner.classList.add("hidden");
+			}
+			showNotification(
+				"Analytics disabled. You can re-enable anytime in Settings.",
+				"info",
+			);
+		});
+	}
+	if (elements.telemetryBannerKeep) {
+		elements.telemetryBannerKeep.addEventListener("click", async () => {
+			await saveTelemetryConfig({
+				consentShown: true,
+				consentDate: Date.now(),
+			});
+			await markFirstRunComplete();
+			if (elements.telemetryToggle) {
+				elements.telemetryToggle.checked = true;
+			}
+			if (elements.telemetryBanner) {
+				elements.telemetryBanner.classList.add("hidden");
+			}
+			showNotification(
+				"Thanks for helping improve Ranobe Gemini!",
+				"success",
+			);
+		});
+	}
+
 	// Carousel controls
 	elements.carouselPlayPause.addEventListener(
 		"click",
-		toggleCarouselPlayPause
+		toggleCarouselPlayPause,
 	);
 	elements.carouselPrev.addEventListener("click", () => moveCarousel(-1));
 	elements.carouselNext.addEventListener("click", () => moveCarousel(1));
@@ -1574,6 +1817,13 @@ function showNotification(message, type = "success") {
  * Delegates to site-specific renderer if available
  */
 async function openNovelDetail(novel) {
+	currentModalNovel = novel || null;
+	if (elements.modalRemoveBtn && novel?.id) {
+		elements.modalRemoveBtn.dataset.novelId = novel.id;
+	}
+	if (elements.modalStatus && novel?.id) {
+		elements.modalStatus.dataset.novelId = novel.id;
+	}
 	const shelfId = novel.shelfId;
 	let handled = false;
 
@@ -1591,6 +1841,8 @@ async function openNovelDetail(novel) {
 
 	if (!handled) {
 		await openDefaultNovelDetail(novel);
+	} else {
+		applyModalActionVisibility(novel);
 	}
 }
 
@@ -1797,10 +2049,14 @@ async function openDefaultNovelDetail(novel) {
 	const refreshTarget = resolveMetadataRefreshUrl(novel);
 	elements.modalContinueBtn.href =
 		novel.lastReadUrl || novel.sourceUrl || "#";
-	elements.modalSourceBtn.href = refreshTarget || novel.sourceUrl || "#";
+	if (elements.modalSourceBtn) {
+		elements.modalSourceBtn.href = refreshTarget || novel.sourceUrl || "#";
+	}
 	if (elements.modalRefreshBtn) {
 		elements.modalRefreshBtn.dataset.refreshUrl = refreshTarget || "";
 	}
+
+	applyModalActionVisibility(novel);
 
 	// Store current novel ID for removal
 	elements.modalRemoveBtn.dataset.novelId = novel.id;
@@ -2124,13 +2380,15 @@ async function handleRemoveNovel() {
 
 // Store current novel being edited
 let currentEditingNovel = null;
+let currentModalNovel = null;
 
 /**
  * Handle opening the edit modal
  */
 function handleOpenEditModal() {
-	const novelId = elements.modalRemoveBtn.dataset.novelId;
-	const novel = allNovels.find((n) => n.id === novelId);
+	const novelId =
+		currentModalNovel?.id || elements.modalRemoveBtn?.dataset.novelId;
+	const novel = currentModalNovel || allNovels.find((n) => n.id === novelId);
 
 	if (!novel) {
 		showToast("Novel not found", "error");
@@ -2408,6 +2666,84 @@ async function handleClearLibrary() {
 			await loadLibrary();
 		}
 	}
+}
+
+/**
+ * Handle comprehensive backup creation
+ */
+async function handleComprehensiveBackup() {
+	try {
+		showNotification("Creating comprehensive backup...", "info");
+		const backup = await createComprehensiveBackup();
+		await downloadBackupAsFile(backup, "comprehensive");
+		showNotification("Comprehensive backup created successfully!", "success");
+
+		// Track feature usage
+		trackFeatureUsage("comprehensive_backup");
+	} catch (error) {
+		debugError("Comprehensive backup failed:", error);
+		showNotification(`Backup failed: ${error.message}`, "error");
+	}
+}
+
+/**
+ * Handle comprehensive backup restoration
+ */
+async function handleComprehensiveRestore(e) {
+	const file = e.target.files?.[0];
+	if (!file) return;
+
+	try {
+		const backup = await readBackupFromFile(file);
+
+		// Show confirmation with backup details
+		const novelCount = backup.data?.novelHistory ? Object.keys(backup.data.novelHistory).length : 0;
+		const hasApiKeys = !!(backup.data?.apiKey || backup.data?.backupApiKeys?.length);
+		const hasPrompts = !!(backup.data?.promptTemplate || backup.data?.summaryPrompt || backup.data?.shortSummaryPrompt);
+		const hasDriveSettings = !!(backup.data?.driveClientId);
+
+		const details = [
+			`📚 ${novelCount} novels`,
+			hasApiKeys ? "🔑 API Keys" : null,
+			hasPrompts ? "📝 Prompts" : null,
+			hasDriveSettings ? "☁️ Drive Settings" : null,
+		].filter(Boolean).join(", ");
+
+		const choice = confirm(
+			`Comprehensive Backup Found\n\n` +
+			`Created: ${new Date(backup.timestamp).toLocaleString()}\n` +
+			`Contains: ${details}\n\n` +
+			`Do you want to restore this backup?\n\n` +
+			`⚠️ This will overwrite your current settings.`
+		);
+
+		if (choice) {
+			showNotification("Restoring backup...", "info");
+			const result = await restoreComprehensiveBackup(backup, { merge: true });
+
+			if (result.success) {
+				await loadLibrary();
+				await loadLibrarySettings();
+				await loadTelemetrySettings();
+				closeModal(elements.settingsModal);
+				showNotification(
+					`Backup restored! ${result.restored} items recovered.`,
+					"success"
+				);
+
+				// Track feature usage
+				trackFeatureUsage("comprehensive_restore");
+			} else {
+				throw new Error(result.error || "Restore failed");
+			}
+		}
+	} catch (error) {
+		debugError("Comprehensive restore failed:", error);
+		showNotification(`Restore failed: ${error.message}`, "error");
+	}
+
+	// Reset file input
+	e.target.value = "";
 }
 
 /**

@@ -29,6 +29,11 @@ import {
 } from "../utils/drive.js";
 import { novelLibrary } from "../utils/novel-library.js";
 import { notificationManager } from "../utils/notification-manager.js";
+import {
+	initializeTelemetry,
+	sendTelemetryPing,
+	trackInstall,
+} from "../utils/telemetry.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -178,11 +183,35 @@ if (typeof browser === "undefined") {
 		browser.runtime.onStartup?.addListener(() => {
 			debugLog("Firefox: Extension started");
 			setupKeepAliveAlarm();
+			// Send startup telemetry
+			initializeTelemetry().then(() => sendTelemetryPing("startup"));
 		});
 
-		browser.runtime.onInstalled?.addListener(() => {
+		browser.runtime.onInstalled?.addListener((details) => {
 			debugLog("Firefox: Extension installed/updated");
 			setupKeepAliveAlarm();
+			// Track install/update
+			initializeTelemetry().then(() => {
+				if (details?.reason === "install") {
+					trackInstall(false);
+				} else if (details?.reason === "update") {
+					trackInstall(true);
+				}
+			});
+		});
+	} else {
+		// Chromium browsers
+		browser.runtime.onInstalled?.addListener((details) => {
+			debugLog("Chromium: Extension installed/updated");
+			setupKeepAliveAlarm();
+			// Track install/update
+			initializeTelemetry().then(() => {
+				if (details?.reason === "install") {
+					trackInstall(false);
+				} else if (details?.reason === "update") {
+					trackInstall(true);
+				}
+			});
 		});
 	}
 

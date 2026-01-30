@@ -116,6 +116,34 @@ Version 3.7.0 introduces support for Web Application OAuth credentials, major po
   - Backwards compatible with "Chrome Extension" type credentials (no secret required)
   - Allows users to use existing Google Cloud projects with web credentials
 
+- **User-Configured OAuth**: Removed default credentials for better security
+  - Users now configure their own Google Cloud OAuth credentials
+  - Paste JSON credentials directly from Google Cloud Console
+  - Automatic parsing of "Web application" or "Desktop app" credential JSON
+  - Smart redirect URI validation per browser type (Chrome, Firefox, Edge)
+
+#### 💾 Comprehensive Backup System
+- **Full Extension Backup**: New `comprehensive-backup.js` utility
+  - Complete backups including library, API keys, prompts, and all settings
+  - Site-specific prompts and per-novel custom prompts
+  - Theme preferences and model configuration
+  - Google Drive OAuth credentials
+
+- **Rolling Auto-Backups**: Automatic protection with browser storage
+  - Keeps up to 5 recent backups in browser storage
+  - Triggered automatically when library changes
+  - Quick restore from popup without external files
+  - Toggle auto-backups on/off per preference
+
+#### 📊 Anonymous Analytics (Opt-Out)
+- **CFlair-Counter Integration**: New `telemetry.js` module
+  - Uses [CFlair-Counter](https://github.com/Life-Experimentalist/CFlair-Counter) API
+  - **Enabled by default** (opt-out model)
+  - First-run dialog informs users about analytics
+  - Anonymous view counts per feature
+  - Error reporting (optional, separate toggle)
+  - Custom webhook support for additional self-hosted debugging
+
 #### 📢 Enhanced Notification System
 - **Notification Manager**: Centralized notification handling across the extension
   - Added logging for all notifications with detailed metadata
