@@ -396,6 +396,7 @@ Click to generate preview...</pre
 							<p style="font-size: 13px; margin: 0 0 8px 0">
 								Backup your library to Google Drive with automatic version history and easy restore.
 							</p>
+							<div id="driveAuthError" class="description" style="display: none; margin-bottom: 8px; color: #f59e0b; font-size: 12px"></div>
 							<button id="connectDriveBtn" class="btn-primary" style="width: 100%; margin-bottom: 8px">
 								🔗 Connect Google Drive
 							</button>
@@ -413,9 +414,23 @@ Click to generate preview...</pre
 										<input type="radio" name="driveBackupMode" id="driveContinuous" value="continuous" />
 										<span>Continuous</span>
 									</label>
+									<label style="display: flex; align-items: center; gap: 4px; font-size: 12px">
+										<input type="radio" name="driveBackupMode" id="driveBoth" value="both" />
+										<span>Both</span>
+									</label>
 								</div>
 								<div class="description" style="font-size: 11px; margin-top: 4px">
-									Scheduled: Daily at set time | Continuous: After library changes (5-min delay)
+									Scheduled: Daily versions | Continuous: Rolling file (5-min delay) | Both: Daily + Rolling
+								</div>
+							</div>
+
+							<div style="margin-bottom: 8px">
+								<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+									<input type="checkbox" id="driveAutoRestoreEnabled" />
+									<span>Auto-restore from Drive (merge latest)</span>
+								</label>
+								<div class="description" style="font-size: 11px; margin-top: 4px">
+									Checks Drive every 10 minutes and merges the newest backup.
 								</div>
 							</div>
 
@@ -428,10 +443,60 @@ Click to generate preview...</pre
 								</button>
 							</div>
 
+							<button id="driveSyncNowBtn" class="btn-secondary" style="width: 100%; font-size: 12px; padding: 6px; margin-bottom: 6px">
+								🔄 Sync From Drive Now
+							</button>
+
 							<button id="disconnectDriveBtn" class="btn-secondary" style="width: 100%; font-size: 12px; padding: 6px">
 								🔌 Disconnect Drive
 							</button>
 						</div>
+
+						<details style="margin-top: 10px">
+							<summary style="cursor: pointer; font-weight: 600; font-size: 12px; color: #9fb3c8">
+								Advanced setup (optional)
+							</summary>
+							<div style="margin-top: 10px; display: grid; gap: 10px">
+								<div>
+									<label for="driveClientId" style="font-size: 12px">Google OAuth Client ID</label>
+									<input
+										id="driveClientId"
+										type="text"
+										placeholder="Optional: custom client ID"
+										style="width: 100%"
+									/>
+									<div class="description" style="font-size: 11px">
+										Only needed for private setups. Default works out of the box.
+									</div>
+								</div>
+
+								<div>
+									<label for="driveClientSecret" style="font-size: 12px">Google OAuth Client Secret</label>
+									<input
+										id="driveClientSecret"
+										type="password"
+										placeholder="Required if using Web Application Client ID"
+										style="width: 100%"
+									/>
+									<div class="description" style="font-size: 11px">
+										Required for "Web application" client types (usually starts with "GOCSPX-"). "Chrome Extension" types don't need this.
+									</div>
+								</div>
+
+								<div>
+									<label for="driveFolderId" style="font-size: 12px">Drive Folder ID (optional)</label>
+									<input
+										id="driveFolderId"
+										type="text"
+										placeholder="Uploads go to root when empty"
+										style="width: 100%"
+									/>
+									<div class="description" style="font-size: 11px">
+										Optional: store backups in a specific Drive folder.
+									</div>
+								</div>
+							</div>
+						</details>
 					</div>
 
 					<div style="margin-bottom: 15px">
@@ -918,58 +983,6 @@ Click to generate preview...</pre
 						For advanced users only. Leave blank to use standard
 						endpoints.
 					</div>
-				</div>
-
-				<div class="setting">
-					<h4 style="margin-bottom: 8px">☁️ Drive Log Backup</h4>
-					<label for="driveClientId">Google OAuth Client ID</label>
-					<input
-						type="text"
-						id="driveClientId"
-						placeholder="xxxxxx.apps.googleusercontent.com"
-						style="margin-bottom: 8px"
-					/>
-					<div class="description" style="margin-bottom: 10px">
-						Uses identity.launchWebAuthFlow with your client ID and
-						Drive file scope (no hosting needed). Tokens stay in the
-						extension.
-					</div>
-					<label for="driveFolderId"
-						>Drive Folder ID (optional)</label
-					>
-					<input
-						type="text"
-						id="driveFolderId"
-						placeholder="Drive folder ID for uploads"
-						style="margin-bottom: 8px"
-					/>
-					<div class="button-group" style="gap: 8px">
-						<button
-							id="driveAuthBtn"
-							class="btn btn-secondary btn-sm"
-						>
-							Sign in to Drive
-						</button>
-						<button
-							id="driveUploadLogsBtn"
-							class="btn btn-primary btn-sm"
-							title="Export recent debug logs to Drive"
-						>
-							Upload Logs → Drive
-						</button>
-						<button
-							id="driveResetBtn"
-							class="btn btn-secondary btn-sm"
-							title="Forget cached tokens"
-						>
-							Reset Tokens
-						</button>
-					</div>
-					<div
-						id="driveStatus"
-						class="description"
-						style="margin-top: 8px; min-height: 18px"
-					></div>
 				</div>
 
 				<div class="actions">

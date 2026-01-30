@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Ranobe Gemini | Google Drive Setup</title>
+		<meta
+			name="description"
+			content="Step-by-step Google Drive backup & sync setup for Ranobe Gemini. Includes private OAuth setup for personal deployments."
+		/>
+		<link
+			rel="canonical"
+			href="https://ranobe.vkrishna04.me/drive-setup.html"
+		/>
+		<meta name="theme-color" content="#0b1628" />
+		<link
+			rel="icon"
+			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			sizes="32x32"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+	</head>
+	<body>
+		<div class="bg-glow"></div>
+		<div class="bg-dots"></div>
+		<header class="topbar">
+			<div class="brand">
+				<img
+					class="logo-img"
+					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					alt="Ranobe Gemini"
+				/>
+				<div class="meta">
+					<strong id="brandName">Ranobe Gemini</strong>
+					<span>Drive backup setup</span>
+				</div>
+			</div>
+			<nav class="nav">
+				<a href="./index.html">Home</a>
+				<a href="#quick-start">Quick start</a>
+				<a href="#private-setup">Private setup</a>
+				<a href="#troubleshooting">Troubleshooting</a>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero section">
+				<div class="hero-copy">
+					<p class="eyebrow">Drive backup & restore</p>
+					<h1>Google Drive sync setup</h1>
+					<p class="lede">
+						Use the default shared client for fast setup, or
+						configure a private OAuth client if you want your own
+						project and quotas.
+					</p>
+					<div class="cta-row">
+						<a class="btn primary" href="#quick-start">
+							Start quick setup
+						</a>
+						<a class="btn secondary" href="#private-setup">
+							Private setup
+						</a>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-header">
+						<h3>What this enables</h3>
+					</div>
+					<div class="card-body">
+						<div class="line bright">
+							✅ Automatic Drive backups
+						</div>
+						<div class="line">✅ Cross‑browser sync (merge)</div>
+						<div class="line">✅ Rolling + daily history</div>
+						<div class="line">✅ Restore on new installs</div>
+					</div>
+					<div class="card-footer">
+						<span class="status-badge ready"
+							>No hosting required</span
+						>
+					</div>
+				</div>
+			</section>
+
+			<section id="quick-start" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Quick start</p>
+					<h2>Use the default client (fastest)</h2>
+					<p class="lede">
+						This is the simplest path. It works immediately and does
+						not require creating a Google Cloud project.
+					</p>
+				</div>
+				<ol class="steps">
+					<li>
+						<strong>Open the extension popup</strong>
+						<p>Go to Advanced → Google Drive Backup.</p>
+					</li>
+					<li>
+						<strong>Click “Connect Google Drive”</strong>
+						<p>Choose your Google account and approve access.</p>
+					</li>
+					<li>
+						<strong>Choose a backup mode</strong>
+						<p>Scheduled, Continuous, or Both.</p>
+					</li>
+					<li>
+						<strong>Run “Sync From Drive Now”</strong>
+						<p>Optional but recommended for first time.</p>
+					</li>
+				</ol>
+			</section>
+
+			<section id="private-setup" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Private setup</p>
+					<h2>Use your own Google Cloud project</h2>
+					<p class="lede">
+						Recommended if you want full control, your own quotas,
+						or a private-only setup.
+					</p>
+				</div>
+				<div class="grid">
+					<div class="card">
+						<div class="card-header">
+							<h3>Step 1 — OAuth consent screen</h3>
+						</div>
+						<div class="card-body">
+							<ul class="pill-list">
+								<li>Project name + support email</li>
+								<li>Add yourself as a test user</li>
+								<li>Scope: Drive file (drive.file)</li>
+							</ul>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header">
+							<h3>Step 2 — OAuth client ID</h3>
+						</div>
+						<div class="card-body">
+							<ul class="pill-list">
+								<li>Client type: Web application</li>
+								<li>Add redirect URIs per browser</li>
+								<li>No hosted redirect page required</li>
+							</ul>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header">
+							<h3>Step 3 — Paste client ID</h3>
+						</div>
+						<div class="card-body">
+							<p class="lede" style="font-size: 15px">
+								Open the Advanced → Google Drive Backup section
+								in the extension and paste your OAuth client ID
+								under Advanced setup.
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="section" style="margin: 40px 0 0">
+					<h3>Redirect URI templates</h3>
+					<p class="lede" style="font-size: 16px">
+						Each browser build has its own extension ID. Register
+						the redirect for every browser you ship.
+					</p>
+					<div class="grid">
+						<div class="browser-card ready">
+							<div class="browser-icon">🧩</div>
+							<div>
+								<strong>Chromium (Chrome/Edge/Brave)</strong>
+								<p class="lede" style="font-size: 14px">
+									<span id="chromiumRedirect"></span>
+								</p>
+								<p class="description">
+									Extension ID:
+									<span id="chromiumExtensionId"></span>
+								</p>
+							</div>
+						</div>
+						<div class="browser-card ready">
+							<div class="browser-icon">🦊</div>
+							<div>
+								<strong>Firefox</strong>
+								<p class="lede" style="font-size: 14px">
+									<span id="firefoxRedirect"></span>
+								</p>
+								<p class="description">
+									Extension ID:
+									<span id="firefoxExtensionId"></span>
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="troubleshooting" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Troubleshooting</p>
+					<h2>Common issues</h2>
+				</div>
+				<div class="grid">
+					<div class="card">
+						<div class="card-header">
+							<h3>Popup still shows Disconnected</h3>
+						</div>
+						<div class="card-body">
+							<p class="lede" style="font-size: 15px">
+								Open the popup again after completing OAuth. If
+								it still shows disconnected, verify your
+								redirect URI matches the extension ID and try
+								reconnecting.
+							</p>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header">
+							<h3>Auth failed (invalid_client)</h3>
+						</div>
+						<div class="card-body">
+							<p class="lede" style="font-size: 15px">
+								Ensure you are using the correct Client ID and
+								that the redirect URI is registered exactly
+								(including /drive).
+							</p>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header">
+							<h3>Access blocked or testing only</h3>
+						</div>
+						<div class="card-body">
+							<p class="lede" style="font-size: 15px">
+								Add your Google account as a test user or
+								publish the consent screen.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<script src="./drive-setup.js"></script>
+	</body>
+</html>

@@ -612,6 +612,45 @@ body {
 	box-shadow: var(--shadow-md);
 }
 
+.btn-secondary {
+	background: var(--bg-card);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+	border-color: var(--primary-color);
+	color: var(--primary-color);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-sm);
+}
+
+.btn-icon {
+	padding: 8px 12px;
+	background: var(--bg-card);
+	border: 1px solid var(--border-color);
+	color: var(--text-primary);
+}
+
+.btn-icon:hover {
+	border-color: var(--primary-color);
+	color: var(--primary-color);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-sm);
+}
+
+.btn-danger {
+	background: rgba(239, 68, 68, 0.15);
+	border-color: rgba(239, 68, 68, 0.35);
+	color: #fca5a5;
+}
+
+.btn-danger:hover {
+	background: rgba(239, 68, 68, 0.22);
+	border-color: rgba(239, 68, 68, 0.55);
+	color: #fecaca;
+}
+
 @media (max-width: 600px) {
 	.modal-content {
 		max-width: 100%;

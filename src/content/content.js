@@ -37,6 +37,9 @@ let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let lastKnownNovelData = null; // Cached novel data for notifications
+const progressPromptState = new Map();
+const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
+const PROGRESS_PROMPT_TIMEOUT_MS = 15000;
 if (window.__RGInitDone) {
 	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
@@ -3393,6 +3396,97 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	function shouldShowProgressPrompt(novelId) {
+		if (!novelId) return false;
+		const lastPrompt = progressPromptState.get(novelId);
+		if (!lastPrompt) return true;
+		return Date.now() - lastPrompt > PROGRESS_PROMPT_COOLDOWN_MS;
+	}
+
+	async function showProgressUpdatePrompt({
+		novelId,
+		currentChapter,
+		storedChapter,
+	}) {
+		if (!shouldShowProgressPrompt(novelId)) return;
+		progressPromptState.set(novelId, Date.now());
+
+		const existing = document.getElementById("rg-progress-banner");
+		if (existing) existing.remove();
+
+		const banner = document.createElement("div");
+		banner.id = "rg-progress-banner";
+		banner.style.cssText = `
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: #1a237e;
+			border: 2px solid #3949ab;
+			border-radius: 8px;
+			padding: 12px 16px;
+			color: #ffffff;
+			font-family: system-ui, -apple-system, sans-serif;
+			font-size: 13px;
+			z-index: 999999;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+			max-width: 360px;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		`;
+
+		const message = document.createElement("div");
+		message.textContent = `Saved progress is chapter ${storedChapter}, but you're on chapter ${currentChapter}. Update progress?`;
+		banner.appendChild(message);
+
+		const actions = document.createElement("div");
+		actions.style.cssText = "display: flex; gap: 8px;";
+
+		const updateBtn = document.createElement("button");
+		updateBtn.textContent = `Update to ${currentChapter}`;
+		updateBtn.style.cssText =
+			"background: #ffffff; color: #1a237e; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;";
+
+		const ignoreBtn = document.createElement("button");
+		ignoreBtn.textContent = "Ignore";
+		ignoreBtn.style.cssText =
+			"background: transparent; color: #ffffff; border: 1px solid rgba(255,255,255,0.4); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;";
+
+		updateBtn.addEventListener("click", async () => {
+			try {
+				await novelLibrary.updateReadingProgress(
+					novelId,
+					currentChapter,
+					window.location.href,
+				);
+				showTimedBanner(
+					`Progress updated to Chapter ${currentChapter}`,
+					"success",
+					2000,
+				);
+			} catch (err) {
+				debugError("Failed to update progress", err);
+				showTimedBanner("Failed to update progress", "warning", 2000);
+			} finally {
+				banner.remove();
+			}
+		});
+
+		ignoreBtn.addEventListener("click", () => {
+			banner.remove();
+		});
+
+		actions.appendChild(updateBtn);
+		actions.appendChild(ignoreBtn);
+		banner.appendChild(actions);
+
+		document.body.appendChild(banner);
+
+		setTimeout(() => {
+			if (banner.parentElement) banner.remove();
+		}, PROGRESS_PROMPT_TIMEOUT_MS);
+	}
+
 	/**
 	 * Auto-update novel metadata when visiting any supported novel page
 	 * This ensures the library stays up-to-date without requiring user action
@@ -4336,16 +4430,25 @@ if (window.__RGInitDone) {
 				await novelLibrary.updateReadingProgress(
 					novelId,
 					chapterNav.currentChapter,
-					window.location.href
+					window.location.href,
 				);
 				debugLog(
-					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`
+					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
 				);
 				showTimedBanner(
 					`Progress saved: Chapter ${chapterNav.currentChapter}`,
 					"success",
-					2000
+					2000,
 				);
+			} else if (
+				novel.lastReadChapter &&
+				chapterNav.currentChapter < novel.lastReadChapter
+			) {
+				await showProgressUpdatePrompt({
+					novelId,
+					currentChapter: chapterNav.currentChapter,
+					storedChapter: novel.lastReadChapter,
+				});
 			}
 		} catch (error) {
 			debugError("Error updating chapter progression:", error);

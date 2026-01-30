@@ -11,7 +11,9 @@ import {
 } from "./constants.js";
 
 const TOKEN_KEY = "driveAuthTokens";
+const AUTH_ERROR_KEY = "driveAuthError";
 const CLIENT_ID_KEY = "driveClientId";
+const CLIENT_SECRET_KEY = "driveClientSecret";
 const FOLDER_ID_KEY = "driveFolderId";
 const SCOPES = GOOGLE_OAUTH_SCOPES;
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -54,6 +56,20 @@ async function setStored(map) {
 	await browser.storage.local.set(map);
 }
 
+async function setAuthError(error) {
+	if (!error) return;
+	await setStored({
+		[AUTH_ERROR_KEY]: {
+			message: error?.message || String(error),
+			at: Date.now(),
+		},
+	});
+}
+
+async function clearAuthError() {
+	await setStored({ [AUTH_ERROR_KEY]: null });
+}
+
 export async function saveDriveClientId(clientId) {
 	await setStored({ [CLIENT_ID_KEY]: clientId || "" });
 }
@@ -61,6 +77,14 @@ export async function saveDriveClientId(clientId) {
 export async function getDriveClientId() {
 	const stored = await getStored(CLIENT_ID_KEY);
 	return stored || DEFAULT_DRIVE_CLIENT_ID;
+}
+
+export async function saveDriveClientSecret(clientSecret) {
+	await setStored({ [CLIENT_SECRET_KEY]: clientSecret || "" });
+}
+
+export async function getDriveClientSecret() {
+	return getStored(CLIENT_SECRET_KEY);
 }
 
 export async function saveDriveFolderId(folderId) {
@@ -98,14 +122,24 @@ function isTokenValid(token) {
 	);
 }
 
-async function exchangeAuthCode({ code, redirectUri, codeVerifier, clientId }) {
-	const body = new URLSearchParams({
+async function exchangeAuthCode({
+	code,
+	redirectUri,
+	codeVerifier,
+	clientId,
+	clientSecret,
+}) {
+	const params = {
 		client_id: clientId,
 		code,
 		code_verifier: codeVerifier,
 		grant_type: "authorization_code",
 		redirect_uri: redirectUri,
-	});
+	};
+	if (clientSecret) {
+		params.client_secret = clientSecret;
+	}
+	const body = new URLSearchParams(params);
 	const resp = await fetch(TOKEN_ENDPOINT, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -118,12 +152,16 @@ async function exchangeAuthCode({ code, redirectUri, codeVerifier, clientId }) {
 	return resp.json();
 }
 
-async function refreshAccessToken({ refreshToken, clientId }) {
-	const body = new URLSearchParams({
+async function refreshAccessToken({ refreshToken, clientId, clientSecret }) {
+	const params = {
 		client_id: clientId,
 		refresh_token: refreshToken,
 		grant_type: "refresh_token",
-	});
+	};
+	if (clientSecret) {
+		params.client_secret = clientSecret;
+	}
+	const body = new URLSearchParams(params);
 	const resp = await fetch(TOKEN_ENDPOINT, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -138,11 +176,13 @@ async function refreshAccessToken({ refreshToken, clientId }) {
 
 export async function revokeDriveTokens() {
 	await setStored({ [TOKEN_KEY]: null });
+	await clearAuthError();
 }
 
 export async function ensureDriveAccessToken({ interactive = false } = {}) {
 	const clientId = (await getDriveClientId())?.trim();
 	if (!clientId) throw new Error("Drive client ID missing");
+	const clientSecret = (await getDriveClientSecret())?.trim();
 
 	const redirectUri = browser.identity.getRedirectURL("drive");
 	let tokens = await getTokens();
@@ -153,12 +193,14 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 			const refreshed = await refreshAccessToken({
 				refreshToken: tokens.refresh_token,
 				clientId,
+				clientSecret,
 			});
 			const merged = {
 				...refreshed,
 				refresh_token: refreshed.refresh_token || tokens.refresh_token,
 			};
 			await storeTokens(merged);
+			await clearAuthError();
 			return merged.access_token;
 		} catch (err) {
 			debugError("Drive token refresh failed", err);
@@ -187,17 +229,31 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 	});
 	const parsed = new URL(redirectUrl);
 	if (parsed.searchParams.get("state") !== state) {
-		throw new Error("State mismatch during Drive auth");
+		const err = new Error("State mismatch during Drive auth");
+		await setAuthError(err);
+		throw err;
 	}
 	const code = parsed.searchParams.get("code");
-	if (!code) throw new Error("No auth code returned from Drive");
-	const exchanged = await exchangeAuthCode({
-		code,
-		redirectUri,
-		codeVerifier: verifier,
-		clientId,
-	});
+	if (!code) {
+		const err = new Error("No auth code returned from Drive");
+		await setAuthError(err);
+		throw err;
+	}
+	let exchanged;
+	try {
+		exchanged = await exchangeAuthCode({
+			code,
+			redirectUri,
+			codeVerifier: verifier,
+			clientId,
+			clientSecret,
+		});
+	} catch (err) {
+		await setAuthError(err);
+		throw err;
+	}
 	await storeTokens(exchanged);
+	await clearAuthError();
 	return exchanged.access_token;
 }
 
@@ -487,6 +543,30 @@ export async function listDriveBackups() {
 	} catch (err) {
 		debugError("Failed to list backups", err);
 		return [];
+	}
+}
+
+export async function getContinuousDriveBackup() {
+	const folderId = await getDriveFolderId();
+	if (!folderId) return null;
+	try {
+		return await findDriveBackupByName(
+			folderId,
+			DRIVE_CONTINUOUS_BACKUP_BASENAME,
+		);
+	} catch (err) {
+		debugError("Failed to find continuous backup", err);
+		return null;
+	}
+}
+
+export async function getLatestDriveBackup() {
+	try {
+		const backups = await listDriveBackups();
+		return backups?.[0] || null;
+	} catch (err) {
+		debugError("Failed to find latest backup", err);
+		return null;
 	}
 }
 

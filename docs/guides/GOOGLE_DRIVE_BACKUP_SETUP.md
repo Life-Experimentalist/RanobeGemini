@@ -53,7 +53,9 @@ The backup system provides:
    ### For Chrome/Edge:
    ```
    https://YOUR_EXTENSION_ID.chromiumapp.org/
-   ```
+
+
+
 
    ### For Firefox:
    ```
@@ -101,6 +103,17 @@ If you're using the bundled Client ID in the extension, you're done! The extensi
    - Click **"Allow"**
 6. The extension automatically creates a folder called **"Ranobe Gemini Backups"** on your Drive and keeps the newest 3 backups plus a single rolling continuous backup file
 
+## Step 6B: Enable Auto-Restore (Cross-Browser Sync)
+
+To sync between Firefox and Edge (or any two browsers) using free Google Drive storage:
+
+1. Stay in **Settings → Advanced → Library Backup & Restore**
+2. In the Google Drive panel, enable **"Auto-restore from Drive (merge latest)"**
+3. Keep **Backup Mode = Continuous** for best results
+4. Repeat these steps in the second browser and connect the same Google account
+
+The extension checks Drive every 10 minutes and merges the newest backup into your local library.
+
 ## Step 7: Restore from Backup
 
 1. Open extension popup
@@ -109,6 +122,8 @@ If you're using the bundled Client ID in the extension, you're done! The extensi
 4. Select a backup from the list
 5. Click **"Restore"**
 6. Confirm the restore (this replaces your current library)
+
+> Tip: Use **Auto-restore** if you want seamless sync across browsers without manual restore clicks.
 
 ## Backup Modes Explained
 
@@ -129,6 +144,17 @@ If you're using the bundled Client ID in the extension, you're done! The extensi
 
 **Setting**: Automatic
 
+### Both (Daily + Rolling)
+- Daily versioned backups + a rolling file for continuous updates
+- Best for WhatsApp-style behavior (history + latest)
+- Uses the same Drive folder and respects retention limits
+
+### Auto-Restore Mode (Sync)
+- Pulls the newest Drive backup every 10 minutes
+- Merges into your current library (safe merge)
+- Enables cross-browser use (Firefox + Edge)
+- Works with the same Google account on both browsers
+
 ## Configuration Options
 
 ### In Extension Settings:
@@ -140,6 +166,7 @@ If you're using the bundled Client ID in the extension, you're done! The extensi
 | Drive Retention     | Fixed 3   | Drive keeps the latest 3 backups automatically (plus continuous) |
 | Google Drive Folder | Auto      | Auto-created "Ranobe Gemini Backups" folder                      |
 | Client ID           | Built-in  | Your Google OAuth Client ID                                      |
+| Auto-restore         | Off       | Merge newest Drive backup every 10 minutes                       |
 
 ### Command-Line / Manual:
 
@@ -150,6 +177,8 @@ All settings are stored in `browser.storage.local` with keys:
 - `driveFolderId` - Auto-created backup folder ID
 - `driveClientId` - Your OAuth Client ID
 - `driveAuthTokens` - Tokens (managed automatically)
+- `driveAutoRestoreEnabled` - Enables auto-restore sync
+- `driveAutoRestoreMergeMode` - "merge" (default) or "replace"
 
 ## Troubleshooting
 
@@ -216,13 +245,9 @@ User Opens Popup
     ↓
 User Clicks "Connect Drive" or Enables Backup
     ↓
-popup.js requests oauth-redirect.html in new window
+Browser launches OAuth flow via identity.launchWebAuthFlow (PKCE)
     ↓
-oauth-redirect.html detects extension and redirects to extension library
-    ↓
-Extension receives OAuth token via postMessage
-    ↓
-popup.js stores token in browser.storage.local
+drive.js stores tokens in browser.storage.local
     ↓
 background.js uses token to:
     - Create/get "Ranobe Gemini Backups" folder
@@ -249,7 +274,6 @@ Tokens are stored with:
 
 ## Files Involved
 
-- [landing/oauth-redirect.html](../../landing/oauth-redirect.html) - OAuth receiver page
 - [src/utils/drive.js](../../src/utils/drive.js) - Drive API wrapper
 - [src/background/background.js](../../src/background/background.js) - Backup scheduler
 - [src/popup/popup.js](../../src/popup/popup.js) - Popup UI logic

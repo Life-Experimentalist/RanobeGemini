@@ -24,6 +24,8 @@ import {
 	ensureBackupFolder,
 	listDriveBackups,
 	downloadDriveBackup,
+	getContinuousDriveBackup,
+	getLatestDriveBackup,
 } from "../utils/drive.js";
 import { novelLibrary } from "../utils/novel-library.js";
 import { notificationManager } from "../utils/notification-manager.js";
@@ -55,9 +57,11 @@ if (typeof browser === "undefined") {
 	const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES =
 		KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
 	const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
+	const DRIVE_SYNC_ALARM_NAME = "ranobe-gemini-drive-sync";
 	const DEFAULT_BACKUP_RETENTION = 3;
 	const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
 	const CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES = 5;
+	const DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES = 10;
 	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
 	// Detect browser type
@@ -133,6 +137,10 @@ if (typeof browser === "undefined") {
 			} else if (alarm.name === AUTO_BACKUP_ALARM_NAME) {
 				performAutoBackup().catch((err) =>
 					debugError("Auto-backup failed:", err),
+				);
+			} else if (alarm.name === DRIVE_SYNC_ALARM_NAME) {
+				syncLibraryFromDrive({ reason: "scheduled" }).catch((err) =>
+					debugError("Drive sync failed:", err),
 				);
 			}
 		});
@@ -297,13 +305,15 @@ if (typeof browser === "undefined") {
 			"backupMode",
 			"driveFolderId",
 		]);
+		const driveTokens = await browser.storage.local.get("driveAuthTokens");
+		const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
 
-		if (!prefs.autoBackupEnabled) {
+		if (!prefs.autoBackupEnabled && !driveConnected) {
 			return { success: false, skipped: true, reason: "disabled" };
 		}
 
 		const mode = prefs.backupMode || "scheduled";
-		if (mode !== "scheduled") {
+		if (mode !== "scheduled" && mode !== "both") {
 			return { success: false, skipped: true, reason: "mode" };
 		}
 
@@ -332,6 +342,14 @@ if (typeof browser === "undefined") {
 				);
 			}
 
+			if (!prefs.autoBackupEnabled) {
+				return {
+					success: false,
+					skipped: true,
+					reason: "drive-only",
+				};
+			}
+
 			const result = await createBackupFile({
 				folder,
 				saveAs: false,
@@ -345,6 +363,68 @@ if (typeof browser === "undefined") {
 		}
 	}
 
+	async function syncLibraryFromDrive({
+		force = false,
+		reason = "auto",
+	} = {}) {
+		const prefs = await browser.storage.local.get([
+			"driveAutoRestoreEnabled",
+			"driveAutoRestoreMergeMode",
+			"backupMode",
+		]);
+
+		if (!prefs.driveAutoRestoreEnabled && !force) {
+			return { success: false, skipped: true, reason: "disabled" };
+		}
+
+		const backupMode = prefs.backupMode || "scheduled";
+		const mergeMode = prefs.driveAutoRestoreMergeMode || "merge";
+		const shouldMerge = mergeMode !== "replace";
+
+		const latestFile =
+			backupMode === "continuous" || backupMode === "both"
+				? await getContinuousDriveBackup()
+				: await getLatestDriveBackup();
+
+		if (!latestFile?.id) {
+			return { success: false, skipped: true, reason: "no-backup" };
+		}
+
+		const syncState = await browser.storage.local.get("driveLastSync");
+		const lastSync = syncState.driveLastSync || {};
+
+		if (
+			!force &&
+			lastSync.fileId === latestFile.id &&
+			lastSync.modifiedTime === latestFile.modifiedTime
+		) {
+			return { success: false, skipped: true, reason: "up-to-date" };
+		}
+
+		const backupData = await downloadDriveBackup(latestFile.id);
+		if (!backupData?.library || !backupData?.version) {
+			return { success: false, skipped: true, reason: "invalid-backup" };
+		}
+
+		const importResult = await novelLibrary.importLibrary(
+			backupData,
+			shouldMerge,
+		);
+
+		await browser.storage.local.set({
+			driveLastSync: {
+				fileId: latestFile.id,
+				modifiedTime: latestFile.modifiedTime,
+				name: latestFile.name,
+				reason,
+				mergeMode,
+				importedAt: Date.now(),
+			},
+		});
+
+		return { success: true, file: latestFile, result: importResult };
+	}
+
 	let continuousBackupTimer = null;
 
 	async function scheduleAutoBackup() {
@@ -353,7 +433,9 @@ if (typeof browser === "undefined") {
 			"backupIntervalDays",
 			"backupMode",
 		]);
-		const enabled = prefs.autoBackupEnabled || false;
+		const driveTokens = await browser.storage.local.get("driveAuthTokens");
+		const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
+		const enabled = prefs.autoBackupEnabled || driveConnected;
 		const intervalDays = prefs.backupIntervalDays || 1;
 		const mode = prefs.backupMode || "scheduled";
 
@@ -366,7 +448,7 @@ if (typeof browser === "undefined") {
 			// ignore
 		}
 
-		if (!enabled || mode !== "scheduled") return false;
+		if (!enabled || (mode !== "scheduled" && mode !== "both")) return false;
 
 		await browser.alarms.create(AUTO_BACKUP_ALARM_NAME, {
 			periodInMinutes: Math.max(60 * 24 * intervalDays, 60),
@@ -386,9 +468,12 @@ if (typeof browser === "undefined") {
 			"continuousBackupDelayMinutes",
 			"driveFolderId",
 		]);
+		const driveTokens = await browser.storage.local.get("driveAuthTokens");
+		const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
 
-		if (!prefs.autoBackupEnabled) return;
-		if ((prefs.backupMode || "scheduled") !== "continuous") return;
+		if (!prefs.autoBackupEnabled && !driveConnected) return;
+		const mode = prefs.backupMode || "scheduled";
+		if (mode !== "continuous" && mode !== "both") return;
 
 		const delayMinutes =
 			prefs.continuousBackupDelayMinutes ||
@@ -409,6 +494,35 @@ if (typeof browser === "undefined") {
 		}, delayMs);
 	}
 
+	async function scheduleDriveSync() {
+		if (!browser.alarms) return false;
+
+		try {
+			await browser.alarms.clear(DRIVE_SYNC_ALARM_NAME);
+		} catch (_err) {
+			// ignore
+		}
+
+		const prefs = await browser.storage.local.get([
+			"driveAutoRestoreEnabled",
+			"driveSyncIntervalMinutes",
+		]);
+
+		if (!prefs.driveAutoRestoreEnabled) return false;
+
+		const intervalMinutes = Math.max(
+			5,
+			prefs.driveSyncIntervalMinutes ||
+				DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES,
+		);
+
+		await browser.alarms.create(DRIVE_SYNC_ALARM_NAME, {
+			periodInMinutes: intervalMinutes,
+		});
+
+		return true;
+	}
+
 	// Kick off scheduling on startup
 	scheduleAutoBackup().catch((err) =>
 		console.warn("Auto-backup schedule setup failed:", err?.message),
@@ -416,6 +530,14 @@ if (typeof browser === "undefined") {
 	scheduleContinuousBackup().catch((err) =>
 		console.warn("Continuous backup schedule setup failed:", err?.message),
 	);
+	scheduleDriveSync().catch((err) =>
+		console.warn("Drive sync schedule setup failed:", err?.message),
+	);
+	setTimeout(() => {
+		syncLibraryFromDrive({ reason: "startup" }).catch((err) =>
+			debugError("Drive sync on startup failed:", err),
+		);
+	}, 15000);
 
 	browser.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local") return;
@@ -430,6 +552,13 @@ if (typeof browser === "undefined") {
 		) {
 			scheduleAutoBackup();
 			scheduleContinuousBackup();
+		}
+
+		if (
+			changes.driveAutoRestoreEnabled ||
+			changes.driveSyncIntervalMinutes
+		) {
+			scheduleDriveSync();
 		}
 	});
 
@@ -694,18 +823,42 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "uploadLibraryBackupToDrive") {
-			uploadLibraryBackupToDriveWithHistory({
-				folderId: message.folderId,
-				reason: message.reason || "manual",
-				variant: message.variant || "versioned",
-			})
-				.then((result) => sendResponse({ success: true, ...result }))
-				.catch((error) =>
+			(async () => {
+				try {
+					const prefs = await browser.storage.local.get("backupMode");
+					const mode = prefs.backupMode || "scheduled";
+					const primary = await uploadLibraryBackupToDriveWithHistory(
+						{
+							folderId: message.folderId,
+							reason: message.reason || "manual",
+							variant: message.variant || "versioned",
+						},
+					);
+
+					let rolling = null;
+					if (mode === "continuous" || mode === "both") {
+						rolling = await uploadLibraryBackupToDriveWithHistory({
+							folderId: message.folderId,
+							reason: "rolling",
+							variant: "continuous",
+						});
+					}
+
+					sendResponse({
+						success: true,
+						primary,
+						rolling,
+						name: primary?.filename || primary?.name,
+					});
+				} catch (error) {
 					sendResponse({
 						success: false,
 						error: error.message,
-					}),
-				);
+					});
+				}
+			})().catch((error) =>
+				sendResponse({ success: false, error: error.message }),
+			);
 			return true;
 		}
 
@@ -742,6 +895,15 @@ if (typeof browser === "undefined") {
 						success: false,
 						error: error.message,
 					}),
+				);
+			return true;
+		}
+
+		if (message.action === "syncDriveNow") {
+			syncLibraryFromDrive({ force: true, reason: "manual" })
+				.then((result) => sendResponse({ success: true, ...result }))
+				.catch((error) =>
+					sendResponse({ success: false, error: error.message }),
 				);
 			return true;
 		}

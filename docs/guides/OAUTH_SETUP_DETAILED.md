@@ -1,5 +1,7 @@
 # Google OAuth 2.0 Setup for Ranobe Gemini
 
+> Note: The current implementation uses browser-native `identity.launchWebAuthFlow` with PKCE. Any references to `landing/oauth-redirect.html` below are legacy and can be ignored.
+
 Complete guide to set up Google Drive backup with proper OAuth 2.0 authentication.
 
 ## Quick Summary

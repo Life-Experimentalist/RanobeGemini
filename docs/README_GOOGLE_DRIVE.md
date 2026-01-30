@@ -50,7 +50,7 @@ src/
 └── manifest.json                 ← No changes (permissions already present)
 
 landing/
-└── oauth-redirect.html           ← Already set up correctly
+└── oauth-redirect.html           ← Legacy (no longer used by Drive OAuth)
 
 docs/
 ├── guides/

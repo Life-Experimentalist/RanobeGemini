@@ -1,5 +1,3 @@
-import MAX_DEBUG_LOG_ENTRIES from "../constants.js";
-
 (function () {
 	"use strict";
 

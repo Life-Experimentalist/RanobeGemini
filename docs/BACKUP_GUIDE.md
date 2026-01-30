@@ -37,6 +37,12 @@
 2. System creates a backup daily (once per 24 hours)
 3. Oldest automatic backups are automatically deleted when limit (3) is reached
 
+**Google Drive Sync (Cross-Browser):**
+1. Settings → Advanced → Library Backup & Restore → Connect Google Drive
+2. Set Backup Mode to **Continuous**
+3. Enable **Auto-restore from Drive (merge latest)**
+4. Repeat on your second browser with the same Google account
+
 #### Restoring Backups
 
 **Choose Merge Mode First:**
@@ -89,6 +95,8 @@
 | Restore Backup | Opens restore process |
 | Backup History | View/manage all backups |
 | Merge Mode | Choose how to combine data |
+| Drive Auto-restore | Merge newest Drive backup every 10 minutes |
+| Drive Backup Mode | Scheduled / Continuous / Both |
 
 ### Technical Details
 

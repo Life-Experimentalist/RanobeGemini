@@ -626,12 +626,16 @@ function showNovelModal(novel) {
 	// Set up action buttons
 	const continueBtn = document.getElementById("modal-continue-btn");
 	if (continueBtn) {
-		const lastReadUrl =
+		const continueUrl =
+			novel.lastReadUrl ||
 			novel.lastReadChapterUrl ||
 			novel.currentChapterUrl ||
-			novel.sourceUrl;
-		if (lastReadUrl) {
-			continueBtn.href = lastReadUrl;
+			novel.lastChapterUrl ||
+			novel.sourceUrl ||
+			novel.url;
+		if (continueUrl) {
+			continueBtn.href = continueUrl;
+			continueBtn.rel = "noreferrer";
 			continueBtn.style.display = "inline-flex";
 		} else {
 			continueBtn.style.display = "none";
@@ -639,9 +643,20 @@ function showNovelModal(novel) {
 	}
 
 	const readBtn = document.getElementById("modal-read-btn");
-	if (readBtn && novel.sourceUrl) {
-		readBtn.href = novel.sourceUrl;
-		readBtn.textContent = "View on Site";
+	if (readBtn) {
+		const sourceUrl =
+			novel.sourceUrl ||
+			novel.url ||
+			novel.lastChapterUrl ||
+			novel.lastReadUrl;
+		if (sourceUrl) {
+			readBtn.href = sourceUrl;
+			readBtn.rel = "noreferrer";
+			readBtn.textContent = "View on Site";
+			readBtn.style.display = "inline-flex";
+		} else {
+			readBtn.style.display = "none";
+		}
 	}
 
 	// Refresh button

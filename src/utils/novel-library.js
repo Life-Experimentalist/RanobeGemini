@@ -386,7 +386,7 @@ export class NovelLibrary {
 	/**
 	 * Auto-adjust stale reading statuses:
 	 * - If a novel hasn't been touched for 7+ days and is still READING:
-	 *   - If at chapter 1 or the novel only has 1 chapter → PLAN_TO_READ
+	 *   - If progress is at chapter 1 (not started) → PLAN_TO_READ
 	 *   - Otherwise → ON_HOLD
 	 * Completed remains user-controlled.
 	 * @param {Object} library
@@ -405,9 +405,16 @@ export class NovelLibrary {
 
 			if (novel.readingStatus === READING_STATUS.READING) {
 				const lastReadChapter = novel.lastReadChapter || 0;
-				const totalChapters = novel.totalChapters || 0;
+				const currentChapter =
+					novel.currentChapter || novel.metadata?.currentChapter || 0;
+				const progressChapter = Math.max(
+					lastReadChapter,
+					currentChapter,
+				);
+				const totalChapters =
+					novel.totalChapters || novel.metadata?.totalChapters || 0;
 
-				if (lastReadChapter <= 1 || totalChapters <= 1) {
+				if (progressChapter <= 1) {
 					novel.readingStatus = READING_STATUS.PLAN_TO_READ;
 				} else {
 					novel.readingStatus = READING_STATUS.ON_HOLD;
@@ -730,13 +737,13 @@ export class NovelLibrary {
 			const currentStatus =
 				novel.readingStatus || READING_STATUS.PLAN_TO_READ;
 
-			// If status is "Plan to Read" and user starts reading, change to "Reading"
+			// Only auto-resume if status is "On Hold"
 			if (
-				currentStatus === READING_STATUS.PLAN_TO_READ &&
+				currentStatus === READING_STATUS.ON_HOLD &&
 				chapterNumber >= 1
 			) {
 				updates.readingStatus = READING_STATUS.READING;
-				debugLog(`📚 Auto-status: Plan to Read → Reading`);
+				debugLog(`📚 Auto-status: On Hold → Reading`);
 			}
 
 			// If user reaches the last chapter, suggest completion

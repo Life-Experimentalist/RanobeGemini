@@ -59,7 +59,7 @@ try {
 		console.error("Failed to initialize notification manager:", err);
 	});
 
-	document.addEventListener("DOMContentLoaded", async function () {
+	const startPopup = async () => {
 		// Wrap initialization in try-catch
 		try {
 			await initializePopup();
@@ -73,7 +73,13 @@ try {
 				statusDiv.className = "error";
 			}
 		}
-	});
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", startPopup);
+	} else {
+		startPopup();
+	}
 } catch (error) {
 	debugError("Critical error in popup script:", error);
 }
@@ -204,12 +210,6 @@ async function initializePopup() {
 	const siteToggleList = document.getElementById("siteToggleList");
 	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
 
-	// Backup mode controls
-	const backupModeScheduled = document.getElementById("backupModeScheduled");
-	const backupModeContinuous = document.getElementById(
-		"backupModeContinuous",
-	);
-
 	// Backup API Keys elements
 	const backupKeysListContainer = document.getElementById("backupKeysList");
 	const newBackupKeyInput = document.getElementById("newBackupKey");
@@ -234,22 +234,6 @@ async function initializePopup() {
 	const mergeModRadios = document.querySelectorAll('input[name="mergeMode"]');
 
 	const CONTINUOUS_BACKUP_DELAY_MINUTES = 5;
-
-	// Receive OAuth tokens from oauth-redirect.html and persist
-	window.addEventListener("message", async (event) => {
-		if (event.data?.source !== "ranobe-gemini-oauth") return;
-		const payload = {
-			accessToken: event.data.accessToken,
-			expiresAt: event.data.expiresAt,
-		};
-		try {
-			await browser.storage.local.set({ googleOAuth: payload });
-			setDriveStatus?.("OAuth token received", "success");
-			showStatus("Google OAuth token saved", "success");
-		} catch (err) {
-			debugError("Failed to store OAuth token", err);
-		}
-	});
 
 	// Library Tab Elements (New)
 	const libraryLoading = document.getElementById("libraryLoading");
@@ -300,11 +284,8 @@ async function initializePopup() {
 	const restoreFileInput = document.getElementById("restoreFileInput");
 	const backupHistoryList = document.getElementById("backupHistoryList");
 	const driveClientIdInput = document.getElementById("driveClientId");
+	const driveClientSecretInput = document.getElementById("driveClientSecret");
 	const driveFolderIdInput = document.getElementById("driveFolderId");
-	const driveAuthBtn = document.getElementById("driveAuthBtn");
-	const driveUploadLogsBtn = document.getElementById("driveUploadLogsBtn");
-	const driveResetBtn = document.getElementById("driveResetBtn");
-	const driveStatus = document.getElementById("driveStatus");
 
 	// Google Drive Backup elements
 	const connectDriveBtn = document.getElementById("connectDriveBtn");
@@ -314,9 +295,14 @@ async function initializePopup() {
 	const driveNotConnected = document.getElementById("driveNotConnected");
 	const driveConnected = document.getElementById("driveConnected");
 	const driveStatusSpan = document.getElementById("driveStatus");
+	const driveAuthError = document.getElementById("driveAuthError");
 	const driveBackupModeRadios = document.querySelectorAll(
 		'input[name="driveBackupMode"]',
 	);
+	const driveAutoRestoreEnabled = document.getElementById(
+		"driveAutoRestoreEnabled",
+	);
+	const driveSyncNowBtn = document.getElementById("driveSyncNowBtn");
 
 	// Theme elements
 	const themeModeSelect = document.getElementById("themeMode");
@@ -1032,13 +1018,11 @@ async function initializePopup() {
 			driveClientIdInput.value =
 				data.driveClientId || DEFAULT_DRIVE_CLIENT_ID || "";
 		}
+		if (driveClientSecretInput) {
+			driveClientSecretInput.value = data.driveClientSecret || "";
+		}
 		if (driveFolderIdInput) {
 			driveFolderIdInput.value = data.driveFolderId || "";
-		}
-		if (driveStatus) {
-			driveStatus.textContent = data.driveAuthTokens
-				? "Drive tokens cached"
-				: "Not signed in";
 		}
 
 		// Set debug mode checkbox
@@ -1094,10 +1078,6 @@ async function initializePopup() {
 		if (autoBackupToggle)
 			autoBackupToggle.checked = data.autoBackupEnabled || false;
 		const backupMode = data.backupMode || "scheduled";
-		if (backupModeScheduled)
-			backupModeScheduled.checked = backupMode === "scheduled";
-		if (backupModeContinuous)
-			backupModeContinuous.checked = backupMode === "continuous";
 		backupHistory = data.backupHistory || [];
 		renderBackupHistory();
 
@@ -2878,9 +2858,9 @@ async function initializePopup() {
 		const folderValue = (backupFolderInput?.value || "").trim();
 		const backupFolder = folderValue || "RanobeGeminiBackups";
 		const autoBackupEnabled = autoBackupToggle?.checked || false;
-		const backupMode = backupModeScheduled?.checked
-			? "scheduled"
-			: "continuous";
+		const storedPrefs = await browser.storage.local.get("backupMode");
+		const backupMode =
+			extra.backupMode || storedPrefs.backupMode || "scheduled";
 
 		backupHistory = (backupHistory || []).slice(0, BACKUP_RETENTION);
 
@@ -2989,21 +2969,6 @@ async function initializePopup() {
 		}
 	}
 
-	function setDriveStatus(text, kind = "info") {
-		if (!driveStatus) return;
-		driveStatus.textContent = text || "";
-		switch (kind) {
-			case "error":
-				driveStatus.style.color = "#d14343";
-				break;
-			case "success":
-				driveStatus.style.color = "#0f9d58";
-				break;
-			default:
-				driveStatus.style.color = "#475569";
-		}
-	}
-
 	async function persistDriveConfig({ clientId, folderId } = {}) {
 		const payload = {};
 		if (clientId !== undefined) payload.driveClientId = clientId;
@@ -3052,22 +3017,6 @@ async function initializePopup() {
 		});
 	}
 
-	if (backupModeScheduled) {
-		backupModeScheduled.addEventListener("change", () => {
-			if (backupModeScheduled.checked) {
-				persistBackupPrefs({ backupMode: "scheduled" });
-			}
-		});
-	}
-
-	if (backupModeContinuous) {
-		backupModeContinuous.addEventListener("change", () => {
-			if (backupModeContinuous.checked) {
-				persistBackupPrefs({ backupMode: "continuous" });
-			}
-		});
-	}
-
 	if (restoreBackupBtn && restoreFileInput) {
 		restoreBackupBtn.addEventListener("click", () =>
 			restoreFileInput.click(),
@@ -3083,7 +3032,7 @@ async function initializePopup() {
 		driveClientIdInput.addEventListener("change", async () => {
 			const value = driveClientIdInput.value.trim();
 			await persistDriveConfig({ clientId: value });
-			setDriveStatus("Client ID saved", "success");
+			showStatus("Drive client ID saved", "success");
 			try {
 				await browser.runtime.sendMessage({ action: "resetDriveAuth" });
 			} catch (err) {
@@ -3096,77 +3045,7 @@ async function initializePopup() {
 		driveFolderIdInput.addEventListener("change", async () => {
 			const value = driveFolderIdInput.value.trim();
 			await persistDriveConfig({ folderId: value });
-			setDriveStatus("Folder saved", "success");
-		});
-	}
-
-	if (driveAuthBtn) {
-		driveAuthBtn.addEventListener("click", async () => {
-			const clientId =
-				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
-			if (!clientId) {
-				setDriveStatus("Add your OAuth client ID first", "error");
-				return;
-			}
-			setDriveStatus("Opening Google sign-in...");
-			try {
-				await browser.runtime.sendMessage({
-					action: "ensureDriveAuth",
-				});
-				setDriveStatus("Drive connected", "success");
-			} catch (err) {
-				setDriveStatus(
-					`Drive auth failed: ${err?.message || err}`,
-					"error",
-				);
-			}
-		});
-	}
-
-	if (driveUploadLogsBtn) {
-		driveUploadLogsBtn.addEventListener("click", async () => {
-			const clientId =
-				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
-			if (!clientId) {
-				setDriveStatus("Add your OAuth client ID first", "error");
-				return;
-			}
-			driveUploadLogsBtn.classList.add("loading");
-			setDriveStatus("Uploading logs to Drive...");
-			try {
-				const folderId = driveFolderIdInput?.value.trim();
-				const resp = await browser.runtime.sendMessage({
-					action: "uploadLogsToDrive",
-					folderId: folderId || undefined,
-				});
-				if (resp?.success) {
-					setDriveStatus(
-						`Uploaded ${resp.count || "logs"} entries to Drive`,
-						"success",
-					);
-				} else {
-					throw new Error(resp?.error || "Upload failed");
-				}
-			} catch (err) {
-				setDriveStatus(
-					`Drive upload failed: ${err?.message || err}`,
-					"error",
-				);
-			} finally {
-				driveUploadLogsBtn.classList.remove("loading");
-			}
-		});
-	}
-
-	if (driveResetBtn) {
-		driveResetBtn.addEventListener("click", async () => {
-			setDriveStatus("Resetting tokens...");
-			try {
-				await browser.runtime.sendMessage({ action: "resetDriveAuth" });
-				setDriveStatus("Drive tokens cleared", "success");
-			} catch (err) {
-				setDriveStatus(`Reset failed: ${err?.message || err}`, "error");
-			}
+			showStatus("Drive folder saved", "success");
 		});
 	}
 
@@ -4214,7 +4093,14 @@ async function initializePopup() {
 	 */
 	async function updateDriveUI() {
 		try {
-			const tokens = await browser.storage.local.get("driveAuthTokens");
+			if (!driveNotConnected || !driveConnected || !driveStatusSpan) {
+				debugError("Drive UI elements missing in popup");
+				return;
+			}
+			const tokens = await browser.storage.local.get([
+				"driveAuthTokens",
+				"driveAuthError",
+			]);
 			const isConnected = !!tokens.driveAuthTokens?.access_token;
 
 			if (isConnected) {
@@ -4222,18 +4108,48 @@ async function initializePopup() {
 				driveConnected.style.display = "block";
 				driveStatusSpan.textContent = "🟢 Connected";
 				driveStatusSpan.style.color = "#4CAF50";
+				if (driveAuthError) {
+					driveAuthError.style.display = "none";
+					driveAuthError.textContent = "";
+				}
 
 				// Load backup mode
 				const prefs = await browser.storage.local.get("backupMode");
 				const mode = prefs.backupMode || "scheduled";
-				document.querySelector(
+				const modeRadio = document.querySelector(
 					`input[name="driveBackupMode"][value="${mode}"]`,
-				).checked = true;
+				);
+				if (modeRadio) modeRadio.checked = true;
+
+				const restorePrefs = await browser.storage.local.get(
+					"driveAutoRestoreEnabled",
+				);
+				if (driveAutoRestoreEnabled) {
+					driveAutoRestoreEnabled.checked =
+						restorePrefs.driveAutoRestoreEnabled === true;
+				}
 			} else {
 				driveNotConnected.style.display = "block";
 				driveConnected.style.display = "none";
-				driveStatusSpan.textContent = "⚫ Disconnected";
-				driveStatusSpan.style.color = "#999";
+				const authError = tokens.driveAuthError?.message;
+				if (authError) {
+					driveStatusSpan.textContent = "🔴 Auth failed";
+					driveStatusSpan.style.color = "#f59e0b";
+					if (driveAuthError) {
+						driveAuthError.textContent = authError;
+						driveAuthError.style.display = "block";
+					}
+				} else {
+					driveStatusSpan.textContent = "⚫ Disconnected";
+					driveStatusSpan.style.color = "#999";
+					if (driveAuthError) {
+						driveAuthError.style.display = "none";
+						driveAuthError.textContent = "";
+					}
+				}
+				if (driveAutoRestoreEnabled) {
+					driveAutoRestoreEnabled.checked = false;
+				}
 			}
 		} catch (err) {
 			debugError("Failed to update Drive UI", err);
@@ -4248,60 +4164,44 @@ async function initializePopup() {
 			connectDriveBtn.disabled = true;
 			connectDriveBtn.textContent = "🔗 Connecting...";
 
-			const clientId = DEFAULT_DRIVE_CLIENT_ID;
-			const redirectUri = browser.identity.getRedirectURL("drive");
+			const clientId =
+				driveClientIdInput?.value.trim() || DEFAULT_DRIVE_CLIENT_ID;
+			const clientSecret = driveClientSecretInput?.value.trim() || "";
 
-			// Build OAuth URL
-			const params = new URLSearchParams({
-				client_id: clientId,
-				redirect_uri: redirectUri,
-				response_type: "code",
-				scope: "https://www.googleapis.com/auth/drive.file",
-				access_type: "offline",
-				prompt: "consent",
+			await browser.storage.local.set({
+				driveClientId: clientId,
+				driveClientSecret: clientSecret,
+			});
+			const response = await browser.runtime.sendMessage({
+				action: "ensureDriveAuth",
 			});
 
-			// Open OAuth redirect page in new tab
-			const oauthUrl = `https://ranobe.vkrishna04.me/oauth-redirect.html?${params.toString()}`;
-			browser.tabs.create({ url: browser.runtime.getURL(oauthUrl) });
-
-			showStatus(
-				"Opening Google login... Please authorize the extension.",
-				"info",
-			);
-
-			// Poll for token (wait up to 30 seconds)
-			let attempts = 0;
-			const pollInterval = setInterval(async () => {
-				attempts++;
-				const stored =
+			if (response?.success) {
+				const tokens =
 					await browser.storage.local.get("driveAuthTokens");
-
-				if (stored.driveAuthTokens?.access_token || attempts > 30) {
-					clearInterval(pollInterval);
-					connectDriveBtn.disabled = false;
-					connectDriveBtn.textContent = "🔗 Connect Google Drive";
-
-					if (stored.driveAuthTokens?.access_token) {
-						showStatus(
-							"✅ Google Drive connected successfully!",
-							"success",
-						);
-						await updateDriveUI();
-					} else {
-						showStatus(
-							"❌ Authentication failed or timed out",
-							"error",
-						);
-					}
+				if (!tokens.driveAuthTokens?.access_token) {
+					throw new Error(
+						"OAuth completed but no tokens were saved. Check your OAuth client type and redirect URI.",
+					);
 				}
-			}, 1000);
+				showStatus(
+					"✅ Google Drive connected successfully!",
+					"success",
+				);
+				await updateDriveUI();
+			} else {
+				throw new Error(response?.error || "Authentication failed");
+			}
 		} catch (err) {
 			debugError("Failed to connect Drive", err);
 			showStatus("Failed to connect Google Drive", "error");
 			connectDriveBtn.disabled = false;
 			connectDriveBtn.textContent = "🔗 Connect Google Drive";
+			return;
 		}
+
+		connectDriveBtn.disabled = false;
+		connectDriveBtn.textContent = "🔗 Connect Google Drive";
 	}
 
 	/**
@@ -4385,32 +4285,13 @@ async function initializePopup() {
 			}
 			html += "</div>";
 
-			// Show in modal or status
-			showStatus(
-				`Found ${backups.length} backups. Click to restore: ` + html,
-				"info",
-			);
+			throw new Error(response?.error || "Drive sync failed");
 		} catch (err) {
-			debugError("Failed to list backups", err);
-			showStatus("Failed to load backups", "error");
-		}
-	}
-
-	/**
-	 * Save Drive backup mode preference
-	 */
-	async function handleDriveBackupModeChange(event) {
-		try {
-			const mode = event.target.value;
-			await browser.storage.local.set({ backupMode: mode });
-			showStatus(
-				`Backup mode changed to: ${
-					mode === "scheduled" ? "Daily Scheduled" : "Continuous"
-				}`,
-				"success",
-			);
-		} catch (err) {
-			debugError("Failed to update backup mode", err);
+			debugError("Drive sync failed", err);
+			showStatus(`Drive sync failed: ${err.message}`, "error");
+		} finally {
+			driveSyncNowBtn.disabled = false;
+			driveSyncNowBtn.textContent = "🔄 Sync From Drive Now";
 		}
 	}
 
@@ -4492,6 +4373,15 @@ async function initializePopup() {
 	driveBackupModeRadios.forEach((radio) => {
 		radio.addEventListener("change", handleDriveBackupModeChange);
 	});
+	if (driveAutoRestoreEnabled) {
+		driveAutoRestoreEnabled.addEventListener(
+			"change",
+			handleDriveAutoRestoreToggle,
+		);
+	}
+	if (driveSyncNowBtn) {
+		driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);
+	}
 
 	// Load backups and novels on popup open
 	(async () => {
