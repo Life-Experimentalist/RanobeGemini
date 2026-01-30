@@ -1,7 +1,10 @@
 {
 	"overrides": [
 		{
-			"files": ["src/manifest.json"],
+			"files": [
+				"src/manifest-chromium.json",
+				"src/manifest-firefox.json"
+			],
 			"options": {
 				"insertFinalNewline": false
 			}
