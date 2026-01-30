@@ -3,79 +3,267 @@
 > **Index:**
 
 - [Changelog](#changelog)
+	- [3.7.0 - 2026-01-30](#370---2026-01-30)
+		- [🔧 Google Drive OAuth Enhancements \& UI Improvements](#-google-drive-oauth-enhancements--ui-improvements)
+		- [Added](#added)
+			- [☁️ Google Drive OAuth Improvements](#️-google-drive-oauth-improvements)
+			- [📢 Enhanced Notification System](#-enhanced-notification-system)
+			- [🎯 Domain-Specific Settings](#-domain-specific-settings)
+			- [📖 Reading Progress Tracking](#-reading-progress-tracking)
+		- [Changed](#changed)
+			- [🖥️ Popup UI Refactoring](#️-popup-ui-refactoring)
+			- [🌐 Website Handler Improvements](#-website-handler-improvements)
+			- [📚 Library Enhancements](#-library-enhancements)
+			- [🏗️ Build System \& Documentation](#️-build-system--documentation)
+		- [Fixed](#fixed)
+			- [🐛 Bug Fixes](#-bug-fixes)
+			- [🔧 Google Drive OAuth](#-google-drive-oauth)
+		- [Developer Experience](#developer-experience)
+			- [🛠️ Code Quality](#️-code-quality)
+		- [Technical Details](#technical-details)
+			- [Google Drive OAuth Flow](#google-drive-oauth-flow)
+			- [Popup Initialization Fix](#popup-initialization-fix)
+		- [Migration Notes](#migration-notes)
+		- [Known Issues](#known-issues)
 	- [\[3.5.0\] - 2025-12-20](#350---2025-12-20)
 		- [🎨 Shelf Pages, Analytics \& UX Improvements](#-shelf-pages-analytics--ux-improvements)
-		- [Added](#added)
+		- [Added](#added-1)
 			- [📊 Website Shelf Pages](#-website-shelf-pages)
 			- [🎨 Popup Modal Improvements](#-popup-modal-improvements)
 			- [🏗️ Keep-Alive Architecture Documentation](#️-keep-alive-architecture-documentation)
-		- [Changed](#changed)
-		- [Fixed](#fixed)
+		- [Changed](#changed-1)
+		- [Fixed](#fixed-1)
 		- [Documentation](#documentation)
 	- [\[3.0.0\] - 2025-11-28](#300---2025-11-28)
 		- [🎉 Major Release: Novel Library System](#-major-release-novel-library-system)
-		- [Added](#added-1)
+		- [Added](#added-2)
 			- [📚 Novel Library System](#-novel-library-system)
 			- [🔧 Dynamic Shelf System](#-dynamic-shelf-system)
 			- [🎨 UI Enhancements](#-ui-enhancements)
 			- [📖 Metadata Extraction](#-metadata-extraction)
 			- [📝 Documentation Overhaul](#-documentation-overhaul)
-		- [Changed](#changed-1)
+		- [Changed](#changed-2)
 			- [🏗️ Architecture Improvements](#️-architecture-improvements)
 			- [📚 Documentation](#-documentation)
-		- [Fixed](#fixed-1)
-		- [Developer Experience](#developer-experience)
+		- [Fixed](#fixed-2)
+		- [Developer Experience](#developer-experience-1)
 			- [Adding New Website Support (Simplified)](#adding-new-website-support-simplified)
 			- [Build Scripts](#build-scripts)
-		- [Technical Details](#technical-details)
+		- [Technical Details](#technical-details-1)
 			- [Novel Library Schema](#novel-library-schema)
 			- [Shelf Metadata Schema](#shelf-metadata-schema)
-		- [Migration Notes](#migration-notes)
+		- [Migration Notes](#migration-notes-1)
 	- [\[2.9.0\] - 2025-11-25](#290---2025-11-25)
 		- [Summary](#summary)
-		- [Added](#added-2)
-		- [Changed](#changed-2)
-		- [Fixed](#fixed-2)
-	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
-		- [Summary](#summary-1)
 		- [Added](#added-3)
 		- [Changed](#changed-3)
 		- [Fixed](#fixed-3)
-		- [Developer Experience](#developer-experience-1)
-		- [Migration Notes](#migration-notes-1)
-		- [Known Issues](#known-issues)
-	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
-		- [Summary](#summary-2)
+	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
+		- [Summary](#summary-1)
 		- [Added](#added-4)
 		- [Changed](#changed-4)
 		- [Fixed](#fixed-4)
-	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
-		- [Summary](#summary-3)
+		- [Developer Experience](#developer-experience-2)
+		- [Migration Notes](#migration-notes-2)
+		- [Known Issues](#known-issues-1)
+	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
+		- [Summary](#summary-2)
 		- [Added](#added-5)
 		- [Changed](#changed-5)
 		- [Fixed](#fixed-5)
-	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
-		- [Summary](#summary-4)
+	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
+		- [Summary](#summary-3)
 		- [Added](#added-6)
 		- [Changed](#changed-6)
 		- [Fixed](#fixed-6)
-	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
-		- [Summary](#summary-5)
+	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
+		- [Summary](#summary-4)
 		- [Added](#added-7)
 		- [Changed](#changed-7)
 		- [Fixed](#fixed-7)
-	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
+	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
+		- [Summary](#summary-5)
 		- [Added](#added-8)
 		- [Changed](#changed-8)
 		- [Fixed](#fixed-8)
-	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
+	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
 		- [Added](#added-9)
+		- [Changed](#changed-9)
 		- [Fixed](#fixed-9)
+	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
+		- [Added](#added-10)
+		- [Fixed](#fixed-10)
 
 
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [3.7.0](RELEASE_NOTES_3.7.0.md) - 2026-01-30
+
+### 🔧 Google Drive OAuth Enhancements & UI Improvements
+
+Version 3.7.0 introduces support for Web Application OAuth credentials, major popup UI fixes, enhanced notification system, and improved website handler logic.
+
+### Added
+
+#### ☁️ Google Drive OAuth Improvements
+- **Client Secret Support**: Added support for "Web application" type OAuth credentials
+  - New `driveClientSecret` field in popup Advanced settings
+  - Automatic inclusion of client secret in OAuth token exchanges and refresh flows
+  - Backwards compatible with "Chrome Extension" type credentials (no secret required)
+  - Allows users to use existing Google Cloud projects with web credentials
+
+#### 📢 Enhanced Notification System
+- **Notification Manager**: Centralized notification handling across the extension
+  - Added logging for all notifications with detailed metadata
+  - Implemented novel data caching to improve notification context
+  - Enhanced popup notification display with metadata details
+  - Improved notification badge updating mechanisms
+  - Added notification history clearing functionality
+
+#### 🎯 Domain-Specific Settings
+- **Site Settings Management**: Per-domain feature toggles
+  - Enable/disable features on specific domains
+  - Domain-level configuration for auto-enhancement and other features
+  - Improved granular control over extension behavior
+
+#### 📖 Reading Progress Tracking
+- **Progress Update Prompts**: Smart chapter progress detection
+  - Notifies users when saved progress is behind current reading chapter
+  - Cooldown mechanism to prevent spam prompts
+  - Banner UI for updating progress or dismissing notifications
+  - Automatic status transitions based on chapter progress
+
+### Changed
+
+#### 🖥️ Popup UI Refactoring
+- **Major Popup Fixes**:
+  - Fixed popup initialization race condition (DOMContentLoaded vs document.readyState)
+  - Fixed tab switching mechanism (now properly activates content)
+  - Removed legacy Google Drive backup UI elements
+  - Cleaned up backup mode handling and event listeners
+  - Added defensive guards for missing DOM elements
+  - Improved settings loading and display logic
+
+- **Google Drive Settings UI**:
+  - Moved Drive backup controls to Advanced tab
+  - Added connection status indicators (🟢 Connected, 🔴 Auth failed, ⚫ Disconnected)
+  - Improved error message display for authentication issues
+  - Added Client Secret input field with helpful descriptions
+  - Reorganized Drive settings into collapsible "Advanced setup" section
+
+#### 🌐 Website Handler Improvements
+- **AO3 Handler**: Changed enhancement label from "Gemini" to "Ranobe Gemini"
+
+- **Fanfiction Handler**:
+  - Added automatic redirection from bare domain to mobile/desktop based on user agent
+  - Improved chapter page detection by excluding user profile pages (`/u/`)
+  - Enhanced metadata extraction for genres, characters, and relationships
+  - Better handling of story descriptions and author names
+
+- **Fanfiction Mobile Handler**:
+  - Added initialization redirect logic for bare domain visits
+
+- **Ranobes Handler**:
+  - Fixed chapter vs novel page detection
+  - Excluded chapter index URLs (`/chapters/{id}`) from being treated as novel pages
+  - Improved title extraction (strips author suffix)
+  - Enhanced metadata extraction
+
+- **ScribbleHub Handler**:
+  - Updated novel modal to display author as clickable link
+  - Improved metadata display in detailed modal
+
+- **Handler Manager**:
+  - Ensured handlers are initialized only once
+  - Prevented duplicate initializations
+  - Added static `initialize()` support for handlers
+
+#### 📚 Library Enhancements
+- **Novel Modal Improvements**:
+  - Enhanced "Continue Reading" button with comprehensive URL selection logic
+  - Improved "Read" button to display correct source URLs
+  - Better handling of author links in modals
+
+- **Auto-Status Updates**:
+  - Modified reading status auto-adjustment based on current chapter
+  - Improved status transitions (Reading → Plan to Read, etc.)
+  - Enhanced last read chapter tracking
+
+#### 🏗️ Build System & Documentation
+- **Build Process**:
+  - Split manifest files into `manifest-firefox.json` and `manifest-chromium.json`
+  - Enhanced build script for platform-specific packaging
+  - Updated icon paths for consistency across all files
+
+- **Documentation**:
+  - Added comprehensive Copilot instructions (`.github/copilot-instructions.md`)
+  - Enhanced build system documentation
+  - Improved domain management guides
+
+### Fixed
+
+#### 🐛 Bug Fixes
+- **Popup Initialization**: Fixed critical race condition where `DOMContentLoaded` fired before listener attachment
+- **Tab Switching**: Fixed broken tab navigation in popup
+- **Drive UI**: Removed references to deleted backup mode variables (`backupModeScheduled`, `backupModeContinuous`)
+- **Settings Loading**: Fixed empty fields in popup after page load
+- **API Key Saving**: Restored proper API key persistence
+- **Prompt Loading**: Fixed prompts not pre-filling in popup
+
+#### 🔧 Google Drive OAuth
+- **Token Exchange**: Added client secret support to fix "400 client_secret is missing" errors
+- **Token Refresh**: Updated refresh flow to include client secret when required
+- **Error Handling**: Improved error messages for OAuth failures
+
+### Developer Experience
+
+#### 🛠️ Code Quality
+- **Logging Improvements**: Centralized logging system using `debugLog` and `debugError` across all handlers
+- **Handler Registry**: Dynamic handler loading from generated registry
+- **Deduplication**: Better handler deduplication based on constructor names
+- **Type Safety**: Improved metadata handling flags (`metadataIncomplete`, `requiresDetailPage`)
+
+### Technical Details
+
+#### Google Drive OAuth Flow
+```javascript
+// New flow supports both Chrome Extension and Web Application credentials
+const params = {
+  client_id: clientId,
+  // ... other params
+};
+if (clientSecret) {
+  params.client_secret = clientSecret; // Only for Web App type
+}
+```
+
+#### Popup Initialization Fix
+```javascript
+// Before: Race condition
+document.addEventListener("DOMContentLoaded", async () => { ... });
+
+// After: Reliable startup
+const startPopup = async () => { ... };
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startPopup);
+} else {
+  startPopup();
+}
+```
+
+### Migration Notes
+- Users with existing Drive connections may need to reconnect if using Web Application credentials
+- No action required for Chrome Extension type credentials
+- Local backups continue to work without any changes
+- All existing settings and library data are preserved
+
+### Known Issues
+- Web Application OAuth credentials expose client secret in extension storage (consider using Chrome Extension type for public distribution)
+- Extension ID must be hardcoded in Google Cloud Console for proper OAuth redirect handling
 
 ---
 
