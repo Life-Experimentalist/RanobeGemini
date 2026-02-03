@@ -272,7 +272,7 @@ Special thanks to all users who reported issues and provided feedback that made 
 
 ## 📖 Full Changelog
 
-See [CHANGELOG.md](docs/CHANGELOG.md) for complete version history.
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ---
 
@@ -283,3 +283,43 @@ Found an issue? [Report it on GitHub](https://github.com/Life-Experimentalist/Ra
 ---
 
 **Happy Reading! 📚✨**
+
+
+----
+
+Here’s a **short Firefox release note (≤2500 chars)**. I included the full version link on GitHub as requested.
+
+**Full version:** https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/RELEASE_NOTES_3.7.0.md
+
+---
+
+## Ranobe Gemini v3.7.0 — Firefox Release Notes (Short)
+
+**Release Date:** Jan 30, 2026
+
+### Highlights
+- **Google Drive OAuth enhanced**
+  Supports **Web Application** credentials with client secret, while staying compatible with **Chrome Extension** creds. Users can now paste OAuth JSON directly in Advanced settings.
+
+- **Comprehensive Backup System**
+  Full backups include library, progress, API keys, prompts, settings, theme, model config, and encrypted Drive OAuth. Includes **auto-rolling backups** (up to 5) with restore and delete controls.
+
+- **Anonymous Analytics (Opt‑Out)**
+  Uses **CFlair‑Counter** for anonymous view counts. No personal data or keys collected. Optional custom webhook support.
+
+- **Notification System Overhaul**
+  Centralized manager with better logging, badge updates, notification history, and smart progress prompts with cooldowns.
+
+- **Domain-Specific Settings**
+  Per-site feature toggles for granular control.
+
+### Major Fixes
+- Popup UI reliability fixes: initialization, tabs, settings fields, prompt loading.
+- Google Drive OAuth error fixes (“client_secret missing”), improved refresh handling.
+- Website handlers: better detection, metadata extraction, and stability across sites (FanFiction.net, Ranobes.net, AO3, ScribbleHub).
+
+### Notes
+- Web App OAuth credentials store client secrets in extension storage; **Chrome Extension credentials are safer** for public use.
+- Extension ID must be set in Google Cloud for proper redirects.
+
+**Full release notes:** https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/RELEASE_NOTES_3.7.0.md

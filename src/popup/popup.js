@@ -35,6 +35,28 @@ import {
 // Log that imports completed successfully
 debugLog("popup.js: All module imports completed successfully");
 
+// Apply theme mode early to reduce flash (CSP-safe, no inline script)
+(async () => {
+	try {
+		const stored = await browser.storage.local.get("themeSettings");
+		const theme = stored.themeSettings || { mode: "dark" };
+		const root = document.documentElement;
+		if (theme.mode === "light") {
+			root.setAttribute("data-theme", "light");
+		} else if (theme.mode === "auto") {
+			const prefersDark = window.matchMedia(
+				"(prefers-color-scheme: dark)",
+			).matches;
+			root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+		} else {
+			root.removeAttribute("data-theme");
+		}
+	} catch (error) {
+		// Ignore theme errors; default to dark
+		document.documentElement.removeAttribute("data-theme");
+	}
+})();
+
 let novelLibrary = null;
 let SHELVES = {};
 let siteSettingsApi = null;
@@ -250,6 +272,7 @@ async function initializePopup() {
 	const mergeModRadios = document.querySelectorAll('input[name="mergeMode"]');
 
 	const CONTINUOUS_BACKUP_DELAY_MINUTES = 5;
+	const CONTINUOUS_BACKUP_CHECK_INTERVAL_MINUTES = 2; // Default check interval
 
 	// Library Tab Elements (New)
 	const libraryLoading = document.getElementById("libraryLoading");
@@ -301,12 +324,15 @@ async function initializePopup() {
 	const backupHistoryList = document.getElementById("backupHistoryList");
 	const driveClientIdInput = document.getElementById("driveClientId");
 	const driveClientSecretInput = document.getElementById("driveClientSecret");
-	const showClientSecretToggle = document.getElementById("showClientSecret");
+	const toggleClientSecretBtn = document.getElementById(
+		"toggleClientSecretVisibility",
+	);
 	const driveFolderIdInput = document.getElementById("driveFolderId");
 
 	// OAuth JSON parsing elements
 	const oauthJsonPaste = document.getElementById("oauthJsonPaste");
 	const parseOAuthJsonBtn = document.getElementById("parseOAuthJson");
+	const saveOAuthFromJsonBtn = document.getElementById("saveOAuthFromJson");
 	const oauthParseResult = document.getElementById("oauthParseResult");
 	const saveOAuthSettingsBtn = document.getElementById("saveOAuthSettings");
 
@@ -578,6 +604,9 @@ async function initializePopup() {
 	// Load theme on startup
 	loadTheme();
 
+	// Load backup checkbox settings on startup
+	loadBackupCheckboxSettings();
+
 	// Site toggle helpers
 	async function loadSiteToggleSettings() {
 		const depsOk = await ensureLibraryDeps();
@@ -597,12 +626,40 @@ async function initializePopup() {
 	async function persistSiteToggleSettings() {
 		if (!siteToggleList) return siteSettings;
 		const updates = {};
+		const defaults = siteSettingsApi?.getDefaultSiteSettings?.() || {};
 		const rows = siteToggleList.querySelectorAll(".site-toggle-row");
 		rows.forEach((row) => {
 			const siteId = row.dataset.siteId;
-			const checkbox = row.querySelector("input[type='checkbox']");
-			if (siteId && checkbox) {
-				updates[siteId] = { enabled: checkbox.checked };
+			const enabledToggle = row.querySelector(
+				"input[data-setting='enabled']",
+			);
+			const autoAddToggle = row.querySelector(
+				"input[data-setting='autoAddEnabled']",
+			);
+			const autoAddStatusChapter = row.querySelector(
+				"select[data-setting='autoAddStatusChapter']",
+			);
+			const autoAddStatusNovel = row.querySelector(
+				"select[data-setting='autoAddStatusNovel']",
+			);
+			const def = defaults[siteId] || {};
+			if (siteId) {
+				updates[siteId] = {
+					enabled: enabledToggle
+						? enabledToggle.checked
+						: def.enabled !== false,
+					autoAddEnabled: autoAddToggle
+						? autoAddToggle.checked
+						: def.autoAddEnabled !== false,
+					autoAddStatusChapter:
+						autoAddStatusChapter?.value ||
+						def.autoAddStatusChapter ||
+						"reading",
+					autoAddStatusNovel:
+						autoAddStatusNovel?.value ||
+						def.autoAddStatusNovel ||
+						"plan-to-read",
+				};
 			}
 		});
 
@@ -611,6 +668,71 @@ async function initializePopup() {
 		siteSettings = await siteSettingsApi.saveSiteSettings(updates);
 		return siteSettings;
 	}
+
+	// Backup Options Checkbox Persistence
+	async function loadBackupCheckboxSettings() {
+		try {
+			const result = await browser.storage.local.get(
+				"backupCheckboxSettings",
+			);
+			const settings = result.backupCheckboxSettings || {
+				includeApiKeys: true,
+				includeCredentials: true,
+			};
+
+			if (backupIncludeApiKeys) {
+				backupIncludeApiKeys.checked = settings.includeApiKeys;
+			}
+			if (backupIncludeCredentials) {
+				backupIncludeCredentials.checked = settings.includeCredentials;
+			}
+
+			debugLog("Loaded backup checkbox settings:", settings);
+		} catch (error) {
+			debugError("Failed to load backup checkbox settings:", error);
+		}
+	}
+
+	async function saveBackupCheckboxSettings() {
+		try {
+			const settings = {
+				includeApiKeys: backupIncludeApiKeys?.checked ?? true,
+				includeCredentials: backupIncludeCredentials?.checked ?? false,
+			};
+
+			await browser.storage.local.set({
+				backupCheckboxSettings: settings,
+			});
+
+			debugLog("Saved backup checkbox settings:", settings);
+		} catch (error) {
+			debugError("Failed to save backup checkbox settings:", error);
+		}
+	}
+
+	// Add change event listeners to backup checkboxes
+	if (backupIncludeApiKeys) {
+		backupIncludeApiKeys.addEventListener(
+			"change",
+			saveBackupCheckboxSettings,
+		);
+	}
+	if (backupIncludeCredentials) {
+		backupIncludeCredentials.addEventListener(
+			"change",
+			saveBackupCheckboxSettings,
+		);
+	}
+
+	const AUTO_ADD_STATUS_OPTIONS = [
+		{ value: "reading", label: "📖 Reading" },
+		{ value: "plan-to-read", label: "📋 Plan to Read" },
+		{ value: "up-to-date", label: "✨ Up to Date" },
+		{ value: "completed", label: "✅ Completed" },
+		{ value: "on-hold", label: "⏸️ On Hold" },
+		{ value: "dropped", label: "❌ Dropped" },
+		{ value: "re-reading", label: "🔁 Re-reading" },
+	];
 
 	function renderSiteToggles() {
 		if (!siteToggleList) return;
@@ -626,8 +748,11 @@ async function initializePopup() {
 			const setting = siteSettings[shelf.id] ||
 				defaults[shelf.id] || {
 					enabled: true,
+					autoAddEnabled: true,
+					autoAddStatusChapter: "reading",
+					autoAddStatusNovel: "plan-to-read",
 				};
-			const row = document.createElement("label");
+			const row = document.createElement("div");
 			row.className = "site-toggle-row";
 			row.dataset.siteId = shelf.id;
 
@@ -635,6 +760,17 @@ async function initializePopup() {
 				? `<img src="${shelf.icon}" alt="${shelf.name}" onerror="this.remove()">`
 				: shelf.emoji || "📖";
 			const domainsPreview = (shelf.domains || []).slice(0, 2).join(", ");
+			const autoAddStatusChapter =
+				setting.autoAddStatusChapter || "reading";
+			const autoAddStatusNovel =
+				setting.autoAddStatusNovel || "plan-to-read";
+			const buildOptions = (selected) =>
+				AUTO_ADD_STATUS_OPTIONS.map(
+					(opt) =>
+						`<option value="${opt.value}" ${
+							opt.value === selected ? "selected" : ""
+						}>${opt.label}</option>`,
+				).join("");
 
 			row.innerHTML = `
 				<div class="site-toggle-meta">
@@ -644,33 +780,51 @@ async function initializePopup() {
 						<div class="site-toggle-domains">${domainsPreview}</div>
 					</div>
 				</div>
-				<div class="site-toggle-control">
-					<input type="checkbox" ${
-						setting.enabled !== false ? "checked" : ""
-					} aria-label="Enable ${shelf.name || shelf.id}">
+				<div class="site-toggle-controls">
+					<label class="site-toggle-control">
+						<span class="site-toggle-label">Enabled</span>
+						<input type="checkbox" data-setting="enabled" ${
+							setting.enabled !== false ? "checked" : ""
+						} aria-label="Enable ${shelf.name || shelf.id}">
+					</label>
+					<label class="site-toggle-control">
+						<span class="site-toggle-label">Auto-add</span>
+						<input type="checkbox" data-setting="autoAddEnabled" ${
+							setting.autoAddEnabled !== false ? "checked" : ""
+						} aria-label="Auto add ${shelf.name || shelf.id}">
+					</label>
+					<div class="site-autoadd-selects">
+						<label>
+							<span>On chapter</span>
+							<select data-setting="autoAddStatusChapter">
+								${buildOptions(autoAddStatusChapter)}
+							</select>
+						</label>
+						<label>
+							<span>On novel</span>
+							<select data-setting="autoAddStatusNovel">
+								${buildOptions(autoAddStatusNovel)}
+							</select>
+						</label>
+					</div>
 				</div>
 			`;
 
-			// Add event listener to checkbox
-			const checkbox = row.querySelector("input[type='checkbox']");
-			if (checkbox) {
-				checkbox.addEventListener("change", async () => {
-					await persistSiteToggleSettings();
-					showStatus(
-						`${shelf.name} ${
-							checkbox.checked ? "enabled" : "disabled"
-						}`,
-						"success",
-					);
-					// Refresh library display if on library tab
-					const activeTab = document.querySelector(
-						".tab-content.active",
-					);
-					if (activeTab && activeTab.id === "library") {
-						await initializeLibraryTab();
-					}
-				});
-			}
+			const handleSettingChange = async () => {
+				await persistSiteToggleSettings();
+				showStatus(
+					`Updated auto-add settings for ${shelf.name || shelf.id}`,
+					"success",
+				);
+				const activeTab = document.querySelector(".tab-content.active");
+				if (activeTab && activeTab.id === "library") {
+					await initializeLibraryTab();
+				}
+			};
+
+			row.querySelectorAll("input, select").forEach((control) => {
+				control.addEventListener("change", handleSettingChange);
+			});
 
 			siteToggleList.appendChild(row);
 		});
@@ -1609,14 +1763,18 @@ async function initializePopup() {
 
 	// Helper function to show status messages
 	async function showStatus(message, type, options = {}) {
-		statusDiv.textContent = message;
-		statusDiv.className = type || "";
+		if (statusDiv) {
+			statusDiv.textContent = message;
+			statusDiv.className = type || "";
+		}
 
 		// Auto clear success messages after 3 seconds
 		if (type === "success") {
 			setTimeout(() => {
-				statusDiv.textContent = "";
-				statusDiv.className = "";
+				if (statusDiv) {
+					statusDiv.textContent = "";
+					statusDiv.className = "";
+				}
 			}, 3000);
 		}
 
@@ -1645,13 +1803,24 @@ async function initializePopup() {
 				// Ignore error getting tab URL
 			}
 
-			await notificationManager.add({
-				type: notificationType,
-				message,
-				url: currentUrl,
-				source: "popup",
-				...options,
-			});
+			try {
+				await browser.runtime.sendMessage({
+					action: "logNotification",
+					type: notificationType,
+					message,
+					url: currentUrl,
+					source: "popup",
+					...options,
+				});
+			} catch (_err) {
+				await notificationManager.add({
+					type: notificationType,
+					message,
+					url: currentUrl,
+					source: "popup",
+					...options,
+				});
+			}
 
 			// Update notification badge
 			updateNotificationBadge();
@@ -2913,6 +3082,8 @@ async function initializePopup() {
 			autoBackupEnabled,
 			backupMode,
 			continuousBackupDelayMinutes: CONTINUOUS_BACKUP_DELAY_MINUTES,
+			continuousBackupCheckIntervalMinutes:
+				CONTINUOUS_BACKUP_CHECK_INTERVAL_MINUTES,
 			backupRetention: BACKUP_RETENTION,
 			backupIntervalDays: BACKUP_INTERVAL_DAYS,
 			backupHistory,
@@ -4168,6 +4339,11 @@ async function initializePopup() {
 				debugError("Drive UI elements missing in popup");
 				return;
 			}
+
+			// Initially hide both sections to prevent flicker
+			driveNotConnected.style.display = "none";
+			driveConnected.style.display = "none";
+
 			const tokens = await browser.storage.local.get([
 				"driveAuthTokens",
 				"driveAuthError",
@@ -4185,12 +4361,43 @@ async function initializePopup() {
 				}
 
 				// Load backup mode
-				const prefs = await browser.storage.local.get("backupMode");
+				const prefs = await browser.storage.local.get([
+					"backupMode",
+					"continuousBackupCheckIntervalMinutes",
+				]);
 				const mode = prefs.backupMode || "scheduled";
 				const modeRadio = document.querySelector(
 					`input[name="driveBackupMode"][value="${mode}"]`,
 				);
 				if (modeRadio) modeRadio.checked = true;
+
+				// Load continuous backup check interval
+				const continuousCheckInterval =
+					prefs.continuousBackupCheckIntervalMinutes || 2;
+				const continuousCheckSlider = document.getElementById(
+					"continuousBackupCheckInterval",
+				);
+				const continuousCheckDisplay = document.getElementById(
+					"continuousCheckIntervalDisplay",
+				);
+				if (continuousCheckSlider) {
+					continuousCheckSlider.value = continuousCheckInterval;
+				}
+				if (continuousCheckDisplay) {
+					continuousCheckDisplay.textContent =
+						continuousCheckInterval;
+				}
+
+				// Show/hide continuous backup interval control
+				const continuousContainer = document.getElementById(
+					"continuousBackupCheckContainer",
+				);
+				if (continuousContainer) {
+					continuousContainer.style.display =
+						mode === "continuous" || mode === "both"
+							? "block"
+							: "none";
+				}
 
 				const restorePrefs = await browser.storage.local.get(
 					"driveAutoRestoreEnabled",
@@ -4267,6 +4474,41 @@ async function initializePopup() {
 					"success",
 				);
 				await updateDriveUI();
+
+				// Auto-backup after successful OAuth connection
+				debugLog("Creating initial backup after OAuth connection...");
+				try {
+					const backupResponse = await browser.runtime.sendMessage({
+						action: "uploadLibraryBackupToDrive",
+						folderId: null,
+						reason: "oauth-initial",
+					});
+
+					if (backupResponse?.success) {
+						const fileName =
+							backupResponse.primary?.filename || "backup";
+						debugLog("Initial backup created:", fileName);
+						showStatus(
+							`✅ Initial backup created: ${fileName}`,
+							"success",
+						);
+					} else {
+						debugError(
+							"Initial backup failed:",
+							backupResponse?.error,
+						);
+						showStatus(
+							`Note: Initial backup creation skipped (${backupResponse?.error || "unknown error"})`,
+							"warning",
+						);
+					}
+				} catch (backupErr) {
+					debugError("Auto-backup error:", backupErr);
+					showStatus(
+						`Note: Initial backup not created (${backupErr.message})`,
+						"warning",
+					);
+				}
 			} else {
 				throw new Error(response?.error || "Authentication failed");
 			}
@@ -4307,9 +4549,23 @@ async function initializePopup() {
 	 * Backup library to Google Drive now
 	 */
 	async function handleBackupNow() {
+		if (!backupNowBtn) return;
+
 		try {
+			// Check if connected to Drive
+			const tokens = await browser.storage.local.get("driveAuthTokens");
+			if (!tokens.driveAuthTokens?.access_token) {
+				showStatus(
+					"❌ Not connected to Google Drive. Connect first.",
+					"error",
+				);
+				return;
+			}
+
 			backupNowBtn.disabled = true;
 			backupNowBtn.textContent = "📤 Backing up...";
+
+			debugLog("Starting manual backup to Drive...");
 
 			const response = await browser.runtime.sendMessage({
 				action: "uploadLibraryBackupToDrive",
@@ -4317,10 +4573,15 @@ async function initializePopup() {
 				reason: "manual",
 			});
 
-			if (response.success) {
-				showStatus(`✅ Backup uploaded: ${response.name}`, "success");
+			debugLog("Backup response:", response);
+
+			if (response?.success) {
+				const fileName =
+					response.primary?.filename || response.name || "backup";
+				debugLog("Backup successful:", fileName);
+				showStatus(`✅ Backup uploaded: ${fileName}`, "success");
 			} else {
-				throw new Error(response.error || "Upload failed");
+				throw new Error(response?.error || "Upload failed");
 			}
 		} catch (err) {
 			debugError("Failed to backup to Drive", err);
@@ -4335,10 +4596,31 @@ async function initializePopup() {
 	 * View backups on Google Drive
 	 */
 	async function handleViewBackups() {
+		if (!viewBackupsBtn) return;
+
 		try {
-			const backups = await browser.runtime.sendMessage({
+			// Check if connected to Drive
+			const tokens = await browser.storage.local.get("driveAuthTokens");
+			if (!tokens.driveAuthTokens?.access_token) {
+				showStatus(
+					"❌ Not connected to Google Drive. Connect first.",
+					"error",
+				);
+				return;
+			}
+
+			viewBackupsBtn.disabled = true;
+			viewBackupsBtn.textContent = "⏳ Loading...";
+
+			debugLog("Fetching backups from Drive...");
+			const response = await browser.runtime.sendMessage({
 				action: "listDriveBackups",
 			});
+
+			debugLog("Backups response:", response);
+
+			// Extract backups array from response object
+			const backups = response?.backups || response;
 
 			if (!backups || backups.length === 0) {
 				showStatus("No backups found on Drive", "info");
@@ -4363,13 +4645,141 @@ async function initializePopup() {
 			}
 			html += "</div>";
 
-			throw new Error(response?.error || "Drive sync failed");
+			// Show the backups in a modal or new section
+			debugLog("Backups list HTML:", html);
+			showStatus(
+				"Retrieved " + backups.length + " backup(s) from Drive",
+				"success",
+			);
+			// TODO: Display backups in a modal or dedicated UI section
+			console.log("Backups:", backups);
+		} catch (err) {
+			debugError("View backups failed", err);
+			showStatus(`View backups failed: ${err.message}`, "error");
+		} finally {
+			viewBackupsBtn.disabled = false;
+			viewBackupsBtn.textContent = "📋 View Backups";
+		}
+	}
+
+	/**
+	 * Handle Sync From Drive Now button click
+	 */
+	async function handleDriveSyncNow() {
+		if (!driveSyncNowBtn) return;
+
+		try {
+			// Check if connected to Drive
+			const tokens = await browser.storage.local.get("driveAuthTokens");
+			if (!tokens.driveAuthTokens?.access_token) {
+				showStatus(
+					"❌ Not connected to Google Drive. Connect first.",
+					"error",
+				);
+				return;
+			}
+
+			driveSyncNowBtn.disabled = true;
+			driveSyncNowBtn.textContent = "⏳ Syncing...";
+
+			debugLog("Syncing library from Drive...");
+			const response = await browser.runtime.sendMessage({
+				action: "syncDriveNow",
+			});
+
+			if (response?.success) {
+				debugLog("Drive sync successful");
+				showStatus(
+					"Library synced from Drive successfully!",
+					"success",
+				);
+				// Reload library if on library page
+				if (typeof loadLibrary === "function") {
+					await loadLibrary();
+				}
+			} else {
+				throw new Error(response?.error || "Drive sync failed");
+			}
 		} catch (err) {
 			debugError("Drive sync failed", err);
 			showStatus(`Drive sync failed: ${err.message}`, "error");
 		} finally {
 			driveSyncNowBtn.disabled = false;
 			driveSyncNowBtn.textContent = "🔄 Sync From Drive Now";
+		}
+	}
+
+	/**
+	 * Handle Drive backup mode change (scheduled vs continuous)
+	 */
+	async function handleDriveBackupModeChange(e) {
+		try {
+			const mode = e.target.value;
+			await browser.storage.local.set({ backupMode: mode });
+
+			// Show/hide continuous backup check interval control
+			const continuousContainer = document.getElementById(
+				"continuousBackupCheckContainer",
+			);
+			if (continuousContainer) {
+				continuousContainer.style.display =
+					mode === "continuous" || mode === "both" ? "block" : "none";
+			}
+
+			showStatus(`Backup mode set to: ${mode}`, "success");
+		} catch (err) {
+			debugError("Failed to update backup mode", err);
+			showStatus("Failed to update backup mode", "error");
+		}
+	}
+
+	/**
+	 * Handle continuous backup check interval change
+	 */
+	async function handleContinuousBackupCheckIntervalChange(e) {
+		try {
+			const interval = parseInt(e.target.value);
+			await browser.storage.local.set({
+				continuousBackupCheckIntervalMinutes: interval,
+			});
+
+			// Update display
+			const display = document.getElementById(
+				"continuousCheckIntervalDisplay",
+			);
+			if (display) {
+				display.textContent = interval;
+			}
+
+			debugLog(
+				`Continuous backup check interval set to ${interval} minutes`,
+			);
+		} catch (err) {
+			debugError(
+				"Failed to update continuous backup check interval",
+				err,
+			);
+		}
+	}
+
+	/**
+	 * Handle Drive auto-restore toggle
+	 */
+	async function handleDriveAutoRestoreToggle(e) {
+		try {
+			const enabled = e.target.checked;
+			await browser.storage.local.set({
+				driveAutoRestoreEnabled: enabled,
+			});
+			showStatus(
+				enabled
+					? "Auto-restore from Drive enabled"
+					: "Auto-restore from Drive disabled",
+				"success",
+			);
+		} catch (err) {
+			debugError("Failed to update auto-restore setting", err);
+			showStatus("Failed to update auto-restore setting", "error");
 		}
 	}
 
@@ -4451,6 +4861,19 @@ async function initializePopup() {
 	driveBackupModeRadios.forEach((radio) => {
 		radio.addEventListener("change", handleDriveBackupModeChange);
 	});
+	const continuousBackupCheckInterval = document.getElementById(
+		"continuousBackupCheckInterval",
+	);
+	if (continuousBackupCheckInterval) {
+		continuousBackupCheckInterval.addEventListener(
+			"change",
+			handleContinuousBackupCheckIntervalChange,
+		);
+		continuousBackupCheckInterval.addEventListener(
+			"input",
+			handleContinuousBackupCheckIntervalChange,
+		);
+	}
 	if (driveAutoRestoreEnabled) {
 		driveAutoRestoreEnabled.addEventListener(
 			"change",
@@ -4460,61 +4883,99 @@ async function initializePopup() {
 	if (driveSyncNowBtn) {
 		driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);
 	}
-	if (showClientSecretToggle && driveClientSecretInput) {
-		// Initialize checkbox state - default unchecked (password hidden)
-		showClientSecretToggle.checked = false;
-		driveClientSecretInput.type = "password";
 
-		showClientSecretToggle.addEventListener("change", () => {
-			driveClientSecretInput.type = showClientSecretToggle.checked
-				? "text"
-				: "password";
+	// Eye icon toggle for client secret visibility
+	if (toggleClientSecretBtn && driveClientSecretInput) {
+		toggleClientSecretBtn.addEventListener("click", () => {
+			const isPassword = driveClientSecretInput.type === "password";
+			driveClientSecretInput.type = isPassword ? "text" : "password";
+			toggleClientSecretBtn.textContent = isPassword ? "🙈" : "👁️";
+			toggleClientSecretBtn.title = isPassword
+				? "Hide Client Secret"
+				: "Show Client Secret";
 		});
 	}
 
 	// ===== OAuth JSON Parsing Handlers =====
 	if (parseOAuthJsonBtn) {
 		parseOAuthJsonBtn.addEventListener("click", async () => {
-			const jsonText = oauthJsonPaste?.value?.trim();
-			if (!jsonText) {
+			try {
+				const jsonText = oauthJsonPaste?.value?.trim();
+				if (!jsonText) {
+					showOAuthParseResult(
+						"Please paste your OAuth JSON first",
+						"error",
+					);
+					return;
+				}
+
+				debugLog("Parsing OAuth JSON, length:", jsonText.length);
+				const result = parseOAuthCredentials(jsonText);
+
+				if (!result.valid) {
+					debugError("OAuth parsing failed:", result.error);
+					showOAuthParseResult(`❌ ${result.error}`, "error");
+					return;
+				}
+
+				debugLog("OAuth parsed successfully:", {
+					type: result.type,
+					clientIdLength: result.clientId?.length,
+					clientSecretLength: result.clientSecret?.length,
+				});
+
+				// Validate redirect URIs
+				const uriValidation = validateRedirectUris(result.redirectUris);
+
+				// Apply credentials to inputs (but don't save yet)
+				if (driveClientIdInput)
+					driveClientIdInput.value = result.clientId;
+				if (driveClientSecretInput)
+					driveClientSecretInput.value = result.clientSecret || "";
+				// Show the secret after parsing so user can verify
+				if (toggleClientSecretBtn && driveClientSecretInput) {
+					driveClientSecretInput.type = "text";
+					toggleClientSecretBtn.textContent = "🙈";
+					toggleClientSecretBtn.title = "Hide Client Secret";
+				}
+
+				let message = `✅ Parsed ${result.type} credentials\n`;
+				message += `Client ID: ${result.clientId.substring(0, 20)}...\n`;
+				message += `Click "Save to Storage" to save credentials.`;
+
+				if (uriValidation.warnings.length > 0) {
+					message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
+				}
+
 				showOAuthParseResult(
-					"Please paste your OAuth JSON first",
+					message,
+					uriValidation.valid ? "success" : "warning",
+				);
+			} catch (err) {
+				debugError("Failed to parse OAuth JSON", err);
+				showOAuthParseResult(
+					"❌ Failed to parse: " + err.message,
 					"error",
 				);
-				return;
 			}
+		});
+	}
 
-			const result = parseOAuthCredentials(jsonText);
-			if (!result.valid) {
-				showOAuthParseResult(`❌ ${result.error}`, "error");
-				return;
-			}
-
-			// Validate redirect URIs
-			const uriValidation = validateRedirectUris(result.redirectUris);
-
-			// Apply credentials to inputs
-			if (driveClientIdInput) driveClientIdInput.value = result.clientId;
-			if (driveClientSecretInput)
-				driveClientSecretInput.value = result.clientSecret || "";
-			if (showClientSecretToggle && driveClientSecretInput) {
-				showClientSecretToggle.checked = true;
-				driveClientSecretInput.type = "text";
-			}
-
-			let message = `✅ Parsed ${result.type} credentials\n`;
-			message += `Client ID: ${result.clientId.substring(0, 20)}...`;
-
-			if (uriValidation.warnings.length > 0) {
-				message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
-			}
-
-			showOAuthParseResult(
-				message,
-				uriValidation.valid ? "success" : "warning",
-			);
-
+	// ===== Save OAuth from JSON Handler =====
+	if (saveOAuthFromJsonBtn) {
+		saveOAuthFromJsonBtn.addEventListener("click", async () => {
 			try {
+				const clientId = driveClientIdInput?.value.trim() || "";
+				const clientSecret = driveClientSecretInput?.value.trim() || "";
+
+				if (!clientId) {
+					showOAuthParseResult(
+						"No Client ID to save. Parse JSON first.",
+						"error",
+					);
+					return;
+				}
+
 				const existing = await browser.storage.local.get([
 					"driveFolderId",
 				]);
@@ -4523,17 +4984,70 @@ async function initializePopup() {
 					existing.driveFolderId ||
 					"";
 
+				debugLog("Saving OAuth credentials to storage...");
 				await browser.storage.local.set({
-					driveClientId: result.clientId,
-					driveClientSecret: result.clientSecret || "",
+					driveClientId: clientId,
+					driveClientSecret: clientSecret,
 					driveFolderId: folderId,
 				});
 
+				debugLog("Verifying saved OAuth credentials...");
+				const saved = await browser.storage.local.get([
+					"driveClientId",
+					"driveClientSecret",
+					"driveFolderId",
+				]);
+
+				debugLog("Saved values:", {
+					clientIdMatch: saved.driveClientId === clientId,
+					secretMatch: saved.driveClientSecret === clientSecret,
+					folderIdMatch: saved.driveFolderId === folderId,
+					savedClientIdLength: saved.driveClientId?.length,
+					savedSecretLength: saved.driveClientSecret?.length,
+				});
+
+				if (
+					saved.driveClientId !== clientId ||
+					saved.driveClientSecret !== clientSecret ||
+					saved.driveFolderId !== folderId
+				) {
+					debugError("OAuth verification failed!", {
+						expected: {
+							clientId: clientId.substring(0, 20),
+							secretLength: clientSecret?.length,
+							folderId,
+						},
+						actual: {
+							clientId: saved.driveClientId?.substring(0, 20),
+							secretLength: saved.driveClientSecret?.length,
+							folderId: saved.driveFolderId,
+						},
+					});
+					showOAuthParseResult(
+						"❌ Failed to save credentials",
+						"error",
+					);
+					showStatus("❌ OAuth settings failed to persist", "error");
+					return;
+				}
+
+				debugLog("OAuth credentials saved and verified successfully!");
+				showOAuthParseResult(
+					"✅ Credentials saved to storage!",
+					"success",
+				);
 				showStatus("✅ OAuth settings saved!", "success");
 				await updateDriveUI();
 			} catch (err) {
 				debugError("Failed to save OAuth settings", err);
-				showStatus("❌ Failed to save OAuth settings", "error");
+				showOAuthParseResult(
+					"❌ Failed to save: " + err.message,
+					"error",
+				);
+				showStatus(
+					"❌ Failed to save OAuth settings: " + err.message,
+					"error",
+				);
 			}
 		});
 	}
@@ -4542,45 +5056,101 @@ async function initializePopup() {
 		if (!oauthParseResult) return;
 		oauthParseResult.style.display = "block";
 		oauthParseResult.textContent = message;
-		oauthParseResult.style.color =
-			type === "error"
-				? "#ef4444"
-				: type === "success"
-					? "#22c55e"
-					: type === "warning"
-						? "#f59e0b"
-						: "#9ca3af";
+		oauthParseResult.style.whiteSpace = "pre-wrap";
+		oauthParseResult.style.wordWrap = "break-word";
+
+		// Use CSS variables for colors that respect theme
+		let backgroundColor, textColor;
+		if (type === "error") {
+			textColor = "#ef4444";
+			backgroundColor = "rgba(239, 68, 68, 0.1)";
+		} else if (type === "success") {
+			textColor = "#22c55e";
+			backgroundColor = "rgba(34, 197, 94, 0.1)";
+		} else if (type === "warning") {
+			textColor = "#f59e0b";
+			backgroundColor = "rgba(245, 158, 11, 0.1)";
+		} else {
+			textColor = "var(--text-secondary, #9ca3af)";
+			backgroundColor = "var(--accent-primary, rgba(0, 0, 0, 0.1))";
+		}
+
+		oauthParseResult.style.color = textColor;
+		oauthParseResult.style.backgroundColor = backgroundColor;
 	}
 
 	if (saveOAuthSettingsBtn) {
 		saveOAuthSettingsBtn.addEventListener("click", async () => {
-			const clientId = driveClientIdInput?.value.trim() || "";
-			const clientSecret = driveClientSecretInput?.value.trim() || "";
-			const folderId = driveFolderIdInput?.value.trim() || "";
+			try {
+				const clientId = driveClientIdInput?.value.trim() || "";
+				const clientSecret = driveClientSecretInput?.value.trim() || "";
+				const folderId = driveFolderIdInput?.value.trim() || "";
 
-			if (!clientId) {
-				showStatus("Please enter a Client ID", "error");
-				return;
-			}
+				if (!clientId) {
+					showStatus("Please enter a Client ID", "error");
+					return;
+				}
 
-			await browser.storage.local.set({
-				driveClientId: clientId,
-				driveClientSecret: clientSecret,
-				driveFolderId: folderId,
-			});
+				debugLog("Saving OAuth credentials:", {
+					clientIdLength: clientId.length,
+					clientSecretLength: clientSecret.length,
+					folderIdLength: folderId.length,
+				});
 
-			showStatus("✅ OAuth settings saved!", "success");
-			if (typeof showOAuthParseResult === "function") {
-				showOAuthParseResult(
-					"✅ OAuth settings saved successfully",
-					"success",
+				await browser.storage.local.set({
+					driveClientId: clientId,
+					driveClientSecret: clientSecret,
+					driveFolderId: folderId,
+				});
+
+				const saved = await browser.storage.local.get([
+					"driveClientId",
+					"driveClientSecret",
+					"driveFolderId",
+				]);
+
+				debugLog("Verifying saved OAuth credentials:", {
+					savedClientId: saved.driveClientId?.substring(0, 20),
+					savedSecretLength: saved.driveClientSecret?.length,
+					expectedClientId: clientId.substring(0, 20),
+					expectedSecretLength: clientSecret.length,
+				});
+
+				if (
+					saved.driveClientId !== clientId ||
+					saved.driveClientSecret !== clientSecret ||
+					saved.driveFolderId !== folderId
+				) {
+					debugError("OAuth settings failed to persist!", {
+						saved,
+						expected: { clientId, clientSecret, folderId },
+					});
+					showStatus(
+						"❌ OAuth settings failed to persist - check console",
+						"error",
+					);
+					return;
+				}
+
+				showStatus("✅ OAuth settings saved!", "success");
+				if (typeof showOAuthParseResult === "function") {
+					showOAuthParseResult(
+						"✅ OAuth settings saved successfully",
+						"success",
+					);
+				}
+				if (driveClientIdInput) driveClientIdInput.value = clientId;
+				if (driveClientSecretInput)
+					driveClientSecretInput.value = clientSecret;
+				if (driveFolderIdInput) driveFolderIdInput.value = folderId;
+				await updateDriveUI();
+			} catch (err) {
+				debugError("Error saving OAuth settings:", err);
+				showStatus(
+					"❌ Error saving OAuth settings: " + err.message,
+					"error",
 				);
 			}
-			if (driveClientIdInput) driveClientIdInput.value = clientId;
-			if (driveClientSecretInput)
-				driveClientSecretInput.value = clientSecret;
-			if (driveFolderIdInput) driveFolderIdInput.value = folderId;
-			await updateDriveUI();
 		});
 	}
 
@@ -4595,7 +5165,7 @@ async function initializePopup() {
 					type: BACKUP_OPTIONS.FULL,
 					includeApiKeys: backupIncludeApiKeys?.checked ?? true,
 					includeCredentials:
-						backupIncludeCredentials?.checked ?? false,
+						backupIncludeCredentials?.checked ?? true,
 				});
 
 				downloadBackupAsFile(backup);
@@ -4635,12 +5205,20 @@ async function initializePopup() {
 				const hasApiKey = backup.metadata?.hasApiKey;
 				const hasCredentials = backup.metadata?.hasDriveCredentials;
 
-				const confirmMsg =
-					`Restore this backup?\n\n` +
-					`• ${novelCount} novels\n` +
-					`• API Key: ${hasApiKey ? "Yes" : "No"}\n` +
-					`• OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n` +
-					`Mode: MERGE (preserves existing data)`;
+				// Build confirmation message with version info
+				let confirmMsg = `Restore this backup?\n\n`;
+
+				// Add version information if available
+				if (backup.extensionVersion) {
+					confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
+				}
+				if (backup.version) {
+					confirmMsg += `📋 Format Version: ${backup.version}\n`;
+				}
+				confirmMsg += `📚 ${novelCount} novels\n`;
+				confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
+				confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
+				confirmMsg += `Mode: MERGE (preserves existing data)`;
 
 				if (!confirm(confirmMsg)) {
 					e.target.value = "";
@@ -4655,10 +5233,23 @@ async function initializePopup() {
 				});
 
 				if (result.success) {
-					showStatus(
-						`✅ Restored ${result.restoredKeys.length} items!`,
-						"success",
-					);
+					// Show version warnings if any
+					if (result.versionInfo?.warnings?.length > 0) {
+						const warningMsg =
+							result.versionInfo.warnings.join("\n");
+						showStatus(`⚠️ ${warningMsg}`, "warning");
+						setTimeout(() => {
+							showStatus(
+								`✅ Restored ${result.restoredKeys.length} items!`,
+								"success",
+							);
+						}, 3000);
+					} else {
+						showStatus(
+							`✅ Restored ${result.restoredKeys.length} items!`,
+							"success",
+						);
+					}
 					// Reload popup to reflect changes
 					setTimeout(() => location.reload(), 1500);
 				}
@@ -4787,6 +5378,8 @@ async function initializePopup() {
 		await loadBackupHistory();
 		// Update Google Drive UI on popup open
 		await updateDriveUI();
+		// Update notification badge on popup open (so it shows before clicking tab)
+		await updateNotificationBadge();
 	})();
 
 	// Load novels when novels tab is opened

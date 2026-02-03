@@ -13,7 +13,17 @@ import { COMPREHENSIVE_BACKUP_KEYS } from "./constants.js";
 const ROLLING_BACKUP_KEY = "rg_rolling_backup";
 const ROLLING_BACKUP_METADATA_KEY = "rg_rolling_backup_meta";
 const MAX_ROLLING_BACKUPS = 5;
-const BACKUP_VERSION = "2.0";
+const BACKUP_VERSION = "3.0";
+
+// Get extension version from manifest
+function getExtensionVersion() {
+	try {
+		const manifest = browser.runtime.getManifest();
+		return manifest.version || "unknown";
+	} catch (error) {
+		return "unknown";
+	}
+}
 
 /**
  * Comprehensive backup options
@@ -37,7 +47,7 @@ export const BACKUP_OPTIONS = {
 export async function createComprehensiveBackup(options = {}) {
 	const {
 		type = BACKUP_OPTIONS.FULL,
-		includeCredentials = false,
+		includeCredentials = true,
 		includeApiKeys = true,
 		customKeys = [],
 	} = options;
@@ -142,7 +152,56 @@ export async function restoreComprehensiveBackup(backup, options = {}) {
 			throw new Error("Invalid backup format");
 		}
 
+		// Comprehensive version checking
+		const currentExtVersion = getExtensionVersion();
+		const backupExtVersion = backup.extensionVersion || "unknown";
+		const backupVersion = parseFloat(backup.version) || 1.0;
+		const currentVersion = parseFloat(BACKUP_VERSION) || 3.0;
+
+		// Version compatibility warnings
+		const versionInfo = {
+			backupFormatVersion: backup.version,
+			backupExtensionVersion: backupExtVersion,
+			currentFormatVersion: BACKUP_VERSION,
+			currentExtensionVersion: currentExtVersion,
+			compatible: true,
+			warnings: [],
+		};
+
+		// Check format version compatibility
+		if (backupVersion > currentVersion) {
+			versionInfo.warnings.push(
+				`Backup format v${backup.version} is newer than current v${BACKUP_VERSION}. Some data may not restore correctly.`,
+			);
+		}
+
+		// Check extension version mismatch
+		if (backupExtVersion !== "unknown" && currentExtVersion !== "unknown") {
+			const backupMajor = parseInt(backupExtVersion.split(".")[0]);
+			const currentMajor = parseInt(currentExtVersion.split(".")[0]);
+
+			if (backupMajor > currentMajor) {
+				versionInfo.warnings.push(
+					`Backup from extension v${backupExtVersion} is newer than current v${currentExtVersion}. Consider updating the extension.`,
+				);
+			} else if (backupMajor < currentMajor) {
+				versionInfo.warnings.push(
+					`Backup from extension v${backupExtVersion} is older than current v${currentExtVersion}. Data will be migrated.`,
+				);
+			}
+		}
+
+		// Legacy format detection (version < 2.0)
+		if (backupVersion < 2.0) {
+			versionInfo.warnings.push(
+				"Legacy backup format detected. Some settings may need reconfiguration.",
+			);
+		}
+
+		debugLog("Backup version check:", versionInfo);
+
 		const results = {
+			versionInfo,
 			success: true,
 			restoredKeys: [],
 			skippedKeys: [],
@@ -364,8 +423,21 @@ export async function deleteRollingBackup(key) {
 export function parseOAuthCredentials(jsonString) {
 	try {
 		// Trim whitespace to handle any formatting (single-line or multi-line)
-		const trimmedJson = jsonString.trim();
-		const parsed = JSON.parse(trimmedJson);
+		const trimmedJson = jsonString.trim().replace(/^\uFEFF/, "");
+		let parsed;
+		try {
+			parsed = JSON.parse(trimmedJson);
+		} catch (parseError) {
+			// Handle pasted content with extra text or code fences
+			const jsonStart = trimmedJson.indexOf("{");
+			const jsonEnd = trimmedJson.lastIndexOf("}");
+			if (jsonStart >= 0 && jsonEnd > jsonStart) {
+				const extracted = trimmedJson.slice(jsonStart, jsonEnd + 1);
+				parsed = JSON.parse(extracted);
+			} else {
+				throw parseError;
+			}
+		}
 
 		// Check for "web" type (Web application)
 		if (parsed.web) {

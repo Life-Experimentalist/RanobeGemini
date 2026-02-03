@@ -19,6 +19,9 @@ function buildDefaultSiteSettings() {
 		if (!shelf?.id) continue;
 		defaults[shelf.id] = {
 			enabled: shelf.enabledByDefault !== false,
+			autoAddEnabled: true,
+			autoAddStatusChapter: "reading",
+			autoAddStatusNovel: "plan-to-read",
 			name: shelf.name || shelf.id,
 			domains: shelf.domains || [],
 			icon: shelf.icon,
@@ -142,6 +145,15 @@ export async function getSiteSettings() {
 					typeof userSetting.enabled === "boolean"
 						? userSetting.enabled
 						: def.enabled,
+				autoAddEnabled:
+					typeof userSetting.autoAddEnabled === "boolean"
+						? userSetting.autoAddEnabled
+						: def.autoAddEnabled,
+				autoAddStatusChapter:
+					userSetting.autoAddStatusChapter ||
+					def.autoAddStatusChapter,
+				autoAddStatusNovel:
+					userSetting.autoAddStatusNovel || def.autoAddStatusNovel,
 			};
 		}
 
@@ -193,6 +205,14 @@ export async function saveSiteSettings(updates = {}) {
 				value && typeof value.enabled === "boolean"
 					? value.enabled
 					: base.enabled,
+			autoAddEnabled:
+				value && typeof value.autoAddEnabled === "boolean"
+					? value.autoAddEnabled
+					: base.autoAddEnabled,
+			autoAddStatusChapter:
+				value?.autoAddStatusChapter || base.autoAddStatusChapter,
+			autoAddStatusNovel:
+				value?.autoAddStatusNovel || base.autoAddStatusNovel,
 		};
 	}
 

@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.7.0",
+	"version": "3.8.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"icons": {
 		"16": "icons/icon.png",

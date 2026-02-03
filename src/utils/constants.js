@@ -142,34 +142,34 @@ export const TELEMETRY_ENABLED_DEFAULT = false;
 
 // Comprehensive backup includes these storage keys
 export const COMPREHENSIVE_BACKUP_KEYS = [
-	"novelHistory",           // Library data
-	"apiKey",                 // Gemini API key
-	"backupApiKeys",          // Backup API keys
-	"selectedModel",          // Selected model
-	"customModelEndpoint",    // Custom endpoint
-	"promptTemplate",         // Main prompt
-	"summaryPrompt",          // Summary prompt
-	"shortSummaryPrompt",     // Short summary prompt
-	"permanentPrompt",        // Permanent prompt
-	"siteSpecificPrompts",    // Site-specific prompts
-	"chunkingEnabled",        // Chunking setting
-	"chunkSize",              // Chunk size
-	"useEmoji",               // Emoji setting
-	"maxOutputTokens",        // Max tokens
-	"temperature",            // Temperature
-	"topP",                   // Top P
-	"topK",                   // Top K
-	"debugMode",              // Debug mode
-	"driveClientId",          // OAuth client ID (if user wants to backup)
-	"driveClientSecret",      // OAuth client secret (if user wants to backup)
-	"driveFolderId",          // Drive folder ID
-	"backupMode",             // Backup mode
-	"siteSettings",           // Per-site settings
-	"autoHoldEnabled",        // Auto hold enabled
-	"autoHoldDays",           // Auto hold days
-	"librarySettings",        // Library settings
-	"themeSettings",          // Theme settings
-	"fontSize",               // Font size
+	"novelHistory", // Library data
+	"apiKey", // Gemini API key
+	"backupApiKeys", // Backup API keys
+	"selectedModel", // Selected model
+	"customModelEndpoint", // Custom endpoint
+	"promptTemplate", // Main prompt
+	"summaryPrompt", // Summary prompt
+	"shortSummaryPrompt", // Short summary prompt
+	"permanentPrompt", // Permanent prompt
+	"siteSpecificPrompts", // Site-specific prompts
+	"chunkingEnabled", // Chunking setting
+	"chunkSize", // Chunk size
+	"useEmoji", // Emoji setting
+	"maxOutputTokens", // Max tokens
+	"temperature", // Temperature
+	"topP", // Top P
+	"topK", // Top K
+	"debugMode", // Debug mode
+	"driveClientId", // OAuth client ID (if user wants to backup)
+	"driveClientSecret", // OAuth client secret (if user wants to backup)
+	"driveFolderId", // Drive folder ID
+	"backupMode", // Backup mode
+	"rg_site_settings", // Per-site settings
+	"autoHoldEnabled", // Auto hold enabled
+	"autoHoldDays", // Auto hold days
+	"rg_library_settings", // Library settings
+	"themeSettings", // Theme settings
+	"fontSize", // Font size
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators

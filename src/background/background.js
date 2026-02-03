@@ -63,9 +63,12 @@ if (typeof browser === "undefined") {
 		KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
 	const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
 	const DRIVE_SYNC_ALARM_NAME = "ranobe-gemini-drive-sync";
+	const CONTINUOUS_BACKUP_CHECK_ALARM_NAME =
+		"ranobe-gemini-continuous-backup-check";
 	const DEFAULT_BACKUP_RETENTION = 3;
 	const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
 	const CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES = 5;
+	const CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES = 2;
 	const DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES = 10;
 	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
@@ -232,10 +235,6 @@ if (typeof browser === "undefined") {
 			throw new Error("Downloads API not available");
 		}
 
-		const { novelLibrary } = await import(
-			browser.runtime.getURL("utils/novel-library.js")
-		);
-
 		const data = await novelLibrary.exportLibrary();
 		const timestamp = new Date()
 			.toISOString()
@@ -284,19 +283,12 @@ if (typeof browser === "undefined") {
 		reason = "scheduled",
 		variant = "versioned",
 	}) {
-		const { novelLibrary } = await import(
-			browser.runtime.getURL("utils/novel-library.js")
-		);
-		const { uploadLibraryBackupToDrive: uploadToDrive } = await import(
-			browser.runtime.getURL("utils/drive.js")
-		);
-
 		const data = await novelLibrary.exportLibrary();
 		const blob = new Blob([JSON.stringify(data, null, 2)], {
 			type: "application/json",
 		});
 
-		const uploadResult = await uploadToDrive(blob, {
+		const uploadResult = await uploadLibraryBackupToDrive(blob, {
 			folderId,
 			variant: variant === "continuous" ? "continuous" : "versioned",
 		});
@@ -454,7 +446,52 @@ if (typeof browser === "undefined") {
 		return { success: true, file: latestFile, result: importResult };
 	}
 
-	let continuousBackupTimer = null;
+	let continuousBackupCheckTimer = null;
+	let lastLibraryHash = null;
+
+	// Calculate hash of current library state
+	async function getLibraryHash() {
+		try {
+			const library = await novelLibrary.getLibrary();
+			// Create a simple hash by JSON stringifying and counting changes
+			const libraryJson = JSON.stringify(library);
+			// Use a simple hash function for comparison
+			let hash = 0;
+			for (let i = 0; i < libraryJson.length; i++) {
+				const char = libraryJson.charCodeAt(i);
+				hash = (hash << 5) - hash + char;
+				hash = hash & hash; // Convert to 32-bit integer
+			}
+			return hash.toString(16);
+		} catch (err) {
+			debugError("Failed to calculate library hash:", err);
+			return null;
+		}
+	}
+
+	// Check if library has changed since last check
+	async function hasLibraryChanged() {
+		try {
+			const currentHash = await getLibraryHash();
+			if (currentHash === null) return false;
+
+			if (lastLibraryHash === null) {
+				// First run, store the hash
+				lastLibraryHash = currentHash;
+				return false;
+			}
+
+			const changed = lastLibraryHash !== currentHash;
+			if (changed) {
+				lastLibraryHash = currentHash;
+				debugLog("Library change detected");
+			}
+			return changed;
+		} catch (err) {
+			debugError("Error checking library changes:", err);
+			return false;
+		}
+	}
 
 	async function scheduleAutoBackup() {
 		const prefs = await browser.storage.local.get([
@@ -485,16 +522,17 @@ if (typeof browser === "undefined") {
 		return true;
 	}
 
-	async function scheduleContinuousBackup() {
-		if (continuousBackupTimer) {
-			clearTimeout(continuousBackupTimer);
-			continuousBackupTimer = null;
+	async function scheduleContinuousBackupCheck() {
+		// Clear existing timer
+		if (continuousBackupCheckTimer) {
+			clearInterval(continuousBackupCheckTimer);
+			continuousBackupCheckTimer = null;
 		}
 
 		const prefs = await browser.storage.local.get([
 			"autoBackupEnabled",
 			"backupMode",
-			"continuousBackupDelayMinutes",
+			"continuousBackupCheckIntervalMinutes",
 			"driveFolderId",
 		]);
 		const driveTokens = await browser.storage.local.get("driveAuthTokens");
@@ -504,23 +542,41 @@ if (typeof browser === "undefined") {
 		const mode = prefs.backupMode || "scheduled";
 		if (mode !== "continuous" && mode !== "both") return;
 
-		const delayMinutes =
-			prefs.continuousBackupDelayMinutes ||
-			CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES;
-		const delayMs = Math.max(1, delayMinutes) * 60 * 1000;
+		// Get the check interval (how often to check for changes)
+		const checkIntervalMinutes =
+			prefs.continuousBackupCheckIntervalMinutes ||
+			CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES;
+		const checkIntervalMs = Math.max(1, checkIntervalMinutes) * 60 * 1000;
 
-		continuousBackupTimer = setTimeout(async () => {
+		// Initialize hash on first run
+		if (lastLibraryHash === null) {
+			lastLibraryHash = await getLibraryHash();
+		}
+
+		// Set up polling interval
+		continuousBackupCheckTimer = setInterval(async () => {
 			try {
-				await uploadLibraryBackupToDriveWithHistory({
-					folderId: prefs.driveFolderId,
-					reason: "continuous",
-					variant: "continuous",
-				});
-				debugLog("Continuous backup uploaded to Drive");
+				const changed = await hasLibraryChanged();
+				if (changed) {
+					debugLog(
+						`Continuous backup triggered by library change (check interval: ${checkIntervalMinutes}m)`,
+					);
+					// Backup immediately on change detection
+					await uploadLibraryBackupToDriveWithHistory({
+						folderId: prefs.driveFolderId,
+						reason: "continuous-change",
+						variant: "continuous",
+					});
+					debugLog("Continuous backup uploaded to Drive");
+				}
 			} catch (err) {
-				debugError("Continuous backup failed:", err);
+				debugError("Continuous backup check failed:", err);
 			}
-		}, delayMs);
+		}, checkIntervalMs);
+
+		debugLog(
+			`Continuous backup check scheduled every ${checkIntervalMinutes} minutes`,
+		);
 	}
 
 	async function scheduleDriveSync() {
@@ -556,8 +612,11 @@ if (typeof browser === "undefined") {
 	scheduleAutoBackup().catch((err) =>
 		console.warn("Auto-backup schedule setup failed:", err?.message),
 	);
-	scheduleContinuousBackup().catch((err) =>
-		console.warn("Continuous backup schedule setup failed:", err?.message),
+	scheduleContinuousBackupCheck().catch((err) =>
+		console.warn(
+			"Continuous backup check schedule setup failed:",
+			err?.message,
+		),
 	);
 	scheduleDriveSync().catch((err) =>
 		console.warn("Drive sync schedule setup failed:", err?.message),
@@ -577,10 +636,11 @@ if (typeof browser === "undefined") {
 			changes.backupMode ||
 			changes.autoBackupEnabled ||
 			changes.backupIntervalDays ||
-			changes.continuousBackupDelayMinutes
+			changes.continuousBackupDelayMinutes ||
+			changes.continuousBackupCheckIntervalMinutes
 		) {
 			scheduleAutoBackup();
-			scheduleContinuousBackup();
+			scheduleContinuousBackupCheck();
 		}
 
 		if (
@@ -854,8 +914,23 @@ if (typeof browser === "undefined") {
 		if (message.action === "uploadLibraryBackupToDrive") {
 			(async () => {
 				try {
+					debugLog("Starting Drive backup upload...");
+					debugLog("Backup reason:", message.reason);
+
+					// Ensure we have valid auth before attempting backup
+					const tokens =
+						await browser.storage.local.get("driveAuthTokens");
+					if (!tokens.driveAuthTokens?.access_token) {
+						throw new Error(
+							"Not authenticated with Google Drive. Please connect Drive first.",
+						);
+					}
+					debugLog("Auth tokens verified for backup");
+
 					const prefs = await browser.storage.local.get("backupMode");
 					const mode = prefs.backupMode || "scheduled";
+
+					debugLog("Uploading primary backup...");
 					const primary = await uploadLibraryBackupToDriveWithHistory(
 						{
 							folderId: message.folderId,
@@ -863,16 +938,26 @@ if (typeof browser === "undefined") {
 							variant: message.variant || "versioned",
 						},
 					);
+					debugLog(
+						"Primary backup uploaded successfully:",
+						primary.filename,
+					);
 
 					let rolling = null;
 					if (mode === "continuous" || mode === "both") {
+						debugLog("Uploading rolling backup...");
 						rolling = await uploadLibraryBackupToDriveWithHistory({
 							folderId: message.folderId,
 							reason: "rolling",
 							variant: "continuous",
 						});
+						debugLog(
+							"Rolling backup uploaded successfully:",
+							rolling.filename,
+						);
 					}
 
+					debugLog("Backup complete, sending success response");
 					sendResponse({
 						success: true,
 						primary,
@@ -880,14 +965,16 @@ if (typeof browser === "undefined") {
 						name: primary?.filename || primary?.name,
 					});
 				} catch (error) {
+					debugError("Backup error:", error);
 					sendResponse({
 						success: false,
 						error: error.message,
 					});
 				}
-			})().catch((error) =>
-				sendResponse({ success: false, error: error.message }),
-			);
+			})().catch((error) => {
+				debugError("Backup handler error:", error);
+				sendResponse({ success: false, error: error.message });
+			});
 			return true;
 		}
 
@@ -918,7 +1005,10 @@ if (typeof browser === "undefined") {
 
 		if (message.action === "syncAutoBackups") {
 			scheduleAutoBackup()
-				.then((scheduled) => sendResponse({ success: true, scheduled }))
+				.then((scheduled) => {
+					scheduleContinuousBackupCheck();
+					return sendResponse({ success: true, scheduled });
+				})
 				.catch((error) =>
 					sendResponse({
 						success: false,

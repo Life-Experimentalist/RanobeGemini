@@ -1,7 +1,7 @@
 // Google Drive auth + upload helper for RanobeGemini
 // Uses identity.launchWebAuthFlow with PKCE and stores tokens in extension storage.
 
-import { debugLog, debugError } from "./logger.js";
+import { debugLog, debugError, uploadLogsWithAdapter } from "./logger.js";
 import {
 	DEFAULT_DRIVE_CLIENT_ID,
 	DRIVE_BACKUP_MAX_COUNT,
@@ -305,7 +305,6 @@ export async function uploadBlobToDrive(
 }
 
 export async function uploadLogsToDriveWithAdapter(adapterOptions = {}) {
-	const { uploadLogsWithAdapter } = await import("./logger.js");
 	return uploadLogsWithAdapter(async (blob, meta) => {
 		const filename =
 			adapterOptions.filename || meta.filename || "ranobe-logs.json";

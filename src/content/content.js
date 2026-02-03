@@ -3631,6 +3631,19 @@ if (window.__RGInitDone) {
 					  }
 					: {}),
 			}; // Check if this novel already exists in the library
+			const shelfId =
+				currentHandler.constructor.SHELF_METADATA?.id || "unknown";
+			const defaultSiteSettings =
+				siteSettingsModule?.getDefaultSiteSettings?.() || {};
+			const siteAutoAddSettings =
+				siteSettings?.[shelfId] || defaultSiteSettings[shelfId] || {};
+			const autoAddEnabled = siteAutoAddSettings.autoAddEnabled !== false;
+			const autoAddStatusChapter =
+				siteAutoAddSettings.autoAddStatusChapter ||
+				READING_STATUS.READING;
+			const autoAddStatusNovel =
+				siteAutoAddSettings.autoAddStatusNovel ||
+				READING_STATUS.PLAN_TO_READ;
 			const existingNovels = await novelLibrary.getRecentNovels(0);
 			const existingNovel = existingNovels.find((n) => n.id === novelId);
 
@@ -3645,9 +3658,21 @@ if (window.__RGInitDone) {
 				(handlerType === HANDLER_TYPES.DEDICATED_PAGE && isNovelPage);
 
 			// Always allow auto-add if we have some metadata (title at minimum)
-			const shouldAutoAdd = metadata.title && metadata.title.length > 0;
+			const shouldAutoAdd =
+				autoAddEnabled && metadata.title && metadata.title.length > 0;
 
 			if (existingNovel) {
+				// Avoid overwriting reading status unless auto-add is configured for chapter pages
+				const statusUsesProgress = [
+					READING_STATUS.READING,
+					READING_STATUS.RE_READING,
+					READING_STATUS.UP_TO_DATE,
+				].includes(autoAddStatusChapter);
+				if (isChapter && !statusUsesProgress) {
+					delete novelData.readingStatus;
+					delete novelData.lastReadChapter;
+					delete novelData.lastReadUrl;
+				}
 				// Check if this novel has pending refresh (from library refresh button)
 				const hasPendingRefresh = existingNovel.pendingRefresh === true;
 
@@ -3657,7 +3682,7 @@ if (window.__RGInitDone) {
 						`Refreshing: ${metadata.title}`,
 						"updating",
 						2000,
-						{ field: "all metadata" }
+						{ field: "all metadata" },
 					);
 
 					// Clear the pending refresh flag and reset edited fields
@@ -3674,12 +3699,12 @@ if (window.__RGInitDone) {
 
 					debugLog(
 						"📚 Force-refreshed novel metadata:",
-						metadata.title
+						metadata.title,
 					);
 					showTimedBanner(
 						`Refreshed: ${metadata.title}`,
 						"success",
-						3000
+						3000,
 					);
 				} else {
 					// Normal update - respects editedFields
@@ -3690,7 +3715,7 @@ if (window.__RGInitDone) {
 							2000,
 							{
 								field: "metadata",
-							}
+							},
 						);
 					}
 					await novelLibrary.updateNovelMetadata(novelId, novelData);
@@ -3699,11 +3724,27 @@ if (window.__RGInitDone) {
 						showTimedBanner(
 							`Updated: ${metadata.title}`,
 							"success",
-							2000
+							2000,
 						);
 					}
 				}
 			} else if (shouldAutoAdd) {
+				// Apply configured auto-add status for new novels
+				const autoAddStatus = isChapter
+					? autoAddStatusChapter
+					: autoAddStatusNovel;
+				if (autoAddStatus) {
+					novelData.readingStatus = autoAddStatus;
+					const statusUsesProgress = [
+						READING_STATUS.READING,
+						READING_STATUS.RE_READING,
+						READING_STATUS.UP_TO_DATE,
+					].includes(autoAddStatus);
+					if (!isChapter || !statusUsesProgress) {
+						delete novelData.lastReadChapter;
+						delete novelData.lastReadUrl;
+					}
+				}
 				// Add new novel to library
 				const addMessage = hasGoodMetadata
 					? `Adding: ${metadata.title}`
@@ -3737,7 +3778,7 @@ if (window.__RGInitDone) {
 										text: "📖 View Details",
 										url: novelPageUrl,
 									},
-								}
+								},
 							);
 						}, 3500);
 					}

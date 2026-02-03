@@ -13,7 +13,8 @@ import { DOMAIN_REGISTRY, SHELF_REGISTRY } from "./domain-constants.js";
  */
 export const READING_STATUS = {
 	READING: "reading",
-	COMPLETED: "completed",
+	UP_TO_DATE: "up-to-date", // For incomplete/ongoing novels where user is current with latest
+	COMPLETED: "completed", // For novels completed by author
 	PLAN_TO_READ: "plan-to-read",
 	ON_HOLD: "on-hold",
 	DROPPED: "dropped",
@@ -25,6 +26,10 @@ export const READING_STATUS = {
  */
 export const READING_STATUS_INFO = {
 	[READING_STATUS.READING]: { label: "📖 Reading", color: "#4caf50" },
+	[READING_STATUS.UP_TO_DATE]: {
+		label: "✨ Up to Date",
+		color: "#00bcd4",
+	},
 	[READING_STATUS.COMPLETED]: { label: "✅ Completed", color: "#2196f3" },
 	[READING_STATUS.PLAN_TO_READ]: {
 		label: "📋 Plan to Read",

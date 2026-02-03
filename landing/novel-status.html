@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Ranobe Gemini | Novel Status Guide</title>
+		<meta
+			name="description"
+			content="Complete guide to understanding novel reading status in Ranobe Gemini. Learn how statuses work and when they automatically update."
+		/>
+		<link
+			rel="canonical"
+			href="https://ranobe.vkrishna04.me/novel-status.html"
+		/>
+		<meta name="theme-color" content="#0b1628" />
+		<link
+			rel="icon"
+			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			sizes="32x32"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+		<style>
+			.status-card {
+				background: linear-gradient(
+					135deg,
+					rgba(75, 85, 99, 0.1),
+					rgba(102, 126, 234, 0.05)
+				);
+				border: 1px solid rgba(102, 126, 234, 0.3);
+				border-radius: 10px;
+				padding: 20px;
+				margin: 15px 0;
+				transition: all 0.3s ease;
+			}
+			.status-card:hover {
+				border-color: rgba(102, 126, 234, 0.6);
+				background: linear-gradient(
+					135deg,
+					rgba(75, 85, 99, 0.15),
+					rgba(102, 126, 234, 0.1)
+				);
+			}
+			.status-label {
+				display: inline-block;
+				padding: 6px 12px;
+				border-radius: 20px;
+				font-weight: 600;
+				font-size: 14px;
+				margin-bottom: 10px;
+			}
+			.reading {
+				background: rgba(76, 175, 80, 0.2);
+				color: #4caf50;
+			}
+			.up-to-date {
+				background: rgba(0, 188, 212, 0.2);
+				color: #00bcd4;
+			}
+			.completed {
+				background: rgba(33, 150, 243, 0.2);
+				color: #2196f3;
+			}
+			.plan {
+				background: rgba(255, 152, 0, 0.2);
+				color: #ff9800;
+			}
+			.on-hold {
+				background: rgba(158, 158, 158, 0.2);
+				color: #9e9e9e;
+			}
+			.dropped {
+				background: rgba(244, 67, 54, 0.2);
+				color: #f44336;
+			}
+			.flow-diagram {
+				background: rgba(102, 126, 234, 0.05);
+				border: 1px solid rgba(102, 126, 234, 0.3);
+				border-radius: 10px;
+				padding: 20px;
+				margin: 20px 0;
+				font-family: monospace;
+				font-size: 13px;
+				line-height: 1.8;
+				color: #e5e7eb;
+				overflow-x: auto;
+			}
+			.highlight {
+				background: rgba(255, 235, 59, 0.2);
+				padding: 2px 6px;
+				border-radius: 3px;
+				color: #ffeb3b;
+			}
+			.example-box {
+				background: rgba(76, 175, 80, 0.1);
+				border-left: 3px solid #4caf50;
+				padding: 15px;
+				margin: 15px 0;
+				border-radius: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="bg-glow"></div>
+		<div class="bg-dots"></div>
+		<header class="topbar">
+			<div class="brand">
+				<img
+					class="logo-img"
+					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					alt="Ranobe Gemini"
+				/>
+				<div class="meta">
+					<strong id="brandName">Ranobe Gemini</strong>
+					<span>Novel status guide</span>
+				</div>
+			</div>
+			<nav class="nav">
+				<a href="./index.html">Home</a>
+				<a href="#status-overview">Statuses</a>
+				<a href="#status-transitions">Transitions</a>
+				<a href="#examples">Examples</a>
+			</nav>
+		</header>
+
+		<main class="container">
+			<section id="status-overview">
+				<h1>📖 Novel Reading Status Guide</h1>
+				<p class="lead">
+					Understanding how Ranobe Gemini tracks your reading progress
+					with automatic and manual status management.
+				</p>
+
+				<h2>Core Concept</h2>
+				<p>
+					The novel status system distinguishes between
+					<span class="highlight">author progress</span> and
+					<span class="highlight">your progress</span>. A novel's
+					completion status depends on whether the author has finished
+					writing it.
+				</p>
+
+				<h2>Available Statuses</h2>
+
+				<div class="status-card">
+					<div class="status-label reading">📖 Reading</div>
+					<h3>Reading</h3>
+					<p>
+						You are actively reading this novel and are
+						<strong>behind</strong> the latest chapter. More content
+						is available for you to read.
+					</p>
+					<p>
+						<strong>Transitions to:</strong> Up to Date (when you
+						reach latest chapter)
+					</p>
+				</div>
+
+				<div class="status-card">
+					<div class="status-label up-to-date">✨ Up to Date</div>
+					<h3>Up to Date</h3>
+					<p>
+						You have read all available chapters. This status
+						applies to:
+					</p>
+					<ul style="margin-left: 20px; margin-top: 10px">
+						<li>
+							<strong>Ongoing novels:</strong> Author hasn't
+							completed the series yet
+						</li>
+						<li>
+							<strong>Completed novels:</strong> You've finished
+							the entire series
+						</li>
+					</ul>
+					<p style="margin-top: 10px">
+						<strong>Transitions to:</strong>
+					</p>
+					<ul style="margin-left: 20px; margin-top: 5px">
+						<li>Reading (when new chapters are released)</li>
+						<li>
+							Completed (if you mark as completed and author has
+							finished)
+						</li>
+					</ul>
+				</div>
+
+				<div class="status-card">
+					<div class="status-label completed">✅ Completed</div>
+					<h3>Completed</h3>
+					<p>
+						You have finished reading this novel.
+						<strong
+							>Only available for novels completed by the
+							author.</strong
+						>
+					</p>
+					<p style="margin-top: 10px">
+						For ongoing/incomplete novels: Use "Up to Date" instead
+						to indicate you're current with latest chapters.
+					</p>
+					<p>
+						<strong>Transitions to:</strong> Reading (if new
+						chapters appear after author continues)
+					</p>
+				</div>
+
+				<div class="status-card">
+					<div class="status-label plan">📋 Plan to Read</div>
+					<h3>Plan to Read</h3>
+					<p>
+						You want to read this novel in the future but haven't
+						started yet.
+					</p>
+					<p>
+						<strong>Manual status:</strong> Change this whenever
+						you're ready to start reading.
+					</p>
+				</div>
+
+				<div class="status-card">
+					<div class="status-label on-hold">⏸️ On Hold</div>
+					<h3>On Hold</h3>
+					<p>
+						You're pausing this novel temporarily. No automatic
+						transitions occur.
+					</p>
+					<p>
+						<strong>Manual status:</strong> Change back to Reading
+						when you're ready to continue.
+					</p>
+				</div>
+
+				<div class="status-card">
+					<div class="status-label dropped">❌ Dropped</div>
+					<h3>Dropped</h3>
+					<p>You've decided not to continue reading this novel.</p>
+					<p>
+						<strong>Manual status:</strong> Use this for novels you
+						no longer wish to track.
+					</p>
+				</div>
+
+				<div class="status-card">
+					<div
+						class="status-label"
+						style="
+							background: rgba(156, 39, 176, 0.2);
+							color: #9c27b0;
+						"
+					>
+						🔁 Re-reading
+					</div>
+					<h3>Re-reading</h3>
+					<p>
+						You're reading through a novel you've already completed.
+					</p>
+					<p>
+						<strong>Manual status:</strong> Perfect for novels you
+						want to revisit.
+					</p>
+				</div>
+			</section>
+
+			<section id="status-transitions">
+				<h2>Automatic Status Transitions</h2>
+
+				<h3>🎯 For Completed Novels (Author Finished)</h3>
+				<div class="flow-diagram">
+					Reading → Up to Date (reached latest) → Completed (you mark
+					as done)
+				</div>
+				<p>
+					When you read the final chapter of a completed novel, the
+					status automatically changes to
+					<span class="highlight">Up to Date</span>. You can then
+					manually set it to <span class="highlight">Completed</span>.
+				</p>
+
+				<h3>🚀 For Ongoing Novels (Author Still Writing)</h3>
+				<div class="flow-diagram">
+					Reading → Up to Date (caught up with latest) ↑ ↓ ← ← ← (new
+					chapter!) ← ← ←
+				</div>
+				<p>
+					When you reach the latest chapter of an ongoing novel, it
+					becomes
+					<span class="highlight">Up to Date</span>. If the author
+					releases new chapters later, it automatically reverts to
+					<span class="highlight">Reading</span>.
+				</p>
+
+				<h3>📝 For One-shots (Single Chapter)</h3>
+				<div class="flow-diagram">
+					Reading → (user marks status manually) Status stays as set -
+					no automatic transitions
+				</div>
+				<p>
+					One-shot stories remain under your manual control. The
+					extension doesn't automatically change status since there's
+					no "new chapters" scenario.
+				</p>
+
+				<h3>⏸️ Manual Statuses (No Auto-Transition)</h3>
+				<p>The following statuses never automatically change:</p>
+				<ul style="margin-left: 20px; margin-top: 10px">
+					<li>
+						<strong>Plan to Read:</strong> Changes only when you
+						manually update
+					</li>
+					<li>
+						<strong>On Hold:</strong> Stays until you manually
+						change it
+					</li>
+					<li>
+						<strong>Dropped:</strong> Permanent until manually
+						changed
+					</li>
+					<li>
+						<strong>Re-reading:</strong> Manual status, no
+						auto-transitions
+					</li>
+				</ul>
+			</section>
+
+			<section id="examples">
+				<h2>Real-World Examples</h2>
+
+				<h3>Example 1: Ongoing Web Novel</h3>
+				<div class="example-box">
+					<p>
+						<strong>Scenario:</strong> You're reading "The Endless
+						Tower" on Wuxia site. Author is still writing.
+					</p>
+					<ol style="margin-left: 20px; margin-top: 10px">
+						<li>
+							You start reading → Status:
+							<span class="highlight">Reading</span>
+						</li>
+						<li>
+							You catch up to the latest chapter → Status
+							auto-changes to:
+							<span class="highlight">Up to Date</span>
+						</li>
+						<li>
+							Author releases 5 new chapters → Status auto-changes
+							back to: <span class="highlight">Reading</span>
+						</li>
+						<li>
+							You read those chapters and catch up again → Status:
+							<span class="highlight">Up to Date</span>
+						</li>
+					</ol>
+					<p style="margin-top: 10px">
+						<strong>Note:</strong> Status never becomes "Completed"
+						because the author hasn't finished writing.
+					</p>
+				</div>
+
+				<h3>Example 2: Completed Web Novel</h3>
+				<div class="example-box">
+					<p>
+						<strong>Scenario:</strong> You're reading "The Lost
+						Kingdom" which is fully written by the author.
+					</p>
+					<ol style="margin-left: 20px; margin-top: 10px">
+						<li>
+							You start reading → Status:
+							<span class="highlight">Reading</span>
+						</li>
+						<li>
+							You reach the final chapter → Status auto-changes
+							to: <span class="highlight">Up to Date</span>
+						</li>
+						<li>
+							You manually mark as done → Status:
+							<span class="highlight">Completed</span>
+						</li>
+						<li>
+							No new chapters can appear → Status remains:
+							<span class="highlight">Completed</span>
+						</li>
+					</ol>
+				</div>
+
+				<h3>Example 3: One-shot Short Story</h3>
+				<div class="example-box">
+					<p>
+						<strong>Scenario:</strong> You read a single-chapter
+						short story.
+					</p>
+					<ol style="margin-left: 20px; margin-top: 10px">
+						<li>
+							You read the story → Status:
+							<span class="highlight">Reading</span> (stays here)
+						</li>
+						<li>
+							You manually change to:
+							<span class="highlight">Completed</span>
+						</li>
+						<li>
+							No automatic transitions occur since it's a one-shot
+						</li>
+						<li>
+							Status stays as you set it:
+							<span class="highlight">Completed</span>
+						</li>
+					</ol>
+				</div>
+
+				<h3>Example 4: Series on Hiatus</h3>
+				<div class="example-box">
+					<p>
+						<strong>Scenario:</strong> You're reading a series, but
+						the author goes on hiatus.
+					</p>
+					<ol style="margin-left: 20px; margin-top: 10px">
+						<li>
+							You read latest chapter → Status:
+							<span class="highlight">Up to Date</span>
+						</li>
+						<li>
+							Author announces hiatus (no new chapters) → Status:
+							<span class="highlight">Up to Date</span> (stays)
+						</li>
+						<li>
+							You want to pause → Manually change to:
+							<span class="highlight">On Hold</span>
+						</li>
+						<li>
+							When author resumes → You manually change back to:
+							<span class="highlight">Reading</span>
+						</li>
+					</ol>
+					<p style="margin-top: 10px">
+						<strong>Note:</strong> The extension can detect new
+						chapters but respects your "On Hold" status if you set
+						it.
+					</p>
+				</div>
+			</section>
+
+			<section>
+				<h2>Quick Reference</h2>
+				<table
+					style="
+						width: 100%;
+						border-collapse: collapse;
+						margin-top: 20px;
+					"
+				>
+					<thead>
+						<tr
+							style="
+								border-bottom: 2px solid
+									rgba(102, 126, 234, 0.5);
+							"
+						>
+							<th style="text-align: left; padding: 12px">
+								Status
+							</th>
+							<th style="text-align: left; padding: 12px">
+								Auto-Changes?
+							</th>
+							<th style="text-align: left; padding: 12px">
+								Use When...
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">📖 Reading</td>
+							<td style="padding: 12px">✅ Yes</td>
+							<td style="padding: 12px">
+								Behind the latest chapter
+							</td>
+						</tr>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">✨ Up to Date</td>
+							<td style="padding: 12px">✅ Yes</td>
+							<td style="padding: 12px">
+								Caught up (ongoing or completed novels)
+							</td>
+						</tr>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">✅ Completed</td>
+							<td style="padding: 12px">❌ No*</td>
+							<td style="padding: 12px">
+								Finished reading a completed novel
+							</td>
+						</tr>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">📋 Plan to Read</td>
+							<td style="padding: 12px">❌ No</td>
+							<td style="padding: 12px">
+								Want to read but haven't started
+							</td>
+						</tr>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">⏸️ On Hold</td>
+							<td style="padding: 12px">❌ No</td>
+							<td style="padding: 12px">Temporarily pausing</td>
+						</tr>
+						<tr
+							style="
+								border-bottom: 1px solid
+									rgba(102, 126, 234, 0.2);
+							"
+						>
+							<td style="padding: 12px">❌ Dropped</td>
+							<td style="padding: 12px">❌ No</td>
+							<td style="padding: 12px">
+								Not continuing anymore
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 12px">🔁 Re-reading</td>
+							<td style="padding: 12px">❌ No</td>
+							<td style="padding: 12px">
+								Re-reading a finished novel
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<p style="margin-top: 10px; font-size: 12px">
+					*Only if author releases new chapters after completion
+				</p>
+			</section>
+
+			<section
+				style="
+					margin-top: 40px;
+					padding: 20px;
+					background: rgba(102, 126, 234, 0.05);
+					border-radius: 10px;
+					border: 1px solid rgba(102, 126, 234, 0.3);
+				"
+			>
+				<h3>📌 Key Takeaway</h3>
+				<p>
+					The status system intelligently separates
+					<strong>author progress</strong> from
+					<strong>your reading progress</strong>. For ongoing series,
+					"Up to Date" means you're caught up—not that the series is
+					complete. Only use "Completed" for series that the author
+					has actually finished. This keeps your reading status
+					accurate and meaningful.
+				</p>
+			</section>
+		</main>
+
+		<footer class="footer">
+			<p>
+				Ranobe Gemini © 2025 |
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini"
+					>GitHub</a
+				>
+			</p>
+		</footer>
+	</body>
+</html>

@@ -13,7 +13,9 @@ import { debugLog, debugError } from "../utils/logger.js";
 import {
 	filterEnabledShelves,
 	getSiteSettings,
+	getDefaultSiteSettings,
 	isSiteEnabled,
+	saveSiteSettings,
 	SITE_SETTINGS_KEY,
 } from "../utils/site-settings.js";
 import {
@@ -164,6 +166,7 @@ const elements = {
 	viewButtons: document.querySelectorAll(".view-btn"),
 	refreshBtn: document.getElementById("refresh-btn"),
 	settingsBtn: document.getElementById("settings-btn"),
+	siteAutoAddList: document.getElementById("site-autoadd-list"),
 
 	// Novel Modal
 	novelModal: document.getElementById("novel-modal"),
@@ -423,6 +426,8 @@ async function loadSiteToggleSettings() {
 		debugError("Failed to load site settings:", error);
 		siteSettings = {};
 	}
+
+	renderSiteAutoAddSettings();
 }
 
 /**
@@ -871,6 +876,134 @@ function populateSupportedSites() {
 		.join("");
 
 	attachIconFallbacks(sitesList);
+}
+
+function renderSiteAutoAddSettings() {
+	if (!elements.siteAutoAddList) return;
+	if (!SHELVES || !Object.keys(SHELVES).length) return;
+
+	const defaults = getDefaultSiteSettings();
+	const shelves = Object.values(SHELVES).sort((a, b) =>
+		(a.name || a.id).localeCompare(b.name || b.id),
+	);
+
+	const statusOptions = [
+		READING_STATUS.READING,
+		READING_STATUS.PLAN_TO_READ,
+		READING_STATUS.UP_TO_DATE,
+		READING_STATUS.COMPLETED,
+		READING_STATUS.ON_HOLD,
+		READING_STATUS.DROPPED,
+		READING_STATUS.RE_READING,
+	];
+
+	elements.siteAutoAddList.innerHTML = "";
+
+	shelves.forEach((shelf) => {
+		const setting = siteSettings[shelf.id] || defaults[shelf.id] || {};
+		const autoAddEnabled = setting.autoAddEnabled !== false;
+		const autoAddStatusChapter = setting.autoAddStatusChapter || "reading";
+		const autoAddStatusNovel = setting.autoAddStatusNovel || "plan-to-read";
+
+		const row = document.createElement("div");
+		row.className = "site-autoadd-row";
+		row.dataset.siteId = shelf.id;
+
+		const iconHtml = renderShelfIcon(
+			shelf.icon,
+			"site-icon",
+			shelf.emoji || "📖",
+		);
+
+		row.innerHTML = `
+			<div class="site-autoadd-header">
+				<div class="site-autoadd-icon">${iconHtml || "📖"}</div>
+				<div class="site-autoadd-name">${shelf.name || shelf.id}</div>
+			</div>
+			<div class="site-autoadd-controls">
+				<label>
+					<span>Auto-add novels</span>
+					<input type="checkbox" data-setting="autoAddEnabled" ${
+						autoAddEnabled ? "checked" : ""
+					} />
+				</label>
+				<label>
+					<span>On chapter pages</span>
+					<select data-setting="autoAddStatusChapter">
+						${statusOptions
+							.map((status) => {
+								const label =
+									READING_STATUS_INFO[status]?.label ||
+									status;
+								return `<option value="${status}" ${
+									status === autoAddStatusChapter
+										? "selected"
+										: ""
+								}>${label}</option>`;
+							})
+							.join("")}
+					</select>
+				</label>
+				<label>
+					<span>On novel pages</span>
+					<select data-setting="autoAddStatusNovel">
+						${statusOptions
+							.map((status) => {
+								const label =
+									READING_STATUS_INFO[status]?.label ||
+									status;
+								return `<option value="${status}" ${
+									status === autoAddStatusNovel
+										? "selected"
+										: ""
+								}>${label}</option>`;
+							})
+							.join("")}
+					</select>
+				</label>
+			</div>
+		`;
+
+		const handleChange = async () => {
+			const autoAddToggle = row.querySelector(
+				"input[data-setting='autoAddEnabled']",
+			);
+			const statusChapter = row.querySelector(
+				"select[data-setting='autoAddStatusChapter']",
+			);
+			const statusNovel = row.querySelector(
+				"select[data-setting='autoAddStatusNovel']",
+			);
+
+			const updated = {
+				autoAddEnabled: autoAddToggle?.checked ?? true,
+				autoAddStatusChapter:
+					statusChapter?.value || autoAddStatusChapter,
+				autoAddStatusNovel: statusNovel?.value || autoAddStatusNovel,
+			};
+
+			try {
+				siteSettings = await saveSiteSettings({
+					[shelf.id]: updated,
+				});
+				showToast(
+					`Saved auto-add settings for ${shelf.name || shelf.id}`,
+					"success",
+				);
+			} catch (error) {
+				debugError("Failed to save auto-add settings:", error);
+				showToast("Failed to save auto-add settings", "error");
+			}
+		};
+
+		row.querySelectorAll("input, select").forEach((control) => {
+			control.addEventListener("change", handleChange);
+		});
+
+		elements.siteAutoAddList.appendChild(row);
+	});
+
+	attachIconFallbacks(elements.siteAutoAddList);
 }
 
 /**

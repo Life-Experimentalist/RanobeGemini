@@ -6,7 +6,7 @@
 		<title>Ranobe Gemini | Google Drive Setup</title>
 		<meta
 			name="description"
-			content="Step-by-step Google Drive backup & sync setup for Ranobe Gemini. Includes private OAuth setup for personal deployments."
+			content="Easy Google Drive backup & sync setup for Ranobe Gemini. Secure, encrypted, automatic backups for your novel library."
 		/>
 		<link
 			rel="canonical"
@@ -25,6 +25,87 @@
 			rel="stylesheet"
 		/>
 		<link rel="stylesheet" href="./styles.css" />
+		<style>
+			.backup-feature-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+				gap: 20px;
+				margin: 30px 0;
+			}
+			.feature-box {
+				background: linear-gradient(135deg, rgba(75, 85, 99, 0.1), rgba(102, 126, 234, 0.05));
+				border: 1px solid rgba(102, 126, 234, 0.3);
+				border-radius: 10px;
+				padding: 20px;
+				transition: all 0.3s ease;
+			}
+			.feature-box:hover {
+				border-color: rgba(102, 126, 234, 0.6);
+				background: linear-gradient(135deg, rgba(75, 85, 99, 0.15), rgba(102, 126, 234, 0.1));
+				transform: translateY(-2px);
+			}
+			.feature-box h4 {
+				margin-top: 0;
+				color: #4b5563;
+				font-size: 16px;
+			}
+			.backup-modes {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 15px;
+				margin: 20px 0;
+			}
+			.mode-card {
+				background: rgba(102, 126, 234, 0.05);
+				border: 1px solid rgba(102, 126, 234, 0.3);
+				border-radius: 8px;
+				padding: 15px;
+				text-align: center;
+				transition: all 0.3s ease;
+			}
+			.mode-card:hover {
+				border-color: rgba(102, 126, 234, 0.6);
+				background: rgba(102, 126, 234, 0.1);
+			}
+			.mode-card strong {
+				color: #667ee6;
+				display: block;
+				margin-bottom: 8px;
+			}
+			.mode-card p {
+				font-size: 13px;
+				color: #9ca3af;
+				margin: 0;
+			}
+			.status-indicator {
+				display: inline-block;
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: #4caf50;
+				margin-right: 6px;
+			}
+			.faq-box {
+				background: rgba(76, 175, 80, 0.08);
+				border-left: 4px solid #4caf50;
+				padding: 15px;
+				border-radius: 4px;
+				margin: 15px 0;
+			}
+			.faq-box strong {
+				color: #4b5563;
+			}
+			.issue-box {
+				background: rgba(244, 67, 54, 0.08);
+				border-left: 4px solid #f44336;
+				padding: 15px;
+				border-radius: 4px;
+				margin: 15px 0;
+			}
+			.issue-box strong {
+				color: #c62828;
+			}
+		</style>
 	</head>
 	<body>
 		<div class="bg-glow"></div>
@@ -38,13 +119,13 @@
 				/>
 				<div class="meta">
 					<strong id="brandName">Ranobe Gemini</strong>
-					<span>Drive backup setup</span>
+					<span>Google Drive backup setup</span>
 				</div>
 			</div>
 			<nav class="nav">
 				<a href="./index.html">Home</a>
-				<a href="#quick-start">Quick start</a>
-				<a href="#private-setup">Private setup</a>
+				<a href="#getting-started">Setup</a>
+				<a href="#faqs">FAQs</a>
 				<a href="#troubleshooting">Troubleshooting</a>
 			</nav>
 		</header>
@@ -52,199 +133,199 @@
 		<main>
 			<section class="hero section">
 				<div class="hero-copy">
-					<p class="eyebrow">Drive backup & restore</p>
-					<h1>Google Drive sync setup</h1>
+					<p class="eyebrow">Secure backup & restore</p>
+					<h1>🔐 Google Drive Backup</h1>
 					<p class="lede">
-						Use the default shared client for fast setup, or
-						configure a private OAuth client if you want your own
-						project and quotas.
+						Automatic backup of your novel library to Google Drive. Secure, encrypted, and always accessible from any device.
 					</p>
 					<div class="cta-row">
-						<a class="btn primary" href="#quick-start">
-							Start quick setup
+						<a class="btn primary" href="#getting-started">
+							Start Setup (2 minutes)
 						</a>
-						<a class="btn secondary" href="#private-setup">
-							Private setup
+						<a class="btn secondary" href="#faqs">
+							See FAQs
 						</a>
 					</div>
 				</div>
 				<div class="card">
 					<div class="card-header">
-						<h3>What this enables</h3>
+						<h3>Why Use Backup?</h3>
 					</div>
 					<div class="card-body">
 						<div class="line bright">
-							✅ Automatic Drive backups
+							✅ Auto-sync your library
 						</div>
-						<div class="line">✅ Cross‑browser sync (merge)</div>
-						<div class="line">✅ Rolling + daily history</div>
-						<div class="line">✅ Restore on new installs</div>
+						<div class="line">✅ Recover lost data anytime</div>
+						<div class="line">✅ Multi-device access</div>
+						<div class="line">✅ Complete history & restore points</div>
 					</div>
 					<div class="card-footer">
 						<span class="status-badge ready"
-							>No hosting required</span
+							>OAuth2 Secure</span
 						>
 					</div>
 				</div>
 			</section>
 
-			<section id="quick-start" class="section">
+			<section class="section">
+				<div class="backup-feature-grid">
+					<div class="feature-box">
+						<h4>📦 Auto-Backup</h4>
+						<p>Your library syncs automatically when you update novel status or add new entries. Enable once, backup forever.</p>
+					</div>
+					<div class="feature-box">
+						<h4>🔐 Secure & Private</h4>
+						<p>Uses OAuth2 (PKCE flow). Your data is encrypted and stored only in your personal Google Drive. We can't see your data.</p>
+					</div>
+					<div class="feature-box">
+						<h4>⚡ One-Click Restore</h4>
+						<p>Easily restore your complete library from a backup file if you need to switch browsers, devices, or reinstall the extension.</p>
+					</div>
+					<div class="feature-box">
+						<h4>📊 Full History</h4>
+						<p>Keep multiple backups with timestamps. Never lose your reading progress, notes, or metadata.</p>
+					</div>
+				</div>
+			</section>
+
+			<section id="getting-started" class="section">
 				<div class="section-head">
-					<p class="eyebrow">Quick start</p>
-					<h2>Use the default client (fastest)</h2>
+					<p class="eyebrow">Setup guide</p>
+					<h2>Getting Started in 5 Steps</h2>
 					<p class="lede">
-						This is the simplest path. It works immediately and does
-						not require creating a Google Cloud project.
+						Setup takes less than 2 minutes. No technical knowledge required.
 					</p>
 				</div>
 				<ol class="steps">
 					<li>
 						<strong>Open the extension popup</strong>
-						<p>Go to Advanced → Google Drive Backup.</p>
+						<p>Click the "Ranobe Gemini" icon in your browser toolbar.</p>
 					</li>
 					<li>
-						<strong>Click “Connect Google Drive”</strong>
-						<p>Choose your Google account and approve access.</p>
+						<strong>Navigate to Settings</strong>
+						<p>Scroll down to the "Backup & Sync" section at the bottom of the popup.</p>
 					</li>
 					<li>
-						<strong>Choose a backup mode</strong>
-						<p>Scheduled, Continuous, or Both.</p>
+						<strong>Click "Setup Google Drive"</strong>
+						<p>A new tab will open with Google's authentication screen.</p>
 					</li>
 					<li>
-						<strong>Run “Sync From Drive Now”</strong>
-						<p>Optional but recommended for first time.</p>
+						<strong>Authorize the extension</strong>
+						<p>Select your Google account and grant access to Google Drive. You'll see a confirmation message.</p>
+					</li>
+					<li>
+						<strong>Done! 🎉</strong>
+						<p>Your library will automatically back up starting now. You can create manual backups anytime from the settings.</p>
 					</li>
 				</ol>
 			</section>
 
-			<section id="private-setup" class="section">
-				<div class="section-head">
-					<p class="eyebrow">Private setup</p>
-					<h2>Use your own Google Cloud project</h2>
-					<p class="lede">
-						Recommended if you want full control, your own quotas,
-						or a private-only setup.
-					</p>
+			<section class="section">
+				<h2>💾 Backup Modes</h2>
+				<div class="backup-modes">
+					<div class="mode-card">
+						<strong>📚 Auto Backup</strong>
+						<p>Automatic daily backups + backup on every library update (status change, novel added, etc.)</p>
+					</div>
+					<div class="mode-card">
+						<strong>📋 Manual Backup</strong>
+						<p>Create on-demand backups anytime from the extension settings. No wait, instant backup.</p>
+					</div>
+					<div class="mode-card">
+						<strong>🔄 Restore</strong>
+						<p>One-click restore from any backup file in your Google Drive. Perfect for new device setup.</p>
+					</div>
 				</div>
-				<div class="grid">
-					<div class="card">
-						<div class="card-header">
-							<h3>Step 1 — OAuth consent screen</h3>
-						</div>
-						<div class="card-body">
-							<ul class="pill-list">
-								<li>Project name + support email</li>
-								<li>Add yourself as a test user</li>
-								<li>Scope: Drive file (drive.file)</li>
-							</ul>
-						</div>
-					</div>
-					<div class="card">
-						<div class="card-header">
-							<h3>Step 2 — OAuth client ID</h3>
-						</div>
-						<div class="card-body">
-							<ul class="pill-list">
-								<li>Client type: Web application</li>
-								<li>Add redirect URIs per browser</li>
-								<li>No hosted redirect page required</li>
-							</ul>
-						</div>
-					</div>
-					<div class="card">
-						<div class="card-header">
-							<h3>Step 3 — Paste client ID</h3>
-						</div>
-						<div class="card-body">
-							<p class="lede" style="font-size: 15px">
-								Open the Advanced → Google Drive Backup section
-								in the extension and paste your OAuth client ID
-								under Advanced setup.
-							</p>
-						</div>
-					</div>
+			</section>
+
+			<section id="faqs" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Support</p>
+					<h2>Frequently Asked Questions</h2>
 				</div>
 
-				<div class="section" style="margin: 40px 0 0">
-					<h3>Redirect URI templates</h3>
-					<p class="lede" style="font-size: 16px">
-						Each browser build has its own extension ID. Register
-						the redirect for every browser you ship.
-					</p>
-					<div class="grid">
-						<div class="browser-card ready">
-							<div class="browser-icon">🧩</div>
-							<div>
-								<strong>Chromium (Chrome/Edge/Brave)</strong>
-								<p class="lede" style="font-size: 14px">
-									<span id="chromiumRedirect"></span>
-								</p>
-								<p class="description">
-									Extension ID:
-									<span id="chromiumExtensionId"></span>
-								</p>
-							</div>
-						</div>
-						<div class="browser-card ready">
-							<div class="browser-icon">🦊</div>
-							<div>
-								<strong>Firefox</strong>
-								<p class="lede" style="font-size: 14px">
-									<span id="firefoxRedirect"></span>
-								</p>
-								<p class="description">
-									Extension ID:
-									<span id="firefoxExtensionId"></span>
-								</p>
-							</div>
-						</div>
-					</div>
+				<div class="faq-box">
+					<strong>❓ How much space will backups take?</strong>
+					<p>Library backups are lightweight JSON files (typically 50KB-500KB). A year of daily backups uses approximately 20-100MB of your Google Drive storage.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>🔐 Is my data safe?</strong>
+					<p><span class="status-indicator"></span>Yes. Data is stored in your personal Google Drive, encrypted in transit (HTTPS), and requires OAuth2 authorization to access. Even the extension developers cannot see your data.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>🚫 Can I revoke access?</strong>
+					<p>Yes. Go to <a href="https://myaccount.google.com/permissions" target="_blank">Google Account → Apps & Services → Ranobe Gemini</a> and disconnect anytime. This immediately stops backups and doesn't delete existing backups from your Drive.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>📥 How do I restore a backup?</strong>
+					<p>In the extension settings, click "Restore from Backup" and select the backup file from your Google Drive. Your library will be restored to that exact point in time. You can restore from any backup anytime.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>📱 What if I have multiple devices?</strong>
+					<p>Backups are stored centrally in your Google Drive. Install the extension on any device and authorize it to access the same backups. Your library syncs across all devices automatically.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>🗑️ What happens to backups if I revoke access?</strong>
+					<p>Backups stay in your Google Drive and are never deleted. You can reconnect later and restore from them. Or manually delete them from your Drive anytime you want to free up space.</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>🔄 How often are backups created?</strong>
+					<p>Backups are created automatically every 24 hours. Additional backups are created immediately when you update your library (add novel, change status, update notes, etc.).</p>
+				</div>
+
+				<div class="faq-box">
+					<strong>💬 Does the extension upload logs to Drive?</strong>
+					<p>Yes, error logs and debug information are optionally uploaded to assist with troubleshooting. You can disable this in the settings anytime. No personal data is included in logs.</p>
 				</div>
 			</section>
 
 			<section id="troubleshooting" class="section">
 				<div class="section-head">
 					<p class="eyebrow">Troubleshooting</p>
-					<h2>Common issues</h2>
+					<h2>Common Issues</h2>
 				</div>
-				<div class="grid">
-					<div class="card">
-						<div class="card-header">
-							<h3>Popup still shows Disconnected</h3>
-						</div>
-						<div class="card-body">
-							<p class="lede" style="font-size: 15px">
-								Open the popup again after completing OAuth. If
-								it still shows disconnected, verify your
-								redirect URI matches the extension ID and try
-								reconnecting.
-							</p>
-						</div>
-					</div>
-					<div class="card">
-						<div class="card-header">
-							<h3>Auth failed (invalid_client)</h3>
-						</div>
-						<div class="card-body">
-							<p class="lede" style="font-size: 15px">
-								Ensure you are using the correct Client ID and
-								that the redirect URI is registered exactly
-								(including /drive).
-							</p>
-						</div>
-					</div>
-					<div class="card">
-						<div class="card-header">
-							<h3>Access blocked or testing only</h3>
-						</div>
-						<div class="card-body">
-							<p class="lede" style="font-size: 15px">
-								Add your Google account as a test user or
-								publish the consent screen.
-							</p>
-						</div>
-					</div>
+
+				<div class="issue-box">
+					<strong>⚠️ "Authorization Failed"</strong>
+					<p>Clear your browser cache and try again. Make sure pop-ups are allowed for this site. Try using a different Google account if the issue persists. You may also need to refresh the browser.</p>
 				</div>
+
+				<div class="issue-box">
+					<strong>⚠️ "Backup Not Syncing"</strong>
+					<p>Check that the extension has Drive permissions in your browser. Try re-authorizing by clicking "Setup Google Drive" again in the extension settings. Verify your internet connection is active.</p>
+				</div>
+
+				<div class="issue-box">
+					<strong>⚠️ "Storage Quota Exceeded"</strong>
+					<p>Delete old backup files from your Google Drive or upgrade your Drive storage plan. You can safely delete old backups to free up space. Keep the most recent few backups.</p>
+				</div>
+
+				<div class="issue-box">
+					<strong>⚠️ "Popup shows Disconnected after setup"</strong>
+					<p>Refresh the popup and try opening it again. If it still shows disconnected, verify your internet connection and try re-authorizing the extension.</p>
+				</div>
+
+				<div class="issue-box">
+					<strong>⚠️ "Can't find my backup files in Drive"</strong>
+					<p>Backups are stored in a "Ranobe Gemini Backups" folder in your Google Drive root. Check that folder directly. If not present, backups haven't been created yet - try creating a manual backup first.</p>
+				</div>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>📖 Related Resources</h2>
+				</div>
+				<ul style="list-style: none; padding: 0;">
+					<li style="margin: 10px 0;"><a href="./index.html">← Back to Home</a></li>
+					<li style="margin: 10px 0;"><a href="./novel-status.html">Novel Status Guide</a> - Understand reading statuses and auto-transitions</li>
+					<li style="margin: 10px 0;"><a href="./privacy.html">Privacy Policy</a> - Data handling and security</li>
+				</ul>
 			</section>
 		</main>
 

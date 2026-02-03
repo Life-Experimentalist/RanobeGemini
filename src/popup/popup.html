@@ -134,14 +134,13 @@
 						</div>
 					</div>
 
-					<div style="margin-top: 15px">
-						<label style="font-weight: normal">
-							<input type="checkbox" id="useEmoji" />
-							Add emotion emojis to dialogue
+					<div style="margin-top: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--accent-primary)20">
+						<label style="font-weight: normal; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+							<input type="checkbox" id="useEmoji" style="cursor: pointer;" />
+							<span>Add emotion emojis to dialogue</span>
 						</label>
-						<div class="description">
-							Adds appropriate emojis to enhance emotional
-							expressions in text
+						<div class="description" style="margin-top: 6px;">
+							Adds appropriate emojis to enhance emotional expressions in text
 						</div>
 					</div>
 				</div>
@@ -164,10 +163,10 @@
 					</div>
 				</div>
 
-				<div class="setting">
-					<label>
-						<input type="checkbox" id="debugMode" />
-						Debug mode (console logging)
+				<div class="setting" style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--accent-primary)20">
+					<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
+						<input type="checkbox" id="debugMode" style="cursor: pointer;" />
+						<span>Debug mode (console logging)</span>
 					</label>
 				</div>
 
@@ -420,7 +419,18 @@ Click to generate preview...</pre
 									</label>
 								</div>
 								<div class="description" style="font-size: 11px; margin-top: 4px">
-									Scheduled: Daily versions | Continuous: Rolling file (5-min delay) | Both: Daily + Rolling
+									Scheduled: Daily versions | Continuous: Detects changes every N minutes | Both: Daily + Continuous
+								</div>
+							</div>
+
+							<div style="margin-bottom: 8px" id="continuousBackupCheckContainer" style="display: none;">
+								<label style="display: block; font-weight: bold; font-size: 12px; margin-bottom: 4px">
+									Check for changes every:
+									<span id="continuousCheckIntervalDisplay" style="color: #667ee6; font-weight: bold;">2</span> minutes
+								</label>
+								<input type="range" id="continuousBackupCheckInterval" min="1" max="60" value="2" style="width: 100%;" />
+								<div class="description" style="font-size: 11px; margin-top: 2px">
+									Lower values = more frequent checks but slightly more CPU usage. Backup triggers immediately when changes detected.
 								</div>
 							</div>
 
@@ -452,78 +462,133 @@ Click to generate preview...</pre
 							</button>
 						</div>
 
-						<details style="margin-top: 10px">
-							<summary style="cursor: pointer; font-weight: 600; font-size: 12px; color: #9fb3c8">
-								🔧 OAuth Setup (Required for Google Drive)
+						<details id="oauthSetupDetails" style="margin-top: 10px; padding: 12px; background: var(--accent-primary, rgba(0, 0, 0, 0.1)); border-radius: 8px; border-left: 3px solid var(--accent-secondary, #667ee6)">
+							<summary style="cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary, #9fb3c8); padding: 8px 0; display: flex; align-items: center; gap: 6px; list-style: none; user-select: none">
+								<span>🔧</span>
+								<span>OAuth Setup (Required for Google Drive)</span>
+								<span style="flex: 1"></span>
+								<span style="font-size: 11px; color: var(--text-secondary, #999); font-weight: normal">(Takes 2 minutes)</span>
 							</summary>
-							<div style="margin-top: 10px; display: grid; gap: 10px">
-								<div style="padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; border-left: 3px solid #ffc107">
-									<p style="font-size: 11px; margin: 0 0 8px 0; color: #ffc107">
-										⚠️ You need to create your own OAuth credentials (free, takes 2 minutes).
-										<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank" style="color: #4285F4">Setup Guide →</a>
-									</p>
+							<div style="margin-top: 12px; padding: 10px; background: var(--accent-secondary, rgba(66, 133, 244, 0.05)); border-radius: 6px">
+								<div style="display: flex; gap: 12px; align-items: flex-start">
+									<div style="flex: 1">
+										<p style="font-size: 12px; margin: 0 0 6px 0; color: var(--accent-secondary, #4285F4); font-weight: 600">ℹ️ What is OAuth Setup?</p>
+										<p style="font-size: 11px; margin: 0; color: var(--text-secondary, #666)">
+											Create free Google OAuth credentials to enable automatic backups. This is a one-time setup.
+										</p>
+										<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank" style="color: var(--accent-secondary, #4285F4); font-size: 11px; display: inline-block; margin-top: 6px; text-decoration: none; font-weight: 500">
+											📖 Detailed Setup Guide →
+										</a>
+									</div>
 								</div>
+							</div>
 
-								<div>
-									<label for="oauthJsonPaste" style="font-size: 12px; font-weight: bold">Paste OAuth JSON (Recommended)</label>
+							<div style="margin-top: 14px; display: grid; gap: 12px">
+								<!-- JSON Upload Method -->
+								<div style="padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
+									<label style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+										📋 Method 1: Paste OAuth JSON (Recommended)
+									</label>
+									<p style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 6px 0">
+										Download your credentials JSON file from Google Cloud Console and paste here:
+									</p>
 									<textarea
 										id="oauthJsonPaste"
 										placeholder='Paste your client_secret_*.json file contents here...'
-										style="width: 100%; height: 80px; font-family: monospace; font-size: 10px; resize: vertical"
+										style="width: 100%; height: 70px; font-family: 'Courier New', monospace; font-size: 10px; resize: vertical; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; background: var(--input-bg, white); color: var(--text-primary, black)"
 									></textarea>
-									<button id="parseOAuthJson" class="btn-secondary" style="width: 100%; margin-top: 4px; font-size: 11px">
-										📋 Parse & Apply Credentials
-									</button>
-									<div id="oauthParseResult" class="description" style="font-size: 11px; margin-top: 4px; display: none"></div>
+									<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px">
+										<button id="parseOAuthJson" class="btn-primary" style="font-size: 11px; padding: 6px">
+											✓ Parse JSON
+										</button>
+										<button id="saveOAuthFromJson" class="btn-secondary" style="font-size: 11px; padding: 6px">
+											💾 Save to Storage
+										</button>
+									</div>
+									<div id="oauthParseResult" class="description" style="font-size: 11px; margin-top: 6px; display: none; padding: 8px; border-radius: 4px; border-left: 3px solid var(--accent-secondary, #667ee6); background: var(--accent-primary, rgba(102, 126, 234, 0.1))"></div>
 								</div>
 
-								<div style="text-align: center; font-size: 11px; color: #666">— or enter manually —</div>
-
-								<div>
-									<label for="driveClientId" style="font-size: 12px">Google OAuth Client ID</label>
-									<input
-										id="driveClientId"
-										type="text"
-										placeholder="Required: your OAuth client ID"
-										style="width: 100%"
-									/>
-								</div>
-
-								<div>
-									<label for="driveClientSecret" style="font-size: 12px">Google OAuth Client Secret</label>
-									<input
-										id="driveClientSecret"
-										type="password"
-										placeholder="Required for Web Application type"
-										style="width: 100%"
-									/>
-									<label style="display: flex; gap: 6px; align-items: center; margin-top: 6px; font-size: 11px; color: #9ca3af;">
-										<input type="checkbox" id="showClientSecret" />
-										<span>Show client secret</span>
+								<!-- Manual Entry Method -->
+								<div style="padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
+									<label style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+										⚙️ Method 2: Enter Manually
 									</label>
-									<div class="description" style="font-size: 11px">
-										Usually starts with "GOCSPX-". Required for Web Application credentials.
+									<p style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 8px 0">
+										Enter your OAuth credentials if you prefer not to paste the JSON file:
+									</p>
+
+									<div style="display: grid; gap: 8px">
+										<div>
+											<label for="driveClientId" style="font-size: 11px; color: var(--text-primary, #374151); font-weight: 500; display: block; margin-bottom: 3px">
+												Client ID
+											</label>
+											<input
+												id="driveClientId"
+												type="text"
+												placeholder="Paste your OAuth client ID here..."
+												style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; background: var(--input-bg, white); color: var(--text-primary, black)"
+											/>
+										</div>
+
+										<div>
+											<label for="driveClientSecret" style="font-size: 11px; color: var(--text-primary, #374151); font-weight: 500; display: block; margin-bottom: 3px">
+												Client Secret
+											</label>
+											<div style="position: relative; display: flex; align-items: center">
+												<input
+													id="driveClientSecret"
+													type="password"
+													placeholder="Paste your OAuth client secret here..."
+													style="width: 100%; padding: 6px; padding-right: 32px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; background: var(--input-bg, white); color: var(--text-primary, black)"
+												/>
+												<button
+													type="button"
+													id="toggleClientSecretVisibility"
+													title="Show/Hide Client Secret"
+													style="
+														position: absolute;
+														right: 6px;
+														top: 50%;
+														transform: translateY(-50%);
+														background: transparent;
+														border: none;
+														cursor: pointer;
+														padding: 4px;
+														font-size: 14px;
+														line-height: 1;
+														color: var(--text-secondary, #9ca3af);
+														transition: color 0.2s;
+													"
+												>
+													👁️
+												</button>
+											</div>
+										</div>
+
+										<button id="saveOAuthSettings" class="btn-primary" style="width: 100%; font-size: 11px; padding: 6px">
+											💾 Save Credentials
+										</button>
 									</div>
 								</div>
 
-								<div>
-									<label for="driveFolderId" style="font-size: 12px">Drive Folder ID (optional)</label>
+								<!-- Optional Folder ID - Hidden for now (not working properly) -->
+								<div style="display: none; padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
+									<label style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+										📁 Optional: Specify Drive Folder
+									</label>
+									<label for="driveFolderId" style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
+										Folder ID (leave empty for auto-create):
+									</label>
 									<input
 										id="driveFolderId"
 										type="text"
-										placeholder="Leave empty to auto-create backup folder"
-										style="width: 100%"
+										placeholder="e.g., 1a2b3c4d5e6f7g8h9i0j..."
+										style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; margin-bottom: 4px; background: var(--input-bg, white); color: var(--text-primary, black)"
 									/>
-									<div class="description" style="font-size: 11px">
-										Optional. Specify a Google Drive folder ID where backups will be stored.
-										Leave empty to create a new 'RanobeGeminiBackups' folder automatically.
-										Find folder ID in Drive: Open folder → URL shows folders/[ID].
-									</div>
+									<p style="font-size: 10px; color: var(--text-secondary, #999); margin: 0">
+										💡 How to find Folder ID: Open a folder in Google Drive → Copy the ID from the URL (after /folders/)
+									</p>
 								</div>
-
-								<button id="saveOAuthSettings" class="btn-primary" style="width: 100%; font-size: 11px">
-									💾 Save OAuth Settings
-								</button>
 							</div>
 						</details>
 					</div>
@@ -555,12 +620,12 @@ Click to generate preview...</pre
 						</div>
 
 						<div style="display: grid; gap: 6px; margin-bottom: 10px">
-							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
-								<input type="checkbox" id="backupIncludeApiKeys" checked />
+							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer">
+								<input type="checkbox" id="backupIncludeApiKeys" checked style="cursor: pointer; width: 14px; height: 14px;" />
 								<span>Include API keys</span>
 							</label>
-							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
-								<input type="checkbox" id="backupIncludeCredentials" />
+							<label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer">
+								<input type="checkbox" id="backupIncludeCredentials" checked style="cursor: pointer; width: 14px; height: 14px;" />
 								<span>Include OAuth credentials</span>
 							</label>
 						</div>

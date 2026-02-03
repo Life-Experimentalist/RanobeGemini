@@ -660,14 +660,15 @@
 			<!-- Settings Modal -->
 			<div id="settings-modal" class="modal hidden">
 				<div class="modal-backdrop"></div>
-				<div class="modal-content modal-small">
+				<div class="modal-content settings-modal-content">
 					<button class="modal-close" id="settings-close">
 						&times;
 					</button>
 
 					<h2>Library Settings</h2>
 
-					<div class="settings-section">
+					<div class="settings-grid">
+						<div class="settings-section">
 						<h3>Data Management</h3>
 						<div class="settings-item">
 							<button id="export-btn" class="btn btn-secondary">
@@ -742,6 +743,16 @@
 					</div>
 
 					<div class="settings-section">
+						<h3>Auto-Add by Site</h3>
+						<p class="settings-desc">
+							Choose whether each site should auto-add novels when
+							visited, and which reading status to assign on chapter or
+							novel pages.
+						</p>
+						<div id="site-autoadd-list" class="site-autoadd-list"></div>
+					</div>
+
+					<div class="settings-section">
 						<h3>Comprehensive Backup</h3>
 						<p class="settings-desc" style="margin-bottom: 12px;">
 							Create a full backup including library, API keys, prompts, and all settings.
@@ -806,6 +817,7 @@
 								</p>
 							</div>
 						</div>
+					</div>
 					</div>
 				</div>
 			</div>
