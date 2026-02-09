@@ -65,7 +65,13 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	// Return true if this handler can handle the mobile version
 	canHandle() {
-		return window.location.hostname === "m.fanfiction.net";
+		const hostname = window.location.hostname;
+		const path = window.location.pathname;
+		// Exclude user profile pages
+		if (path.startsWith("/u/")) {
+			return false;
+		}
+		return hostname === "m.fanfiction.net";
 	}
 
 	/**
@@ -74,7 +80,15 @@ When enhancing, improve readability while respecting the author's creative voice
 	 */
 	isChapterPage() {
 		const url = window.location.pathname;
-		// Story pages have /s/ in the URL
+		// Explicit check for user profile pages (matches desktop handler pattern)
+		if (url.startsWith("/u/")) return false;
+
+		// Exclude other user/author profile pages - they contain /users/, /profile/, or /author/
+		if (/\/(users|profile|author)\//.test(url)) {
+			return false;
+		}
+
+		// Story pages have /s/ in the URL (e.g., /s/12345/1/Title)
 		const isStoryUrl = /^\/s\/\d+/.test(url);
 		// Also check for story content
 		const hasStoryContent = !!document.getElementById("storycontent");
@@ -124,6 +138,44 @@ When enhancing, improve readability while respecting the author's creative voice
 			"m.fanfiction.net",
 			"www.fanfiction.net",
 		);
+	}
+
+	/**
+	 * Fetch desktop version metadata in background and save to library
+	 * This ensures mobile users get full novel details (description, etc.)
+	 */
+	async fetchDesktopMetadata() {
+		try {
+			const desktopUrl = this.getNovelPageUrl();
+			const novelId = this.generateNovelId();
+
+			debugLog("[Mobile] Fetching desktop metadata from:", desktopUrl);
+
+			// Send message to background script to fetch desktop version
+			const response = await browser.runtime.sendMessage({
+				action: "fetchDesktopMetadata",
+				url: desktopUrl,
+				novelId: novelId,
+				handler: "fanfiction",
+			});
+
+			if (response?.success && response?.metadata) {
+				debugLog(
+					"[Mobile] Desktop metadata fetched successfully:",
+					response.metadata,
+				);
+				return response.metadata;
+			} else {
+				debugError(
+					"[Mobile] Failed to fetch desktop metadata:",
+					response?.error,
+				);
+				return null;
+			}
+		} catch (err) {
+			debugError("[Mobile] Error fetching desktop metadata:", err);
+			return null;
+		}
 	}
 
 	/**
@@ -227,8 +279,15 @@ When enhancing, improve readability while respecting the author's creative voice
 	 * @returns {Object}
 	 */
 	extractNovelMetadata() {
+		const title = this.extractTitle();
+
+		// Validate we have at least a title before proceeding
+		if (!title || title === "Untitled Story") {
+			debugError("Mobile handler: Could not extract valid title");
+		}
+
 		const metadata = {
-			title: this.extractTitle(),
+			title: title,
 			author: null,
 			description: null,
 			coverUrl: null,
@@ -246,7 +305,10 @@ When enhancing, improve readability while respecting the author's creative voice
 		if (contentDiv) {
 			const authorLink = contentDiv.querySelector("a[href*='/u/']");
 			if (authorLink) {
-				metadata.author = authorLink.textContent.trim();
+				const authorText = authorLink.textContent.trim();
+				if (authorText && authorText.length > 0) {
+					metadata.author = authorText;
+				}
 			}
 		}
 
@@ -259,14 +321,25 @@ When enhancing, improve readability while respecting the author's creative voice
 		const contentDiv = document.getElementById("storycontent");
 		if (contentDiv) {
 			debugLog("FanFiction Mobile: Found storycontent div");
-			return contentDiv;
+			// Validate it has content
+			if (
+				contentDiv.textContent &&
+				contentDiv.textContent.trim().length > 0
+			) {
+				return contentDiv;
+			}
 		}
 
 		// Fallback: try finding by class
 		const storyContentByClass = document.querySelector(".storycontent");
 		if (storyContentByClass) {
 			debugLog("FanFiction Mobile: Found content by class");
-			return storyContentByClass;
+			if (
+				storyContentByClass.textContent &&
+				storyContentByClass.textContent.trim().length > 0
+			) {
+				return storyContentByClass;
+			}
 		}
 
 		// Final fallback to base implementation
@@ -282,12 +355,20 @@ When enhancing, improve readability while respecting the author's creative voice
 				"div[align='center'] b",
 			);
 			if (titleElement) {
-				return titleElement.textContent.trim();
+				const title = titleElement.textContent.trim();
+				if (title && title.length > 0) {
+					return title;
+				}
 			}
 		}
 
-		// Fallback to page title
-		return document.title;
+		// Fallback to page title if available
+		if (document.title && document.title.trim().length > 0) {
+			return document.title;
+		}
+
+		// Final fallback
+		return "Untitled Story";
 	}
 
 	// Format content after enhancement - DO NOT MODIFY STYLING
@@ -311,7 +392,16 @@ When enhancing, improve readability while respecting the author's creative voice
 	 * @returns {number} total paragraphs updated/appended
 	 */
 	applyEnhancedContent(contentArea, enhancedText) {
-		if (!contentArea || typeof enhancedText !== "string") return 0;
+		// Validate inputs
+		if (!contentArea || typeof enhancedText !== "string") {
+			debugError("Mobile handler: Invalid content area or enhanced text");
+			return 0;
+		}
+
+		if (!enhancedText || enhancedText.trim().length === 0) {
+			debugError("Mobile handler: Enhanced text is empty");
+			return 0;
+		}
 
 		debugLog(
 			"FanFiction Mobile applyEnhancedContent: contentArea is",

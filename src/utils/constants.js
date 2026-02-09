@@ -128,9 +128,9 @@ export const GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/drive.file"
 export const DEFAULT_BACKUP_RETENTION_DAYS = 7; // Keep backups for 7 days
 export const DEFAULT_BACKUP_SCHEDULE_HOUR = 2; // Default daily backup at 2 AM
 export const CONTINUOUS_BACKUP_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minute debounce for continuous mode
-export const DRIVE_BACKUP_MAX_COUNT = 3; // Keep at most 3 backups on Drive
+export const DRIVE_BACKUP_MAX_COUNT = 4; // Keep at most 4 manual backups per Google Account (daily auto + user-created)
 export const DRIVE_BACKUP_PREFIX = "ranobe-library-"; // Prefix for Drive backup files
-export const DRIVE_CONTINUOUS_BACKUP_BASENAME = "ranobe-library-continuous.json"; // Single rolling file for continuous mode
+export const DRIVE_CONTINUOUS_BACKUP_BASENAME = "ranobe-library-continuous.json"; // Single rolling file for continuous mode (separate from manual quota)
 
 // Auto "On Hold" settings
 export const DEFAULT_AUTO_HOLD_ENABLED = true;
@@ -142,11 +142,12 @@ export const TELEMETRY_ENABLED_DEFAULT = false;
 
 // Comprehensive backup includes these storage keys
 export const COMPREHENSIVE_BACKUP_KEYS = [
-	"novelHistory", // Library data
+	"rg_novel_library", // Library data (current)
 	"apiKey", // Gemini API key
 	"backupApiKeys", // Backup API keys
-	"selectedModel", // Selected model
-	"customModelEndpoint", // Custom endpoint
+	"selectedModelId", // Selected model ID
+	"customEndpoint", // Custom endpoint
+	"customModelEndpoint", // Custom endpoint (legacy)
 	"promptTemplate", // Main prompt
 	"summaryPrompt", // Summary prompt
 	"shortSummaryPrompt", // Short summary prompt
@@ -156,7 +157,8 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"chunkSize", // Chunk size
 	"useEmoji", // Emoji setting
 	"maxOutputTokens", // Max tokens
-	"temperature", // Temperature
+	"temperature", // Temperature (legacy)
+	"customTemperature", // Temperature
 	"topP", // Top P
 	"topK", // Top K
 	"debugMode", // Debug mode
@@ -164,12 +166,28 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"driveClientSecret", // OAuth client secret (if user wants to backup)
 	"driveFolderId", // Drive folder ID
 	"backupMode", // Backup mode
+	"driveAutoRestoreEnabled", // Drive auto-restore
+	"driveAutoRestoreMergeMode", // Drive auto-restore merge mode
+	"continuousBackupCheckIntervalMinutes", // Drive continuous check interval
+	"driveSyncIntervalMinutes", // Drive sync interval
 	"rg_site_settings", // Per-site settings
 	"autoHoldEnabled", // Auto hold enabled
 	"autoHoldDays", // Auto hold days
 	"rg_library_settings", // Library settings
 	"themeSettings", // Theme settings
 	"fontSize", // Font size
+	"autoEnhanceNovels", // Auto-enhance per novel
+	"backupIncludeApiKeys", // Backup include API keys
+	"backupIncludeCredentials", // Backup include OAuth credentials
+	"rg_rolling_backup_enabled", // Rolling backup enabled
+	"rollingBackupIntervalMinutes", // Rolling backup interval
+	"rg_rolling_backup_meta", // Rolling backup metadata
+	"rg_backup_config", // Quick backup config
+	"backupHistory", // Backup history (Drive)
+	"lastBackupAt", // Last backup timestamp
+	"backupFolder", // Backup folder
+	"backupRetention", // Backup retention
+	"backupIntervalDays", // Auto backup interval
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators

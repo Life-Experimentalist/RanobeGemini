@@ -442,27 +442,43 @@ async function updateDriveFile(fileId, blob, { filename, mimeType }) {
 }
 
 // Delete oldest backups to maintain a fixed count (excludes the continuous file)
-async function enforceBackupLimit(folderId, maxCount = DRIVE_BACKUP_MAX_COUNT) {
+async function enforceBackupLimit(folderId) {
+	// Fixed quota per Google Account: 4 manual backups (daily auto + user-created)
+	// Continuous backup is handled separately and not counted here
+	const MAX_MANUAL_BACKUPS = 4;
+
 	const accessToken = await ensureDriveAccessToken({ interactive: false });
 	const query = encodeURIComponent(
-		`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`
+		`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`,
 	);
 
 	const resp = await fetch(
 		`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc&pageSize=50`,
 		{
 			headers: { Authorization: `Bearer ${accessToken}` },
-		}
+		},
 	);
 
 	if (!resp.ok) return;
 	const data = await resp.json();
-	const files = (data.files || []).filter(
-		(file) => file.name !== DRIVE_CONTINUOUS_BACKUP_BASENAME
+
+	// Filter out continuous backup file - it has separate lifecycle
+	const manualBackups = (data.files || []).filter(
+		(file) => file.name !== DRIVE_CONTINUOUS_BACKUP_BASENAME,
 	);
 
-	if (files.length <= maxCount) return;
-	const toDelete = files.slice(maxCount);
+	debugLog(
+		`📦 Google Drive backups: ${manualBackups.length} manual backups found (max: ${MAX_MANUAL_BACKUPS})`,
+	);
+
+	// If we're within the limit, no cleanup needed
+	if (manualBackups.length <= MAX_MANUAL_BACKUPS) return;
+
+	// Delete oldest manual backups exceeding the quota
+	const toDelete = manualBackups.slice(MAX_MANUAL_BACKUPS);
+	debugLog(
+		`🗑️ Deleting ${toDelete.length} old backup(s) to enforce quota (4 manual per account)`,
+	);
 
 	for (const file of toDelete) {
 		try {
@@ -471,8 +487,9 @@ async function enforceBackupLimit(folderId, maxCount = DRIVE_BACKUP_MAX_COUNT) {
 				{
 					method: "DELETE",
 					headers: { Authorization: `Bearer ${accessToken}` },
-				}
+				},
 			);
+			debugLog(`✅ Deleted old backup: ${file.name}`);
 		} catch (delErr) {
 			debugError(`Failed to delete old backup ${file.id}`, delErr);
 		}

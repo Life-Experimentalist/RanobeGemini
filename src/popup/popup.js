@@ -139,17 +139,21 @@ async function initializePopup() {
 	const modelSelect = document.getElementById("modelSelect");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const resetPromptBtn = document.getElementById("resetPrompt");
-	const summaryPrompt = document.getElementById("summaryPrompt"); // Get summary prompt textarea
-	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt"); // Get summary prompt reset button
-	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt"); // Get short summary prompt textarea
+	const summaryPrompt = document.getElementById("summaryPrompt");
+	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt");
+	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt");
 	const resetShortSummaryPromptBtn = document.getElementById(
 		"resetShortSummaryPrompt",
-	); // Get short summary prompt reset button
-	const permanentPrompt = document.getElementById("permanentPrompt"); // Get permanent prompt textarea
+	);
+	const permanentPrompt = document.getElementById("permanentPrompt");
 	const resetPermanentPromptBtn = document.getElementById(
 		"resetPermanentPrompt",
-	); // Get permanent prompt reset button
+	);
 	const debugModeCheckbox = document.getElementById("debugMode");
+	const modelEndpointDisplay = document.getElementById(
+		"modelEndpointDisplay",
+	);
+	const copyModelEndpoint = document.getElementById("copyModelEndpoint");
 
 	// Expose the debug toggle globally so shared debugLog can read it synchronously in the popup.
 	try {
@@ -173,53 +177,35 @@ async function initializePopup() {
 		"buttons found",
 	);
 
+	const setActiveTab = (tabId) => {
+		// Remove active class from all buttons and contents
+		tabButtons.forEach((btn) => btn.classList.remove("active"));
+		tabContents.forEach((content) => content.classList.remove("active"));
+
+		// Add active class to clicked button
+		const activeButton = document.querySelector(
+			`.tab-btn[data-tab="${tabId}"]`,
+		);
+		if (activeButton) {
+			activeButton.classList.add("active");
+		}
+
+		// Show corresponding content
+		const targetContent = document.getElementById(tabId);
+		if (targetContent) {
+			targetContent.classList.add("active");
+		}
+	};
+
 	if (tabButtons.length > 0 && tabContents.length > 0) {
 		tabButtons.forEach((button) => {
-			button.addEventListener("click", () => {
-				console.log("Tab clicked:", button.getAttribute("data-tab"));
-
-				// Remove active class from all buttons and contents
-				tabButtons.forEach((btn) => btn.classList.remove("active"));
-				tabContents.forEach((content) =>
-					content.classList.remove("active"),
-				);
-
-				// Add active class to clicked button
-				button.classList.add("active");
-
-				// Show corresponding content
+			button.addEventListener("click", async () => {
 				const tabId = button.getAttribute("data-tab");
-				const targetContent = document.getElementById(tabId);
-				if (targetContent) {
-					targetContent.classList.add("active");
-					console.log("Tab switched to:", tabId);
-				} else {
-					console.error("Tab content not found for:", tabId);
-				}
+				setActiveTab(tabId);
 
-				// Special handling for specific tabs (called after tab is already shown)
-				setTimeout(() => {
-					try {
-						if (
-							tabId === "library" &&
-							typeof initializeLibraryTab === "function"
-						) {
-							initializeLibraryTab();
-						} else if (
-							tabId === "notifications" &&
-							typeof initNotificationsTab === "function"
-						) {
-							initNotificationsTab();
-						} else if (
-							tabId === "advanced" &&
-							typeof loadSiteToggleSettings === "function"
-						) {
-							loadSiteToggleSettings();
-						}
-					} catch (e) {
-						console.error("Error in tab initialization:", e);
-					}
-				}, 0);
+				if (tabId === "novels" && typeof loadNovelsTab === "function") {
+					await loadNovelsTab();
+				}
 			});
 		});
 		console.log("Tab switching setup complete!");
@@ -362,6 +348,7 @@ async function initializePopup() {
 	const disconnectDriveBtn = document.getElementById("disconnectDriveBtn");
 	const backupNowBtn = document.getElementById("backupNowBtn");
 	const viewBackupsBtn = document.getElementById("viewBackupsBtn");
+	const openLibrarySettings = document.getElementById("openLibrarySettings");
 	const driveNotConnected = document.getElementById("driveNotConnected");
 	const driveConnected = document.getElementById("driveConnected");
 	const driveStatusSpan = document.getElementById("driveStatus");
@@ -403,6 +390,13 @@ async function initializePopup() {
 		"clearNotificationsBtn",
 	);
 	const filterButtons = document.querySelectorAll(".filter-btn");
+	const notificationsToggle = document.getElementById("notificationsToggle");
+	const notificationsPanel = document.getElementById("notificationsPanel");
+	const driveBackupsList = document.getElementById("driveBackupsList");
+	const driveOAuthDetails = document.getElementById("driveOAuthDetails");
+	const openLibrarySettingsFromPrompts = document.getElementById(
+		"openLibrarySettingsFromPrompts",
+	);
 	let currentNotificationFilter = "all";
 
 	// Store current page novel data
@@ -1224,7 +1218,9 @@ async function initializePopup() {
 		}
 
 		// Set debug mode checkbox
-		debugModeCheckbox.checked = data.debugMode || false;
+		if (debugModeCheckbox) {
+			debugModeCheckbox.checked = data.debugMode || false;
+		}
 
 		// Set emoji checkbox state
 		const useEmojiCheckbox = document.getElementById("useEmoji");
@@ -1283,6 +1279,9 @@ async function initializePopup() {
 		if (apiKeyRotationSelect) {
 			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
 		}
+
+		// Update model endpoint display
+		await updateModelEndpointDisplay();
 	} catch (error) {
 		debugError("Error loading settings:", error);
 		// If settings fail to load, at least set the default prompt
@@ -1368,7 +1367,9 @@ async function initializePopup() {
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		const stored = await browser.storage.local.get("maxOutputTokens");
 		const maxTokens = stored?.maxOutputTokens || 8192;
-		const temperature = parseFloat(temperatureSlider.value);
+		const temperature = temperatureSlider
+			? parseFloat(temperatureSlider.value)
+			: 0.7;
 
 		if (!apiKey) {
 			showStatus("Please enter a valid API key", "error");
@@ -1400,7 +1401,7 @@ async function initializePopup() {
 				apiKey: apiKey,
 				selectedModelId: selectedModelId,
 				modelEndpoint: modelEndpoint,
-				debugMode: debugModeCheckbox.checked,
+				debugMode: debugModeCheckbox?.checked ?? false,
 				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false, // Save emoji setting
 				formatGameStats: formatGameStatsInput?.checked !== false, // default true
 				centerSceneHeadings:
@@ -1533,33 +1534,33 @@ async function initializePopup() {
 		});
 	}
 
-	// Reset prompt to default
-	resetPromptBtn.addEventListener("click", () => {
-		promptTemplate.value = DEFAULT_PROMPT;
-		showStatus("Enhancement prompt reset to default", "info");
-	});
-
-	// Reset summary prompt to default
-	resetSummaryPromptBtn.addEventListener("click", () => {
-		summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
-		showStatus("Summary prompt reset to default", "info");
-	});
-
-	// Reset short summary prompt to default
-	if (resetShortSummaryPromptBtn) {
-		resetShortSummaryPromptBtn.addEventListener("click", () => {
-			if (shortSummaryPrompt) {
-				shortSummaryPrompt.value = DEFAULT_SHORT_SUMMARY_PROMPT;
-				showStatus("Short summary prompt reset to default", "info");
-			}
+	if (resetPromptBtn && promptTemplate) {
+		resetPromptBtn.addEventListener("click", () => {
+			promptTemplate.value = DEFAULT_PROMPT;
+			showStatus("Enhancement prompt reset to default", "info");
 		});
 	}
 
-	// Reset permanent prompt to default
-	resetPermanentPromptBtn.addEventListener("click", () => {
-		permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
-		showStatus("Permanent prompt reset to default", "info");
-	});
+	if (resetSummaryPromptBtn && summaryPrompt) {
+		resetSummaryPromptBtn.addEventListener("click", () => {
+			summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
+			showStatus("Summary prompt reset to default", "info");
+		});
+	}
+
+	if (resetShortSummaryPromptBtn && shortSummaryPrompt) {
+		resetShortSummaryPromptBtn.addEventListener("click", () => {
+			shortSummaryPrompt.value = DEFAULT_SHORT_SUMMARY_PROMPT;
+			showStatus("Short summary prompt reset to default", "info");
+		});
+	}
+
+	if (resetPermanentPromptBtn && permanentPrompt) {
+		resetPermanentPromptBtn.addEventListener("click", () => {
+			permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
+			showStatus("Permanent prompt reset to default", "info");
+		});
+	}
 
 	// Full Prompt Preview functionality
 	const fullPromptPreview = document.getElementById("fullPromptPreview");
@@ -1617,14 +1618,14 @@ async function initializePopup() {
 		fullPromptPreview.textContent = fullPrompt;
 	}
 
-	if (refreshPromptPreviewBtn) {
+	if (refreshPromptPreviewBtn && fullPromptPreview) {
 		refreshPromptPreviewBtn.addEventListener(
 			"click",
 			generateFullPromptPreview,
 		);
 	}
 
-	if (copyFullPromptBtn) {
+	if (copyFullPromptBtn && fullPromptPreview) {
 		copyFullPromptBtn.addEventListener("click", async () => {
 			generateFullPromptPreview();
 			try {
@@ -1643,7 +1644,7 @@ async function initializePopup() {
 	const promptPreviewSection = document.querySelector(
 		".prompt-preview-section",
 	);
-	if (promptPreviewSection) {
+	if (promptPreviewSection && fullPromptPreview) {
 		promptPreviewSection.addEventListener("toggle", (e) => {
 			if (e.target.open) {
 				generateFullPromptPreview();
@@ -1760,6 +1761,43 @@ async function initializePopup() {
 			setTimeout(() => modelSelect.click(), 100);
 		}
 	});
+
+	// Update model endpoint display when model selection changes
+	modelSelect.addEventListener("change", updateModelEndpointDisplay);
+
+	// Helper function to update model endpoint display
+	async function updateModelEndpointDisplay() {
+		if (!modelEndpointDisplay) return;
+
+		const selectedModelId = modelSelect.value;
+		if (!selectedModelId) {
+			modelEndpointDisplay.value = "";
+			return;
+		}
+
+		// Construct endpoint URL
+		const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+		modelEndpointDisplay.value = endpoint;
+	}
+
+	// Copy model endpoint to clipboard
+	if (copyModelEndpoint) {
+		copyModelEndpoint.addEventListener("click", async () => {
+			const endpoint = modelEndpointDisplay.value;
+			if (!endpoint) {
+				showStatus("No endpoint to copy", "error");
+				return;
+			}
+
+			try {
+				await navigator.clipboard.writeText(endpoint);
+				showStatus("Endpoint copied to clipboard!", "success");
+			} catch (error) {
+				debugError("Failed to copy endpoint:", error);
+				showStatus("Failed to copy endpoint", "error");
+			}
+		});
+	}
 
 	// Helper function to show status messages
 	async function showStatus(message, type, options = {}) {
@@ -3696,10 +3734,9 @@ async function initializePopup() {
 		}
 	}
 
-	// Add site prompt button functionality
-	document
-		.getElementById("addSitePrompt")
-		.addEventListener("click", function () {
+	const addSitePromptButton = document.getElementById("addSitePrompt");
+	if (addSitePromptButton) {
+		addSitePromptButton.addEventListener("click", function () {
 			const container = document.getElementById(
 				"siteSpecificPromptsContainer",
 			);
@@ -3745,44 +3782,45 @@ async function initializePopup() {
 				container.appendChild(newPrompt);
 			}
 		});
+	}
 
-	// Modify the savePrompts function to include site-specific prompts
-	document
-		.getElementById("savePrompts")
-		.addEventListener("click", async function () {
+	const savePromptsButton = document.getElementById("savePrompts");
+	if (savePromptsButton) {
+		savePromptsButton.addEventListener("click", async function () {
+			const promptInput = document.getElementById("promptTemplate");
+			const summaryInput = document.getElementById("summaryPrompt");
+			const permanentInput = document.getElementById("permanentPrompt");
+			if (!promptInput || !summaryInput || !permanentInput) {
+				showStatus("Prompts UI not available", "error");
+				return;
+			}
 			// Save enhancement prompt
-			const promptTemplate =
-				document.getElementById("promptTemplate").value;
-			localStorage.setItem("geminiPromptTemplate", promptTemplate);
+			const promptValue = promptInput.value;
+			localStorage.setItem("geminiPromptTemplate", promptValue);
 
 			// Save summary prompt
-			const summaryPrompt =
-				document.getElementById("summaryPrompt").value;
-			localStorage.setItem("geminiSummaryPrompt", summaryPrompt);
+			const summaryValue = summaryInput.value;
+			localStorage.setItem("geminiSummaryPrompt", summaryValue);
 
 			// Save short summary prompt
 			const shortSummaryPromptEl =
 				document.getElementById("shortSummaryPrompt");
-			const shortSummaryPrompt = shortSummaryPromptEl
+			const shortSummaryValue = shortSummaryPromptEl
 				? shortSummaryPromptEl.value
 				: DEFAULT_SHORT_SUMMARY_PROMPT;
-			localStorage.setItem(
-				"geminiShortSummaryPrompt",
-				shortSummaryPrompt,
-			);
+			localStorage.setItem("geminiShortSummaryPrompt", shortSummaryValue);
 
 			// Save permanent prompt
-			const permanentPrompt =
-				document.getElementById("permanentPrompt").value;
-			localStorage.setItem("permanentPrompt", permanentPrompt);
+			const permanentValue = permanentInput.value;
+			localStorage.setItem("permanentPrompt", permanentValue);
 
 			// Also save to browser.storage.local for background script access
 			try {
 				await browser.storage.local.set({
-					defaultPrompt: promptTemplate,
-					summaryPrompt: summaryPrompt,
-					shortSummaryPrompt: shortSummaryPrompt,
-					permanentPrompt: permanentPrompt,
+					defaultPrompt: promptValue,
+					summaryPrompt: summaryValue,
+					shortSummaryPrompt: shortSummaryValue,
+					permanentPrompt: permanentValue,
 				});
 			} catch (error) {
 				debugError("Error saving prompts to browser storage:", error);
@@ -3804,6 +3842,7 @@ async function initializePopup() {
 					}
 				});
 		});
+	}
 
 	// ========== NOVELS TAB HANDLERS ==========
 	/**
@@ -4281,6 +4320,10 @@ async function initializePopup() {
 			]);
 			const isConnected = !!tokens.driveAuthTokens?.access_token;
 
+			if (driveOAuthDetails) {
+				driveOAuthDetails.open = !isConnected;
+			}
+
 			if (isConnected) {
 				driveNotConnected.style.display = "none";
 				driveConnected.style.display = "block";
@@ -4417,6 +4460,14 @@ async function initializePopup() {
 					"✅ Google Drive connected successfully!",
 					"success",
 				);
+
+				// Enable auto-restore by default after successful OAuth
+				debugLog("Enabling auto-restore from Drive...");
+				await browser.storage.local.set({
+					driveAutoRestoreEnabled: true,
+					driveAutoRestoreMergeMode: "merge",
+				});
+
 				await updateDriveUI();
 
 				// Auto-backup after successful OAuth connection
@@ -4452,6 +4503,38 @@ async function initializePopup() {
 						`Note: Initial backup not created (${backupErr.message})`,
 						"warning",
 					);
+				}
+
+				// Trigger initial sync from Drive after OAuth
+				debugLog("Triggering initial sync from Drive...");
+				try {
+					const syncResponse = await browser.runtime.sendMessage({
+						action: "syncDriveNow",
+						reason: "oauth-initial",
+					});
+
+					if (syncResponse?.success) {
+						debugLog("Initial Drive sync completed:", syncResponse);
+						if (syncResponse.imported) {
+							showStatus(
+								`✅ Synced ${syncResponse.novelCount || 0} novels from Drive`,
+								"success",
+							);
+						} else {
+							showStatus(
+								"✅ Drive sync completed (no new data)",
+								"success",
+							);
+						}
+					} else if (syncResponse?.skipped) {
+						debugLog("Drive sync skipped:", syncResponse.reason);
+						// Don't show skipped message to user - it's expected
+					} else {
+						debugError("Initial sync failed:", syncResponse?.error);
+					}
+				} catch (syncErr) {
+					debugError("Auto-sync error:", syncErr);
+					// Don't show sync errors to user - backup succeeded which is most important
 				}
 			} else {
 				throw new Error(response?.error || "Authentication failed");
@@ -4543,6 +4626,286 @@ async function initializePopup() {
 		}
 	}
 
+	function formatFileSize(bytes) {
+		if (!bytes && bytes !== 0) return "Unknown";
+		const kb = bytes / 1024;
+		if (kb < 1024) return `${kb.toFixed(1)} KB`;
+		return `${(kb / 1024).toFixed(2)} MB`;
+	}
+
+	function getRelativeTimeString(date) {
+		const now = new Date();
+		const diffMs = now - date;
+		const seconds = Math.floor(diffMs / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (seconds < 60) return `${seconds}s ago`;
+		if (minutes < 60) return `${minutes}m ago`;
+		if (hours < 24) return `${hours}h ago`;
+		return `${days}d ago`;
+	}
+
+	function getBackupTags(name) {
+		const tags = [];
+		const lower = (name || "").toLowerCase();
+		if (lower.includes("continuous")) tags.push("🔄 Continuous");
+		else tags.push("📅 Scheduled");
+		const versionMatch = name?.match(/v\d+(?:\.\d+)?/i);
+		if (versionMatch) tags.push(versionMatch[0].toUpperCase());
+		return tags;
+	}
+
+	async function handleRestoreDriveBackup(fileId) {
+		try {
+			if (!fileId) return;
+			showStatus("⏳ Downloading backup...", "info");
+			const response = await browser.runtime.sendMessage({
+				action: "downloadDriveBackup",
+				fileId,
+			});
+
+			if (!response?.success || !response.data) {
+				throw new Error(response?.error || "Download failed");
+			}
+
+			await restoreComprehensiveBackup(response.data, {
+				mode: "merge",
+				restoreCredentials: false,
+				restoreApiKeys: true,
+			});
+
+			showStatus("✅ Backup restored successfully", "success");
+			await loadNovelsTab();
+		} catch (err) {
+			debugError("Drive backup restore failed", err);
+			showStatus(`Restore failed: ${err.message}`, "error");
+		}
+	}
+
+	function renderDriveBackups(backups) {
+		if (!driveBackupsList) return;
+		driveBackupsList.innerHTML = "";
+
+		const list = document.createElement("div");
+		list.style.maxHeight = "260px";
+		list.style.overflowY = "auto";
+		list.style.display = "grid";
+		list.style.gap = "12px";
+
+		backups.slice(0, 20).forEach((backup) => {
+			const created = new Date(
+				backup.modifiedTime || backup.createdTime || Date.now(),
+			);
+			const modified = new Date(backup.modifiedTime || Date.now());
+			const sizeLabel = formatFileSize(Number(backup.size));
+
+			// Determine backup type from filename
+			const isContinuous =
+				backup.name === "ranobe-library-continuous.json";
+			const backupType = isContinuous ? "Continuous" : "Manual";
+			const backupTypeColor = isContinuous ? "#4CAF50" : "#2196F3";
+
+			// Parse timestamp from filename for manual backups
+			let backupDate = created;
+			if (!isContinuous && backup.name.includes("ranobe-library-")) {
+				const timestampStr = backup.name
+					.replace("ranobe-library-", "")
+					.replace(".json", "");
+				// Try to parse ISO timestamp from filename
+				const parsed = new Date(
+					timestampStr.replace(/-/g, ":").replace("T", " "),
+				);
+				if (!isNaN(parsed.getTime())) {
+					backupDate = parsed;
+				}
+			}
+
+			const card = document.createElement("div");
+			card.className = "drive-backup-card";
+			card.style.padding = "12px";
+			card.style.background = "rgba(0, 0, 0, 0.1)";
+			card.style.borderRadius = "6px";
+			card.style.borderLeft = `4px solid ${backupTypeColor}`;
+
+			// Title row with type badge
+			const titleRow = document.createElement("div");
+			titleRow.style.display = "flex";
+			titleRow.style.justifyContent = "space-between";
+			titleRow.style.alignItems = "center";
+			titleRow.style.marginBottom = "8px";
+
+			const titleLeft = document.createElement("div");
+			titleLeft.style.display = "flex";
+			titleLeft.style.alignItems = "center";
+			titleLeft.style.gap = "8px";
+
+			const typeBadge = document.createElement("span");
+			typeBadge.style.padding = "2px 8px";
+			typeBadge.style.borderRadius = "12px";
+			typeBadge.style.fontSize = "11px";
+			typeBadge.style.fontWeight = "600";
+			typeBadge.style.background = backupTypeColor;
+			typeBadge.style.color = "white";
+			typeBadge.textContent = backupType;
+
+			const fileName = document.createElement("span");
+			fileName.style.fontSize = "13px";
+			fileName.style.fontWeight = "500";
+			fileName.style.color = "#ddd";
+			fileName.textContent = isContinuous
+				? "Rolling Backup"
+				: backupDate.toLocaleString();
+
+			titleLeft.appendChild(typeBadge);
+			titleLeft.appendChild(fileName);
+
+			const sizeSpan = document.createElement("span");
+			sizeSpan.style.fontSize = "12px";
+			sizeSpan.style.color = "#aaa";
+			sizeSpan.textContent = sizeLabel;
+
+			titleRow.appendChild(titleLeft);
+			titleRow.appendChild(sizeSpan);
+
+			// Metadata row with icons
+			const meta = document.createElement("div");
+			meta.style.fontSize = "11px";
+			meta.style.color = "#999";
+			meta.style.marginBottom = "10px";
+			meta.style.display = "flex";
+			meta.style.gap = "12px";
+			meta.style.flexWrap = "wrap";
+
+			const createdSpan = document.createElement("span");
+			createdSpan.textContent = `📅 ${backupDate.toLocaleDateString()} ${backupDate.toLocaleTimeString()}`;
+
+			const relativeSpan = document.createElement("span");
+			relativeSpan.textContent = `🕒 ${getRelativeTimeString(backupDate)}`;
+
+			meta.appendChild(createdSpan);
+			meta.appendChild(relativeSpan);
+
+			// Actions row
+			const actions = document.createElement("div");
+			actions.style.display = "flex";
+			actions.style.gap = "8px";
+
+			const restoreBtn = document.createElement("button");
+			restoreBtn.className = "btn-secondary";
+			restoreBtn.style.fontSize = "12px";
+			restoreBtn.style.flex = "1";
+			restoreBtn.textContent = "📥 Restore";
+			restoreBtn.addEventListener("click", () => {
+				handleRestoreDriveBackup(backup.id);
+			});
+
+			const viewDetailsBtn = document.createElement("button");
+			viewDetailsBtn.className = "btn-secondary";
+			viewDetailsBtn.style.fontSize = "12px";
+			viewDetailsBtn.style.padding = "6px 12px";
+			viewDetailsBtn.textContent = "ℹ️";
+			viewDetailsBtn.title = "View detailed backup info";
+			viewDetailsBtn.addEventListener("click", async () => {
+				await showBackupDetails(backup);
+			});
+
+			actions.appendChild(restoreBtn);
+			actions.appendChild(viewDetailsBtn);
+
+			card.appendChild(titleRow);
+			card.appendChild(meta);
+			card.appendChild(actions);
+			list.appendChild(card);
+		});
+
+		if (backups.length === 0) {
+			list.innerHTML = `
+				<div style="text-align: center; padding: 30px; color: #888;">
+					<div style="font-size: 48px; margin-bottom: 12px;">📦</div>
+					<div style="font-size: 14px;">No backups found on Google Drive</div>
+					<div style="font-size: 12px; margin-top: 8px; color: #666;">Create a backup to get started</div>
+				</div>
+			`;
+		}
+
+		driveBackupsList.appendChild(list);
+	}
+
+	/**
+	 * Show detailed backup information in a modal
+	 */
+	async function showBackupDetails(backup) {
+		try {
+			showStatus("⏳ Loading backup details...", "info");
+
+			// Download and parse the backup to get detailed metadata
+			const response = await browser.runtime.sendMessage({
+				action: "downloadDriveBackup",
+				fileId: backup.id,
+			});
+
+			if (!response || !response.data) {
+				throw new Error("Failed to download backup");
+			}
+
+			const backupData = response.data;
+			const metadata = backupData.metadata || {};
+			const novelCount =
+				metadata.novelCount ||
+				Object.keys(
+					backupData.data?.novelHistory ||
+						backupData.data?.rg_novel_library?.novels ||
+						{},
+				).length ||
+				0;
+
+			// Calculate chapter count
+			let chapterCount = 0;
+			if (backupData.chapters) {
+				chapterCount = Object.values(backupData.chapters).reduce(
+					(sum, chapterData) => {
+						return (
+							sum +
+							(Array.isArray(chapterData)
+								? chapterData.length
+								: 0)
+						);
+					},
+					0,
+				);
+			}
+
+			const details = `
+📦 Backup Details
+━━━━━━━━━━━━━━━
+📚 Novels: ${novelCount}
+📖 Chapters: ${chapterCount}
+💾 Size: ${formatFileSize(Number(backup.size))}
+📅 Created: ${new Date(backup.createdTime || backup.modifiedTime).toLocaleString()}
+🔄 Modified: ${new Date(backup.modifiedTime).toLocaleString()}
+🆔 Version: ${backupData.version || "unknown"}
+🔧 Extension: ${backupData.extensionVersion || "unknown"}
+🌐 Browser: ${backupData.browser || "unknown"}
+
+🔑 Contains:
+${metadata.hasApiKey ? "✅" : "❌"} API Keys
+${metadata.hasPrompts ? "✅" : "❌"} Custom Prompts
+${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
+			`.trim();
+
+			alert(details);
+			showStatus("✅ Backup details loaded", "success");
+		} catch (error) {
+			debugError("Failed to load backup details:", error);
+			showStatus(
+				`❌ Failed to load backup details: ${error.message}`,
+				"error",
+			);
+		}
+	}
+
 	/**
 	 * View backups on Google Drive
 	 */
@@ -4574,36 +4937,16 @@ async function initializePopup() {
 			const backups = response?.backups || response;
 
 			if (!backups || backups.length === 0) {
+				renderDriveBackups([]);
 				showStatus("No backups found on Drive", "info");
 				return;
 			}
 
-			// Build backup list HTML
-			let html =
-				'<div style="max-height: 300px; overflow-y: auto; font-size: 12px">';
-			for (const backup of backups.slice(0, 20)) {
-				const date = new Date(backup.createdTime).toLocaleDateString();
-				const size = backup.size
-					? `${(backup.size / 1024).toFixed(1)} KB`
-					: "Unknown";
-				html += `
-					<div style="padding: 6px; border-bottom: 1px solid #ddd; cursor: pointer"
-						 onclick="restoreFromDrive('${backup.id}')">
-						<div style="font-weight: bold">${backup.name}</div>
-						<div style="color: #666">${date} • ${size}</div>
-					</div>
-				`;
-			}
-			html += "</div>";
-
-			// Show the backups in a modal or new section
-			debugLog("Backups list HTML:", html);
+			renderDriveBackups(backups);
 			showStatus(
 				"Retrieved " + backups.length + " backup(s) from Drive",
 				"success",
 			);
-			// TODO: Display backups in a modal or dedicated UI section
-			console.log("Backups:", backups);
 		} catch (err) {
 			debugError("View backups failed", err);
 			showStatus(`View backups failed: ${err.message}`, "error");
@@ -4798,7 +5141,17 @@ async function initializePopup() {
 
 	// Attach Google Drive backup handlers
 	if (connectDriveBtn) {
-		connectDriveBtn.addEventListener("click", handleConnectDrive);
+		// Use both click and touchend for better mobile support
+		const handleConnect = (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			handleConnectDrive();
+		};
+		connectDriveBtn.addEventListener("click", handleConnect);
+		// Add touch event for mobile browsers
+		connectDriveBtn.addEventListener("touchend", handleConnect, {
+			passive: false,
+		});
 	}
 	if (disconnectDriveBtn) {
 		disconnectDriveBtn.addEventListener("click", handleDisconnectDrive);
@@ -4809,6 +5162,78 @@ async function initializePopup() {
 	if (viewBackupsBtn) {
 		viewBackupsBtn.addEventListener("click", handleViewBackups);
 	}
+
+	// Handle both openLibrarySettings buttons (one in Novels tab, one in Settings tab)
+	const allLibrarySettingsButtons = document.querySelectorAll(
+		"#openLibrarySettings",
+	);
+	allLibrarySettingsButtons.forEach((button) => {
+		button.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html#settings"),
+			});
+		});
+	});
+
+	// Handle openLibrarySettingsFromBackup button (in Advanced tab Backups section)
+	const openLibrarySettingsFromBackup = document.getElementById(
+		"openLibrarySettingsFromBackup",
+	);
+	if (openLibrarySettingsFromBackup) {
+		openLibrarySettingsFromBackup.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html#settings"),
+			});
+		});
+	}
+
+	if (openLibrarySettingsFromPrompts) {
+		openLibrarySettingsFromPrompts.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html#settings"),
+			});
+		});
+	}
+
+	// Handle Main Library button
+	const openMainLibrary = document.getElementById("openMainLibrary");
+	if (openMainLibrary) {
+		openMainLibrary.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	// Handle shelf links (website-specific libraries)
+	const shelfLinks = document.querySelectorAll(".shelf-link");
+	shelfLinks.forEach((link) => {
+		link.addEventListener("click", (e) => {
+			e.preventDefault();
+			const shelfId = link.getAttribute("data-shelf");
+			if (shelfId) {
+				browser.tabs.create({
+					url: browser.runtime.getURL(
+						`library/websites/${shelfId}/index.html`,
+					),
+				});
+			}
+		});
+	});
+
+	// Handle Backup Manager button
+	const openBackupManager = document.getElementById("openBackupManager");
+	if (openBackupManager) {
+		openBackupManager.addEventListener("click", () => {
+			// Open library settings on Backup tab
+			// The hash will be handled to open settings, then we need to switch to backup tab
+			// For now, just open settings - user can click Backup tab
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html#settings"),
+			});
+		});
+	}
+
 	driveBackupModeRadios.forEach((radio) => {
 		radio.addEventListener("change", handleDriveBackupModeChange);
 	});
@@ -5331,35 +5756,85 @@ async function initializePopup() {
 		await updateDriveUI();
 		// Update notification badge on popup open (so it shows before clicking tab)
 		await updateNotificationBadge();
-	})();
 
-	// Load novels when novels tab is opened
-	document.querySelectorAll(".tab-btn").forEach((btn) => {
-		btn.addEventListener("click", async function () {
-			if (this.getAttribute("data-tab") === "novels") {
+		// Default tab selection: go to Novels after API key is set
+		try {
+			const stored = await browser.storage.local.get([
+				"apiKey",
+				"backupApiKeys",
+			]);
+			const hasKey =
+				!!stored.apiKey ||
+				(Array.isArray(stored.backupApiKeys) &&
+					stored.backupApiKeys.length > 0);
+			setActiveTab(hasKey ? "novels" : "config");
+			if (hasKey) {
 				await loadNovelsTab();
 			}
+		} catch (err) {
+			debugError("Failed to select default tab", err);
+		}
+	})();
+
+	// Notifications bell icon - open modal
+	if (notificationsToggle) {
+		const notificationsModal =
+			document.getElementById("notificationsModal");
+		const closeNotificationsBtn = document.getElementById(
+			"closeNotificationsModal",
+		);
+
+		notificationsToggle.addEventListener("click", async () => {
+			if (notificationsModal) {
+				notificationsModal.style.display = "block";
+				await initNotificationsTab();
+			}
 		});
-	});
+
+		// Close modal when X button clicked
+		if (closeNotificationsBtn) {
+			closeNotificationsBtn.addEventListener("click", () => {
+				if (notificationsModal) {
+					notificationsModal.style.display = "none";
+				}
+			});
+		}
+
+		// Close modal when clicking outside
+		if (notificationsModal) {
+			notificationsModal.addEventListener("click", (e) => {
+				if (e.target === notificationsModal) {
+					notificationsModal.style.display = "none";
+				}
+			});
+		}
+	}
 
 	// Log that the popup is initialized
 	debugLog("RanobeGemini popup initialized");
 
-	// Load site-specific prompts
-	loadSiteHandlerPrompts();
+	// Load site-specific prompts (only when UI is present)
+	const sitePromptsContainer = document.getElementById(
+		"siteSpecificPromptsContainer",
+	);
+	if (sitePromptsContainer) {
+		loadSiteHandlerPrompts();
+	}
 
 	// Initialize info tab with dynamic data
 	initInfoTab();
 
 	// Add tab change listener to update prompts when switching to the prompts tab
-	document.querySelectorAll(".tab-btn").forEach(function (button) {
-		button.addEventListener("click", function () {
-			if (button.getAttribute("data-tab") === "prompts") {
-				// Reload site-specific prompts when prompts tab is selected
-				loadSiteHandlerPrompts();
-			}
+	if (sitePromptsContainer) {
+		document.querySelectorAll(".tab-btn").forEach(function (button) {
+			button.addEventListener("click", function () {
+				if (button.getAttribute("data-tab") === "prompts") {
+					// Reload site-specific prompts when prompts tab is selected
+					loadSiteHandlerPrompts();
+				}
+			});
 		});
-	});
+	}
 
 	/**
 	 * Initialize Info tab with dynamic version and supported sites
@@ -5827,12 +6302,26 @@ async function initializePopup() {
 		} catch (_error) {
 			unreadCount = notificationManager.getUnreadCount();
 		}
+		const badgeText = unreadCount > 999 ? "999+" : `${unreadCount}`;
 		if (unreadCount > 0) {
-			notificationBadge.textContent =
-				unreadCount > 999 ? "999+" : unreadCount;
+			notificationBadge.textContent = badgeText;
 			notificationBadge.style.display = "inline-block";
 		} else {
 			notificationBadge.style.display = "none";
+		}
+
+		try {
+			const actionApi = browser.action || browser.browserAction;
+			if (actionApi?.setBadgeText) {
+				actionApi.setBadgeText({
+					text: unreadCount > 0 ? badgeText : "",
+				});
+				if (actionApi.setBadgeBackgroundColor) {
+					actionApi.setBadgeBackgroundColor({ color: "#ef4444" });
+				}
+			}
+		} catch (_err) {
+			// ignore badge errors for browsers that do not support it
 		}
 	}
 

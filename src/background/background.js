@@ -27,6 +27,10 @@ import {
 	getContinuousDriveBackup,
 	getLatestDriveBackup,
 } from "../utils/drive.js";
+import {
+	createRollingBackup,
+	listRollingBackups,
+} from "../utils/comprehensive-backup.js";
 import { novelLibrary } from "../utils/novel-library.js";
 import { notificationManager } from "../utils/notification-manager.js";
 import {
@@ -51,6 +55,28 @@ if (typeof browser === "undefined") {
 
 	debugLog("Ranobe Gemini: Background script loaded");
 
+	const updateNotificationBadge = () => {
+		try {
+			const stats = notificationManager.getStats();
+			const unread = stats?.unread || 0;
+			const badgeText = unread > 999 ? "999+" : `${unread}`;
+			const actionApi = api.action || api.browserAction;
+			if (actionApi?.setBadgeText) {
+				actionApi.setBadgeText({ text: unread > 0 ? badgeText : "" });
+				if (actionApi.setBadgeBackgroundColor) {
+					actionApi.setBadgeBackgroundColor({ color: "#ef4444" });
+				}
+			}
+		} catch (_err) {
+			// ignore badge update failures
+		}
+	};
+
+	notificationManager
+		.initialize()
+		.then(updateNotificationBadge)
+		.catch(() => {});
+
 	// ============================================================
 	// CROSS-BROWSER KEEP-ALIVE MECHANISM (MV3)
 	// ============================================================
@@ -62,6 +88,7 @@ if (typeof browser === "undefined") {
 	const DEFAULT_KEEP_ALIVE_INTERVAL_MINUTES =
 		KEEP_ALIVE_ALARM_INTERVAL_MINUTES || 0.5; // 30 seconds
 	const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
+	const ROLLING_BACKUP_ALARM_NAME = "ranobe-gemini-rolling-backup";
 	const DRIVE_SYNC_ALARM_NAME = "ranobe-gemini-drive-sync";
 	const CONTINUOUS_BACKUP_CHECK_ALARM_NAME =
 		"ranobe-gemini-continuous-backup-check";
@@ -69,6 +96,7 @@ if (typeof browser === "undefined") {
 	const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
 	const CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES = 5;
 	const CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES = 2;
+	const DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES = 60;
 	const DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES = 10;
 	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
@@ -146,6 +174,10 @@ if (typeof browser === "undefined") {
 				performAutoBackup().catch((err) =>
 					debugError("Auto-backup failed:", err),
 				);
+			} else if (alarm.name === ROLLING_BACKUP_ALARM_NAME) {
+				createRollingBackup("scheduled").catch((err) =>
+					debugError("Rolling backup failed:", err),
+				);
 			} else if (alarm.name === DRIVE_SYNC_ALARM_NAME) {
 				syncLibraryFromDrive({ reason: "scheduled" }).catch((err) =>
 					debugError("Drive sync failed:", err),
@@ -186,6 +218,8 @@ if (typeof browser === "undefined") {
 		browser.runtime.onStartup?.addListener(() => {
 			debugLog("Firefox: Extension started");
 			setupKeepAliveAlarm();
+			scheduleRollingBackupAlarm();
+			ensureInitialRollingBackup();
 			// Send startup telemetry
 			initializeTelemetry().then(() => sendTelemetryPing("startup"));
 		});
@@ -193,6 +227,29 @@ if (typeof browser === "undefined") {
 		browser.runtime.onInstalled?.addListener((details) => {
 			debugLog("Firefox: Extension installed/updated");
 			setupKeepAliveAlarm();
+			browser.storage.local
+				.get([
+					"rg_rolling_backup_enabled",
+					"rollingBackupIntervalMinutes",
+				])
+				.then((prefs) => {
+					const updates = {};
+					if (prefs.rg_rolling_backup_enabled === undefined) {
+						updates.rg_rolling_backup_enabled = true;
+					}
+					if (prefs.rollingBackupIntervalMinutes === undefined) {
+						updates.rollingBackupIntervalMinutes =
+							DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES;
+					}
+					if (Object.keys(updates).length > 0) {
+						return browser.storage.local.set(updates);
+					}
+					return null;
+				})
+				.finally(() => {
+					scheduleRollingBackupAlarm();
+					ensureInitialRollingBackup();
+				});
 			// Track install/update
 			initializeTelemetry().then(() => {
 				if (details?.reason === "install") {
@@ -207,6 +264,29 @@ if (typeof browser === "undefined") {
 		browser.runtime.onInstalled?.addListener((details) => {
 			debugLog("Chromium: Extension installed/updated");
 			setupKeepAliveAlarm();
+			browser.storage.local
+				.get([
+					"rg_rolling_backup_enabled",
+					"rollingBackupIntervalMinutes",
+				])
+				.then((prefs) => {
+					const updates = {};
+					if (prefs.rg_rolling_backup_enabled === undefined) {
+						updates.rg_rolling_backup_enabled = true;
+					}
+					if (prefs.rollingBackupIntervalMinutes === undefined) {
+						updates.rollingBackupIntervalMinutes =
+							DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES;
+					}
+					if (Object.keys(updates).length > 0) {
+						return browser.storage.local.set(updates);
+					}
+					return null;
+				})
+				.finally(() => {
+					scheduleRollingBackupAlarm();
+					ensureInitialRollingBackup();
+				});
 			// Track install/update
 			initializeTelemetry().then(() => {
 				if (details?.reason === "install") {
@@ -522,6 +602,50 @@ if (typeof browser === "undefined") {
 		return true;
 	}
 
+	async function scheduleRollingBackupAlarm() {
+		const prefs = await browser.storage.local.get([
+			"rg_rolling_backup_enabled",
+			"rollingBackupIntervalMinutes",
+		]);
+		const enabled = prefs.rg_rolling_backup_enabled ?? true;
+		const intervalMinutes =
+			prefs.rollingBackupIntervalMinutes ||
+			DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES;
+
+		if (!browser.alarms) return false;
+
+		try {
+			await browser.alarms.clear(ROLLING_BACKUP_ALARM_NAME);
+		} catch (_e) {
+			// ignore
+		}
+
+		if (!enabled) return false;
+
+		await browser.alarms.create(ROLLING_BACKUP_ALARM_NAME, {
+			periodInMinutes: Math.max(1, intervalMinutes),
+		});
+		return true;
+	}
+
+	async function ensureInitialRollingBackup() {
+		try {
+			const prefs = await browser.storage.local.get([
+				"rg_rolling_backup_enabled",
+			]);
+			if (prefs.rg_rolling_backup_enabled === false) return false;
+
+			const existing = await listRollingBackups();
+			if (existing.length === 0) {
+				await createRollingBackup("install");
+			}
+			return true;
+		} catch (error) {
+			debugError("Failed to create initial rolling backup:", error);
+			return false;
+		}
+	}
+
 	async function scheduleContinuousBackupCheck() {
 		// Clear existing timer
 		if (continuousBackupCheckTimer) {
@@ -612,6 +736,9 @@ if (typeof browser === "undefined") {
 	scheduleAutoBackup().catch((err) =>
 		console.warn("Auto-backup schedule setup failed:", err?.message),
 	);
+	scheduleRollingBackupAlarm().catch((err) =>
+		console.warn("Rolling backup schedule setup failed:", err?.message),
+	);
 	scheduleContinuousBackupCheck().catch((err) =>
 		console.warn(
 			"Continuous backup check schedule setup failed:",
@@ -621,6 +748,9 @@ if (typeof browser === "undefined") {
 	scheduleDriveSync().catch((err) =>
 		console.warn("Drive sync schedule setup failed:", err?.message),
 	);
+	ensureInitialRollingBackup().catch((err) =>
+		console.warn("Initial rolling backup failed:", err?.message),
+	);
 	setTimeout(() => {
 		syncLibraryFromDrive({ reason: "startup" }).catch((err) =>
 			debugError("Drive sync on startup failed:", err),
@@ -629,7 +759,8 @@ if (typeof browser === "undefined") {
 
 	browser.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local") return;
-		if (changes.novelHistory) {
+		// Watch both old and new library keys for changes
+		if (changes.novelHistory || changes.rg_novel_library) {
 			scheduleContinuousBackup();
 		}
 		if (
@@ -641,6 +772,13 @@ if (typeof browser === "undefined") {
 		) {
 			scheduleAutoBackup();
 			scheduleContinuousBackupCheck();
+		}
+
+		if (
+			changes.rg_rolling_backup_enabled ||
+			changes.rollingBackupIntervalMinutes
+		) {
+			scheduleRollingBackupAlarm();
 		}
 
 		if (
@@ -1051,6 +1189,138 @@ if (typeof browser === "undefined") {
 			return true;
 		}
 
+		if (message.action === "fetchDesktopMetadata") {
+			// Fetch desktop version of mobile page to extract full metadata
+			(async () => {
+				try {
+					const { url, novelId, handler } = message;
+
+					debugLog(
+						`[Background] Fetching desktop metadata from: ${url}`,
+					);
+
+					const response = await fetch(url);
+					if (!response.ok) {
+						throw new Error(
+							`HTTP ${response.status}: ${response.statusText}`,
+						);
+					}
+
+					const html = await response.text();
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(html, "text/html");
+
+					// Extract metadata based on handler type
+					let metadata = {};
+
+					if (handler === "fanfiction") {
+						// FanFiction.net specific extraction
+						const profileTop = doc.querySelector("#profile_top");
+						if (profileTop) {
+							// Extract description
+							const descDiv =
+								profileTop.querySelector("div.xcontrast_txt");
+							metadata.description = descDiv
+								? descDiv.textContent.trim()
+								: "";
+
+							// Extract title
+							const titleEl =
+								profileTop.querySelector("b.xcontrast_txt");
+							metadata.title = titleEl
+								? titleEl.textContent.trim()
+								: "";
+
+							// Extract author
+							const authorLink =
+								profileTop.querySelector("a[href^='/u/']");
+							metadata.author = authorLink
+								? authorLink.textContent.trim()
+								: "";
+
+							// Extract metadata (rating, language, genre, etc.)
+							const grayCenter = profileTop.querySelectorAll(
+								"span.xgray.xcontrast_txt",
+							);
+							if (grayCenter.length > 0) {
+								const metaText = grayCenter[0].textContent;
+								metadata.metadataText = metaText;
+
+								// Parse rating, language, genres, etc.
+								const ratingMatch =
+									metaText.match(/Rated:\\s*([^-]+)/);
+								if (ratingMatch)
+									metadata.rating = ratingMatch[1].trim();
+
+								const languageMatch =
+									metaText.match(/([A-Z][a-z]+)\\s*-/);
+								if (languageMatch)
+									metadata.language = languageMatch[1];
+							}
+
+							// Extract stats (chapters, words, reviews, etc.)
+							const statsSpan = profileTop.querySelector(
+								"span.xgray.xcontrast_txt:last-child",
+							);
+							if (statsSpan) {
+								const statsText = statsSpan.textContent;
+
+								const chaptersMatch =
+									statsText.match(/Chapters:\\s*(\\d+)/);
+								if (chaptersMatch)
+									metadata.chapters = parseInt(
+										chaptersMatch[1],
+									);
+
+								const wordsMatch =
+									statsText.match(/Words:\\s*([\\d,]+)/);
+								if (wordsMatch)
+									metadata.words = parseInt(
+										wordsMatch[1].replace(/,/g, ""),
+									);
+							}
+						}
+					}
+
+					// Save metadata to library
+					if (Object.keys(metadata).length > 0) {
+						const library = await novelLibrary.getLibrary();
+						const novel = library[novelId];
+
+						if (novel) {
+							// Merge metadata with existing novel data
+							const updated = {
+								...novel,
+								description:
+									metadata.description || novel.description,
+								author: metadata.author || novel.author,
+								rating: metadata.rating || novel.rating,
+								language: metadata.language || novel.language,
+								totalChapters:
+									metadata.chapters || novel.totalChapters,
+								wordCount: metadata.words || novel.wordCount,
+								metadataFetchedAt: Date.now(),
+							};
+
+							await novelLibrary.updateNovel(novelId, updated);
+							debugLog(
+								`[Background] Updated novel ${novelId} with desktop metadata`,
+							);
+						}
+					}
+
+					sendResponse({ success: true, metadata });
+				} catch (error) {
+					debugError(
+						"[Background] Failed to fetch desktop metadata:",
+						error,
+					);
+					sendResponse({ success: false, error: error.message });
+				}
+			})();
+			return true;
+		}
+
 		if (message.action === "uploadLogsToDrive") {
 			uploadLogsToDriveWithAdapter({
 				filename: message.filename || "ranobe-logs.json",
@@ -1082,7 +1352,10 @@ if (typeof browser === "undefined") {
 					metadata: message.metadata,
 					source: message.source || "background",
 				})
-				.then((id) => sendResponse({ success: true, id }))
+				.then((id) => {
+					updateNotificationBadge();
+					sendResponse({ success: true, id });
+				})
 				.catch((error) =>
 					sendResponse({
 						success: false,
@@ -1125,6 +1398,7 @@ if (typeof browser === "undefined") {
 				.markAsRead(message.id)
 				.then(() => {
 					const stats = notificationManager.getStats();
+					updateNotificationBadge();
 					sendResponse({ success: true, stats });
 				})
 				.catch((error) =>
@@ -1138,6 +1412,7 @@ if (typeof browser === "undefined") {
 				.markAllAsRead()
 				.then(() => {
 					const stats = notificationManager.getStats();
+					updateNotificationBadge();
 					sendResponse({ success: true, stats });
 				})
 				.catch((error) =>
@@ -1151,6 +1426,7 @@ if (typeof browser === "undefined") {
 				.delete(message.id)
 				.then(() => {
 					const stats = notificationManager.getStats();
+					updateNotificationBadge();
 					sendResponse({ success: true, stats });
 				})
 				.catch((error) =>
@@ -1162,7 +1438,10 @@ if (typeof browser === "undefined") {
 		if (message.action === "clearNotifications") {
 			notificationManager
 				.clearAll()
-				.then(() => sendResponse({ success: true }))
+				.then(() => {
+					updateNotificationBadge();
+					sendResponse({ success: true });
+				})
 				.catch((error) =>
 					sendResponse({ success: false, error: error.message }),
 				);

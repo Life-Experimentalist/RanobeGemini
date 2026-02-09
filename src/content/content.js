@@ -4367,7 +4367,7 @@ if (window.__RGInitDone) {
 				showTimedBanner(
 					"Could not extract novel metadata",
 					"warning",
-					3000
+					3000,
 				);
 				return;
 			}
@@ -4400,7 +4400,44 @@ if (window.__RGInitDone) {
 			// Also update with extracted metadata
 			await novelLibrary.updateNovelMetadata(novelId, metadata);
 
-			showTimedBanner(`Saved: ${metadata.title}`, "success", 3000);
+			// If on mobile, fetch desktop version metadata in background
+			if (
+				currentHandler?.constructor?.name === "FanfictionMobileHandler"
+			) {
+				debugLog("[Mobile] Fetching desktop metadata in background...");
+				try {
+					const desktopMetadata =
+						await currentHandler.fetchDesktopMetadata();
+					if (desktopMetadata) {
+						debugLog(
+							"[Mobile] Desktop metadata fetched successfully",
+						);
+						showTimedBanner(
+							`Saved with full metadata: ${metadata.title}`,
+							"success",
+							3000,
+						);
+					} else {
+						showTimedBanner(
+							`Saved: ${metadata.title}`,
+							"success",
+							3000,
+						);
+					}
+				} catch (err) {
+					debugError(
+						"[Mobile] Failed to fetch desktop metadata:",
+						err,
+					);
+					showTimedBanner(
+						`Saved: ${metadata.title}`,
+						"success",
+						3000,
+					);
+				}
+			} else {
+				showTimedBanner(`Saved: ${metadata.title}`, "success", 3000);
+			}
 
 			// Refresh the UI
 			const controls = document.getElementById("rg-novel-controls");
@@ -4412,26 +4449,6 @@ if (window.__RGInitDone) {
 		} catch (error) {
 			debugError("Error saving novel:", error);
 			showTimedBanner("Error saving novel", "warning", 3000);
-		}
-	}
-
-	/**
-	 * Handle reading status change
-	 */
-	async function handleReadingStatusChange(newStatus) {
-		if (!novelLibrary) return;
-
-		const novelId = getNovelIdFromCurrentPage();
-		if (!novelId) return;
-
-		try {
-			await novelLibrary.updateNovelMetadata(novelId, {
-				readingStatus: newStatus,
-			});
-			showTimedBanner(`Status updated: ${newStatus}`, "success", 2000);
-		} catch (error) {
-			debugError("Error updating reading status:", error);
-			showTimedBanner("Error updating status", "warning", 3000);
 		}
 	}
 
@@ -4455,7 +4472,7 @@ if (window.__RGInitDone) {
 
 			// Get the novel from library
 			const novel = await novelLibrary.getNovelByUrl(
-				window.location.href
+				window.location.href,
 			);
 			if (!novel) {
 				debugLog("Novel not in library, skipping progression update");
@@ -5107,9 +5124,18 @@ if (window.__RGInitDone) {
 						const novel = await novelLibrary.getNovelByUrl(
 							window.location.href
 						);
-						if (novel && novel.autoEnhance === true) {
+						const stored = await browser.storage.local.get([
+							"autoEnhanceNovels",
+						]);
+						const autoEnhanceNovels =
+							stored.autoEnhanceNovels || [];
+						const shouldAutoEnhance =
+							(novel && novel.autoEnhance === true) ||
+							(novel && autoEnhanceNovels.includes(novel.id));
+
+						if (shouldAutoEnhance) {
 							debugLog(
-								"🚀 Auto-enhance enabled for this novel, starting enhancement..."
+								"🚀 Auto-enhance enabled for this novel, starting enhancement...",
 							);
 							// Wait a bit for page to stabilize
 							setTimeout(() => {

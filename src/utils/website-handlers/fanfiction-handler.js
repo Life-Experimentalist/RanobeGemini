@@ -7,6 +7,7 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { SITE_SETTINGS_KEY } from "../site-settings.js";
 
 export class FanfictionHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -77,11 +78,34 @@ When enhancing, improve readability while respecting the author's creative voice
 			const isMobile =
 				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
 				window.innerWidth <= 768;
-			const targetHost = isMobile
-				? "m.fanfiction.net"
-				: "www.fanfiction.net";
 
-			if (isFanfictionHost && (isBareDomain || !isKnownSubdomain)) {
+			const resolveTargetHost = (preference) => {
+				switch (preference) {
+					case "mobile":
+						return "m.fanfiction.net";
+					case "desktop":
+						return "www.fanfiction.net";
+					default:
+						return isMobile
+							? "m.fanfiction.net"
+							: "www.fanfiction.net";
+				}
+			};
+
+			const shouldRedirect = (preference) => {
+				if (!isFanfictionHost) return false;
+				if (isBareDomain || !isKnownSubdomain) return true;
+				if (preference === "mobile" && hostname !== "m.fanfiction.net")
+					return true;
+				if (
+					preference === "desktop" &&
+					hostname !== "www.fanfiction.net"
+				)
+					return true;
+				return false;
+			};
+
+			const redirectTo = (targetHost) => {
 				const target = `https://${targetHost}${pathname}${search}${hash}`;
 				if (window.location.href !== target) {
 					// For .ws domain redirect, use try-catch with revert on error
@@ -99,7 +123,25 @@ When enhancing, improve readability while respecting the author's creative voice
 						window.location.replace(target);
 					}
 				}
-			}
+			};
+
+			browser.storage.local
+				.get(SITE_SETTINGS_KEY)
+				.then((result) => {
+					const settings = result?.[SITE_SETTINGS_KEY] || {};
+					const preference =
+						settings?.fanfiction?.domainPreference || "auto";
+					const targetHost = resolveTargetHost(preference);
+					if (shouldRedirect(preference)) {
+						redirectTo(targetHost);
+					}
+				})
+				.catch(() => {
+					const targetHost = resolveTargetHost("auto");
+					if (shouldRedirect("auto")) {
+						redirectTo(targetHost);
+					}
+				});
 		} catch (_err) {
 			// no-op
 		}

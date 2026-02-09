@@ -103,6 +103,8 @@ export async function createComprehensiveBackup(options = {}) {
 			}
 		}
 
+		const librarySnapshot =
+			allData.rg_novel_library?.novels || allData.novelHistory || {};
 		const backup = {
 			version: BACKUP_VERSION,
 			type,
@@ -114,7 +116,7 @@ export async function createComprehensiveBackup(options = {}) {
 			data: allData,
 			chapters: chaptersData,
 			metadata: {
-				novelCount: Object.keys(allData.novelHistory || {}).length,
+				novelCount: Object.keys(librarySnapshot || {}).length,
 				hasApiKey: !!allData.apiKey,
 				hasPrompts: !!(allData.promptTemplate || allData.summaryPrompt),
 				hasDriveCredentials: !!allData.driveClientId,
@@ -308,10 +310,17 @@ function smartMergeLibrary(existing, incoming) {
  */
 export async function createRollingBackup(reason = "auto") {
 	try {
+		const prefs = await browser.storage.local.get([
+			"backupIncludeApiKeys",
+			"backupIncludeCredentials",
+		]);
+		const includeApiKeys = prefs.backupIncludeApiKeys ?? true;
+		const includeCredentials = prefs.backupIncludeCredentials ?? true;
+
 		const backup = await createComprehensiveBackup({
 			type: BACKUP_OPTIONS.FULL,
-			includeCredentials: false,
-			includeApiKeys: true,
+			includeCredentials,
+			includeApiKeys,
 		});
 
 		backup.reason = reason;

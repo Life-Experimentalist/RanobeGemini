@@ -206,6 +206,43 @@ textarea::placeholder {
 	box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
+.tab-icon-btn {
+	position: relative;
+	border: none;
+	background: transparent;
+	border-radius: 8px;
+	padding: 10px 12px;
+	cursor: pointer;
+	color: var(--text-primary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	transition: all 0.2s ease;
+}
+
+.tab-icon-btn:hover {
+	background: var(--hover-bg);
+}
+
+.tab-icon-btn .notification-badge {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	min-width: 18px;
+	height: 18px;
+	border-radius: 999px;
+	background: #ef4444;
+	color: white;
+	font-size: 10px;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 5px;
+	box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
 /* Tab Content */
 .tab-content {
 	display: none;
@@ -3564,6 +3601,114 @@ button:disabled {
 	text-align: center;
 	padding: 60px 20px;
 	color: var(--text-secondary);
+}
+
+/* OAuth + Drive backup panel */
+.oauth-section summary,
+.notifications-panel summary,
+.info-panel summary {
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 14px;
+	list-style: none;
+}
+
+.oauth-section summary::-webkit-details-marker,
+.notifications-panel summary::-webkit-details-marker,
+.info-panel summary::-webkit-details-marker {
+	display: none;
+}
+
+.oauth-content {
+	display: grid;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.oauth-status {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+
+.oauth-state {
+	padding: 10px;
+	border-radius: 8px;
+	background: var(--bg-tertiary, rgba(255, 255, 255, 0.05));
+	border: 1px solid var(--border-color);
+}
+
+.oauth-fields label {
+	display: block;
+	margin: 8px 0 6px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.oauth-fields textarea {
+	width: 100%;
+}
+
+.drive-backups-list {
+	display: grid;
+	gap: 10px;
+}
+
+.drive-backup-card {
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 10px;
+	padding: 12px;
+	display: grid;
+	gap: 8px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.drive-backup-title {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.drive-backup-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	font-size: 11px;
+}
+
+.drive-backup-tag {
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: rgba(59, 130, 246, 0.15);
+	color: #93c5fd;
+	border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.drive-backup-meta {
+	font-size: 11px;
+	color: var(--text-secondary);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.drive-backup-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.drive-backup-actions button {
+	padding: 6px 10px;
+	font-size: 12px;
+}
+
+.notifications-panel .section-header h2 {
+	font-size: 16px;
 }
 
 .no-notifications p:first-child {

@@ -6,6 +6,7 @@
 
 import { debugLog, debugError } from "./logger.js";
 import { DOMAIN_REGISTRY, SHELF_REGISTRY } from "./domain-constants.js";
+import { SITE_SETTINGS_KEY } from "./site-settings.js";
 
 /**
  * Reading status constants
@@ -1356,11 +1357,56 @@ export class NovelLibrary {
 			}
 		}
 
+		// Include all extension settings and API keys for complete restore
+		const settings = {
+			// API Keys (exclude OAuth tokens for security)
+			apiKey: allData.apiKey,
+			backupApiKeys: allData.backupApiKeys,
+			driveClientId: allData.driveClientId,
+			driveClientSecret: allData.driveClientSecret,
+
+			// Model settings
+			selectedModelId: allData.selectedModelId,
+			customEndpoint: allData.customEndpoint,
+			customTemperature: allData.customTemperature,
+			temperature: allData.temperature,
+			topP: allData.topP,
+			topK: allData.topK,
+
+			// Processing options
+			chunkingEnabled: allData.chunkingEnabled,
+
+			// Theme settings
+			themeSettings: allData.themeSettings,
+			theme: allData.theme,
+			themeMode: allData.themeMode,
+			accentPrimary: allData.accentPrimary,
+			accentSecondary: allData.accentSecondary,
+			bgColor: allData.bgColor,
+			textColor: allData.textColor,
+
+			// Site toggles
+			siteSettings: allData[SITE_SETTINGS_KEY] || allData.siteSettings,
+
+			// Backup settings
+			autoBackupEnabled: allData.autoBackupEnabled,
+			backupMode: allData.backupMode,
+			backupRetention: allData.backupRetention,
+			backupFolder: allData.backupFolder,
+			driveFolderId: allData.driveFolderId,
+			continuousBackupCheckInterval: allData.continuousBackupCheckInterval,
+			fontSize: allData.fontSize,
+
+			// Model merge mode
+			modelMergeMode: allData.modelMergeMode,
+		};
+
 		return {
 			library,
 			chapters: chaptersData,
+			settings,
 			exportedAt: Date.now(),
-			version: "1.0",
+			version: "2.0", // Increment version for expanded backup format
 		};
 	}
 
@@ -1374,6 +1420,66 @@ export class NovelLibrary {
 		try {
 			if (!data.library || !data.version) {
 				throw new Error("Invalid import data format");
+			}
+
+			// Restore settings if available (version 2.0+)
+			if (data.settings) {
+				const settingsToRestore = {};
+
+				// Only restore non-sensitive settings (exclude OAuth tokens)
+				const settingKeys = [
+					"apiKey",
+					"backupApiKeys",
+					"driveClientId",
+					"driveClientSecret",
+					"selectedModel",
+					"selectedModelId",
+					"modelEndpoint",
+					"availableModels",
+					"customEndpoint",
+					"customTemperature",
+					"temperature",
+					"topP",
+					"topK",
+					"chunkingEnabled",
+					"themeSettings",
+					"theme",
+					"themeMode",
+					"accentPrimary",
+					"accentSecondary",
+					"bgColor",
+					"textColor",
+					"siteSettings",
+					"autoBackupEnabled",
+					"backupMode",
+					"backupRetention",
+					"backupFolder",
+					"driveFolderId",
+					"continuousBackupCheckInterval",
+					"modelMergeMode",
+					"fontSize",
+				];
+
+				for (const key of settingKeys) {
+					if (
+						data.settings[key] !== undefined &&
+						data.settings[key] !== null
+					) {
+						settingsToRestore[key] = data.settings[key];
+					}
+				}
+
+				if (settingsToRestore.siteSettings) {
+					settingsToRestore[SITE_SETTINGS_KEY] =
+						settingsToRestore.siteSettings;
+				}
+
+				if (Object.keys(settingsToRestore).length > 0) {
+					await browser.storage.local.set(settingsToRestore);
+					debugLog(
+						`[Import] Restored ${Object.keys(settingsToRestore).length} settings`,
+					);
+				}
 			}
 
 			let imported = 0;

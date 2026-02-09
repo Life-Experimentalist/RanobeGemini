@@ -9,6 +9,13 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../utils/novel-library.js";
+import {
+	DEFAULT_PROMPT,
+	DEFAULT_SUMMARY_PROMPT,
+	DEFAULT_SHORT_SUMMARY_PROMPT,
+	DEFAULT_PERMANENT_PROMPT,
+	DEFAULT_DRIVE_CLIENT_ID,
+} from "../utils/constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
 import {
 	filterEnabledShelves,
@@ -23,7 +30,15 @@ import {
 	restoreComprehensiveBackup,
 	downloadBackupAsFile,
 	readBackupFromFile,
+	parseOAuthCredentials,
+	validateRedirectUris,
+	createRollingBackup,
+	listRollingBackups,
+	getRollingBackup,
+	deleteRollingBackup,
+	BACKUP_OPTIONS,
 } from "../utils/comprehensive-backup.js";
+import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import {
 	getTelemetryConfig,
 	saveTelemetryConfig,
@@ -118,6 +133,35 @@ const themePalettes = {
 // Track metadata refresh snapshots to show before/after banners
 const REFRESH_PREFIX = "rg-refresh-snapshot-";
 const REFRESH_TAB_TIMEOUT_MS = 18000; // Allow extra time for slower sites before auto-closing refresh tab
+
+/**
+ * Get relative time string (e.g., "2 hours ago", "3 days ago")
+ * @param {Date} date - The date to compare
+ * @returns {string} Relative time string
+ */
+function getRelativeTimeString(date) {
+	const now = new Date();
+	const diffMs = now - date;
+	const diffSeconds = Math.floor(diffMs / 1000);
+	const diffMinutes = Math.floor(diffSeconds / 60);
+	const diffHours = Math.floor(diffMinutes / 60);
+	const diffDays = Math.floor(diffHours / 24);
+
+	if (diffSeconds < 60) return "Just now";
+	if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
+	if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+	if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+	if (diffDays < 30) {
+		const weeks = Math.floor(diffDays / 7);
+		return `${weeks} week${weeks !== 1 ? "s" : ""} ago`;
+	}
+	if (diffDays < 365) {
+		const months = Math.floor(diffDays / 30);
+		return `${months} month${months !== 1 ? "s" : ""} ago`;
+	}
+	const years = Math.floor(diffDays / 365);
+	return `${years} year${years !== 1 ? "s" : ""} ago`;
+}
 
 function getRefreshTabTimeout(url) {
 	if (!url) return REFRESH_TAB_TIMEOUT_MS;
@@ -230,6 +274,7 @@ const elements = {
 	// Settings Modal
 	settingsModal: document.getElementById("settings-modal"),
 	settingsClose: document.getElementById("settings-close"),
+	settingsSaveBtn: document.getElementById("settings-save"),
 	exportBtn: document.getElementById("export-btn"),
 	importBtn: document.getElementById("import-btn"),
 	importFile: document.getElementById("import-file"),
@@ -246,12 +291,148 @@ const elements = {
 		"comprehensive-restore-file",
 	),
 	rollingBackupToggle: document.getElementById("rolling-backup-toggle"),
+	// New comprehensive backup elements
+	createComprehensiveBackupBtn: document.getElementById(
+		"createComprehensiveBackup",
+	),
+	restoreComprehensiveBackupBtn: document.getElementById(
+		"restoreComprehensiveBackup",
+	),
+	comprehensiveBackupFile: document.getElementById("comprehensiveBackupFile"),
+	backupIncludeApiKeys: document.getElementById("backupIncludeApiKeys"),
+	backupIncludeCredentials: document.getElementById(
+		"backupIncludeCredentials",
+	),
+	autoBackupEnabled: document.getElementById("autoBackupEnabled"),
+	rollingBackupInterval: document.getElementById("rollingBackupInterval"),
+	rollingBackupIntervalDisplay: document.getElementById(
+		"rollingBackupIntervalDisplay",
+	),
+	rollingBackupList: document.getElementById("rollingBackupList"),
+	createRollingBackupBtn: document.getElementById("createRollingBackup"),
+	backupHistoryList: document.getElementById("backupHistoryList"),
+	mergeModeRadios: document.querySelectorAll('input[name="mergeMode"]'),
+
+	// Google Drive Backup
+	libraryViewBackupsBtn: document.getElementById("library-view-backups-btn"),
+	libraryDriveSyncNowBtn: document.getElementById(
+		"library-sync-from-drive-btn",
+	),
+	driveBackupsModal: document.getElementById("drive-backups-modal"),
+	driveBackupsClose: document.getElementById("drive-backups-close"),
+	driveBackupsLoading: document.getElementById("drive-backups-loading"),
+	driveBackupsList: document.getElementById("drive-backups-list"),
+	driveBackupsEmpty: document.getElementById("drive-backups-empty"),
+	connectDriveBtn: document.getElementById("connectDriveBtn"),
+	disconnectDriveBtn: document.getElementById("disconnectDriveBtn"),
+	backupNowBtn: document.getElementById("backupNowBtn"),
+	driveNotConnected: document.getElementById("driveNotConnected"),
+	driveConnected: document.getElementById("driveConnected"),
+	driveStatusSpan: document.getElementById("driveStatus"),
+	driveAuthError: document.getElementById("driveAuthError"),
+	driveBackupModeRadios: document.querySelectorAll(
+		'input[name="driveBackupMode"]',
+	),
+	continuousBackupCheckInterval: document.getElementById(
+		"continuousBackupCheckInterval",
+	),
+	driveBackupRetention: document.getElementById("driveBackupRetention"),
+	driveBackupRetentionDisplay: document.getElementById(
+		"driveBackupRetentionDisplay",
+	),
+	driveAutoRestoreEnabled: document.getElementById("driveAutoRestoreEnabled"),
+	driveClientIdInput: document.getElementById("driveClientId"),
+	driveClientSecretInput: document.getElementById("driveClientSecret"),
+	toggleClientSecretBtn: document.getElementById(
+		"toggleClientSecretVisibility",
+	),
+	saveOAuthSettingsBtn: document.getElementById("saveOAuthSettings"),
+	oauthJsonPaste: document.getElementById("oauthJsonPaste"),
+	parseOAuthJsonBtn: document.getElementById("parseOAuthJson"),
+	saveOAuthFromJsonBtn: document.getElementById("saveOAuthFromJson"),
+	driveFolderIdInput: document.getElementById("driveFolderId"),
 
 	// Telemetry Settings
 	telemetryToggle: document.getElementById("telemetry-toggle"),
 	telemetryDetails: document.getElementById("telemetry-details"),
 	sendErrorsToggle: document.getElementById("send-errors-toggle"),
 	webhookUrl: document.getElementById("webhook-url"),
+
+	// Theme Settings (Library Modal)
+	libraryThemeMode: document.getElementById("library-theme-mode"),
+	libraryAccentColorPicker: document.getElementById(
+		"library-accentColorPicker",
+	),
+	libraryAccentColorText: document.getElementById("library-accentColorText"),
+	libraryAccentSecondaryPicker: document.getElementById(
+		"library-accentSecondaryPicker",
+	),
+	libraryAccentSecondaryText: document.getElementById(
+		"library-accentSecondaryText",
+	),
+	libraryBackgroundColorPicker: document.getElementById(
+		"library-backgroundColorPicker",
+	),
+	libraryBackgroundColorText: document.getElementById(
+		"library-backgroundColorText",
+	),
+	libraryTextColorPicker: document.getElementById("library-textColorPicker"),
+	libraryTextColorText: document.getElementById("library-textColorText"),
+	librarySaveThemeBtn: document.getElementById("library-save-theme"),
+	libraryResetThemeBtn: document.getElementById("library-reset-theme"),
+
+	// AI Model Settings (Library Modal)
+	libraryApiKeyInput: document.getElementById("library-api-key"),
+	librarySaveApiKeyBtn: document.getElementById("library-save-api-key"),
+	libraryTestApiKeyBtn: document.getElementById("library-test-api-key"),
+	libraryModelSelect: document.getElementById("library-model-select"),
+	libraryModelEndpointInput: document.getElementById(
+		"library-model-endpoint",
+	),
+	libraryCopyModelEndpointBtn: document.getElementById(
+		"library-copy-model-endpoint",
+	),
+	libraryRefreshModelsBtn: document.getElementById("library-refresh-models"),
+	libraryTemperatureSlider: document.getElementById(
+		"library-temperature-slider",
+	),
+	libraryTemperatureValue: document.getElementById(
+		"library-temperature-value",
+	),
+
+	// Font Size (Library Modal)
+	libraryFontSizeSlider: document.getElementById("library-font-size-slider"),
+	libraryFontSizeValue: document.getElementById("library-font-size-value"),
+
+	// Advanced Settings (Library Modal)
+	libraryTopKSlider: document.getElementById("library-top-k-slider"),
+	libraryTopKValue: document.getElementById("library-top-k-value"),
+	libraryTopPSlider: document.getElementById("library-top-p-slider"),
+	libraryTopPValue: document.getElementById("library-top-p-value"),
+	libraryAdvancedModelEndpoint: document.getElementById(
+		"library-advanced-model-endpoint",
+	),
+	libraryAdvancedCopyEndpoint: document.getElementById(
+		"library-advanced-copy-endpoint",
+	),
+	libraryPromptMain: document.getElementById("library-prompt-main"),
+	libraryResetPromptMain: document.getElementById(
+		"library-reset-prompt-main",
+	),
+	libraryPromptSummary: document.getElementById("library-prompt-summary"),
+	libraryResetPromptSummary: document.getElementById(
+		"library-reset-prompt-summary",
+	),
+	libraryPromptShortSummary: document.getElementById(
+		"library-prompt-short-summary",
+	),
+	libraryResetPromptShortSummary: document.getElementById(
+		"library-reset-prompt-short-summary",
+	),
+	libraryPromptPermanent: document.getElementById("library-prompt-permanent"),
+	libraryResetPromptPermanent: document.getElementById(
+		"library-reset-prompt-permanent",
+	),
 
 	// Telemetry Consent Modal
 	telemetryConsentModal: document.getElementById("telemetry-consent-modal"),
@@ -344,6 +525,316 @@ async function openNovelFromQueryParams() {
 }
 
 /**
+ * Load rolling backups into the UI
+ */
+async function loadRollingBackups() {
+	if (!elements.rollingBackupList) return;
+
+	const backups = await listRollingBackups();
+
+	if (backups.length === 0) {
+		elements.rollingBackupList.innerHTML = `
+			<div class="no-backups" style="text-align: center; padding: 15px; color: #888; font-size: 12px">
+				No rolling backups yet. Enable auto-backup or create one manually.
+			</div>`;
+		return;
+	}
+
+	elements.rollingBackupList.innerHTML = backups
+		.map(
+			(b) => `
+		<div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 6px; font-size: 12px">
+			<div>
+				<div style="font-weight: 500">${b.dateStr}</div>
+				<div style="font-size: 11px; color: #aaa">${b.novelCount} novels • ${b.reason}</div>
+			</div>
+			<div style="display: flex; gap: 4px;">
+				<button class="rolling-restore btn btn-secondary" data-key="${b.key}" style="font-size: 11px; padding: 4px 8px;">
+					Restore
+				</button>
+				<button class="rolling-download btn btn-secondary" data-key="${b.key}" style="font-size: 11px; padding: 4px 8px;">
+					Download
+				</button>
+				<button class="rolling-delete btn btn-danger" data-key="${b.key}" style="font-size: 11px; padding: 4px 8px;">
+					Delete
+				</button>
+			</div>
+		</div>
+	`,
+		)
+		.join("");
+
+	// Add event listeners
+	elements.rollingBackupList.querySelectorAll(".rolling-restore").forEach((btn) => {
+		btn.addEventListener("click", async () => {
+			const backup = await getRollingBackup(btn.dataset.key);
+			if (backup && confirm("Restore this backup? (Merge mode)")) {
+				await restoreComprehensiveBackup(backup, { mode: "merge" });
+				showNotification("✅ Backup restored!", "success");
+				setTimeout(() => location.reload(), 1000);
+			}
+		});
+	});
+
+	elements.rollingBackupList.querySelectorAll(".rolling-download").forEach((btn) => {
+		btn.addEventListener("click", async () => {
+			const backup = await getRollingBackup(btn.dataset.key);
+			if (backup) {
+				downloadBackupAsFile(backup);
+			}
+		});
+	});
+
+	elements.rollingBackupList.querySelectorAll(".rolling-delete").forEach((btn) => {
+		btn.addEventListener("click", async () => {
+			if (confirm("Delete this backup?")) {
+				await deleteRollingBackup(btn.dataset.key);
+				await loadRollingBackups();
+				showNotification("Backup deleted", "success");
+			}
+		});
+	});
+}
+
+/**
+ * Initialize and update rolling backup status indicator
+ * Shows countdown timer, status, and last backup time
+ */
+async function initializeRollingBackupStatus() {
+	const statusContainer = document.getElementById("rollingBackupStatus");
+	const statusIcon = document.getElementById("backupStatusIcon");
+	const statusText = document.getElementById("backupStatusText");
+	const countdownContainer = document.getElementById("backupCountdownContainer");
+	const countdownTime = document.getElementById("backupCountdownTime");
+	const lastBackupTimeDiv = document.getElementById("lastBackupTime");
+	const lastBackupTimeText = document.getElementById("lastBackupTimeText");
+
+	if (!statusContainer) return; // Elements don't exist
+
+	// Get rolling backup settings
+	const stored = await browser.storage.local.get([
+		"rg_rolling_backup_enabled",
+		"rollingBackupIntervalMinutes",
+		"rg_rolling_backup_meta",
+	]);
+
+	const isEnabled = stored.rg_rolling_backup_enabled ?? true;
+	const intervalMinutes = parseInt(stored.rollingBackupIntervalMinutes) || 60;
+	const metadata = stored.rg_rolling_backup_meta || {};
+
+	// Hide status if rolling backups are disabled
+	if (!isEnabled) {
+		statusContainer.style.display = "none";
+		return;
+	}
+
+	statusContainer.style.display = "block";
+
+	// Function to update countdown display
+	const updateCountdown = () => {
+		if (!metadata.lastBackupTime) {
+			statusIcon.textContent = "⏳";
+			statusText.textContent = "Waiting for first backup...";
+			if (countdownContainer) countdownContainer.style.display = "none";
+			if (lastBackupTimeDiv) lastBackupTimeDiv.style.display = "none";
+			return;
+		}
+
+		const lastBackupMs = parseInt(metadata.lastBackupTime);
+		const nextBackupMs = lastBackupMs + intervalMinutes * 60 * 1000;
+		const nowMs = Date.now();
+
+		if (nowMs >= nextBackupMs) {
+			// Next backup is due or overdue
+			statusIcon.textContent = "📅";
+			statusText.textContent = "Backup due now";
+			if (countdownContainer) countdownContainer.style.display = "none";
+		} else {
+			// Calculate remaining time
+			const remainingMs = nextBackupMs - nowMs;
+			const remainingMins = Math.floor(remainingMs / 60000);
+			const remainingSecs = Math.floor((remainingMs % 60000) / 1000);
+
+			statusIcon.textContent = "⏳";
+			statusText.textContent =
+				remainingMins > 0
+					? `Next backup in ${remainingMins}m ${remainingSecs}s`
+					: `Next backup in ${remainingSecs}s`;
+
+			if (countdownContainer) {
+				countdownContainer.style.display = "block";
+				if (countdownTime) {
+					countdownTime.textContent = `${remainingMins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+				}
+			}
+		}
+
+		// Update last backup time
+		if (lastBackupTimeDiv && lastBackupTimeText) {
+			const lastBackupDate = new Date(lastBackupMs);
+			const now = new Date();
+			const diffMs = now - lastBackupDate;
+			const diffMins = Math.floor(diffMs / 60000);
+			const diffHours = Math.floor(diffMs / 3600000);
+			const diffDays = Math.floor(diffMs / 86400000);
+
+			let timeStr;
+			if (diffMins < 1) {
+				timeStr = "just now";
+			} else if (diffMins < 60) {
+				timeStr = `${diffMins}m ago`;
+			} else if (diffHours < 24) {
+				timeStr = `${diffHours}h ago`;
+			} else {
+				timeStr = `${diffDays}d ago`;
+			}
+
+			lastBackupTimeText.textContent = timeStr;
+			lastBackupTimeDiv.style.display = "block";
+		}
+	};
+
+	// Initial update
+	updateCountdown();
+
+	// Update countdown every second
+	if (!window.rollingBackupCountdownInterval) {
+		window.rollingBackupCountdownInterval = setInterval(updateCountdown, 1000);
+	}
+}
+
+/**
+ * Load backup history (quick library backups)
+ */
+async function loadBackupHistory() {
+	if (!elements.backupHistoryList) return;
+
+	try {
+		const backups = await libraryBackupManager.listBackups();
+
+		if (!backups || backups.length === 0) {
+			elements.backupHistoryList.innerHTML = `
+				<div style="text-align: center; padding: 15px; color: #888; font-size: 12px">
+					No backups yet
+				</div>`;
+			return;
+		}
+
+		elements.backupHistoryList.innerHTML = backups
+			.map(
+				(backup) => `
+			<div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 6px; font-size: 12px">
+				<div>
+					<div style="font-weight: 500; color: #e0e0e0; margin-bottom: 3px;">${backup.dateStr}</div>
+					<div style="font-size: 12px; color: #aaa;">
+						${backup.novelCount} novels • ${Math.round(backup.size / 1024)} KB ${
+							backup.isAutomatic
+								? '<span style="color: #4caf50;">(Auto)</span>'
+								: "(Manual)"
+						}
+					</div>
+				</div>
+				<div style="display: flex; gap: 6px;">
+					<button class="backup-restore-btn" data-backup-id="${backup.id}" style="padding: 6px 12px; font-size: 11px; background: #667eea; border: none; border-radius: 4px; cursor: pointer; color: white;">
+						Restore
+					</button>
+					<button class="backup-delete-btn" data-backup-id="${backup.id}" style="padding: 6px 12px; font-size: 11px; background: #db4437; border: none; border-radius: 4px; cursor: pointer; color: white;">
+						Delete
+					</button>
+				</div>
+			</div>
+		`,
+			)
+			.join("");
+
+		// Add event listeners for restore and delete
+		document.querySelectorAll(".backup-restore-btn").forEach((btn) => {
+			btn.addEventListener("click", async function () {
+				const backupId = this.dataset.backupId;
+				const mergeModeChecked = document.querySelector('input[name="mergeMode"]:checked')?.value || "merge";
+
+				try {
+					const restored = await libraryBackupManager.restoreBackup(backupId, mergeModeChecked);
+					if (restored) {
+						await browser.storage.local.set({ novelHistory: restored });
+						showNotification(`Backup restored successfully (${mergeModeChecked} mode)!`, "success");
+						await loadBackupHistory();
+						await loadLibrary();
+					}
+				} catch (error) {
+					debugError("Error restoring backup:", error);
+					showNotification("Failed to restore backup", "error");
+				}
+			});
+		});
+
+		document.querySelectorAll(".backup-delete-btn").forEach((btn) => {
+			btn.addEventListener("click", async function () {
+				const backupId = this.dataset.backupId;
+				if (confirm("Are you sure you want to delete this backup?")) {
+					await libraryBackupManager.deleteBackup(backupId);
+					await loadBackupHistory();
+					showNotification("Backup deleted successfully!", "success");
+				}
+			});
+		});
+	} catch (error) {
+		debugError("Error loading backup history:", error);
+	}
+}
+
+/**
+ * Save backup checkbox settings
+ */
+async function saveBackupCheckboxSettings() {
+	try {
+		const settings = {
+			backupIncludeApiKeys: elements.backupIncludeApiKeys?.checked ?? true,
+			backupIncludeCredentials: elements.backupIncludeCredentials?.checked ?? true,
+			rollingBackupIntervalMinutes: elements.rollingBackupInterval
+				? parseInt(elements.rollingBackupInterval.value, 10) || 60
+				: 60,
+		};
+		await browser.storage.local.set(settings);
+	} catch (error) {
+		debugError("Failed to save backup checkbox settings:", error);
+	}
+}
+
+/**
+ * Load backup checkbox settings
+ */
+async function loadBackupCheckboxSettings() {
+	try {
+		const settings = await browser.storage.local.get([
+			"backupIncludeApiKeys",
+			"backupIncludeCredentials",
+			"rg_rolling_backup_enabled",
+			"rollingBackupIntervalMinutes",
+		]);
+
+		if (elements.backupIncludeApiKeys) {
+			elements.backupIncludeApiKeys.checked = settings.backupIncludeApiKeys ?? true;
+		}
+		if (elements.backupIncludeCredentials) {
+			elements.backupIncludeCredentials.checked = settings.backupIncludeCredentials ?? true;
+		}
+		if (elements.autoBackupEnabled) {
+			elements.autoBackupEnabled.checked = settings.rg_rolling_backup_enabled ?? true;
+		}
+		if (elements.rollingBackupInterval) {
+			const interval = settings.rollingBackupIntervalMinutes ?? 60;
+			elements.rollingBackupInterval.value = String(interval);
+			if (elements.rollingBackupIntervalDisplay) {
+				elements.rollingBackupIntervalDisplay.textContent = String(interval);
+			}
+		}
+	} catch (error) {
+		debugError("Failed to load backup checkbox settings:", error);
+	}
+}
+
+/**
  * Initialize the library page
  */
 async function init() {
@@ -369,9 +860,19 @@ async function init() {
 	// Load telemetry settings
 	await loadTelemetrySettings();
 
-	// Set up event listeners
-	setupEventListeners();
+	// Load backup settings
+	await loadBackupCheckboxSettings();
+	await loadRollingBackups();
+	await initializeRollingBackupStatus();
+	await loadBackupHistory();
 
+	// Load UI settings (theme, model, display)
+	await loadLibraryThemeControls();
+	await loadLibraryModelSettings();
+	await loadLibraryDisplaySettings();
+	await loadLibraryAdvancedSettings();
+	setupEventListeners();
+	await updateDriveUI();
 	// Set up storage change listener for auto-updates
 	setupStorageListener();
 
@@ -407,6 +908,33 @@ function setupStorageListener() {
 				populateSupportedSites();
 				loadLibrary();
 			});
+		}
+
+		// Check if rolling backup metadata changed (new backup created)
+		if (
+			changes.rg_rolling_backup_meta ||
+			changes.rg_rolling_backup_enabled ||
+			changes.rollingBackupIntervalMinutes
+		) {
+			debugLog(
+				"📦 Rolling backup settings/metadata changed, updating status...",
+			);
+			initializeRollingBackupStatus();
+			if (changes.rg_rolling_backup_meta) {
+				loadRollingBackups();
+			}
+		}
+
+		if (
+			changes.driveAuthTokens ||
+			changes.driveAuthError ||
+			changes.backupMode ||
+			changes.driveAutoRestoreEnabled ||
+			changes.continuousBackupCheckIntervalMinutes ||
+			changes.driveClientId ||
+			changes.driveClientSecret
+		) {
+			updateDriveUI();
 		}
 	});
 }
@@ -471,11 +999,316 @@ async function loadTelemetrySettings() {
 
 		// Load rolling backup setting
 		if (elements.rollingBackupToggle) {
-			const result = await browser.storage.local.get("rg_rolling_backup_enabled");
-			elements.rollingBackupToggle.checked = result.rg_rolling_backup_enabled !== false; // Default to true
+			const result = await browser.storage.local.get(
+				"rg_rolling_backup_enabled",
+			);
+			elements.rollingBackupToggle.checked =
+				result.rg_rolling_backup_enabled !== false; // Default to true
 		}
 	} catch (error) {
 		debugError("Failed to load telemetry settings:", error);
+	}
+}
+
+async function loadLibraryThemeControls() {
+	try {
+		const result = await browser.storage.local.get("themeSettings");
+		const theme = result.themeSettings || defaultTheme;
+
+		if (elements.libraryThemeMode) {
+			elements.libraryThemeMode.value = theme.mode || "dark";
+		}
+
+		if (
+			elements.libraryAccentColorPicker &&
+			elements.libraryAccentColorText
+		) {
+			elements.libraryAccentColorPicker.value =
+				theme.accentPrimary || defaultTheme.accentPrimary;
+			elements.libraryAccentColorText.value =
+				theme.accentPrimary || defaultTheme.accentPrimary;
+		}
+
+		if (
+			elements.libraryAccentSecondaryPicker &&
+			elements.libraryAccentSecondaryText
+		) {
+			elements.libraryAccentSecondaryPicker.value =
+				theme.accentSecondary || defaultTheme.accentSecondary;
+			elements.libraryAccentSecondaryText.value =
+				theme.accentSecondary || defaultTheme.accentSecondary;
+		}
+
+		if (
+			elements.libraryBackgroundColorPicker &&
+			elements.libraryBackgroundColorText
+		) {
+			elements.libraryBackgroundColorPicker.value =
+				theme.bgColor || defaultTheme.bgColor;
+			elements.libraryBackgroundColorText.value =
+				theme.bgColor || defaultTheme.bgColor;
+		}
+
+		if (elements.libraryTextColorPicker && elements.libraryTextColorText) {
+			elements.libraryTextColorPicker.value =
+				theme.textColor || defaultTheme.textColor;
+			elements.libraryTextColorText.value =
+				theme.textColor || defaultTheme.textColor;
+		}
+
+		setThemeVariables(theme);
+	} catch (error) {
+		debugError("Failed to load theme controls:", error);
+	}
+}
+
+async function loadLibraryDisplaySettings() {
+	try {
+		if (elements.libraryTemperatureSlider) {
+			const result = await browser.storage.local.get("customTemperature");
+			const temp = result.customTemperature ?? 0.7;
+			elements.libraryTemperatureSlider.value = temp;
+			if (elements.libraryTemperatureValue) {
+				elements.libraryTemperatureValue.textContent = temp.toFixed(1);
+			}
+		}
+
+		if (elements.libraryFontSizeSlider) {
+			const result = await browser.storage.local.get("fontSize");
+			const size = result.fontSize ?? 100;
+			elements.libraryFontSizeSlider.value = size;
+			if (elements.libraryFontSizeValue) {
+				elements.libraryFontSizeValue.textContent = `${size}%`;
+			}
+		}
+	} catch (error) {
+		debugError("Failed to load display settings:", error);
+	}
+}
+
+function formatLibraryModelName(modelId) {
+	return modelId
+		.replace("gemini-", "Gemini ")
+		.replace(/-/g, " ")
+		.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function setLibraryModelEndpoint(value) {
+	if (elements.libraryModelEndpointInput) {
+		elements.libraryModelEndpointInput.value = value || "";
+	}
+	// Also update in Advanced Settings tab
+	if (elements.libraryAdvancedModelEndpoint) {
+		elements.libraryAdvancedModelEndpoint.value = value || "";
+	}
+}
+
+async function fetchLibraryModels(apiKey) {
+	if (!apiKey) return null;
+	try {
+		const response = await fetch(
+			`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+		);
+		if (!response.ok) {
+			const errorText = await response.text();
+			throw new Error(`HTTP ${response.status}: ${errorText}`);
+		}
+		const data = await response.json();
+		return (data.models || [])
+			.filter(
+				(model) =>
+					model.name.includes("gemini") &&
+					model.supportedGenerationMethods?.includes(
+						"generateContent",
+					),
+			)
+			.map((model) => {
+				const id = model.name.split("/").pop();
+				return {
+					id,
+					displayName: formatLibraryModelName(id),
+					endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`,
+				};
+			});
+	} catch (error) {
+		debugError("Failed to fetch models:", error);
+		return null;
+	}
+}
+
+async function updateLibraryModelSelector(apiKey) {
+	if (!elements.libraryModelSelect) return;
+	try {
+		elements.libraryModelSelect.innerHTML =
+			'<option value="">Loading models...</option>';
+		elements.libraryModelSelect.disabled = true;
+
+		const models = await fetchLibraryModels(apiKey);
+		if (!models || models.length === 0) {
+			elements.libraryModelSelect.innerHTML =
+				'<option value="">No models available</option>';
+			return;
+		}
+
+		models.sort((a, b) => {
+			if (a.id.includes("2.0") && !b.id.includes("2.0")) return -1;
+			if (!a.id.includes("2.0") && b.id.includes("2.0")) return 1;
+			if (a.id.includes("1.5") && !b.id.includes("1.5")) return -1;
+			if (!a.id.includes("1.5") && b.id.includes("1.5")) return 1;
+			return a.displayName.localeCompare(b.displayName);
+		});
+
+		const stored = await browser.storage.local.get([
+			"selectedModelId",
+			"modelEndpoint",
+		]);
+		let selectedModelId = stored.selectedModelId || "";
+
+		elements.libraryModelSelect.innerHTML = "";
+		models.forEach((model) => {
+			const option = document.createElement("option");
+			option.value = model.id;
+			option.textContent = model.displayName;
+			if (!selectedModelId && model.id === "gemini-2.0-flash") {
+				selectedModelId = model.id;
+			}
+			elements.libraryModelSelect.appendChild(option);
+		});
+
+		if (selectedModelId) {
+			elements.libraryModelSelect.value = selectedModelId;
+		} else if (stored.modelEndpoint) {
+			const modelId = stored.modelEndpoint.split("/").pop().split(":")[0];
+			if (
+				modelId &&
+				elements.libraryModelSelect.querySelector(
+					`option[value="${modelId}"]`,
+				)
+			) {
+				elements.libraryModelSelect.value = modelId;
+			}
+		}
+
+		const selectedModel = models.find(
+			(model) => model.id === elements.libraryModelSelect.value,
+		);
+		setLibraryModelEndpoint(
+			selectedModel?.endpoint ||
+				(elements.libraryModelSelect.value
+					? `https://generativelanguage.googleapis.com/v1beta/models/${elements.libraryModelSelect.value}:generateContent`
+					: ""),
+		);
+
+		await browser.storage.local.set({
+			availableModels: models,
+			selectedModelId: elements.libraryModelSelect.value,
+			modelsLastFetched: Date.now(),
+		});
+	} catch (error) {
+		debugError("Error updating model selector:", error);
+		elements.libraryModelSelect.innerHTML =
+			'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
+	} finally {
+		elements.libraryModelSelect.disabled = false;
+	}
+}
+
+async function loadLibraryModelSettings() {
+	try {
+		const data = await browser.storage.local.get([
+			"apiKey",
+			"selectedModelId",
+			"modelEndpoint",
+		]);
+		if (elements.libraryApiKeyInput) {
+			elements.libraryApiKeyInput.value = data.apiKey || "";
+		}
+		if (data.apiKey) {
+			await updateLibraryModelSelector(data.apiKey);
+		} else if (elements.libraryModelSelect) {
+			elements.libraryModelSelect.innerHTML = `
+				<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
+				<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
+				<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
+			`;
+			if (data.selectedModelId) {
+				elements.libraryModelSelect.value = data.selectedModelId;
+			}
+		}
+
+		const selectedModelId =
+			elements.libraryModelSelect?.value || data.selectedModelId || "";
+		const endpoint =
+			data.modelEndpoint ||
+			(selectedModelId
+				? `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`
+				: "");
+
+		setLibraryModelEndpoint(endpoint);
+
+		// Also set the endpoint in Advanced Settings tab
+		if (elements.libraryAdvancedModelEndpoint) {
+			elements.libraryAdvancedModelEndpoint.value = endpoint;
+		}
+	} catch (error) {
+		debugError("Failed to load model settings:", error);
+	}
+}
+
+/**
+ * Load Advanced Settings from storage
+ */
+async function loadLibraryAdvancedSettings() {
+	try {
+		const data = await browser.storage.local.get([
+			"topK",
+			"topP",
+			"modelEndpoint",
+			"customPrompt",
+			"customSummaryPrompt",
+			"customShortSummaryPrompt",
+			"permanentPrompt",
+		]);
+
+		// Load Top K
+		if (elements.libraryTopKSlider && elements.libraryTopKValue) {
+			const topK = data.topK !== undefined ? data.topK : 40;
+			elements.libraryTopKSlider.value = topK;
+			elements.libraryTopKValue.textContent = topK;
+		}
+
+		// Load Top P
+		if (elements.libraryTopPSlider && elements.libraryTopPValue) {
+			const topP = data.topP !== undefined ? data.topP : 0.95;
+			elements.libraryTopPSlider.value = topP;
+			elements.libraryTopPValue.textContent = topP.toFixed(2);
+		}
+
+		// Load Model Endpoint
+		if (elements.libraryAdvancedModelEndpoint) {
+			elements.libraryAdvancedModelEndpoint.value =
+				data.modelEndpoint || "";
+		}
+
+		// Load Prompts
+		if (elements.libraryPromptMain) {
+			elements.libraryPromptMain.value =
+				data.customPrompt || DEFAULT_PROMPT;
+		}
+		if (elements.libraryPromptSummary) {
+			elements.libraryPromptSummary.value =
+				data.customSummaryPrompt || DEFAULT_SUMMARY_PROMPT;
+		}
+		if (elements.libraryPromptShortSummary) {
+			elements.libraryPromptShortSummary.value =
+				data.customShortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT;
+		}
+		if (elements.libraryPromptPermanent) {
+			elements.libraryPromptPermanent.value =
+				data.permanentPrompt || DEFAULT_PERMANENT_PROMPT;
+		}
+	} catch (error) {
+		debugError("Failed to load advanced settings:", error);
 	}
 }
 
@@ -916,9 +1749,14 @@ function renderSiteAutoAddSettings() {
 
 	shelves.forEach((shelf) => {
 		const setting = siteSettings[shelf.id] || defaults[shelf.id] || {};
-		const autoAddEnabled = setting.autoAddEnabled !== false;
+		const siteEnabled = setting.enabled !== false;
+		const autoAddEnabled = siteEnabled && setting.autoAddEnabled !== false;
 		const autoAddStatusChapter = setting.autoAddStatusChapter || "reading";
 		const autoAddStatusNovel = setting.autoAddStatusNovel || "plan-to-read";
+			const domainPreference =
+				shelf.id === "fanfiction"
+					? setting.domainPreference || "auto"
+					: null;
 
 		const row = document.createElement("div");
 		row.className = "site-autoadd-row";
@@ -930,21 +1768,53 @@ function renderSiteAutoAddSettings() {
 			shelf.emoji || "📖",
 		);
 
+		const domainPreferenceRow =
+			shelf.id === "fanfiction"
+				? `
+					<label>
+						<span>Preferred site version</span>
+						<select data-setting="domainPreference" ${siteEnabled ? "" : "disabled"}>
+							<option value="auto" ${
+								domainPreference === "auto" ? "selected" : ""
+							}>Auto (device-based)</option>
+							<option value="desktop" ${
+								domainPreference === "desktop" ? "selected" : ""
+							}>Force Desktop (www)</option>
+							<option value="mobile" ${
+								domainPreference === "mobile" ? "selected" : ""
+							}>Force Mobile (m)</option>
+						</select>
+					</label>
+					<p class="settings-desc" style="margin: 6px 0 0; font-size: 11px;">
+						Auto-convert FanFiction links between m. and www.
+					</p>
+				`
+				: "";
+
 		row.innerHTML = `
 			<div class="site-autoadd-header">
-				<div class="site-autoadd-icon">${iconHtml || "📖"}</div>
-				<div class="site-autoadd-name">${shelf.name || shelf.id}</div>
+				<div class="site-autoadd-title">
+					<div class="site-autoadd-icon">${iconHtml || "📖"}</div>
+					<div class="site-autoadd-name">${shelf.name || shelf.id}</div>
+				</div>
+				<div class="site-autoadd-status ${
+					siteEnabled ? "enabled" : "disabled"
+				}">${siteEnabled ? "Enabled" : "Disabled"}</div>
 			</div>
 			<div class="site-autoadd-controls">
-				<label>
-					<span>Auto-add novels</span>
+				<label class="site-autoadd-toggle">
+					<input type="checkbox" data-setting="enabled" ${siteEnabled ? "checked" : ""} />
+					<span>Site enabled</span>
+				</label>
+				<label class="site-autoadd-toggle">
 					<input type="checkbox" data-setting="autoAddEnabled" ${
 						autoAddEnabled ? "checked" : ""
-					} />
+					} ${siteEnabled ? "" : "disabled"} />
+					<span>Auto-add novels</span>
 				</label>
 				<label>
 					<span>On chapter pages</span>
-					<select data-setting="autoAddStatusChapter">
+					<select data-setting="autoAddStatusChapter" ${siteEnabled ? "" : "disabled"}>
 						${statusOptions
 							.map((status) => {
 								const label =
@@ -961,7 +1831,7 @@ function renderSiteAutoAddSettings() {
 				</label>
 				<label>
 					<span>On novel pages</span>
-					<select data-setting="autoAddStatusNovel">
+					<select data-setting="autoAddStatusNovel" ${siteEnabled ? "" : "disabled"}>
 						${statusOptions
 							.map((status) => {
 								const label =
@@ -976,10 +1846,36 @@ function renderSiteAutoAddSettings() {
 							.join("")}
 					</select>
 				</label>
+				${domainPreferenceRow}
 			</div>
 		`;
 
+		const updateRowState = (enabled) => {
+			row.classList.toggle("is-disabled", !enabled);
+			const statusBadge = row.querySelector(".site-autoadd-status");
+			if (statusBadge) {
+				statusBadge.textContent = enabled ? "Enabled" : "Disabled";
+				statusBadge.classList.toggle("enabled", enabled);
+				statusBadge.classList.toggle("disabled", !enabled);
+			}
+			row.querySelectorAll("select").forEach((select) => {
+				select.disabled = !enabled;
+			});
+			const autoAddToggle = row.querySelector(
+				"input[data-setting='autoAddEnabled']",
+			);
+			if (autoAddToggle) {
+				autoAddToggle.disabled = !enabled;
+				if (!enabled) autoAddToggle.checked = false;
+			}
+		};
+
+		updateRowState(siteEnabled);
+
 		const handleChange = async () => {
+			const enabledToggle = row.querySelector(
+				"input[data-setting='enabled']",
+			);
 			const autoAddToggle = row.querySelector(
 				"input[data-setting='autoAddEnabled']",
 			);
@@ -989,12 +1885,29 @@ function renderSiteAutoAddSettings() {
 			const statusNovel = row.querySelector(
 				"select[data-setting='autoAddStatusNovel']",
 			);
+			const domainPreferenceSelect = row.querySelector(
+				"select[data-setting='domainPreference']",
+			);
+			const enabled = enabledToggle?.checked ?? true;
+
+			updateRowState(enabled);
 
 			const updated = {
-				autoAddEnabled: autoAddToggle?.checked ?? true,
+				enabled,
+				autoAddEnabled: enabled
+					? (autoAddToggle?.checked ?? true)
+					: false,
 				autoAddStatusChapter:
 					statusChapter?.value || autoAddStatusChapter,
 				autoAddStatusNovel: statusNovel?.value || autoAddStatusNovel,
+				...(shelf.id === "fanfiction"
+					? {
+							domainPreference:
+								domainPreferenceSelect?.value ||
+								domainPreference ||
+								"auto",
+						}
+					: {}),
 			};
 
 			try {
@@ -1106,6 +2019,158 @@ function setupEventListeners() {
 	elements.importFile.addEventListener("change", handleImport);
 	elements.clearBtn.addEventListener("click", handleClearLibrary);
 
+	// Settings tabs
+	const settingsTabs = document.querySelectorAll(".settings-tab");
+	settingsTabs.forEach((tab) => {
+		tab.addEventListener("click", () => {
+			const targetTabId = tab.dataset.tab;
+
+			// Remove active class from all tabs
+			settingsTabs.forEach((t) => t.classList.remove("active"));
+			// Add active class to clicked tab
+			tab.classList.add("active");
+
+			// Hide all tab contents
+			document
+				.querySelectorAll(".settings-tab-content")
+				.forEach((content) => {
+					content.classList.add("hidden");
+				});
+
+			// Show target tab content
+			const targetContent = document.getElementById(targetTabId);
+			if (targetContent) {
+				targetContent.classList.remove("hidden");
+			}
+		});
+	});
+
+	// Initialize first tab as active
+	if (settingsTabs.length > 0) {
+		settingsTabs[0].classList.add("active");
+	}
+
+	// Settings save button - saves library settings configuration
+	if (elements.settingsSaveBtn) {
+		elements.settingsSaveBtn.addEventListener("click", async () => {
+			try {
+				// Collect all settings from the modal
+				const apiKey = elements.libraryApiKeyInput?.value?.trim() || "";
+				const selectedModelId =
+					elements.libraryModelSelect?.value || "";
+				let modelEndpoint = "";
+				if (selectedModelId) {
+					const stored =
+						await browser.storage.local.get("availableModels");
+					const match = stored.availableModels?.find(
+						(m) => m.id === selectedModelId,
+					);
+					modelEndpoint =
+						match?.endpoint ||
+						`https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+				}
+
+				const themeSettings = elements.libraryThemeMode
+					? {
+							mode: elements.libraryThemeMode.value || "dark",
+							accentPrimary:
+								elements.libraryAccentColorPicker?.value ||
+								defaultTheme.accentPrimary,
+							accentSecondary:
+								elements.libraryAccentSecondaryPicker?.value ||
+								defaultTheme.accentSecondary,
+							bgColor:
+								elements.libraryBackgroundColorPicker?.value ||
+								defaultTheme.bgColor,
+							textColor:
+								elements.libraryTextColorPicker?.value ||
+								defaultTheme.textColor,
+						}
+					: null;
+
+				const settingsToSave = {
+					autoHoldEnabled: elements.autoHoldToggle?.checked ?? false,
+					autoHoldDays: parseInt(
+						elements.autoHoldDays?.value ?? 7,
+						10,
+					),
+					rollingBackupEnabled:
+						elements.rollingBackupToggle?.checked ?? true,
+					telemetryEnabled: elements.telemetryToggle?.checked ?? true,
+					sendErrorsEnabled:
+						elements.sendErrorsToggle?.checked ?? true,
+					webhookUrl: elements.webhookUrl?.value?.trim() ?? "",
+					apiKey,
+					selectedModelId,
+					modelEndpoint,
+					customTemperature: elements.libraryTemperatureSlider
+						? parseFloat(elements.libraryTemperatureSlider.value)
+						: undefined,
+					fontSize: elements.libraryFontSizeSlider
+						? parseInt(elements.libraryFontSizeSlider.value, 10)
+						: undefined,
+					themeSettings: themeSettings || undefined,
+					// Advanced Settings
+					topK: elements.libraryTopKSlider
+						? parseInt(elements.libraryTopKSlider.value, 10)
+						: undefined,
+					topP: elements.libraryTopPSlider
+						? parseFloat(elements.libraryTopPSlider.value)
+						: undefined,
+					customPrompt:
+						elements.libraryPromptMain?.value || undefined,
+					customSummaryPrompt:
+						elements.libraryPromptSummary?.value || undefined,
+					customShortSummaryPrompt:
+						elements.libraryPromptShortSummary?.value || undefined,
+					permanentPrompt:
+						elements.libraryPromptPermanent?.value || undefined,
+				};
+
+				// Save to storage
+				await browser.storage.local.set({
+					autoHoldEnabled: settingsToSave.autoHoldEnabled,
+					autoHoldDays: settingsToSave.autoHoldDays,
+					rg_rolling_backup_enabled:
+						settingsToSave.rollingBackupEnabled,
+					telemetryEnabled: settingsToSave.telemetryEnabled,
+					sendErrorsEnabled: settingsToSave.sendErrorsEnabled,
+					webhookUrl: settingsToSave.webhookUrl,
+					apiKey: settingsToSave.apiKey,
+					selectedModelId: settingsToSave.selectedModelId,
+					modelEndpoint: settingsToSave.modelEndpoint,
+					customTemperature: settingsToSave.customTemperature,
+					fontSize: settingsToSave.fontSize,
+					topK: settingsToSave.topK,
+					topP: settingsToSave.topP,
+					customPrompt: settingsToSave.customPrompt,
+					customSummaryPrompt: settingsToSave.customSummaryPrompt,
+					customShortSummaryPrompt:
+						settingsToSave.customShortSummaryPrompt,
+					permanentPrompt: settingsToSave.permanentPrompt,
+					...(settingsToSave.themeSettings
+						? { themeSettings: settingsToSave.themeSettings }
+						: {}),
+				});
+
+				if (settingsToSave.themeSettings) {
+					setThemeVariables(settingsToSave.themeSettings);
+				}
+
+				showNotification(
+					"✅ All settings saved successfully!",
+					"success",
+				);
+			} catch (error) {
+				debugError("Error saving settings:", error);
+				showNotification(
+					`❌ Failed to save settings: ${error.message}`,
+					"error",
+				);
+			}
+		});
+	}
+
 	// Comprehensive backup
 	if (elements.comprehensiveBackupBtn) {
 		elements.comprehensiveBackupBtn.addEventListener(
@@ -1136,6 +2201,286 @@ function setupEventListeners() {
 				"info",
 			);
 		});
+	}
+
+	// New comprehensive backup handlers (from popup)
+	if (elements.createComprehensiveBackupBtn) {
+		elements.createComprehensiveBackupBtn.addEventListener(
+			"click",
+			async () => {
+				try {
+					elements.createComprehensiveBackupBtn.disabled = true;
+					elements.createComprehensiveBackupBtn.textContent =
+						"⏳ Creating...";
+
+					const backup = await createComprehensiveBackup({
+						type: BACKUP_OPTIONS.FULL,
+						includeApiKeys:
+							elements.backupIncludeApiKeys?.checked ?? true,
+						includeCredentials:
+							elements.backupIncludeCredentials?.checked ?? true,
+					});
+
+					downloadBackupAsFile(backup);
+					showNotification(
+						`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
+						"success",
+					);
+				} catch (error) {
+					debugError("Comprehensive backup failed:", error);
+					showNotification(
+						`❌ Backup failed: ${error.message}`,
+						"error",
+					);
+				} finally {
+					elements.createComprehensiveBackupBtn.disabled = false;
+					elements.createComprehensiveBackupBtn.textContent =
+						"💾 Full Backup";
+				}
+			},
+		);
+	}
+
+	if (elements.restoreComprehensiveBackupBtn) {
+		elements.restoreComprehensiveBackupBtn.addEventListener("click", () => {
+			elements.comprehensiveBackupFile?.click();
+		});
+	}
+
+	if (elements.comprehensiveBackupFile) {
+		elements.comprehensiveBackupFile.addEventListener(
+			"change",
+			async (e) => {
+				const file = e.target.files?.[0];
+				if (!file) return;
+
+				try {
+					const backup = await readBackupFromFile(file);
+
+					if (!backup.version || !backup.data) {
+						throw new Error("Invalid backup file format");
+					}
+
+					const novelCount = backup.metadata?.novelCount || 0;
+					const hasApiKey = backup.metadata?.hasApiKey;
+					const hasCredentials = backup.metadata?.hasDriveCredentials;
+
+					let confirmMsg = `Restore this backup?\n\n`;
+					if (backup.extensionVersion) {
+						confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
+					}
+					if (backup.version) {
+						confirmMsg += `📋 Format Version: ${backup.version}\n`;
+					}
+					confirmMsg += `📚 ${novelCount} novels\n`;
+					confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
+					confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
+					confirmMsg += `Mode: MERGE (preserves existing data)`;
+
+					if (!confirm(confirmMsg)) {
+						e.target.value = "";
+						return;
+					}
+
+					const result = await restoreComprehensiveBackup(backup, {
+						mode: "merge",
+						restoreApiKeys:
+							hasApiKey && confirm("Restore API keys?"),
+						restoreCredentials:
+							hasCredentials &&
+							confirm("Restore OAuth credentials?"),
+					});
+
+					if (result.success) {
+						if (result.versionInfo?.warnings?.length > 0) {
+							const warningMsg =
+								result.versionInfo.warnings.join("\n");
+							showNotification(`⚠️ ${warningMsg}`, "warning");
+							setTimeout(() => {
+								showNotification(
+									`✅ Restored ${result.restoredKeys.length} items!`,
+									"success",
+								);
+							}, 3000);
+						} else {
+							showNotification(
+								`✅ Restored ${result.restoredKeys.length} items!`,
+								"success",
+							);
+						}
+						setTimeout(() => location.reload(), 1500);
+					}
+				} catch (error) {
+					debugError("Restore failed:", error);
+					showNotification(
+						`❌ Restore failed: ${error.message}`,
+						"error",
+					);
+				}
+
+				e.target.value = "";
+			},
+		);
+	}
+
+	if (elements.autoBackupEnabled) {
+		elements.autoBackupEnabled.addEventListener("change", async (e) => {
+			await browser.storage.local.set({
+				rg_rolling_backup_enabled: e.target.checked,
+			});
+			showNotification(
+				e.target.checked
+					? "Automatic rolling backups enabled"
+					: "Automatic rolling backups disabled",
+				"info",
+			);
+		});
+	}
+
+	if (elements.rollingBackupInterval) {
+		const updateRollingIntervalDisplay = () => {
+			if (elements.rollingBackupIntervalDisplay) {
+				elements.rollingBackupIntervalDisplay.textContent =
+					elements.rollingBackupInterval.value;
+			}
+		};
+
+		elements.rollingBackupInterval.addEventListener("input", () => {
+			updateRollingIntervalDisplay();
+		});
+		elements.rollingBackupInterval.addEventListener("change", () => {
+			updateRollingIntervalDisplay();
+			saveBackupCheckboxSettings();
+		});
+	}
+
+	if (elements.createRollingBackupBtn) {
+		elements.createRollingBackupBtn.addEventListener("click", async () => {
+			try {
+				elements.createRollingBackupBtn.disabled = true;
+				elements.createRollingBackupBtn.textContent = "⏳ Creating...";
+
+				await createRollingBackup("manual");
+				await loadRollingBackups();
+				showNotification("✅ Rolling backup created!", "success");
+			} catch (error) {
+				debugError("Rolling backup failed:", error);
+				showNotification(`❌ Failed: ${error.message}`, "error");
+			} finally {
+				elements.createRollingBackupBtn.disabled = false;
+				elements.createRollingBackupBtn.textContent =
+					"➕ Create Rolling Backup Now";
+			}
+		});
+	}
+
+	// Backup checkbox settings persistence
+	if (elements.backupIncludeApiKeys) {
+		elements.backupIncludeApiKeys.addEventListener(
+			"change",
+			saveBackupCheckboxSettings,
+		);
+	}
+	if (elements.backupIncludeCredentials) {
+		elements.backupIncludeCredentials.addEventListener(
+			"change",
+			saveBackupCheckboxSettings,
+		);
+	}
+
+	// Google Drive Backup
+	if (elements.libraryViewBackupsBtn) {
+		elements.libraryViewBackupsBtn.addEventListener(
+			"click",
+			handleViewDriveBackups,
+		);
+	}
+	if (elements.libraryDriveSyncNowBtn) {
+		elements.libraryDriveSyncNowBtn.addEventListener(
+			"click",
+			handleDriveSyncFromLibrary,
+		);
+	}
+	if (elements.driveBackupsClose) {
+		elements.driveBackupsClose.addEventListener("click", () =>
+			closeModal(elements.driveBackupsModal),
+		);
+	}
+	if (elements.connectDriveBtn) {
+		elements.connectDriveBtn.addEventListener("click", handleConnectDrive);
+	}
+	if (elements.disconnectDriveBtn) {
+		elements.disconnectDriveBtn.addEventListener(
+			"click",
+			handleDisconnectDrive,
+		);
+	}
+	if (elements.backupNowBtn) {
+		elements.backupNowBtn.addEventListener("click", handleBackupNow);
+	}
+	if (elements.driveBackupModeRadios) {
+		elements.driveBackupModeRadios.forEach((radio) => {
+			radio.addEventListener("change", handleDriveBackupModeChange);
+		});
+	}
+	if (elements.continuousBackupCheckInterval) {
+		elements.continuousBackupCheckInterval.addEventListener(
+			"change",
+			handleContinuousBackupCheckIntervalChange,
+		);
+		elements.continuousBackupCheckInterval.addEventListener(
+			"input",
+			handleContinuousBackupCheckIntervalChange,
+		);
+	}
+	if (elements.driveBackupRetention) {
+		elements.driveBackupRetention.addEventListener(
+			"change",
+			handleDriveBackupRetentionChange,
+		);
+		elements.driveBackupRetention.addEventListener(
+			"input",
+			handleDriveBackupRetentionChange,
+		);
+	}
+	if (elements.driveAutoRestoreEnabled) {
+		elements.driveAutoRestoreEnabled.addEventListener(
+			"change",
+			handleDriveAutoRestoreToggle,
+		);
+	}
+	if (elements.toggleClientSecretBtn && elements.driveClientSecretInput) {
+		elements.toggleClientSecretBtn.addEventListener("click", () => {
+			const isPassword =
+				elements.driveClientSecretInput.type === "password";
+			elements.driveClientSecretInput.type = isPassword
+				? "text"
+				: "password";
+			elements.toggleClientSecretBtn.textContent = isPassword
+				? "🙈"
+				: "👁️";
+			elements.toggleClientSecretBtn.title = isPassword
+				? "Hide Client Secret"
+				: "Show Client Secret";
+		});
+	}
+	if (elements.saveOAuthSettingsBtn) {
+		elements.saveOAuthSettingsBtn.addEventListener(
+			"click",
+			handleSaveOAuthSettings,
+		);
+	}
+	if (elements.parseOAuthJsonBtn) {
+		elements.parseOAuthJsonBtn.addEventListener(
+			"click",
+			handleParseOAuthJson,
+		);
+	}
+	if (elements.saveOAuthFromJsonBtn) {
+		elements.saveOAuthFromJsonBtn.addEventListener(
+			"click",
+			handleSaveOAuthFromJson,
+		);
 	}
 
 	// Telemetry settings
@@ -1171,6 +2516,373 @@ function setupEventListeners() {
 				showNotification("Custom webhook URL saved", "success");
 			}
 		});
+	}
+
+	// Theme settings (Library Modal)
+	const buildLibraryTheme = () => ({
+		mode: elements.libraryThemeMode?.value || "dark",
+		accentPrimary:
+			elements.libraryAccentColorPicker?.value ||
+			defaultTheme.accentPrimary,
+		accentSecondary:
+			elements.libraryAccentSecondaryPicker?.value ||
+			defaultTheme.accentSecondary,
+		bgColor:
+			elements.libraryBackgroundColorPicker?.value ||
+			defaultTheme.bgColor,
+		textColor:
+			elements.libraryTextColorPicker?.value || defaultTheme.textColor,
+	});
+
+	const syncLibraryColorInputs = (picker, text) => {
+		if (!picker || !text) return;
+		picker.addEventListener("input", () => {
+			text.value = picker.value;
+			setThemeVariables(buildLibraryTheme());
+		});
+		text.addEventListener("input", () => {
+			if (/^#[0-9A-Fa-f]{6}$/.test(text.value)) {
+				picker.value = text.value;
+				setThemeVariables(buildLibraryTheme());
+			}
+		});
+	};
+
+	syncLibraryColorInputs(
+		elements.libraryAccentColorPicker,
+		elements.libraryAccentColorText,
+	);
+	syncLibraryColorInputs(
+		elements.libraryAccentSecondaryPicker,
+		elements.libraryAccentSecondaryText,
+	);
+	syncLibraryColorInputs(
+		elements.libraryBackgroundColorPicker,
+		elements.libraryBackgroundColorText,
+	);
+	syncLibraryColorInputs(
+		elements.libraryTextColorPicker,
+		elements.libraryTextColorText,
+	);
+
+	if (elements.libraryThemeMode) {
+		elements.libraryThemeMode.addEventListener("change", async () => {
+			const theme = buildLibraryTheme();
+			setThemeVariables(theme);
+			await browser.storage.local.set({ themeSettings: theme });
+			showNotification("✅ Theme updated", "success");
+		});
+	}
+
+	if (elements.librarySaveThemeBtn) {
+		elements.librarySaveThemeBtn.addEventListener("click", async () => {
+			try {
+				const theme = buildLibraryTheme();
+				await browser.storage.local.set({ themeSettings: theme });
+				setThemeVariables(theme);
+				showNotification("✅ Theme saved", "success");
+			} catch (error) {
+				debugError("Failed to save theme:", error);
+				showNotification("❌ Failed to save theme", "error");
+			}
+		});
+	}
+
+	if (elements.libraryResetThemeBtn) {
+		elements.libraryResetThemeBtn.addEventListener("click", async () => {
+			try {
+				await browser.storage.local.set({
+					themeSettings: defaultTheme,
+				});
+				await loadLibraryThemeControls();
+				setThemeVariables(defaultTheme);
+				showNotification("✅ Theme reset", "success");
+			} catch (error) {
+				debugError("Failed to reset theme:", error);
+				showNotification("❌ Failed to reset theme", "error");
+			}
+		});
+	}
+
+	// API key + model settings (Library Modal)
+	if (elements.librarySaveApiKeyBtn && elements.libraryApiKeyInput) {
+		elements.librarySaveApiKeyBtn.addEventListener("click", async () => {
+			const apiKey = elements.libraryApiKeyInput.value.trim();
+			if (!apiKey) {
+				showNotification("❌ Please enter a valid API key", "error");
+				return;
+			}
+			try {
+				await browser.storage.local.set({ apiKey });
+				await updateLibraryModelSelector(apiKey);
+				showNotification("✅ API key saved", "success");
+			} catch (error) {
+				debugError("Error saving API key:", error);
+				showNotification("❌ Failed to save API key", "error");
+			}
+		});
+	}
+
+	if (elements.libraryTestApiKeyBtn && elements.libraryApiKeyInput) {
+		elements.libraryTestApiKeyBtn.addEventListener("click", async () => {
+			const apiKey = elements.libraryApiKeyInput.value.trim();
+			if (!apiKey) {
+				showNotification("❌ Enter an API key to test", "error");
+				return;
+			}
+			try {
+				elements.libraryTestApiKeyBtn.disabled = true;
+				showNotification("🔍 Testing API key...", "info");
+				const models = await fetchLibraryModels(apiKey);
+				if (models && models.length > 0) {
+					await browser.storage.local.set({ apiKey });
+					await updateLibraryModelSelector(apiKey);
+					showNotification(
+						"✅ API key valid. Models loaded.",
+						"success",
+					);
+				} else {
+					showNotification(
+						"❌ API key invalid or no models",
+						"error",
+					);
+				}
+			} catch (error) {
+				debugError("Error testing API key:", error);
+				showNotification("❌ Failed to test API key", "error");
+			} finally {
+				elements.libraryTestApiKeyBtn.disabled = false;
+			}
+		});
+	}
+
+	if (elements.libraryRefreshModelsBtn) {
+		elements.libraryRefreshModelsBtn.addEventListener("click", async () => {
+			const apiKey = elements.libraryApiKeyInput?.value.trim();
+			if (!apiKey) {
+				showNotification("❌ Enter API key to refresh models", "error");
+				return;
+			}
+			await updateLibraryModelSelector(apiKey);
+			showNotification("✅ Models refreshed", "success");
+		});
+	}
+
+	if (elements.libraryModelSelect) {
+		elements.libraryModelSelect.addEventListener("change", async () => {
+			const selectedModelId = elements.libraryModelSelect.value;
+			if (!selectedModelId) return;
+			try {
+				const stored =
+					await browser.storage.local.get("availableModels");
+				const matched = stored.availableModels?.find(
+					(m) => m.id === selectedModelId,
+				);
+				const modelEndpoint =
+					matched?.endpoint ||
+					`https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+				setLibraryModelEndpoint(modelEndpoint);
+				await browser.storage.local.set({
+					selectedModelId,
+					modelEndpoint,
+				});
+				showNotification("✅ Model selected", "success");
+			} catch (error) {
+				debugError("Failed to save model selection:", error);
+				showNotification("❌ Failed to save model", "error");
+			}
+		});
+	}
+
+	if (elements.libraryCopyModelEndpointBtn) {
+		elements.libraryCopyModelEndpointBtn.addEventListener(
+			"click",
+			async () => {
+				const endpoint =
+					elements.libraryModelEndpointInput?.value || "";
+				if (!endpoint) {
+					showNotification("❌ No model URL to copy", "error");
+					return;
+				}
+				try {
+					await navigator.clipboard.writeText(endpoint);
+					showNotification("✅ Model URL copied", "success");
+				} catch (error) {
+					debugError("Failed to copy model URL:", error);
+					showNotification("❌ Failed to copy URL", "error");
+				}
+			},
+		);
+	}
+
+	// AI Model settings (Library Modal)
+	if (elements.libraryTemperatureSlider) {
+		elements.libraryTemperatureSlider.addEventListener("input", (e) => {
+			const value = parseFloat(e.target.value);
+			if (elements.libraryTemperatureValue) {
+				elements.libraryTemperatureValue.textContent = value.toFixed(1);
+			}
+		});
+
+		elements.libraryTemperatureSlider.addEventListener(
+			"change",
+			async (e) => {
+				const value = parseFloat(e.target.value);
+				await browser.storage.local.set({ customTemperature: value });
+				showNotification("✅ Temperature setting saved", "success");
+			},
+		);
+	}
+
+	// Font size settings (Library Modal)
+	if (elements.libraryFontSizeSlider) {
+		elements.libraryFontSizeSlider.addEventListener("input", (e) => {
+			const value = parseInt(e.target.value, 10);
+			if (elements.libraryFontSizeValue) {
+				elements.libraryFontSizeValue.textContent = `${value}%`;
+			}
+		});
+
+		elements.libraryFontSizeSlider.addEventListener("change", async (e) => {
+			const value = parseInt(e.target.value, 10);
+			await browser.storage.local.set({ fontSize: value });
+			document.documentElement.style.setProperty(
+				"--content-font-size",
+				`${value}%`,
+			);
+			showNotification("✅ Font size setting saved", "success");
+		});
+	}
+
+	// Advanced Settings - Top K slider (Library Modal)
+	if (elements.libraryTopKSlider) {
+		elements.libraryTopKSlider.addEventListener("input", (e) => {
+			const value = parseInt(e.target.value, 10);
+			if (elements.libraryTopKValue) {
+				elements.libraryTopKValue.textContent = value;
+			}
+		});
+
+		elements.libraryTopKSlider.addEventListener("change", async (e) => {
+			const value = parseInt(e.target.value, 10);
+			await browser.storage.local.set({ topK: value });
+			showNotification("✅ Top K setting saved", "success");
+		});
+	}
+
+	// Advanced Settings - Top P slider (Library Modal)
+	if (elements.libraryTopPSlider) {
+		elements.libraryTopPSlider.addEventListener("input", (e) => {
+			const value = parseFloat(e.target.value);
+			if (elements.libraryTopPValue) {
+				elements.libraryTopPValue.textContent = value.toFixed(2);
+			}
+		});
+
+		elements.libraryTopPSlider.addEventListener("change", async (e) => {
+			const value = parseFloat(e.target.value);
+			await browser.storage.local.set({ topP: value });
+			showNotification("✅ Top P setting saved", "success");
+		});
+	}
+
+	// Advanced Settings - Copy endpoint button (Library Modal)
+	if (elements.libraryAdvancedCopyEndpoint) {
+		elements.libraryAdvancedCopyEndpoint.addEventListener(
+			"click",
+			async () => {
+				const endpoint =
+					elements.libraryAdvancedModelEndpoint?.value || "";
+				if (!endpoint) {
+					showNotification("❌ No model URL to copy", "error");
+					return;
+				}
+				try {
+					await navigator.clipboard.writeText(endpoint);
+					showNotification("✅ Model URL copied", "success");
+				} catch (error) {
+					debugError("Failed to copy model URL:", error);
+					showNotification("❌ Failed to copy URL", "error");
+				}
+			},
+		);
+	}
+
+	// Factory Reset Button
+	if (document.getElementById("library-factory-reset-btn")) {
+		document
+			.getElementById("library-factory-reset-btn")
+			.addEventListener("click", handleFactoryReset);
+	}
+
+	// Advanced Settings - Prompt reset buttons (Library Modal)
+	if (elements.libraryResetPromptMain) {
+		elements.libraryResetPromptMain.addEventListener("click", async () => {
+			if (elements.libraryPromptMain) {
+				elements.libraryPromptMain.value = DEFAULT_PROMPT;
+				await browser.storage.local.set({
+					customPrompt: DEFAULT_PROMPT,
+				});
+				showNotification("✅ Main prompt reset to default", "success");
+			}
+		});
+	}
+
+	if (elements.libraryResetPromptSummary) {
+		elements.libraryResetPromptSummary.addEventListener(
+			"click",
+			async () => {
+				if (elements.libraryPromptSummary) {
+					elements.libraryPromptSummary.value =
+						DEFAULT_SUMMARY_PROMPT;
+					await browser.storage.local.set({
+						customSummaryPrompt: DEFAULT_SUMMARY_PROMPT,
+					});
+					showNotification(
+						"✅ Summary prompt reset to default",
+						"success",
+					);
+				}
+			},
+		);
+	}
+
+	if (elements.libraryResetPromptShortSummary) {
+		elements.libraryResetPromptShortSummary.addEventListener(
+			"click",
+			async () => {
+				if (elements.libraryPromptShortSummary) {
+					elements.libraryPromptShortSummary.value =
+						DEFAULT_SHORT_SUMMARY_PROMPT;
+					await browser.storage.local.set({
+						customShortSummaryPrompt: DEFAULT_SHORT_SUMMARY_PROMPT,
+					});
+					showNotification(
+						"✅ Short summary prompt reset to default",
+						"success",
+					);
+				}
+			},
+		);
+	}
+
+	if (elements.libraryResetPromptPermanent) {
+		elements.libraryResetPromptPermanent.addEventListener(
+			"click",
+			async () => {
+				if (elements.libraryPromptPermanent) {
+					elements.libraryPromptPermanent.value =
+						DEFAULT_PERMANENT_PROMPT;
+					await browser.storage.local.set({
+						permanentPrompt: DEFAULT_PERMANENT_PROMPT,
+					});
+					showNotification(
+						"✅ Permanent prompt reset to default",
+						"success",
+					);
+				}
+			},
+		);
 	}
 
 	// Telemetry consent modal (opt-out notification)
@@ -2895,6 +4607,843 @@ async function handleComprehensiveRestore(e) {
 }
 
 /**
+ * Handle viewing backups from Google Drive
+ */
+async function handleViewDriveBackups() {
+	try {
+		if (!elements.libraryViewBackupsBtn) {
+			debugError("View Backups button not found in DOM");
+			return;
+		}
+
+		// Check if connected to Drive
+		const tokens = await browser.storage.local.get("driveAuthTokens");
+		if (!tokens?.driveAuthTokens?.access_token) {
+			showNotification(
+				"❌ Not connected to Google Drive. Set up OAuth in Library settings first.",
+				"error",
+			);
+			return;
+		}
+
+		// Open modal and show loading state
+		openModal(elements.driveBackupsModal);
+		elements.driveBackupsLoading.classList.remove("hidden");
+		elements.driveBackupsList.classList.add("hidden");
+		elements.driveBackupsEmpty.classList.add("hidden");
+
+		debugLog("Fetching backups from Drive...");
+		const response = await browser.runtime.sendMessage({
+			action: "listDriveBackups",
+		});
+
+		debugLog("Backups response:", response);
+
+		if (!response?.success) {
+			throw new Error(response?.error || "Failed to fetch backups");
+		}
+
+		// Extract backups array from response object
+		const backups = response?.backups || [];
+
+		if (backups.length === 0) {
+			elements.driveBackupsLoading.classList.add("hidden");
+			elements.driveBackupsEmpty.classList.remove("hidden");
+			return;
+		}
+
+		// Download and parse each backup to get metadata
+		const backupsWithMeta = [];
+		for (const backup of backups) {
+			try {
+				const downloadResponse = await browser.runtime.sendMessage({
+					action: "downloadDriveBackup",
+					fileId: backup.id,
+				});
+
+				if (downloadResponse?.success && downloadResponse?.data) {
+					const backupData = downloadResponse.data;
+					// Check both new and old library keys for compatibility
+					const libraryData = backupData.data?.rg_novel_library?.novels || backupData.data?.novelHistory;
+					const novelCount = libraryData
+						? Object.keys(libraryData).length
+						: 0;
+					const hasApiKeys = !!(backupData.data?.apiKey || backupData.data?.backupApiKeys?.length);
+					const hasDriveSettings = !!(backupData.data?.driveClientId);
+					const hasTheme = !!(backupData.data?.themeSettings);
+
+					backupsWithMeta.push({
+						...backup,
+						novelCount,
+						hasApiKeys,
+						hasDriveSettings,
+						hasTheme,
+						backupData,
+					});
+				} else {
+					// Add backup without metadata if download failed
+					backupsWithMeta.push({
+						...backup,
+						novelCount: 0,
+						hasApiKeys: false,
+						hasDriveSettings: false,
+						hasTheme: false,
+					});
+				}
+			} catch (err) {
+				debugError(`Failed to download backup ${backup.name}:`, err);
+				// Add backup without metadata
+				backupsWithMeta.push({
+					...backup,
+					novelCount: 0,
+					hasApiKeys: false,
+					hasDriveSettings: false,
+					hasTheme: false,
+				});
+			}
+		}
+
+		// Display backups in modal
+		displayDriveBackups(backupsWithMeta);
+
+		// Track feature usage
+		if (typeof trackFeatureUsage === "function") {
+			trackFeatureUsage("view_drive_backups");
+		}
+	} catch (err) {
+		debugError("View backups failed", err);
+		showNotification(`❌ Failed to view backups: ${err.message}`, "error");
+		closeModal(elements.driveBackupsModal);
+	}
+}
+
+/**
+ * Display drive backups in modal
+ */
+function displayDriveBackups(backups) {
+	elements.driveBackupsLoading.classList.add("hidden");
+	elements.driveBackupsList.classList.remove("hidden");
+	elements.driveBackupsList.innerHTML = "";
+
+	// Get user's timezone
+	const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+	for (const backup of backups) {
+		const card = document.createElement("div");
+		card.style.cssText = `
+			background: var(--bg-secondary, #1e293b);
+			padding: 16px;
+			border-radius: 8px;
+			border-left: 3px solid #4285f4;
+			cursor: pointer;
+			transition: transform 0.2s, box-shadow 0.2s;
+		`;
+
+		card.addEventListener("mouseenter", () => {
+			card.style.transform = "translateX(4px)";
+			card.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+		});
+
+		card.addEventListener("mouseleave", () => {
+			card.style.transform = "";
+			card.style.boxShadow = "";
+		});
+
+		// Enhanced date formatting with timezone
+		const backupDate = new Date(backup.modifiedTime || backup.createdTime);
+		const dateOptions = {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+			timeZoneName: "short",
+			timeZone: userTimezone,
+		};
+		const formattedDate = backupDate.toLocaleString("en-US", dateOptions);
+		const relativeTime = getRelativeTimeString(backupDate);
+
+		const size = backup.size ? `${(backup.size / 1024).toFixed(1)} KB` : "Unknown";
+
+		// Extract more metadata from backup
+		const features = [];
+		if (backup.novelCount > 0) features.push(`📚 ${backup.novelCount} novels`);
+		if (backup.hasApiKeys) features.push("🔑 API Keys");
+		if (backup.hasDriveSettings) features.push("☁️ OAuth");
+		if (backup.hasTheme) features.push("🎨 Theme");
+
+		// Determine backup type from filename
+		const isContinuous = backup.name.includes("continuous");
+		const backupType = isContinuous ? "🔄 Continuous" : "📅 Scheduled";
+		const backupVersion = backup.backupData?.version || "Unknown";
+
+		card.innerHTML = `
+			<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+				<div style="flex: 1;">
+					<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+						<h3 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">
+							${backupType}
+						</h3>
+						<span style="font-size: 10px; padding: 2px 6px; background: rgba(66, 133, 244, 0.2); border-radius: 3px; color: #4285f4;">
+							v${backupVersion}
+						</span>
+					</div>
+					<p style="margin: 0 0 4px 0; font-size: 11px; color: var(--text-secondary, #9ca3af);">
+						🕒 ${formattedDate}
+					</p>
+					<p style="margin: 0; font-size: 10px; color: var(--text-secondary, #666); font-style: italic;">
+						${relativeTime} • 💾 ${size}
+					</p>
+				</div>
+				<button class="btn btn-primary" style="font-size: 11px; padding: 6px 12px;" data-backup-id="${backup.id}">
+					📥 Restore
+				</button>
+			</div>
+			${features.length > 0 ? `
+				<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color, #374151);">
+					${features.map(f => `<span style="font-size: 10px; padding: 3px 7px; background: var(--bg-tertiary, #0f172a); border-radius: 4px; color: var(--text-secondary, #9ca3af);">${f}</span>`).join('')}
+				</div>
+			` : ''}
+		`;
+
+		// Add click handler for restore button
+		const restoreBtn = card.querySelector("button");
+		restoreBtn.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			await handleRestoreSpecificBackup(backup);
+		});
+
+		elements.driveBackupsList.appendChild(card);
+	}
+}
+
+/**
+ * Handle restoring a specific backup
+ */
+async function handleRestoreSpecificBackup(backup) {
+	const confirm = window.confirm(
+		`Restore backup "${backup.name}"?\n\n` +
+		`Created: ${new Date(backup.createdTime).toLocaleString()}\n` +
+		`Novels: ${backup.novelCount || 0}\n\n` +
+		`⚠️ This will merge with your current library.`
+	);
+
+	if (!confirm) return;
+
+	try {
+		showNotification("🔄 Restoring backup...", "info");
+
+		if (backup.backupData) {
+			// We already have the data
+			const result = await restoreComprehensiveBackup(backup.backupData, { merge: true });
+			if (result.success) {
+				await loadLibrary();
+				await loadLibrarySettings();
+				closeModal(elements.driveBackupsModal);
+				showNotification(
+					`✅ Restored ${result.restored} items from backup!`,
+					"success"
+				);
+			} else {
+				throw new Error(result.error || "Restore failed");
+			}
+		} else {
+			// Download and restore
+			const downloadResponse = await browser.runtime.sendMessage({
+				action: "downloadDriveBackup",
+				fileId: backup.id,
+			});
+
+			if (downloadResponse?.success && downloadResponse?.data) {
+				const result = await restoreComprehensiveBackup(downloadResponse.data, { merge: true });
+				if (result.success) {
+					await loadLibrary();
+					await loadLibrarySettings();
+					closeModal(elements.driveBackupsModal);
+					showNotification(
+						`✅ Restored ${result.restored} items from backup!`,
+						"success"
+					);
+				} else {
+					throw new Error(result.error || "Restore failed");
+				}
+			} else {
+				throw new Error("Failed to download backup");
+			}
+		}
+	} catch (err) {
+		debugError("Failed to restore backup:", err);
+		showNotification(`❌ Failed to restore: ${err.message}`, "error");
+	}
+}
+
+/**
+ * Update Google Drive UI
+ */
+async function updateDriveUI() {
+	if (
+		!elements.driveNotConnected ||
+		!elements.driveConnected ||
+		!elements.driveStatusSpan
+	) {
+		return;
+	}
+
+	try {
+		const tokens = await browser.storage.local.get([
+			"driveAuthTokens",
+			"driveAuthError",
+			"backupMode",
+			"driveAutoRestoreEnabled",
+			"continuousBackupCheckIntervalMinutes",
+			"driveBackupRetention",
+			"driveClientId",
+			"driveClientSecret",
+		]);
+		const hasToken = tokens.driveAuthTokens?.access_token;
+
+		if (elements.driveClientIdInput) {
+			elements.driveClientIdInput.value =
+				tokens.driveClientId || DEFAULT_DRIVE_CLIENT_ID || "";
+		}
+		if (elements.driveClientSecretInput) {
+			elements.driveClientSecretInput.value =
+				tokens.driveClientSecret || "";
+		}
+
+		const mode = tokens.backupMode || "scheduled";
+		const continuousContainer = document.getElementById(
+			"continuousBackupCheckContainer",
+		);
+		if (continuousContainer) {
+			continuousContainer.style.display =
+				mode === "continuous" || mode === "both" ? "block" : "none";
+		}
+		const radios = elements.driveBackupModeRadios || [];
+		radios.forEach((radio) => {
+			radio.checked = radio.value === mode;
+		});
+		if (elements.driveAutoRestoreEnabled) {
+			elements.driveAutoRestoreEnabled.checked =
+				tokens.driveAutoRestoreEnabled === true;
+		}
+
+		// Load continuous backup interval
+		const interval =
+			tokens.continuousBackupCheckIntervalMinutes || 2;
+		if (elements.continuousBackupCheckInterval) {
+			elements.continuousBackupCheckInterval.value = interval;
+		}
+		const display = document.getElementById(
+			"continuousCheckIntervalDisplay",
+		);
+		if (display) {
+			display.textContent = interval;
+		}
+
+		// Load Drive backup retention
+		const retention = tokens.driveBackupRetention || 5;
+		if (elements.driveBackupRetention) {
+			elements.driveBackupRetention.value = retention;
+		}
+		if (elements.driveBackupRetentionDisplay) {
+			elements.driveBackupRetentionDisplay.textContent = retention;
+		}
+
+		if (hasToken) {
+			elements.driveNotConnected.style.display = "none";
+			elements.driveConnected.style.display = "block";
+			elements.driveStatusSpan.textContent = "🟢 Connected";
+			elements.driveStatusSpan.style.color = "#34a853";
+			if (elements.driveAuthError) {
+				elements.driveAuthError.style.display = "none";
+				elements.driveAuthError.textContent = "";
+			}
+		} else {
+			elements.driveNotConnected.style.display = "block";
+			elements.driveConnected.style.display = "none";
+			const authError = tokens.driveAuthError?.message;
+			if (authError) {
+				elements.driveStatusSpan.textContent = "🔴 Auth failed";
+				elements.driveStatusSpan.style.color = "#f59e0b";
+				if (elements.driveAuthError) {
+					elements.driveAuthError.textContent = authError;
+					elements.driveAuthError.style.display = "block";
+				}
+			} else {
+				elements.driveStatusSpan.textContent = "⚫ Disconnected";
+				elements.driveStatusSpan.style.color = "#999";
+				if (elements.driveAuthError) {
+					elements.driveAuthError.style.display = "none";
+					elements.driveAuthError.textContent = "";
+				}
+			}
+			if (elements.driveAutoRestoreEnabled) {
+				elements.driveAutoRestoreEnabled.checked = false;
+			}
+		}
+	} catch (err) {
+		debugError("Failed to update Drive UI", err);
+	}
+}
+
+/**
+ * Connect to Google Drive via OAuth
+ */
+async function handleConnectDrive() {
+	try {
+		if (!elements.connectDriveBtn) return;
+
+		elements.connectDriveBtn.disabled = true;
+		elements.connectDriveBtn.textContent = "🔗 Connecting...";
+
+		const saved = await browser.storage.local.get([
+			"driveClientId",
+			"driveClientSecret",
+		]);
+		const clientIdInput = elements.driveClientIdInput?.value.trim();
+		const clientSecretInput =
+			elements.driveClientSecretInput?.value.trim();
+		const clientId =
+			clientIdInput ||
+			saved.driveClientId ||
+			DEFAULT_DRIVE_CLIENT_ID;
+		const clientSecret =
+			clientSecretInput || saved.driveClientSecret || "";
+
+		await browser.storage.local.set({
+			driveClientId: clientId,
+			driveClientSecret: clientSecret,
+		});
+
+		const response = await browser.runtime.sendMessage({
+			action: "ensureDriveAuth",
+		});
+
+		if (response?.success) {
+			const tokens = await browser.storage.local.get("driveAuthTokens");
+			if (!tokens.driveAuthTokens?.access_token) {
+				throw new Error(
+					"OAuth completed but no tokens were saved. Check your OAuth client type and redirect URI.",
+				);
+			}
+
+			await browser.storage.local.set({
+				driveAutoRestoreEnabled: true,
+				driveAutoRestoreMergeMode: "merge",
+			});
+
+			showNotification(
+				"✅ Google Drive connected successfully!",
+				"success",
+			);
+			await updateDriveUI();
+
+			try {
+				await browser.runtime.sendMessage({
+					action: "uploadLibraryBackupToDrive",
+					folderId: null,
+					reason: "oauth-initial",
+				});
+			} catch (backupErr) {
+				debugError("Initial backup failed", backupErr);
+			}
+
+			try {
+				await browser.runtime.sendMessage({
+					action: "syncDriveNow",
+					reason: "oauth-initial",
+				});
+			} catch (syncErr) {
+				debugError("Initial sync failed", syncErr);
+			}
+		} else {
+			throw new Error(response?.error || "Authentication failed");
+		}
+	} catch (err) {
+		debugError("Failed to connect Drive", err);
+		showNotification(
+			`Failed to connect Google Drive: ${err.message}`,
+			"error",
+		);
+	} finally {
+		if (elements.connectDriveBtn) {
+			elements.connectDriveBtn.disabled = false;
+			elements.connectDriveBtn.textContent = "🔗 Connect Google Drive";
+		}
+	}
+}
+
+/**
+ * Disconnect from Google Drive
+ */
+async function handleDisconnectDrive() {
+	if (!confirm("Disconnect Google Drive? Backups won't sync automatically.")) {
+		return;
+	}
+
+	try {
+		await browser.storage.local.set({ driveAuthTokens: null });
+		showNotification("Disconnected from Google Drive", "success");
+		await updateDriveUI();
+	} catch (err) {
+		debugError("Failed to disconnect Drive", err);
+		showNotification("Failed to disconnect Google Drive", "error");
+	}
+}
+
+/**
+ * Backup library to Google Drive now
+ */
+async function handleBackupNow() {
+	if (!elements.backupNowBtn) return;
+
+	try {
+		const tokens = await browser.storage.local.get("driveAuthTokens");
+		if (!tokens.driveAuthTokens?.access_token) {
+			showNotification(
+				"❌ Not connected to Google Drive. Connect first.",
+				"error",
+			);
+			return;
+		}
+
+		elements.backupNowBtn.disabled = true;
+		elements.backupNowBtn.textContent = "📤 Backing up...";
+
+		const response = await browser.runtime.sendMessage({
+			action: "uploadLibraryBackupToDrive",
+			folderId: null,
+			reason: "manual",
+		});
+
+		if (response?.success) {
+			const fileName =
+				response.primary?.filename || response.name || "backup";
+			showNotification(`✅ Backup uploaded: ${fileName}`, "success");
+		} else {
+			throw new Error(response?.error || "Upload failed");
+		}
+	} catch (err) {
+		debugError("Failed to backup to Drive", err);
+		showNotification(`Failed: ${err.message}`, "error");
+	} finally {
+		elements.backupNowBtn.disabled = false;
+		elements.backupNowBtn.textContent = "📤 Backup Now";
+	}
+}
+
+/**
+ * Handle Drive backup mode change
+ */
+async function handleDriveBackupModeChange(e) {
+	try {
+		const mode = e.target.value;
+		await browser.storage.local.set({ backupMode: mode });
+
+		const continuousContainer = document.getElementById(
+			"continuousBackupCheckContainer",
+		);
+		if (continuousContainer) {
+			continuousContainer.style.display =
+				mode === "continuous" || mode === "both" ? "block" : "none";
+		}
+
+		showNotification(`Backup mode set to: ${mode}`, "success");
+	} catch (err) {
+		debugError("Failed to update backup mode", err);
+		showNotification("Failed to update backup mode", "error");
+	}
+}
+
+/**
+ * Handle continuous backup check interval change
+ */
+async function handleContinuousBackupCheckIntervalChange(e) {
+	try {
+		const interval = parseInt(e.target.value, 10);
+		await browser.storage.local.set({
+			continuousBackupCheckIntervalMinutes: interval,
+		});
+
+		const display = document.getElementById(
+			"continuousCheckIntervalDisplay",
+		);
+		if (display) {
+			display.textContent = interval;
+		}
+	} catch (err) {
+		debugError("Failed to update continuous backup interval", err);
+	}
+}
+
+/**
+ * Handle Drive backup retention change
+ */
+/**
+ * Handle Factory Reset - Delete everything (library + OAuth + settings)
+ */
+async function handleFactoryReset() {
+	try {
+		// Triple confirmation to prevent accidents
+		const confirmed1 = confirm(
+			"⚠️ FACTORY RESET WARNING\n\n" +
+				"This will permanently delete:\n" +
+				"• All novels from your library\n" +
+				"• All enhanced chapters and summaries\n" +
+				"• Google Drive OAuth credentials\n" +
+				"• All settings and preferences\n\n" +
+				"💡 This does NOT delete Google Drive cloud backups.\n\n" +
+				"Are you absolutely sure you want to continue?"
+		);
+
+		if (!confirmed1) {
+			showNotification("Factory Reset cancelled", "info");
+			return;
+		}
+
+		const confirmed2 = confirm(
+			"🔥 FINAL CONFIRMATION\n\n" +
+				"Type 'DELETE EVERYTHING' in your mind and click OK to proceed.\n\n" +
+				"This action CANNOT be undone!"
+		);
+
+		if (!confirmed2) {
+			showNotification("Factory Reset cancelled", "info");
+			return;
+		}
+
+		showNotification("🔥 Factory Reset in progress...", "info");
+
+		// 1. Clear all storage (library, OAuth, settings, everything)
+		await browser.storage.local.clear();
+
+		// 2. Disconnect from Google Drive (revoke OAuth)
+		try {
+			await revokeGoogleDriveAccess();
+		} catch (err) {
+			debugError("Failed to revoke Drive access during reset", err);
+		}
+
+		// 3. Reset UI to defaults
+		novelLibrary.clear();
+		renderNovelLibrary();
+		updateLibraryStats();
+
+		// 4. Reset all form elements to defaults
+		if (elements.driveBackupModeScheduled) {
+			elements.driveBackupModeScheduled.checked = true;
+		}
+		if (elements.driveBackupInterval) {
+			elements.driveBackupInterval.value = 2;
+		}
+		if (elements.driveBackupRetention) {
+			elements.driveBackupRetention.value = 5;
+		}
+
+		// 5. Show success message
+		showNotification(
+			"✅ Factory Reset complete - Extension restored to defaults",
+			"success"
+		);
+
+		// 6. Reload page after 2 seconds to ensure clean state
+		setTimeout(() => {
+			window.location.reload();
+		}, 2000);
+	} catch (err) {
+		debugError("Factory Reset failed", err);
+		showNotification(
+			`❌ Factory Reset failed: ${err.message}`,
+			"error"
+		);
+	}
+}
+
+async function handleDriveBackupRetentionChange(e) {
+	try {
+		const count = parseInt(e.target.value, 10);
+		await browser.storage.local.set({
+			driveBackupRetention: count,
+		});
+
+		if (elements.driveBackupRetentionDisplay) {
+			elements.driveBackupRetentionDisplay.textContent = count;
+		}
+	} catch (err) {
+		debugError("Failed to update Drive backup retention", err);
+	}
+}
+
+/**
+ * Handle Drive auto-restore toggle
+ */
+async function handleDriveAutoRestoreToggle(e) {
+	try {
+		const enabled = e.target.checked;
+		await browser.storage.local.set({
+			driveAutoRestoreEnabled: enabled,
+		});
+		showNotification(
+			enabled
+				? "Auto-restore from Drive enabled"
+				: "Auto-restore from Drive disabled",
+			"success",
+		);
+	} catch (err) {
+		debugError("Failed to update auto-restore", err);
+	}
+}
+
+/**
+ * Save OAuth settings manually
+ */
+async function handleSaveOAuthSettings() {
+	const clientId = elements.driveClientIdInput?.value.trim() || "";
+	const clientSecret =
+		elements.driveClientSecretInput?.value.trim() || "";
+
+	await browser.storage.local.set({
+		driveClientId: clientId,
+		driveClientSecret: clientSecret,
+	});
+
+	showNotification("OAuth credentials saved", "success");
+}
+
+/**
+ * Parse OAuth JSON and fill fields
+ */
+async function handleParseOAuthJson() {
+	try {
+		const jsonText = elements.oauthJsonPaste?.value?.trim();
+		if (!jsonText) {
+			showNotification("Paste your OAuth JSON first", "error");
+			return;
+		}
+
+		const result = parseOAuthCredentials(jsonText);
+		if (!result.valid) {
+			showNotification(`❌ ${result.error}`, "error");
+			return;
+		}
+
+		const uriValidation = validateRedirectUris(result.redirectUris);
+		if (elements.driveClientIdInput) {
+			elements.driveClientIdInput.value = result.clientId;
+		}
+		if (elements.driveClientSecretInput) {
+			elements.driveClientSecretInput.value = result.clientSecret || "";
+		}
+		if (elements.toggleClientSecretBtn && elements.driveClientSecretInput) {
+			elements.driveClientSecretInput.type = "text";
+			elements.toggleClientSecretBtn.textContent = "🙈";
+			elements.toggleClientSecretBtn.title = "Hide Client Secret";
+		}
+
+		const warning = uriValidation.warnings?.length
+			? ` ${uriValidation.warnings.join(", ")}`
+			: "";
+		showNotification(`✅ Parsed OAuth JSON.${warning}`, "success");
+	} catch (err) {
+		debugError("Failed to parse OAuth JSON", err);
+		showNotification("Failed to parse OAuth JSON", "error");
+	}
+}
+
+/**
+ * Save OAuth JSON into storage
+ */
+async function handleSaveOAuthFromJson() {
+	try {
+		const clientId = elements.driveClientIdInput?.value.trim() || "";
+		const clientSecret =
+			elements.driveClientSecretInput?.value.trim() || "";
+		await browser.storage.local.set({
+			driveClientId: clientId,
+			driveClientSecret: clientSecret,
+		});
+		showNotification("OAuth credentials saved", "success");
+	} catch (err) {
+		debugError("Failed to save OAuth credentials", err);
+		showNotification("Failed to save OAuth credentials", "error");
+	}
+}
+
+/**
+ * Handle syncing library from Google Drive
+ */
+async function handleDriveSyncFromLibrary() {
+	try {
+		if (!elements.libraryDriveSyncNowBtn) {
+			debugError("Sync from Drive button not found in DOM");
+			return;
+		}
+
+		const originalText = elements.libraryDriveSyncNowBtn.textContent;
+		elements.libraryDriveSyncNowBtn.setAttribute("data-original-text", originalText);
+
+		// Check if connected to Drive
+		const tokens = await browser.storage.local.get("driveAuthTokens");
+		if (!tokens?.driveAuthTokens?.access_token) {
+			showNotification(
+				"❌ Not connected to Google Drive. Set up OAuth in Library settings first.",
+				"error",
+			);
+			return;
+		}
+
+		elements.libraryDriveSyncNowBtn.disabled = true;
+		elements.libraryDriveSyncNowBtn.textContent = "⏳ Syncing...";
+
+		debugLog("Syncing library from Drive...");
+		const response = await browser.runtime.sendMessage({
+			action: "syncDriveNow",
+		});
+
+		if (!response) {
+			throw new Error("No response from background script");
+		}
+
+		if (response?.success) {
+			debugLog("Drive sync successful", response);
+			showNotification(
+				"✅ Library synced from Drive successfully!",
+				"success",
+			);
+
+			// Reload library to show synced data
+			if (typeof loadLibrary === "function") {
+				await loadLibrary();
+			}
+			if (typeof loadLibrarySettings === "function") {
+				await loadLibrarySettings();
+			}
+
+			// Track feature usage
+			if (typeof trackFeatureUsage === "function") {
+				trackFeatureUsage("drive_sync_from_library");
+			}
+		} else {
+			throw new Error(response?.error || "Drive sync failed");
+		}
+	} catch (err) {
+		debugError("Drive sync failed", err);
+		showNotification(`❌ Failed to sync from Drive: ${err.message}`, "error");
+	} finally {
+		if (elements.libraryDriveSyncNowBtn) {
+			elements.libraryDriveSyncNowBtn.disabled = false;
+			const originalText = elements.libraryDriveSyncNowBtn.getAttribute("data-original-text");
+			if (originalText) {
+				elements.libraryDriveSyncNowBtn.textContent = originalText;
+				elements.libraryDriveSyncNowBtn.removeAttribute("data-original-text");
+			}
+		}
+	}
+}
+
+/**
  * Show/hide loading state
  */
 function showLoading(show) {
@@ -3401,3 +5950,14 @@ browser.storage.onChanged.addListener((changes, areaName) => {
 
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", init);
+
+// Check URL hash to auto-open settings modal
+window.addEventListener("hashchange", handleHashChange);
+window.addEventListener("load", handleHashChange);
+
+function handleHashChange() {
+	const hash = window.location.hash.substring(1); // Remove '#'
+	if (hash === "settings" && elements.settingsModal) {
+		openModal(elements.settingsModal);
+	}
+}
