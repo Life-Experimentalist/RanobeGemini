@@ -12,6 +12,7 @@ export class FanfictionMobileHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
 	static SUPPORTED_DOMAINS = [
 		"m.fanfiction.net", // Mobile-specific domain
+		"m.fanfiction.ws", // Alternate domain but only used to redirect to default domain
 	];
 
 	static DEFAULT_ENABLED = false;
@@ -43,25 +44,6 @@ Please maintain:
 - Any special formatting for emphasis
 - Preserve the narrative flow and pacing
 When enhancing, improve readability while respecting the author's creative voice and the source material.`;
-
-	static initialize() {
-		try {
-			const { hostname, pathname, search, hash } = window.location;
-			const isBareDomain = hostname === "fanfiction.net";
-			const isStoryPath = /^\/s\/\d+/.test(pathname);
-			const isMobileUA =
-				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-				window.innerWidth <= 768;
-			if (isBareDomain && isStoryPath && isMobileUA) {
-				const target = `https://m.fanfiction.net${pathname}${search}${hash}`;
-				if (window.location.href !== target) {
-					window.location.replace(target);
-				}
-			}
-		} catch (_err) {
-			// no-op
-		}
-	}
 
 	constructor() {
 		super();

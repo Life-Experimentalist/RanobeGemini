@@ -1887,6 +1887,112 @@ async function initializePopup() {
 	}
 
 	/**
+	 * Display novels grouped by website
+	 */
+	async function displayNovelsByWebsite(allNovels, options = {}) {
+		try {
+			if (!novelsListContainer) {
+				return;
+			}
+			if (allNovels.length === 0) {
+				novelsListContainer.innerHTML =
+					'<div class="no-novels">No novels in your library yet.</div>';
+				return;
+			}
+
+			const novelsByShelf = new Map();
+			allNovels.forEach((novel) => {
+				if (!novel || !novel.shelfId) return;
+				const shelf = Object.values(SHELVES).find(
+					(s) => s.id === novel.shelfId,
+				);
+				if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
+					return;
+				}
+				if (!novelsByShelf.has(novel.shelfId)) {
+					novelsByShelf.set(novel.shelfId, []);
+				}
+				novelsByShelf.get(novel.shelfId).push(novel);
+			});
+
+			const sortedShelves = Array.from(novelsByShelf.entries()).sort(
+				(a, b) => {
+					const latestA = Math.max(
+						...a[1].map((n) => n.lastAccessedAt || 0),
+					);
+					const latestB = Math.max(
+						...b[1].map((n) => n.lastAccessedAt || 0),
+					);
+					return latestB - latestA;
+				},
+			);
+
+			novelsListContainer.innerHTML = "";
+			sortedShelves.forEach(([shelfId, shelfNovels]) => {
+				const sortedNovels = shelfNovels.sort(
+					(a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0),
+				);
+				const section = createDomainSection(
+					shelfId,
+					sortedNovels,
+					options,
+				);
+				novelsListContainer.appendChild(section);
+			});
+
+			attachLibraryListHandlers();
+		} catch (error) {
+			debugError("Error displaying novels by website:", error);
+			if (novelsListContainer) {
+				novelsListContainer.innerHTML =
+					'<div class="no-novels">Failed to display novels.</div>';
+			}
+		}
+	}
+
+	function attachLibraryListHandlers() {
+		document.querySelectorAll(".domain-toggle").forEach((toggle) => {
+			toggle.addEventListener("click", function (e) {
+				if (e.target.closest(".domain-expand-btn")) return;
+				const section = this.closest(".domain-section");
+				const novelsList = section.querySelector(".domain-novels");
+				novelsList.classList.toggle("collapsed");
+				const icon = this.querySelector(".toggle-icon");
+				if (icon) {
+					icon.textContent = novelsList.classList.contains(
+						"collapsed",
+					)
+						? "▶"
+						: "▼";
+				}
+			});
+		});
+
+		document.querySelectorAll(".domain-expand-btn").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const section = btn.closest(".domain-section");
+				const hiddenItems = section.querySelectorAll(".collapsed-item");
+				const isExpanded = btn.dataset.expanded === "true";
+				hiddenItems.forEach((item) => {
+					item.style.display = isExpanded ? "none" : "block";
+				});
+				btn.dataset.expanded = isExpanded ? "false" : "true";
+				btn.textContent = isExpanded ? "▶ Show all" : "▼ Show less";
+			});
+		});
+
+		document.querySelectorAll(".novel-view-library-btn").forEach((btn) => {
+			btn.addEventListener("click", async (e) => {
+				e.preventDefault();
+				const novelId = btn.dataset.novelId;
+				const shelfId = btn.dataset.shelfId;
+				await openNovelInLibrary(novelId, shelfId);
+			});
+		});
+	}
+
+	/**
 	 * Load novels from storage and display them grouped by domain
 	 */
 	async function loadNovels() {
@@ -1899,9 +2005,8 @@ async function initializePopup() {
 				return;
 			}
 
-			// Get novels from storage
-			const result = await browser.storage.local.get(["novelHistory"]);
-			const novels = result.novelHistory || {};
+			const library = await novelLibrary.getLibrary();
+			const novels = library.novels || {};
 
 			if (Object.keys(novels).length === 0) {
 				novelsListContainer.innerHTML =
@@ -1913,94 +2018,15 @@ async function initializePopup() {
 			// Clear the novels list
 			novelsListContainer.innerHTML = "";
 
-			// Group novels by domain
-			const novelsByDomain = {};
-			Object.entries(novels).forEach(([novelId, novel]) => {
-				const domain = novel.domain || extractDomain(novel.url || "");
-				if (!novelsByDomain[domain]) {
-					novelsByDomain[domain] = [];
-				}
-				novelsByDomain[domain].push([novelId, novel]);
-			});
-
-			// Sort domains by most recently read novel
-			const sortedDomains = Object.entries(novelsByDomain).sort(
-				(a, b) => {
-					const latestA = Math.max(
-						...a[1].map(([_, novel]) =>
-							new Date(
-								novel.lastRead || "1970-01-01T00:00:00.000Z",
-							).getTime(),
-						),
-					);
-					const latestB = Math.max(
-						...b[1].map(([_, novel]) =>
-							new Date(
-								novel.lastRead || "1970-01-01T00:00:00.000Z",
-							).getTime(),
-						),
-					);
-					return latestB - latestA;
-				},
-			);
-
-			// Create domain sections
-			sortedDomains.forEach(([domain, domainNovels]) => {
-				const shelf = getShelfByDomain(domain);
-				if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
-					return;
-				}
-				// Sort novels within domain by last read
-				const sortedNovels = domainNovels.sort((a, b) => {
-					const lastReadA =
-						a[1].lastRead || "1970-01-01T00:00:00.000Z";
-					const lastReadB =
-						b[1].lastRead || "1970-01-01T00:00:00.000Z";
-					return new Date(lastReadB) - new Date(lastReadA);
-				});
-
-				// Create domain section
-				const domainSection = createDomainSection(domain, sortedNovels);
-				novelsListContainer.appendChild(domainSection);
+			await displayNovelsByWebsite(Object.values(novels), {
+				collapsed: false,
+				limitPerShelf: 0,
 			});
 
 			showStatus(
-				`Loaded ${Object.keys(novels).length} novels from ${
-					sortedDomains.length
-				} sites.`,
+				`Loaded ${Object.keys(novels).length} novels from library.`,
 				"success",
 			);
-
-			// Add event listeners for domain toggles
-			document.querySelectorAll(".domain-toggle").forEach((toggle) => {
-				toggle.addEventListener("click", function () {
-					const section = this.closest(".domain-section");
-					const novelsList = section.querySelector(".domain-novels");
-					novelsList.classList.toggle("collapsed");
-					const icon = this.querySelector(".toggle-icon");
-					icon.textContent = novelsList.classList.contains(
-						"collapsed",
-					)
-						? "▶"
-						: "▼";
-				});
-			});
-
-			// Add event listeners for chapter toggles
-			document
-				.querySelectorAll(".novel-chapters-toggle")
-				.forEach((toggle) => {
-					toggle.addEventListener("click", function () {
-						const chapters =
-							this.closest(".novel-item").querySelector(
-								".novel-chapters",
-							);
-						chapters.classList.toggle("active");
-						this.textContent = chapters.classList.contains("active")
-							? "▲ Hide Chapters"
-							: "▼ Show Chapters";
-					});
-				});
 
 			// Add event listeners for auto-enhance checkboxes
 			document
@@ -2109,27 +2135,28 @@ async function initializePopup() {
 	}
 
 	/**
-	 * Create a domain section element
-	 * @param {string} domain - Domain name
-	 * @param {Array} novels - Array of [novelId, novel] tuples
-	 * @returns {HTMLElement} - The domain section element
+	 * Create a shelf section element
+	 * @param {string} shelfId - Shelf identifier
+	 * @param {Array} novels - Array of novel objects
+	 * @param {Object} options - Render options
+	 * @returns {HTMLElement} - The shelf section element
 	 */
-	function createDomainSection(domain, novels) {
+	function createDomainSection(shelfId, novels, options = {}) {
 		const section = document.createElement("div");
 		section.className = "domain-section";
 
-		// Get shelf info for icon
-		const shelf = getShelfByDomain(domain);
+		const shelf = Object.values(SHELVES).find((s) => s.id === shelfId);
 		const shelfIcon = shelf ? shelf.icon : "📖";
-		const shelfName = shelf ? shelf.name : domain;
+		const shelfName = shelf ? shelf.name : shelfId;
 		const iconHtml = renderDomainIcon(shelfIcon);
+		const limit = options.limitPerShelf || 0;
 
 		const header = document.createElement("div");
 		header.className = "domain-header domain-toggle";
 		header.innerHTML = `
 			<span class="toggle-icon">▼</span>
 			${iconHtml}
-			<span class="domain-name">${shelfName}</span>
+			<span class="domain-name">${escapeHtml(shelfName)}</span>
 			<span class="domain-count">${novels.length} ${
 				novels.length === 1 ? "novel" : "novels"
 			}</span>
@@ -2138,10 +2165,22 @@ async function initializePopup() {
 		const novelsList = document.createElement("div");
 		novelsList.className = "domain-novels";
 
-		novels.forEach(([novelId, novel]) => {
-			const novelItem = createNovelItem(novelId, novel);
+		novels.forEach((novel, index) => {
+			const novelItem = createNovelItem(novel);
+			if (limit > 0 && index >= limit) {
+				novelItem.classList.add("collapsed-item");
+				novelItem.style.display = "none";
+			}
 			novelsList.appendChild(novelItem);
 		});
+
+		if (limit > 0 && novels.length > limit) {
+			const expandBtn = document.createElement("button");
+			expandBtn.className = "domain-expand-btn";
+			expandBtn.textContent = "▶ Show all";
+			expandBtn.dataset.limit = String(limit);
+			header.appendChild(expandBtn);
+		}
 
 		section.appendChild(header);
 		section.appendChild(novelsList);
@@ -2155,99 +2194,68 @@ async function initializePopup() {
 	 * @param {Object} novel - Novel data
 	 * @returns {HTMLElement} - The novel item element
 	 */
-	function createNovelItem(novelId, novel) {
+	function createNovelItem(novel) {
 		const novelItem = document.createElement("div");
 		novelItem.className = "novel-item";
+		novelItem.dataset.novelId = novel.id;
+		novelItem.dataset.shelfId = novel.shelfId || "";
 
-		const bookTitle = novel.bookTitle || "Unknown Title";
+		const bookTitle = novel.title || novel.bookTitle || "Unknown Title";
 		const author = novel.author || "Unknown Author";
-		const lastRead = novel.lastRead
-			? formatRelativeTime(novel.lastRead)
-			: "Never";
+		const lastAccessed = novel.lastAccessedAt
+			? formatRelativeTime(new Date(novel.lastAccessedAt).toISOString())
+			: "Unknown";
+		const totalChapters = novel.totalChapters || novel.chapterCount || "?";
+		const lastReadChapter =
+			novel.lastReadChapter || novel.currentChapter || null;
+		const readingStatus = novel.readingStatus || "Unknown";
+		const sourceUrl = novel.sourceUrl || novel.mainNovelUrl || novel.url;
 
-		// Build extended info HTML
-		let extendedInfoHtml = "";
-		if (
-			novel.description ||
-			novel.rating ||
-			novel.wordCount ||
-			novel.genres?.length > 0
-		) {
-			extendedInfoHtml = '<div class="novel-extended-info">';
-
-			if (novel.description) {
-				const shortDesc =
-					novel.description.length > 200
-						? novel.description.substring(0, 200) + "..."
-						: novel.description;
-				extendedInfoHtml += `<div class="novel-description">${shortDesc}</div>`;
-			}
-
-			const statsItems = [];
-			if (novel.rating) statsItems.push(`Rating: ${novel.rating}`);
-			if (novel.language) statsItems.push(`Language: ${novel.language}`);
-			if (novel.wordCount)
-				statsItems.push(`Words: ${novel.wordCount.toLocaleString()}`);
-			if (novel.completed !== undefined)
-				statsItems.push(novel.completed ? "✓ Complete" : "Ongoing");
-
-			if (statsItems.length > 0) {
-				extendedInfoHtml += `<div class="novel-stats">${statsItems.join(
-					" • ",
-				)}</div>`;
-			}
-
-			const engagementItems = [];
-			if (novel.reviews) engagementItems.push(`${novel.reviews} reviews`);
-			if (novel.favorites)
-				engagementItems.push(`${novel.favorites} favs`);
-			if (novel.follows) engagementItems.push(`${novel.follows} follows`);
-
-			if (engagementItems.length > 0) {
-				extendedInfoHtml += `<div class="novel-engagement">${engagementItems.join(
-					" • ",
-				)}</div>`;
-			}
-
-			if (novel.genres && novel.genres.length > 0) {
-				const genreTags = novel.genres
-					.map((g) => `<span class="genre-tag">${g}</span>`)
-					.join("");
-				extendedInfoHtml += `<div class="novel-genres">${genreTags}</div>`;
-			}
-
-			extendedInfoHtml += "</div>";
-		}
-
-		// Create chapters list
-		const chaptersHtml =
-			novel.chapters && novel.chapters.length > 0
-				? createChaptersListHtml(novel.chapters, novel.url)
-				: '<div style="padding: 10px; font-style: italic;">No chapter history available</div>';
+		const chips = [];
+		if (readingStatus)
+			chips.push(
+				`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
+			);
+		if (totalChapters)
+			chips.push(
+				`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
+			);
+		if (lastReadChapter)
+			chips.push(
+				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
+			);
 
 		novelItem.innerHTML = `
 			<div class="novel-meta">
-				<span class="novel-last-read">Last read: ${lastRead}</span>
+				<span class="novel-last-read">Last accessed: ${escapeHtml(lastAccessed)}</span>
 			</div>
-			<div class="novel-title">${bookTitle}</div>
+			<div class="novel-title">${escapeHtml(bookTitle)}</div>
 			<div class="novel-info">
-				<span>Author: ${author}</span>
-				<div>Chapters read: ${novel.chapters ? novel.chapters.length : 0}</div>
+				<span>Author: ${escapeHtml(author)}</span>
+				<span>Status: ${escapeHtml(readingStatus)}</span>
 			</div>
-			${extendedInfoHtml}
+			<div class="novel-chips">${chips.join(" ")}</div>
+			${
+				novel.description
+					? `<div class="novel-description">${escapeHtml(
+							novel.description,
+						)}</div>`
+					: ""
+			}
 			<div class="novel-actions">
-				<button class="novel-chapters-toggle">▼ Show Chapters</button>
+				<button class="novel-view-library-btn" data-novel-id="${escapeHtml(
+					novel.id,
+				)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
+					📚 View in Library
+				</button>
 				${
-					novel.currentChapterUrl
-						? `<a href="${novel.currentChapterUrl}" target="_blank" style="text-decoration: none;"><button>Continue Reading</button></a>`
+					sourceUrl
+						? `<a href="${escapeHtml(
+								sourceUrl,
+							)}" target="_blank" class="novel-source-link">Open Source</a>`
 						: ""
 				}
-				<label class="auto-enhance-label" title="Auto-enhance this novel's chapters">
-					<input type="checkbox" class="auto-enhance-checkbox" data-novel-id="${novelId}">
-					Auto-Enhance
-				</label>
 			</div>
-			<div class="novel-chapters">${chaptersHtml}</div>
 		`;
 
 		return novelItem;
@@ -3820,32 +3828,48 @@ async function initializePopup() {
 				return;
 			}
 
-			const result = await browser.storage.local.get(["novelHistory"]);
-			const novels = result.novelHistory || {};
-			const novelArray = Object.values(novels);
+			try {
+				siteSettings = siteSettingsApi
+					? await siteSettingsApi.getSiteSettings()
+					: {};
+			} catch (_err) {
+				siteSettings =
+					siteSettingsApi?.getDefaultSiteSettings?.() || {};
+			}
+
+			const library = await novelLibrary.getLibrary();
+			const novelArray = Object.values(library.novels || {});
 
 			// Get current novel info if on a supported site
-			await updateCurrentNovelInfo();
+			const currentNovel = await updateCurrentNovelInfo(novelArray);
 
-			// Load all novels grouped by site
-			await displayNovelsByWebsite(novelArray);
-
-			// If on unsupported page or no current novel, show top 6 recent
+			// Detect if current page is supported
 			const tabs = await browser.tabs.query({
 				active: true,
 				currentWindow: true,
 			});
 			const currentUrl = tabs[0]?.url || "";
-			const supportedDomains = Object.values(SHELVES)
-				.flatMap((shelf) => shelf.domains || [])
-				.filter(Boolean);
-			const isSupported = supportedDomains.some((domain) =>
-				currentUrl.includes(domain),
-			);
+			const currentShelf = getShelfFromUrl(currentUrl);
+			const isSupported = Boolean(currentShelf);
 
-			if (!isSupported || novelArray.length === 0) {
+			// Suggested novels: same website or recent fallback
+			if (currentNovel?.shelfId) {
+				await showSuggestedNovelsFromShelf(
+					currentNovel.shelfId,
+					novelArray,
+					currentNovel.id,
+				);
+			} else {
 				await showTopRecentNovels(novelArray);
 			}
+
+			// Library list: collapsed by default on supported sites
+			const collapsed = isSupported;
+			const limitPerShelf = collapsed ? 1 : 0;
+			await displayNovelsByWebsite(novelArray, {
+				collapsed,
+				limitPerShelf,
+			});
 		} catch (error) {
 			debugError("Error loading novels tab:", error);
 			if (novelsListContainer) {
@@ -3858,10 +3882,10 @@ async function initializePopup() {
 	/**
 	 * Update current novel info section
 	 */
-	async function updateCurrentNovelInfo() {
+	async function updateCurrentNovelInfo(allNovels = []) {
 		try {
 			if (!currentNovelInfo) {
-				return;
+				return null;
 			}
 			const tabs = await browser.tabs.query({
 				active: true,
@@ -3874,153 +3898,38 @@ async function initializePopup() {
 						<p class="description">Visit a novel page and the extension will track your reading.</p>
 					</div>
 				`;
-				return;
+				return null;
 			}
 
-			const currentUrl = tabs[0].url;
-			const result = await browser.storage.local.get(["novelHistory"]);
-			const novels = result.novelHistory || {};
-
-			// Find novel matching current URL
-			let currentNovel = null;
-			for (const novel of Object.values(novels)) {
-				if (
-					novel.url &&
-					(currentUrl.includes(novel.url) ||
-						novel.url.includes(currentUrl))
-				) {
-					currentNovel = novel;
-					break;
-				}
-			}
+			const currentUrl = tabs[0].url || "";
+			const currentShelf = getShelfFromUrl(currentUrl);
+			const currentNovel = await novelLibrary.getNovelByUrl(currentUrl);
 
 			if (currentNovel) {
-				// Get novels from same site
-				const sameSiteNovels = Object.values(novels).filter(
-					(n) =>
-						n.domain === currentNovel.domain &&
-						n.id !== currentNovel.id,
-				);
-
-				currentNovelInfo.innerHTML = `
-					<div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15)); padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
-						<div style="display: flex; gap: 12px; margin-bottom: 12px;">
-							${
-								currentNovel.coverUrl
-									? `<img src="${escapeHtml(
-											currentNovel.coverUrl,
-										)}" style="width: 60px; height: 80px; object-fit: cover; border-radius: 4px;" alt="Cover" />`
-									: ""
-							}
-							<div style="flex: 1;">
-								<div style="font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 5px;">${escapeHtml(
-									currentNovel.title || "Unknown",
-								)}</div>
-								<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">by ${escapeHtml(
-									currentNovel.author || "Unknown",
-								)}</div>
-								<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
-									<span style="font-size: 10px; padding: 2px 8px; background: rgba(76, 175, 80, 0.2); color: #4caf50; border-radius: 10px;">
-										${escapeHtml(currentNovel.status || "Ongoing")}
-									</span>
-									<span style="font-size: 10px; padding: 2px 8px; background: rgba(102, 126, 234, 0.2); color: #667eea; border-radius: 10px;">
-										${currentNovel.totalChapters || "?"} chapters
-									</span>
-									${
-										currentNovel.lastReadChapter
-											? `<span style="font-size: 10px; padding: 2px 8px; background: rgba(255, 152, 0, 0.2); color: #ff9800; border-radius: 10px;">
-										Ch. ${currentNovel.lastReadChapter}
-									</span>`
-											: ""
-									}
-								</div>
-							</div>
-						</div>
-						${
-							currentNovel.description
-								? `<div style="font-size: 11px; color: #999; line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
-							${escapeHtml(currentNovel.description)}
-						</div>`
-								: ""
-						}
-					</div>
-
-					${
-						sameSiteNovels.length > 0
-							? `
-						<div style="margin-top: 12px;">
-							<div style="font-size: 12px; font-weight: 600; color: #aaa; margin-bottom: 8px;">
-								📚 More from ${escapeHtml(currentNovel.domain || "this site")}
-							</div>
-							<div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
-								${sameSiteNovels
-									.slice(0, 3)
-									.map(
-										(n) => `
-									<div style="padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; cursor: pointer;" onclick="window.open('${escapeHtml(
-										n.url || "#",
-									)}', '_blank')">
-										<div style="font-weight: 500; color: #e0e0e0;">${escapeHtml(n.title)}</div>
-										<div style="color: #888; font-size: 10px;">by ${escapeHtml(
-											n.author || "Unknown",
-										)}</div>
-									</div>
-								`,
-									)
-									.join("")}
-							</div>
-						</div>
-					`
-							: ""
-					}
-				`;
-			} else {
-				// Try to get page info from content script
-				browser.tabs
-					.sendMessage(tabs[0].id, {
-						action: "getPageInfo",
-					})
-					.then((response) => {
-						if (response && response.novelInfo) {
-							const novel = response.novelInfo;
-							currentNovelInfo.innerHTML = `
-								<div style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; border-left: 3px solid #667eea;">
-									<div style="font-size: 14px; font-weight: 500; color: #e0e0e0; margin-bottom: 4px;">${escapeHtml(
-										novel.title || "Unknown",
-									)}</div>
-									<div style="font-size: 12px; color: #aaa; margin-bottom: 3px;">by ${escapeHtml(
-										novel.author || "Unknown",
-									)}</div>
-									<div style="font-size: 11px; color: #888; margin-top: 6px;">
-										<span style="color: #4caf50;">${escapeHtml(
-											novel.status || "Ongoing",
-										)}</span> • ${
-											novel.totalChapters || "?"
-										} chapters
-									</div>
-								</div>
-							`;
-						} else {
-							currentNovelInfo.innerHTML = `
-								<div class="no-current-novel">
-									<p>No current novel detected.</p>
-									<p class="description">Visit a novel page to see details here.</p>
-								</div>
-							`;
-						}
-					})
-					.catch(() => {
-						if (currentNovelInfo) {
-							currentNovelInfo.innerHTML = `
-								<div class="no-current-novel">
-									<p>Visit a supported novel site to see details here.</p>
-								</div>
-							`;
-						}
-					});
+				renderCurrentNovelDetails(currentNovel);
+				return currentNovel;
 			}
+
+			if (!currentShelf) {
+				currentNovelInfo.innerHTML = `
+					<div class="no-current-novel">
+						<p>Unsupported website.</p>
+						<p class="description">Showing your full library below.</p>
+					</div>
+				`;
+				return null;
+			}
+
+			currentNovelInfo.innerHTML = `
+				<div class="no-current-novel">
+					<p>No current novel detected.</p>
+					<p class="description">Visit a novel page to see details here.</p>
+				</div>
+			`;
+			return null;
 		} catch (error) {
 			debugError("Error updating current novel info:", error);
+			return null;
 		}
 	}
 
@@ -4084,135 +3993,157 @@ async function initializePopup() {
 		}
 	}
 
-	/**
-	 * Display novels grouped by website
-	 */
-	async function displayNovelsByWebsite(allNovels) {
-		try {
-			if (!novelsListContainer) {
-				return;
-			}
-			if (allNovels.length === 0) {
-				novelsListContainer.innerHTML =
-					'<div class="no-novels">No novels in your library yet.</div>';
-				return;
-			}
+	function renderCurrentNovelDetails(novel) {
+		const title = novel.title || novel.bookTitle || "Unknown";
+		const author = novel.author || "Unknown";
+		const readingStatus = novel.readingStatus || "Unknown";
+		const lastAccessed = novel.lastAccessedAt
+			? new Date(novel.lastAccessedAt).toLocaleDateString()
+			: "Unknown";
+		const totalChapters = novel.totalChapters || novel.chapterCount || "?";
+		const lastReadChapter =
+			novel.lastReadChapter || novel.currentChapter || null;
 
-			// Group by domain
-			const novelsByDomain = {};
-			allNovels.forEach((novel) => {
-				const domain = novel.domain || "Unknown";
-				if (!novelsByDomain[domain]) {
-					novelsByDomain[domain] = [];
-				}
-				novelsByDomain[domain].push(novel);
-			});
-
-			// Sort domains by most recent novel
-			const sortedDomains = Object.entries(novelsByDomain).sort(
-				(a, b) => {
-					const latestA = Math.max(
-						...a[1].map((n) => new Date(n.lastRead || 0).getTime()),
-					);
-					const latestB = Math.max(
-						...b[1].map((n) => new Date(n.lastRead || 0).getTime()),
-					);
-					return latestB - latestA;
-				},
+		const chips = [];
+		if (readingStatus)
+			chips.push(
+				`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
+			);
+		if (totalChapters)
+			chips.push(
+				`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
+			);
+		if (lastReadChapter)
+			chips.push(
+				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
+			);
+		if (novel.enhancedChaptersCount)
+			chips.push(
+				`<span class="chip chip-success">${escapeHtml(String(novel.enhancedChaptersCount))} enhanced</span>`,
 			);
 
-			// Build HTML
-			let html = `
-				<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-					<div style="font-size: 13px; color: #aaa;">
-						${allNovels.length} novel${allNovels.length !== 1 ? "s" : ""} across ${
-							sortedDomains.length
-						} site${sortedDomains.length !== 1 ? "s" : ""}
+		const tagSections = [
+			{ label: "Fandoms", values: novel.fandoms },
+			{ label: "Genres", values: novel.genres },
+			{ label: "Tags", values: novel.tags },
+			{ label: "Characters", values: novel.characters },
+		];
+		const tagsHtml = tagSections
+			.filter(
+				(group) => Array.isArray(group.values) && group.values.length,
+			)
+			.map(
+				(group) => `
+				<div class="current-novel-tag-group">
+					<div class="current-novel-tag-label">${escapeHtml(group.label)}</div>
+					<div class="current-novel-tag-list">
+						${group.values
+							.slice(0, 6)
+							.map(
+								(tag) =>
+									`<span class="tag">${escapeHtml(tag)}</span>`,
+							)
+							.join("")}
 					</div>
-					<button id="showTopRecent" style="padding: 6px 12px; font-size: 11px; background: #667eea; border: none; border-radius: 4px; cursor: pointer; color: white;">
-						🌟 Top 6 Recent
-					</button>
+				</div>
+			`,
+			)
+			.join("");
+
+		currentNovelInfo.innerHTML = `
+			<div class="current-novel-card">
+				<div class="current-novel-cover">
+					${
+						novel.coverUrl
+							? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
+							: `<div class="current-novel-cover-placeholder">📚</div>`
+					}
+				</div>
+				<div class="current-novel-info">
+					<div class="current-novel-title">${escapeHtml(title)}</div>
+					<div class="current-novel-author">by ${escapeHtml(author)}</div>
+					<div class="current-novel-meta">Last accessed: ${escapeHtml(lastAccessed)}</div>
+					<div class="current-novel-chips">${chips.join(" ")}</div>
+				</div>
+			</div>
+			${
+				novel.description
+					? `<div class="current-novel-description">${escapeHtml(novel.description)}</div>`
+					: ""
+			}
+			${tagsHtml ? `<div class="current-novel-tags">${tagsHtml}</div>` : ""}
+			<div class="current-novel-actions">
+				<button class="btn-small btn-primary current-novel-library-link" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
+					📚 View in Library
+				</button>
+			</div>
+		`;
+
+		const link = currentNovelInfo.querySelector(
+			".current-novel-library-link",
+		);
+		if (link) {
+			link.addEventListener("click", async () => {
+				await openNovelInLibrary(novel.id, novel.shelfId);
+			});
+		}
+	}
+
+	async function showSuggestedNovelsFromShelf(
+		shelfId,
+		allNovels,
+		excludeNovelId,
+	) {
+		try {
+			if (!suggestedNovelsList) return;
+			const suggestions = allNovels
+				.filter((n) => n.shelfId === shelfId && n.id !== excludeNovelId)
+				.sort(
+					(a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0),
+				)
+				.slice(0, 6);
+
+			if (suggestions.length === 0) {
+				suggestedNovelsList.innerHTML = `
+					<div class="no-suggestions">
+						<p>No suggestions yet for this website.</p>
+					</div>
+				`;
+				return;
+			}
+
+			suggestedNovelsList.innerHTML = `
+				<div class="suggested-novels-grid">
+					${suggestions.map((novel) => renderSuggestedNovelCard(novel)).join("")}
 				</div>
 			`;
 
-			for (const [domain, domainNovels] of sortedDomains) {
-				// Get shelf info for better display
-				const shelf = Object.values(SHELVES).find((s) =>
-					s.domains.some((d) => domain.includes(d)),
-				);
-
-				html += `
-					<div class="domain-section" style="margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 12px; background: rgba(0,0,0,0.2);">
-						<div style="font-weight: bold; margin-bottom: 10px; color: #667eea; display: flex; align-items: center; gap: 8px;">
-							${
-								shelf && shelf.icon
-									? `<span style="font-size: 16px;">${
-											shelf.emoji || shelf.icon
-										}</span>`
-									: "📖"
-							}
-							<span>${shelf ? shelf.name : domain}</span>
-							<span style="font-size: 11px; font-weight: normal; color: #888;">(${
-								domainNovels.length
-							})</span>
-						</div>
-						<div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-							${domainNovels
-								.sort(
-									(a, b) =>
-										new Date(b.lastRead || 0) -
-										new Date(a.lastRead || 0),
-								)
-								.map(
-									(novel) => `
-								<div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; gap: 10px; align-items: start;" onclick="window.open('${escapeHtml(
-									novel.url || "#",
-								)}', '_blank')">
-									${
-										novel.coverUrl
-											? `<img src="${escapeHtml(
-													novel.coverUrl,
-												)}" style="width: 40px; height: 55px; object-fit: cover; border-radius: 3px; flex-shrink: 0;" alt="Cover" />`
-											: ""
-									}
-									<div style="flex: 1; min-width: 0;">
-										<div style="font-weight: 500; margin-bottom: 3px; word-break: break-word; color: #e0e0e0;">${escapeHtml(
-											novel.title || "Unknown",
-										)}</div>
-										<div style="color: #aaa; font-size: 11px; margin-bottom: 2px;">by ${escapeHtml(
-											novel.author || "Unknown",
-										)}</div>
-										<div style="color: #888; font-size: 10px; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-											<span>📅 ${new Date(novel.lastRead || new Date()).toLocaleDateString()}</span>
-											${novel.lastReadChapter ? `<span>📖 Ch. ${novel.lastReadChapter}</span>` : ""}
-											${
-												novel.enhancedChaptersCount
-													? `<span>✨ ${novel.enhancedChaptersCount} enhanced</span>`
-													: ""
-											}
-										</div>
-									</div>
-								</div>
-							`,
-								)
-								.join("")}
-						</div>
-					</div>
-				`;
-			}
-
-			novelsListContainer.innerHTML = html;
-
-			// Add event listener for top recent button
-			const topRecentBtn = document.getElementById("showTopRecent");
-			if (topRecentBtn) {
-				topRecentBtn.addEventListener("click", () => {
-					showTopRecentNovels(allNovels);
+			suggestedNovelsList
+				.querySelectorAll(".suggested-novel-card")
+				.forEach((card) => {
+					card.addEventListener("click", async () => {
+						const novelId = card.dataset.novelId;
+						const shelf = card.dataset.shelfId;
+						await openNovelInLibrary(novelId, shelf);
+					});
 				});
-			}
 		} catch (error) {
-			debugError("Error displaying novels by website:", error);
+			debugError("Error showing shelf suggestions:", error);
 		}
+	}
+
+	function renderSuggestedNovelCard(novel) {
+		return `
+			<div class="suggested-novel-card" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
+				${
+					novel.coverUrl
+						? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
+						: ""
+				}
+				<div class="suggested-novel-title">${escapeHtml(novel.title || "Unknown")}</div>
+				<div class="suggested-novel-author">by ${escapeHtml(novel.author || "Unknown")}</div>
+			</div>
+		`;
 	}
 
 	/**
@@ -4439,6 +4370,15 @@ async function initializePopup() {
 	 */
 	async function handleConnectDrive() {
 		try {
+			debugLog("handleConnectDrive called");
+			debugLog("connectDriveBtn element:", connectDriveBtn);
+
+			if (!connectDriveBtn) {
+				debugError("connectDriveBtn element not found!");
+				showStatus("Button element not found", "error");
+				return;
+			}
+
 			connectDriveBtn.disabled = true;
 			connectDriveBtn.textContent = "🔗 Connecting...";
 
@@ -4457,9 +4397,13 @@ async function initializePopup() {
 				driveClientId: clientId,
 				driveClientSecret: clientSecret,
 			});
+
+			debugLog("Sending ensureDriveAuth message...");
 			const response = await browser.runtime.sendMessage({
 				action: "ensureDriveAuth",
 			});
+
+			debugLog("ensureDriveAuth response:", response);
 
 			if (response?.success) {
 				const tokens =
@@ -4514,14 +4458,21 @@ async function initializePopup() {
 			}
 		} catch (err) {
 			debugError("Failed to connect Drive", err);
-			showStatus("Failed to connect Google Drive", "error");
-			connectDriveBtn.disabled = false;
-			connectDriveBtn.textContent = "🔗 Connect Google Drive";
+			showStatus(
+				`Failed to connect Google Drive: ${err.message}`,
+				"error",
+			);
+			if (connectDriveBtn) {
+				connectDriveBtn.disabled = false;
+				connectDriveBtn.textContent = "🔗 Connect Google Drive";
+			}
 			return;
 		}
 
-		connectDriveBtn.disabled = false;
-		connectDriveBtn.textContent = "🔗 Connect Google Drive";
+		if (connectDriveBtn) {
+			connectDriveBtn.disabled = false;
+			connectDriveBtn.textContent = "🔗 Connect Google Drive";
+		}
 	}
 
 	/**
@@ -5482,6 +5433,7 @@ async function initializePopup() {
 			const response = await browser.runtime.sendMessage({
 				action: "getNotifications",
 				type: filterType,
+				grouped: true, // Request grouped notifications
 			});
 			if (response?.success) {
 				notifications = response.notifications || [];
@@ -5490,7 +5442,10 @@ async function initializePopup() {
 				throw new Error(response?.error || "Notification fetch failed");
 			}
 		} catch (_error) {
-			notifications = notificationManager.getAll({ type: filterType });
+			notifications = notificationManager.getAll({
+				type: filterType,
+				grouped: true,
+			});
 			stats = notificationManager.getStats();
 		}
 
@@ -5534,17 +5489,75 @@ async function initializePopup() {
 			.querySelectorAll(".notification-item")
 			.forEach((item) => {
 				const id = item.dataset.id;
-				item.addEventListener("click", async () => {
+				const notif = notifications.find((n) => n.id === id);
+				item.addEventListener("click", async (e) => {
+					// Don't mark as read if clicking action buttons
+					if (e.target.closest(".notification-action-btn")) return;
+					if (e.target.closest(".notification-library-link")) return;
+
 					try {
-						await browser.runtime.sendMessage({
-							action: "markNotificationRead",
-							id,
-						});
+						// If grouped notification, mark all underlying notifications
+						if (notif?.isGroup && notif?.groupedNotifications) {
+							await Promise.all(
+								notif.groupedNotifications.map((n) =>
+									browser.runtime
+										.sendMessage({
+											action: "markNotificationRead",
+											id: n.id,
+										})
+										.catch(() =>
+											notificationManager.markAsRead(
+												n.id,
+											),
+										),
+								),
+							);
+						} else {
+							await browser.runtime.sendMessage({
+								action: "markNotificationRead",
+								id,
+							});
+						}
 					} catch (_err) {
-						await notificationManager.markAsRead(id);
+						if (notif?.isGroup && notif?.groupedNotifications) {
+							notif.groupedNotifications.forEach((n) =>
+								notificationManager.markAsRead(n.id),
+							);
+						} else {
+							await notificationManager.markAsRead(id);
+						}
 					}
 					item.classList.remove("unread");
 					await updateNotificationBadge();
+				});
+			});
+
+		// Add expand/collapse listeners for grouped notifications
+		notificationsContainer
+			.querySelectorAll(".notification-group-toggle")
+			.forEach((toggle) => {
+				toggle.addEventListener("click", (e) => {
+					e.stopPropagation();
+					const group = toggle
+						.closest(".notification-item")
+						.querySelector(".notification-group-items");
+					group.classList.toggle("expanded");
+					toggle.textContent = group.classList.contains("expanded")
+						? "▼ Hide"
+						: `▶ Show ${toggle.dataset.count} related`;
+				});
+			});
+
+		// Add library link listeners
+		notificationsContainer
+			.querySelectorAll(".notification-library-link")
+			.forEach((link) => {
+				link.addEventListener("click", async (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					const novelId = link.dataset.novelId;
+					const shelfId = link.dataset.shelfId;
+					await openNovelInLibrary(novelId, shelfId);
 				});
 			});
 
@@ -5569,6 +5582,11 @@ async function initializePopup() {
 		const relativeTime = formatRelativeTime(notif.timestamp);
 		const fullTime = new Date(notif.timestamp).toLocaleString();
 
+		// Handle grouped notifications
+		if (notif.isGroup && notif.groupedNotifications) {
+			return renderGroupedNotification(notif);
+		}
+
 		return `
 			<div class="notification-item ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
 				<div class="notification-header">
@@ -5581,6 +5599,55 @@ async function initializePopup() {
 				<div class="notification-actions">
 					<button class="notification-action-btn" data-action="delete">🗑️ Delete</button>
 				</div>
+			</div>
+		`;
+	}
+
+	/**
+	 * Render a grouped notification
+	 */
+	function renderGroupedNotification(notif) {
+		const relativeTime = formatRelativeTime(notif.timestamp);
+		const fullTime = new Date(notif.timestamp).toLocaleString();
+		const startTime = formatRelativeTime(notif.timeRange.start);
+
+		return `
+			<div class="notification-item notification-group ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
+				<div class="notification-header">
+					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
+					<span class="notification-group-badge">${notif.groupCount} updates</span>
+					<span class="notification-time" title="${fullTime}">${startTime} - ${relativeTime}</span>
+				</div>
+				${notif.title ? `<div class="notification-title">${escapeHtml(notif.title)}</div>` : ""}
+				<div class="notification-message">${escapeHtml(notif.message)}</div>
+				${renderNotificationMeta(notif)}
+				<button class="notification-group-toggle" data-count="${notif.groupCount}">
+					▶ Show ${notif.groupCount} related
+				</button>
+				<div class="notification-group-items">
+					${notif.groupedNotifications.map((n) => renderGroupedItem(n)).join("")}
+				</div>
+				<div class="notification-actions">
+					<button class="notification-action-btn" data-action="delete">🗑️ Delete</button>
+				</div>
+			</div>
+		`;
+	}
+
+	/**
+	 * Render a single item within a group
+	 */
+	function renderGroupedItem(notif) {
+		const relativeTime = formatRelativeTime(notif.timestamp);
+		const fullTime = new Date(notif.timestamp).toLocaleString();
+
+		return `
+			<div class="notification-group-item">
+				<div class="notification-group-item-header">
+					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
+					<span class="notification-time" title="${fullTime}">${relativeTime}</span>
+				</div>
+				<div class="notification-message">${escapeHtml(notif.message)}</div>
 			</div>
 		`;
 	}
@@ -5613,13 +5680,27 @@ async function initializePopup() {
 			}
 
 			if (notif.novelData) {
+				const novelTitle =
+					notif.novelData.title ||
+					notif.novelData.bookTitle ||
+					"Unknown Novel";
+				const novelId = notif.novelData.novelId;
+				const shelfId = notif.novelData.shelfId;
+
 				metaHTML += `
 					<div class="notification-novel-data">
-						<div class="notification-novel-title">${escapeHtml(notif.novelData.title || "Unknown Novel")}</div>
+						<div class="notification-novel-title">${escapeHtml(novelTitle)}</div>
 						<div class="notification-novel-meta">
 							${notif.novelData.author ? `by ${escapeHtml(notif.novelData.author)}` : ""}
 							${notif.novelData.currentChapter ? ` • Ch. ${notif.novelData.currentChapter}` : ""}
 						</div>
+						${
+							novelId && shelfId
+								? `<button class="notification-library-link" data-novel-id="${escapeHtml(novelId)}" data-shelf-id="${escapeHtml(shelfId)}">
+									📚 View in Library
+								</button>`
+								: ""
+						}
 					</div>
 				`;
 			}
@@ -5698,6 +5779,33 @@ async function initializePopup() {
 		}
 		await loadNotifications();
 		await updateNotificationBadge();
+	}
+
+	/**
+	 * Open novel in library (opens library page with modal)
+	 */
+	async function openNovelInLibrary(novelId, shelfId) {
+		try {
+			const shelf = Object.values(SHELVES).find((s) => s.id === shelfId);
+			const shelfPage = shelf
+				? `library/websites/${encodeURIComponent(shelfId)}/index.html`
+				: "library/library.html";
+			const libraryUrl = browser.runtime.getURL(
+				`${shelfPage}?novel=${encodeURIComponent(novelId)}`,
+			);
+
+			// Open in new tab
+			await browser.tabs.create({
+				url: libraryUrl,
+				active: true,
+			});
+
+			// Close popup
+			window.close();
+		} catch (error) {
+			debugError("Failed to open novel in library:", error);
+			showStatus("Failed to open library. Please try again.", "error");
+		}
 	}
 
 	/**

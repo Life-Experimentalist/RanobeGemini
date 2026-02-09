@@ -140,6 +140,22 @@ export function registerCustomFilter(callback) {
 	}
 }
 
+function openNovelFromQuery() {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const novelId = params.get("novel");
+		if (!novelId) return;
+		const novel = allNovels.find((n) => n && n.id === novelId);
+		if (novel) {
+			openNovelDetails(novelId);
+		} else {
+			showToast("Novel not found in this shelf", "info");
+		}
+	} catch (_err) {
+		debugError("Error opening novel from query:", _err);
+	}
+}
+
 /**
  * Initialize shelf page
  * @param {string} shelfId - The shelf identifier
@@ -158,6 +174,7 @@ export async function initShelfPage(shelfId, config = {}) {
 
 	// Load and display novels
 	await loadShelfNovels();
+	openNovelFromQuery();
 }
 
 /**
@@ -176,6 +193,12 @@ function setupFilterControls() {
                        class="filter-input">
             </div>
 
+			<div class="filter-group">
+				<button type="button" id="random-select-btn" class="filter-btn">
+					🎲 Random
+				</button>
+            </div>
+
             <div class="filter-group">
                 <label for="status-filter">Status:</label>
                 <select id="status-filter" class="filter-select">
@@ -183,7 +206,7 @@ function setupFilterControls() {
                     ${Object.entries(READING_STATUS_INFO)
 						.map(
 							([status, info]) =>
-								`<option value="${status}">${info.label}</option>`
+								`<option value="${status}">${info.label}</option>`,
 						)
 						.join("")}
                 </select>
@@ -318,6 +341,20 @@ function setupEventListeners() {
 			document.getElementById("sort-order-icon").textContent =
 				currentFilters.sortOrder === "asc" ? "↑" : "↓";
 			applyFiltersAndSort();
+		});
+	}
+
+	// Random select button
+	const randomSelectBtn = document.getElementById("random-select-btn");
+	if (randomSelectBtn) {
+		randomSelectBtn.addEventListener("click", () => {
+			const pool = filteredNovels.length ? filteredNovels : allNovels;
+			if (!pool.length) {
+				showToast("No novels available for random pick", "info");
+				return;
+			}
+			const pick = pool[Math.floor(Math.random() * pool.length)];
+			openNovelDetails(pick.id);
 		});
 	}
 

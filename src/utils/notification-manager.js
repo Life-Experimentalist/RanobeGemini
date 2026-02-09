@@ -131,9 +131,15 @@ class NotificationManager {
 	 * @param {string} [options.type] - Filter by type
 	 * @param {boolean} [options.unreadOnly] - Only unread notifications
 	 * @param {number} [options.limit] - Limit number of results
+	 * @param {boolean} [options.grouped] - Group related notifications by novel
 	 * @returns {Array} Notifications
 	 */
-	getAll({ type = null, unreadOnly = false, limit = null } = {}) {
+	getAll({
+		type = null,
+		unreadOnly = false,
+		limit = null,
+		grouped = false,
+	} = {}) {
 		let filtered = this.notifications;
 
 		if (type) {
@@ -144,11 +150,134 @@ class NotificationManager {
 			filtered = filtered.filter((n) => !n.read);
 		}
 
+		if (grouped) {
+			filtered = this.groupNotifications(filtered);
+		}
+
 		if (limit) {
 			filtered = filtered.slice(0, limit);
 		}
 
 		return filtered;
+	}
+
+	/**
+	 * Group related notifications by novel
+	 * Groups "updating" and "success" notifications for the same novel
+	 * @param {Array} notifications - Notifications to group
+	 * @returns {Array} Grouped notifications
+	 */
+	groupNotifications(notifications) {
+		const grouped = [];
+		const processedIds = new Set();
+		const novelGroups = new Map(); // novelId -> group of related notifications
+
+		// First pass: identify novel-based groups
+		notifications.forEach((notif) => {
+			const novelId = this.extractNovelId(notif);
+			if (novelId && this.isGroupableNotification(notif)) {
+				if (!novelGroups.has(novelId)) {
+					novelGroups.set(novelId, []);
+				}
+				novelGroups.get(novelId).push(notif);
+			}
+		});
+
+		// Second pass: create grouped notifications
+		notifications.forEach((notif) => {
+			if (processedIds.has(notif.id)) return;
+
+			const novelId = this.extractNovelId(notif);
+			if (
+				novelId &&
+				novelGroups.has(novelId) &&
+				novelGroups.get(novelId).length > 1
+			) {
+				const group = novelGroups.get(novelId);
+				// Only create group once (on first encounter)
+				if (!group.some((n) => processedIds.has(n.id))) {
+					grouped.push(this.createNotificationGroup(group));
+					group.forEach((n) => processedIds.add(n.id));
+				}
+			} else {
+				// Not groupable - add as-is
+				grouped.push(notif);
+				processedIds.add(notif.id);
+			}
+		});
+
+		return grouped;
+	}
+
+	/**
+	 * Check if notification should be grouped
+	 * @param {Object} notif - Notification
+	 * @returns {boolean}
+	 */
+	isGroupableNotification(notif) {
+		const groupableTypes = ["info", "success"];
+		const groupableMessages = [
+			/updating/i,
+			/updated/i,
+			/tracking/i,
+			/added/i,
+		];
+		return (
+			groupableTypes.includes(notif.type) &&
+			groupableMessages.some((regex) => regex.test(notif.message))
+		);
+	}
+
+	/**
+	 * Extract novel ID from notification
+	 * @param {Object} notif - Notification
+	 * @returns {string|null}
+	 */
+	extractNovelId(notif) {
+		if (notif.novelData?.novelId) return notif.novelData.novelId;
+		if (notif.novelData?.id) return notif.novelData.id;
+		if (notif.novelData?.bookTitle) return notif.novelData.bookTitle;
+		if (notif.metadata?.novelId) return notif.metadata.novelId;
+		// Try to extract from URL
+		if (notif.url) {
+			const match = notif.url.match(/\/s\/(\d+)/); // FanFiction pattern
+			if (match) return match[1];
+		}
+		return null;
+	}
+
+	/**
+	 * Create a grouped notification from multiple notifications
+	 * @param {Array} notifications - Notifications to group
+	 * @returns {Object} Grouped notification
+	 */
+	createNotificationGroup(notifications) {
+		// Sort by timestamp (newest first)
+		const sorted = [...notifications].sort(
+			(a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+		);
+		const latest = sorted[0];
+		const earliest = sorted[sorted.length - 1];
+
+		return {
+			id: `group_${latest.id}`,
+			type: latest.type,
+			message: latest.message,
+			title: latest.title,
+			url: latest.url,
+			novelData: latest.novelData,
+			metadata: latest.metadata,
+			source: latest.source,
+			timestamp: latest.timestamp,
+			read: sorted.every((n) => n.read),
+			isGroup: true,
+			groupedNotifications: sorted,
+			groupCount: sorted.length,
+			timeRange: {
+				start: earliest.timestamp,
+				end: latest.timestamp,
+			},
+		};
 	}
 
 	/**

@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "3.8.0",
+	"version": "3.9.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
@@ -137,6 +137,7 @@
 				"*://*.ao3.org/*",
 				"*://*.archiveofourown.org/*",
 				"*://*.fanfiction.net/*",
+				"*://*.fanfiction.ws/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.org/*",
@@ -198,6 +199,7 @@
 				"*://*.ao3.org/*",
 				"*://*.archiveofourown.org/*",
 				"*://*.fanfiction.net/*",
+				"*://*.fanfiction.ws/*",
 				"*://*.ranobes.com/*",
 				"*://*.ranobes.net/*",
 				"*://*.ranobes.org/*",

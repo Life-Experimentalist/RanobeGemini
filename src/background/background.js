@@ -1100,6 +1100,7 @@ if (typeof browser === "undefined") {
 						type: message.type || null,
 						unreadOnly: message.unreadOnly === true,
 						limit: message.limit || null,
+						grouped: message.grouped === true,
 					});
 					const stats = notificationManager.getStats();
 					sendResponse({

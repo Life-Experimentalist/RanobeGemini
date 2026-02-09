@@ -1763,6 +1763,7 @@ function setupFandomFilter() {
 				applyFiltersAndSort();
 			}, 200);
 		});
+		ensureRandomSelectButton();
 	}
 
 	if (backBtn) {
@@ -1772,6 +1773,33 @@ function setupFandomFilter() {
 	}
 
 	renderActiveFilters();
+}
+
+function ensureRandomSelectButton() {
+	const searchInput = document.getElementById("search-input");
+	if (!searchInput) return;
+	if (document.getElementById("random-select-btn")) return;
+	const container = searchInput.parentElement;
+	if (!container) return;
+
+	const button = document.createElement("button");
+	button.type = "button";
+	button.id = "random-select-btn";
+	button.className = "btn btn-secondary random-select-btn";
+	button.textContent = "🎲 Random";
+	button.title = "Pick a random novel from current filters";
+
+	button.addEventListener("click", () => {
+		const pool = filteredNovels.length ? filteredNovels : allNovels;
+		if (!pool.length) {
+			showToast("No novels available for random pick", "info");
+			return;
+		}
+		const pick = pool[Math.floor(Math.random() * pool.length)];
+		showNovelModal(pick);
+	});
+
+	container.appendChild(button);
 }
 
 async function initializeFanFictionShelf() {
@@ -1829,6 +1857,7 @@ async function initializeFanFictionShelf() {
 		setupFandomFilter();
 		setupInsightClicks();
 		applyFiltersAndSort();
+		openNovelFromQuery();
 	} catch (error) {
 		console.error(
 			"[FanFiction Shelf] CRITICAL ERROR during initialization:",
@@ -1841,6 +1870,22 @@ async function initializeFanFictionShelf() {
 			if (h2) h2.textContent = `Error: ${error.message}`;
 		}
 		if (novelGrid) novelGrid.style.display = "none";
+	}
+}
+
+function openNovelFromQuery() {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const novelId = params.get("novel");
+		if (!novelId) return;
+		const novel = allNovels.find((n) => n && n.id === novelId);
+		if (novel) {
+			showNovelModal(novel);
+		} else {
+			showToast("Novel not found in this shelf", "info");
+		}
+	} catch (_err) {
+		// ignore
 	}
 }
 

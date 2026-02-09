@@ -329,6 +329,20 @@ if (isSidebar) {
 	document.documentElement.classList.add("sidebar-mode");
 }
 
+async function openNovelFromQueryParams() {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const novelId = params.get("novel");
+		if (!novelId) return;
+		const novel = await novelLibrary.getNovel(novelId);
+		if (novel) {
+			openNovelDetail(novel);
+		}
+	} catch (_err) {
+		debugError("Failed to open novel from query params:", _err);
+	}
+}
+
 /**
  * Initialize the library page
  */
@@ -363,6 +377,7 @@ async function init() {
 
 	// Load library data
 	await loadLibrary();
+	await openNovelFromQueryParams();
 
 	// Check for first run telemetry consent
 	await checkFirstRunConsent();

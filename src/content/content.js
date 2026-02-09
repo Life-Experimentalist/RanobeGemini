@@ -6731,6 +6731,9 @@ if (window.__RGInitDone) {
 		if (!metadata) return null;
 		return {
 			id: metadata.id,
+			novelId: metadata.id,
+			shelfId: metadata.shelfId,
+			bookTitle: metadata.title,
 			title: metadata.title,
 			author: metadata.author,
 			currentChapter: metadata.currentChapter,
@@ -6745,6 +6748,9 @@ if (window.__RGInitDone) {
 		if (!novelData) return lastKnownNovelData;
 		const cached = {
 			id: novelData.id,
+			novelId: novelData.novelId || novelData.id,
+			shelfId: novelData.shelfId,
+			bookTitle: novelData.bookTitle || novelData.title,
 			title: novelData.title,
 			author: novelData.author,
 			currentChapter: novelData.currentChapter,

@@ -442,10 +442,18 @@ function buildFilterOptionsFromNovels(novels) {
 		const metadata = novel.metadata || {};
 		if (metadata.language) languages.add(metadata.language);
 
-		(metadata.fandoms || []).forEach((fandom) => fandoms.add(fandom));
-		(metadata.relationships || []).forEach((rel) => relationships.add(rel));
-		(metadata.characters || []).forEach((char) => characters.add(char));
-		(metadata.additionalTags || []).forEach((tag) => tags.add(tag));
+		(metadata.fandoms || []).forEach((fandom) =>
+			fandoms.add(canonicalizeLabel(fandom, "fandoms")),
+		);
+		(metadata.relationships || []).forEach((rel) =>
+			relationships.add(canonicalizeLabel(rel, "relationships")),
+		);
+		(metadata.characters || []).forEach((char) =>
+			characters.add(canonicalizeLabel(char, "characters")),
+		);
+		(metadata.additionalTags || []).forEach((tag) =>
+			tags.add(canonicalizeLabel(tag, "additionalTags")),
+		);
 	});
 
 	return {
@@ -980,14 +988,21 @@ function applyFiltersAndSort() {
 
 	if (Array.isArray(fandoms) && fandoms.length > 0) {
 		const fandomsMode = filterState.fandomsMode || "any";
+		const normalizedSelected = fandoms.map((f) =>
+			canonicalizeLabel(f, "fandoms"),
+		);
 		filteredNovels = filteredNovels.filter((n) => {
-			const storyFandoms = n.metadata?.fandoms || [];
+			const storyFandoms = (n.metadata?.fandoms || []).map((f) =>
+				canonicalizeLabel(f, "fandoms"),
+			);
 			if (fandomsMode === "all") {
 				// ALL mode: story must include all selected fandoms
-				return fandoms.every((f) => storyFandoms.includes(f));
+				return normalizedSelected.every((f) =>
+					storyFandoms.includes(f),
+				);
 			} else {
 				// ANY mode: story must include at least one selected fandom
-				return storyFandoms.some((f) => fandoms.includes(f));
+				return storyFandoms.some((f) => normalizedSelected.includes(f));
 			}
 		});
 	}
@@ -1798,6 +1813,7 @@ function setupFilters() {
 				applyFiltersAndSort();
 			}, 200);
 		});
+		ensureRandomSelectButton();
 	}
 
 	if (backBtn) {
@@ -1807,6 +1823,33 @@ function setupFilters() {
 	}
 
 	renderActiveFilters();
+}
+
+function ensureRandomSelectButton() {
+	const searchInput = document.getElementById("search-input");
+	if (!searchInput) return;
+	if (document.getElementById("random-select-btn")) return;
+	const container = searchInput.parentElement;
+	if (!container) return;
+
+	const button = document.createElement("button");
+	button.type = "button";
+	button.id = "random-select-btn";
+	button.className = "btn btn-secondary random-select-btn";
+	button.textContent = "🎲 Random";
+	button.title = "Pick a random novel from current filters";
+
+	button.addEventListener("click", () => {
+		const pool = filteredNovels.length ? filteredNovels : allNovels;
+		if (!pool.length) {
+			showToast("No novels available for random pick", "info");
+			return;
+		}
+		const pick = pool[Math.floor(Math.random() * pool.length)];
+		showNovelModal(pick);
+	});
+
+	container.appendChild(button);
 }
 
 async function initializeAO3Shelf() {
@@ -1863,6 +1906,7 @@ async function initializeAO3Shelf() {
 		setupFilters();
 		setupInsightClicks();
 		applyFiltersAndSort();
+		openNovelFromQuery();
 	} catch (error) {
 		console.error(
 			"[AO3 Shelf] CRITICAL ERROR during initialization:",
@@ -1875,6 +1919,22 @@ async function initializeAO3Shelf() {
 			if (h2) h2.textContent = `Error: ${error.message}`;
 		}
 		if (novelGrid) novelGrid.style.display = "none";
+	}
+}
+
+function openNovelFromQuery() {
+	try {
+		const params = new URLSearchParams(window.location.search);
+		const novelId = params.get("novel");
+		if (!novelId) return;
+		const novel = allNovels.find((n) => n && n.id === novelId);
+		if (novel) {
+			showNovelModal(novel);
+		} else {
+			showToast("Novel not found in this shelf", "info");
+		}
+	} catch (_err) {
+		debugError("Error parsing query parameters:", _err);
 	}
 }
 

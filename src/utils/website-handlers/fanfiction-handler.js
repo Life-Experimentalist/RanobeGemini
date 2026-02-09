@@ -15,6 +15,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	static SUPPORTED_DOMAINS = [
 		"fanfiction.net",
 		"www.fanfiction.net",
+		"www.fanfiction.ws",
 		"*.fanfiction.net", // Safety net: catches any other subdomains (EXCEPT m.fanfiction.net - handled by mobile handler)
 	];
 
@@ -64,11 +65,15 @@ When enhancing, improve readability while respecting the author's creative voice
 	static initialize() {
 		try {
 			const { hostname, pathname, search, hash } = window.location;
-			const isFanfictionHost = hostname.endsWith("fanfiction.net");
+			const isFanfictionHost =
+				hostname.endsWith("fanfiction.net") ||
+				hostname.endsWith("fanfiction.ws");
 			const isKnownSubdomain =
 				hostname === "www.fanfiction.net" ||
 				hostname === "m.fanfiction.net";
-			const isBareDomain = hostname === "fanfiction.net";
+			const isBareDomain =
+				hostname === "fanfiction.net" || hostname === "fanfiction.ws";
+			const isWSHost = hostname.endsWith("fanfiction.ws");
 			const isMobile =
 				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
 				window.innerWidth <= 768;
@@ -79,7 +84,20 @@ When enhancing, improve readability while respecting the author's creative voice
 			if (isFanfictionHost && (isBareDomain || !isKnownSubdomain)) {
 				const target = `https://${targetHost}${pathname}${search}${hash}`;
 				if (window.location.href !== target) {
-					window.location.replace(target);
+					// For .ws domain redirect, use try-catch with revert on error
+					if (isWSHost) {
+						try {
+							window.location.replace(target);
+						} catch (wsRedirectErr) {
+							debugError(
+								"FanFiction.ws redirect failed",
+								wsRedirectErr,
+							);
+							// Revert to original .ws URL on error
+						}
+					} else {
+						window.location.replace(target);
+					}
 				}
 			}
 		} catch (_err) {
