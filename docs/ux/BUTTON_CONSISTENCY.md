@@ -8,6 +8,47 @@ Both interfaces provide comprehensive settings management with consistent button
 - **Popup**: Detailed controls with confirmations and granular options
 - **Library Modal**: Simplified controls with auto-save on change and batch save button
 
+## Table of Contents
+
+- [Button Consistency Guide](#button-consistency-guide)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [Button Categories](#button-categories)
+		- [1. Data Management Buttons](#1-data-management-buttons)
+			- [Export Library](#export-library)
+			- [Import Library](#import-library)
+			- [Clear Library](#clear-library)
+		- [2. Comprehensive Backup Buttons](#2-comprehensive-backup-buttons)
+			- [Create Comprehensive Backup](#create-comprehensive-backup)
+			- [Restore Comprehensive Backup](#restore-comprehensive-backup)
+		- [3. Rolling Backup Toggle](#3-rolling-backup-toggle)
+			- [Enable/Disable Rolling Backups](#enabledisable-rolling-backups)
+		- [4. Model Settings (Popup Only)](#4-model-settings-popup-only)
+			- [Save Advanced Settings](#save-advanced-settings)
+			- [Reset All Advanced Settings](#reset-all-advanced-settings)
+		- [5. Theme Settings (Popup Only)](#5-theme-settings-popup-only)
+			- [Save Theme](#save-theme)
+			- [Reset Theme](#reset-theme)
+		- [6. Site Toggles (Popup Only)](#6-site-toggles-popup-only)
+			- [Enable/Disable Sites](#enabledisable-sites)
+			- [Restore Site Defaults](#restore-site-defaults)
+		- [7. Google Drive Buttons](#7-google-drive-buttons)
+			- [Connect Drive (OAuth)](#connect-drive-oauth)
+			- [Disconnect Drive](#disconnect-drive)
+			- [Manual Drive Backup](#manual-drive-backup)
+			- [View Backup History](#view-backup-history)
+			- [Manual Drive Sync](#manual-drive-sync)
+			- [Enable/Disable Auto-Restore](#enabledisable-auto-restore)
+		- [8. Library Settings Save Button (NEW)](#8-library-settings-save-button-new)
+			- [Save All Settings](#save-all-settings)
+	- [Consistency Rules](#consistency-rules)
+		- [✅ CONSISTENT ACROSS BOTH INTERFACES](#-consistent-across-both-interfaces)
+		- [⚠️ DIFFERENCES (BY DESIGN)](#️-differences-by-design)
+	- [Testing Checklist](#testing-checklist)
+	- [Implementation Notes](#implementation-notes)
+		- [Adding New Settings Button](#adding-new-settings-button)
+	- [File References](#file-references)
+
 ## Button Categories
 
 ### 1. Data Management Buttons

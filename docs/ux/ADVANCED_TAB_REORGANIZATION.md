@@ -6,6 +6,42 @@
 
 Complete reorganization of the Advanced tab in popup.html and Library Settings modal in library.html for better UX, clearer organization, and proper functionality.
 
+## Table of Contents
+
+- [Advanced Tab \& Library Settings Reorganization](#advanced-tab--library-settings-reorganization)
+	- [Date: February 7, 2026](#date-february-7-2026)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [Changes Made](#changes-made)
+		- [1. Advanced Tab Reorganization (`src/popup/popup.html`)](#1-advanced-tab-reorganization-srcpopuppopuphtml)
+			- [**Before**: Cluttered, unclear hierarchy, mixed sections](#before-cluttered-unclear-hierarchy-mixed-sections)
+			- [**After**: 7 well-defined sections with clear visual hierarchy](#after-7-well-defined-sections-with-clear-visual-hierarchy)
+			- [New Structure](#new-structure)
+			- [Visual Improvements](#visual-improvements)
+		- [2. Library Settings Modal Redesign (`src/library/library.html`)](#2-library-settings-modal-redesign-srclibrarylibraryhtml)
+			- [**Before**: Basic sections, minimal styling](#before-basic-sections-minimal-styling)
+			- [**After**: Modern card-based layout with color coding](#after-modern-card-based-layout-with-color-coding)
+			- [New Structure](#new-structure-1)
+			- [Visual Improvements](#visual-improvements-1)
+	- [Button Handlers Verified](#button-handlers-verified)
+		- [Popup.js Handlers (All Working)](#popupjs-handlers-all-working)
+		- [Library.js Handlers (All Working)](#libraryjs-handlers-all-working)
+	- [User Experience Improvements](#user-experience-improvements)
+		- [Clarity](#clarity)
+		- [Organization](#organization)
+		- [Accessibility](#accessibility)
+		- [Functionality](#functionality)
+	- [Files Modified](#files-modified)
+	- [Testing Checklist](#testing-checklist)
+		- [Advanced Tab Testing](#advanced-tab-testing)
+		- [Library Settings Modal Testing](#library-settings-modal-testing)
+	- [Build Status](#build-status)
+	- [Known Working Features](#known-working-features)
+		- [From Previous Fixes](#from-previous-fixes)
+		- [From This Update](#from-this-update)
+	- [Next Steps (Optional Future Enhancements)](#next-steps-optional-future-enhancements)
+	- [Summary](#summary)
+
 ---
 
 ## Changes Made

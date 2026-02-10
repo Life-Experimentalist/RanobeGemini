@@ -8,6 +8,23 @@ This document presents a polished, accessible reference for the Library Settings
 - Layout principle: A responsive "bento" grid that scales from 4 columns (desktop) to a single column (mobile).
 - Primary areas: Data Management, Backups, Auto-Hold, Theme, AI Model, Font Size, Analytics, Developer tools, and Auto-Add by Site.
 
+## Table of Contents
+
+- [Library Settings — Visual Guide](#library-settings--visual-guide)
+	- [Summary](#summary)
+	- [Table of Contents](#table-of-contents)
+	- [Key UI Areas](#key-ui-areas)
+	- [Layouts](#layouts)
+		- [Desktop — 4-column grid](#desktop--4-column-grid)
+		- [Tablet — 2–3 column grid](#tablet--23-column-grid)
+		- [Mobile — single-column stack](#mobile--single-column-stack)
+	- [Interaction Patterns](#interaction-patterns)
+	- [Color \& Visual Encoding](#color--visual-encoding)
+	- [Responsive Breakpoints (recommended)](#responsive-breakpoints-recommended)
+	- [Accessibility \& UX](#accessibility--ux)
+	- [Implementation Guidance](#implementation-guidance)
+	- [Design Rationale — Space \& Efficiency](#design-rationale--space--efficiency)
+
 ## Key UI Areas
 
 - Data Management — Export / Import / Clear controls.

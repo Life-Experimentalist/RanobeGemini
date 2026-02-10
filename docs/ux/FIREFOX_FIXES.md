@@ -1,5 +1,29 @@
 # Firefox Validation Fixes - v3.6.0
 
+## Table of Contents
+
+- [Firefox Validation Fixes - v3.6.0](#firefox-validation-fixes---v360)
+	- [Table of Contents](#table-of-contents)
+	- [Critical Errors Fixed ✅](#critical-errors-fixed-)
+		- [1. Service Worker Not Supported](#1-service-worker-not-supported)
+		- [2. JavaScript Syntax Error](#2-javascript-syntax-error)
+	- [Important Warnings Fixed ✅](#important-warnings-fixed-)
+		- [3. Missing data\_collection\_permissions](#3-missing-data_collection_permissions)
+		- [4. Unsupported sidepanel Permission](#4-unsupported-sidepanel-permission)
+		- [5. Icon Size Mismatch](#5-icon-size-mismatch)
+		- [6. Minimum Version Compatibility](#6-minimum-version-compatibility)
+	- [Remaining Warnings (Non-Critical) ⚠️](#remaining-warnings-non-critical-️)
+		- [Unsafe innerHTML Assignments](#unsafe-innerhtml-assignments)
+	- [Build Process Updates](#build-process-updates)
+		- [File: `dev/build-cross-platform.js`](#file-devbuild-cross-platformjs)
+		- [Build \& Package Commands](#build--package-commands)
+	- [Validation Results](#validation-results)
+		- [Before Fixes](#before-fixes)
+		- [After Fixes](#after-fixes)
+	- [Files Modified](#files-modified)
+	- [Next Steps](#next-steps)
+	- [Testing](#testing)
+
 ## Critical Errors Fixed ✅
 
 ### 1. Service Worker Not Supported

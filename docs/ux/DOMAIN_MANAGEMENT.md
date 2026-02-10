@@ -4,6 +4,30 @@
 
 The website handler system automatically manages domain permissions across all browser manifests. When you add or update website handlers, the `update-domains` script synchronizes all manifest files.
 
+## Table of Contents
+
+- [Website Handlers \& Domain Management](#website-handlers--domain-management)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [How It Works](#how-it-works)
+		- [1. Website Handlers](#1-website-handlers)
+		- [2. Domain Extraction](#2-domain-extraction)
+		- [3. Pattern Generation](#3-pattern-generation)
+		- [4. Manifest Synchronization](#4-manifest-synchronization)
+	- [Usage](#usage)
+		- [Adding a New Website](#adding-a-new-website)
+		- [Publishing with Domain Updates](#publishing-with-domain-updates)
+	- [Scripts](#scripts)
+		- [`npm run update-domains`](#npm-run-update-domains)
+		- [`npm run build`](#npm-run-build)
+		- [`npm run package-firefox`](#npm-run-package-firefox)
+		- [`npm run package-chromium`](#npm-run-package-chromium)
+	- [File Structure](#file-structure)
+	- [Domain Pattern Examples](#domain-pattern-examples)
+	- [Key Points](#key-points)
+	- [Troubleshooting](#troubleshooting)
+	- [Best Practices](#best-practices)
+
 ## How It Works
 
 ### 1. Website Handlers
