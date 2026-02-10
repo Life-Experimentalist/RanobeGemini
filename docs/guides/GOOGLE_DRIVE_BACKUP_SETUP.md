@@ -2,6 +2,43 @@
 
 This guide explains how to set up Google Drive backups for Ranobe Gemini, enabling automatic backup of your novel library to Google Drive (like WhatsApp backups).
 
+## Table of Contents
+
+- [Google Drive Backup Setup Guide](#google-drive-backup-setup-guide)
+	- [Table of Contents](#table-of-contents)
+	- [Overview](#overview)
+	- [Step 1: Create Google Cloud Project](#step-1-create-google-cloud-project)
+	- [Step 2: Enable Google Drive API](#step-2-enable-google-drive-api)
+	- [Step 3: Create OAuth 2.0 Credentials](#step-3-create-oauth-20-credentials)
+		- [For Chrome/Edge](#for-chromeedge)
+		- [For Firefox](#for-firefox)
+	- [Step 4: Copy Your Client ID](#step-4-copy-your-client-id)
+	- [Step 5: Configure Extension](#step-5-configure-extension)
+		- [Option A: Use Default Client ID (Easiest)](#option-a-use-default-client-id-easiest)
+		- [Option B: Use Your Own Client ID (Recommended for Private Builds)](#option-b-use-your-own-client-id-recommended-for-private-builds)
+	- [Step 6: First Backup](#step-6-first-backup)
+	- [Step 6B: Enable Auto-Restore (Cross-Browser Sync)](#step-6b-enable-auto-restore-cross-browser-sync)
+	- [Step 7: Restore from Backup](#step-7-restore-from-backup)
+	- [Backup Modes Explained](#backup-modes-explained)
+		- [Scheduled Mode](#scheduled-mode)
+		- [Continuous Mode](#continuous-mode)
+		- [Both (Daily + Rolling)](#both-daily--rolling)
+		- [Auto-Restore Mode (Sync)](#auto-restore-mode-sync)
+	- [Configuration Options](#configuration-options)
+		- [In Extension Settings](#in-extension-settings)
+		- [Command-Line / Manual](#command-line--manual)
+	- [Troubleshooting](#troubleshooting)
+		- ["Client ID missing" Error](#client-id-missing-error)
+		- ["State mismatch" Error](#state-mismatch-error)
+		- ["Folder creation failed"](#folder-creation-failed)
+		- [Backups Not Uploading](#backups-not-uploading)
+		- [Can't Restore from Backup](#cant-restore-from-backup)
+	- [Security Notes](#security-notes)
+	- [Advanced: Custom Google Cloud Project](#advanced-custom-google-cloud-project)
+	- [Architecture](#architecture)
+	- [OAuth Flow Details](#oauth-flow-details)
+	- [Files Involved](#files-involved)
+
 ## Overview
 
 The backup system provides:
@@ -44,21 +81,21 @@ The backup system provides:
 5. Select **"Web application"**
 6. Add Authorized JavaScript origins (to host the landing OAuth page):
 
-   ```
+   ```url
    https://ranobe.vkrishna04.me
    ```
 
 7. Add Redirect URIs (important for different browsers):
 
-   ### For Chrome/Edge:
-   ```
+   ### For Chrome/Edge
+
+   ```url
    https://YOUR_EXTENSION_ID.chromiumapp.org/
-
-
-
-
-   ### For Firefox:
    ```
+
+   ### For Firefox
+
+   ```md
    urn:ietf:wg:oauth:2.0:oob
    ```
 
@@ -72,7 +109,8 @@ The backup system provides:
 ## Step 4: Copy Your Client ID
 
 You should see a modal with:
-```
+
+```env
 Client ID: 123456789-xxxxxxxxxxxxx.apps.googleusercontent.com
 Client Secret: (not needed for this implementation)
 ```
@@ -82,9 +120,11 @@ Client Secret: (not needed for this implementation)
 ## Step 5: Configure Extension
 
 ### Option A: Use Default Client ID (Easiest)
+
 If you're using the bundled Client ID in the extension, you're done! The extension comes with a default Client ID that works for Chrome/Edge/Firefox.
 
 ### Option B: Use Your Own Client ID (Recommended for Private Builds)
+
 1. Open the extension popup (click Ranobe Gemini icon)
 2. Go to **Settings** tab
 3. Find **"Google Drive Client ID"**
@@ -128,6 +168,7 @@ The extension checks Drive every 10 minutes and merges the newest backup into yo
 ## Backup Modes Explained
 
 ### Scheduled Mode
+
 - Backs up automatically at your chosen time (default: 2 AM)
 - Keeps the latest 3 scheduled backups (oldest is pruned automatically)
 - Less frequent → smaller Drive quota usage
@@ -136,6 +177,7 @@ The extension checks Drive every 10 minutes and merges the newest backup into yo
 **Setting**: Daily backup time (e.g., 2:00 AM)
 
 ### Continuous Mode
+
 - Uploads backup whenever you change your library (add/remove novels, change tags, etc.)
 - Uses a single rolling file that gets updated (no extra Drive clutter)
 - Has 5-minute debounce (won't upload more than once every 5 minutes)
@@ -145,11 +187,13 @@ The extension checks Drive every 10 minutes and merges the newest backup into yo
 **Setting**: Automatic
 
 ### Both (Daily + Rolling)
+
 - Daily versioned backups + a rolling file for continuous updates
 - Best for WhatsApp-style behavior (history + latest)
 - Uses the same Drive folder and respects retention limits
 
 ### Auto-Restore Mode (Sync)
+
 - Pulls the newest Drive backup every 10 minutes
 - Merges into your current library (safe merge)
 - Enables cross-browser use (Firefox + Edge)
@@ -157,7 +201,7 @@ The extension checks Drive every 10 minutes and merges the newest backup into yo
 
 ## Configuration Options
 
-### In Extension Settings:
+### In Extension Settings
 
 | Setting             | Default   | Description                                                      |
 | ------------------- | --------- | ---------------------------------------------------------------- |
@@ -168,7 +212,7 @@ The extension checks Drive every 10 minutes and merges the newest backup into yo
 | Client ID           | Built-in  | Your Google OAuth Client ID                                      |
 | Auto-restore         | Off       | Merge newest Drive backup every 10 minutes                       |
 
-### Command-Line / Manual:
+### Command-Line / Manual
 
 All settings are stored in `browser.storage.local` with keys:
 - `backupMode` - "scheduled" or "continuous"
@@ -183,23 +227,28 @@ All settings are stored in `browser.storage.local` with keys:
 ## Troubleshooting
 
 ### "Client ID missing" Error
+
 - Make sure you added your Client ID in Settings
 - Or use the default built-in Client ID
 
 ### "State mismatch" Error
+
 - Your browser was redirected during OAuth
 - Try again, or check that your redirect URIs match exactly
 
 ### "Folder creation failed"
+
 - Make sure Google Drive API is enabled in your Google Cloud project
 - Check that your OAuth scopes include `https://www.googleapis.com/auth/drive.file`
 
 ### Backups Not Uploading
+
 - Check that you clicked "Connect Google Drive" and authorized
 - Check that you have free space in Google Drive
 - Check extension logs: `F12` → `Extensions` tab → Ranobe Gemini → check background errors
 
 ### Can't Restore from Backup
+
 - Make sure you're logged into the same Google account
 - Check that the backup file still exists in your Google Drive (hasn't been deleted/moved)
 - Try downloading the backup file manually from Drive to verify it's not corrupted
@@ -240,7 +289,7 @@ This way:
 
 ## Architecture
 
-```
+```markdown
 User Opens Popup
     ↓
 User Clicks "Connect Drive" or Enables Backup

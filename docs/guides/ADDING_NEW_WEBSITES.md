@@ -2,6 +2,35 @@
 
 This guide explains how to add support for new novel websites to the Ranobe Gemini Firefox extension.
 
+## Table of Contents
+
+- [Adding Support for New Websites](#adding-support-for-new-websites)
+	- [Table of Contents](#table-of-contents)
+	- [Overview](#overview)
+		- [Handler System Architecture](#handler-system-architecture)
+	- [Step-by-Step Process](#step-by-step-process)
+		- [1. Identify the Website's DOM Structure](#1-identify-the-websites-dom-structure)
+		- [DOM Structure Analysis Steps](#dom-structure-analysis-steps)
+		- [2. Create a New Handler File](#2-create-a-new-handler-file)
+		- [3. Implement the Handler Class](#3-implement-the-handler-class)
+		- [Handler Class Structure](#handler-class-structure)
+		- [4. Register Your Handler](#4-register-your-handler)
+		- [Handler Selection Process](#handler-selection-process)
+		- [5. Update the Manifest File](#5-update-the-manifest-file)
+		- [Manifest Configuration Elements](#manifest-configuration-elements)
+		- [6. Test Your Implementation](#6-test-your-implementation)
+		- [Testing Checklist](#testing-checklist)
+		- [7. Add SHELF\_METADATA for Novel Library](#7-add-shelf_metadata-for-novel-library)
+		- [8. Create a Library Page for Your Website (Optional)](#8-create-a-library-page-for-your-website-optional)
+		- [9. Implement Novel Metadata Extraction (For Auto-Update)](#9-implement-novel-metadata-extraction-for-auto-update)
+		- [10. Submit Your Contribution](#10-submit-your-contribution)
+	- [Complete Integration Checklist](#complete-integration-checklist)
+	- [Common Challenges and Solutions](#common-challenges-and-solutions)
+		- [Challenge: Complex Content Structure](#challenge-complex-content-structure)
+		- [Challenge: Dynamic Content Loading](#challenge-dynamic-content-loading)
+		- [Challenge: Protected Content](#challenge-protected-content)
+	- [Guidelines for Good Handlers](#guidelines-for-good-handlers)
+
 ## Overview
 
 Ranobe Gemini uses a modular website handler system that allows it to support different websites through specialized handler classes. Each handler knows how to extract content from a specific website's DOM structure.
@@ -237,9 +266,11 @@ flowchart TD
 
 **Automated Approach:**
 Instead of manually editing `manifest.json`, use:
+
 ```powershell
 npm run update-domains
 ```
+
 This script automatically extracts domains from all handlers and updates the manifest.
 
 Update the `manifest.json` file to include your new website in the content script matching patterns:

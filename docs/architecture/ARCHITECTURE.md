@@ -48,7 +48,6 @@
 		- [Performance Considerations](#performance-considerations)
 		- [Security Considerations](#security-considerations)
 
-
 ---
 
 ## Overview
@@ -296,24 +295,24 @@ graph TB
 
 ### Background Script Components
 
-| Component                        | Purpose               | Details                                                     |
-| -------------------------------- | --------------------- | ----------------------------------------------------------- |
-| **background.js**                | Service worker        | Persistent background process, manages all API interactions |
-| **offscreen.js/offscreen.html**  | Keep-alive mechanism  | Offscreen document for Chrome MV3 service worker persistence (20s heartbeat) |
-| **initConfig()**                 | Configuration loader  | Loads settings from storage, applies defaults               |
-| **getCurrentApiKey()**           | Key selector          | Returns current API key based on rotation strategy          |
-| **getNextApiKey()**              | Failover handler      | Gets next backup key on rate limit/error                    |
-| **processContentWithGemini()**   | Single-shot processor | Processes content in one API call                           |
-| **processContentInChunks()**     | Chunked processor     | Splits and processes large content progressively            |
-| **splitContentForProcessing()**  | Content splitter      | Intelligently splits at paragraph boundaries                |
-| **summarizeContentWithGemini()** | Summarizer            | Generates chapter summaries (long or short)                 |
-| **combinePartialSummaries()**    | Summary combiner      | Merges multiple part summaries into one                     |
-| **makeApiCallWithRotation()**    | API caller            | Handles API requests with automatic key rotation            |
-| **Key Rotation Logic**           | Failover system       | Round-robin or failover key selection                       |
-| **Rate Limit Handler**           | Error handler         | Detects 429 errors, switches keys, schedules retries        |
-| **Keep-Alive Alarm**             | Service worker lifeline | 30s alarm prevents Chrome MV3 termination                  |
-| **Port Listener**                | Content script bridge | Accepts long-lived port connections for keep-alive pings    |
-| **Message Handlers**             | IPC                   | Listens for content script messages, routes to functions    |
+| Component                        | Purpose                 | Details                                                                      |
+| -------------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
+| **background.js**                | Service worker          | Persistent background process, manages all API interactions                  |
+| **offscreen.js/offscreen.html**  | Keep-alive mechanism    | Offscreen document for Chrome MV3 service worker persistence (20s heartbeat) |
+| **initConfig()**                 | Configuration loader    | Loads settings from storage, applies defaults                                |
+| **getCurrentApiKey()**           | Key selector            | Returns current API key based on rotation strategy                           |
+| **getNextApiKey()**              | Failover handler        | Gets next backup key on rate limit/error                                     |
+| **processContentWithGemini()**   | Single-shot processor   | Processes content in one API call                                            |
+| **processContentInChunks()**     | Chunked processor       | Splits and processes large content progressively                             |
+| **splitContentForProcessing()**  | Content splitter        | Intelligently splits at paragraph boundaries                                 |
+| **summarizeContentWithGemini()** | Summarizer              | Generates chapter summaries (long or short)                                  |
+| **combinePartialSummaries()**    | Summary combiner        | Merges multiple part summaries into one                                      |
+| **makeApiCallWithRotation()**    | API caller              | Handles API requests with automatic key rotation                             |
+| **Key Rotation Logic**           | Failover system         | Round-robin or failover key selection                                        |
+| **Rate Limit Handler**           | Error handler           | Detects 429 errors, switches keys, schedules retries                         |
+| **Keep-Alive Alarm**             | Service worker lifeline | 30s alarm prevents Chrome MV3 termination                                    |
+| **Port Listener**                | Content script bridge   | Accepts long-lived port connections for keep-alive pings                     |
+| **Message Handlers**             | IPC                     | Listens for content script messages, routes to functions                     |
 
 ### 3. Popup Interface (`popup/`)
 
@@ -611,7 +610,7 @@ graph TB
 | Key                    | Type          | Purpose                                        | Default                      |
 | ---------------------- | ------------- | ---------------------------------------------- | ---------------------------- |
 | **apiKey**             | string        | Primary Gemini API key                         | ""                           |
-| **backupApiKeys**      | Array<string> | Backup keys for failover                       | []                           |
+| **backupApiKeys**      | `Array<string>` | Backup keys for failover                       | []                           |
 | **apiKeyRotation**     | string        | Rotation strategy: "failover" or "round-robin" | "failover"                   |
 | **currentApiKeyIndex** | number        | Current key index for round-robin              | 0                            |
 | **selectedModelId**    | string        | Gemini model identifier                        | "gemini-2.0-flash-exp"       |
@@ -913,7 +912,7 @@ flowchart TD
 
 ## File Structure
 
-```
+```file-structure
 RanobeGemini/
 ├── src/
 │   ├── background/

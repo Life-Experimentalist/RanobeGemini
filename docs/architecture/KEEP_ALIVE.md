@@ -4,6 +4,34 @@
 
 The Ranobe Gemini extension implements a three-layer keep-alive system to maintain persistent background functionality in modern browser environments, particularly Chrome's Manifest V3 which terminates service workers after 30 seconds of inactivity.
 
+## Table of Contents
+
+- [Keep-Alive Architecture](#keep-alive-architecture)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [Architecture Layers](#architecture-layers)
+		- [Layer 1: Offscreen Document (`src/background/offscreen.js`)](#layer-1-offscreen-document-srcbackgroundoffscreenjs)
+		- [Layer 2: Background Service Worker (`src/background/background.js`)](#layer-2-background-service-worker-srcbackgroundbackgroundjs)
+			- [A. Alarm API](#a-alarm-api)
+			- [B. Port Listener](#b-port-listener)
+		- [Layer 3: Content Script (`src/content/content.js`)](#layer-3-content-script-srccontentcontentjs)
+	- [Why Three Layers?](#why-three-layers)
+	- [Timing Considerations](#timing-considerations)
+	- [Browser Differences](#browser-differences)
+		- [Chrome (Manifest V3)](#chrome-manifest-v3)
+		- [Firefox](#firefox)
+	- [Lifecycle](#lifecycle)
+		- [Extension Startup](#extension-startup)
+		- [Normal Operation](#normal-operation)
+		- [Page Navigation](#page-navigation)
+		- [Extension Update/Reload](#extension-updatereload)
+	- [Debugging](#debugging)
+		- [Console Messages](#console-messages)
+		- [Common Issues](#common-issues)
+	- [Related Files](#related-files)
+	- [Permissions Required](#permissions-required)
+	- [Future Improvements](#future-improvements)
+
 ## Architecture Layers
 
 ### Layer 1: Offscreen Document (`src/background/offscreen.js`)
@@ -16,6 +44,7 @@ The Ranobe Gemini extension implements a three-layer keep-alive system to mainta
 - Interval: **20 seconds** (`KEEPALIVE_INTERVAL = 20000`)
 
 **Implementation**:
+
 ```javascript
 const KEEPALIVE_INTERVAL = 20000; // 20 seconds
 
@@ -41,6 +70,7 @@ setInterval(sendKeepAlive, KEEPALIVE_INTERVAL);
 **Mechanisms**:
 
 #### A. Alarm API
+
 - Schedules periodic wakeup events for the service worker
 - Interval: **30 seconds minimum** for Chrome
 - Configurable via `KEEP_ALIVE_INTERVAL_MINUTES` (default: 0.5 minutes = 30s)
@@ -63,6 +93,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 ```
 
 #### B. Port Listener
+
 - Accepts long-lived port connections from content scripts
 - Port name: `"rg-keepalive"`
 - Listens for heartbeat messages from content scripts
@@ -92,6 +123,7 @@ chrome.runtime.onConnect.addListener((port) => {
 - Port name: `"rg-keepalive"`
 
 **Implementation**:
+
 ```javascript
 const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 const HEARTBEAT_INTERVAL = 20000; // 20 seconds
@@ -160,11 +192,13 @@ All intervals are deliberately set below Chrome MV3's 30-second service worker t
 ## Browser Differences
 
 ### Chrome (Manifest V3)
+
 - Service workers terminate after 30s inactivity
 - Requires offscreen document + alarm API
 - All three layers active
 
 ### Firefox
+
 - Event pages more persistent than Chrome service workers
 - Alarm intervals configurable (can be less than 30s)
 - Primarily relies on background alarm + content port
@@ -172,6 +206,7 @@ All intervals are deliberately set below Chrome MV3's 30-second service worker t
 ## Lifecycle
 
 ### Extension Startup
+
 1. Background service worker loads
 2. `setupKeepAliveAlarm()` creates alarm
 3. Offscreen document created (Chrome only)
@@ -179,17 +214,20 @@ All intervals are deliberately set below Chrome MV3's 30-second service worker t
 5. Content scripts establish port connections
 
 ### Normal Operation
+
 - **Every 20s**: Offscreen sends postMessage
 - **Every 20s**: Content scripts send heartbeat
 - **Every 30s**: Background alarm fires
 - All messages prevent service worker termination
 
 ### Page Navigation
+
 - Content script may be destroyed
 - Port disconnects
 - Auto-reconnection after 1s delay
 
 ### Extension Update/Reload
+
 - All connections severed
 - Alarm cleared
 - System reinitializes on next startup
@@ -197,6 +235,7 @@ All intervals are deliberately set below Chrome MV3's 30-second service worker t
 ## Debugging
 
 ### Console Messages
+
 ```javascript
 // Offscreen
 [Offscreen] Keep-alive heartbeat sent

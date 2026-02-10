@@ -6,11 +6,11 @@
 	- [📁 Documents in This Directory](#-documents-in-this-directory)
 		- [ARCHITECTURE.md](#architecturemd)
 		- [DYNAMIC\_DOMAINS.md](#dynamic_domainsmd)
+		- [KEEP\_ALIVE.md](#keep_alivemd)
 	- [🔗 Quick Navigation](#-quick-navigation)
 	- [📚 Related Documentation](#-related-documentation)
 	- [🎯 For Developers](#-for-developers)
 	- [🔄 Document Status](#-document-status)
-
 
 This directory contains technical documentation about the internal architecture, design patterns, and system components of the RanobeGemini extension.
 
@@ -19,7 +19,8 @@ This directory contains technical documentation about the internal architecture,
 ## 📁 Documents in This Directory
 
 ### [ARCHITECTURE.md](./ARCHITECTURE.md)
-**Comprehensive architectural overview of the extension**
+
+Comprehensive architectural overview of the extension
 
 - System architecture diagrams with detailed component tables
 - Extension component breakdown (Content Scripts, Background, Popup, Handlers)
@@ -39,7 +40,8 @@ This directory contains technical documentation about the internal architecture,
 ---
 
 ### [DYNAMIC_DOMAINS.md](./DYNAMIC_DOMAINS.md)
-**Dynamic domain management system documentation**
+
+Dynamic domain management system documentation
 
 - Domain registration system
 - Handler-based domain discovery
@@ -56,7 +58,8 @@ This directory contains technical documentation about the internal architecture,
 ---
 
 ### [KEEP_ALIVE.md](./KEEP_ALIVE.md)
-**Three-layer keep-alive system documentation**
+
+Three-layer keep-alive system documentation
 
 - Offscreen document heartbeat mechanism (Chrome MV3)
 - Background alarm API and port listener architecture
@@ -79,7 +82,7 @@ This directory contains technical documentation about the internal architecture,
 | --------------------- | ----------------------------------------------------------------- | ----------------------------- |
 | **System Overview**   | [ARCHITECTURE.md](./ARCHITECTURE.md#overview)                     | High-level system description |
 | **Component Details** | [ARCHITECTURE.md](./ARCHITECTURE.md#extension-components)         | Deep dive into each component |
-| **Handler System**    | [ARCHITECTURE.md](./ARCHITECTURE.md#handler-system-architecture)  | Website handler architecture  |
+| **Handler System**    | [ARCHITECTURE.md](./ARCHITECTURE.md#4-website-handlers-utilswebsite-handlers)  | Website handler architecture  |
 | **Processing Flow**   | [ARCHITECTURE.md](./ARCHITECTURE.md#content-processing-pipeline)  | How content is processed      |
 | **Storage Design**    | [ARCHITECTURE.md](./ARCHITECTURE.md#storage-architecture)         | Data persistence patterns     |
 | **API Integration**   | [ARCHITECTURE.md](./ARCHITECTURE.md#api-integration-architecture) | Gemini API communication      |
@@ -108,7 +111,7 @@ If you're looking to understand how the extension works internally:
 
 If you're adding support for a new website:
 
-1. **Read:** [ARCHITECTURE.md - Handler System](./ARCHITECTURE.md#handler-system-architecture)
+1. **Read:** [ARCHITECTURE.md - Handler System](./ARCHITECTURE.md#4-website-handlers-utilswebsite-handlers)
 2. **Then see:** [DYNAMIC_DOMAINS.md](./DYNAMIC_DOMAINS.md)
 3. **Follow guide:** [Adding New Websites](../guides/ADDING_NEW_WEBSITES.md)
 

@@ -1,8 +1,9 @@
 # Development Roadmap
 
-> **Index:**
+## Table of Contents
 
 - [Development Roadmap](#development-roadmap)
+	- [Table of Contents](#table-of-contents)
 	- [✅ Completed Features](#-completed-features)
 		- [Version 3.0.0 (Released 2025-11-28)](#version-300-released-2025-11-28)
 		- [Version 2.8.0](#version-280)
@@ -40,7 +41,6 @@
 	- [🤝 Contributing](#-contributing)
 	- [📞 Resources](#-resources)
 
-
 **Last Updated:** 2025-11-28
 **Current Version:** 3.0.0
 
@@ -49,6 +49,7 @@
 ## ✅ Completed Features
 
 ### Version 3.0.0 (Released 2025-11-28)
+
 - [x] **Novel Library System**
   - [x] Full library page with grid layout
   - [x] Search, filter, and sort functionality
@@ -65,6 +66,7 @@
   - [x] Consistent formatting
 
 ### Version 2.8.0
+
 - [x] Backup API keys with rotation
 - [x] Failover and round-robin strategies
 - [x] Emoji support in dialogues
@@ -72,12 +74,14 @@
 - [x] Per-novel custom prompts
 
 ### Version 2.7.x
+
 - [x] Progressive enhancement with chunking
 - [x] Work-in-progress banner
 - [x] Chunk-based processing
 - [x] Real-time UI updates
 
 ### Version 2.x
+
 - [x] Multi-site support (Ranobes, FanFiction, AO3, WebNovel)
 - [x] Handler system architecture
 - [x] Content extraction framework
@@ -144,6 +148,7 @@
 ## 🔮 Future Versions
 
 ### Version 3.2.0 - Enhanced Library
+
 **Focus:** Library features and organization**
 
 - [ ] Collections/folders for organizing novels
@@ -155,6 +160,7 @@
 - [ ] Shelf color/icon customization
 
 ### Version 3.3.0 - Cross-Device Sync
+
 **Focus:** Cloud sync and multi-device support**
 
 - [ ] Firefox Sync integration for library
@@ -164,6 +170,7 @@
 - [ ] Sync status indicators
 
 ### Version 3.4.0 - Advanced Enhancement
+
 **Focus:** Enhancement quality and options**
 
 - [ ] Multiple enhancement styles (formal, casual, poetic)
@@ -174,6 +181,7 @@
 - [ ] Enhancement quality rating system
 
 ### Version 4.0.0 - Platform Expansion
+
 **Focus:** Chrome support and new features**
 
 - [ ] Chrome extension port (Manifest V3)
@@ -187,20 +195,24 @@
 ## 🐛 Known Issues
 
 ### Critical
+
 - None currently
 
 ### High Priority
+
 - [ ] WebNovel handler: Button injection fails on some chapters with infinite scroll
 - [ ] Long content (>100k chars) may timeout during chunking
 - [ ] Import library: Large libraries (>1000 novels) slow to import
 
 ### Medium Priority
+
 - [ ] FanFiction mobile: Cover images sometimes fail to load
 - [ ] AO3: Tag extraction misses custom tags
 - [ ] Cache: Expired entries not automatically cleaned up
 - [ ] Popup: Library preview doesn't update immediately after changes
 
 ### Low Priority
+
 - [ ] Some sites with aggressive CSP block button styling
 - [ ] Debug panel: Performance metrics occasionally incorrect
 - [ ] Library grid: Card height inconsistent with long descriptions
@@ -210,6 +222,7 @@
 ## 🔧 Technical Debt
 
 ### Code Quality
+
 - [ ] Add comprehensive unit tests
   - [ ] Handler tests with mock DOM
   - [ ] Storage manager tests
@@ -226,6 +239,7 @@
   - [ ] Improve IDE autocomplete
 
 ### Architecture
+
 - [ ] Implement proper state management
   - [ ] Redux or similar for popup state
   - [ ] Event-driven architecture for library updates
@@ -241,6 +255,7 @@
   - [ ] Bundle size optimization
 
 ### Documentation
+
 - [ ] API documentation for handlers
 - [ ] Contributing guidelines
 - [ ] Code style guide
@@ -251,6 +266,7 @@
 ## 💡 Feature Requests
 
 ### From Users
+
 - [ ] Support for reading offline (store enhanced chapters locally)
 - [ ] Dark mode for enhanced content
 - [ ] Text-to-speech integration
@@ -259,6 +275,7 @@
 - [ ] Browser reading mode integration
 
 ### Community Ideas
+
 - [ ] Shared prompt library (community-driven)
 - [ ] Enhancement presets for different genres
 - [ ] Character glossary generation
@@ -266,6 +283,7 @@
 - [ ] Author style analysis and matching
 
 ### Experimental
+
 - [ ] AI-powered chapter predictions
 - [ ] Character dialogue consistency analysis
 - [ ] World-building consistency checker
@@ -277,18 +295,21 @@
 ## 📊 Development Metrics
 
 ### Code Statistics (Estimated)
+
 - Total lines of code: ~8,000
 - JavaScript files: ~25
 - CSS files: ~5
 - Documentation pages: ~15
 
 ### Test Coverage Goals
+
 - [ ] Handlers: 80% coverage
 - [ ] Storage: 90% coverage
 - [ ] Library: 85% coverage
 - [ ] Background: 75% coverage
 
 ### Performance Targets
+
 - [ ] Extension startup: < 100ms
 - [ ] Content injection: < 50ms
 - [ ] Library page load: < 500ms (1000 novels)
@@ -299,6 +320,7 @@
 ## 🗓️ Release Schedule
 
 ### Tentative Timeline
+
 - **v3.1.0** - Q1 2025 - Documentation & Bug Fixes
 - **v3.2.0** - Q2 2025 - Enhanced Library Features
 - **v3.3.0** - Q3 2025 - Cross-Device Sync
@@ -306,6 +328,7 @@
 - **v4.0.0** - 2026 - Chrome Support & Platform Expansion
 
 ### Release Criteria
+
 Each release must have:
 - [ ] All high-priority bugs fixed
 - [ ] Documentation updated
@@ -337,4 +360,3 @@ Priority areas for contributions:
 ---
 
 **Navigation:** [Back to Development Docs](./README.md) | [Main Docs](../README.md) | [Architecture](../architecture/ARCHITECTURE.md)
-```

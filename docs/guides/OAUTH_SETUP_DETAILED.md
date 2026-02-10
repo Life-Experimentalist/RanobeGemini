@@ -4,6 +4,47 @@
 
 Complete guide to set up Google Drive backup with proper OAuth 2.0 authentication.
 
+## Table of Contents
+
+- [Google OAuth 2.0 Setup for Ranobe Gemini](#google-oauth-20-setup-for-ranobe-gemini)
+	- [Table of Contents](#table-of-contents)
+	- [Quick Summary](#quick-summary)
+	- [Why PKCE?](#why-pkce)
+	- [Why `drive.file` Scope?](#why-drivefile-scope)
+	- [Google Cloud Console Setup](#google-cloud-console-setup)
+		- [Step 1: Create OAuth Consent Screen](#step-1-create-oauth-consent-screen)
+		- [Step 2: Create OAuth 2.0 Credentials](#step-2-create-oauth-20-credentials)
+		- [Step 3: Copy Client ID](#step-3-copy-client-id)
+	- [Finding Your Extension ID](#finding-your-extension-id)
+		- [Chrome/Chromium](#chromechromium)
+		- [Edge](#edge)
+		- [Firefox](#firefox)
+	- [Implementation Details](#implementation-details)
+		- [Code Flow](#code-flow)
+		- [Token Refresh](#token-refresh)
+		- [API Calls](#api-calls)
+		- [Backup Retention Rules](#backup-retention-rules)
+	- [File Structure](#file-structure)
+		- [Landing Page (OAuth Redirect)](#landing-page-oauth-redirect)
+		- [Drive Utils](#drive-utils)
+		- [Popup UI](#popup-ui)
+		- [Background Service](#background-service)
+	- [Security Considerations](#security-considerations)
+		- [Token Storage](#token-storage)
+		- [PKCE Flow Benefits](#pkce-flow-benefits)
+		- [Scope Limitation](#scope-limitation)
+		- [Revocation](#revocation)
+	- [Troubleshooting](#troubleshooting)
+		- ["Client ID missing" Error](#client-id-missing-error)
+		- ["State mismatch" Error](#state-mismatch-error)
+		- [Token Refresh Failed](#token-refresh-failed)
+		- [Backup Upload Failed](#backup-upload-failed)
+	- [Default Client ID](#default-client-id)
+	- [Testing the Flow](#testing-the-flow)
+		- [Unit Test (Node.js)](#unit-test-nodejs)
+		- [Integration Test (Browser)](#integration-test-browser)
+	- [References](#references)
+
 ## Quick Summary
 
 | Item                    | Value                                                                               |
@@ -25,7 +66,7 @@ The extension uses **PKCE** (RFC 7636) because:
 
 ## Why `drive.file` Scope?
 
-```
+```logs
 Scope: https://www.googleapis.com/auth/drive.file
 ```
 
@@ -45,7 +86,7 @@ This scope means:
 
 ### Step 1: Create OAuth Consent Screen
 
-```
+```logs
 Google Cloud Console
   ↓
 APIs & Services
@@ -68,7 +109,7 @@ Save and Continue
 
 ### Step 2: Create OAuth 2.0 Credentials
 
-```
+```logs
 Google Cloud Console
   ↓
 APIs & Services
@@ -95,7 +136,7 @@ Create
 
 ### Step 3: Copy Client ID
 
-```
+```json
 You should see:
 {
   "client_id": "123456789-xxxxx.apps.googleusercontent.com",
@@ -118,12 +159,14 @@ You should see:
 3. Your extension ID is shown in the blue box
 
 Example:
-```
+
+```env
 ID: agbhdkiciomjlifhlfbjanpnhhokaimn
 ```
 
 Add to Google Cloud redirect URIs:
-```
+
+```env
 https://agbhdkiciomjlifhlfbjanpnhhokaimn.chromiumapp.org/
 ```
 
@@ -133,7 +176,8 @@ https://agbhdkiciomjlifhlfbjanpnhhokaimn.chromiumapp.org/
 2. Enable "Developer mode"
 3. Copy ID
 4. Add to Google Cloud redirect URIs:
-```
+
+```env
 https://YOUR_ID.chromiumapp.org/
 ```
 
@@ -148,7 +192,7 @@ https://YOUR_ID.chromiumapp.org/
 
 ### Code Flow
 
-```
+```markdown
 User clicks "Connect Google Drive"
          ↓
 popup.js opens oauth-redirect.html in new tab
@@ -206,7 +250,7 @@ Now backup library to Google Drive
 
 Tokens expire in 3600 seconds (1 hour). When expired:
 
-```
+```markdown
 drive.js detects expired token
          ↓
 Calls ensureDriveAccessToken()
@@ -230,12 +274,13 @@ Makes API call with new token
 
 All Drive API calls use the access token:
 
-```
+```post
 Authorization: Bearer <access_token>
 ```
 
 Example: List backups
-```
+
+```post
 GET https://www.googleapis.com/drive/v3/files
   ?q='FOLDER_ID' in parents
   &spaces=drive
@@ -254,7 +299,8 @@ Headers:
 ## File Structure
 
 ### Landing Page (OAuth Redirect)
-```
+
+```file-structure
 landing/oauth-redirect.html
 ├── Minimal UI
 ├── Detects browser
@@ -264,7 +310,8 @@ landing/oauth-redirect.html
 ```
 
 ### Drive Utils
-```
+
+```file-structure
 src/utils/drive.js
 ├── PKCE helper functions
 ├── ensureDriveAccessToken()     // Get/refresh token
@@ -276,7 +323,8 @@ src/utils/drive.js
 ```
 
 ### Popup UI
-```
+
+```file-structure
 src/popup/popup.html
 ├── Backup Tab
 │   ├── Google Drive section
@@ -288,7 +336,8 @@ src/popup/popup.html
 ```
 
 ### Background Service
-```
+
+```file-structure
 src/background/background.js
 ├── Auto-backup scheduler
 │   ├── Scheduled mode: daily alarm
@@ -389,6 +438,7 @@ Check:
 ## Default Client ID
 
 The extension includes a default Google OAuth Client ID:
+
 ```javascript
 // src/utils/constants.js
 export const DEFAULT_DRIVE_CLIENT_ID =

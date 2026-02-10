@@ -42,7 +42,6 @@
 	- [🔄 Version Information](#-version-information)
 		- [Version History](#version-history)
 
-
 **Version:** 3.0.0
 **Last Updated:** 2025-01-15
 **Maintainer:** VKrishna04
@@ -60,6 +59,7 @@ This is the comprehensive documentation hub for the RanobesGemini Firefox extens
 The documentation is organized into four main categories:
 
 ### 🏗️ [Architecture](./architecture/)
+
 **Technical architecture, design patterns, and system components**
 
 - [System Architecture](./architecture/ARCHITECTURE.md) - Comprehensive architectural overview
@@ -71,6 +71,7 @@ The documentation is organized into four main categories:
 ---
 
 ### ✨ [Features](./features/)
+
 **Detailed documentation for each major feature**
 
 - Novel Library System
@@ -85,6 +86,7 @@ The documentation is organized into four main categories:
 ---
 
 ### 📖 [Guides](./guides/)
+
 **Step-by-step guides for users and contributors**
 
 - [Adding New Websites](./guides/ADDING_NEW_WEBSITES.md) - Complete handler creation guide
@@ -97,6 +99,7 @@ The documentation is organized into four main categories:
 ---
 
 ### 🔧 [Development](./development/)
+
 **Development workflows, roadmap, and technical notes**
 
 - [TODO](./development/TODO.md) - Feature roadmap and bug tracking
@@ -171,6 +174,7 @@ mindmap
 ## 🎯 Documentation by Role
 
 ### I'm a User
+
 **I want to use the extension and understand its features**
 
 1. ~~Getting Started Guide~~ → **Current:** Main project [README](../README.md)
@@ -179,6 +183,7 @@ mindmap
 4. ~~Troubleshooting Guide~~ → **Planned**
 
 ### I'm a Contributor
+
 **I want to add support for a new website**
 
 1. [Adding New Websites Guide](./guides/ADDING_NEW_WEBSITES.md) - Complete walkthrough
@@ -186,6 +191,7 @@ mindmap
 3. [Development Workflow](./development/README.md) - Testing and submission
 
 ### I'm a Developer
+
 **I want to understand or modify the codebase**
 
 1. [Architecture Overview](./architecture/ARCHITECTURE.md) - System architecture
@@ -195,11 +201,12 @@ mindmap
 5. [TODO](./development/TODO.md) - Current work and roadmap
 
 ### I'm a Maintainer
+
 **I want to manage the project and releases**
 
 1. [Development Documentation](./development/README.md) - Full dev workflows
 2. [TODO](./development/TODO.md) - Feature backlog and priorities
-3. [Changelog](./CHANGELOG.md) - Release history
+3. [Changelog](./release/CHANGELOG.md) - Release history
 
 ---
 
@@ -208,17 +215,20 @@ mindmap
 All documentation in this project follows these conventions:
 
 ### Structure
+
 - **Index placeholder** at the top (marked `<!-- TO BE FILLED -->`)
 - **Version and date** metadata
 - **Table of contents** for documents >3 sections
 - **Navigation links** at bottom
 
 ### Diagrams
+
 - **Mermaid diagrams** for all visual representations
 - **Component tables** below each diagram
 - **Clear labels** and descriptions
 
 ### Formatting
+
 - **Markdown**: GitHub-flavored markdown
 - **Naming**: UPPERCASE.md for major docs
 - **Headings**: Clear hierarchy with semantic structure
@@ -229,7 +239,7 @@ All documentation in this project follows these conventions:
 
 ## 🗺️ Documentation Map
 
-```
+```file-structure
 docs/
 ├── README.md                    # This file - Documentation hub
 ├── CHANGELOG.md                 # Version history and changes
@@ -345,20 +355,24 @@ We welcome documentation improvements! Here's how:
 ## 📞 Getting Help
 
 ### For Users
+
 - Check extension popup → Info & FAQ tab
 - Review [Features](./features/README.md) for capability overview
 - ~~See Troubleshooting Guide~~ (planned)
 
 ### For Developers
+
 - Read [Architecture](./architecture/ARCHITECTURE.md) for system understanding
 - Check [Development Guide](./development/README.md) for workflows
 
 ### For Contributors
+
 - Follow [Adding Websites Guide](./guides/ADDING_NEW_WEBSITES.md)
 - Check [TODO](./development/TODO.md) for current priorities
 - Read [Development Guide](./development/README.md) for contribution process
 
 ### Contact
+
 - **GitHub:** [Life-Experimentalist/RanobeGemini](https://github.com/Life-Experimentalist/RanobeGemini)
 - **Issues:** [GitHub Issues](https://github.com/Life-Experimentalist/RanobeGemini/issues)
 - **Profile:** [VKrishna04](https://github.com/VKrishna04)
@@ -379,7 +393,7 @@ We welcome documentation improvements! Here's how:
 - **v2.4.0** (2024-10) - Content splitting improvements
 - **v2.0.0** (2024-09) - Multi-site support, handler system
 
-See [CHANGELOG.md](./CHANGELOG.md) for complete history.
+See [CHANGELOG.md](./release/CHANGELOG.md) for complete history.
 
 ---
 

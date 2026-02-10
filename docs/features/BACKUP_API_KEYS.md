@@ -1,9 +1,10 @@
 # Backup API Keys & Rotation System
 
-> **Index:**
+## Table of Contents
 
 - [Backup API Keys \& Rotation System](#backup-api-keys--rotation-system)
 	- [Table of Contents](#table-of-contents)
+	- [Table of Contents](#table-of-contents-1)
 	- [Overview](#overview)
 		- [Key Benefits](#key-benefits)
 	- [How It Works](#how-it-works)
@@ -31,7 +32,6 @@
 		- [Strategy Selection](#strategy-selection)
 		- [Quota Management](#quota-management)
 		- [Troubleshooting](#troubleshooting)
-
 
 **Feature Version:** 2.8.0
 **Last Updated:** 2025-11-28
@@ -127,6 +127,7 @@ sequenceDiagram
 6. Repeat for additional keys (up to 5 recommended)
 
 **Via Storage** (Advanced):
+
 ```javascript
 await browser.storage.local.set({
   backupApiKeys: [
@@ -285,7 +286,8 @@ When you see: *"All API keys exhausted. Please try again later."*
 ### Key Rotation Behavior
 
 **Failover Example**:
-```
+
+```logs
 Request 1: Primary → Success
 Request 2: Primary → 429 Error → Backup 1 → Success
 Request 3: Primary → 429 Error → Backup 1 → Success
@@ -293,7 +295,8 @@ Request 4: Primary → 429 Error → Backup 1 → 429 → Backup 2 → Success
 ```
 
 **Round-Robin Example**:
-```
+
+```logs
 Request 1: Primary → Success
 Request 2: Backup 1 → Success
 Request 3: Backup 2 → Success
@@ -323,6 +326,7 @@ Request 5: Backup 1 → Success
 ### Key Selection Algorithm
 
 **Failover**:
+
 ```javascript
 function getCurrentApiKey() {
   return apiKey; // Always return primary
@@ -338,6 +342,7 @@ function getNextApiKey(currentIndex) {
 ```
 
 **Round-Robin**:
+
 ```javascript
 function getCurrentApiKey() {
   const allKeys = [apiKey, ...backupApiKeys];

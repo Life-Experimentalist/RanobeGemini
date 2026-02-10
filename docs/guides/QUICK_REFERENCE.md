@@ -1,10 +1,30 @@
 # Google Drive Backup - Quick Reference
 
+## Table of Contents
+
+- [Google Drive Backup - Quick Reference](#google-drive-backup---quick-reference)
+	- [Table of Contents](#table-of-contents)
+	- [⚡ Quick Setup](#-quick-setup)
+		- [1. Google Cloud Console (5 minutes)](#1-google-cloud-console-5-minutes)
+		- [2. Update Extension](#2-update-extension)
+		- [3. Build \& Test](#3-build--test)
+	- [📊 OAuth Scopes](#-oauth-scopes)
+	- [🔐 Token Flow (PKCE)](#-token-flow-pkce)
+	- [💾 Backup Modes](#-backup-modes)
+		- [Scheduled](#scheduled)
+		- [Continuous](#continuous)
+	- [📝 Files Modified](#-files-modified)
+	- [🧪 Test Checklist](#-test-checklist)
+	- [🐛 Common Issues](#-common-issues)
+	- [📚 Documentation](#-documentation)
+	- [🚀 Ready to Ship?](#-ready-to-ship)
+	- [📧 Support URLs](#-support-urls)
+
 ## ⚡ Quick Setup
 
 ### 1. Google Cloud Console (5 minutes)
 
-```
+```markdown
 console.cloud.google.com
   → New Project: "Ranobe Gemini"
   → APIs: Enable "Google Drive API"
@@ -45,7 +65,7 @@ npm run build    # or npm run watch
 
 ## 🔐 Token Flow (PKCE)
 
-```
+```markdown
 User clicks "Connect Drive"
   ↓
 Extension opens Google login
@@ -62,14 +82,16 @@ Backups upload automatically
 ## 💾 Backup Modes
 
 ### Scheduled
-```
+
+```logs
 - Runs daily at 2 AM
 - Good for: Nightly protection
 - Storage: Low (once per day)
 ```
 
 ### Continuous
-```
+
+```logs
 - Uploads 5 min after library change
 - Good for: Real-time protection
 - Storage: Higher (multiple per day)

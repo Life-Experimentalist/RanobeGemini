@@ -4,6 +4,7 @@
 		"bierner.markdown-mermaid",
 		"christian-kohler.path-intellisense",
 		"dbaeumer.vscode-eslint",
+		"DavidAnson.vscode-markdownlint",
 		"EditorConfig.EditorConfig",
 		"esbenp.prettier-vscode",
 		"moppitz.vscode-extension-auto-import",

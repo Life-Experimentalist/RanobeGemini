@@ -4,6 +4,42 @@
 
 The RanobeGemini extension now uses a **dynamic domain management system** that automatically collects supported domains from website handlers. This eliminates the need to manually update multiple files when adding new domains or handlers.
 
+## Table of Contents
+
+- [Dynamic Domain Management System](#dynamic-domain-management-system)
+	- [Overview](#overview)
+	- [Table of Contents](#table-of-contents)
+	- [How It Works](#how-it-works)
+		- [1. Handler Configuration](#1-handler-configuration)
+		- [2. Automatic Collection](#2-automatic-collection)
+		- [3. Manifest Generation](#3-manifest-generation)
+	- [Adding a New Website](#adding-a-new-website)
+		- [Step 1: Create the Handler](#step-1-create-the-handler)
+		- [Step 2: Register the Handler](#step-2-register-the-handler)
+		- [Step 3: Update Domain Constants](#step-3-update-domain-constants)
+		- [Step 4: Generate Manifest](#step-4-generate-manifest)
+	- [Benefits](#benefits)
+		- [Before (Manual System)](#before-manual-system)
+		- [Manual System Workflow Steps](#manual-system-workflow-steps)
+		- [After (Dynamic System)](#after-dynamic-system)
+		- [Dynamic System Workflow Steps](#dynamic-system-workflow-steps)
+	- [API Reference](#api-reference)
+		- [Exported Constants](#exported-constants)
+		- [Helper Functions](#helper-functions)
+		- [Example Usage](#example-usage)
+	- [Subdomain Handling](#subdomain-handling)
+	- [Maintenance](#maintenance)
+		- [Updating Domains](#updating-domains)
+		- [Viewing Current Domains](#viewing-current-domains)
+		- [Debugging](#debugging)
+	- [Migration Guide](#migration-guide)
+		- [Old Code](#old-code)
+		- [New Code (Recommended)](#new-code-recommended)
+		- [Backward Compatible](#backward-compatible)
+	- [Architecture Diagram](#architecture-diagram)
+		- [Dynamic Domain System Components](#dynamic-domain-system-components)
+	- [Future Enhancements](#future-enhancements)
+
 ## How It Works
 
 ### 1. Handler Configuration
@@ -166,6 +202,7 @@ That's it! The domains are now automatically included in:
 ## Benefits
 
 ### Before (Manual System)
+
 To add a new domain, you had to update:
 1. ❌ `domain-constants.js` - Add to domain array
 2. ❌ `manifest.json` - Add to content_scripts matches
@@ -199,6 +236,7 @@ flowchart LR
 | 6    | Test                  | Verify all changes work together             | ⚠️ Yes - Miss one file, nothing works |
 
 ### After (Dynamic System)
+
 To add a new domain:
 1. ✅ Handler file - Add to `SUPPORTED_DOMAINS` array
 2. ✅ Run `npm run update-domains`
@@ -330,6 +368,7 @@ If domains aren't working:
 If you have existing code using old domain constants:
 
 ### Old Code
+
 ```javascript
 import { RANOBES_DOMAINS } from "./utils/domain-constants.js";
 
@@ -339,6 +378,7 @@ if (RANOBES_DOMAINS.includes(hostname)) {
 ```
 
 ### New Code (Recommended)
+
 ```javascript
 import { isSupportedDomain } from "./utils/domain-constants.js";
 
@@ -348,6 +388,7 @@ if (isSupportedDomain(hostname)) {
 ```
 
 ### Backward Compatible
+
 The old constants (`RANOBES_DOMAINS`, `FANFICTION_DOMAINS`, etc.) are still exported for backward compatibility, but they're automatically generated from handlers now.
 
 ## Architecture Diagram

@@ -1,8 +1,9 @@
 # Development Documentation
 
-> **Index:**
+## Table of Contents
 
 - [Development Documentation](#development-documentation)
+	- [Table of Contents](#table-of-contents)
 	- [📁 Documents in This Directory](#-documents-in-this-directory)
 		- [TODO.md](#todomd)
 	- [🔗 Quick Development Navigation](#-quick-development-navigation)
@@ -35,7 +36,6 @@
 		- [Key Files for Common Tasks](#key-files-for-common-tasks)
 		- [Architecture References](#architecture-references)
 
-
 This directory contains documentation for developers working on the RanobeGemini extension codebase.
 
 ---
@@ -43,7 +43,8 @@ This directory contains documentation for developers working on the RanobeGemini
 ## 📁 Documents in This Directory
 
 ### [TODO.md](./TODO.md)
-**Development roadmap, planned features, and known issues**
+
+Development roadmap, planned features, and known issues
 
 - Feature backlog
 - Bug tracking
@@ -56,7 +57,6 @@ This directory contains documentation for developers working on the RanobeGemini
 - 🐛 Known bugs
 - 💡 Enhancement proposals
 - ✅ Completed work
-
 
 ---
 
@@ -85,17 +85,20 @@ This directory contains documentation for developers working on the RanobeGemini
 ### Getting Started with Development
 
 1. **Clone the repository**
+
    ```powershell
    git clone https://github.com/Life-Experimentalist/RanobeGemini.git
    cd RanobeGemini
    ```
 
 2. **Install dependencies**
+
    ```powershell
    npm install
    ```
 
 3. **Run development build**
+
    ```powershell
    npm run watch  # Watches for changes and rebuilds
    ```
@@ -119,7 +122,7 @@ This directory contains documentation for developers working on the RanobeGemini
 
 ### File Structure for Developers
 
-```
+```file-structure
 src/
 ├── background/          # Background service worker
 │   └── background.js    # API integration, chunking, message handling
@@ -278,6 +281,7 @@ Enable debug mode to see:
 - Cache hit/miss rates
 
 **Enable debug mode:**
+
 ```javascript
 // In browser console on any supported page
 localStorage.setItem('rg_debug', 'true');
@@ -315,7 +319,7 @@ localStorage.setItem('rg_debug', 'true');
 ### Creating a Release
 
 1. **Update version** in `manifest.json` and `package.json`
-2. **Update [CHANGELOG.md](../CHANGELOG.md)** with changes
+2. **Update [CHANGELOG.md](../release/CHANGELOG.md)** with changes
 3. **Run build:** `npm run build`
 4. **Test thoroughly** on all supported sites
 5. **Package:** `npm run package` (runs domain refresh + multi-target) or target builds via `npm run package-firefox`, `npm run package-chromium`

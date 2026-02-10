@@ -1,9 +1,10 @@
 # Novel Library System
 
-> **Index:**
+## Table of Contents
 
 - [Novel Library System](#novel-library-system)
 	- [Table of Contents](#table-of-contents)
+	- [Table of Contents](#table-of-contents-1)
 	- [Overview](#overview)
 		- [Key Benefits](#key-benefits)
 	- [Architecture](#architecture)
@@ -12,7 +13,12 @@
 		- [1. Automatic Novel Detection](#1-automatic-novel-detection)
 		- [2. Shelf Organization](#2-shelf-organization)
 		- [3. Full Library Page](#3-full-library-page)
-			- [Features:](#features-1)
+			- [Features](#features-1)
+		- [3.5. Website Shelf Pages (v3.5.0+)](#35-website-shelf-pages-v350)
+			- [AO3 Shelf Page](#ao3-shelf-page)
+			- [FanFiction.net Shelf Page](#fanfictionnet-shelf-page)
+			- [Ranobes Shelf Page](#ranobes-shelf-page)
+			- [ScribbleHub \& WebNovel Shelf Pages](#scribblehub--webnovel-shelf-pages)
 		- [4. Novel Metadata](#4-novel-metadata)
 		- [5. Novel Management](#5-novel-management)
 		- [6. Import/Export](#6-importexport)
@@ -52,7 +58,6 @@
 		- [Organization](#organization)
 		- [Performance](#performance)
 		- [Data Management](#data-management)
-
 
 **Feature Version:** 3.0.0
 **Last Updated:** 2025-11-28
@@ -223,7 +228,8 @@ graph LR
     E --> E1[Novel Cards]
 ```
 
-#### Features:
+#### Features
+
 - **Search**: Find novels by title, author, or description
 - **Filter by Shelf**: Show only novels from specific websites
 - **Sort Options**:
@@ -362,12 +368,14 @@ Each novel stores comprehensive metadata:
 ### 6. Import/Export
 
 #### Export
+
 - **Format**: JSON with timestamp
 - **Filename**: `ranobegemini-library-YYYY-MM-DD-HHmmss.json`
 - **Contents**: Complete library data, settings excluded
 - **Use Cases**: Backup, transfer between devices, sharing
 
 #### Import
+
 - **Modes**:
   - **Merge**: Add new novels, update existing (by ID)
   - **Replace**: Clear library, then import all novels
@@ -596,6 +604,7 @@ await addOrUpdateNovelInLibrary({
 #### Methods
 
 ##### `getInstance()`
+
 Returns the singleton instance.
 
 ```javascript
@@ -603,14 +612,16 @@ const library = NovelLibrary.getInstance();
 ```
 
 ##### `addNovel(novelData)`
+
 Adds a novel to the library.
 
 **Parameters**:
 - `novelData` (Object): Novel metadata
 
-**Returns**: Promise<void>
+**Returns**: `Promise<void>`
 
 **Example**:
+
 ```javascript
 await library.addNovel({
   id: "fanfiction_12025721",
@@ -623,15 +634,17 @@ await library.addNovel({
 ```
 
 ##### `updateNovel(novelId, updates)`
+
 Updates an existing novel.
 
 **Parameters**:
 - `novelId` (string): Novel ID
 - `updates` (Object): Fields to update
 
-**Returns**: Promise<void>
+**Returns**: `Promise<void>`
 
 **Example**:
+
 ```javascript
 await library.updateNovel("fanfiction_12025721", {
   chaptersEnhanced: 10,
@@ -640,14 +653,16 @@ await library.updateNovel("fanfiction_12025721", {
 ```
 
 ##### `deleteNovel(novelId)`
+
 Deletes a novel from the library.
 
 **Parameters**:
 - `novelId` (string): Novel ID
 
-**Returns**: Promise<void>
+**Returns**: `Promise<void>`
 
 ##### `getNovel(novelId)`
+
 Retrieves a specific novel.
 
 **Parameters**:
@@ -656,24 +671,28 @@ Retrieves a specific novel.
 **Returns**: Promise<Object|null>
 
 ##### `getAllNovels()`
+
 Retrieves all novels.
 
-**Returns**: Promise<Array<Object>>
+**Returns**: `Promise<Array<Object>>`
 
 ##### `searchNovels(query)`
+
 Searches novels by title, author, or description.
 
 **Parameters**:
 - `query` (string): Search query
 
-**Returns**: Promise<Array<Object>>
+**Returns**: `Promise<Array<Object>>`
 
 ##### `exportLibrary()`
+
 Exports library as JSON string.
 
-**Returns**: Promise<string>
+**Returns**: `Promise<string>`
 
 ##### `importLibrary(jsonData, mode)`
+
 Imports library from JSON.
 
 **Parameters**:

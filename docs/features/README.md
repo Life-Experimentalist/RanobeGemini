@@ -1,8 +1,9 @@
 # Features Documentation
 
-> **Index:**
+## Table of Contents
 
 - [Features Documentation](#features-documentation)
+	- [Table of Contents](#table-of-contents)
 	- [📁 Feature Documentation (To Be Created)](#-feature-documentation-to-be-created)
 		- [Novel Library System](#novel-library-system)
 		- [Backup API Keys](#backup-api-keys)
@@ -21,7 +22,6 @@
 		- [Phase 2: Enhancement Features](#phase-2-enhancement-features)
 		- [Phase 3: Advanced Features](#phase-3-advanced-features)
 
-
 This directory contains detailed documentation for each major feature of the RanobeGemini extension.
 
 ---
@@ -29,6 +29,7 @@ This directory contains detailed documentation for each major feature of the Ran
 ## 📁 Feature Documentation (To Be Created)
 
 ### Novel Library System
+
 **Comprehensive novel management and tracking**
 
 Status: ⏳ Documentation pending
@@ -45,6 +46,7 @@ Planned file: `NOVEL_LIBRARY.md`
 ---
 
 ### Backup API Keys
+
 **Automatic failover and key rotation**
 
 Status: ⏳ Documentation pending
@@ -60,6 +62,7 @@ Planned file: `BACKUP_API_KEYS.md`
 ---
 
 ### Chunking System
+
 **Progressive content processing**
 
 Status: ⏳ Documentation pending
@@ -76,6 +79,7 @@ Planned file: `CHUNKING_SYSTEM.md`
 ---
 
 ### Emoji Support
+
 **Emotional context in dialogues**
 
 Status: ⏳ Documentation pending
@@ -91,6 +95,7 @@ Planned file: `EMOJI_SUPPORT.md`
 ---
 
 ### Summary Modes
+
 **Long and short format summaries**
 
 Status: ⏳ Documentation pending
@@ -107,6 +112,7 @@ Planned file: `SUMMARY_MODES.md`
 ---
 
 ### Progressive Enhancement
+
 **Real-time content enhancement with live updates**
 
 Status: ⏳ Documentation pending
@@ -123,6 +129,7 @@ Planned file: `PROGRESSIVE_ENHANCEMENT.md`
 ---
 
 ### Custom Prompts
+
 **Per-novel and global prompt customization**
 
 Status: ⏳ Documentation pending
@@ -194,16 +201,19 @@ Planned file: `CUSTOM_PROMPTS.md`
 ## 🔄 Documentation Roadmap
 
 ### Phase 1: Core Features (Priority)
+
 - [ ] NOVEL_LIBRARY.md
 - [ ] BACKUP_API_KEYS.md
 - [ ] CHUNKING_SYSTEM.md
 
 ### Phase 2: Enhancement Features
+
 - [ ] EMOJI_SUPPORT.md
 - [ ] SUMMARY_MODES.md
 - [ ] PROGRESSIVE_ENHANCEMENT.md
 
 ### Phase 3: Advanced Features
+
 - [ ] CUSTOM_PROMPTS.md
 - [ ] CACHING_SYSTEM.md
 - [ ] DEBUG_MODE.md

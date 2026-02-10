@@ -1,8 +1,9 @@
 # User Guides
 
-> **Index:**
+## Table of Contents
 
 - [User Guides](#user-guides)
+	- [Table of Contents](#table-of-contents)
 	- [📁 Guides in This Directory](#-guides-in-this-directory)
 		- [ADDING\_NEW\_WEBSITES.md](#adding_new_websitesmd)
 	- [🔗 Planned Guides](#-planned-guides)
@@ -21,7 +22,6 @@
 	- [🔄 Documentation Status](#-documentation-status)
 	- [💡 Contributing to Guides](#-contributing-to-guides)
 
-
 This directory contains step-by-step guides for using and extending the RanobeGemini extension.
 
 ---
@@ -29,6 +29,7 @@ This directory contains step-by-step guides for using and extending the RanobeGe
 ## 📁 Guides in This Directory
 
 ### [ADDING_NEW_WEBSITES.md](./ADDING_NEW_WEBSITES.md)
+
 **Complete guide for adding support for new web novel websites**
 
 - Prerequisites and setup
@@ -49,6 +50,7 @@ This directory contains step-by-step guides for using and extending the RanobeGe
 ## 🔗 Planned Guides
 
 ### Getting Started Guide
+
 **For new users setting up the extension**
 
 Status: ⏳ To be created
@@ -64,6 +66,7 @@ Planned file: `GETTING_STARTED.md`
 ---
 
 ### Configuration Guide
+
 **Detailed settings and customization**
 
 Status: ⏳ To be created
@@ -81,6 +84,7 @@ Planned file: `CONFIGURATION.md`
 ---
 
 ### Novel Library Guide
+
 **Managing your novel collection**
 
 Status: ⏳ To be created
@@ -98,6 +102,7 @@ Planned file: `LIBRARY_GUIDE.md`
 ---
 
 ### Troubleshooting Guide
+
 **Common issues and solutions**
 
 Status: ⏳ To be created
@@ -179,6 +184,7 @@ Follow this workflow:
 ## 📖 Guide Categories
 
 ### User Guides
+>
 > For end users of the extension
 
 - Getting Started (planned)
@@ -187,6 +193,7 @@ Follow this workflow:
 - Troubleshooting (planned)
 
 ### Developer Guides
+>
 > For contributors and developers
 
 - ✅ Adding New Websites (available)
@@ -195,6 +202,7 @@ Follow this workflow:
 - Debugging Guide (planned)
 
 ### Advanced Guides
+>
 > For power users and customization
 
 - Custom Prompt Engineering (planned)
