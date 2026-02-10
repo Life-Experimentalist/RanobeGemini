@@ -16,6 +16,7 @@ import {
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_DRIVE_CLIENT_ID,
 } from "../utils/constants.js";
+import { isSupportedDomain } from "../utils/domain-constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
 import {
 	filterEnabledShelves,
@@ -25,6 +26,10 @@ import {
 	saveSiteSettings,
 	SITE_SETTINGS_KEY,
 } from "../utils/site-settings.js";
+import {
+	WEBSITE_SETTINGS_DEFINITIONS,
+	renderWebsiteSettingsPanel,
+} from "./site-settings-ui.js";
 import {
 	createComprehensiveBackup,
 	restoreComprehensiveBackup,
@@ -281,6 +286,15 @@ const elements = {
 	clearBtn: document.getElementById("clear-btn"),
 	autoHoldToggle: document.getElementById("auto-hold-toggle"),
 	autoHoldDays: document.getElementById("auto-hold-days"),
+	urlImportText: document.getElementById("url-import-text"),
+	urlImportBtn: document.getElementById("url-import-btn"),
+	urlImportClear: document.getElementById("url-import-clear"),
+	urlImportStatus: document.getElementById("url-import-status"),
+	libraryChunkingEnabled: document.getElementById("library-chunking-enabled"),
+	libraryChunkSize: document.getElementById("library-chunk-size"),
+	libraryMaxOutputTokens: document.getElementById(
+		"library-max-output-tokens",
+	),
 
 	// Comprehensive Backup
 	comprehensiveBackupBtn: document.getElementById("comprehensive-backup-btn"),
@@ -971,6 +985,7 @@ async function loadSiteToggleSettings() {
 	}
 
 	renderSiteAutoAddSettings();
+	renderWebsiteSettingsTabs();
 }
 
 /**
@@ -1268,6 +1283,9 @@ async function loadLibraryAdvancedSettings() {
 			"customSummaryPrompt",
 			"customShortSummaryPrompt",
 			"permanentPrompt",
+			"chunkingEnabled",
+			"chunkSize",
+			"maxOutputTokens",
 		]);
 
 		// Load Top K
@@ -1306,6 +1324,18 @@ async function loadLibraryAdvancedSettings() {
 		if (elements.libraryPromptPermanent) {
 			elements.libraryPromptPermanent.value =
 				data.permanentPrompt || DEFAULT_PERMANENT_PROMPT;
+		}
+
+		if (elements.libraryChunkingEnabled) {
+			elements.libraryChunkingEnabled.checked =
+				data.chunkingEnabled !== false;
+		}
+		if (elements.libraryChunkSize) {
+			elements.libraryChunkSize.value = data.chunkSize || 20000;
+		}
+		if (elements.libraryMaxOutputTokens) {
+			elements.libraryMaxOutputTokens.value =
+				data.maxOutputTokens || 8192;
 		}
 	} catch (error) {
 		debugError("Failed to load advanced settings:", error);
@@ -1753,10 +1783,6 @@ function renderSiteAutoAddSettings() {
 		const autoAddEnabled = siteEnabled && setting.autoAddEnabled !== false;
 		const autoAddStatusChapter = setting.autoAddStatusChapter || "reading";
 		const autoAddStatusNovel = setting.autoAddStatusNovel || "plan-to-read";
-			const domainPreference =
-				shelf.id === "fanfiction"
-					? setting.domainPreference || "auto"
-					: null;
 
 		const row = document.createElement("div");
 		row.className = "site-autoadd-row";
@@ -1768,28 +1794,6 @@ function renderSiteAutoAddSettings() {
 			shelf.emoji || "📖",
 		);
 
-		const domainPreferenceRow =
-			shelf.id === "fanfiction"
-				? `
-					<label>
-						<span>Preferred site version</span>
-						<select data-setting="domainPreference" ${siteEnabled ? "" : "disabled"}>
-							<option value="auto" ${
-								domainPreference === "auto" ? "selected" : ""
-							}>Auto (device-based)</option>
-							<option value="desktop" ${
-								domainPreference === "desktop" ? "selected" : ""
-							}>Force Desktop (www)</option>
-							<option value="mobile" ${
-								domainPreference === "mobile" ? "selected" : ""
-							}>Force Mobile (m)</option>
-						</select>
-					</label>
-					<p class="settings-desc" style="margin: 6px 0 0; font-size: 11px;">
-						Auto-convert FanFiction links between m. and www.
-					</p>
-				`
-				: "";
 
 		row.innerHTML = `
 			<div class="site-autoadd-header">
@@ -1802,16 +1806,22 @@ function renderSiteAutoAddSettings() {
 				}">${siteEnabled ? "Enabled" : "Disabled"}</div>
 			</div>
 			<div class="site-autoadd-controls">
-				<label class="site-autoadd-toggle">
-					<input type="checkbox" data-setting="enabled" ${siteEnabled ? "checked" : ""} />
+				<div class="site-autoadd-toggle">
 					<span>Site enabled</span>
-				</label>
-				<label class="site-autoadd-toggle">
-					<input type="checkbox" data-setting="autoAddEnabled" ${
-						autoAddEnabled ? "checked" : ""
-					} ${siteEnabled ? "" : "disabled"} />
+					<label class="toggle-switch toggle-switch-sm">
+						<input type="checkbox" data-setting="enabled" ${siteEnabled ? "checked" : ""} />
+						<span class="toggle-slider"></span>
+					</label>
+				</div>
+				<div class="site-autoadd-toggle">
 					<span>Auto-add novels</span>
-				</label>
+					<label class="toggle-switch toggle-switch-sm">
+						<input type="checkbox" data-setting="autoAddEnabled" ${
+							autoAddEnabled ? "checked" : ""
+						} ${siteEnabled ? "" : "disabled"} />
+						<span class="toggle-slider"></span>
+					</label>
+				</div>
 				<label>
 					<span>On chapter pages</span>
 					<select data-setting="autoAddStatusChapter" ${siteEnabled ? "" : "disabled"}>
@@ -1846,7 +1856,6 @@ function renderSiteAutoAddSettings() {
 							.join("")}
 					</select>
 				</label>
-				${domainPreferenceRow}
 			</div>
 		`;
 
@@ -1885,9 +1894,6 @@ function renderSiteAutoAddSettings() {
 			const statusNovel = row.querySelector(
 				"select[data-setting='autoAddStatusNovel']",
 			);
-			const domainPreferenceSelect = row.querySelector(
-				"select[data-setting='domainPreference']",
-			);
 			const enabled = enabledToggle?.checked ?? true;
 
 			updateRowState(enabled);
@@ -1900,14 +1906,6 @@ function renderSiteAutoAddSettings() {
 				autoAddStatusChapter:
 					statusChapter?.value || autoAddStatusChapter,
 				autoAddStatusNovel: statusNovel?.value || autoAddStatusNovel,
-				...(shelf.id === "fanfiction"
-					? {
-							domainPreference:
-								domainPreferenceSelect?.value ||
-								domainPreference ||
-								"auto",
-						}
-					: {}),
 			};
 
 			try {
@@ -1932,6 +1930,199 @@ function renderSiteAutoAddSettings() {
 	});
 
 	attachIconFallbacks(elements.siteAutoAddList);
+}
+
+function renderWebsiteSettingsTabs() {
+	const tabsContainer = document.querySelector(".settings-tabs");
+	const modalContent = document.querySelector(".settings-modal-content");
+
+	if (!tabsContainer || !modalContent) return;
+
+	modalContent
+		.querySelectorAll(".website-settings-panel")
+		.forEach((panel) => panel.remove());
+	tabsContainer
+		.querySelectorAll(".website-settings-tab")
+		.forEach((tab) => tab.remove());
+
+	WEBSITE_SETTINGS_DEFINITIONS.forEach((definition) => {
+		const tabId = `website-settings-${definition.id}`;
+		const tabButton = document.createElement("button");
+		tabButton.className = "settings-tab website-settings-tab";
+		tabButton.dataset.tab = tabId;
+		tabButton.textContent = definition.label;
+		tabsContainer.appendChild(tabButton);
+
+		const panel = document.createElement("div");
+		panel.className = "settings-tab-content hidden website-settings-panel";
+		panel.id = tabId;
+		panel.innerHTML = renderWebsiteSettingsPanel(
+			definition,
+			siteSettings[definition.id] ||
+				getDefaultSiteSettings()[definition.id] ||
+				{},
+		);
+		modalContent.appendChild(panel);
+	});
+
+	attachWebsiteSettingsHandlers();
+	bindSettingsTabListeners();
+}
+
+function attachWebsiteSettingsHandlers() {
+	const inputs = document.querySelectorAll(
+		".website-settings-panel input[data-setting]",
+	);
+
+	inputs.forEach((input) => {
+		input.addEventListener("change", async () => {
+			const shelfId = input.dataset.shelf;
+			const key = input.dataset.setting;
+			if (!shelfId || !key) return;
+
+			const defaults = getDefaultSiteSettings();
+			const base = siteSettings[shelfId] || defaults[shelfId] || {};
+			const updated = {
+				...base,
+				[key]: input.checked,
+			};
+
+			try {
+				siteSettings = await saveSiteSettings({
+					[shelfId]: updated,
+				});
+				showToast(
+					`Saved ${key} for ${base.name || shelfId}`,
+					"success",
+				);
+			} catch (error) {
+				debugError("Failed to save website settings:", error);
+				showToast("Failed to save website settings", "error");
+			}
+		});
+	});
+}
+
+function bindSettingsTabListeners() {
+	const settingsTabs = document.querySelectorAll(".settings-tab");
+	settingsTabs.forEach((tab) => {
+		if (tab.dataset.bound === "true") return;
+		tab.dataset.bound = "true";
+		tab.addEventListener("click", () => {
+			const targetTabId = tab.dataset.tab;
+
+			settingsTabs.forEach((t) => t.classList.remove("active"));
+			tab.classList.add("active");
+
+			document
+				.querySelectorAll(".settings-tab-content")
+				.forEach((content) => {
+					content.classList.add("hidden");
+				});
+
+			const targetContent = document.getElementById(targetTabId);
+			if (targetContent) {
+				targetContent.classList.remove("hidden");
+			}
+		});
+	});
+
+	if (!document.querySelector(".settings-tab.active")) {
+		if (settingsTabs.length > 0) {
+			settingsTabs[0].classList.add("active");
+		}
+	}
+}
+
+function extractUrlsFromText(text = "") {
+	const urls = text.match(/https?:\/\/[^\s)\]\[<>]+/gi) || [];
+	const cleaned = urls
+		.map((raw) => raw.replace(/[),.\]]+$/g, ""))
+		.filter(Boolean);
+	return [...new Set(cleaned)];
+}
+
+function filterSupportedUrls(urls = []) {
+	return urls.filter((value) => {
+		try {
+			const hostname = new URL(value).hostname;
+			return isSupportedDomain(hostname);
+		} catch (_err) {
+			return false;
+		}
+	});
+}
+
+function waitForTabComplete(tabId, timeoutMs = 15000) {
+	return new Promise((resolve, reject) => {
+		let timeoutId;
+		const onUpdated = (updatedTabId, info) => {
+			if (updatedTabId !== tabId || info.status !== "complete") return;
+			browser.tabs.onUpdated.removeListener(onUpdated);
+			if (timeoutId) clearTimeout(timeoutId);
+			resolve();
+		};
+
+		browser.tabs.onUpdated.addListener(onUpdated);
+		timeoutId = setTimeout(() => {
+			browser.tabs.onUpdated.removeListener(onUpdated);
+			reject(new Error("Timed out waiting for tab load"));
+		}, timeoutMs);
+	});
+}
+
+async function sendAddToLibraryMessage(tabId) {
+	const maxAttempts = 3;
+	for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+		try {
+			const response = await browser.tabs.sendMessage(tabId, {
+				action: "addToLibrary",
+			});
+			if (response?.success) return true;
+		} catch (_err) {
+			// retry
+		}
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	}
+	return false;
+}
+
+async function addUrlsToLibrary(urls = []) {
+	const results = {
+		added: 0,
+		skipped: 0,
+		failed: 0,
+	};
+
+	for (const url of urls) {
+		let tabId = null;
+		try {
+			const tab = await browser.tabs.create({
+				url,
+				active: false,
+			});
+			tabId = tab.id;
+			await waitForTabComplete(tabId);
+			const success = await sendAddToLibraryMessage(tabId);
+			if (success) {
+				results.added += 1;
+			} else {
+				results.failed += 1;
+			}
+		} catch (_err) {
+			results.failed += 1;
+		} finally {
+			if (tabId !== null) {
+				try {
+					await browser.tabs.remove(tabId);
+				} catch (_err) {
+					// ignore close errors
+				}
+			}
+		}
+	}
+
+	return results;
 }
 
 /**
@@ -1968,6 +2159,37 @@ function setupEventListeners() {
 	elements.settingsClose.addEventListener("click", () =>
 		closeModal(elements.settingsModal),
 	);
+
+	if (elements.urlImportBtn && elements.urlImportText) {
+		elements.urlImportBtn.addEventListener("click", async () => {
+			const rawText = elements.urlImportText.value || "";
+			const extracted = extractUrlsFromText(rawText);
+			const supported = filterSupportedUrls(extracted);
+
+			if (elements.urlImportStatus) {
+				elements.urlImportStatus.textContent =
+					supported.length === 0
+						? "No supported URLs found."
+						: `Found ${supported.length} supported URL(s). Adding...`;
+			}
+
+			if (supported.length === 0) return;
+
+			const results = await addUrlsToLibrary(supported);
+			if (elements.urlImportStatus) {
+				elements.urlImportStatus.textContent = `Added ${results.added}, failed ${results.failed}.`;
+			}
+		});
+	}
+
+	if (elements.urlImportClear && elements.urlImportText) {
+		elements.urlImportClear.addEventListener("click", () => {
+			elements.urlImportText.value = "";
+			if (elements.urlImportStatus) {
+				elements.urlImportStatus.textContent = "Ready to import.";
+			}
+		});
+	}
 
 	// Novel modal
 	elements.modalClose.addEventListener("click", () =>
@@ -2020,35 +2242,7 @@ function setupEventListeners() {
 	elements.clearBtn.addEventListener("click", handleClearLibrary);
 
 	// Settings tabs
-	const settingsTabs = document.querySelectorAll(".settings-tab");
-	settingsTabs.forEach((tab) => {
-		tab.addEventListener("click", () => {
-			const targetTabId = tab.dataset.tab;
-
-			// Remove active class from all tabs
-			settingsTabs.forEach((t) => t.classList.remove("active"));
-			// Add active class to clicked tab
-			tab.classList.add("active");
-
-			// Hide all tab contents
-			document
-				.querySelectorAll(".settings-tab-content")
-				.forEach((content) => {
-					content.classList.add("hidden");
-				});
-
-			// Show target tab content
-			const targetContent = document.getElementById(targetTabId);
-			if (targetContent) {
-				targetContent.classList.remove("hidden");
-			}
-		});
-	});
-
-	// Initialize first tab as active
-	if (settingsTabs.length > 0) {
-		settingsTabs[0].classList.add("active");
-	}
+	bindSettingsTabListeners();
 
 	// Settings save button - saves library settings configuration
 	if (elements.settingsSaveBtn) {
@@ -2110,6 +2304,15 @@ function setupEventListeners() {
 						? parseInt(elements.libraryFontSizeSlider.value, 10)
 						: undefined,
 					themeSettings: themeSettings || undefined,
+					chunkingEnabled:
+						elements.libraryChunkingEnabled?.checked ?? true,
+					chunkSize: elements.libraryChunkSize
+						? parseInt(elements.libraryChunkSize.value, 10) || 20000
+						: undefined,
+					maxOutputTokens: elements.libraryMaxOutputTokens
+						? parseInt(elements.libraryMaxOutputTokens.value, 10) ||
+							8192
+						: undefined,
 					// Advanced Settings
 					topK: elements.libraryTopKSlider
 						? parseInt(elements.libraryTopKSlider.value, 10)
@@ -2141,6 +2344,9 @@ function setupEventListeners() {
 					modelEndpoint: settingsToSave.modelEndpoint,
 					customTemperature: settingsToSave.customTemperature,
 					fontSize: settingsToSave.fontSize,
+					chunkingEnabled: settingsToSave.chunkingEnabled,
+					chunkSize: settingsToSave.chunkSize,
+					maxOutputTokens: settingsToSave.maxOutputTokens,
 					topK: settingsToSave.topK,
 					topP: settingsToSave.topP,
 					customPrompt: settingsToSave.customPrompt,
@@ -4457,37 +4663,69 @@ async function handleImport(e) {
 		}
 
 		const novelCount = Object.keys(data.library.novels || {}).length;
-		const choice = confirm(
-			`Found ${novelCount} novels in backup file.\n\n` +
-				`Click OK to MERGE with your existing library (recommended)\n` +
-				`Click Cancel to see replace option`
+		// Handle toggle inputs
+		const inputs = document.querySelectorAll(
+			".website-settings-panel input[data-setting]",
 		);
+		inputs.forEach((input) => {
+			input.addEventListener("change", async () => {
+				const shelfId = input.dataset.shelf;
+				const key = input.dataset.setting;
+				if (!shelfId || !key) return;
 
-		if (choice) {
-			// Merge mode
-			const result = await novelLibrary.importLibrary(data, true);
-			if (result.success) {
-				await loadLibrary();
-				closeModal(elements.settingsModal);
-				alert(
-					`Library merged successfully!\n\n` +
-						`• ${result.imported} new novels added\n` +
-						`• ${result.updated} existing novels updated\n` +
-						(result.errors > 0
-							? `• ${result.errors} errors occurred`
-							: "")
-				);
-			} else {
-				throw new Error(result.error || "Import failed");
-			}
-		} else {
-			// Ask about replace
-			if (
-				confirm(
-					"Do you want to REPLACE your entire library with the backup?\n\n" +
-						"⚠️ WARNING: This will delete all your current library data!"
-				)
-			) {
+				const defaults = getDefaultSiteSettings();
+				const base = siteSettings[shelfId] || defaults[shelfId] || {};
+				const updated = {
+					...base,
+					[key]: input.checked,
+				};
+
+				try {
+					siteSettings = await saveSiteSettings({
+						[shelfId]: updated,
+					});
+					showToast(
+						`Saved ${key} for ${base.name || shelfId}`,
+						"success",
+					);
+				} catch (error) {
+					debugError("Failed to save website settings:", error);
+					showToast("Failed to save website settings", "error");
+				}
+			});
+		});
+
+		// Handle select fields
+		const selects = document.querySelectorAll(
+			".website-settings-panel select[data-setting]",
+		);
+		selects.forEach((select) => {
+			select.addEventListener("change", async () => {
+				const shelfId = select.dataset.shelf;
+				const key = select.dataset.setting;
+				if (!shelfId || !key) return;
+
+				const defaults = getDefaultSiteSettings();
+				const base = siteSettings[shelfId] || defaults[shelfId] || {};
+				const updated = {
+					...base,
+					[key]: select.value,
+				};
+
+				try {
+					siteSettings = await saveSiteSettings({
+						[shelfId]: updated,
+					});
+					showToast(
+						`Saved ${key} for ${base.name || shelfId}`,
+						"success",
+					);
+				} catch (error) {
+					debugError("Failed to save website settings:", error);
+					showToast("Failed to save website settings", "error");
+				}
+			});
+		});
 				const result = await novelLibrary.importLibrary(data, false);
 				if (result.success) {
 					await loadLibrary();

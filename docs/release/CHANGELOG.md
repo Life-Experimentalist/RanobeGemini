@@ -3,21 +3,26 @@
 > **Index:**
 
 - [Changelog](#changelog)
+	- [3.9.0 - 2026-02-10](#390---2026-02-10)
+		- [Highlights](#highlights)
+		- [Added](#added)
+		- [Changed](#changed)
+		- [Fixed](#fixed)
 	- [3.7.0 - 2026-01-30](#370---2026-01-30)
 		- [🔧 Google Drive OAuth Enhancements \& UI Improvements](#-google-drive-oauth-enhancements--ui-improvements)
-		- [Added](#added)
+		- [Added](#added-1)
 			- [☁️ Google Drive OAuth Improvements](#️-google-drive-oauth-improvements)
 			- [💾 Comprehensive Backup System](#-comprehensive-backup-system)
 			- [📊 Anonymous Analytics (Opt-Out)](#-anonymous-analytics-opt-out)
 			- [📢 Enhanced Notification System](#-enhanced-notification-system)
 			- [🎯 Domain-Specific Settings](#-domain-specific-settings)
 			- [📖 Reading Progress Tracking](#-reading-progress-tracking)
-		- [Changed](#changed)
+		- [Changed](#changed-1)
 			- [🖥️ Popup UI Refactoring](#️-popup-ui-refactoring)
 			- [🌐 Website Handler Improvements](#-website-handler-improvements)
 			- [📚 Library Enhancements](#-library-enhancements)
 			- [🏗️ Build System \& Documentation](#️-build-system--documentation)
-		- [Fixed](#fixed)
+		- [Fixed](#fixed-1)
 			- [🐛 Bug Fixes](#-bug-fixes)
 			- [🔧 Google Drive OAuth](#-google-drive-oauth)
 		- [Developer Experience](#developer-experience)
@@ -29,25 +34,25 @@
 		- [Known Issues](#known-issues)
 	- [3.5.0 - 2025-12-20](#350---2025-12-20)
 		- [🎨 Shelf Pages, Analytics \& UX Improvements](#-shelf-pages-analytics--ux-improvements)
-		- [Added](#added-1)
+		- [Added](#added-2)
 			- [📊 Website Shelf Pages](#-website-shelf-pages)
 			- [🎨 Popup Modal Improvements](#-popup-modal-improvements)
 			- [🏗️ Keep-Alive Architecture Documentation](#️-keep-alive-architecture-documentation)
-		- [Changed](#changed-1)
-		- [Fixed](#fixed-1)
+		- [Changed](#changed-2)
+		- [Fixed](#fixed-2)
 		- [Documentation](#documentation)
-	- [\[3.0.0\] - 2025-11-28](#300---2025-11-28)
+	- [3.0.0 - 2025-11-28](#300---2025-11-28)
 		- [🎉 Major Release: Novel Library System](#-major-release-novel-library-system)
-		- [Added](#added-2)
+		- [Added](#added-3)
 			- [📚 Novel Library System](#-novel-library-system)
 			- [🔧 Dynamic Shelf System](#-dynamic-shelf-system)
 			- [🎨 UI Enhancements](#-ui-enhancements)
 			- [📖 Metadata Extraction](#-metadata-extraction)
 			- [📝 Documentation Overhaul](#-documentation-overhaul)
-		- [Changed](#changed-2)
+		- [Changed](#changed-3)
 			- [🏗️ Architecture Improvements](#️-architecture-improvements)
 			- [📚 Documentation](#-documentation)
-		- [Fixed](#fixed-2)
+		- [Fixed](#fixed-3)
 		- [Developer Experience](#developer-experience-1)
 			- [Adding New Website Support (Simplified)](#adding-new-website-support-simplified)
 			- [Build Scripts](#build-scripts)
@@ -55,52 +60,79 @@
 			- [Novel Library Schema](#novel-library-schema)
 			- [Shelf Metadata Schema](#shelf-metadata-schema)
 		- [Migration Notes](#migration-notes-1)
-	- [\[2.9.0\] - 2025-11-25](#290---2025-11-25)
+	- [2.9.0 - 2025-11-25](#290---2025-11-25)
 		- [Summary](#summary)
-		- [Added](#added-3)
-		- [Changed](#changed-3)
-		- [Fixed](#fixed-3)
-	- [\[2.8.0\] - 2025-11-25](#280---2025-11-25)
-		- [Summary](#summary-1)
 		- [Added](#added-4)
 		- [Changed](#changed-4)
 		- [Fixed](#fixed-4)
-		- [Developer Experience](#developer-experience-2)
-		- [Migration Notes](#migration-notes-2)
-		- [Known Issues](#known-issues-1)
-	- [\[2.2.1\] - 2025-04-26](#221---2025-04-26)
-		- [Summary](#summary-2)
+	- [2.8.0 - 2025-11-25](#280---2025-11-25)
+		- [Summary](#summary-1)
 		- [Added](#added-5)
 		- [Changed](#changed-5)
 		- [Fixed](#fixed-5)
-	- [\[2.2.0\] - 2025-04-19](#220---2025-04-19)
-		- [Summary](#summary-3)
+		- [Developer Experience](#developer-experience-2)
+		- [Migration Notes](#migration-notes-2)
+		- [Known Issues](#known-issues-1)
+	- [2.2.1 - 2025-04-26](#221---2025-04-26)
+		- [Summary](#summary-2)
 		- [Added](#added-6)
 		- [Changed](#changed-6)
 		- [Fixed](#fixed-6)
-	- [\[2.1.0\] - 2025-04-15](#210---2025-04-15)
-		- [Summary](#summary-4)
+	- [2.2.0 - 2025-04-19](#220---2025-04-19)
+		- [Summary](#summary-3)
 		- [Added](#added-7)
 		- [Changed](#changed-7)
 		- [Fixed](#fixed-7)
-	- [\[2.0.0\] - 2025-04-13](#200---2025-04-13)
-		- [Summary](#summary-5)
+	- [2.1.0 - 2025-04-15](#210---2025-04-15)
+		- [Summary](#summary-4)
 		- [Added](#added-8)
 		- [Changed](#changed-8)
 		- [Fixed](#fixed-8)
-	- [\[1.1.0\] - 2025-04-10](#110---2025-04-10)
+	- [2.0.0 - 2025-04-13](#200---2025-04-13)
+		- [Summary](#summary-5)
 		- [Added](#added-9)
 		- [Changed](#changed-9)
 		- [Fixed](#fixed-9)
-	- [\[1.0.0\] - 2025-06-15](#100---2025-06-15)
+	- [1.1.0 - 2025-04-10](#110---2025-04-10)
 		- [Added](#added-10)
+		- [Changed](#changed-10)
 		- [Fixed](#fixed-10)
+	- [1.0.0 - 2025-06-15](#100---2025-06-15)
+		- [Added](#added-11)
+		- [Fixed](#fixed-11)
 
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+
+## [3.9.0](RELEASE_NOTES_3.9.0.md) - 2026-02-10
+
+### Highlights
+
+- Auto-update reading progress and status on every supported novel page reload.
+- Per-site settings and redirects consolidated with a single FanFiction.net domain preference.
+- Library-first configuration: processing options and prompts live in Library Settings.
+
+### Added
+
+- Per-site settings panels in Library settings and website shelf pages.
+- URL import tool to batch-add novels from pasted links.
+- Per-site status mapping for Ranobes novel pages using bookmark list data when available.
+- Progress-aware status rules for chapter-embedded sites (single chapter -> Reading, first of many -> Plan to Read, final -> Completed).
+
+### Changed
+
+- Site settings storage key moved to `siteSettingsApi` and included in backups.
+- Processing options and prompt configuration moved out of popup into Library Settings.
+- Suggested reads and library cards in the popup improved for metadata density.
+- FanFiction.net domain redirect now uses a single preference (www, mobile, auto).
+
+### Fixed
+
+- Notification bell modal overlay and click behavior in the popup.
+- Auto-update logic now refreshes in-library novels on page reloads.
 
 ## [3.7.0](RELEASE_NOTES_3.7.0.md) - 2026-01-30
 
@@ -385,7 +417,7 @@ Version 3.5.0 introduces dedicated website shelf pages with advanced filtering, 
 
 ---
 
-## [3.0.0] - 2025-11-28
+## [3.0.0]() - 2025-11-28
 
 ### 🎉 Major Release: Novel Library System
 
@@ -599,7 +631,7 @@ Users upgrading from v2.x to v3.0.0:
 
 ---
 
-## [2.9.0] - 2025-11-25
+## [2.9.0]() - 2025-11-25
 
 ### Summary
 
@@ -631,7 +663,7 @@ Version 2.9.0 is a maintenance release that prepares the architecture for the No
 
 ---
 
-## [2.8.0] - 2025-11-25
+## [2.8.0]() - 2025-11-25
 
 ### Summary
 
@@ -725,7 +757,7 @@ Version 2.8.0 is a major architectural update introducing multi-site support, dy
 - 3 warnings about dynamic imports (expected for handler module loading)
 - These warnings are safe and necessary for extension functionality
 
-## [2.2.1] - 2025-04-26
+## [2.2.1]() - 2025-04-26
 
 ### Summary
 
@@ -751,7 +783,7 @@ Version 2.2.1 addresses the domain transition from ranobes.top to ranobes.net, e
 
 ---
 
-## [2.2.0] - 2025-04-19
+## [2.2.0]() - 2025-04-19
 
 ### Summary
 
@@ -786,7 +818,7 @@ Version 2.2.0 delivers a significant user experience upgrade focusing on improve
 
 ---
 
-## [2.1.0] - 2025-04-15
+## [2.1.0]() - 2025-04-15
 
 ### Summary
 
@@ -821,7 +853,7 @@ Version 2.1.0 brings significant improvements to the summary feature, handling o
 
 ---
 
-## [2.0.0] - 2025-04-13
+## [2.0.0]() - 2025-04-13
 
 ### Summary
 
@@ -853,7 +885,7 @@ Version 2.0.0 is a major update that introduces a completely redesigned interfac
 
 ---
 
-## [1.1.0] - 2025-04-10
+## [1.1.0]() - 2025-04-10
 
 ### Added
 
@@ -879,7 +911,7 @@ Version 2.0.0 is a major update that introduces a completely redesigned interfac
 
 ---
 
-## [1.0.0] - 2025-06-15
+## [1.0.0]() - 2025-06-15
 
 ### Added
 

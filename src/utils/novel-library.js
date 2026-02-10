@@ -723,7 +723,12 @@ export class NovelLibrary {
 	 * @param {string} chapterUrl - URL of the current chapter
 	 * @returns {Promise<Object|null>} Updated novel or null
 	 */
-	async updateReadingProgress(novelId, chapterNumber, chapterUrl) {
+	async updateReadingProgress(
+		novelId,
+		chapterNumber,
+		chapterUrl,
+		options = {},
+	) {
 		try {
 			const library = await this.getLibrary();
 			const novel = library.novels[novelId];
@@ -739,31 +744,32 @@ export class NovelLibrary {
 				lastAccessedAt: Date.now(),
 			};
 
-			// Auto-update reading status based on progress
-			const currentStatus =
-				novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+			const totalChapters =
+				Number(options.totalChapters) ||
+				Number(novel.totalChapters) ||
+				0;
+			let nextStatus = null;
 
-			// Only auto-resume if status is "On Hold"
-			if (
-				currentStatus === READING_STATUS.ON_HOLD &&
-				chapterNumber >= 1
-			) {
-				updates.readingStatus = READING_STATUS.READING;
-				debugLog(`📚 Auto-status: On Hold → Reading`);
+			if (chapterNumber >= 1) {
+				if (totalChapters > 0 && totalChapters <= 1) {
+					nextStatus = READING_STATUS.READING;
+				} else if (
+					totalChapters > 0 &&
+					chapterNumber >= totalChapters
+				) {
+					nextStatus = READING_STATUS.COMPLETED;
+				} else if (chapterNumber >= 2) {
+					nextStatus = READING_STATUS.READING;
+				} else if (chapterNumber === 1) {
+					nextStatus =
+						totalChapters > 1
+							? READING_STATUS.PLAN_TO_READ
+							: READING_STATUS.READING;
+				}
 			}
 
-			// If user reaches the last chapter, suggest completion
-			// (Only auto-complete if they were actively reading)
-			if (
-				novel.totalChapters > 0 &&
-				chapterNumber >= novel.totalChapters &&
-				(currentStatus === READING_STATUS.READING ||
-					currentStatus === READING_STATUS.RE_READING)
-			) {
-				updates.readingStatus = READING_STATUS.COMPLETED;
-				debugLog(
-					`📚 Auto-status: ${currentStatus} → Completed (reached chapter ${chapterNumber}/${novel.totalChapters})`,
-				);
+			if (nextStatus) {
+				updates.readingStatus = nextStatus;
 			}
 
 			// Apply updates
@@ -1319,6 +1325,23 @@ export class NovelLibrary {
 			.replace(/\s*\[Archive of Our Own\]$/i, "") // Remove AO3 suffix
 			.trim();
 
+		const totalChapters = Number(context.totalChapters) || 0;
+		let derivedStatus = READING_STATUS.PLAN_TO_READ;
+		if (chapterNumber >= 1) {
+			if (totalChapters > 0 && totalChapters <= 1) {
+				derivedStatus = READING_STATUS.READING;
+			} else if (totalChapters > 0 && chapterNumber >= totalChapters) {
+				derivedStatus = READING_STATUS.COMPLETED;
+			} else if (chapterNumber >= 2) {
+				derivedStatus = READING_STATUS.READING;
+			} else if (chapterNumber === 1) {
+				derivedStatus =
+					totalChapters > 1
+						? READING_STATUS.PLAN_TO_READ
+						: READING_STATUS.READING;
+			}
+		}
+
 		return {
 			id: novelId,
 			shelfId: shelf.id,
@@ -1328,10 +1351,10 @@ export class NovelLibrary {
 			coverUrl: context.coverUrl || "",
 			description: context.description || "",
 			sourceUrl: url,
-			totalChapters: context.totalChapters || 0,
+			totalChapters: totalChapters || 0,
 			lastReadChapter: chapterNumber || 1, // From context, so we're on a chapter
 			lastReadUrl: url,
-			readingStatus: READING_STATUS.READING, // User is reading this chapter
+			readingStatus: derivedStatus,
 			status: context.status || "unknown",
 			genres: context.genres || [],
 			tags: context.tags || [],
@@ -1394,7 +1417,8 @@ export class NovelLibrary {
 			backupRetention: allData.backupRetention,
 			backupFolder: allData.backupFolder,
 			driveFolderId: allData.driveFolderId,
-			continuousBackupCheckInterval: allData.continuousBackupCheckInterval,
+			continuousBackupCheckInterval:
+				allData.continuousBackupCheckInterval,
 			fontSize: allData.fontSize,
 
 			// Model merge mode

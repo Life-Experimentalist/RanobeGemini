@@ -772,6 +772,28 @@
 								</div>
 							</div>
 						</div>
+
+						<!-- SECTION: URL Import (FULL WIDTH) -->
+						<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+							<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
+								🔗 Import URLs
+							</h3>
+							<p class="settings-desc" style="margin-bottom: 10px; font-size: 12px;">
+								Paste any text and we'll extract supported novel URLs, open them in the background, and add them to your library.
+							</p>
+							<textarea id="url-import-text" rows="5" placeholder="Paste links or text here..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; resize: vertical;"></textarea>
+							<div style="display: flex; gap: 8px; margin-top: 10px;">
+								<button id="url-import-btn" class="btn btn-primary" style="font-size: 12px; padding: 8px 12px;">
+									➕ Add URLs to Library
+								</button>
+								<button id="url-import-clear" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">
+									Clear
+								</button>
+							</div>
+							<p class="settings-desc" id="url-import-status" style="margin-top: 8px; font-size: 11px;">
+								Ready to import.
+							</p>
+						</div>
 						<div class="settings-item theme-actions">
 							<button id="library-reset-theme" class="btn btn-danger" style="font-size: 11px; padding: 6px 8px;">
 								Reset
@@ -1328,6 +1350,43 @@
 						<p class="settings-desc" style="margin: 0; font-size: 11px;">
 							These settings are for power users. Change only if you know what you're doing.
 						</p>
+					</div>
+
+					<!-- SECTION: Processing Options -->
+					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
+							🧪 Processing Options
+						</h3>
+						<div class="settings-item" style="margin-bottom: 12px;">
+							<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+								<span style="font-weight: 500; font-size: 12px;">Split large chapters automatically</span>
+								<label class="toggle-switch toggle-switch-sm">
+									<input type="checkbox" id="library-chunking-enabled" />
+									<span class="toggle-slider"></span>
+								</label>
+							</div>
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Processes large chapters in parts to avoid token limits.
+							</p>
+						</div>
+						<div class="settings-item">
+							<label for="library-chunk-size" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Segment size (characters per chunk):
+							</label>
+							<input type="number" id="library-chunk-size" min="5000" max="50000" step="1000" value="20000" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Smaller = safer but more segments.
+							</p>
+						</div>
++						<div class="settings-item" style="margin-top: 12px;">
++							<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
++								Maximum Output Length (tokens):
++							</label>
++							<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192" style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
++							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
++								Controls maximum length of generated text.
++							</p>
++						</div>
 					</div>
 
 					<!-- SECTION: Analytics & Diagnostics -->

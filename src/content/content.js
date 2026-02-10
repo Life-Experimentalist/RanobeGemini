@@ -3403,10 +3403,32 @@ if (window.__RGInitDone) {
 		return Date.now() - lastPrompt > PROGRESS_PROMPT_COOLDOWN_MS;
 	}
 
+	function deriveReadingStatusFromProgress(currentChapter, totalChapters) {
+		if (!READING_STATUS || !currentChapter) return null;
+		const total = Number(totalChapters) || 0;
+
+		if (total > 0 && total <= 1) {
+			return READING_STATUS.READING;
+		}
+		if (total > 0 && currentChapter >= total) {
+			return READING_STATUS.COMPLETED;
+		}
+		if (currentChapter >= 2) {
+			return READING_STATUS.READING;
+		}
+		if (currentChapter === 1) {
+			return total > 1
+				? READING_STATUS.PLAN_TO_READ
+				: READING_STATUS.READING;
+		}
+		return null;
+	}
+
 	async function showProgressUpdatePrompt({
 		novelId,
 		currentChapter,
 		storedChapter,
+		totalChapters,
 	}) {
 		if (!shouldShowProgressPrompt(novelId)) return;
 		progressPromptState.set(novelId, Date.now());
@@ -3458,6 +3480,9 @@ if (window.__RGInitDone) {
 					novelId,
 					currentChapter,
 					window.location.href,
+					{
+						totalChapters: totalChapters,
+					},
 				);
 				showTimedBanner(
 					`Progress updated to Chapter ${currentChapter}`,
@@ -3574,6 +3599,12 @@ if (window.__RGInitDone) {
 			// Determine if we're on a chapter page to set proper initial progress
 			const chapterNav = currentHandler.getChapterNavigation?.() || {};
 			const currentChapterNum = chapterNav.currentChapter;
+			const totalChapterCount =
+				metadata.totalChapters || metadata.chapterCount || null;
+			const progressStatus = deriveReadingStatusFromProgress(
+				currentChapterNum,
+				totalChapterCount,
+			);
 
 			// Create novel data object
 			// CRITICAL: For dedicated_page handlers, sourceUrl MUST be mainNovelUrl (novel details page)
@@ -3627,8 +3658,12 @@ if (window.__RGInitDone) {
 					? {
 							lastReadChapter: currentChapterNum,
 							lastReadUrl: window.location.href,
-							readingStatus: READING_STATUS.READING,
-					  }
+							readingStatus:
+								progressStatus || READING_STATUS.READING,
+						}
+					: {}),
+				...(metadata.siteReadingStatus && !isChapter
+					? { readingStatus: metadata.siteReadingStatus }
 					: {}),
 			}; // Check if this novel already exists in the library
 			const shelfId =
@@ -3662,6 +3697,35 @@ if (window.__RGInitDone) {
 				autoAddEnabled && metadata.title && metadata.title.length > 0;
 
 			if (existingNovel) {
+								if (isChapter && currentChapterNum) {
+									const shouldUpdateProgress =
+										!existingNovel.lastReadChapter ||
+										currentChapterNum >=
+											existingNovel.lastReadChapter;
+									if (shouldUpdateProgress) {
+										await novelLibrary.updateReadingProgress(
+											novelId,
+											currentChapterNum,
+											window.location.href,
+											{
+												totalChapters:
+													totalChapterCount,
+											},
+										);
+									}
+								}
+
+								if (
+									metadata.siteReadingStatus &&
+									isNovelPage &&
+									existingNovel.readingStatus !==
+										metadata.siteReadingStatus
+								) {
+									await novelLibrary.updateNovel(novelId, {
+										readingStatus:
+											metadata.siteReadingStatus,
+									});
+								}
 				// Avoid overwriting reading status unless auto-add is configured for chapter pages
 				const statusUsesProgress = [
 					READING_STATUS.READING,
@@ -3733,13 +3797,17 @@ if (window.__RGInitDone) {
 				const autoAddStatus = isChapter
 					? autoAddStatusChapter
 					: autoAddStatusNovel;
-				if (autoAddStatus) {
-					novelData.readingStatus = autoAddStatus;
+				const preferredStatus =
+					(isChapter && progressStatus) ||
+					(!isChapter && metadata.siteReadingStatus) ||
+					autoAddStatus;
+				if (preferredStatus) {
+					novelData.readingStatus = preferredStatus;
 					const statusUsesProgress = [
 						READING_STATUS.READING,
 						READING_STATUS.RE_READING,
 						READING_STATUS.UP_TO_DATE,
-					].includes(autoAddStatus);
+					].includes(preferredStatus);
 					if (!isChapter || !statusUsesProgress) {
 						delete novelData.lastReadChapter;
 						delete novelData.lastReadUrl;
@@ -4489,6 +4557,9 @@ if (window.__RGInitDone) {
 					novelId,
 					chapterNav.currentChapter,
 					window.location.href,
+					{
+						totalChapters: novel.totalChapters,
+					},
 				);
 				debugLog(
 					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
@@ -4506,6 +4577,7 @@ if (window.__RGInitDone) {
 					novelId,
 					currentChapter: chapterNav.currentChapter,
 					storedChapter: novel.lastReadChapter,
+					totalChapters: novel.totalChapters,
 				});
 			}
 		} catch (error) {
@@ -5129,9 +5201,16 @@ if (window.__RGInitDone) {
 						]);
 						const autoEnhanceNovels =
 							stored.autoEnhanceNovels || [];
+						const handlerShelfId =
+							currentHandler?.constructor?.SHELF_METADATA?.id;
+						const siteAutoEnhance =
+							handlerShelfId &&
+							siteSettings?.[handlerShelfId]
+								?.autoEnhanceEnabled === true;
 						const shouldAutoEnhance =
 							(novel && novel.autoEnhance === true) ||
-							(novel && autoEnhanceNovels.includes(novel.id));
+							(novel && autoEnhanceNovels.includes(novel.id)) ||
+							siteAutoEnhance;
 
 						if (shouldAutoEnhance) {
 							debugLog(

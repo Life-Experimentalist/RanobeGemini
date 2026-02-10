@@ -82,8 +82,10 @@ When enhancing, improve readability while respecting the author's creative voice
 			const resolveTargetHost = (preference) => {
 				switch (preference) {
 					case "mobile":
+					case "m":
 						return "m.fanfiction.net";
 					case "desktop":
+					case "www":
 						return "www.fanfiction.net";
 					default:
 						return isMobile
@@ -129,16 +131,18 @@ When enhancing, improve readability while respecting the author's creative voice
 				.get(SITE_SETTINGS_KEY)
 				.then((result) => {
 					const settings = result?.[SITE_SETTINGS_KEY] || {};
+					const fanfictionSettings = settings?.fanfiction || {};
 					const preference =
-						settings?.fanfiction?.domainPreference || "auto";
+						fanfictionSettings.domainPreference || "www";
 					const targetHost = resolveTargetHost(preference);
-					if (shouldRedirect(preference)) {
+
+					if (isBareDomain && targetHost) {
 						redirectTo(targetHost);
 					}
 				})
 				.catch(() => {
-					const targetHost = resolveTargetHost("auto");
-					if (shouldRedirect("auto")) {
+					const targetHost = resolveTargetHost("www");
+					if (isBareDomain && targetHost) {
 						redirectTo(targetHost);
 					}
 				});
@@ -149,20 +153,6 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	constructor() {
 		super();
-		this.selectors = {
-			content: [
-				"#storytext", // Main content area for FanFiction.net
-				".storytext",
-				"#story_text",
-			],
-			title: [
-				"#profile_top b.xcontrast_txt", // FanFiction.net story title
-				"#content b",
-				"h1.title",
-			],
-		};
-
-		// Enhancement mode specific to fanfiction.net
 		this.enhancementMode = "text-only"; // indicates we replace only paragraph text, preserving original DOM/styles
 	}
 

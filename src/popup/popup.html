@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -9,13 +9,23 @@
 	<body>
 		<div class="container">
 			<div class="header">
-				<h1><img src="../icons/logo-48.png" alt="Ranobe Gemini" style="width: 48px; height: 48px; margin-right: 8px;">Ranobe Gemini</h1>
+				<h1>
+					<img
+						src="../icons/logo-48.png"
+						alt="Ranobe Gemini"
+						style="width: 48px; height: 48px; margin-right: 8px"
+					/>Ranobe Gemini
+				</h1>
 				<button
 					id="quickLibraryBtn"
 					class="quick-library-btn"
 					title="Open Full Library (Ctrl+Alt+N)"
 				>
-					<img src="../icons/icon.png" alt="Library" style="width: 48px; height: 48px; margin-right: 8px;">
+					<img
+						src="../icons/icon.png"
+						alt="Library"
+						style="width: 48px; height: 48px; margin-right: 8px"
+					/>
 				</button>
 			</div>
 
@@ -23,9 +33,18 @@
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="config">Config</button>
 				<button class="tab-btn" data-tab="novels">Novels</button>
-				<button class="tab-icon-btn" id="notificationsToggle" title="Notifications">
+				<button
+					class="tab-icon-btn"
+					id="notificationsToggle"
+					title="Notifications"
+				>
 					<span class="tab-icon">🔔</span>
-					<span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+					<span
+						id="notificationBadge"
+						class="notification-badge"
+						style="display: none"
+						>0</span
+					>
 				</button>
 			</div>
 
@@ -38,10 +57,17 @@
 						id="apiKey"
 						placeholder="Enter your API key"
 					/>
-					<div class="button-group">
-						<button id="saveApiKey">Save Key</button>
-						<button id="testApiKey">Test Key</button>
+							<button
+								class="open-library-settings"
+								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+							>
+								⚙️ Library Settings
+							</button>
+						</div>
 					</div>
+				</div>
+					</div>
+			<!-- Notifications Modal -->
 				</div>
 
 				<div class="setting">
@@ -69,62 +95,40 @@
 				</div>
 
 				<div class="setting">
-					<label>Processing Options:</label>
-					<div style="margin-top: 8px">
-						<label style="font-weight: normal">
-							<input
-								type="checkbox"
-								id="chunkingEnabled"
-								checked
-							/>
-							Split large chapters automatically
-						</label>
-						<div class="description">
-							Processes large chapters in parts to avoid token
-							limits
-						</div>
+					<label>🧪 Processing Options</label>
+					<div class="description" style="margin-top: 6px">
+						Moved to Library Settings for better control.
 					</div>
+				</div>
 
-					<div
-						id="chunkSizeContainer"
-						style="margin-top: 8px; margin-left: 22px"
+				<div class="setting"
+					style="
+						margin-top: 15px;
+						padding: 10px;
+						border: 1px solid var(--border-color);
+						border-radius: 6px;
+						background: var(--accent-primary) 20;
+					"
+				>
+					<label
+						style="
+							font-weight: normal;
+							display: flex;
+							align-items: center;
+							gap: 8px;
+							cursor: pointer;
+						"
 					>
-						<label for="chunkSize"
-							>Segment size (characters per chunk):</label
-						>
-						<div
-							style="
-								display: flex;
-								gap: 10px;
-								align-items: center;
-							"
-						>
-							<input
-								type="number"
-								id="chunkSize"
-								min="5000"
-								max="50000"
-								step="1000"
-								style="width: 120px"
-								value="12000"
-							/>
-							<span
-								class="description"
-								style="font-size: 12px; color: #666"
-							>
-								(smaller = safer but more segments)
-							</span>
-						</div>
-					</div>
-
-					<div style="margin-top: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--accent-primary)20">
-						<label style="font-weight: normal; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-							<input type="checkbox" id="useEmoji" style="cursor: pointer;" />
-							<span>Add emotion emojis to dialogue</span>
-						</label>
-						<div class="description" style="margin-top: 6px;">
-							Adds appropriate emojis to enhance emotional expressions in text
-						</div>
+						<input
+							type="checkbox"
+							id="useEmoji"
+							style="cursor: pointer"
+						/>
+						<span>Add emotion emojis to dialogue</span>
+					</label>
+					<div class="description" style="margin-top: 6px">
+						Adds appropriate emojis to enhance emotional expressions
+						in text
 					</div>
 				</div>
 
@@ -158,48 +162,202 @@
 							/>
 							<button id="addBackupKey">Add Key</button>
 						</div>
-						<div style="margin-top: 10px;">
+						<div style="margin-top: 10px">
 							<label for="apiKeyRotation">Key Rotation</label>
-							<select id="apiKeyRotation" style="width: 100%; margin-top: 6px;">
+							<select
+								id="apiKeyRotation"
+								style="width: 100%; margin-top: 6px"
+							>
 								<option value="off">Off</option>
 								<option value="round_robin">Round Robin</option>
 								<option value="random">Random</option>
 							</select>
-							<div class="description" style="margin-top: 6px;">
-								Use alternate keys automatically if one hits limits.
+							<div class="description" style="margin-top: 6px">
+								Use alternate keys automatically if one hits
+								limits.
 							</div>
 						</div>
 					</div>
 				</details>
 
-				<div class="actions">
-					<button id="enhancePageBtn">Enhance Current Page</button>
-					<button
-						id="saveSettings"
-						style="float: right; background-color: #34a853"
+				<!-- Theme Mode Quick Toggle -->
+				<div class="setting">
+					<label for="themeMode">🎨 Theme Mode</label>
+					<select
+						id="themeMode"
+						style="width: 100%; padding: 10px; border-radius: 6px"
 					>
-						Save All Settings
-					</button>
+						<option value="dark">Dark Mode (Default)</option>
+						<option value="light">Light Mode</option>
+						<option value="auto">Auto (System Preference)</option>
+					</select>
 				</div>
+
+				<!-- Site Toggles -->
+				<details class="setting">
+					<summary style="cursor: pointer; font-weight: 600">
+						🌐 Site Toggles
+					</summary>
+					<div style="margin-top: 12px">
+						<div class="description" style="margin-bottom: 12px">
+							Turn off a site to hide enhance buttons and library
+							shelves for it.
+						</div>
+						<div id="siteToggleList" class="site-toggle-list"></div>
 					</div>
 				</details>
+
+				<!-- Font Size -->
+				<div class="setting">
+					<div class="slider-block">
+						<label for="fontSizeSlider">
+							🔤 Enhanced Content Font Size
+							<span class="slider-value" id="fontSizeValue"
+								>100%</span
+							>
+						</label>
+						<input
+							type="range"
+							min="80"
+							max="150"
+							step="5"
+							value="100"
+							class="slider"
+							id="fontSizeSlider"
+						/>
+						<div class="description">
+							Adjusts font size of enhanced content (100% =
+							default)
+						</div>
+					</div>
+				</div>
+
+				<!-- Debug Toggle -->
+				<div class="setting">
+					<div
+						style="
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+						"
+					>
+						<label
+							style="
+								font-weight: 600;
+								display: flex;
+								align-items: center;
+								gap: 8px;
+							"
+						>
+							<span>🧪 Debug Mode</span>
+						</label>
+						<label class="toggle-switch">
+							<input type="checkbox" id="debugMode" />
+							<span class="toggle-slider"></span>
+						</label>
+					</div>
+					<div class="description" style="margin-top: 4px">
+						Enable console logging for debugging
+					</div>
+				</div>
+
+				<!-- Advanced Settings Link -->
+				<details class="setting">
+					<summary style="cursor: pointer; font-weight: 600">
+						⚙️ More Settings
+					</summary>
+					<div style="margin-top: 12px">
+						<!-- Backups link -->
+						<div
+							style="
+								background: var(
+									--bg-tertiary,
+									rgba(255, 255, 255, 0.05)
+								);
+								padding: 12px;
+								border-radius: 8px;
+								border-left: 3px solid #4285f4;
+							"
+						>
+							<p
+								style="
+									margin: 0 0 8px 0;
+									font-size: 12px;
+									color: var(--text-secondary);
+								"
+							>
+								💾 Advanced settings, backups, prompts, and AI
+								parameters are in Library Settings.
+							</p>
+							<button
+								class="open-library-settings"
+								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+							>
+								⚙️ Library Settings
+							</button>
+					<div
+						id="notificationsModal"
+						style="
+							display: none;
+							position: fixed;
+							top: 0;
+							left: 0;
+							right: 0;
+							bottom: 0;
+							background: rgba(0, 0, 0, 0.7);
+							z-index: 2000;
+							overflow-y: auto;
+							padding: 20px;
+							align-items: center;
+							justify-content: center;
+						"
+					>
+						<div
+							style="
+								position: relative;
+								background: var(--bg-primary, #0f172a);
+								border: 1px solid var(--border-color, #334155);
+								border-radius: 12px;
+								padding: 20px;
+								width: 100%;
+								max-width: 450px;
+								max-height: 80vh;
+								overflow-y: auto;
+								box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+							"
+						>
+				</div>
 			</div>
 
 			<!-- Novels Tab -->
 			<div class="tab-content" id="novels">
-				<h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-					<span>📚 Quick Navigation</span>
+				<h3
+					style="
+						margin-bottom: 16px;
+						font-size: 16px;
+						font-weight: 600;
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+					"
+				>
+					<span>📚 Your Reading</span>
+					<button
+						class="icon-button open-library-settings"
+						title="Open Library Settings"
+						style="font-size: 16px"
+					>
+						⚙️
+					</button>
 				</h3>
 
 				<!-- Current Novel Section -->
 				<div class="current-novel-section">
-					<div class="section-header">📖 Currently Reading</div>
 					<div id="currentNovelInfo" class="current-novel-card">
 						<div class="no-current-novel">
-							<p>No current novel detected.</p>
+							<p>No novel detected on this page.</p>
 							<p class="description">
-								Visit a novel page and the extension will track
-								your reading.
+								Visit a supported novel site to get started!
 							</p>
 						</div>
 					</div>
@@ -207,12 +365,37 @@
 
 				<!-- Suggested Novels Section -->
 				<div class="suggested-novels-section">
-					<div class="section-header">✨ Suggested Reads</div>
-					<div id="suggestedNovelsList" class="suggested-novels-grid">
+					<div
+						class="section-header"
+						style="
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+						"
+					>
+						<span>✨ Suggested Reads</span>
+						<button
+							id="randomizeSuggestions"
+							class="icon-button"
+							title="Randomize suggestions"
+							style="
+								background: none;
+								border: none;
+								font-size: 18px;
+								cursor: pointer;
+								padding: 4px 8px;
+							"
+						>
+							🎲
+						</button>
+					</div>
+					<div
+						id="suggestedNovelsList"
+						class="suggested-novels-container"
+					>
 						<div class="no-suggestions">
 							<p>
-								No suggestions yet. Check back after reading a
-								few chapters!
+								No suggestions yet. Add novels to your library!
 							</p>
 						</div>
 					</div>
@@ -237,508 +420,152 @@
 					</div>
 				</div>
 
-					<!-- Quick Navigation -->
-					<!-- Main Library -->
-					<a href="#" id="openMainLibrary" style="display: flex; align-items: center; gap: 12px; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; text-decoration: none; color: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-						<span style="font-size: 24px;">🏛️</span>
-						<div style="flex: 1;">
-							<div style="font-weight: 600; font-size: 14px;">Main Library</div>
-							<div style="font-size: 11px; opacity: 0.9;">View all your saved novels</div>
+				<!-- Quick Navigation -->
+				<!-- Main Library -->
+				<a
+					href="#"
+					id="openMainLibrary"
+					style="
+						display: flex;
+						align-items: center;
+						gap: 12px;
+						padding: 14px;
+						background: linear-gradient(
+							135deg,
+							#667eea 0%,
+							#764ba2 100%
+						);
+						border-radius: 8px;
+						text-decoration: none;
+						color: white;
+						transition: transform 0.2s;
+					"
+					onmouseover="this.style.transform = 'translateY(-2px)'"
+					onmouseout="this.style.transform = ''"
+				>
+					<span style="font-size: 24px">🏛️</span>
+					<div style="flex: 1">
+						<div style="font-weight: 600; font-size: 14px">
+							Main Library
 						</div>
-						<span style="font-size: 18px;">→</span>
-					</a>
+						<div style="font-size: 11px; opacity: 0.9">
+							View all your saved novels
+						</div>
+					</div>
+					<span style="font-size: 18px">→</span>
+				</a>
 			</div>
 
 			<!-- Prompts & Advanced settings moved to Library Settings -->
 
-		<!-- Notifications Modal (triggered by bell icon) -->
-		<div id="notificationsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; border-radius: 8px;">
-			<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-primary, #0f172a); border: 1px solid var(--border-color, #334155); border-radius: 12px; padding: 20px; width: 90%; max-width: 500px; max-height: 600px; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);">
-				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-					<h2 style="margin: 0; font-size: 18px; font-weight: 600;">🔔 Notifications</h2>
-					<button id="closeNotificationsModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary, #999);">✕</button>
-				</div>
-				<div id="notificationsContainer" style="display: grid; gap: 8px;">
-					<div style="text-align: center; padding: 40px 20px; color: var(--text-secondary, #999);">
-						<p>📭 No notifications yet</p>
-						<p style="font-size: 12px;">Notifications will appear here as you use the extension</p>
-					</div>
-				</div>
-				<div style="margin-top: 16px; display: flex; gap: 8px;">
-					<button id="markAllReadBtn" style="flex: 1; padding: 8px; background: var(--accent-secondary, #475569); border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Mark All Read</button>
-					<button id="clearNotificationsBtn" style="flex: 1; padding: 8px; background: #db4437; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Clear All</button>
-				</div>
-			</div>
-		</div>
-
-		<!-- Size indicator -->
-		<div class="size-indicator" id="sizeIndicator"></div>
-
-		<!-- * NOTICE: DO NOT TOUCH THIS BELOW DIV (FROM EXPERIENCE)!!! -->
-		<!-- Resize handle with improved visibility -->
-		<div
-			class="resize-handle"
-			id="resize-handle"
-			title="Drag to resize"
-		></div>
-	</div>
-	<!-- Browser API polyfill for Chrome/Edge compatibility -->
-	<script src="../lib/browser-polyfill.min.js"></script>
-	<script src="popup.js" type="module"></script>
-</body>
-</html>
-				<div class="setting">
-					<label for="promptTemplate">Enhancement Prompt:</label>
-					<textarea
-						id="promptTemplate"
-						placeholder="Instructions for Gemini AI..."
-					></textarea>
-					<button id="resetPrompt" style="margin-top: 5px">
-						Reset to Default
-					</button>
-				</div>
-
-				<div class="setting">
-					<label for="summaryPrompt">Summary Prompt:</label>
-					<textarea
-						id="summaryPrompt"
-						placeholder="Instructions for summarization..."
-					></textarea>
-					<button id="resetSummaryPrompt" style="margin-top: 5px">
-						Reset to Default
-					</button>
-				</div>
-
-				<div class="setting">
-					<label for="shortSummaryPrompt"
-						>Short Summary Prompt:</label
-					>
-					<textarea
-						id="shortSummaryPrompt"
-						placeholder="Instructions for brief summarization..."
-						rows="4"
-					></textarea>
-					<button
-						id="resetShortSummaryPrompt"
-						style="margin-top: 5px"
-					>
-						Reset to Default
-					</button>
-				</div>
-
-				<div class="setting">
-					<label for="siteSpecificPrompts"
-						>Site-Specific Prompts:</label
-					>
+			<!-- Notifications Modal (triggered by bell icon) -->
+			<div
+				id="notificationsModal"
+				style="
+					display: none;
+					position: absolute;
+					inset: 0;
+					background: rgba(0, 0, 0, 0.6);
+					z-index: 1000;
+					border-radius: 8px;
+					overflow-y: auto;
+				"
+			>
+				<div
+					style="
+						position: absolute;
+						top: 50%;
+						left: 50%;
+						transform: translate(-50%, -50%);
+						background: var(--bg-primary, #0f172a);
+						border: 1px solid var(--border-color, #334155);
+						border-radius: 12px;
+						padding: 20px;
+						width: 85%;
+						max-width: 450px;
+						max-height: 500px;
+						overflow-y: auto;
+						box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+					"
+				>
 					<div
-						id="siteSpecificPromptsContainer"
-						class="site-specific-prompts"
+						style="
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+							margin-bottom: 16px;
+						"
 					>
-						<!-- Site-specific prompts will be loaded dynamically -->
-						<div class="no-site-prompts" id="noSitePrompts">
-							No site-specific prompts available.
-						</div>
-					</div>
-					<div class="site-prompt-template" style="display: none">
-						<div class="site-prompt-item">
-							<div class="site-prompt-header">
-								<input
-									type="text"
-									class="site-name"
-									placeholder="Site name"
-								/>
-								<button class="remove-site-prompt">✕</button>
-							</div>
-							<textarea
-								class="site-prompt-content"
-								rows="3"
-								placeholder="Enter site-specific prompt"
-							></textarea>
-						</div>
-					</div>
-					<button id="addSitePrompt" style="margin-top: 5px">
-						Add Site Prompt
-					</button>
-					<div class="description">
-						These prompts are automatically provided by website
-						handlers and can be customized. They help Gemini
-						understand the specific formatting and style of each
-						site.
-					</div>
-				</div>
-
-				<div class="setting">
-					<label for="permanentPrompt"
-						>Permanent Prompt (Appended to all requests):</label
-					>
-					<textarea id="permanentPrompt" rows="4"></textarea>
-					<button id="resetPermanentPrompt" style="margin-top: 5px">
-						Reset to Default
-					</button>
-				</div>
-
-				<!-- Full Prompt Preview Section -->
-				<details class="setting prompt-preview-section">
-					<summary>👁️ Preview Full Prompt (sent to model)</summary>
-					<div class="prompt-preview-content">
-						<div class="prompt-preview-header">
-							<span
-								>This is the complete prompt that will be sent
-								to the AI model:</span
-							>
-							<button
-								id="copyFullPrompt"
-								class="btn-small"
-								title="Copy to clipboard"
-							>
-								📋 Copy
-							</button>
-						</div>
-						<pre id="fullPromptPreview" class="full-prompt-preview">
-Click to generate preview...</pre
+						<h2
+							style="margin: 0; font-size: 18px; font-weight: 600"
 						>
+							🔔 Notifications
+						</h2>
 						<button
-							id="refreshPromptPreview"
-							class="btn-secondary"
-							style="margin-top: 8px"
+							id="closeNotificationsModal"
+							style="
+								background: none;
+								border: none;
+								font-size: 20px;
+								cursor: pointer;
+								color: var(--text-secondary, #999);
+							"
 						>
-							🔄 Refresh Preview
+							✕
 						</button>
 					</div>
-				</details>
-
-				<div class="actions">
-					<button
-						id="resetAllPrompts"
-						style="background-color: #db4437"
+					<div
+						id="notificationsContainer"
+						style="display: grid; gap: 8px"
 					>
-						Reset All Prompts
-					</button>
-					<button
-						id="savePrompts"
-						style="float: right; background-color: #34a853"
-					>
-						Save Prompts
-					</button>
-				</div>
-			</div>
-
-			<!-- Advanced Tab -->
-			<div id="advanced" class="tab-content">
-				<!-- Page Header -->
-				<div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--border-color, rgba(255,255,255,0.1));">
-					<h3 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 600;">⚙️ Advanced Settings</h3>
-					<p style="margin: 0; font-size: 13px; color: var(--text-secondary, #999);">
-						Configure backups, model parameters, theme, and more
-					</p>
-				</div>
-
-				<!-- ===== SECTION 1: ADVANCED WARNING ===== -->
-				<div class="setting" style="margin-bottom: 16px; padding: 12px; background: rgba(245, 158, 11, 0.12); border-radius: 8px; border-left: 3px solid #f59e0b;">
-					<h4 style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #f59e0b;">⚠️ Advanced Area</h4>
-					<p style="margin: 0; font-size: 12px; color: var(--text-secondary, #9ca3af);">
-						These settings are for power users. Change only if you know what you're doing.
-					</p>
-				</div>
-
-				<!-- ===== SECTION 2: ADVANCED ENDPOINTS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🔗 Advanced Endpoints</span>
-					</h4>
-
-					<div style="margin-bottom: 12px;">
-						<label for="customEndpoint" style="display: block; margin-bottom: 6px; font-weight: 500;">
-							Custom Model Endpoint
-						</label>
-						<input
-							type="text"
-							id="customEndpoint"
-							placeholder="https://generativelanguage.googleapis.com/v1beta/models/..."
-							style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);"
-						/>
-						<div class="description" style="margin-top: 4px; font-size: 11px;">
-							Overrides standard endpoints. Leave blank to use defaults.
+						<div
+							style="
+								text-align: center;
+								padding: 40px 20px;
+								color: var(--text-secondary, #999);
+							"
+						>
+							<p>📭 No notifications yet</p>
+							<p style="font-size: 12px">
+								Notifications will appear here as you use the
+								extension
+							</p>
 						</div>
 					</div>
-
-					<div style="margin-top: 12px;">
-						<label for="modelEndpointDisplay" style="display: block; margin-bottom: 6px; font-weight: 500;">
-							Current Model Endpoint URL
-						</label>
-						<div style="display: flex; gap: 8px; align-items: center;">
-							<input
-								type="text"
-								id="modelEndpointDisplay"
-								readonly
-								placeholder="https://generativelanguage.googleapis.com/..."
-								style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-secondary); font-size: 11px;"
-							/>
-							<button id="copyModelEndpoint" class="btn-secondary" style="padding: 8px 12px; font-size: 12px;">
-								📋 Copy
-							</button>
-						</div>
-						<div class="description" style="margin-top: 4px; font-size: 11px;">
-							Auto-generated from your selected model.
-						</div>
-					</div>
-				</div>
-
-				<!-- ===== SECTION 3: DIAGNOSTICS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🧪 Diagnostics</span>
-					</h4>
-					<div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--accent-primary)20">
-						<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal;">
-							<input type="checkbox" id="debugMode" style="cursor: pointer;" />
-							<span>Debug mode (console logging)</span>
-						</label>
-					</div>
-				</div>
-
-				<!-- ===== SECTION 4: BACKUPS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>💾 Backups</span>
-					</h4>
-					<div style="background: var(--bg-tertiary, rgba(255,255,255,0.05)); padding: 16px; border-radius: 8px; border-left: 3px solid #4285f4;">
-						<p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-primary, #e0e0e0);">
-							<strong>All backup functionality has been moved to Library Settings:</strong>
-						</p>
-						<ul style="margin: 0 0 12px 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary, #9ca3af); line-height: 1.6;">
-							<li>💾 Local Backups (Comprehensive & Rolling)</li>
-							<li>📋 Quick Library Backups</li>
-							<li>☁️ Google Drive Backups</li>
-							<li>⚙️ Import & Merge Options</li>
-						</ul>
-						<button id="openLibrarySettingsFromBackup" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
-							🏛️ Open Library Settings → Backups Tab
+					<div style="margin-top: 16px; display: flex; gap: 8px">
+						<button
+							id="markAllReadBtn"
+							style="
+								flex: 1;
+								padding: 8px;
+								background: var(--accent-secondary, #475569);
+								border: none;
+								border-radius: 6px;
+								color: white;
+								cursor: pointer;
+								font-size: 12px;
+							"
+						>
+							Mark All Read
 						</button>
-					</div>
-				</div>
-				</div>
-
-				<!-- ===== SECTION 3: AI MODEL SETTINGS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🤖 AI Model Settings</span>
-					</h4>
-					<div class="description" style="margin-bottom: 15px;">
-						Configure AI model parameters for content enhancement.
-					</div>
-
-					<div class="slider-block" style="margin-bottom: 20px;">
-						<label for="temperatureSlider">
-							Temperature
-							<span class="slider-value" id="temperatureValue">0.7</span>
-						</label>
-						<input type="range" min="0" max="1" step="0.1" value="0.7" class="slider" id="temperatureSlider" />
-						<div class="description">
-							Controls creativity (0 = deterministic, 1 = creative)
-						</div>
-					</div>
-
-					<div class="slider-block" style="margin-bottom: 20px;">
-						<label for="topPSlider">
-							Top-P
-							<span class="slider-value" id="topPValue">0.95</span>
-						</label>
-						<input type="range" min="0" max="1" step="0.05" value="0.95" class="slider" id="topPSlider" />
-						<div class="description">
-							Controls diversity of output (lower = more focused)
-						</div>
-					</div>
-
-					<div class="slider-block" style="margin-bottom: 20px;">
-						<label for="topKSlider">
-							Top-K
-							<span class="slider-value" id="topKValue">40</span>
-						</label>
-						<input type="range" min="1" max="100" step="1" value="40" class="slider" id="topKSlider" />
-						<div class="description">
-							Limits token selection pool (lower = more deterministic)
-						</div>
-					</div>
-
-				</div>
-
-				<!-- ===== SECTION 4: THEME SETTINGS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🎨 Theme Settings</span>
-					</h4>
-
-					<div class="slider-block" style="margin-bottom: 20px;">
-						<label for="themeMode">Theme Mode</label>
-						<select id="themeMode" style="width: 100%; padding: 10px; border-radius: 6px;">
-							<option value="dark">Dark Mode (Default)</option>
-							<option value="light">Light Mode</option>
-							<option value="auto">Auto (System Preference)</option>
-						</select>
-						<div class="description">
-							Choose your preferred theme
-						</div>
-					</div>
-
-					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-						<div>
-							<label for="accentColorPicker" style="display: block; margin-bottom: 6px; font-weight: 500;">Accent Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input
-									type="color"
-									id="accentColorPicker"
-									value="#667eea"
-									style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;"
-								/>
-								<input
-									type="text"
-									id="accentColorText"
-									value="#667eea"
-									style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);"
-									placeholder="#667eea"
-								/>
-							</div>
-						</div>
-
-						<div>
-							<label for="accentSecondaryPicker" style="display: block; margin-bottom: 6px; font-weight: 500;">Accent Secondary</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input
-									type="color"
-									id="accentSecondaryPicker"
-									value="#764ba2"
-									style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;"
-								/>
-								<input
-									type="text"
-									id="accentSecondaryText"
-									value="#764ba2"
-									style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);"
-									placeholder="#764ba2"
-								/>
-							</div>
-						</div>
-
-						<div>
-							<label for="backgroundColorPicker" style="display: block; margin-bottom: 6px; font-weight: 500;">Background Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input
-									type="color"
-									id="backgroundColorPicker"
-									value="#16213e"
-									style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;"
-								/>
-								<input
-									type="text"
-									id="backgroundColorText"
-									value="#16213e"
-									style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);"
-									placeholder="#16213e"
-								/>
-							</div>
-						</div>
-
-						<div>
-							<label for="textColorPicker" style="display: block; margin-bottom: 6px; font-weight: 500;">Text Color</label>
-							<div style="display: flex; gap: 10px; align-items: center;">
-								<input
-									type="color"
-									id="textColorPicker"
-									value="#e0e0e0"
-									style="width: 60px; height: 40px; border: none; border-radius: 6px; cursor: pointer;"
-								/>
-								<input
-									type="text"
-									id="textColorText"
-									value="#e0e0e0"
-									style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);"
-									placeholder="#e0e0e0"
-								/>
-							</div>
-						</div>
-					</div>
-
-					<div class="actions" style="margin-top: 15px;">
-						<button id="resetTheme" style="background-color: #db4437;">
-							Reset Theme to Default
-						</button>
-						<button id="saveTheme" style="float: right; background-color: #34a853;">
-							Save Theme
-						</button>
-					</div>
-				</div>
-
-				<!-- ===== SECTION 5: SITE TOGGLES ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🌐 Site Toggles</span>
-					</h4>
-					<div class="description" style="margin-bottom: 12px;">
-						Turn off a site to hide enhance buttons and library shelves for it.
-					</div>
-					<div id="siteToggleList" class="site-toggle-list"></div>
-					<div class="actions" style="margin-top: 12px;">
-						<button id="resetSiteToggles" class="btn-secondary">
-							Restore Site Defaults
-						</button>
-					</div>
-				</div>
-
-				<!-- ===== SECTION 6: FONT SIZE & DISPLAY ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>🔤 Font Size & Display</span>
-					</h4>
-					<div class="slider-block">
-						<label for="fontSizeSlider">
-							Enhanced Content Font Size
-							<span class="slider-value" id="fontSizeValue">100%</span>
-						</label>
-						<input
-							type="range"
-							min="80"
-							max="150"
-							step="5"
-							value="100"
-							class="slider"
-							id="fontSizeSlider"
-						/>
-						<div class="description">
-							Adjusts font size of enhanced content (100% = default)
-						</div>
-					</div>
-				</div>
-
-				<!-- Library Settings Button -->
-				<div class="setting" style="margin-bottom: 16px;">
-					<div style="background: var(--bg-tertiary, rgba(255,255,255,0.05)); padding: 12px; border-radius: 8px; border-left: 3px solid #4285f4; margin-bottom: 12px;">
-						<p style="margin: 0; font-size: 12px; color: var(--text-secondary, #9ca3af);">
-							💡 <strong>Library-Only Settings:</strong> Auto-add per site, theme customization, and backup management are available in Library Settings.
-						</p>
-					</div>
-					<button id="openLibrarySettings" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; margin-bottom: 12px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
-						🏛️ Open Library Settings
-					</button>
-				</div>
-
-				<!-- ===== SECTION 7: ADVANCED ACTIONS ===== -->
-				<div class="setting" style="margin-bottom: 24px;">
-					<h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-						<span>⚡ Advanced Actions</span>
-					</h4>
-					<div class="actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-						<button id="resetAllAdvanced" style="background-color: #db4437;">
-							Reset All Advanced Settings
-						</button>
-						<button id="saveAdvancedSettings" style="background-color: #34a853;">
-							Save Advanced Settings
+						<button
+							id="clearNotificationsBtn"
+							style="
+								flex: 1;
+								padding: 8px;
+								background: #db4437;
+								border: none;
+								border-radius: 6px;
+								color: white;
+								cursor: pointer;
+								font-size: 12px;
+							"
+						>
+							Clear All
 						</button>
 					</div>
 				</div>
 			</div>
-
-			<div id="status"></div>
 
 			<!-- Size indicator -->
 			<div class="size-indicator" id="sizeIndicator"></div>

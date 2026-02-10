@@ -1,6 +1,6 @@
 {
 	"name": "ranobe-gemini",
-	"version": "3.9.0",
+	"version": "4.0.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"scripts": {
 		"build": "node dev/build.js",

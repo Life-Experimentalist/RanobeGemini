@@ -782,6 +782,47 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 				// Set main novel URL to current page for novel pages
 				metadata.mainNovelUrl = window.location.href;
+
+				const bookmarkTrigger = document.querySelector(
+					".bookmark--trigger[data-tabs]",
+				);
+				const tabId = bookmarkTrigger?.getAttribute("data-tabs") || "";
+				const favoritesTabs = window.__favorites__?.tabs || [];
+				const matchedTab = favoritesTabs.find(
+					(tab) => String(tab.id) === String(tabId),
+				);
+				const systemName = (
+					matchedTab?.system_name || ""
+				).toLowerCase();
+				const titleText = (matchedTab?.title || "").toLowerCase();
+
+				const mapSystemNameToStatus = (name, title) => {
+					switch (name) {
+						case "reading_now":
+							return "reading";
+						case "will_read":
+						case "awaiting":
+							return "plan-to-read";
+						case "delayed":
+							return "on-hold";
+						case "dropped":
+							return "dropped";
+						case "viewed":
+							return "up-to-date";
+						case "completed":
+							return "completed";
+						default:
+							if (title.includes("completed")) {
+								return "completed";
+							}
+							return null;
+					}
+				};
+
+				const siteStatus = mapSystemNameToStatus(systemName, titleText);
+				if (siteStatus) {
+					metadata.siteReadingStatus = siteStatus;
+				}
 			}
 
 			// Mark partial metadata when we only saw a chapter page

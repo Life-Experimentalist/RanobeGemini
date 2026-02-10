@@ -2544,6 +2544,7 @@ body {
 	color: var(--text-primary);
 	line-height: 1.3;
 	display: -webkit-box;
+	line-clamp: 2;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
@@ -2609,6 +2610,7 @@ body {
 .sh-progress-subtext {
 	font-size: 0.7rem;
 	color: var(--text-secondary);
+}
 
 .sh-card-status {
 	display: flex;
@@ -2650,4 +2652,3 @@ body {
 	background: var(--primary-hover);
 	transform: scale(1.05);
 }
-

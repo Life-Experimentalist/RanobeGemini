@@ -397,6 +397,9 @@ async function initializePopup() {
 	const openLibrarySettingsFromPrompts = document.getElementById(
 		"openLibrarySettingsFromPrompts",
 	);
+	const randomizeSuggestionsBtn = document.getElementById(
+		"randomizeSuggestions",
+	);
 	let currentNotificationFilter = "all";
 
 	// Store current page novel data
@@ -601,6 +604,9 @@ async function initializePopup() {
 	// Load backup checkbox settings on startup
 	loadBackupCheckboxSettings();
 
+	// Load site toggle settings on startup
+	loadSiteToggleSettings();
+
 	// Site toggle helpers
 	async function loadSiteToggleSettings() {
 		const depsOk = await ensureLibraryDeps();
@@ -775,18 +781,26 @@ async function initializePopup() {
 					</div>
 				</div>
 				<div class="site-toggle-controls">
-					<label class="site-toggle-control">
+					<div class="site-toggle-control">
 						<span class="site-toggle-label">Enabled</span>
-						<input type="checkbox" data-setting="enabled" ${
-							setting.enabled !== false ? "checked" : ""
-						} aria-label="Enable ${shelf.name || shelf.id}">
-					</label>
-					<label class="site-toggle-control">
+						<label class="toggle-switch toggle-switch-sm">
+							<input type="checkbox" data-setting="enabled" ${
+								setting.enabled !== false ? "checked" : ""
+							} aria-label="Enable ${shelf.name || shelf.id}">
+							<span class="toggle-slider"></span>
+						</label>
+					</div>
+					<div class="site-toggle-control">
 						<span class="site-toggle-label">Auto-add</span>
-						<input type="checkbox" data-setting="autoAddEnabled" ${
-							setting.autoAddEnabled !== false ? "checked" : ""
-						} aria-label="Auto add ${shelf.name || shelf.id}">
-					</label>
+						<label class="toggle-switch toggle-switch-sm">
+							<input type="checkbox" data-setting="autoAddEnabled" ${
+								setting.autoAddEnabled !== false
+									? "checked"
+									: ""
+							} aria-label="Auto add ${shelf.name || shelf.id}">
+							<span class="toggle-slider"></span>
+						</label>
+					</div>
 					<div class="site-autoadd-selects">
 						<label>
 							<span>On chapter</span>
@@ -1397,28 +1411,32 @@ async function initializePopup() {
 				modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
 			}
 
-			await browser.storage.local.set({
+			const updates = {
 				apiKey: apiKey,
 				selectedModelId: selectedModelId,
 				modelEndpoint: modelEndpoint,
 				debugMode: debugModeCheckbox?.checked ?? false,
-				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false, // Save emoji setting
-				formatGameStats: formatGameStatsInput?.checked !== false, // default true
+				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false,
+				formatGameStats: formatGameStatsInput?.checked !== false,
 				centerSceneHeadings:
-					centerSceneHeadingsInput?.checked !== false, // default true
+					centerSceneHeadingsInput?.checked !== false,
 				maxOutputTokens: maxTokens,
 				temperature: temperature,
-				chunkingEnabled: chunkingEnabledInput?.checked !== false,
-				chunkSize: chunkSizeInput
-					? Math.min(
-							Math.max(
-								parseInt(chunkSizeInput.value, 10) || 20000,
-								5000,
-							),
-							50000,
-						)
-					: 20000,
-			});
+			};
+
+			if (chunkingEnabledInput) {
+				updates.chunkingEnabled =
+					chunkingEnabledInput.checked !== false;
+			}
+
+			if (chunkSizeInput) {
+				updates.chunkSize = Math.min(
+					Math.max(parseInt(chunkSizeInput.value, 10) || 20000, 5000),
+					50000,
+				);
+			}
+
+			await browser.storage.local.set(updates);
 
 			showStatus("Basic settings saved successfully!", "success");
 		} catch (error) {
@@ -2212,14 +2230,6 @@ async function initializePopup() {
 			novelsList.appendChild(novelItem);
 		});
 
-		if (limit > 0 && novels.length > limit) {
-			const expandBtn = document.createElement("button");
-			expandBtn.className = "domain-expand-btn";
-			expandBtn.textContent = "▶ Show all";
-			expandBtn.dataset.limit = String(limit);
-			header.appendChild(expandBtn);
-		}
-
 		section.appendChild(header);
 		section.appendChild(novelsList);
 
@@ -2263,36 +2273,43 @@ async function initializePopup() {
 				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
 			);
 
+		const coverImg = novel.coverImage
+			? `<img src="${escapeHtml(novel.coverImage)}" alt="${escapeHtml(bookTitle)}" class="novel-cover">`
+			: '<div class="novel-cover-placeholder">📖</div>';
+
 		novelItem.innerHTML = `
-			<div class="novel-meta">
-				<span class="novel-last-read">Last accessed: ${escapeHtml(lastAccessed)}</span>
-			</div>
-			<div class="novel-title">${escapeHtml(bookTitle)}</div>
-			<div class="novel-info">
-				<span>Author: ${escapeHtml(author)}</span>
-				<span>Status: ${escapeHtml(readingStatus)}</span>
-			</div>
-			<div class="novel-chips">${chips.join(" ")}</div>
-			${
-				novel.description
-					? `<div class="novel-description">${escapeHtml(
-							novel.description,
-						)}</div>`
-					: ""
-			}
-			<div class="novel-actions">
-				<button class="novel-view-library-btn" data-novel-id="${escapeHtml(
-					novel.id,
-				)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
-					📚 View in Library
-				</button>
-				${
-					sourceUrl
-						? `<a href="${escapeHtml(
-								sourceUrl,
-							)}" target="_blank" class="novel-source-link">Open Source</a>`
-						: ""
-				}
+			<div class="novel-card-wrapper">
+				<div class="novel-cover-section">
+					${coverImg}
+				</div>
+				<div class="novel-content-section">
+					<div class="novel-header">
+						<div class="novel-title">${escapeHtml(bookTitle)}</div>
+						<div class="novel-author">${escapeHtml(author)}</div>
+					</div>
+					<div class="novel-meta-info">
+						<span class="meta-item">Last read: ${escapeHtml(lastAccessed)}</span>
+						${lastReadChapter ? `<span class="meta-item">Ch. ${escapeHtml(String(lastReadChapter))}/${escapeHtml(String(totalChapters))}</span>` : ""}
+					</div>
+					<div class="novel-status-chips">
+						<span class="chip-status">${escapeHtml(readingStatus)}</span>
+						<span class="chip-chapters">${escapeHtml(String(totalChapters))} ch.</span>
+					</div>
+					<div class="novel-actions-compact">
+						<button class="novel-view-library-btn" data-novel-id="${escapeHtml(
+							novel.id,
+						)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
+							View Details
+						</button>
+						${
+							sourceUrl
+								? `<a href="${escapeHtml(
+										sourceUrl,
+									)}" target="_blank" class="novel-continue-btn">Continue</a>`
+								: ""
+						}
+					</div>
+				</div>
 			</div>
 		`;
 
@@ -2309,38 +2326,6 @@ async function initializePopup() {
 		// Sort chapters by read date (most recent first)
 		const sortedChapters = [...chapters].sort((a, b) => {
 			return new Date(b.date || 0) - new Date(a.date || 0);
-		});
-
-		// Limit to 10 most recent chapters
-		const recentChapters = sortedChapters.slice(0, 10);
-
-		if (recentChapters.length === 0) {
-			return '<div style="padding: 10px; font-style: italic;">No chapter history available</div>';
-		}
-
-		return recentChapters
-			.map((chapter) => {
-				const chapterTitle = chapter.title || "Unnamed Chapter";
-				const chapterDate = chapter.date
-					? formatCompleteDate(chapter.date)
-					: "Unknown date";
-				const chapterUrl = chapter.url || novelUrl;
-
-				return `
-				<div class="chapter-item">
-					<a href="${chapterUrl}" class="chapter-link" target="_blank">${chapterTitle}</a>
-					<span class="chapter-date">${chapterDate}</span>
-				</div>
-			`;
-			})
-			.join("");
-	}
-
-	// Add event listener for refresh novels button
-	if (refreshNovelsBtn) {
-		refreshNovelsBtn.addEventListener("click", () => {
-			loadLibrary();
-			loadNovels();
 		});
 	}
 
@@ -2435,34 +2420,13 @@ async function initializePopup() {
 		}
 
 		try {
-			// Get current tab
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (!tabs[0]) {
-				showNotSupported("No active tab");
+			const currentTab = await getCurrentTab();
+			if (!currentTab) {
+				showNotSupported("Could not determine current tab");
 				return;
 			}
 
-			const currentTab = tabs[0];
-			const { hostname: currentHostname } = new URL(currentTab.url);
-			const rawShelfMatch = Object.values(SHELVES).find((shelf) =>
-				(shelf.domains || []).some((pattern) =>
-					matchDomainPattern(currentHostname, pattern),
-				),
-			);
-			const siteDisabled =
-				rawShelfMatch &&
-				!isSiteEnabledSafe(siteSettings, rawShelfMatch.id);
-			const shelfForTab = siteDisabled ? null : rawShelfMatch;
-
-			if (siteDisabled) {
-				showNotSupported(
-					"This site is disabled in settings. Re-enable it in Advanced → Site Toggles.",
-				);
-				return;
-			}
+			const shelfForTab = getShelfFromUrl(currentTab.url);
 			const isExtensionPage = currentTab.url.startsWith(
 				browser.runtime.getURL(""),
 			);
@@ -2542,10 +2506,7 @@ async function initializePopup() {
 					return;
 				}
 				// Content script not available - page not supported
-				if (
-					error.message?.includes("could not establish connection") ||
-					error.message?.includes("Receiving end does not exist")
-				) {
+				if (error.message?.includes("Receiving end does not exist")) {
 					showNotSupported("Not a supported novel site");
 				} else {
 					showNotSupported("Error: " + error.message);
@@ -3848,6 +3809,120 @@ async function initializePopup() {
 	/**
 	 * Load and display novels in the tab
 	 */
+	/**
+	 * Load randomized novel suggestions from enabled sites
+	 */
+	async function loadRandomizedSuggestions() {
+		try {
+			if (!suggestedNovelsList) {
+				debugLog("Suggested novels list element not found");
+				return;
+			}
+
+			const depsOk = await ensureLibraryDeps();
+			if (!depsOk) {
+				console.error("Library dependencies not available");
+				return;
+			}
+
+			// Get site settings to filter enabled sites
+			let currentSiteSettings = {};
+			try {
+				currentSiteSettings = siteSettingsApi
+					? await siteSettingsApi.getSiteSettings()
+					: {};
+			} catch (_err) {
+				currentSiteSettings =
+					siteSettingsApi?.getDefaultSiteSettings?.() || {};
+			}
+
+			const library = await novelLibrary.getLibrary();
+			const allNovels = Object.values(library.novels || {});
+
+			// Group novels by site (shelfId)
+			const novelsBySite = {};
+			allNovels.forEach((novel) => {
+				if (novel.shelfId) {
+					if (!novelsBySite[novel.shelfId]) {
+						novelsBySite[novel.shelfId] = [];
+					}
+					novelsBySite[novel.shelfId].push(novel);
+				}
+			});
+
+			// Filter sites: enabled and with 10+ novels
+			const eligibleSites = Object.entries(novelsBySite).filter(
+				([shelfId, novels]) => {
+					const isEnabled =
+						currentSiteSettings[shelfId]?.enabled !== false;
+					const hasEnoughNovels = novels.length >= 10;
+					return isEnabled && hasEnoughNovels;
+				},
+			);
+
+			if (eligibleSites.length === 0) {
+				suggestedNovelsList.innerHTML = `
+					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #888;">
+						<p>Not enough novels to show suggestions.</p>
+						<p style="font-size: 12px; margin-top: 8px;">Add more novels to your library from enabled sites!</p>
+					</div>
+				`;
+				return;
+			}
+
+			// Pick 1-2 random novels from each eligible site
+			const randomSuggestions = [];
+			eligibleSites.forEach(([shelfId, novels]) => {
+				// Shuffle and take 1-2 novels
+				const shuffled = [...novels].sort(() => Math.random() - 0.5);
+				const count = Math.min(2, shuffled.length);
+				randomSuggestions.push(...shuffled.slice(0, count));
+			});
+
+			// Shuffle the final list and limit to reasonable number (9-12)
+			const finalSuggestions = [...randomSuggestions]
+				.sort(() => Math.random() - 0.5)
+				.slice(0, 12);
+
+			// Render the suggestions
+			if (finalSuggestions.length === 0) {
+				suggestedNovelsList.innerHTML = `
+					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #888;">
+						No novels found for suggestions.
+					</div>
+				`;
+				return;
+			}
+
+			suggestedNovelsList.innerHTML = finalSuggestions
+				.map((novel) => renderSuggestedNovelCard(novel))
+				.join("");
+
+			// Add click handlers to open novels in library
+			const suggCards = suggestedNovelsList.querySelectorAll(
+				".suggested-novel-card",
+			);
+			suggCards.forEach((card) => {
+				card.addEventListener("click", async () => {
+					const novelId = card.getAttribute("data-novel-id");
+					const shelfId = card.getAttribute("data-shelf-id");
+					if (novelId) {
+						await openNovelInLibrary(novelId, shelfId);
+					}
+				});
+			});
+		} catch (error) {
+			debugError("Error loading randomized suggestions:", error);
+			if (suggestedNovelsList) {
+				suggestedNovelsList.innerHTML = `
+					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #f88;">
+						Error loading suggestions. Try again.
+					</div>
+				`;
+			}
+		}
+	}
+
 	async function loadNovelsTab() {
 		try {
 			if (
@@ -3949,6 +4024,86 @@ async function initializePopup() {
 				return currentNovel;
 			}
 
+			const knownPageInfo = (() => {
+				try {
+					const libraryUrl = browser.runtime.getURL(
+						"library/library.html",
+					);
+					if (currentUrl.startsWith(libraryUrl)) {
+						return {
+							title: "Library Page",
+							detail: "You're viewing your Ranobe Gemini Library.",
+						};
+					}
+
+					if (currentUrl.includes("/library/websites/")) {
+						return {
+							title: "Website Library",
+							detail: "You're viewing a website-specific library page.",
+						};
+					}
+
+					if (
+						currentUrl.startsWith("chrome://newtab") ||
+						currentUrl.startsWith("edge://newtab") ||
+						currentUrl.startsWith("about:newtab") ||
+						currentUrl.startsWith("about:home")
+					) {
+						return {
+							title: "New Tab",
+							detail: "You're on a new tab page.",
+						};
+					}
+
+					if (
+						currentUrl.startsWith("chrome://extensions") ||
+						currentUrl.startsWith("edge://extensions") ||
+						currentUrl.startsWith("about:addons")
+					) {
+						return {
+							title: "Extensions Manager",
+							detail: "You're managing your browser extensions.",
+						};
+					}
+
+					if (
+						currentUrl.includes("addons.mozilla.org") ||
+						currentUrl.includes(
+							"microsoftedge.microsoft.com/addons",
+						)
+					) {
+						return {
+							title: "Add-on Store",
+							detail: "You're viewing an add-on store page.",
+						};
+					}
+
+					const url = new URL(currentUrl);
+					if (
+						url.hostname === "vkrishna04.me" ||
+						url.hostname === "ranobe.vkrishna04.me"
+					) {
+						return {
+							title: "VKrishna04 Site",
+							detail: "You're on VKrishna04's website. Enjoy exploring!",
+						};
+					}
+				} catch (_err) {
+					return null;
+				}
+				return null;
+			})();
+
+			if (knownPageInfo) {
+				currentNovelInfo.innerHTML = `
+					<div class="no-current-novel">
+						<p>${escapeHtml(knownPageInfo.title)}</p>
+						<p class="description">${escapeHtml(knownPageInfo.detail)}</p>
+					</div>
+				`;
+				return null;
+			}
+
 			if (!currentShelf) {
 				currentNovelInfo.innerHTML = `
 					<div class="no-current-novel">
@@ -3998,35 +4153,21 @@ async function initializePopup() {
 				.slice(0, 6);
 
 			suggestedNovelsList.innerHTML = `
-				<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
-					${recentNovels
-						.map(
-							(novel) => `
-						<div style="padding: 10px; background: rgba(102, 126, 234, 0.05); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.2); cursor: pointer;" onclick="window.open('${escapeHtml(
-							novel.url || "#",
-						)}', '_blank')">
-							${
-								novel.coverUrl
-									? `<img src="${escapeHtml(
-											novel.coverUrl,
-										)}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;" alt="Cover" />`
-									: ""
-							}
-							<div style="font-size: 12px; font-weight: 500; color: #e0e0e0; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(
-								novel.title || "Unknown",
-							)}</div>
-							<div style="font-size: 10px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">by ${escapeHtml(
-								novel.author || "Unknown",
-							)}</div>
-							<div style="font-size: 9px; color: #888; margin-top: 4px;">
-								${new Date(novel.lastRead || new Date()).toLocaleDateString()}
-							</div>
-						</div>
-					`,
-						)
-						.join("")}
+				<div class="suggested-novels-container">
+					${recentNovels.map((novel) => renderSuggestedNovelCard(novel)).join("")}
 				</div>
 			`;
+
+			// Add click handlers to open novels in library
+			suggestedNovelsList
+				.querySelectorAll(".suggested-novel-card")
+				.forEach((card) => {
+					card.addEventListener("click", async () => {
+						const novelId = card.dataset.novelId;
+						const shelf = card.dataset.shelfId;
+						await openNovelInLibrary(novelId, shelf);
+					});
+				});
 		} catch (error) {
 			debugError("Error showing top recent novels:", error);
 		}
@@ -4043,80 +4184,51 @@ async function initializePopup() {
 		const lastReadChapter =
 			novel.lastReadChapter || novel.currentChapter || null;
 
+		// Compact chips for mobile - show only most important 3
 		const chips = [];
 		if (readingStatus)
 			chips.push(
 				`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
 			);
-		if (totalChapters)
+		if (lastReadChapter)
+			chips.push(
+				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}/${escapeHtml(String(totalChapters))}</span>`,
+			);
+		else if (totalChapters)
 			chips.push(
 				`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
 			);
-		if (lastReadChapter)
-			chips.push(
-				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
-			);
-		if (novel.enhancedChaptersCount)
-			chips.push(
-				`<span class="chip chip-success">${escapeHtml(String(novel.enhancedChaptersCount))} enhanced</span>`,
-			);
 
-		const tagSections = [
-			{ label: "Fandoms", values: novel.fandoms },
-			{ label: "Genres", values: novel.genres },
-			{ label: "Tags", values: novel.tags },
-			{ label: "Characters", values: novel.characters },
-		];
-		const tagsHtml = tagSections
-			.filter(
-				(group) => Array.isArray(group.values) && group.values.length,
-			)
-			.map(
-				(group) => `
-				<div class="current-novel-tag-group">
-					<div class="current-novel-tag-label">${escapeHtml(group.label)}</div>
-					<div class="current-novel-tag-list">
-						${group.values
-							.slice(0, 6)
-							.map(
-								(tag) =>
-									`<span class="tag">${escapeHtml(tag)}</span>`,
-							)
-							.join("")}
-					</div>
-				</div>
-			`,
-			)
-			.join("");
+		// Truncate description for mobile (2 lines max)
+		let description = novel.description || "";
+		if (description.length > 120) {
+			description = description.substring(0, 120) + "...";
+		}
 
 		currentNovelInfo.innerHTML = `
-			<div class="current-novel-card">
-				<div class="current-novel-cover">
-					${
-						novel.coverUrl
-							? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
-							: `<div class="current-novel-cover-placeholder">📚</div>`
-					}
-				</div>
-				<div class="current-novel-info">
-					<div class="current-novel-title">${escapeHtml(title)}</div>
-					<div class="current-novel-author">by ${escapeHtml(author)}</div>
-					<div class="current-novel-meta">Last accessed: ${escapeHtml(lastAccessed)}</div>
-					<div class="current-novel-chips">${chips.join(" ")}</div>
-				</div>
+		<div class="current-novel-card">
+			<div class="current-novel-cover">
+				${
+					novel.coverUrl
+						? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
+						: `<div class="current-novel-cover-placeholder">📚</div>`
+				}
 			</div>
-			${
-				novel.description
-					? `<div class="current-novel-description">${escapeHtml(novel.description)}</div>`
-					: ""
-			}
-			${tagsHtml ? `<div class="current-novel-tags">${tagsHtml}</div>` : ""}
-			<div class="current-novel-actions">
+			<div class="current-novel-info">
+				<div class="current-novel-title">${escapeHtml(title)}</div>
+				<div class="current-novel-author">by ${escapeHtml(author)}</div>
+				<div class="current-novel-chips">${chips.join(" ")}</div>
+				${
+					description
+						? `<div class="current-novel-description">${escapeHtml(description)}</div>`
+						: ""
+				}
 				<button class="btn-small btn-primary current-novel-library-link" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
-					📚 View in Library
+					📚 View Full Details
 				</button>
 			</div>
-		`;
+		</div>
+	`;
 
 		const link = currentNovelInfo.querySelector(
 			".current-novel-library-link",
@@ -4152,7 +4264,7 @@ async function initializePopup() {
 			}
 
 			suggestedNovelsList.innerHTML = `
-				<div class="suggested-novels-grid">
+				<div class="suggested-novels-container">
 					${suggestions.map((novel) => renderSuggestedNovelCard(novel)).join("")}
 				</div>
 			`;
@@ -4172,17 +4284,53 @@ async function initializePopup() {
 	}
 
 	function renderSuggestedNovelCard(novel) {
+		const status = novel.readingStatus || novel.status || "Reading";
+		const chapters = novel.totalChapters || novel.chapterCount || null;
+		const lastReadRaw = novel.lastRead || novel.lastAccessedAt || null;
+		const lastRead = lastReadRaw
+			? new Date(lastReadRaw).toLocaleDateString()
+			: "—";
+
 		return `
 			<div class="suggested-novel-card" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
-				${
-					novel.coverUrl
-						? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
-						: ""
-				}
-				<div class="suggested-novel-title">${escapeHtml(novel.title || "Unknown")}</div>
-				<div class="suggested-novel-author">by ${escapeHtml(novel.author || "Unknown")}</div>
+				<div class="suggested-novel-cover">
+					${
+						novel.coverUrl
+							? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
+							: `<div class="suggested-novel-cover-placeholder">📖</div>`
+					}
+				</div>
+				<div class="suggested-novel-body">
+					<div class="suggested-novel-title">${escapeHtml(novel.title || "Unknown")}</div>
+					<div class="suggested-novel-author">by ${escapeHtml(novel.author || "Unknown")}</div>
+					<div class="suggested-novel-meta">
+						<span class="novel-chip chip-primary">${escapeHtml(status)}</span>
+						${
+							chapters
+								? `<span class="novel-chip chip-info">${escapeHtml(String(chapters))} ch</span>`
+								: ""
+						}
+					</div>
+					<div class="suggested-novel-foot">Last read: ${escapeHtml(lastRead)}</div>
+				</div>
 			</div>
 		`;
+	}
+
+	/**
+	 * Open a novel in the library page with modal
+	 * @param {string} novelId - The novel ID
+	 * @param {string} shelfId - The shelf ID (optional)
+	 */
+	async function openNovelInLibrary(novelId, shelfId) {
+		try {
+			const libraryUrl = browser.runtime.getURL(
+				`library/library.html?novel=${encodeURIComponent(novelId)}`,
+			);
+			await browser.tabs.create({ url: libraryUrl });
+		} catch (error) {
+			console.error("Failed to open novel in library:", error);
+		}
 	}
 
 	/**
@@ -5127,6 +5275,12 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		refreshNovelsBtn.addEventListener("click", loadNovelsTab);
 	}
 
+	if (randomizeSuggestionsBtn) {
+		randomizeSuggestionsBtn.addEventListener("click", async () => {
+			await loadRandomizedSuggestions();
+		});
+	}
+
 	if (createManualBackup) {
 		createManualBackup.addEventListener("click", handleCreateManualBackup);
 	}
@@ -5163,9 +5317,9 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		viewBackupsBtn.addEventListener("click", handleViewBackups);
 	}
 
-	// Handle both openLibrarySettings buttons (one in Novels tab, one in Settings tab)
+	// Handle all Library Settings buttons
 	const allLibrarySettingsButtons = document.querySelectorAll(
-		"#openLibrarySettings",
+		".open-library-settings",
 	);
 	allLibrarySettingsButtons.forEach((button) => {
 		button.addEventListener("click", () => {

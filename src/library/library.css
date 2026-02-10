@@ -1943,11 +1943,79 @@ body {
 }
 
 .site-autoadd-controls .site-autoadd-toggle {
+	display: flex;
 	flex-direction: row;
 	align-items: center;
+	justify-content: space-between;
 	gap: 8px;
 	font-size: 12px;
 	color: var(--text-primary);
+}
+
+.site-autoadd-controls .toggle-switch {
+	flex-shrink: 0;
+}
+
+/* Toggle Switch (Library Settings) */
+.toggle-switch {
+	position: relative;
+	display: inline-block;
+	width: 48px;
+	height: 24px;
+}
+
+.toggle-switch input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.toggle-slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: var(--border-color);
+	transition: 0.3s;
+	border-radius: 24px;
+}
+
+.toggle-slider:before {
+	position: absolute;
+	content: "";
+	height: 18px;
+	width: 18px;
+	left: 3px;
+	bottom: 3px;
+	background-color: #fff;
+	transition: 0.3s;
+	border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+	transform: translateX(24px);
+}
+
+.toggle-switch.toggle-switch-sm {
+	width: 38px;
+	height: 20px;
+}
+
+.toggle-switch.toggle-switch-sm .toggle-slider:before {
+	width: 14px;
+	height: 14px;
+	left: 3px;
+	bottom: 3px;
+}
+
+.toggle-switch.toggle-switch-sm input:checked + .toggle-slider:before {
+	transform: translateX(18px);
 }
 
 .site-autoadd-controls select,
@@ -1963,6 +2031,36 @@ body {
 	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	width: 100%;
+}
+
+.website-settings-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.website-setting-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.website-setting-text {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.website-setting-label {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-primary);
 }
 
 /* Tablet: 2 columns (same as desktop) */

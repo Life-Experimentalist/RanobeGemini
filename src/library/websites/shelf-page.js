@@ -10,6 +10,15 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
+import {
+	getSiteSettings,
+	saveSiteSettings,
+	getDefaultSiteSettings,
+} from "../../utils/site-settings.js";
+import {
+	getWebsiteSettingsDefinition,
+	renderWebsiteSettingsPanel,
+} from "../site-settings-ui.js";
 import { debugLog, debugError } from "../../utils/logger.js";
 
 // Theme defaults shared with popup/library
@@ -171,6 +180,7 @@ export async function initShelfPage(shelfId, config = {}) {
 	// Setup UI elements
 	setupFilterControls();
 	setupEventListeners();
+	setupWebsiteSettingsModal();
 
 	// Load and display novels
 	await loadShelfNovels();
@@ -260,6 +270,104 @@ function setupFilterControls() {
 /**
  * Setup event listeners for filter controls
  */
+async function setupWebsiteSettingsModal() {
+	const definition = getWebsiteSettingsDefinition(currentShelf);
+	if (!definition) return;
+
+	const header = document.querySelector(".shelf-page-header");
+	const backLink = header?.querySelector(".back-link");
+	if (header && !header.querySelector("#site-settings-btn")) {
+		const settingsBtn = document.createElement("button");
+		settingsBtn.id = "site-settings-btn";
+		settingsBtn.className = "shelf-settings-btn";
+		settingsBtn.type = "button";
+		settingsBtn.textContent = "⚙️ Settings";
+		if (backLink && backLink.parentElement === header) {
+			header.insertBefore(settingsBtn, backLink);
+		} else {
+			header.appendChild(settingsBtn);
+		}
+	}
+
+	let currentSettings = {};
+	try {
+		const allSettings = await getSiteSettings();
+		currentSettings =
+			allSettings[currentShelf] ||
+			getDefaultSiteSettings()[currentShelf] ||
+			{};
+	} catch (_err) {
+		currentSettings = getDefaultSiteSettings()[currentShelf] || {};
+	}
+
+	const existingModal = document.getElementById("site-settings-modal");
+	if (!existingModal) {
+		const modal = document.createElement("div");
+		modal.id = "site-settings-modal";
+		modal.className = "modal hidden";
+		modal.innerHTML = `
+			<div class="modal-backdrop"></div>
+			<div class="modal-content settings-modal-content">
+				<button class="modal-close" id="site-settings-close">&times;</button>
+				<h2 style="margin-bottom: 8px;">⚙️ ${definition.label} Settings</h2>
+				<p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-secondary, #999);">
+					Manage site-specific preferences for this library.
+				</p>
+				<div class="settings-tabs">
+					<button class="settings-tab active" data-tab="website-settings-panel">
+						⚙️ Settings
+					</button>
+				</div>
+				<div class="settings-tab-content" id="website-settings-panel">
+					${renderWebsiteSettingsPanel(definition, currentSettings)}
+				</div>
+			</div>
+		`;
+		document.body.appendChild(modal);
+	}
+
+	const settingsBtn = document.getElementById("site-settings-btn");
+	const settingsModal = document.getElementById("site-settings-modal");
+	const settingsClose = document.getElementById("site-settings-close");
+	const settingsBackdrop = settingsModal?.querySelector(".modal-backdrop");
+
+	const openModal = () => {
+		if (settingsModal) settingsModal.classList.remove("hidden");
+	};
+	const closeModal = () => {
+		if (settingsModal) settingsModal.classList.add("hidden");
+	};
+
+	if (settingsBtn) settingsBtn.addEventListener("click", openModal);
+	if (settingsClose) settingsClose.addEventListener("click", closeModal);
+	if (settingsBackdrop)
+		settingsBackdrop.addEventListener("click", closeModal);
+
+	const inputs = document.querySelectorAll(
+		"#site-settings-modal input[data-setting]",
+	);
+	inputs.forEach((input) => {
+		input.addEventListener("change", async () => {
+			const key = input.dataset.setting;
+			if (!key) return;
+			const updated = {
+				...currentSettings,
+				[key]: input.checked,
+			};
+			try {
+				const saved = await saveSiteSettings({
+					[currentShelf]: updated,
+				});
+				currentSettings = saved[currentShelf] || updated;
+				showToast("Settings saved", "success");
+			} catch (error) {
+				debugError("Failed to save site settings:", error);
+				showToast("Failed to save settings", "error");
+			}
+		});
+	});
+}
+
 function setupEventListeners() {
 	// Search input
 	const searchInput = document.getElementById("shelf-search");

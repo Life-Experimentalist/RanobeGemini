@@ -5,7 +5,7 @@
 
 import { SHELF_REGISTRY } from "./domain-constants.js";
 
-export const SITE_SETTINGS_KEY = "rg_site_settings";
+export const SITE_SETTINGS_KEY = "siteSettingsApi";
 export const DOMAIN_SETTINGS_KEY = "rg_domain_settings";
 
 let cachedDefaults = null;
@@ -15,6 +15,14 @@ function buildDefaultSiteSettings() {
 	if (cachedDefaults) return cachedDefaults;
 
 	const defaults = {};
+	const perSiteDefaults = {
+		fanfiction: {
+			redirectToWww: true,
+			redirectToMobile: false,
+			autoEnhanceEnabled: false,
+		},
+	};
+
 	for (const shelf of Object.values(SHELF_REGISTRY)) {
 		if (!shelf?.id) continue;
 		defaults[shelf.id] = {
@@ -27,6 +35,9 @@ function buildDefaultSiteSettings() {
 			icon: shelf.icon,
 			emoji: shelf.emoji,
 			color: shelf.color,
+			...(shelf.id === "fanfiction"
+				? { domainPreference: "www", autoEnhanceEnabled: false }
+				: perSiteDefaults[shelf.id] || {}),
 		};
 	}
 

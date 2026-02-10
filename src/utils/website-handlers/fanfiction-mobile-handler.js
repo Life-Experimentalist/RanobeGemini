@@ -129,15 +129,16 @@ When enhancing, improve readability while respecting the author's creative voice
 	 * @returns {string}
 	 */
 	getNovelPageUrl() {
-		// Redirect to desktop version for full story details
-		const match = window.location.href.match(/\/s\/(\d+)/);
-		if (match) {
-			return `https://www.fanfiction.net/s/${match[1]}/1/`;
+		try {
+			const url = new URL(window.location.href);
+			url.hostname = "www.fanfiction.net";
+			return url.toString();
+		} catch (_err) {
+			return window.location.href.replace(
+				"m.fanfiction.net",
+				"www.fanfiction.net",
+			);
 		}
-		return window.location.href.replace(
-			"m.fanfiction.net",
-			"www.fanfiction.net",
-		);
 	}
 
 	/**

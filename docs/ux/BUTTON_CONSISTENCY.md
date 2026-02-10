@@ -366,8 +366,7 @@ If adding a new settings button to library modal:
 
 ## File References
 
-- Advanced Tab HTML: [src/popup/popup.html](../src/popup/popup.html#L371)
-- Advanced Tab Handlers: [src/popup/popup.js](../src/popup/popup.js#L1430)
-- Library Settings HTML: [src/library/library.html](../src/library/library.html#L660)
-- Library Settings Handlers: [src/library/library.js](../src/library/library.js#L1102)
-- Backup Utilities: [src/utils/backup-utils.js](../src/utils/backup-utils.js)
+- Advanced Tab HTML: [src/popup/popup.html](../../src/popup/popup.html#L371)
+- Advanced Tab Handlers: [src/popup/popup.js](../../src/popup/popup.js#L1430)
+- Library Settings HTML: [src/library/library.html](../../src/library/library.html#L660)
+- Library Settings Handlers: [src/library/library.js](../../src/library/library.js#L1102)

@@ -170,7 +170,7 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"driveAutoRestoreMergeMode", // Drive auto-restore merge mode
 	"continuousBackupCheckIntervalMinutes", // Drive continuous check interval
 	"driveSyncIntervalMinutes", // Drive sync interval
-	"rg_site_settings", // Per-site settings
+	"siteSettingsApi", // Per-site settings
 	"autoHoldEnabled", // Auto hold enabled
 	"autoHoldDays", // Auto hold days
 	"rg_library_settings", // Library settings
@@ -188,6 +188,7 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"backupFolder", // Backup folder
 	"backupRetention", // Backup retention
 	"backupIntervalDays", // Auto backup interval
+	"rg_domain_settings", // Per-domain toggle settings
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators
