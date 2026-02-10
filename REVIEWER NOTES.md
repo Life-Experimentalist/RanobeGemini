@@ -1,21 +1,25 @@
 ## BUILD INSTRUCTIONS
 
-### Prerequisites:
+### Prerequisites
+
 - Node.js (v14 or higher)
 - npm
 
-### Build Steps:
+### Build Steps
+
 1. Install dependencies:
    npm install
 
 2. Generate final package:
    npm run package
 
-### This will:
+### This will
+
 - Run generate-manifest-domains.js to update manifest.json with handler domains
 - Create releases/RanobeGemini_vX.X.X.zip from src/ directory
 
-### Build Scripts:
+### Build Scripts
+
 - dev/generate-manifest-domains.js - Extracts domains from handler files, generates manifest.json match patterns
 - dev/package-firefox.js - Creates zip archive of src/ directory
 - dev/build.js - Updates manifest version from package.json

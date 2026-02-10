@@ -4726,22 +4726,20 @@ async function handleImport(e) {
 				}
 			});
 		});
-				const result = await novelLibrary.importLibrary(data, false);
-				if (result.success) {
-					await loadLibrary();
-					closeModal(elements.settingsModal);
-					alert(
-						`Library replaced successfully!\n\n• ${result.imported} novels imported`
-					);
-				} else {
-					throw new Error(result.error || "Import failed");
-				}
-			}
+		const result = await novelLibrary.importLibrary(data, false);
+		if (result.success) {
+			await loadLibrary();
+			closeModal(elements.settingsModal);
+			alert(
+				`Library replaced successfully!\n\n• ${result.imported} novels imported`,
+			);
+		} else {
+			throw new Error(result.error || "Import failed");
 		}
 	} catch (error) {
 		debugError("Import failed:", error);
 		alert(
-			`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`
+			`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`,
 		);
 	}
 
