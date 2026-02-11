@@ -195,7 +195,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		// Primary: Extract from category breadcrumb (most reliable on chapter pages)
 		// <div class="category grey ellipses"><a href="/novels/1206962-...-name.html" rel="up">Novel Title</a></div>
 		const categoryLink = document.querySelector(
-			".category.grey.ellipses a[rel='up'][href*='/novels/']"
+			".category.grey.ellipses a[rel='up'][href*='/novels/']",
 		);
 		if (categoryLink) {
 			return categoryLink.href;
@@ -203,7 +203,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Fallback: Try to find link to novel page on chapter page
 		const novelLink = document.querySelector(
-			".r-chapter-info a[href*='/novels/'], .breadcrumb a[href*='/novels/'], a.btn-primary[href*='/novels/']"
+			".r-chapter-info a[href*='/novels/'], .breadcrumb a[href*='/novels/'], a.btn-primary[href*='/novels/']",
 		);
 		if (novelLink) {
 			return novelLink.href;
@@ -334,7 +334,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Remove title elements from the content if they exist
 		const titlesToRemove = contentClone.querySelectorAll(
-			"h1, h2, h3.title, .story-title, .chapter-title"
+			"h1, h2, h3.title, .story-title, .chapter-title",
 		);
 		titlesToRemove.forEach((title) => {
 			title.remove();
@@ -612,7 +612,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				metadata.needsDetailPage = true; // Chapter pages do not expose full metadata
 				// Primary: Extract from category link (most reliable)
 				const categoryLink = document.querySelector(
-					".category.grey.ellipses a[rel='up'][href*='/novels/']"
+					".category.grey.ellipses a[rel='up'][href*='/novels/']",
 				);
 				if (categoryLink) {
 					metadata.title = categoryLink.textContent.trim();
@@ -634,7 +634,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				// Fallback: Extract from page title
 				if (!metadata.title) {
 					const titleMatch = document.title.match(
-						/(.+?)\s*[|\-]\s*Chapter/i
+						/(.+?)\s*[|\-]\s*Chapter/i,
 					);
 					if (titleMatch) {
 						metadata.title = titleMatch[1].trim();
@@ -650,7 +650,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 				// Extract description from meta tag on chapter page
 				const descMeta = document.querySelector(
-					'meta[name="description"]'
+					'meta[name="description"]',
 				);
 				if (descMeta) {
 					let desc = descMeta.getAttribute("content")?.trim();
@@ -715,7 +715,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				} else {
 					// Fallback to meta description
 					const descMeta = document.querySelector(
-						'meta[name="description"], meta[property="og:description"]'
+						'meta[name="description"], meta[property="og:description"]',
 					);
 					if (descMeta) {
 						metadata.description = descMeta
@@ -737,7 +737,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 				// Extract tags/events from [itemprop="keywords"]
 				const keywordsContainer = document.querySelector(
-					'[itemprop="keywords"]'
+					'[itemprop="keywords"]',
 				);
 				if (keywordsContainer) {
 					const tagLinks = keywordsContainer.querySelectorAll("a");
@@ -858,7 +858,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Extract translator
 			const translatorEl = document.querySelector(
-				'[itemprop="translator"] a'
+				'[itemprop="translator"] a',
 			);
 			if (translatorEl) {
 				metadata.translator = translatorEl.textContent.trim();
@@ -866,7 +866,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Extract publisher
 			const publisherEl = document.querySelector(
-				'[itemprop="publisher"] a'
+				'[itemprop="publisher"] a',
 			);
 			if (publisherEl) {
 				metadata.publisher = publisherEl.textContent.trim();
@@ -875,7 +875,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			// Extract cover image
 			// First try the poster image
 			const posterImg = document.querySelector(
-				".r-fullstory-poster .poster img"
+				".r-fullstory-poster .poster img",
 			);
 			if (posterImg) {
 				const src = posterImg.getAttribute("src");
@@ -887,7 +887,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					try {
 						metadata.coverUrl = new URL(
 							src,
-							window.location.href
+							window.location.href,
 						).href;
 					} catch (e) {
 						// Invalid URL
@@ -898,7 +898,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			// Try background-image from .cover figure
 			if (!metadata.coverUrl) {
 				const coverFigure = document.querySelector(
-					".poster figure.cover"
+					".poster figure.cover",
 				);
 				if (coverFigure) {
 					const bgStyle = coverFigure.style.backgroundImage;
@@ -907,7 +907,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						try {
 							metadata.coverUrl = new URL(
 								match[1],
-								window.location.href
+								window.location.href,
 							).href;
 						} catch (e) {
 							// Invalid URL
@@ -942,7 +942,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 							try {
 								metadata.coverUrl = new URL(
 									src,
-									window.location.href
+									window.location.href,
 								).href;
 								break;
 							} catch (e) {
@@ -987,7 +987,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			// Fallback: Extract from page title
 			if (!context.title) {
 				const titleMatch = document.title.match(
-					/(.+?)\s*[|\-]\s*Chapter/i
+					/(.+?)\s*[|\-]\s*Chapter/i,
 				);
 				if (titleMatch) {
 					context.title = titleMatch[1].trim();
@@ -996,7 +996,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Try to extract author if available
 			const authorEl = document.querySelector(
-				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]'
+				'.tag_list[itemprop="creator"], .info_line a[href*="/author/"]',
 			);
 			if (authorEl) {
 				context.author = authorEl.textContent.trim();
@@ -1004,7 +1004,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// Extract description from meta tag
 			const descriptionMeta = document.querySelector(
-				'meta[name="description"]'
+				'meta[name="description"]',
 			);
 			if (descriptionMeta) {
 				context.description = descriptionMeta
@@ -1016,6 +1016,53 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		}
 
 		return context;
+	}
+
+	/**
+	 * Detect Ranobes' dark mode theme
+	 * @returns {string} 'dark', 'light', or 'auto'
+	 */
+	getPageTheme() {
+		// Check URL for dark template
+		const urlPath = window.location.href;
+		if (urlPath.includes("/Dark-AMOLED/") || urlPath.includes("Dark")) {
+			return "dark";
+		}
+
+		// Check for active dark skin button
+		const activeSkin = document.querySelector(
+			".skin_amoled.active, .skin_dgreen.active, .skin_dblue.active",
+		);
+		if (activeSkin) {
+			return "dark";
+		}
+
+		// Check body or html classes
+		if (
+			document.body?.classList.contains("dark") ||
+			document.body?.classList.contains("skin-dark") ||
+			document.documentElement?.classList.contains("dark-theme")
+		) {
+			return "dark";
+		}
+
+		// Check localStorage/cookies
+		try {
+			const savedSkin =
+				localStorage.getItem("dle-skin") ||
+				localStorage.getItem("skin");
+			if (
+				savedSkin &&
+				(savedSkin.includes("Dark") || savedSkin.includes("AMOLED"))
+			) {
+				return "dark";
+			}
+		} catch (e) {
+			// Ignore storage errors
+		}
+
+		// Default to extension's theme detection
+		return "auto";
 	}
 }
 

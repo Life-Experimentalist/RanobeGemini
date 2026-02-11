@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -38,7 +38,7 @@
 					id="notificationsToggle"
 					title="Notifications"
 				>
-					<span class="tab-icon">🔔</span>
+					<span class="tab-icon">??</span>
 					<span
 						id="notificationBadge"
 						class="notification-badge"
@@ -57,17 +57,17 @@
 						id="apiKey"
 						placeholder="Enter your API key"
 					/>
-							<button
-								class="open-library-settings"
-								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-							>
-								⚙️ Library Settings
-							</button>
-						</div>
+					<div
+						class="api-key-actions"
+						style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px"
+					>
+						<button id="saveApiKey">Save Key</button>
+						<button id="testApiKey">Test Key</button>
+						<a id="getKeyLink" href="#" style="align-self: center"
+							>Get API Key</a
+						>
 					</div>
-				</div>
-					</div>
-			<!-- Notifications Modal -->
+					<div id="status" class="status" style="margin-top: 8px"></div>
 				</div>
 
 				<div class="setting">
@@ -89,19 +89,37 @@
 							class="icon-button"
 							title="Refresh models list"
 						>
-							↻
+							?
+						</button>
+					</div>
+					<div
+						style="display: flex; gap: 8px; margin-top: 8px; align-items: center"
+					>
+						<input
+							id="modelEndpointDisplay"
+							type="text"
+							readonly
+							style="flex: 1; min-width: 0"
+						/>
+						<button
+							id="copyModelEndpoint"
+							class="icon-button"
+							title="Copy model endpoint"
+						>
+							??
 						</button>
 					</div>
 				</div>
 
 				<div class="setting">
-					<label>🧪 Processing Options</label>
+					<label>?? Processing Options</label>
 					<div class="description" style="margin-top: 6px">
 						Moved to Library Settings for better control.
 					</div>
 				</div>
 
-				<div class="setting"
+				<div
+					class="setting"
 					style="
 						margin-top: 15px;
 						padding: 10px;
@@ -127,8 +145,7 @@
 						<span>Add emotion emojis to dialogue</span>
 					</label>
 					<div class="description" style="margin-top: 6px">
-						Adds appropriate emojis to enhance emotional expressions
-						in text
+						Adds appropriate emojis to enhance emotional expressions in text
 					</div>
 				</div>
 
@@ -145,13 +162,12 @@
 						value="8192"
 					/>
 					<div class="description">
-						Controls maximum length of generated text (higher =
-						longer outputs)
+						Controls maximum length of generated text (higher = longer outputs)
 					</div>
 				</div>
 
 				<details class="setting backup-keys-section" open>
-					<summary>🔑 Alternate API Keys</summary>
+					<summary>?? Alternate API Keys</summary>
 					<div class="backup-keys-content">
 						<div id="backupKeysList" class="backup-keys-list"></div>
 						<div class="add-backup-key">
@@ -173,8 +189,7 @@
 								<option value="random">Random</option>
 							</select>
 							<div class="description" style="margin-top: 6px">
-								Use alternate keys automatically if one hits
-								limits.
+								Use alternate keys automatically if one hits limits.
 							</div>
 						</div>
 					</div>
@@ -182,7 +197,7 @@
 
 				<!-- Theme Mode Quick Toggle -->
 				<div class="setting">
-					<label for="themeMode">🎨 Theme Mode</label>
+					<label for="themeMode">?? Theme Mode</label>
 					<select
 						id="themeMode"
 						style="width: 100%; padding: 10px; border-radius: 6px"
@@ -196,12 +211,11 @@
 				<!-- Site Toggles -->
 				<details class="setting">
 					<summary style="cursor: pointer; font-weight: 600">
-						🌐 Site Toggles
+						?? Site Toggles
 					</summary>
 					<div style="margin-top: 12px">
 						<div class="description" style="margin-bottom: 12px">
-							Turn off a site to hide enhance buttons and library
-							shelves for it.
+							Turn off a site to hide enhance buttons and library shelves for it.
 						</div>
 						<div id="siteToggleList" class="site-toggle-list"></div>
 					</div>
@@ -211,10 +225,8 @@
 				<div class="setting">
 					<div class="slider-block">
 						<label for="fontSizeSlider">
-							🔤 Enhanced Content Font Size
-							<span class="slider-value" id="fontSizeValue"
-								>100%</span
-							>
+							?? Enhanced Content Font Size
+							<span class="slider-value" id="fontSizeValue">100%</span>
 						</label>
 						<input
 							type="range"
@@ -226,54 +238,30 @@
 							id="fontSizeSlider"
 						/>
 						<div class="description">
-							Adjusts font size of enhanced content (100% =
-							default)
+							Adjusts font size of enhanced content (100% = default)
 						</div>
 					</div>
 				</div>
 
-				<!-- Debug Toggle -->
-				<div class="setting">
-					<div
-						style="
-							display: flex;
-							justify-content: space-between;
-							align-items: center;
-						"
+				<div class="setting" style="display: flex; gap: 8px; flex-wrap: wrap">
+					<button id="saveSettings">Save Settings</button>
+					<button
+						class="open-library-settings"
+						style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
 					>
-						<label
-							style="
-								font-weight: 600;
-								display: flex;
-								align-items: center;
-								gap: 8px;
-							"
-						>
-							<span>🧪 Debug Mode</span>
-						</label>
-						<label class="toggle-switch">
-							<input type="checkbox" id="debugMode" />
-							<span class="toggle-slider"></span>
-						</label>
-					</div>
-					<div class="description" style="margin-top: 4px">
-						Enable console logging for debugging
-					</div>
+						?? Library Settings
+					</button>
 				</div>
 
 				<!-- Advanced Settings Link -->
 				<details class="setting">
 					<summary style="cursor: pointer; font-weight: 600">
-						⚙️ More Settings
+						?? More Settings
 					</summary>
 					<div style="margin-top: 12px">
-						<!-- Backups link -->
 						<div
 							style="
-								background: var(
-									--bg-tertiary,
-									rgba(255, 255, 255, 0.05)
-								);
+								background: var(--bg-tertiary, rgba(255, 255, 255, 0.05));
 								padding: 12px;
 								border-radius: 8px;
 								border-left: 3px solid #4285f4;
@@ -286,47 +274,17 @@
 									color: var(--text-secondary);
 								"
 							>
-								💾 Advanced settings, backups, prompts, and AI
-								parameters are in Library Settings.
+								?? Advanced settings (debug mode, custom prompts, AI parameters), backups, and Google Drive sync are in Library Settings.
 							</p>
 							<button
 								class="open-library-settings"
 								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
 							>
-								⚙️ Library Settings
+								?? Library Settings
 							</button>
-					<div
-						id="notificationsModal"
-						style="
-							display: none;
-							position: fixed;
-							top: 0;
-							left: 0;
-							right: 0;
-							bottom: 0;
-							background: rgba(0, 0, 0, 0.7);
-							z-index: 2000;
-							overflow-y: auto;
-							padding: 20px;
-							align-items: center;
-							justify-content: center;
-						"
-					>
-						<div
-							style="
-								position: relative;
-								background: var(--bg-primary, #0f172a);
-								border: 1px solid var(--border-color, #334155);
-								border-radius: 12px;
-								padding: 20px;
-								width: 100%;
-								max-width: 450px;
-								max-height: 80vh;
-								overflow-y: auto;
-								box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-							"
-						>
-				</div>
+						</div>
+					</div>
+				</details>
 			</div>
 
 			<!-- Novels Tab -->
@@ -341,13 +299,13 @@
 						justify-content: space-between;
 					"
 				>
-					<span>📚 Your Reading</span>
+					<span>?? Your Reading</span>
 					<button
 						class="icon-button open-library-settings"
 						title="Open Library Settings"
 						style="font-size: 16px"
 					>
-						⚙️
+						??
 					</button>
 				</h3>
 
@@ -373,7 +331,7 @@
 							align-items: center;
 						"
 					>
-						<span>✨ Suggested Reads</span>
+						<span>? Suggested Reads</span>
 						<button
 							id="randomizeSuggestions"
 							class="icon-button"
@@ -386,7 +344,7 @@
 								padding: 4px 8px;
 							"
 						>
-							🎲
+							??
 						</button>
 					</div>
 					<div
@@ -404,13 +362,13 @@
 				<!-- All Novels Section -->
 				<div class="all-novels-section">
 					<div class="section-header">
-						📚 Your Library
+						?? Your Library
 						<button
 							id="refreshNovels"
 							class="icon-button"
 							title="Refresh library"
 						>
-							↻
+							?
 						</button>
 					</div>
 					<div class="novels-list" id="novelsList">
@@ -425,6 +383,7 @@
 				<a
 					href="#"
 					id="openMainLibrary"
+					class="main-library-link"
 					style="
 						display: flex;
 						align-items: center;
@@ -440,10 +399,8 @@
 						color: white;
 						transition: transform 0.2s;
 					"
-					onmouseover="this.style.transform = 'translateY(-2px)'"
-					onmouseout="this.style.transform = ''"
 				>
-					<span style="font-size: 24px">🏛️</span>
+					<span style="font-size: 24px">???</span>
 					<div style="flex: 1">
 						<div style="font-weight: 600; font-size: 14px">
 							Main Library
@@ -452,7 +409,7 @@
 							View all your saved novels
 						</div>
 					</div>
-					<span style="font-size: 18px">→</span>
+					<span style="font-size: 18px">?</span>
 				</a>
 			</div>
 
@@ -499,7 +456,7 @@
 						<h2
 							style="margin: 0; font-size: 18px; font-weight: 600"
 						>
-							🔔 Notifications
+							?? Notifications
 						</h2>
 						<button
 							id="closeNotificationsModal"
@@ -511,7 +468,7 @@
 								color: var(--text-secondary, #999);
 							"
 						>
-							✕
+							?
 						</button>
 					</div>
 					<div
@@ -525,7 +482,7 @@
 								color: var(--text-secondary, #999);
 							"
 						>
-							<p>📭 No notifications yet</p>
+							<p>?? No notifications yet</p>
 							<p style="font-size: 12px">
 								Notifications will appear here as you use the
 								extension

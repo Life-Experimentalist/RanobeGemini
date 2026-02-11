@@ -91,8 +91,19 @@ export const DEFAULT_MODEL_ID = "gemini-3-flash";
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
 
 // Default chunk size for large chapters (characters per segment)
+// DEPRECATED: Use CHUNK_SIZE_WORDS instead for word-based chunking
 // Content larger than this will be split into chunks of this size
 export const DEFAULT_CHUNK_SIZE = 20000;
+
+// New word-based chunking configuration
+// Default chunk size in words (3200 words ≈ 15-20k characters)
+export const DEFAULT_CHUNK_SIZE_WORDS = 3200;
+
+// Default number of chunks after which summary buttons repeat
+export const DEFAULT_CHUNK_SUMMARY_COUNT = 2;
+
+// Minimum chunk size in words (for validation)
+export const MIN_CHUNK_WORDS = 100;
 
 // Default rate limit wait time (in milliseconds)
 export const RATE_LIMIT_WAIT_TIME = 300000; // 5 minutes
@@ -154,7 +165,8 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"permanentPrompt", // Permanent prompt
 	"siteSpecificPrompts", // Site-specific prompts
 	"chunkingEnabled", // Chunking setting
-	"chunkSize", // Chunk size
+	"chunkSizeWords", // Chunk size (words)
+	"chunkSummaryCount", // Summary button frequency
 	"useEmoji", // Emoji setting
 	"maxOutputTokens", // Max tokens
 	"temperature", // Temperature (legacy)

@@ -44,6 +44,35 @@
 						</button>
 						<button
 							class="btn btn-icon"
+							id="notification-bell-btn"
+							title="Notifications"
+							style="position: relative;"
+						>
+							🔔
+							<span
+								id="notification-bell-badge"
+								class="hidden"
+								style="
+									position: absolute;
+									top: -4px;
+									right: -4px;
+									background: #ef4444;
+									color: white;
+									border-radius: 50%;
+									min-width: 18px;
+									height: 18px;
+									font-size: 10px;
+									font-weight: 600;
+									display: flex;
+									align-items: center;
+									justify-content: center;
+									padding: 2px;
+								"
+								>0</span
+							>
+						</button>
+						<button
+							class="btn btn-icon"
 							id="settings-btn"
 							title="Library Settings"
 						>
@@ -1371,22 +1400,31 @@
 						</div>
 						<div class="settings-item">
 							<label for="library-chunk-size" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-								Segment size (characters per chunk):
+								Segment size (words per chunk):
 							</label>
-							<input type="number" id="library-chunk-size" min="5000" max="50000" step="1000" value="20000" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<input type="number" id="library-chunk-size" min="100" max="10000" step="100" value="3200" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
 							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-								Smaller = safer but more segments.
+								Recommended: 3200 words. Smaller = safer but more segments.
 							</p>
 						</div>
-+						<div class="settings-item" style="margin-top: 12px;">
-+							<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-+								Maximum Output Length (tokens):
-+							</label>
-+							<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192" style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-+								Controls maximum length of generated text.
-+							</p>
-+						</div>
+						<div class="settings-item" style="margin-top: 12px;">
+							<label for="library-chunk-summary-count" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Summary buttons every N chunks:
+							</label>
+							<input type="number" id="library-chunk-summary-count" min="1" max="10" step="1" value="2" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Controls how often summary buttons appear between chunks.
+							</p>
+						</div>
+						<div class="settings-item" style="margin-top: 12px;">
+							<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Maximum Output Length (tokens):
+							</label>
+							<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192" style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Controls maximum length of generated text.
+							</p>
+						</div>
 					</div>
 
 					<!-- SECTION: Analytics & Diagnostics -->
@@ -1421,6 +1459,18 @@
 						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #64748b;">
 							⚙️ Developer
 						</h3>
+						<div class="settings-item" style="margin-bottom: 12px;">
+							<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+								<span style="font-weight: 500; font-size: 12px;">🧪 Debug Mode</span>
+								<label class="toggle-switch toggle-switch-sm">
+									<input type="checkbox" id="library-debug-mode" />
+									<span class="toggle-slider"></span>
+								</label>
+							</div>
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Enable console logging for debugging extension issues.
+							</p>
+						</div>
 						<div class="settings-item">
 							<label for="webhook-url" class="settings-desc" style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px;">
 								Webhook URL:
@@ -1591,6 +1641,32 @@
 					<button id="telemetry-accept-btn" class="btn btn-primary">
 						Keep Enabled
 					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Notification Panel -->
+		<div id="notification-panel" class="notification-panel hidden">
+			<div class="notification-panel-backdrop"></div>
+			<div class="notification-panel-content">
+				<div class="notification-panel-header">
+					<h3>🔔 Notifications</h3>
+					<button class="notification-panel-close" id="notification-panel-close">
+						&times;
+					</button>
+				</div>
+				<div class="notification-panel-body">
+					<div class="notification-actions" style="display: flex; gap: 8px; margin-bottom: 12px; padding: 0 16px;">
+						<button id="library-mark-all-read" class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 6px 12px;">
+							✓ Mark All Read
+						</button>
+						<button id="library-clear-all-notifications" class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 6px 12px;">
+							🗑 Clear All
+						</button>
+					</div>
+					<div id="library-notification-list" class="notification-list">
+						<!-- Notifications will be populated by JavaScript -->
+					</div>
 				</div>
 			</div>
 		</div>

@@ -1353,6 +1353,14 @@ When enhancing, improve readability while respecting the author's creative voice
 	getSiteSpecificPrompt() {
 		return FanfictionHandler.DEFAULT_SITE_PROMPT;
 	}
+
+	/**
+	 * FanFiction.net doesn't have dark mode
+	 * @returns {string} Always 'light'
+	 */
+	getPageTheme() {
+		return "light";
+	}
 }
 
 // Default export

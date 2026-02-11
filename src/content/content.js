@@ -42,7 +42,7 @@ const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
 const PROGRESS_PROMPT_TIMEOUT_MS = 15000;
 if (window.__RGInitDone) {
 	debugLog(
-		"Ranobe Gemini: Content script already initialized, skipping duplicate load."
+		"Ranobe Gemini: Content script already initialized, skipping duplicate load.",
 	);
 } else {
 	window.__RGInitDone = true;
@@ -88,7 +88,7 @@ if (window.__RGInitDone) {
 			// leave defaults
 		}
 	})();
-	let debugModeEnabled = false;
+	let debugModeEnabled = true; // Default to true for debugging
 
 	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
 	const __rgOriginalLog = debugLog.bind(console);
@@ -101,7 +101,15 @@ if (window.__RGInitDone) {
 	try {
 		browser.storage.local
 			.get("debugMode")
-			.then((data) => applyDebugFlag(data.debugMode))
+			.then((data) => {
+				// Only apply if debugMode is explicitly set in storage
+				if (data.debugMode !== undefined) {
+					applyDebugFlag(data.debugMode);
+				} else {
+					// Set default value in storage
+					browser.storage.local.set({ debugMode: true });
+				}
+			})
 			.catch(() => {});
 		browser.storage.onChanged.addListener((changes, area) => {
 			if (area === "local" && changes.debugMode) {
@@ -135,10 +143,16 @@ if (window.__RGInitDone) {
 		if (keepAliveRetryCount >= keepAliveConfig.maxRetries) return;
 		keepAliveRetryCount += 1;
 		const delay = keepAliveConfig.reconnectDelayMs;
-		keepAliveReconnectTimer = setTimeout(() => {
-			keepAliveReconnectTimer = null;
-			startKeepAlivePort(reason || "retry");
-		}, delay + Math.floor(Math.random() * (keepAliveConfig.heartbeatJitterMs || 0)));
+		keepAliveReconnectTimer = setTimeout(
+			() => {
+				keepAliveReconnectTimer = null;
+				startKeepAlivePort(reason || "retry");
+			},
+			delay +
+				Math.floor(
+					Math.random() * (keepAliveConfig.heartbeatJitterMs || 0),
+				),
+		);
 	}
 
 	function startKeepAlivePort(trigger = "initial") {
@@ -163,7 +177,7 @@ if (window.__RGInitDone) {
 			const jitter = keepAliveConfig.heartbeatJitterMs || 0;
 			const interval = Math.max(
 				5000,
-				base + Math.floor(Math.random() * jitter)
+				base + Math.floor(Math.random() * jitter),
 			);
 			keepAliveHeartbeat = setInterval(() => {
 				try {
@@ -209,10 +223,10 @@ if (window.__RGInitDone) {
 			navigator.userAgent || navigator.vendor || window.opera;
 		if (
 			/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(
-				userAgent
+				userAgent,
 			) ||
 			/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
-				userAgent.substr(0, 4)
+				userAgent.substr(0, 4),
 			)
 		) {
 			return true;
@@ -229,13 +243,13 @@ if (window.__RGInitDone) {
 		// Remove any <script>...</script> elements
 		let sanitized = html.replace(
 			/<script[\s\S]*?>[\s\S]*?<\/script>/gi,
-			""
+			"",
 		);
 
 		// Remove code block markers like ```html, ```javascript, etc.
 		sanitized = sanitized.replace(
 			/```(?:html|javascript|css|js|xml|json|md|markdown|)\s*\n?/gi,
-			""
+			"",
 		);
 
 		// Remove closing code block markers ```
@@ -270,7 +284,7 @@ if (window.__RGInitDone) {
 		const preservedBoxes = [];
 
 		const candidates = temp.querySelectorAll(
-			"pre, .game-stats-box, .stat-block"
+			"pre, .game-stats-box, .stat-block",
 		);
 		candidates.forEach((node) => {
 			const text = node.textContent || "";
@@ -287,8 +301,8 @@ if (window.__RGInitDone) {
 				...lines
 					.filter((l) => l.trim().length > 0)
 					.map((l) =>
-						l.match(/^\s+/) ? l.match(/^\s+/)[0].length : 0
-					)
+						l.match(/^\s+/) ? l.match(/^\s+/)[0].length : 0,
+					),
 			);
 			const normalized = lines.map((l) => l.slice(minIndent)).join("\n");
 
@@ -310,7 +324,7 @@ if (window.__RGInitDone) {
 		temp.innerHTML = html;
 		preservedBoxes.forEach(({ wrapper }) => {
 			const placeholder = temp.querySelector(
-				`.game-stats-box[data-uid="${wrapper.dataset.uid}"]`
+				`.game-stats-box[data-uid="${wrapper.dataset.uid}"]`,
 			);
 			if (!placeholder) return;
 			placeholder.replaceWith(wrapper);
@@ -330,7 +344,7 @@ if (window.__RGInitDone) {
 		// Remove code block markers first
 		let text = html.replace(
 			/```(?:html|javascript|css|js|xml|json|md|markdown|python|java|cpp|c\+\+)?\s*\n?/gi,
-			""
+			"",
 		);
 		text = text.replace(/```/g, "");
 
@@ -386,7 +400,7 @@ if (window.__RGInitDone) {
 		// Step 0: Remove code block markers first (```html, ```js, etc.)
 		let text = html.replace(
 			/```(?:html|javascript|css|js|xml|json|md|markdown|python|java|cpp|c\+\+)?\s*\n?/gi,
-			""
+			"",
 		);
 		// Remove any remaining backtick markers
 		text = text.replace(/```/g, "");
@@ -460,7 +474,7 @@ if (window.__RGInitDone) {
 					debugLog(
 						`Background worker ready (attempt ${
 							i + 1
-						}/${maxRetries})`
+						}/${maxRetries})`,
 					);
 					isBackgroundScriptReady = true;
 					return true;
@@ -468,12 +482,12 @@ if (window.__RGInitDone) {
 			} catch (error) {
 				console.warn(
 					`Background wake-up attempt ${i + 1}/${maxRetries} failed:`,
-					error.message
+					error.message,
 				);
 				if (i < maxRetries - 1) {
 					// Wait before retry (except on last attempt)
 					await new Promise((resolve) =>
-						setTimeout(resolve, delayMs)
+						setTimeout(resolve, delayMs),
 					);
 				}
 			}
@@ -481,7 +495,7 @@ if (window.__RGInitDone) {
 		debugError(
 			"Background worker failed to wake up after",
 			maxRetries,
-			"attempts"
+			"attempts",
 		);
 		isBackgroundScriptReady = false;
 		return false;
@@ -498,7 +512,7 @@ if (window.__RGInitDone) {
 	async function sendMessageWithRetry(
 		message,
 		maxRetries = 3,
-		retryDelayMs = 1000
+		retryDelayMs = 1000,
 	) {
 		let lastError = null;
 		ensureKeepAlivePort();
@@ -530,10 +544,10 @@ if (window.__RGInitDone) {
 
 				if (isDisconnectionError && attempt < maxRetries) {
 					console.warn(
-						`[sendMessageWithRetry] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`
+						`[sendMessageWithRetry] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`,
 					);
 					debugLog(
-						`[sendMessageWithRetry] Waking up background worker before retry...`
+						`[sendMessageWithRetry] Waking up background worker before retry...`,
 					);
 					ensureKeepAlivePort();
 
@@ -542,15 +556,15 @@ if (window.__RGInitDone) {
 
 					if (workerReady) {
 						debugLog(
-							`[sendMessageWithRetry] Worker woken up, retrying in ${retryDelayMs}ms...`
+							`[sendMessageWithRetry] Worker woken up, retrying in ${retryDelayMs}ms...`,
 						);
 						await new Promise((resolve) =>
-							setTimeout(resolve, retryDelayMs)
+							setTimeout(resolve, retryDelayMs),
 						);
 						continue; // Retry the message
 					} else {
 						debugError(
-							"[sendMessageWithRetry] Could not wake up background worker"
+							"[sendMessageWithRetry] Could not wake up background worker",
 						);
 					}
 				}
@@ -559,7 +573,7 @@ if (window.__RGInitDone) {
 				if (attempt >= maxRetries) {
 					debugError(
 						`[sendMessageWithRetry] All ${maxRetries} attempts failed. Last error:`,
-						lastError
+						lastError,
 					);
 					throw lastError;
 				}
@@ -574,7 +588,7 @@ if (window.__RGInitDone) {
 		originalContent,
 		enhancedContent,
 		modelInfo,
-		showDeleteButton = false
+		showDeleteButton = false,
 	) {
 		// Calculate word counts
 		const originalWordCount = countWords(originalContent);
@@ -612,7 +626,7 @@ if (window.__RGInitDone) {
 		// Support dark mode
 		if (
 			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
 			) ||
 			window.matchMedia("(prefers-color-scheme: dark)").matches
 		) {
@@ -644,8 +658,8 @@ if (window.__RGInitDone) {
 						wordDifference >= 0 ? "#28a745" : "#dc3545"
 					}; font-weight: bold;">
                         (${changeSymbol}${wordDifference.toLocaleString()}, ${changeSymbol}${Math.abs(
-			percentChange
-		)}%)
+							percentChange,
+						)}%)
                     </span>
                 </span>
             </div>
@@ -653,6 +667,598 @@ if (window.__RGInitDone) {
     `;
 
 		return banner;
+	}
+
+	function escapeHtml(str) {
+		if (!str) return "";
+		return String(str)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#039;");
+	}
+
+	function handleCancelEnhancement() {
+		debugLog("Cancelling enhancement process...");
+
+		browser.runtime
+			.sendMessage({ action: "cancelEnhancement" })
+			.catch(debugerror);
+
+		const contentArea = findContentArea();
+		if (contentArea) {
+			const originalContent =
+				contentArea.getAttribute("data-original-html") ||
+				contentArea.getAttribute("data-original-content");
+			if (originalContent) {
+				contentArea.innerHTML = originalContent;
+				showStatusMessage(
+					"Enhancement cancelled. Original content restored.",
+					"info",
+				);
+			}
+		}
+
+		const button = document.querySelector(".gemini-enhance-btn");
+		if (button) {
+			button.textContent = "✨ Enhance with Gemini";
+			button.disabled = false;
+			button.classList.remove("loading");
+		}
+	}
+
+	function buildChunkBanner(
+		chunking,
+		chunkIndex,
+		totalChunks,
+		status,
+		errorMessage = null,
+	) {
+		return chunking.ui.createChunkBanner(
+			chunkIndex,
+			totalChunks,
+			status,
+			errorMessage,
+			{
+				onRegenerate: handleReenhanceChunk,
+				onToggle: handleChunkToggle,
+				onDelete: handleChunkDelete,
+			},
+		);
+	}
+
+	async function handleChunkToggle(chunkIndex) {
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
+		const toggleBtn = chunkWrapper.querySelector(
+			".gemini-chunk-toggle-btn",
+		);
+		if (!chunkContent || !toggleBtn) return;
+
+		const isShowingEnhanced =
+			toggleBtn.getAttribute("data-showing") === "enhanced";
+		const originalHtml = chunkContent.getAttribute(
+			"data-original-chunk-html",
+		);
+		const originalContent = chunkContent.getAttribute(
+			"data-original-chunk-content",
+		);
+		const enhancedContent =
+			chunkContent.getAttribute("data-enhanced-chunk-content") ||
+			chunkContent.innerHTML;
+
+		if (isShowingEnhanced) {
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				chunkContent.innerHTML,
+			);
+			if (originalHtml) {
+				chunkContent.innerHTML = originalHtml;
+			} else {
+				chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
+			}
+			toggleBtn.textContent = "✨ Show Enhanced";
+			toggleBtn.setAttribute("data-showing", "original");
+		} else {
+			chunkContent.innerHTML = enhancedContent;
+			toggleBtn.textContent = "👁 Show Original";
+			toggleBtn.setAttribute("data-showing", "enhanced");
+		}
+	}
+
+	async function handleChunkDelete(chunkIndex) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
+		if (!chunkContent) return;
+
+		const originalHtml = chunkContent.getAttribute(
+			"data-original-chunk-html",
+		);
+		const originalContent = chunkContent.getAttribute(
+			"data-original-chunk-content",
+		);
+
+		if (!originalContent && !originalHtml) {
+			showStatusMessage(
+				"Original content not available for this chunk.",
+				"error",
+			);
+			return;
+		}
+
+		await chunking.cache.deleteChunkFromCache(
+			window.location.href,
+			chunkIndex,
+		);
+
+		if (originalHtml) {
+			chunkContent.innerHTML = originalHtml;
+		} else {
+			chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent)}</div>`;
+		}
+		chunkContent.removeAttribute("data-chunk-enhanced");
+		chunkContent.removeAttribute("data-enhanced-chunk-content");
+
+		const banner = chunkWrapper.querySelector(".gemini-chunk-banner");
+		if (banner) {
+			const totalChunks = document.querySelectorAll(
+				".gemini-chunk-banner",
+			).length;
+			const newBanner = buildChunkBanner(
+				chunking,
+				chunkIndex,
+				totalChunks,
+				"pending",
+			);
+			banner.replaceWith(newBanner);
+		}
+
+		showStatusMessage(
+			`Chunk ${chunkIndex + 1} reverted to original.`,
+			"info",
+			2000,
+		);
+	}
+
+	async function handleReenhanceChunk(chunkIndex) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		debugLog(`Re-enhancing chunk ${chunkIndex}...`);
+
+		const chunkContent = document.querySelector(
+			`.gemini-chunk-content[data-chunk-index="${chunkIndex}"]`,
+		);
+		const originalContent = chunkContent?.getAttribute(
+			"data-original-chunk-content",
+		);
+
+		if (!originalContent) {
+			debugError("No original content found for chunk", chunkIndex);
+			showStatusMessage(
+				`Cannot re-enhance chunk ${
+					chunkIndex + 1
+				}: Original content not found`,
+				"error",
+			);
+			return;
+		}
+
+		try {
+			await wakeUpBackgroundWorker();
+
+			const settings = await browser.storage.local.get([
+				"useEmoji",
+				"formatGameStats",
+				"centerSceneHeadings",
+			]);
+			const useEmoji = settings.useEmoji === true;
+			formattingOptions.useEmoji = useEmoji;
+			formattingOptions.formatGameStats =
+				settings.formatGameStats !== false;
+			formattingOptions.centerSceneHeadings =
+				settings.centerSceneHeadings !== false;
+
+			const combinedPrompt = currentHandler
+				? currentHandler.getSiteSpecificPrompt()
+				: "";
+
+			const response = await sendMessageWithRetry({
+				action: "reenhanceChunk",
+				chunkIndex: chunkIndex,
+				content: originalContent,
+				title: document.title,
+				siteSpecificPrompt: combinedPrompt,
+				useEmoji: useEmoji,
+			});
+
+			if (response && response.success && response.result) {
+				if (chunkContent) {
+					const sanitizedContent = sanitizeHTML(
+						response.result.enhancedContent,
+					);
+					chunkContent.innerHTML = sanitizedContent;
+					chunkContent.setAttribute("data-chunk-enhanced", "true");
+				}
+
+				await chunking.cache.saveChunkToCache(
+					window.location.href,
+					chunkIndex,
+					{
+						originalContent: originalContent,
+						enhancedContent: response.result.enhancedContent,
+						wordCount: response.result.wordCount || 0,
+						timestamp: Date.now(),
+					},
+				);
+
+				const totalChunks = document.querySelectorAll(
+					".gemini-chunk-banner",
+				).length;
+				const existingBanner = document.querySelector(
+					`.chunk-banner-${chunkIndex}`,
+				);
+				if (existingBanner) {
+					const newBanner = buildChunkBanner(
+						chunking,
+						chunkIndex,
+						totalChunks,
+						"completed",
+					);
+					existingBanner.replaceWith(newBanner);
+				}
+
+				showStatusMessage(
+					`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
+					"success",
+				);
+			} else {
+				const errorMsg = response?.error || "Unknown error";
+				const existingBanner = document.querySelector(
+					`.chunk-banner-${chunkIndex}`,
+				);
+				if (existingBanner) {
+					const totalChunks = document.querySelectorAll(
+						".gemini-chunk-banner",
+					).length;
+					const errorBanner = buildChunkBanner(
+						chunking,
+						chunkIndex,
+						totalChunks,
+						"error",
+						errorMsg,
+					);
+					existingBanner.replaceWith(errorBanner);
+				}
+				showStatusMessage(
+					`Failed to re-enhance chunk ${chunkIndex + 1}: ${errorMsg}`,
+					"error",
+				);
+			}
+		} catch (error) {
+			debugError("Error re-enhancing chunk:", error);
+			showStatusMessage(
+				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
+				"error",
+			);
+		}
+	}
+
+	async function handleChunkProcessed(message) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		const contentArea = findContentArea();
+		if (!contentArea) return;
+
+		const chunkIndex = message.chunkIndex;
+		const totalChunks = message.totalChunks;
+		const chunkResult = message.result;
+
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content",
+		);
+		if (!chunkedContainer) return;
+
+		const chunkWrapper = chunkedContainer.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		if (chunkResult && chunkResult.enhancedContent) {
+			const chunkContent = chunkWrapper.querySelector(
+				".gemini-chunk-content",
+			);
+			if (chunkContent) {
+				const sanitizedContent = sanitizeHTML(
+					chunkResult.enhancedContent,
+				);
+				chunkContent.innerHTML = sanitizedContent;
+				chunkContent.setAttribute("data-chunk-enhanced", "true");
+			}
+
+			await chunking.cache.saveChunkToCache(
+				window.location.href,
+				chunkIndex,
+				{
+					originalContent: chunkResult.originalContent || "",
+					enhancedContent: chunkResult.enhancedContent,
+					wordCount: chunkResult.wordCount || 0,
+					timestamp: Date.now(),
+				},
+			);
+
+			const existingBanner = chunkWrapper.querySelector(
+				".gemini-chunk-banner",
+			);
+			if (existingBanner) {
+				const newBanner = buildChunkBanner(
+					chunking,
+					chunkIndex,
+					totalChunks,
+					"completed",
+				);
+				existingBanner.replaceWith(newBanner);
+			}
+		}
+
+		if (message.isComplete) {
+			const contentArea = findContentArea();
+			const button = document.querySelector(".gemini-enhance-btn");
+			if (button) {
+				button.textContent = "🔄 Re-enhance with Gemini";
+				button.disabled = false;
+				button.classList.remove("loading");
+			}
+
+			if (contentArea && chunking?.ui) {
+				const existingMaster = document.querySelector(
+					".gemini-master-banner",
+				);
+				if (!existingMaster) {
+					const originalText =
+						contentArea.getAttribute("data-original-text") || "";
+					const originalWords =
+						chunking.core.countWords(originalText);
+					const enhancedWords = Array.from(
+						document.querySelectorAll(".gemini-chunk-content"),
+					).reduce((sum, chunkContent) => {
+						return (
+							sum +
+							chunking.core.countWords(chunkContent.innerHTML)
+						);
+					}, 0);
+
+					const masterBanner = chunking.ui.createMasterBanner(
+						originalWords,
+						enhancedWords,
+						totalChunks,
+						false,
+					);
+
+					const toggleAllBtn = masterBanner.querySelector(
+						".gemini-master-toggle-all-btn",
+					);
+					if (toggleAllBtn) {
+						toggleAllBtn.setAttribute("data-showing", "enhanced");
+						toggleAllBtn.addEventListener("click", (e) => {
+							e.preventDefault();
+							handleToggleAllChunks();
+						});
+					}
+					const deleteAllBtn = masterBanner.querySelector(
+						".gemini-master-delete-all-btn",
+					);
+					if (deleteAllBtn) {
+						deleteAllBtn.addEventListener("click", async (e) => {
+							e.preventDefault();
+							if (
+								confirm(
+									"Delete all cached enhanced content for this chapter?",
+								)
+							) {
+								await handleDeleteAllChunks();
+							}
+						});
+					}
+
+					contentArea.insertBefore(
+						masterBanner,
+						contentArea.firstChild,
+					);
+				}
+			}
+		}
+	}
+
+	async function handleChunkError(message) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		const chunkIndex = message.chunkIndex;
+		const totalChunks = message.totalChunks;
+
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content",
+		);
+		if (!chunkedContainer) return;
+
+		const chunkWrapper = chunkedContainer.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		const existingBanner = chunkWrapper.querySelector(
+			".gemini-chunk-banner",
+		);
+		if (existingBanner) {
+			const errorBanner = buildChunkBanner(
+				chunking,
+				chunkIndex,
+				totalChunks,
+				"error",
+				message.error,
+			);
+			existingBanner.replaceWith(errorBanner);
+		}
+
+		showStatusMessage(
+			`Error processing chunk ${chunkIndex + 1}: ${message.error}`,
+			"error",
+		);
+	}
+
+	function renderSummaryOutput(summaryDisplay, summary, summaryType) {
+		if (!summaryDisplay) return;
+		while (summaryDisplay.firstChild) {
+			summaryDisplay.removeChild(summaryDisplay.firstChild);
+		}
+
+		const summaryHeader = document.createElement("h3");
+		summaryHeader.textContent = `${summaryType} Chapter Summary:`;
+		summaryDisplay.appendChild(summaryHeader);
+
+		const summaryContentContainer = document.createElement("div");
+		summaryContentContainer.className = "summary-text-content";
+
+		const paragraphs = extractParagraphsFromHtml(summary);
+		if (paragraphs.length > 0) {
+			paragraphs.forEach((paragraphText) => {
+				const p = document.createElement("p");
+				p.textContent = paragraphText;
+				p.style.marginBottom = "1em";
+				p.style.lineHeight = "1.6";
+				summaryContentContainer.appendChild(p);
+			});
+		} else {
+			const cleanSummary = stripHtmlTags(summary);
+			summaryContentContainer.textContent = cleanSummary;
+		}
+
+		if (currentFontSize && currentFontSize !== 100) {
+			summaryContentContainer.style.fontSize = `${currentFontSize}%`;
+		}
+
+		summaryDisplay.appendChild(summaryContentContainer);
+	}
+
+	async function summarizeChunkRange(chunkIndices, isShort) {
+		const statusDiv = document.getElementById("gemini-status");
+		const summaryDisplayLong = document.getElementById(
+			"summary-display-long",
+		);
+		const summaryDisplayShort = document.getElementById(
+			"summary-display-short",
+		);
+		const summaryDisplay = isShort
+			? summaryDisplayShort
+			: summaryDisplayLong;
+
+		const summaryType = isShort ? "Short" : "Long";
+		const combinedText = (chunkIndices || [])
+			.map((index) => {
+				const chunkContent = document.querySelector(
+					`.gemini-chunk-content[data-chunk-index="${index}"]`,
+				);
+				if (!chunkContent) return "";
+				const isEnhanced =
+					chunkContent.getAttribute("data-chunk-enhanced") === "true";
+				const html = isEnhanced
+					? chunkContent.innerHTML
+					: chunkContent.getAttribute("data-original-chunk-html") ||
+						chunkContent.innerHTML;
+				return stripHtmlTags(html || "");
+			})
+			.filter((text) => text && text.trim().length > 0)
+			.join("\n\n");
+
+		if (!combinedText) {
+			showStatusMessage(
+				"No content available for summary.",
+				"warning",
+				2000,
+			);
+			return;
+		}
+
+		try {
+			if (statusDiv) {
+				statusDiv.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+			}
+			if (summaryDisplay) {
+				summaryDisplay.style.display = "block";
+				summaryDisplay.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+			}
+
+			const modelInfoResponse = await sendMessageWithRetry({
+				action: "getModelInfo",
+			});
+
+			const maxContextSize = modelInfoResponse.maxContextSize || 16000;
+			const estimatedTokenCount = Math.ceil(combinedText.length / 4);
+			const contextThreshold = isShort
+				? maxContextSize * 0.8
+				: maxContextSize * 0.6;
+
+			let summary = "";
+			if (estimatedTokenCount > contextThreshold) {
+				summary = await summarizeLargeContentInParts(
+					document.title,
+					combinedText,
+					maxContextSize,
+					statusDiv,
+					isShort,
+				);
+			} else {
+				const action = isShort
+					? "shortSummarizeWithGemini"
+					: "summarizeWithGemini";
+				const response = await sendMessageWithRetry({
+					action,
+					title: document.title,
+					content: combinedText,
+				});
+
+				if (response && response.success && response.summary) {
+					summary = response.summary;
+				} else {
+					throw new Error(
+						response?.error || "Failed to generate summary.",
+					);
+				}
+			}
+
+			if (summary) {
+				renderSummaryOutput(summaryDisplay, summary, summaryType);
+				if (statusDiv) {
+					statusDiv.textContent = "Summary generated successfully!";
+				}
+			}
+		} catch (error) {
+			debugError("Error generating chunk summary:", error);
+			if (statusDiv) {
+				statusDiv.textContent = `Failed to generate summary: ${error.message}`;
+			}
+			if (summaryDisplay) {
+				summaryDisplay.textContent = `Failed to generate summary: ${error.message}`;
+			}
+		}
 	}
 
 	// Function to create a work-in-progress banner
@@ -673,7 +1279,7 @@ if (window.__RGInitDone) {
 		// Support dark mode
 		if (
 			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
 			) ||
 			window.matchMedia("(prefers-color-scheme: dark)").matches
 		) {
@@ -710,1109 +1316,6 @@ if (window.__RGInitDone) {
 	}
 
 	/**
-	 * Create a chunk divider banner with status and full control buttons
-	 * @param {number} chunkIndex - Index of the chunk (0-based)
-	 * @param {number} totalChunks - Total number of chunks
-	 * @param {string} status - 'pending', 'processing', 'completed', 'error'
-	 * @param {string} errorMessage - Error message if status is 'error'
-	 * @returns {HTMLElement} The chunk banner element
-	 */
-	function createChunkBanner(
-		chunkIndex,
-		totalChunks,
-		status = "pending",
-		errorMessage = null
-	) {
-		const banner = document.createElement("div");
-		banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
-		banner.setAttribute("data-chunk-index", chunkIndex);
-		banner.setAttribute("data-chunk-status", status);
-
-		const isDarkMode =
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
-			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-		let bgColor,
-			borderColor,
-			textColor,
-			statusIcon,
-			statusText,
-			statusBgColor;
-
-		switch (status) {
-			case "processing":
-				bgColor = isDarkMode ? "#2c3a3a" : "#e3f2fd";
-				borderColor = isDarkMode ? "#4a6a6a" : "#90caf9";
-				statusBgColor = isDarkMode ? "#1a2a2a" : "#bbdefb";
-				statusIcon = "⏳";
-				statusText = "Processing...";
-				break;
-			case "completed":
-				bgColor = isDarkMode ? "#2c3a2c" : "#e8f5e9";
-				borderColor = isDarkMode ? "#4a6a4a" : "#a5d6a7";
-				statusBgColor = isDarkMode ? "#1a2a1a" : "#c8e6c9";
-				statusIcon = "✅";
-				statusText = "Enhanced";
-				break;
-			case "error":
-				bgColor = isDarkMode ? "#3a2c2c" : "#ffebee";
-				borderColor = isDarkMode ? "#6a4a4a" : "#ef9a9a";
-				statusBgColor = isDarkMode ? "#2a1a1a" : "#ffcdd2";
-				statusIcon = "❌";
-				statusText = "Error";
-				break;
-			default: // pending
-				bgColor = isDarkMode ? "#3a3a2c" : "#fff8e1";
-				borderColor = isDarkMode ? "#5a5a40" : "#ffcc80";
-				statusBgColor = isDarkMode ? "#2a2a1a" : "#ffe0b2";
-				statusIcon = "⏸️";
-				statusText = "Pending";
-		}
-
-		textColor = isDarkMode ? "#e0e0e0" : "#333";
-		const buttonBg = isDarkMode ? "#444" : "#f0f0f0";
-		const buttonColor = isDarkMode ? "#fff" : "#333";
-
-		banner.style.cssText = `
-			margin: 1em 0;
-			padding: 10px 12px;
-			background-color: ${bgColor};
-			border: 1px solid ${borderColor};
-			border-radius: 6px;
-			box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-		`;
-
-		let errorHtml = "";
-		if (status === "error" && errorMessage) {
-			errorHtml = `
-				<div style="margin-top: 8px; padding: 8px; background: rgba(220, 53, 69, 0.1); border-radius: 4px; font-size: 11px; color: ${
-					isDarkMode ? "#ff8a80" : "#c62828"
-				};">
-					Error: ${errorMessage}
-				</div>
-			`;
-		}
-
-		// Build action buttons based on status
-		let actionButtons = "";
-
-		// Always show Enhance/Re-enhance button (except during processing)
-		if (status !== "processing") {
-			const enhanceBtnText =
-				status === "completed"
-					? "🔄 Re-enhance"
-					: status === "error"
-					? "🔄 Retry"
-					: "✨ Enhance";
-			actionButtons += `
-				<button class="gemini-chunk-enhance-btn" data-chunk-index="${chunkIndex}" title="Enhance this chunk" style="
-					padding: 4px 8px;
-					background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-					color: white;
-					border: none;
-					border-radius: 4px;
-					cursor: pointer;
-					font-size: 11px;
-					font-weight: 600;
-				">${enhanceBtnText}</button>
-			`;
-		}
-
-		// Show Original/Enhanced toggle button (only when completed)
-		if (status === "completed") {
-			actionButtons += `
-				<button class="gemini-chunk-toggle-btn" data-chunk-index="${chunkIndex}" data-showing="enhanced" title="Toggle original/enhanced" style="
-					padding: 4px 8px;
-					background: ${buttonBg};
-					color: ${buttonColor};
-					border: 1px solid ${borderColor};
-					border-radius: 4px;
-					cursor: pointer;
-					font-size: 11px;
-				">📄 Original</button>
-			`;
-			// Delete button for this chunk's enhanced data
-			actionButtons += `
-				<button class="gemini-chunk-delete-btn" data-chunk-index="${chunkIndex}" title="Delete enhanced data for this chunk" style="
-					padding: 4px 8px;
-					background: #d32f2f;
-					color: white;
-					border: none;
-					border-radius: 4px;
-					cursor: pointer;
-					font-size: 11px;
-				">🗑️</button>
-			`;
-		}
-
-		banner.innerHTML = `
-			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-				<div style="display: flex; align-items: center; gap: 8px;">
-					<span style="font-size: 14px;">${statusIcon}</span>
-					<span style="font-weight: 600; font-size: 13px; color: ${textColor};">
-						Chunk ${chunkIndex + 1}/${totalChunks}
-					</span>
-					<span style="padding: 2px 6px; background: ${statusBgColor}; border-radius: 10px; font-size: 10px; font-weight: 500; color: ${textColor};">
-						${statusText}
-					</span>
-				</div>
-				<div style="display: flex; align-items: center; gap: 6px;">
-					${actionButtons}
-				</div>
-			</div>
-			${errorHtml}
-		`;
-
-		// Attach button handlers
-		const enhanceBtn = banner.querySelector(".gemini-chunk-enhance-btn");
-		if (enhanceBtn) {
-			enhanceBtn.addEventListener("click", async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				await handleReenhanceChunk(chunkIndex);
-			});
-		}
-
-		const toggleBtn = banner.querySelector(".gemini-chunk-toggle-btn");
-		if (toggleBtn) {
-			toggleBtn.addEventListener("click", (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				handleChunkToggle(chunkIndex);
-			});
-		}
-
-		const deleteBtn = banner.querySelector(".gemini-chunk-delete-btn");
-		if (deleteBtn) {
-			deleteBtn.addEventListener("click", async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				await handleChunkDelete(chunkIndex, totalChunks);
-			});
-		}
-
-		return banner;
-	}
-
-	/**
-	 * Toggle between original and enhanced content for a specific chunk
-	 * @param {number} chunkIndex - The chunk index to toggle
-	 */
-	function handleChunkToggle(chunkIndex) {
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content"
-		);
-		const toggleBtn = chunkWrapper.querySelector(
-			".gemini-chunk-toggle-btn"
-		);
-		if (!chunkContent || !toggleBtn) return;
-
-		const isShowingEnhanced =
-			toggleBtn.getAttribute("data-showing") === "enhanced";
-		// Use HTML chunk if available, fall back to formatted text
-		const originalHtml = chunkContent.getAttribute(
-			"data-original-chunk-html"
-		);
-		const originalContent = chunkContent.getAttribute(
-			"data-original-chunk-content"
-		);
-		const enhancedContent =
-			chunkContent.getAttribute("data-enhanced-chunk-content") ||
-			chunkContent.innerHTML;
-
-		if (isShowingEnhanced) {
-			// Switch to original - use preserved HTML if available
-			chunkContent.setAttribute(
-				"data-enhanced-chunk-content",
-				chunkContent.innerHTML
-			);
-			if (originalHtml) {
-				chunkContent.innerHTML = `<div class="gemini-original-chunk">${originalHtml}</div>`;
-			} else {
-				chunkContent.innerHTML = `<div class="gemini-original-chunk">${formatOriginalChunkContent(
-					originalContent
-				)}</div>`;
-			}
-			toggleBtn.textContent = "✨ Enhanced";
-			toggleBtn.setAttribute("data-showing", "original");
-		} else {
-			// Switch to enhanced
-			const savedEnhanced = chunkContent.getAttribute(
-				"data-enhanced-chunk-content"
-			);
-			if (savedEnhanced) {
-				chunkContent.innerHTML = savedEnhanced;
-			}
-			toggleBtn.textContent = "📄 Original";
-			toggleBtn.setAttribute("data-showing", "enhanced");
-		}
-	}
-
-	/**
-	 * Delete enhanced data for a specific chunk and revert to original
-	 * @param {number} chunkIndex - The chunk index
-	 * @param {number} totalChunks - Total number of chunks
-	 */
-	async function handleChunkDelete(chunkIndex, totalChunks) {
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content"
-		);
-		if (!chunkContent) return;
-
-		// Use HTML chunk if available, fall back to formatted text
-		const originalHtml = chunkContent.getAttribute(
-			"data-original-chunk-html"
-		);
-		const originalContent = chunkContent.getAttribute(
-			"data-original-chunk-content"
-		);
-		if (!originalContent && !originalHtml) {
-			showStatusMessage(
-				"Original content not available for this chunk.",
-				"error"
-			);
-			return;
-		}
-
-		// Revert to original content with preserved HTML if available
-		if (originalHtml) {
-			chunkContent.innerHTML = originalHtml;
-		} else {
-			chunkContent.innerHTML =
-				formatOriginalChunkContent(originalContent);
-		}
-		chunkContent.removeAttribute("data-chunk-enhanced");
-		chunkContent.removeAttribute("data-enhanced-chunk-content");
-
-		// Update banner to pending state
-		const banner = chunkWrapper.querySelector(".gemini-chunk-banner");
-		if (banner) {
-			const newBanner = createChunkBanner(
-				chunkIndex,
-				totalChunks,
-				"pending"
-			);
-			banner.replaceWith(newBanner);
-		}
-
-		// Update cache - save current state
-		await saveCurrentChunkedState();
-		showStatusMessage(
-			`Chunk ${chunkIndex + 1} reverted to original.`,
-			"info",
-			2000
-		);
-	}
-
-	/**
-	 * Save current chunked content state to cache
-	 */
-	async function saveCurrentChunkedState() {
-		if (!storageManager) return;
-
-		const allChunks = document.querySelectorAll(".gemini-chunk-content");
-		if (allChunks.length === 0) return;
-
-		const hasAnyEnhanced = Array.from(allChunks).some(
-			(c) => c.getAttribute("data-chunk-enhanced") === "true"
-		);
-		if (!hasAnyEnhanced) {
-			// All chunks are original, remove from cache
-			await storageManager.removeEnhancedContent(window.location.href);
-			isCachedContent = false;
-			return;
-		}
-
-		// Collect current state
-		const chunkContents = Array.from(allChunks)
-			.sort(
-				(a, b) =>
-					parseInt(a.getAttribute("data-chunk-index")) -
-					parseInt(b.getAttribute("data-chunk-index"))
-			)
-			.map((c) => c.innerHTML);
-
-		const combinedContent = chunkContents.join("\n\n");
-		const originalContent =
-			findContentArea()?.getAttribute("data-original-html") || "";
-
-		try {
-			await storageManager.saveEnhancedContent(window.location.href, {
-				title: document.title,
-				originalContent: originalContent,
-				enhancedContent: combinedContent,
-				timestamp: Date.now(),
-				isChunked: true,
-				chunkCount: allChunks.length,
-			});
-			isCachedContent = true;
-		} catch (error) {
-			debugError("Failed to save chunked state:", error);
-		}
-	}
-
-	/**
-	 * Handle cancellation of enhancement process
-	 */
-	function handleCancelEnhancement() {
-		debugLog("Cancelling enhancement process...");
-
-		// Send cancel message to background
-		browser.runtime
-			.sendMessage({ action: "cancelEnhancement" })
-			.catch(debugerror);
-
-		// Restore original content
-		const contentArea = findContentArea();
-		if (contentArea) {
-			const originalContent =
-				contentArea.getAttribute("data-original-html") ||
-				contentArea.getAttribute("data-original-content");
-			if (originalContent) {
-				contentArea.innerHTML = originalContent;
-				showStatusMessage(
-					"Enhancement cancelled. Original content restored.",
-					"info"
-				);
-			}
-		}
-
-		// Reset button state
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (button) {
-			button.textContent = "✨ Enhance with Gemini";
-			button.disabled = false;
-			button.classList.remove("loading");
-		}
-	}
-
-	/**
-	 * Handle re-enhancement of a specific chunk
-	 * @param {number} chunkIndex - The index of the chunk to re-enhance
-	 */
-	async function handleReenhanceChunk(chunkIndex) {
-		debugLog(`Re-enhancing chunk ${chunkIndex}...`);
-
-		const banner = document.querySelector(`.chunk-banner-${chunkIndex}`);
-		if (banner) {
-			// Update banner to processing state
-			banner.setAttribute("data-chunk-status", "processing");
-			const statusSpan = banner.querySelector("span:nth-child(2)");
-			if (statusSpan) {
-				const parent = statusSpan.parentElement;
-				const iconSpan = parent.querySelector("span:first-child");
-				if (iconSpan) iconSpan.textContent = "⏳";
-				const statusBadge = parent.querySelector("span:nth-child(3)");
-				if (statusBadge) statusBadge.textContent = "Processing...";
-			}
-			const btn = banner.querySelector(".gemini-chunk-reenhance-btn");
-			if (btn) btn.style.display = "none";
-		}
-
-		// Get the original content for this chunk
-		const chunkContent = document.querySelector(
-			`.gemini-chunk-content[data-chunk-index="${chunkIndex}"]`
-		);
-		const originalContent = chunkContent?.getAttribute(
-			"data-original-chunk-content"
-		);
-
-		if (!originalContent) {
-			debugError("No original content found for chunk", chunkIndex);
-			showStatusMessage(
-				`Cannot re-enhance chunk ${
-					chunkIndex + 1
-				}: Original content not found`,
-				"error"
-			);
-			return;
-		}
-
-		try {
-			// Wake up background worker
-			await wakeUpBackgroundWorker();
-
-			// Get settings
-			const settings = await browser.storage.local.get([
-				"useEmoji",
-				"formatGameStats",
-				"centerSceneHeadings",
-			]);
-			const useEmoji = settings.useEmoji === true;
-			formattingOptions.useEmoji = useEmoji;
-			formattingOptions.formatGameStats =
-				settings.formatGameStats !== false;
-			formattingOptions.centerSceneHeadings =
-				settings.centerSceneHeadings !== false;
-
-			// Get prompts
-			let combinedPrompt = currentHandler
-				? currentHandler.getSiteSpecificPrompt()
-				: "";
-
-			// Send single chunk for processing
-			const response = await sendMessageWithRetry({
-				action: "reenhanceChunk",
-				chunkIndex: chunkIndex,
-				content: originalContent,
-				title: document.title,
-				siteSpecificPrompt: combinedPrompt,
-				useEmoji: useEmoji,
-			});
-
-			if (response && response.success && response.result) {
-				// Update the chunk content
-				if (chunkContent) {
-					const sanitizedContent = sanitizeHTML(
-						response.result.enhancedContent
-					);
-					chunkContent.innerHTML = sanitizedContent;
-					chunkContent.setAttribute("data-chunk-enhanced", "true");
-				}
-
-				// Update banner to completed
-				updateChunkBannerStatus(chunkIndex, "completed");
-				showStatusMessage(
-					`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
-					"success"
-				);
-
-				// Check if all chunks are now complete and save to cache
-				await checkAndSaveAllChunks();
-			} else {
-				const errorMsg = response?.error || "Unknown error";
-				updateChunkBannerStatus(chunkIndex, "error", errorMsg);
-				showStatusMessage(
-					`Failed to re-enhance chunk ${chunkIndex + 1}: ${errorMsg}`,
-					"error"
-				);
-			}
-		} catch (error) {
-			debugError("Error re-enhancing chunk:", error);
-			updateChunkBannerStatus(chunkIndex, "error", error.message);
-			showStatusMessage(
-				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
-				"error"
-			);
-		}
-	}
-
-	/**
-	 * Update a chunk banner's status
-	 * @param {number} chunkIndex - The chunk index
-	 * @param {string} status - New status
-	 * @param {string} errorMessage - Error message if applicable
-	 */
-	function updateChunkBannerStatus(chunkIndex, status, errorMessage = null) {
-		const existingBanner = document.querySelector(
-			`.chunk-banner-${chunkIndex}`
-		);
-		if (existingBanner) {
-			const contentArea = findContentArea();
-			const totalChunks = parseInt(
-				existingBanner
-					.closest("[data-total-chunks]")
-					?.getAttribute("data-total-chunks") ||
-					document.querySelectorAll(".gemini-chunk-banner").length
-			);
-			const newBanner = createChunkBanner(
-				chunkIndex,
-				totalChunks,
-				status,
-				errorMessage
-			);
-			existingBanner.replaceWith(newBanner);
-		}
-	}
-
-	/**
-	 * Check if all chunks are completed and save combined content to cache
-	 */
-	async function checkAndSaveAllChunks() {
-		const allBanners = document.querySelectorAll(".gemini-chunk-banner");
-		const allCompleted = Array.from(allBanners).every(
-			(b) => b.getAttribute("data-chunk-status") === "completed"
-		);
-
-		if (allCompleted) {
-			const button = document.querySelector(".gemini-enhance-btn");
-			if (button) {
-				button.textContent = "🔄 Re-enhance with Gemini";
-				button.disabled = false;
-				button.classList.remove("loading");
-			}
-		}
-
-		if (allCompleted && storageManager) {
-			debugLog(
-				"All chunks completed, saving combined content to cache..."
-			);
-
-			// Collect all enhanced content
-			const chunkContents = Array.from(
-				document.querySelectorAll(".gemini-chunk-content")
-			)
-				.sort(
-					(a, b) =>
-						parseInt(a.getAttribute("data-chunk-index")) -
-						parseInt(b.getAttribute("data-chunk-index"))
-				)
-				.map((c) => c.innerHTML);
-
-			const combinedEnhancedContent = chunkContents.join("\n\n");
-			const originalContent =
-				findContentArea()?.getAttribute("data-original-html") || "";
-
-			try {
-				await storageManager.saveEnhancedContent(window.location.href, {
-					title: document.title,
-					originalContent: originalContent,
-					enhancedContent: combinedEnhancedContent,
-					timestamp: Date.now(),
-					isChunked: true,
-					chunkCount: allBanners.length,
-				});
-				isCachedContent = true;
-				debugLog("Combined chunked content saved to cache");
-				showStatusMessage(
-					"Enhanced content saved to cache!",
-					"success",
-					3000
-				);
-			} catch (saveError) {
-				debugError("Failed to save combined content:", saveError);
-			}
-		}
-	}
-
-	// Simple HTML escape for inserting original text chunks safely
-	function escapeHtml(str) {
-		if (!str) return "";
-		return String(str)
-			.replace(/&/g, "&amp;")
-			.replace(/</g, "&lt;")
-			.replace(/>/g, "&gt;")
-			.replace(/"/g, "&quot;")
-			.replace(/'/g, "&#039;");
-	}
-
-	/**
-	 * Format original chunk content for display
-	 * Converts plain text to readable HTML paragraphs
-	 * @param {string} content - The plain text chunk content
-	 * @returns {string} HTML formatted content
-	 */
-	function formatOriginalChunkContent(content) {
-		if (!content)
-			return '<p style="color: #999; font-style: italic;">No content available</p>';
-
-		// Split by double newlines for paragraphs, escape HTML
-		const paragraphs = content
-			.split(/\n\n+/)
-			.map((p) => p.trim())
-			.filter((p) => p.length > 0)
-			.map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
-			.join("\n");
-
-		return paragraphs || `<p>${escapeHtml(content)}</p>`;
-	}
-
-	// Normalize chunk parts by merging tiny leading/trailing pieces into neighbors
-	function normalizeChunkParts(parts, minChunkLength = 200) {
-		const cleanedParts = (parts || [])
-			.map((p) => (typeof p === "string" ? p.trim() : ""))
-			.filter((p) => p.length > 0);
-
-		for (let i = 0; i < cleanedParts.length; i++) {
-			const chunk = cleanedParts[i];
-			if (chunk.length < minChunkLength && cleanedParts[i + 1]) {
-				cleanedParts[i + 1] = `${chunk} ${cleanedParts[i + 1]}`.trim();
-				cleanedParts.splice(i, 1);
-				i -= 1;
-			}
-		}
-
-		if (
-			cleanedParts.length > 1 &&
-			cleanedParts[cleanedParts.length - 1].length < minChunkLength
-		) {
-			cleanedParts[cleanedParts.length - 2] = `${
-				cleanedParts[cleanedParts.length - 2]
-			} ${cleanedParts.pop()}`.trim();
-		}
-
-		return cleanedParts;
-	}
-
-	/**
-	 * Split HTML content into chunks that correspond to text chunks
-	 * Preserves the original HTML structure (p tags, divs, etc.)
-	 * @param {HTMLElement} contentArea - The content area element
-	 * @param {string[]} textChunks - Array of plain text chunks
-	 * @returns {string[]} Array of HTML chunks corresponding to text chunks
-	 */
-	function splitHTMLIntoChunks(contentArea, textChunks) {
-		if (!contentArea || !textChunks || textChunks.length === 0) {
-			return [];
-		}
-
-		// Get all paragraph-level elements (p, div with text, br-separated text blocks)
-		const childElements = Array.from(contentArea.children);
-		const htmlChunks = [];
-
-		// If there are no child elements or only one chunk needed, return original HTML
-		if (childElements.length === 0 || textChunks.length <= 1) {
-			return [contentArea.innerHTML];
-		}
-
-		// Calculate character length for each text chunk (NOT cumulative)
-		const chunkSizes = textChunks.map((chunk) => chunk.length);
-		const totalTextLength = chunkSizes.reduce((sum, len) => sum + len, 0);
-
-		debugLog(
-			`[splitHTMLIntoChunks] Total text: ${totalTextLength} chars, ${textChunks.length} chunks`
-		);
-		debugLog(`[splitHTMLIntoChunks] Chunk sizes: ${chunkSizes.join(", ")}`);
-
-		// Calculate total HTML text length
-		let totalHtmlTextLength = 0;
-		const elementTextLengths = [];
-		for (const el of childElements) {
-			const elTextLen = el.textContent.trim().replace(/\s+/g, " ").length;
-			elementTextLengths.push(elTextLen);
-			totalHtmlTextLength += elTextLen;
-		}
-
-		debugLog(
-			`[splitHTMLIntoChunks] HTML has ${childElements.length} elements, ${totalHtmlTextLength} chars of text`
-		);
-
-		// Calculate the target size for each HTML chunk based on proportion of text chunks
-		// Scale factor accounts for any difference between HTML text and plain text lengths
-		const scaleFactor = totalHtmlTextLength / totalTextLength;
-		const targetHtmlChunkSizes = chunkSizes.map((size) =>
-			Math.round(size * scaleFactor)
-		);
-
-		debugLog(
-			`[splitHTMLIntoChunks] Target HTML chunk sizes: ${targetHtmlChunkSizes.join(
-				", "
-			)}`
-		);
-
-		// Build HTML chunks by distributing elements according to target sizes
-		let currentChunkElements = [];
-		let currentChunkTextLen = 0;
-		let targetChunkIndex = 0;
-		let elementIndex = 0;
-
-		while (
-			elementIndex < childElements.length &&
-			targetChunkIndex < textChunks.length
-		) {
-			const el = childElements[elementIndex];
-			const elTextLen = elementTextLengths[elementIndex];
-			const targetSize = targetHtmlChunkSizes[targetChunkIndex];
-			const isLastChunk = targetChunkIndex === textChunks.length - 1;
-
-			// For the last chunk, just add all remaining elements
-			if (isLastChunk) {
-				currentChunkElements.push(el);
-				currentChunkTextLen += elTextLen;
-				elementIndex++;
-				continue;
-			}
-
-			// Check if adding this element would exceed the target size significantly
-			const wouldExceed = currentChunkTextLen + elTextLen > targetSize;
-			const hasMinContent = currentChunkTextLen > 0;
-
-			if (wouldExceed && hasMinContent) {
-				// Finalize current chunk WITHOUT adding this element
-				const chunkDiv = document.createElement("div");
-				currentChunkElements.forEach((elem) => {
-					chunkDiv.appendChild(elem.cloneNode(true));
-				});
-				htmlChunks.push(chunkDiv.innerHTML);
-
-				debugLog(
-					`[splitHTMLIntoChunks] Created chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars (target: ${targetSize})`
-				);
-
-				// Reset for next chunk - DON'T increment elementIndex, process this element in next chunk
-				currentChunkElements = [];
-				currentChunkTextLen = 0;
-				targetChunkIndex++;
-			} else {
-				// Add element to current chunk
-				currentChunkElements.push(el);
-				currentChunkTextLen += elTextLen;
-				elementIndex++;
-			}
-		}
-
-		// Add remaining elements as the last chunk
-		if (currentChunkElements.length > 0) {
-			// Also add any remaining elements we haven't processed
-			while (elementIndex < childElements.length) {
-				currentChunkElements.push(childElements[elementIndex]);
-				currentChunkTextLen += elementTextLengths[elementIndex];
-				elementIndex++;
-			}
-
-			const chunkDiv = document.createElement("div");
-			currentChunkElements.forEach((elem) => {
-				chunkDiv.appendChild(elem.cloneNode(true));
-			});
-			htmlChunks.push(chunkDiv.innerHTML);
-
-			debugLog(
-				`[splitHTMLIntoChunks] Created final chunk ${htmlChunks.length}: ${currentChunkElements.length} elements, ${currentChunkTextLen} chars`
-			);
-		}
-
-		// Ensure we have the right number of chunks
-		// If we have fewer HTML chunks than text chunks, pad with formatted text
-		while (htmlChunks.length < textChunks.length) {
-			const missingIndex = htmlChunks.length;
-			debugLog(
-				`[splitHTMLIntoChunks] Padding missing chunk ${
-					missingIndex + 1
-				} with formatted text`
-			);
-			htmlChunks.push(
-				formatOriginalChunkContent(textChunks[missingIndex])
-			);
-		}
-
-		debugLog(
-			`[splitHTMLIntoChunks] Created ${htmlChunks.length} HTML chunks from ${childElements.length} child elements`
-		);
-
-		return htmlChunks;
-	}
-
-	// Function to create an error disclaimer banner
-	function createErrorDisclaimerBanner(error, hasPartialContent = false) {
-		const banner = document.createElement("div");
-		banner.className = "gemini-error-banner";
-		banner.style.cssText = `
-        margin: 15px 0;
-        padding: 15px;
-        background-color: #feeced;
-        border-radius: 8px;
-        border: 1px solid #f5c2c7;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    `;
-
-		// Support dark mode
-		if (
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
-			) ||
-			window.matchMedia("(prefers-color-scheme: dark)").matches
-		) {
-			banner.style.backgroundColor = "#3a2c2d";
-			banner.style.borderColor = "#5a3f3f";
-			banner.style.color = "#e0e0e0";
-		}
-
-		// Create different message depending on if we have partial content
-		const messageText = hasPartialContent
-			? "An error occurred during processing, but some content was successfully enhanced. The original content was preserved for the sections that couldn't be processed."
-			: "An error occurred during processing. The content below is the original text.";
-
-		const iconClass = hasPartialContent ? "⚠️" : "❌";
-		const bannerTitle = hasPartialContent
-			? "Partial Content Available"
-			: "Processing Error";
-
-		banner.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 18px; margin-right: 10px;">${iconClass}</span>
-            <span style="font-weight: bold; font-size: 16px;">${bannerTitle}</span>
-        </div>
-        <div style="font-size: 14px; margin-bottom: 8px;">
-            ${messageText}
-        </div>
-        <div style="font-size: 13px; color: #842029; background: rgba(220, 53, 69, 0.1); padding: 8px; border-radius: 4px;">
-            Error details: ${error}
-        </div>
-    `;
-
-		return banner;
-	}
-
-	// Function to update the work-in-progress banner with real-time progress
-	function updateWorkInProgressBanner(
-		currentChunk,
-		totalChunks,
-		progressPercent = null
-	) {
-		let banner = document.querySelector(".gemini-wip-banner");
-
-		if (!progressPercent) {
-			progressPercent = Math.round((currentChunk / totalChunks) * 100);
-		}
-
-		if (banner) {
-			// Update existing banner
-			const progressBar = banner.querySelector(
-				"div > div:nth-child(2) > div"
-			);
-			if (progressBar) {
-				progressBar.style.width = `${progressPercent}%`;
-			}
-
-			const statusText = banner.querySelector("div:nth-child(3)");
-			if (statusText) {
-				statusText.textContent = `Processing chunk ${currentChunk} of ${totalChunks} (${progressPercent}% complete). Please wait while the content is being enhanced...`;
-			}
-		} else {
-			if (contentArea && contentArea.firstChild) {
-				// Remove any existing enhanced banner before inserting a new one
-				const existingBanner = contentArea.querySelector(
-					".gemini-enhanced-banner"
-				);
-				if (existingBanner) {
-					existingBanner.remove();
-				}
-				contentArea.insertBefore(banner, contentArea.firstChild);
-			}
-		}
-
-		return banner;
-	}
-
-	// Function to remove the original word count element
-	function removeOriginalWordCount() {
-		const originalWordCount = document.querySelector(".gemini-word-count");
-		if (originalWordCount) {
-			debugLog("Removing original word count display");
-			originalWordCount.parentNode.removeChild(originalWordCount);
-		}
-	}
-
-	// Handler for processed chunks from the background script
-	function handleChunkProcessed(message) {
-		debugLog(
-			`Received processed chunk ${message.chunkIndex + 1}/${
-				message.totalChunks
-			}`
-		);
-		const contentArea = findContentArea();
-		if (!contentArea) {
-			debugError(
-				"Unable to find content area for displaying processed chunk"
-			);
-			return;
-		}
-
-		const chunkIndex = message.chunkIndex;
-		const totalChunks = message.totalChunks;
-		const chunkResult = message.result;
-
-		// Try to find the new inline chunk structure first
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content"
-		);
-
-		if (chunkedContainer) {
-			// New inline replacement system
-			const chunkWrapper = chunkedContainer.querySelector(
-				`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
-			);
-
-			if (chunkWrapper && chunkResult && chunkResult.enhancedContent) {
-				// Update the banner to completed status
-				const existingBanner = chunkWrapper.querySelector(
-					".gemini-chunk-banner"
-				);
-				if (existingBanner) {
-					const newBanner = createChunkBanner(
-						chunkIndex,
-						totalChunks,
-						"completed"
-					);
-					existingBanner.replaceWith(newBanner);
-				}
-
-				// Replace the chunk content with enhanced version
-				const chunkContent = chunkWrapper.querySelector(
-					".gemini-chunk-content"
-				);
-				if (chunkContent) {
-					const sanitizedContent = sanitizeHTML(
-						chunkResult.enhancedContent
-					);
-					chunkContent.innerHTML = sanitizedContent;
-					chunkContent.setAttribute("data-chunk-enhanced", "true");
-				}
-
-				debugLog(
-					`Chunk ${
-						chunkIndex + 1
-					} replaced inline with enhanced content`
-				);
-			}
-
-			// Update next chunk banner to "processing" if there's more
-			if (chunkIndex + 1 < totalChunks) {
-				const nextWrapper = chunkedContainer.querySelector(
-					`.gemini-chunk-wrapper[data-chunk-index="${
-						chunkIndex + 1
-					}"]`
-				);
-				if (nextWrapper) {
-					const nextBanner = nextWrapper.querySelector(
-						".gemini-chunk-banner"
-					);
-					if (
-						nextBanner &&
-						nextBanner.getAttribute("data-chunk-status") ===
-							"pending"
-					) {
-						const processingBanner = createChunkBanner(
-							chunkIndex + 1,
-							totalChunks,
-							"processing"
-						);
-						nextBanner.replaceWith(processingBanner);
-					}
-				}
-			}
-
-			// If all chunks are processed, finalize
-			if (message.isComplete) {
-				finalizeChunkedContent(chunkResult.modelInfo);
-			}
-
-			return;
-		}
-
-		// Fallback to old progressive system for backwards compatibility
-		const enhancedContainer = document.getElementById(
-			"gemini-enhanced-container"
-		);
-		let wipBanner = document.querySelector(".gemini-wip-banner");
-
-		// If neither new nor old container exists, create fallback structure
-		if (!enhancedContainer) {
-			let progressiveContentContainer = document.getElementById(
-				"gemini-progressive-content"
-			);
-			if (!progressiveContentContainer) {
-				const originalContent = contentArea.innerHTML;
-				contentArea.setAttribute(
-					"data-original-content",
-					originalContent
-				);
-				progressiveContentContainer = document.createElement("div");
-				progressiveContentContainer.id = "gemini-progressive-content";
-				if (currentFontSize && currentFontSize !== 100) {
-					progressiveContentContainer.style.fontSize = `${currentFontSize}%`;
-				}
-				contentArea.innerHTML = "";
-				contentArea.appendChild(progressiveContentContainer);
-				const banner = createWorkInProgressBanner(
-					chunkIndex + 1,
-					totalChunks
-				);
-				contentArea.insertBefore(banner, progressiveContentContainer);
-				wipBanner = banner;
-			}
-
-			if (chunkResult && chunkResult.enhancedContent) {
-				const sanitizedContent = sanitizeHTML(
-					chunkResult.enhancedContent
-				);
-				const chunkContainer = document.createElement("div");
-				chunkContainer.className = "gemini-chunk";
-				chunkContainer.setAttribute("data-chunk-index", chunkIndex);
-				chunkContainer.innerHTML = sanitizedContent;
-				progressiveContentContainer.appendChild(chunkContainer);
-
-				if (message.isComplete) {
-					const existingWip =
-						document.querySelector(".gemini-wip-banner");
-					if (existingWip) existingWip.remove();
-					finalizePrefixEnhancedContent(chunkResult.modelInfo);
-				}
-			}
-			return;
-		}
-
-		// Old progressive flow with enhanced container
-		if (chunkResult && chunkResult.enhancedContent) {
-			const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
-
-			const enhancedChunk = document.createElement("div");
-			enhancedChunk.className = "gemini-chunk";
-			enhancedChunk.setAttribute("data-chunk-index", chunkIndex);
-
-			// Add chunk divider banner if not the first chunk
-			if (chunkIndex > 0) {
-				const divider = document.createElement("div");
-				divider.className = "gemini-chunk-divider";
-				divider.style.cssText = `
-					margin: 2em 0;
-					padding: 0.8em;
-					background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-					color: white;
-					font-weight: 600;
-					text-align: center;
-					border-radius: 8px;
-					font-size: 0.9em;
-					box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-				`;
-				divider.innerHTML = `✨ Chunk ${
-					chunkIndex + 1
-				} of ${totalChunks} ✨`;
-				enhancedChunk.appendChild(divider);
-			}
-
-			const contentDiv = document.createElement("div");
-			contentDiv.innerHTML = sanitizedContent;
-			enhancedChunk.appendChild(contentDiv);
-
-			enhancedContainer.appendChild(enhancedChunk);
-
-			wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				const progressText = wipBanner.querySelector(".progress-text");
-				if (progressText) {
-					progressText.textContent = `Processing chunk ${
-						chunkIndex + 2
-					} of ${totalChunks}...`;
-				}
-			}
-
-			if (message.isComplete) {
-				const wip = document.querySelector(".gemini-wip-banner");
-				if (wip) wip.remove();
-				finalizePrefixEnhancedContent(chunkResult.modelInfo);
-			} else {
-				updateWorkInProgressBanner(
-					chunkIndex + 1,
-					totalChunks,
-					message.progressPercent
-				);
-			}
-		}
-	}
-
-	/**
 	 * Add model attribution to the content area
 	 * @param {Object} modelInfo - Information about the model used
 	 */
@@ -1827,7 +1330,7 @@ if (window.__RGInitDone) {
 
 		const isDarkMode =
 			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
 			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 		const attribution = document.createElement("div");
@@ -1868,7 +1371,7 @@ if (window.__RGInitDone) {
 		// Calculate total enhanced word count from all chunks
 		let totalEnhancedWords = 0;
 		const allChunkContents = document.querySelectorAll(
-			".gemini-chunk-content"
+			".gemini-chunk-content",
 		);
 		allChunkContents.forEach((chunk) => {
 			const enhancedContent =
@@ -1905,7 +1408,7 @@ if (window.__RGInitDone) {
 		// Check dark mode
 		const isDarkMode =
 			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth'
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
 			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 		const bgColor = isDarkMode ? "#2a2a3c" : "#f0f8ff";
@@ -1964,8 +1467,8 @@ if (window.__RGInitDone) {
 							wordDifference >= 0 ? "#28a745" : "#dc3545"
 						}; font-weight: bold; margin-left: 8px;">
 							(${changeSymbol}${Math.abs(
-			wordDifference
-		).toLocaleString()}, ${changeSymbol}${Math.abs(percentChange)}%)
+								wordDifference,
+							).toLocaleString()}, ${changeSymbol}${Math.abs(percentChange)}%)
 						</span>
 					</div>
 				</div>
@@ -1988,7 +1491,7 @@ if (window.__RGInitDone) {
 				e.preventDefault();
 				if (
 					confirm(
-						"Are you sure you want to delete all cached enhanced content for this chapter?"
+						"Are you sure you want to delete all cached enhanced content for this chapter?",
 					)
 				) {
 					await handleDeleteAllChunks();
@@ -2003,19 +1506,19 @@ if (window.__RGInitDone) {
 	 * Toggle all chunks between original and enhanced
 	 */
 	function handleToggleAllChunks() {
-		const mainBanner = document.getElementById(
-			"gemini-main-summary-banner"
+		const mainBanner = document.querySelector(".gemini-master-banner");
+		const toggleBtn = mainBanner?.querySelector(
+			".gemini-master-toggle-all-btn",
 		);
-		const toggleBtn = mainBanner?.querySelector(".gemini-main-toggle-btn");
 		if (!toggleBtn) return;
 
 		const isShowingEnhanced =
-			toggleBtn.getAttribute("data-showing") === "enhanced";
+			toggleBtn.getAttribute("data-showing") !== "original";
 		const allChunkContents = document.querySelectorAll(
-			".gemini-chunk-content"
+			".gemini-chunk-content",
 		);
 		const allChunkToggleBtns = document.querySelectorAll(
-			".gemini-chunk-toggle-btn"
+			".gemini-chunk-toggle-btn",
 		);
 
 		allChunkContents.forEach((chunkContent, idx) => {
@@ -2023,32 +1526,28 @@ if (window.__RGInitDone) {
 				return;
 
 			const originalHtml = chunkContent.getAttribute(
-				"data-original-chunk-html"
+				"data-original-chunk-html",
 			);
 			const originalContent = chunkContent.getAttribute(
-				"data-original-chunk-content"
+				"data-original-chunk-content",
 			);
 			const enhancedContent =
 				chunkContent.getAttribute("data-enhanced-chunk-content") ||
 				chunkContent.innerHTML;
 
 			if (isShowingEnhanced) {
-				// Switch all to original
 				chunkContent.setAttribute(
 					"data-enhanced-chunk-content",
-					chunkContent.innerHTML
+					chunkContent.innerHTML,
 				);
 				if (originalHtml) {
-					chunkContent.innerHTML = `<div class="gemini-original-chunk">${originalHtml}</div>`;
+					chunkContent.innerHTML = originalHtml;
 				} else {
-					chunkContent.innerHTML = `<div class="gemini-original-chunk">${formatOriginalChunkContent(
-						originalContent
-					)}</div>`;
+					chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
 				}
 			} else {
-				// Switch all to enhanced
 				const savedEnhanced = chunkContent.getAttribute(
-					"data-enhanced-chunk-content"
+					"data-enhanced-chunk-content",
 				);
 				if (savedEnhanced) {
 					chunkContent.innerHTML = savedEnhanced;
@@ -2059,10 +1558,10 @@ if (window.__RGInitDone) {
 		// Update all individual toggle buttons
 		allChunkToggleBtns.forEach((btn) => {
 			if (isShowingEnhanced) {
-				btn.textContent = "✨ Enhanced";
+				btn.textContent = "✨ Show Enhanced";
 				btn.setAttribute("data-showing", "original");
 			} else {
-				btn.textContent = "📄 Original";
+				btn.textContent = "👁 Show Original";
 				btn.setAttribute("data-showing", "enhanced");
 			}
 		});
@@ -2072,7 +1571,7 @@ if (window.__RGInitDone) {
 			toggleBtn.textContent = "✨ Show All Enhanced";
 			toggleBtn.setAttribute("data-showing", "original");
 		} else {
-			toggleBtn.textContent = "📄 Show All Original";
+			toggleBtn.textContent = "👁 Show All Original";
 			toggleBtn.setAttribute("data-showing", "enhanced");
 		}
 	}
@@ -2092,16 +1591,16 @@ if (window.__RGInitDone) {
 			contentArea.removeAttribute("data-total-chunks");
 		}
 
-		// Clear from storage
-		if (storageManager) {
-			await storageManager.removeEnhancedContent(window.location.href);
+		const chunking = await loadChunkingSystem();
+		if (chunking) {
+			await chunking.cache.deleteAllChunksForUrl(window.location.href);
 		}
 
 		isCachedContent = false;
 		showStatusMessage(
 			"All enhanced content deleted. Reverted to original.",
 			"info",
-			3000
+			3000,
 		);
 
 		// Reset enhance button
@@ -2112,58 +1611,12 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	/**
-	 * Finalize chunked content processing - remove pending banners, save to cache, add summary banner
-	 * @param {Object} modelInfo - Information about the model used
-	 */
-	async function finalizeChunkedContent(modelInfo) {
-		debugLog("Finalizing chunked content...");
-
-		// Remove any remaining "pending" or "processing" states
-		const allBanners = document.querySelectorAll(".gemini-chunk-banner");
-		const totalChunks = allBanners.length;
-		let completedChunks = 0;
-
-		allBanners.forEach((banner, idx) => {
-			const status = banner.getAttribute("data-chunk-status");
-			if (status === "completed") {
-				completedChunks++;
-			} else if (status !== "error") {
-				// Check if the corresponding content was actually enhanced
-				const wrapper = banner.closest(".gemini-chunk-wrapper");
-				const content = wrapper?.querySelector(".gemini-chunk-content");
-				if (
-					content &&
-					content.getAttribute("data-chunk-enhanced") === "true"
-				) {
-					const newBanner = createChunkBanner(
-						idx,
-						totalChunks,
-						"completed"
-					);
-					banner.replaceWith(newBanner);
-					completedChunks++;
-				}
-			}
-		});
-
-		// Show completion message
-		const successMsg =
-			completedChunks === totalChunks
-				? "✅ All chunks enhanced successfully!"
-				: `⚠️ Enhancement complete: ${completedChunks}/${totalChunks} chunks successful`;
-		showStatusMessage(
-			successMsg,
-			completedChunks === totalChunks ? "success" : "warning",
-			5000
+	// Handler for all chunks processed notification
+	function handleAllChunksProcessed(message) {
+		debugLog(
+			`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`,
 		);
 
-		// Add model attribution if available (at the end)
-		if (modelInfo) {
-			addModelAttribution(modelInfo);
-		}
-
-		// Reset button state
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (button) {
 			button.textContent = "🔄 Re-enhance with Gemini";
@@ -2171,254 +1624,21 @@ if (window.__RGInitDone) {
 			button.classList.remove("loading");
 		}
 
-		// Save combined content to cache
-		await checkAndSaveAllChunks();
-	}
-
-	// Handler for chunk processing errors
-	function handleChunkError(message) {
-		debugLog(
-			`Error processing chunk ${message.chunkIndex + 1}/${
-				message.totalChunks
-			}:`,
-			message.error
-		);
-
-		const contentArea = findContentArea();
-		if (!contentArea) {
-			debugError("Unable to find content area for displaying error");
-			return;
-		}
-
-		const chunkIndex = message.chunkIndex;
-		const totalChunks = message.totalChunks;
-
-		// Try new inline chunk system first
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content"
-		);
-		if (chunkedContainer) {
-			// Update the specific chunk banner to error state with re-enhance button
-			const chunkWrapper = chunkedContainer.querySelector(
-				`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`
-			);
-
-			if (chunkWrapper) {
-				const existingBanner = chunkWrapper.querySelector(
-					".gemini-chunk-banner"
-				);
-				if (existingBanner) {
-					const errorBanner = createChunkBanner(
-						chunkIndex,
-						totalChunks,
-						"error",
-						message.error
-					);
-					existingBanner.replaceWith(errorBanner);
-				}
-
-				// Keep the original content visible - don't replace it
-				debugLog(
-					`Chunk ${
-						chunkIndex + 1
-					} marked as error - original content preserved`
-				);
-			}
-
-			// If this is a rate limit, show status message
-			if (message.isRateLimit) {
-				let waitTimeSeconds = 60;
-				if (message.waitTime) {
-					waitTimeSeconds = Math.ceil(message.waitTime / 1000);
-				}
-				showStatusMessage(
-					`Rate limit reached on chunk ${
-						chunkIndex + 1
-					}. Waiting ${waitTimeSeconds} seconds before continuing...`,
-					"warning"
-				);
-			} else {
-				showStatusMessage(
-					`Error processing chunk ${chunkIndex + 1}: ${
-						message.error
-					}`,
-					"error"
-				);
-			}
-
-			// If all chunks are done (including this error), update button
-			if (message.isComplete) {
-				const button = document.querySelector(".gemini-enhance-btn");
-				if (button) {
-					button.textContent = "🔄 Re-enhance with Gemini";
-					button.disabled = false;
-					button.classList.remove("loading");
-				}
-			}
-			// If background reported a final failure, still re-enable controls
-			if (message.finalFailure && !message.isComplete) {
-				const button = document.querySelector(".gemini-enhance-btn");
-				if (button) {
-					button.textContent = "🔄 Re-enhance with Gemini";
-					button.disabled = false;
-					button.classList.remove("loading");
-				}
-				showStatusMessage(
-					"Enhancement stopped after an error. You can retry individual chunks.",
-					"warning",
-					5000
-				);
-			}
-
-			return;
-		}
-
-		// Fallback to old system
-		const enhancedContainer = document.getElementById(
-			"gemini-enhanced-container"
-		);
-		const hasPartialContent =
-			enhancedContainer &&
-			enhancedContainer.querySelector(".gemini-chunk");
-
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) {
-			const errorBanner = createErrorDisclaimerBanner(
-				message.error,
-				hasPartialContent
-			);
-			wipBanner.replaceWith(errorBanner);
-		} else {
-			const errorBanner = createErrorDisclaimerBanner(
-				message.error,
-				hasPartialContent
-			);
-			contentArea.insertBefore(errorBanner, contentArea.firstChild);
-		}
-
-		// If it's a rate limit error, update the banner with waiting information and allow retry
-		if (message.isRateLimit) {
-			let waitTimeSeconds = 60;
-			if (message.waitTime) {
-				waitTimeSeconds = Math.ceil(message.waitTime / 1000);
-			}
-
-			showStatusMessage(
-				`Rate limit reached. Waiting ${waitTimeSeconds} seconds before continuing...`,
-				"warning"
-			);
-
-			if (hasPartialContent) {
-				const errorBanner = document.querySelector(
-					".gemini-error-banner"
-				);
-				if (errorBanner) {
-					const retryButton = document.createElement("button");
-					retryButton.textContent = "Retry Processing";
-					retryButton.style.cssText = `
-					margin-top: 10px;
-					padding: 6px 12px;
-					background: #4285f4;
-					color: white;
-					border: none;
-					border-radius: 4px;
-					cursor: pointer;
-				`;
-					retryButton.addEventListener("click", () => {
-						const wipBanner = createWorkInProgressBanner(
-							message.chunkIndex + 1,
-							message.totalChunks
-						);
-						errorBanner.replaceWith(wipBanner);
-
-						browser.runtime
-							.sendMessage({
-								action: "resumeProcessing",
-								startChunkIndex: message.chunkIndex,
-								totalChunks: message.totalChunks,
-								remainingChunks:
-									message.unprocessedChunks || [],
-							})
-							.catch((error) => {
-								debugError(
-									"Error requesting to resume processing:",
-									error
-								);
-								showStatusMessage(
-									"Failed to resume processing. Please try again later.",
-									"error"
-								);
-							});
-					});
-
-					errorBanner.appendChild(retryButton);
-				}
-			}
-		}
-	}
-
-	// Handler for all chunks processed notification
-	function handleAllChunksProcessed(message) {
-		debugLog(
-			`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`
-		);
-
-		const contentArea = findContentArea();
-		if (!contentArea) {
-			debugError("Unable to find content area for finalizing content");
-			return;
-		}
-
-		// If there were failures, show an error banner
 		if (message.failedChunks && message.failedChunks.length > 0) {
-			const hasPartialContent = message.totalProcessed > 0;
-			const errorMessage = `Failed to process ${message.failedChunks.length} out of ${message.totalChunks} chunks.`;
-
-			// Remove any existing WIP banner
-			const wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				const errorBanner = createErrorDisclaimerBanner(
-					errorMessage,
-					hasPartialContent
-				);
-				wipBanner.replaceWith(errorBanner);
-			} else {
-				// Create error banner if none exists
-				const errorBanner = createErrorDisclaimerBanner(
-					errorMessage,
-					hasPartialContent
-				);
-				contentArea.insertBefore(errorBanner, contentArea.firstChild);
-			}
-		} else {
-			// Everything processed successfully, finalize the content
-			finalizePrefixEnhancedContent();
-		}
-
-		// Show status message with detailed information
-		if (message.totalProcessed === message.totalChunks) {
-			showStatusMessage(
-				`Content successfully enhanced with Gemini! (${message.totalProcessed} chunks processed)`,
-				"success"
-			);
-		} else {
-			// Calculate percentage of successful chunks
 			const successPercentage = Math.round(
-				(message.totalProcessed / message.totalChunks) * 100
+				(message.totalProcessed / message.totalChunks) * 100,
 			);
 			showStatusMessage(
 				`Partially enhanced ${message.totalProcessed} of ${message.totalChunks} chunks (${successPercentage}% complete).`,
-				"warning"
+				"warning",
 			);
+			return;
 		}
 
-		// If we have a progressive content container, add a class to indicate completion
-		const progressiveContainer = document.getElementById(
-			"gemini-progressive-content"
+		showStatusMessage(
+			`Content successfully enhanced with Gemini! (${message.totalProcessed} chunks processed)`,
+			"success",
 		);
-		if (progressiveContainer) {
-			progressiveContainer.classList.add("gemini-processing-complete");
-		}
 	}
 
 	// Helper function to finalize the progressive content display
@@ -2428,7 +1648,7 @@ if (window.__RGInitDone) {
 
 		// Get the enhanced container (where chunks were added)
 		const enhancedContainer = document.getElementById(
-			"gemini-enhanced-container"
+			"gemini-enhanced-container",
 		);
 		if (!enhancedContainer) {
 			debugError("No enhanced container found for finalization");
@@ -2462,7 +1682,7 @@ if (window.__RGInitDone) {
 			} catch (saveError) {
 				debugError(
 					"Failed to save chunked content to cache:",
-					saveError
+					saveError,
 				);
 			}
 		}
@@ -2481,7 +1701,7 @@ if (window.__RGInitDone) {
 			originalText,
 			enhancedText,
 			modelInfo,
-			isCachedContent
+			isCachedContent,
 		);
 
 		// Add delete button handler if present
@@ -2491,12 +1711,12 @@ if (window.__RGInitDone) {
 				if (confirm("Delete cached enhanced content for this page?")) {
 					if (storageManager) {
 						await storageManager.removeEnhancedContent(
-							window.location.href
+							window.location.href,
 						);
 						isCachedContent = false;
 						showStatusMessage(
 							"Cached content deleted. Reloading page...",
-							"info"
+							"info",
 						);
 						setTimeout(() => location.reload(), 1000);
 					}
@@ -2517,14 +1737,14 @@ if (window.__RGInitDone) {
 					contentArea.innerHTML = originalContent;
 					contentArea.setAttribute("data-showing-enhanced", "false");
 					showStatusMessage(
-						"Showing original content. Click 'Show Enhanced' to view the improved version."
+						"Showing original content. Click 'Show Enhanced' to view the improved version.",
 					);
 					// Re-create banner for original view
 					newBanner = createEnhancedBanner(
 						originalText,
 						enhancedText,
 						modelInfo,
-						isCachedContent
+						isCachedContent,
 					);
 					const newToggleButton =
 						newBanner.querySelector(".gemini-toggle-btn");
@@ -2532,28 +1752,28 @@ if (window.__RGInitDone) {
 						newToggleButton.textContent = "Show Enhanced";
 						newToggleButton.addEventListener(
 							"click",
-							toggleContent
+							toggleContent,
 						);
 					}
 					// Re-attach delete button handler
 					const newDeleteButton = newBanner.querySelector(
-						".gemini-delete-cache-btn"
+						".gemini-delete-cache-btn",
 					);
 					if (newDeleteButton) {
 						newDeleteButton.addEventListener("click", async () => {
 							if (
 								confirm(
-									"Delete cached enhanced content for this page?"
+									"Delete cached enhanced content for this page?",
 								)
 							) {
 								if (storageManager) {
 									await storageManager.removeEnhancedContent(
-										window.location.href
+										window.location.href,
 									);
 									isCachedContent = false;
 									showStatusMessage(
 										"Cached content deleted. Reloading page...",
-										"info"
+										"info",
 									);
 									setTimeout(() => location.reload(), 1000);
 								}
@@ -2567,14 +1787,14 @@ if (window.__RGInitDone) {
 					contentArea.appendChild(enhancedContainer);
 					contentArea.setAttribute("data-showing-enhanced", "true");
 					showStatusMessage(
-						"Showing enhanced content. Click 'Show Original' to view the original version."
+						"Showing enhanced content. Click 'Show Original' to view the original version.",
 					);
 					// Re-create banner for enhanced view
 					newBanner = createEnhancedBanner(
 						originalText,
 						enhancedText,
 						modelInfo,
-						isCachedContent
+						isCachedContent,
 					);
 					const newToggleButton =
 						newBanner.querySelector(".gemini-toggle-btn");
@@ -2582,28 +1802,28 @@ if (window.__RGInitDone) {
 						newToggleButton.textContent = "Show Original";
 						newToggleButton.addEventListener(
 							"click",
-							toggleContent
+							toggleContent,
 						);
 					}
 					// Re-attach delete button handler
 					const newDeleteButton = newBanner.querySelector(
-						".gemini-delete-cache-btn"
+						".gemini-delete-cache-btn",
 					);
 					if (newDeleteButton) {
 						newDeleteButton.addEventListener("click", async () => {
 							if (
 								confirm(
-									"Delete cached enhanced content for this page?"
+									"Delete cached enhanced content for this page?",
 								)
 							) {
 								if (storageManager) {
 									await storageManager.removeEnhancedContent(
-										window.location.href
+										window.location.href,
 									);
 									isCachedContent = false;
 									showStatusMessage(
 										"Cached content deleted. Reloading page...",
-										"info"
+										"info",
 									);
 									setTimeout(() => location.reload(), 1000);
 								}
@@ -2621,7 +1841,7 @@ if (window.__RGInitDone) {
 
 		// Remove any existing enhanced banner before inserting a new one
 		const existingBanner = contentArea.querySelector(
-			".gemini-enhanced-banner"
+			".gemini-enhanced-banner",
 		);
 		if (existingBanner) {
 			existingBanner.remove();
@@ -2673,7 +1893,7 @@ if (window.__RGInitDone) {
 		debugLog(
 			`Ranobe Gemini: Initializing for ${
 				isMobileDevice ? "mobile" : "desktop"
-			} device`
+			} device`,
 		);
 		await initialize();
 	}
@@ -2682,10 +1902,10 @@ if (window.__RGInitDone) {
 	function adjustUIForDeviceType() {
 		const controlsContainer = document.getElementById("gemini-controls");
 		const summaryDisplayLong = document.getElementById(
-			"summary-display-long"
+			"summary-display-long",
 		);
 		const summaryDisplayShort = document.getElementById(
-			"summary-display-short"
+			"summary-display-short",
 		);
 
 		if (!controlsContainer) return;
@@ -2711,7 +1931,7 @@ if (window.__RGInitDone) {
 	async function loadHandlers() {
 		try {
 			const handlerManagerUrl = browser.runtime.getURL(
-				"utils/website-handlers/handler-manager.js"
+				"utils/website-handlers/handler-manager.js",
 			);
 
 			return { handlerManagerUrl };
@@ -2742,7 +1962,7 @@ if (window.__RGInitDone) {
 				const handler = await handlerManager.getHandlerForCurrentSite();
 				debugLog(
 					"Handler loaded:",
-					handler ? handler.constructor.name : "null"
+					handler ? handler.constructor.name : "null",
 				);
 				return handler;
 			}
@@ -2757,7 +1977,7 @@ if (window.__RGInitDone) {
 	async function loadStorageManager() {
 		try {
 			const storageUrl = browser.runtime.getURL(
-				"utils/storage-manager.js"
+				"utils/storage-manager.js",
 			);
 			const storageModule = await import(storageUrl);
 			return storageModule.default || storageModule;
@@ -2777,7 +1997,7 @@ if (window.__RGInitDone) {
 	async function loadSiteSettingsModule() {
 		try {
 			const settingsUrl = browser.runtime.getURL(
-				"utils/site-settings.js"
+				"utils/site-settings.js",
 			);
 			return await import(settingsUrl);
 		} catch (error) {
@@ -2801,25 +2021,36 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// Shared chunking utilities loader
-	let chunkingUtils = null;
-	async function loadChunkingUtils() {
-		if (chunkingUtils) return chunkingUtils;
+	// Shared chunking system loader - NEW WORD-BASED MODULAR SYSTEM
+	let chunkingSystem = null;
+	async function loadChunkingSystem() {
+		if (chunkingSystem) return chunkingSystem;
 		try {
-			const chunkingUrl = browser.runtime.getURL("utils/chunking.js");
+			// Load new modular chunking system
+			const chunkingUrl = browser.runtime.getURL(
+				"utils/chunking/index.js",
+			);
 			const chunkingModule = await import(chunkingUrl);
-			chunkingUtils = {
-				...chunkingModule,
-				splitContentForProcessing:
-					chunkingModule.splitContentForProcessing ||
-					chunkingModule.default?.splitContentForProcessing,
-			};
-			return chunkingUtils;
+			// Store default export with namespaces: { config, core, cache, ui, summaryUI }
+			chunkingSystem = chunkingModule.default;
+			return chunkingSystem;
 		} catch (error) {
-			debugError("Error loading chunking utils:", error);
+			debugError("Error loading chunking system:", error);
 			return null;
 		}
 	}
+
+	// Clear old chunk cache format once per page load
+	(async function initChunkCacheMigration() {
+		try {
+			const chunking = await loadChunkingSystem();
+			if (chunking?.cache?.clearOldCache) {
+				await chunking.cache.clearOldCache();
+			}
+		} catch (error) {
+			debugError("Chunk cache migration failed:", error);
+		}
+	})();
 
 	/**
 	 * Generate reading status dropdown options from READING_STATUS_INFO
@@ -2850,7 +2081,7 @@ if (window.__RGInitDone) {
 		// Validate that this is a valid chapter page (not user/author profile)
 		if (!currentHandler || !currentHandler.isChapterPage?.()) {
 			debugLog(
-				"Skipping library add: Not a chapter page or no valid handler"
+				"Skipping library add: Not a chapter page or no valid handler",
 			);
 			return;
 		}
@@ -2868,7 +2099,7 @@ if (window.__RGInitDone) {
 			// Create novel data from context
 			const novelData = novelLibrary.createNovelFromContext(
 				context,
-				currentHandler
+				currentHandler,
 			);
 
 			if (!novelData) {
@@ -2972,7 +2203,7 @@ if (window.__RGInitDone) {
 			} catch (error) {
 				debugError(
 					"Error extracting page metadata from handler:",
-					error
+					error,
 				);
 			}
 		}
@@ -2986,7 +2217,7 @@ if (window.__RGInitDone) {
 
 		try {
 			const cached = await storageManager.loadEnhancedContent(
-				window.location.href
+				window.location.href,
 			);
 			if (cached) {
 				debugLog("Found cached enhanced content");
@@ -3108,7 +2339,7 @@ if (window.__RGInitDone) {
 
 		if (!currentHandler) {
 			debugLog(
-				"Site disabled or unsupported; skipping UI injection for this page"
+				"Site disabled or unsupported; skipping UI injection for this page",
 			);
 			return;
 		}
@@ -3121,7 +2352,7 @@ if (window.__RGInitDone) {
 			!siteSettingsModule.isSiteEnabled(siteSettings, handlerShelfId)
 		) {
 			debugLog(
-				`Site ${handlerShelfId} disabled in settings; skipping UI injection`
+				`Site ${handlerShelfId} disabled in settings; skipping UI injection`,
 			);
 			return;
 		}
@@ -3130,7 +2361,7 @@ if (window.__RGInitDone) {
 			debugLog(`Using specific handler for ${window.location.hostname}`);
 		} else {
 			debugLog(
-				"No specific handler found, using generic extraction methods"
+				"No specific handler found, using generic extraction methods",
 			);
 		}
 
@@ -3161,7 +2392,7 @@ if (window.__RGInitDone) {
 			injectUI();
 		} else if (!isChapterPage && !isNovelPage) {
 			debugLog(
-				"Ranobe Gemini: Not a chapter or novel page, skipping UI injection"
+				"Ranobe Gemini: Not a chapter or novel page, skipping UI injection",
 			);
 		}
 
@@ -3215,11 +2446,11 @@ if (window.__RGInitDone) {
 		message,
 		type = "info",
 		duration = 3000,
-		options = {}
+		options = {},
 	) {
 		// Remove any existing banner
 		const existingBanner = document.getElementById(
-			"rg-notification-banner"
+			"rg-notification-banner",
 		);
 		if (existingBanner) {
 			existingBanner.remove();
@@ -3545,9 +2776,8 @@ if (window.__RGInitDone) {
 				if (novelPageUrl) {
 					// Check if we have the novel in library
 					const novelId = getNovelIdFromCurrentPage();
-					const existingNovels = await novelLibrary.getRecentNovels(
-						0
-					);
+					const existingNovels =
+						await novelLibrary.getRecentNovels(0);
 					const existingNovel = novelId
 						? existingNovels.find((n) => n.id === novelId)
 						: null;
@@ -3563,7 +2793,7 @@ if (window.__RGInitDone) {
 									text: "📖 View Novel Details",
 									url: novelPageUrl,
 								},
-							}
+							},
 						);
 					}
 				}
@@ -3697,35 +2927,31 @@ if (window.__RGInitDone) {
 				autoAddEnabled && metadata.title && metadata.title.length > 0;
 
 			if (existingNovel) {
-								if (isChapter && currentChapterNum) {
-									const shouldUpdateProgress =
-										!existingNovel.lastReadChapter ||
-										currentChapterNum >=
-											existingNovel.lastReadChapter;
-									if (shouldUpdateProgress) {
-										await novelLibrary.updateReadingProgress(
-											novelId,
-											currentChapterNum,
-											window.location.href,
-											{
-												totalChapters:
-													totalChapterCount,
-											},
-										);
-									}
-								}
+				if (isChapter && currentChapterNum) {
+					const shouldUpdateProgress =
+						!existingNovel.lastReadChapter ||
+						currentChapterNum >= existingNovel.lastReadChapter;
+					if (shouldUpdateProgress) {
+						await novelLibrary.updateReadingProgress(
+							novelId,
+							currentChapterNum,
+							window.location.href,
+							{
+								totalChapters: totalChapterCount,
+							},
+						);
+					}
+				}
 
-								if (
-									metadata.siteReadingStatus &&
-									isNovelPage &&
-									existingNovel.readingStatus !==
-										metadata.siteReadingStatus
-								) {
-									await novelLibrary.updateNovel(novelId, {
-										readingStatus:
-											metadata.siteReadingStatus,
-									});
-								}
+				if (
+					metadata.siteReadingStatus &&
+					isNovelPage &&
+					existingNovel.readingStatus !== metadata.siteReadingStatus
+				) {
+					await novelLibrary.updateNovel(novelId, {
+						readingStatus: metadata.siteReadingStatus,
+					});
+				}
 				// Avoid overwriting reading status unless auto-add is configured for chapter pages
 				const statusUsesProgress = [
 					READING_STATUS.READING,
@@ -3908,7 +3134,7 @@ if (window.__RGInitDone) {
 			const element = document.querySelector(selector);
 			if (element) {
 				debugLog(
-					`Generic: Content area found using selector: ${selector}`
+					`Generic: Content area found using selector: ${selector}`,
 				);
 				return element;
 			}
@@ -3925,7 +3151,7 @@ if (window.__RGInitDone) {
 		button.title = "Generate a detailed summary of the chapter";
 		button.classList.add("gemini-button"); // Use the same class for styling
 		button.addEventListener("click", (event) =>
-			handleSummarizeButtonClick(event, false)
+			handleSummarizeButtonClick(event, false),
 		);
 		return button;
 	}
@@ -3938,7 +3164,7 @@ if (window.__RGInitDone) {
 		button.title = "Generate a brief summary of the chapter";
 		button.classList.add("gemini-button"); // Use the same class for styling
 		button.addEventListener("click", (event) =>
-			handleSummarizeButtonClick(event, true)
+			handleSummarizeButtonClick(event, true),
 		);
 		return button;
 	}
@@ -4065,7 +3291,7 @@ if (window.__RGInitDone) {
 
 				if (!isConnected) {
 					throw new Error(
-						"Cannot connect to extension background script"
+						"Cannot connect to extension background script",
 					);
 				}
 
@@ -4077,7 +3303,7 @@ if (window.__RGInitDone) {
 				debugError("Connection error:", error);
 				showStatusMessage(
 					"Error connecting to extension. Please reload the page and try again.",
-					"error"
+					"error",
 				);
 				button.textContent = originalText;
 				button.disabled = false;
@@ -4105,7 +3331,7 @@ if (window.__RGInitDone) {
 
 				if (!isConnected) {
 					throw new Error(
-						"Cannot connect to extension background script"
+						"Cannot connect to extension background script",
 					);
 				}
 
@@ -4117,7 +3343,7 @@ if (window.__RGInitDone) {
 				debugError("Connection error:", error);
 				showStatusMessage(
 					"Error connecting to extension. Please reload the page and try again.",
-					"error"
+					"error",
 				);
 				button.textContent = originalText;
 				button.disabled = false;
@@ -4155,13 +3381,13 @@ if (window.__RGInitDone) {
 		if (controlsContainer) {
 			controlsContainer.parentNode.insertBefore(
 				wordCountContainer,
-				controlsContainer.nextSibling
+				controlsContainer.nextSibling,
 			);
 		} else {
 			// Fallback: insert at the top of the content area
 			contentArea.insertBefore(
 				wordCountContainer,
-				contentArea.firstChild
+				contentArea.firstChild,
 			);
 		}
 	}
@@ -4177,7 +3403,7 @@ if (window.__RGInitDone) {
 		const insertionPoint = findNovelPageInsertionPoint();
 		if (!insertionPoint) {
 			console.warn(
-				"Ranobe Gemini: Could not find insertion point for novel page UI"
+				"Ranobe Gemini: Could not find insertion point for novel page UI",
 			);
 			return;
 		}
@@ -4313,7 +3539,7 @@ if (window.__RGInitDone) {
 			existingNovel ? "#00695c" : "#1976d2",
 			async () => {
 				await handleNovelAddUpdate();
-			}
+			},
 		);
 		buttonRow.appendChild(addUpdateBtn);
 
@@ -4358,7 +3584,7 @@ if (window.__RGInitDone) {
 				"#c62828",
 				async () => {
 					await handleNovelDelete();
-				}
+				},
 			);
 			buttonRow.appendChild(deleteBtn);
 		}
@@ -4375,7 +3601,7 @@ if (window.__RGInitDone) {
 		// Insert the controls
 		insertionPoint.element.parentNode.insertBefore(
 			controlsContainer,
-			insertionPoint.element
+			insertionPoint.element,
 		);
 
 		hasExtractButton = true; // Prevent duplicate injection
@@ -4845,7 +4071,7 @@ if (window.__RGInitDone) {
 				await handleNovelAddUpdate();
 				// Refresh the controls
 				const oldControls = document.getElementById(
-					"rg-chapter-novel-controls"
+					"rg-chapter-novel-controls",
 				);
 				if (oldControls) {
 					const newControls = await createChapterPageNovelControls();
@@ -4853,7 +4079,7 @@ if (window.__RGInitDone) {
 						oldControls.replaceWith(newControls);
 					}
 				}
-			}
+			},
 		);
 		controlsContainer.appendChild(addUpdateBtn);
 
@@ -4904,7 +4130,7 @@ if (window.__RGInitDone) {
 					await handleNovelDelete();
 					// Refresh the controls
 					const oldControls = document.getElementById(
-						"rg-chapter-novel-controls"
+						"rg-chapter-novel-controls",
 					);
 					if (oldControls) {
 						const newControls =
@@ -4913,7 +4139,7 @@ if (window.__RGInitDone) {
 							oldControls.replaceWith(newControls);
 						}
 					}
-				}
+				},
 			);
 			controlsContainer.appendChild(removeBtn);
 		}
@@ -4925,10 +4151,10 @@ if (window.__RGInitDone) {
 			"#7b1fa2",
 			() => {
 				const libraryUrl = browser.runtime.getURL(
-					"library/library.html"
+					"library/library.html",
 				);
 				window.open(libraryUrl, "_blank");
-			}
+			},
 		);
 		controlsContainer.appendChild(libraryBtn);
 
@@ -4940,7 +4166,7 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 		if (!contentArea) {
 			console.warn(
-				"Ranobe Gemini: Target element for UI injection not found."
+				"Ranobe Gemini: Target element for UI injection not found.",
 			);
 			return;
 		}
@@ -5009,9 +4235,9 @@ if (window.__RGInitDone) {
 		}
 
 		controlsContainer.appendChild(enhanceButton);
-		controlsContainer.appendChild(summarizeButton);
-		controlsContainer.appendChild(shortSummarizeButton);
-		controlsContainer.appendChild(statusDiv);
+		// Summary buttons moved to chunk summary banners
+		// controlsContainer.appendChild(summarizeButton);
+		// controlsContainer.appendChild(shortSummarizeButton);
 
 		// Get optimal insertion point based on the handler
 		let insertionPoint = contentArea;
@@ -5031,20 +4257,20 @@ if (window.__RGInitDone) {
 			if (siteEnhancementsContainer) {
 				insertionPoint.parentNode.insertBefore(
 					siteEnhancementsContainer,
-					insertionPoint
+					insertionPoint,
 				);
 			}
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
-				insertionPoint
+				insertionPoint,
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplayLong,
-				insertionPoint
+				insertionPoint,
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplayShort,
-				insertionPoint
+				insertionPoint,
 			);
 		} else if (
 			insertionPosition === "after" ||
@@ -5053,22 +4279,22 @@ if (window.__RGInitDone) {
 			if (siteEnhancementsContainer) {
 				insertionPoint.parentNode.insertBefore(
 					siteEnhancementsContainer,
-					insertionPoint.nextSibling
+					insertionPoint.nextSibling,
 				);
 			}
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				siteEnhancementsContainer
 					? siteEnhancementsContainer.nextSibling
-					: insertionPoint.nextSibling
+					: insertionPoint.nextSibling,
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplayLong,
-				controlsContainer.nextSibling
+				controlsContainer.nextSibling,
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplayShort,
-				controlsContainer.nextSibling
+				controlsContainer.nextSibling,
 			);
 		} else if (
 			insertionPosition === "prepend" ||
@@ -5092,18 +4318,18 @@ if (window.__RGInitDone) {
 			// Default fallback to before
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
-				insertionPoint
+				insertionPoint,
 			);
 			insertionPoint.parentNode.insertBefore(
 				summaryDisplay,
-				insertionPoint
+				insertionPoint,
 			);
 		}
 
 		debugLog(
 			`Ranobe Gemini: UI injected successfully for ${
 				isMobileDevice ? "mobile" : "desktop"
-			} view.`
+			} view.`,
 		);
 
 		// Add the initial word count display
@@ -5115,13 +4341,12 @@ if (window.__RGInitDone) {
 			try {
 				const controlsConfig =
 					currentHandler?.getNovelControlsConfig?.() || {};
-				const novelControls = await createChapterPageNovelControls(
-					controlsConfig
-				);
+				const novelControls =
+					await createChapterPageNovelControls(controlsConfig);
 				if (novelControls) {
 					placeChapterNovelControls(novelControls, controlsConfig);
 					debugLog(
-						"Ranobe Gemini: Novel controls added for chapter page"
+						"Ranobe Gemini: Novel controls added for chapter page",
 					);
 				}
 			} catch (err) {
@@ -5140,7 +4365,7 @@ if (window.__RGInitDone) {
 			// Re-inject main controls if the host page wipes them out
 			if (!document.getElementById("gemini-controls")) {
 				console.warn(
-					"Ranobe Gemini: controls missing, re-injecting UI"
+					"Ranobe Gemini: controls missing, re-injecting UI",
 				);
 				injectUI();
 				return;
@@ -5154,19 +4379,18 @@ if (window.__RGInitDone) {
 				try {
 					const controlsConfig =
 						currentHandler?.getNovelControlsConfig?.() || {};
-					const novelControls = await createChapterPageNovelControls(
-						controlsConfig
-					);
+					const novelControls =
+						await createChapterPageNovelControls(controlsConfig);
 					if (novelControls) {
 						placeChapterNovelControls(
 							novelControls,
-							controlsConfig
+							controlsConfig,
 						);
 					}
 				} catch (heartbeatError) {
 					debugLog(
 						"Ranobe Gemini: keep-alive could not re-add controls",
-						heartbeatError
+						heartbeatError,
 					);
 				}
 			}
@@ -5194,7 +4418,7 @@ if (window.__RGInitDone) {
 				if (novelLibrary) {
 					try {
 						const novel = await novelLibrary.getNovelByUrl(
-							window.location.href
+							window.location.href,
 						);
 						const stored = await browser.storage.local.get([
 							"autoEnhanceNovels",
@@ -5236,7 +4460,7 @@ if (window.__RGInitDone) {
 			const isShowingEnhanced =
 				contentArea.getAttribute("data-showing-enhanced") === "true";
 			const originalContent = contentArea.getAttribute(
-				"data-original-content"
+				"data-original-content",
 			);
 
 			// If showing enhanced, extract from stored original content
@@ -5305,10 +4529,10 @@ if (window.__RGInitDone) {
 			? document.getElementById("short-summarize-button")
 			: document.getElementById("summarize-button");
 		const summaryDisplayLong = document.getElementById(
-			"summary-display-long"
+			"summary-display-long",
 		);
 		const summaryDisplayShort = document.getElementById(
-			"summary-display-short"
+			"summary-display-short",
 		);
 		const statusDiv = document.getElementById("gemini-status");
 
@@ -5330,7 +4554,7 @@ if (window.__RGInitDone) {
 			const isReady = await wakeUpBackgroundWorker();
 			if (!isReady) {
 				throw new Error(
-					"Background service is not responding. Please try summarizing again."
+					"Background service is not responding. Please try summarizing again.",
 				);
 			}
 
@@ -5352,7 +4576,7 @@ if (window.__RGInitDone) {
 			debugLog(
 				`Extracted ${
 					content.length
-				} characters for ${summaryType.toLowerCase()} summarization`
+				} characters for ${summaryType.toLowerCase()} summarization`,
 			);
 			statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summarization...`;
 
@@ -5364,13 +4588,13 @@ if (window.__RGInitDone) {
 
 			const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
 			debugLog(
-				`Model max context size for summarization: ${maxContextSize}`
+				`Model max context size for summarization: ${maxContextSize}`,
 			);
 
 			// Get approximate token count (rough estimate: 4 chars per token)
 			const estimatedTokenCount = Math.ceil(content.length / 4);
 			debugLog(
-				`Estimated token count for summarization: ${estimatedTokenCount}`
+				`Estimated token count for summarization: ${estimatedTokenCount}`,
 			);
 
 			let summary = "";
@@ -5389,7 +4613,7 @@ if (window.__RGInitDone) {
 					content,
 					maxContextSize,
 					statusDiv,
-					isShort
+					isShort,
 				);
 			} else {
 				// Process as a single chunk - use appropriate action
@@ -5412,7 +4636,7 @@ if (window.__RGInitDone) {
 					if (errorMessage.includes("API key is missing")) {
 						showStatusMessage(
 							"API key is missing. Opening settings page...",
-							"error"
+							"error",
 						);
 						// Open popup for API key input
 						browser.runtime.sendMessage({ action: "openPopup" });
@@ -5450,7 +4674,7 @@ if (window.__RGInitDone) {
 					const paragraphs = extractParagraphsFromHtml(summary);
 					debugLog(
 						"[Render] Extracted paragraphs for summary:",
-						paragraphs.length
+						paragraphs.length,
 					);
 
 					if (paragraphs.length > 0) {
@@ -5536,11 +4760,11 @@ if (window.__RGInitDone) {
 		content,
 		maxContextSize,
 		statusDiv,
-		isShort = false
+		isShort = false,
 	) {
 		const summaryType = isShort ? "short" : "long";
 		debugLog(
-			`Content is large, creating ${summaryType} summary in multiple parts...`
+			`Content is large, creating ${summaryType} summary in multiple parts...`,
 		);
 		if (statusDiv) {
 			statusDiv.textContent = `Content is large, summarizing in multiple parts...`;
@@ -5548,22 +4772,26 @@ if (window.__RGInitDone) {
 
 		// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
 		const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
+		const wordsPerPart = Math.floor(charsPerPart / 7); // Rough conversion: 7 chars per word
 
-		// Use shared content splitting helper
-		const chunkingModule = await loadChunkingUtils();
-		const splitContentForProcessing =
-			chunkingModule?.splitContentForProcessing;
-		if (!splitContentForProcessing) {
+		// Use shared content splitting helper (new modular system)
+		const chunking = await loadChunkingSystem();
+		if (!chunking) {
 			console.warn(
-				"Chunking utils unavailable, summarizing content without splitting."
+				"Chunking system unavailable, summarizing content without splitting.",
 			);
 		}
 
-		const parts = splitContentForProcessing?.(content, charsPerPart, {
-			logPrefix: "[splitContentForProcessing]",
-		}) || [content];
+		let parts = [content];
+		if (chunking) {
+			const chunks = chunking.core.splitContentByWords(
+				content,
+				wordsPerPart,
+			);
+			parts = chunks.map((chunk) => chunk.content);
+		}
 		debugLog(
-			`Split content into ${parts.length} parts for ${summaryType} summarization`
+			`Split content into ${parts.length} parts for ${summaryType} summarization`,
 		);
 
 		// Use the appropriate action based on isShort
@@ -5582,7 +4810,7 @@ if (window.__RGInitDone) {
 			}
 
 			debugLog(
-				`Creating ${summaryType} summary for part ${currentPartNum}/${parts.length} (${part.length} characters)`
+				`Creating ${summaryType} summary for part ${currentPartNum}/${parts.length} (${part.length} characters)`,
 			);
 
 			// Create a part-specific title
@@ -5603,13 +4831,13 @@ if (window.__RGInitDone) {
 
 				if (response && response.success && response.summary) {
 					debugLog(
-						`Successfully summarized part ${currentPartNum}/${parts.length}`
+						`Successfully summarized part ${currentPartNum}/${parts.length}`,
 					);
 					allPartSummaries.push(response.summary);
 				} else {
 					debugError(
 						`Error summarizing part ${currentPartNum}:`,
-						response?.error || "Unknown error"
+						response?.error || "Unknown error",
 					);
 					// Continue with other parts even if one fails
 				}
@@ -5687,7 +4915,7 @@ if (window.__RGInitDone) {
 			if (originalText.includes("Regenerate")) {
 				// Clear cache before regeneration but continue to process
 				await storageManager.removeEnhancedContent(
-					window.location.href
+					window.location.href,
 				);
 				isCachedContent = false;
 				// Update button text immediately
@@ -5698,16 +4926,16 @@ if (window.__RGInitDone) {
 						contentArea.getAttribute("data-showing-enhanced") ===
 						"true";
 					const originalContent = contentArea.getAttribute(
-						"data-original-content"
+						"data-original-content",
 					);
 					if (isShowingEnhanced && originalContent) {
 						contentArea.innerHTML = originalContent;
 						contentArea.setAttribute(
 							"data-showing-enhanced",
-							"false"
+							"false",
 						);
 						const banner = contentArea.querySelector(
-							".gemini-enhanced-banner"
+							".gemini-enhanced-banner",
 						);
 						if (banner) banner.remove();
 					}
@@ -5716,12 +4944,12 @@ if (window.__RGInitDone) {
 				// Try loading cached content
 				try {
 					const cachedData = await storageManager.loadEnhancedContent(
-						window.location.href
+						window.location.href,
 					);
 					if (cachedData && cachedData.enhancedContent) {
 						showStatusMessage(
 							"Loading cached enhanced content...",
-							"info"
+							"info",
 						);
 						replaceContentWithEnhancedVersion(cachedData);
 						if (button) {
@@ -5733,13 +4961,13 @@ if (window.__RGInitDone) {
 					} else {
 						showStatusMessage(
 							"Cached enhanced content is invalid or missing.",
-							"error"
+							"error",
 						);
 					}
 				} catch (err) {
 					showStatusMessage(
 						"Failed to load cached enhanced content.",
-						"error"
+						"error",
 					);
 				}
 			}
@@ -5765,25 +4993,23 @@ if (window.__RGInitDone) {
 			const isReady = await wakeUpBackgroundWorker();
 			if (!isReady) {
 				throw new Error(
-					"Background service is not responding. Please try again."
+					"Background service is not responding. Please try again.",
 				);
 			}
 
 			button.textContent = "Processing...";
 			showStatusMessage("Processing content with Gemini AI...", "info");
 
-			// Load config values from storage to match background's chunking
-			// NOTE: We use chunkSize as BOTH the threshold and chunk size (simplified)
+			// Load config values from storage to match chunking configuration
 			const settings = await browser.storage.local.get([
 				"chunkingEnabled",
-				"chunkSize",
+				"chunkSizeWords", // NEW: word-based chunk size
+				"chunkSummaryCount", // NEW: summary repeat count
 				"useEmoji",
 				"formatGameStats",
 				"centerSceneHeadings",
 			]);
 			const chunkingEnabled = settings.chunkingEnabled !== false;
-			const chunkSize = settings.chunkSize || 20000; // Same default as background
-			const chunkThreshold = chunkSize; // Use same value for threshold (simplified)
 			const useEmoji = settings.useEmoji === true;
 			formattingOptions.useEmoji = useEmoji;
 			formattingOptions.formatGameStats =
@@ -5791,172 +5017,154 @@ if (window.__RGInitDone) {
 			formattingOptions.centerSceneHeadings =
 				settings.centerSceneHeadings !== false; // default true
 
-			// Load chunking helpers (may fall back to single-pass if unavailable)
-			const chunkingModule = chunkingEnabled
-				? await loadChunkingUtils()
+			// Load chunking system (new modular word-based system)
+			const chunking = chunkingEnabled
+				? await loadChunkingSystem()
 				: null;
-			const splitContentForProcessing =
-				chunkingModule?.splitContentForProcessing;
-			const minChunkLength = chunkingModule?.MIN_CHUNK_LENGTH || 200;
-			if (chunkingEnabled && !splitContentForProcessing) {
+			if (chunkingEnabled && !chunking) {
 				showStatusMessage(
-					"Chunking helper unavailable. Proceeding without chunking.",
+					"Chunking system unavailable. Proceeding without chunking.",
 					"warning",
-					3000
+					3000,
 				);
 			}
 
-			// If chunking is enabled and content is large enough, prepare progressive containers
+			// If chunking is enabled, use word-based chunking
 			const contentArea = findContentArea();
 			if (!contentArea)
 				throw new Error("Unable to find content area for enhancement");
 
 			let shouldChunk =
-				chunkingEnabled &&
-				splitContentForProcessing &&
-				extractedContent.text.length > chunkThreshold;
+				chunkingEnabled && chunking && extractedContent.text;
+
+			let chunks = []; // Array of {index, content, wordCount}
+			let chunkSummaryCount = 2;
 
 			if (shouldChunk) {
-				let parts;
 				try {
-					parts = splitContentForProcessing(
-						extractedContent.text,
-						chunkSize,
-						{ logPrefix: "[splitContentForProcessing]" }
+					const chunkConfig = await chunking.config.getChunkConfig();
+					const chunkSizeWords = chunkConfig.chunkSizeWords;
+					chunkSummaryCount = chunkConfig.chunkSummaryCount;
+
+					const originalHTML = contentArea.innerHTML;
+					chunks = chunking.core.splitContentByWords(
+						originalHTML,
+						chunkSizeWords,
+					);
+
+					debugLog(
+						`[Chunking] Split content into ${chunks.length} chunks (word-based, ${chunkSizeWords} words per chunk)`,
 					);
 				} catch (splitError) {
 					debugError(
 						"Failed to split content for chunking:",
-						splitError
+						splitError,
 					);
 					showStatusMessage(
 						"Chunking failed; proceeding without chunking.",
 						"warning",
-						4000
+						4000,
 					);
 					shouldChunk = false;
 				}
 
-				if (shouldChunk) {
-					parts = normalizeChunkParts(parts, minChunkLength);
-				}
-
-				if (!parts || parts.length <= 1) {
+				if (!chunks || chunks.length <= 1) {
 					shouldChunk = false;
 				}
 
 				if (shouldChunk) {
 					const originalHTML = contentArea.innerHTML;
 					try {
-						// Store original HTML for restoration/caching
 						contentArea.setAttribute(
 							"data-original-html",
-							originalHTML
+							originalHTML,
 						);
 						contentArea.setAttribute(
 							"data-original-text",
-							extractedContent.text
+							extractedContent.text,
 						);
 						contentArea.setAttribute(
 							"data-total-chunks",
-							parts.length
+							chunks.length,
 						);
 
-						// Split HTML into chunks that match text chunks (preserves original formatting)
-						let htmlChunks;
-						try {
-							htmlChunks = splitHTMLIntoChunks(
-								contentArea,
-								parts
-							);
-						} catch (htmlSplitError) {
-							debugError(
-								"Failed to split HTML into chunks:",
-								htmlSplitError
-							);
-							htmlChunks = parts.map((p) =>
-								formatOriginalChunkContent(p)
-							);
-						}
-
-						// Ensure htmlChunks aligns with parts length
-						if (
-							!Array.isArray(htmlChunks) ||
-							htmlChunks.length === 0
-						) {
-							htmlChunks = parts.map((p) =>
-								formatOriginalChunkContent(p)
-							);
-						}
-						while (htmlChunks.length < parts.length) {
-							htmlChunks.push(
-								formatOriginalChunkContent(
-									parts[htmlChunks.length]
-								)
-							);
-						}
-						if (htmlChunks.length > parts.length) {
-							htmlChunks = htmlChunks.slice(0, parts.length);
-						}
-
-						// Create new structure with inline chunk replacement:
-						// For each chunk, we show a banner + content area that will be replaced in place
 						const chunkedContentContainer =
 							document.createElement("div");
 						chunkedContentContainer.id = "gemini-chunked-content";
 						chunkedContentContainer.style.width = "100%";
 
-						for (let i = 0; i < parts.length; i++) {
+						for (let i = 0; i < chunks.length; i++) {
 							const chunkWrapper = document.createElement("div");
 							chunkWrapper.className = "gemini-chunk-wrapper";
 							chunkWrapper.setAttribute("data-chunk-index", i);
 
-							// Add chunk banner (first chunk starts as 'processing', rest as 'pending')
 							const initialStatus =
 								i === 0 ? "processing" : "pending";
-							const banner = createChunkBanner(
+							const banner = buildChunkBanner(
+								chunking,
 								i,
-								parts.length,
-								initialStatus
+								chunks.length,
+								initialStatus,
 							);
 							chunkWrapper.appendChild(banner);
 
-							// Add chunk content area with original content (preserving HTML structure)
 							const chunkContent = document.createElement("div");
 							chunkContent.className = "gemini-chunk-content";
 							chunkContent.setAttribute("data-chunk-index", i);
 							chunkContent.setAttribute(
-								"data-original-chunk-content",
-								parts[i]
-							);
-							// Store original HTML chunk for show/hide toggle
-							chunkContent.setAttribute(
 								"data-original-chunk-html",
-								htmlChunks[i] ||
-									formatOriginalChunkContent(parts[i])
+								chunks[i].content,
 							);
-							// Display original content with preserved HTML structure
-							chunkContent.innerHTML =
-								htmlChunks[i] ||
-								formatOriginalChunkContent(parts[i]);
+							chunkContent.setAttribute(
+								"data-original-chunk-content",
+								stripHtmlTags(chunks[i].content),
+							);
+							chunkContent.innerHTML = chunks[i].content;
 							chunkWrapper.appendChild(chunkContent);
 
 							chunkedContentContainer.appendChild(chunkWrapper);
 						}
 
-						// Clear and replace content area
 						contentArea.innerHTML = "";
 						contentArea.appendChild(chunkedContentContainer);
 
+						const chunkWrappers = Array.from(
+							chunkedContentContainer.querySelectorAll(
+								".gemini-chunk-wrapper",
+							),
+						);
+						if (chunking?.summaryUI) {
+							const mainSummaryGroup =
+								chunking.summaryUI.createMainSummaryGroup(
+									chunks.length,
+									(indices) =>
+										summarizeChunkRange(indices, false),
+									(indices) =>
+										summarizeChunkRange(indices, true),
+								);
+							contentArea.insertBefore(
+								mainSummaryGroup,
+								chunkedContentContainer,
+							);
+
+							chunking.summaryUI.insertSummaryGroups(
+								chunkedContentContainer,
+								chunkWrappers,
+								chunkSummaryCount,
+								(indices) =>
+									summarizeChunkRange(indices, false),
+								(indices) => summarizeChunkRange(indices, true),
+							);
+						}
+
 						debugLog(
-							`Prepared ${parts.length} chunks for inline replacement with preserved HTML`
+							`Prepared ${chunks.length} chunks for inline replacement with preserved HTML`,
 						);
 					} catch (prepError) {
 						debugError(
 							"Failed to prepare chunked view:",
-							prepError
+							prepError,
 						);
-						// Restore original content and fall back to non-chunked processing
 						contentArea.innerHTML = originalHTML;
 						contentArea.removeAttribute("data-original-html");
 						contentArea.removeAttribute("data-original-text");
@@ -5965,7 +5173,7 @@ if (window.__RGInitDone) {
 						showStatusMessage(
 							"Could not prepare chunked content. Proceeding without chunking.",
 							"warning",
-							4000
+							4000,
 						);
 					}
 				}
@@ -5975,12 +5183,12 @@ if (window.__RGInitDone) {
 			if (novelLibrary) {
 				try {
 					const novel = await novelLibrary.getNovelByUrl(
-						window.location.href
+						window.location.href,
 					);
 					if (novel && novel.customPrompt) {
 						novelCustomPrompt = novel.customPrompt;
 						debugLog(
-							`Using novel-specific prompt for: ${novel.title}`
+							`Using novel-specific prompt for: ${novel.title}`,
 						);
 					}
 				} catch (err) {
@@ -6016,7 +5224,7 @@ if (window.__RGInitDone) {
 				// If background returned a combined result (non-chunked), handle it here
 				// Skip if we've already been handling chunks progressively
 				const enhancedContainer = document.getElementById(
-					"gemini-enhanced-container"
+					"gemini-enhanced-container",
 				);
 				const hasProgressiveChunks =
 					enhancedContainer &&
@@ -6030,7 +5238,7 @@ if (window.__RGInitDone) {
 					replaceContentWithEnhancedVersion(response.result);
 				} else if (hasProgressiveChunks) {
 					debugLog(
-						"Skipping replaceContentWithEnhancedVersion - chunks already displayed progressively"
+						"Skipping replaceContentWithEnhancedVersion - chunks already displayed progressively",
 					);
 				}
 			} else if (!response || !response.success) {
@@ -6043,7 +5251,7 @@ if (window.__RGInitDone) {
 				) {
 					showStatusMessage(
 						"⚠️ API key is missing. Please configure it in the extension popup.",
-						"error"
+						"error",
 					);
 					// Try to open the popup
 					try {
@@ -6053,18 +5261,18 @@ if (window.__RGInitDone) {
 					} catch (popupError) {
 						console.warn(
 							"Could not open popup automatically:",
-							popupError
+							popupError,
 						);
 						showStatusMessage(
 							"⚠️ API key is missing. Please click the extension icon to configure it.",
 							"error",
-							10000 // Show for 10 seconds
+							10000, // Show for 10 seconds
 						);
 					}
 				} else {
 					showStatusMessage(
 						"Error processing with Gemini: " + errorMessage,
-						"error"
+						"error",
 					);
 				}
 			}
@@ -6084,7 +5292,7 @@ if (window.__RGInitDone) {
 		if (!contentArea) {
 			showStatusMessage(
 				"Unable to find content area for replacement",
-				"error"
+				"error",
 			);
 			return false;
 		}
@@ -6115,7 +5323,7 @@ if (window.__RGInitDone) {
 				", originalContent has <p> tags =",
 				/<p[\s>]/i.test(originalContent),
 				", originalContent length =",
-				originalContent?.length || 0
+				originalContent?.length || 0,
 			);
 
 			const modelInfo =
@@ -6124,7 +5332,7 @@ if (window.__RGInitDone) {
 					? enhancedContent.modelInfo || {
 							name: enhancedContent.modelUsed,
 							provider: "Google Gemini",
-					  }
+						}
 					: null;
 			const enhancedContentText =
 				typeof enhancedContent === "object" &&
@@ -6136,7 +5344,7 @@ if (window.__RGInitDone) {
 			// If content doesn't have <p> tags, convert newlines to paragraphs
 			if (!/<p[\s>]/i.test(sanitizedContent)) {
 				debugLog(
-					"Enhanced content missing <p> tags, converting newlines to paragraphs"
+					"Enhanced content missing <p> tags, converting newlines to paragraphs",
 				);
 				// Split by double newlines (paragraph breaks)
 				const paragraphs = sanitizedContent
@@ -6163,11 +5371,11 @@ if (window.__RGInitDone) {
 				typeof currentHandler.applyEnhancedContent === "function"
 			) {
 				debugLog(
-					"Handler provides text-only enhancement; delegating paragraph updates..."
+					"Handler provides text-only enhancement; delegating paragraph updates...",
 				);
 				currentHandler.applyEnhancedContent(
 					contentArea,
-					sanitizedContent
+					sanitizedContent,
 				);
 				newContent = contentArea.innerText || contentArea.textContent;
 			} else {
@@ -6175,7 +5383,7 @@ if (window.__RGInitDone) {
 				const { preservedElements: originalImages } =
 					preserveHtmlElements(originalContent);
 				debugLog(
-					`Preserved ${originalImages.length} images from original content`
+					`Preserved ${originalImages.length} images from original content`,
 				);
 				const {
 					modifiedContent: contentWithPreservedStats,
@@ -6184,11 +5392,11 @@ if (window.__RGInitDone) {
 				let contentToDisplay = contentWithPreservedStats;
 				if (preservedBoxes.length > 0) {
 					debugLog(
-						`Restoring ${preservedBoxes.length} game stats boxes`
+						`Restoring ${preservedBoxes.length} game stats boxes`,
 					);
 					contentToDisplay = restoreGameStatsBoxes(
 						contentToDisplay,
-						preservedBoxes
+						preservedBoxes,
 					);
 				}
 				if (originalImages.length > 0) {
@@ -6225,7 +5433,7 @@ if (window.__RGInitDone) {
 			contentArea.setAttribute("data-original-content", originalContent);
 			contentArea.setAttribute(
 				"data-enhanced-content",
-				contentArea.innerHTML
+				contentArea.innerHTML,
 			);
 			contentArea.setAttribute("data-showing-enhanced", "true");
 
@@ -6242,12 +5450,12 @@ if (window.__RGInitDone) {
 				"Original has <p> tags:",
 				originalHasPTags,
 				"Enhanced has <p> tags:",
-				enhancedHasPTags
+				enhancedHasPTags,
 			);
 			// Log first 500 chars of original to see structure
 			debugLog(
 				"Original HTML preview:",
-				originalContent ? originalContent.substring(0, 500) : "null"
+				originalContent ? originalContent.substring(0, 500) : "null",
 			);
 
 			removeOriginalWordCount();
@@ -6256,7 +5464,7 @@ if (window.__RGInitDone) {
 			const setupToggleBanner = (showingEnhanced) => {
 				// Remove any existing banner first
 				const existingBanners = contentArea.querySelectorAll(
-					".gemini-enhanced-banner"
+					".gemini-enhanced-banner",
 				);
 				existingBanners.forEach((b) => b.remove());
 
@@ -6265,7 +5473,7 @@ if (window.__RGInitDone) {
 					originalText,
 					newContent,
 					modelInfo,
-					isCachedContent
+					isCachedContent,
 				);
 
 				// Update toggle button text based on current state
@@ -6277,7 +5485,7 @@ if (window.__RGInitDone) {
 						: "Show Enhanced";
 					debugLog(
 						"Toggle button found, attaching click handler. showingEnhanced:",
-						showingEnhanced
+						showingEnhanced,
 					);
 					newToggleButton.addEventListener("click", function (e) {
 						debugLog("Toggle button clicked!");
@@ -6286,17 +5494,17 @@ if (window.__RGInitDone) {
 
 						const currentlyShowingEnhanced =
 							contentArea.getAttribute(
-								"data-showing-enhanced"
+								"data-showing-enhanced",
 							) === "true";
 						debugLog(
 							"currentlyShowingEnhanced:",
-							currentlyShowingEnhanced
+							currentlyShowingEnhanced,
 						);
 
 						if (currentlyShowingEnhanced) {
 							// Switch to original - restore original HTML
 							const storedOriginal = contentArea.getAttribute(
-								"data-original-content"
+								"data-original-content",
 							);
 							debugLog(
 								"Switching to original. storedOriginal length:",
@@ -6304,24 +5512,24 @@ if (window.__RGInitDone) {
 								"Has <p> tags:",
 								storedOriginal
 									? /<p[\s>]/i.test(storedOriginal)
-									: false
+									: false,
 							);
 							debugLog(
 								"Restoring HTML preview:",
 								storedOriginal
 									? storedOriginal.substring(0, 500)
-									: "null"
+									: "null",
 							);
 							if (storedOriginal) {
 								contentArea.innerHTML =
 									sanitizeHTML(storedOriginal);
 								contentArea.setAttribute(
 									"data-showing-enhanced",
-									"false"
+									"false",
 								);
 								debugLog(
 									"Switched to original content. Actual innerHTML has <p> tags:",
-									/<p[\s>]/i.test(contentArea.innerHTML)
+									/<p[\s>]/i.test(contentArea.innerHTML),
 								);
 							} else {
 								debugError("No stored original content found!");
@@ -6329,18 +5537,18 @@ if (window.__RGInitDone) {
 						} else {
 							// Switch to enhanced - restore enhanced HTML
 							const storedEnhanced = contentArea.getAttribute(
-								"data-enhanced-content"
+								"data-enhanced-content",
 							);
 							debugLog(
 								"Switching to enhanced. storedEnhanced length:",
-								storedEnhanced ? storedEnhanced.length : 0
+								storedEnhanced ? storedEnhanced.length : 0,
 							);
 							if (storedEnhanced) {
 								contentArea.innerHTML =
 									sanitizeHTML(storedEnhanced);
 								contentArea.setAttribute(
 									"data-showing-enhanced",
-									"true"
+									"true",
 								);
 
 								// Reapply formatting
@@ -6350,7 +5558,7 @@ if (window.__RGInitDone) {
 										"function"
 								) {
 									currentHandler.formatAfterEnhancement(
-										contentArea
+										contentArea,
 									);
 								} else {
 									applyDefaultFormatting(contentArea);
@@ -6364,7 +5572,7 @@ if (window.__RGInitDone) {
 						// Recursively setup the banner for the new state
 						debugLog(
 							"Setting up toggle banner for state:",
-							!currentlyShowingEnhanced
+							!currentlyShowingEnhanced,
 						);
 						setupToggleBanner(!currentlyShowingEnhanced);
 					});
@@ -6372,23 +5580,23 @@ if (window.__RGInitDone) {
 
 				// Setup delete button handler if present
 				const newDeleteButton = newBanner.querySelector(
-					".gemini-delete-cache-btn"
+					".gemini-delete-cache-btn",
 				);
 				if (newDeleteButton) {
 					newDeleteButton.addEventListener("click", async () => {
 						if (
 							confirm(
-								"Delete cached enhanced content for this page?"
+								"Delete cached enhanced content for this page?",
 							)
 						) {
 							if (storageManager) {
 								await storageManager.removeEnhancedContent(
-									window.location.href
+									window.location.href,
 								);
 								isCachedContent = false;
 								showStatusMessage(
 									"Cached content deleted. Reloading page...",
-									"info"
+									"info",
 								);
 								setTimeout(() => location.reload(), 1000);
 							}
@@ -6406,7 +5614,7 @@ if (window.__RGInitDone) {
 					"Banner inserted. contentArea:",
 					contentArea.id,
 					"Banner parent:",
-					newBanner.parentNode ? newBanner.parentNode.id : "null"
+					newBanner.parentNode ? newBanner.parentNode.id : "null",
 				);
 			};
 
@@ -6442,7 +5650,7 @@ if (window.__RGInitDone) {
 							enhancedContent: enhancedContentText,
 							modelInfo: modelInfo,
 							timestamp: Date.now(),
-						}
+						},
 					);
 					isCachedContent = true;
 					debugLog("Enhanced content saved to cache");
@@ -6467,7 +5675,7 @@ if (window.__RGInitDone) {
 			debugError("Error replacing content:", error);
 			showStatusMessage(
 				`Error replacing content: ${error.message}`,
-				"error"
+				"error",
 			);
 			return false;
 		}
@@ -6479,7 +5687,7 @@ if (window.__RGInitDone) {
 		if (!contentArea) {
 			showStatusMessage(
 				"Unable to find content area for replacement",
-				"error"
+				"error",
 			);
 			return false;
 		}
@@ -6509,15 +5717,15 @@ if (window.__RGInitDone) {
 				typeof currentHandler.applyEnhancedContent === "function"
 			) {
 				debugLog(
-					"Handler provides text-only enhancement for display path; delegating..."
+					"Handler provides text-only enhancement for display path; delegating...",
 				);
 				currentHandler.applyEnhancedContent(
 					contentArea,
-					enhancedContent
+					enhancedContent,
 				);
 			} else {
 				debugLog(
-					"Using default full HTML replacement in displayEnhancedContent..."
+					"Using default full HTML replacement in displayEnhancedContent...",
 				);
 				contentArea.innerHTML = enhancedContent;
 			}
@@ -6536,7 +5744,7 @@ if (window.__RGInitDone) {
 			// Create enhanced banner with word count comparison
 			const banner = createEnhancedBanner(
 				originalContent,
-				enhancedContent
+				enhancedContent,
 			);
 
 			// Remove the original word count element
@@ -6555,12 +5763,12 @@ if (window.__RGInitDone) {
 						contentArea.innerHTML = sanitizeHTML(originalContent);
 						contentArea.setAttribute(
 							"data-showing-enhanced",
-							"false"
+							"false",
 						);
 						// Re-create banner for original view
 						newBanner = createEnhancedBanner(
 							originalContent,
-							enhancedContent
+							enhancedContent,
 						);
 						const newToggleButton =
 							newBanner.querySelector(".gemini-toggle-btn");
@@ -6568,13 +5776,13 @@ if (window.__RGInitDone) {
 							newToggleButton.textContent = "Show Enhanced";
 							newToggleButton.addEventListener(
 								"click",
-								toggleContent
+								toggleContent,
 							);
 						}
 						if (contentArea.firstChild) {
 							contentArea.insertBefore(
 								newBanner,
-								contentArea.firstChild
+								contentArea.firstChild,
 							);
 						} else {
 							contentArea.appendChild(newBanner);
@@ -6584,7 +5792,7 @@ if (window.__RGInitDone) {
 						contentArea.innerHTML = sanitizeHTML(enhancedContent);
 						contentArea.setAttribute(
 							"data-showing-enhanced",
-							"true"
+							"true",
 						);
 
 						// Reapply formatting
@@ -6600,7 +5808,7 @@ if (window.__RGInitDone) {
 						// Re-create banner for enhanced view
 						newBanner = createEnhancedBanner(
 							originalContent,
-							enhancedContent
+							enhancedContent,
 						);
 						const newToggleButton =
 							newBanner.querySelector(".gemini-toggle-btn");
@@ -6608,13 +5816,13 @@ if (window.__RGInitDone) {
 							newToggleButton.textContent = "Show Original";
 							newToggleButton.addEventListener(
 								"click",
-								toggleContent
+								toggleContent,
 							);
 						}
 						if (contentArea.firstChild) {
 							contentArea.insertBefore(
 								newBanner,
-								contentArea.firstChild
+								contentArea.firstChild,
 							);
 						} else {
 							contentArea.appendChild(newBanner);
@@ -6626,7 +5834,7 @@ if (window.__RGInitDone) {
 
 			// Remove any existing enhanced banner before inserting a new one
 			const existingBanner = contentArea.querySelector(
-				".gemini-enhanced-banner"
+				".gemini-enhanced-banner",
 			);
 			if (existingBanner) {
 				existingBanner.remove();
@@ -6747,13 +5955,13 @@ if (window.__RGInitDone) {
 		if (controlsContainer) {
 			controlsContainer.parentNode.insertBefore(
 				wordCountContainer,
-				controlsContainer.nextSibling
+				controlsContainer.nextSibling,
 			);
 		} else {
 			// Fallback: insert at the top of the content area
 			contentArea.insertBefore(
 				wordCountContainer,
-				contentArea.firstChild
+				contentArea.firstChild,
 			);
 		}
 	}
@@ -6793,7 +6001,7 @@ if (window.__RGInitDone) {
 
 		// Add the notice text
 		const noticeText = document.createTextNode(
-			"This content has been enhanced by Gemini AI"
+			"This content has been enhanced by Gemini AI",
 		);
 		noticeContainer.appendChild(noticeText);
 
@@ -6805,7 +6013,7 @@ if (window.__RGInitDone) {
 			// This would need implementation of content backup and restore logic
 			showStatusMessage(
 				"Original content restoration is not implemented yet",
-				"info"
+				"info",
 			);
 		});
 		noticeContainer.appendChild(restoreButton);
@@ -7075,12 +6283,12 @@ if (window.__RGInitDone) {
 							status: libraryNovel.status || metadata.status,
 							enhancedChapters:
 								libraryNovel.enhancedChapters || 0,
-					  }
+						}
 					: {
 							genres: metadata.genres || [],
 							tags: metadata.tags || [],
 							status: metadata.status,
-					  }),
+						}),
 			};
 
 			debugLog("📚 getNovelInfo: Returning novelInfo:", novelInfo);
@@ -7190,7 +6398,7 @@ if (window.__RGInitDone) {
 			showStatusMessage(
 				"⚠️ API key is missing. Please configure it in the extension popup.",
 				"error",
-				10000
+				10000,
 			);
 
 			// Try to open the popup
@@ -7240,11 +6448,11 @@ if (window.__RGInitDone) {
 		// Handle processing cancellation
 		if (message.action === "processingCancelled") {
 			debugLog(
-				`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`
+				`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`,
 			);
 			showStatusMessage(
 				`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
-				"info"
+				"info",
 			);
 
 			// Reset button state
@@ -7359,14 +6567,14 @@ if (window.__RGInitDone) {
 			(async () => {
 				try {
 					const libraryUrl = browser.runtime.getURL(
-						"utils/novel-library.js"
+						"utils/novel-library.js",
 					);
 					const { novelLibrary } = await import(libraryUrl);
 					const result = await novelLibrary.updateNovel(
 						message.novelId,
 						{
 							readingStatus: message.readingStatus,
-						}
+						},
 					);
 					sendResponse({ success: true, result });
 				} catch (error) {

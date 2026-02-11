@@ -167,6 +167,31 @@ async function packagePlatform(platform, version) {
 	}
 }
 
+// Task: Sync source manifest files with package.json version
+function syncSourceManifests(version) {
+	try {
+		console.log(`🔁 Syncing source manifests to v${version}...`);
+		const firefoxPath = path.join(SRC_DIR, "manifest-firefox.json");
+		const chromiumPath = path.join(SRC_DIR, "manifest-chromium.json");
+
+		if (fs.existsSync(firefoxPath)) {
+			const m = JSON.parse(fs.readFileSync(firefoxPath, "utf8"));
+			m.version = version;
+			fs.writeFileSync(firefoxPath, JSON.stringify(m, null, "\t"), "utf8");
+			console.log("✅ Updated src/manifest-firefox.json");
+		}
+
+		if (fs.existsSync(chromiumPath)) {
+			const m = JSON.parse(fs.readFileSync(chromiumPath, "utf8"));
+			m.version = version;
+			fs.writeFileSync(chromiumPath, JSON.stringify(m, null, "\t"), "utf8");
+			console.log("✅ Updated src/manifest-chromium.json");
+		}
+	} catch (err) {
+		console.error("❌ Failed to sync source manifests:", err.message);
+	}
+}
+
 // Main Execution
 async function main() {
 	const args = process.argv.slice(2);
@@ -200,6 +225,8 @@ async function main() {
 	for (const platform of platforms) {
 		build(platform);
 		if (options.package) {
+			// Make sure source manifests reflect the package.json version so they don't need manual edits
+			syncSourceManifests(packageJson.version);
 			await packagePlatform(platform, packageJson.version);
 		}
 	}

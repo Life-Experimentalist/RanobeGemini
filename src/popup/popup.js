@@ -133,7 +133,6 @@ async function initializePopup() {
 	const apiKeyInput = document.getElementById("apiKey");
 	const saveApiKeyBtn = document.getElementById("saveApiKey");
 	const testApiKeyBtn = document.getElementById("testApiKey");
-	const enhancePageBtn = document.getElementById("enhancePageBtn");
 	const getKeyLink = document.getElementById("getKeyLink");
 	const statusDiv = document.getElementById("status");
 	const modelSelect = document.getElementById("modelSelect");
@@ -361,49 +360,6 @@ async function initializePopup() {
 	);
 	const driveSyncNowBtn = document.getElementById("driveSyncNowBtn");
 
-	// Theme elements
-	const themeModeSelect = document.getElementById("themeMode");
-	const accentColorPicker = document.getElementById("accentColorPicker");
-	const accentColorText = document.getElementById("accentColorText");
-	const accentSecondaryPicker = document.getElementById(
-		"accentSecondaryPicker",
-	);
-	const accentSecondaryText = document.getElementById("accentSecondaryText");
-	const backgroundColorPicker = document.getElementById(
-		"backgroundColorPicker",
-	);
-	const backgroundColorText = document.getElementById("backgroundColorText");
-	const textColorPicker = document.getElementById("textColorPicker");
-	const textColorText = document.getElementById("textColorText");
-	const saveThemeBtn = document.getElementById("saveTheme");
-	const resetThemeBtn = document.getElementById("resetTheme");
-
-	// Notification Tab Elements
-	const notificationBadge = document.getElementById("notificationBadge");
-	const notificationsContainer = document.getElementById(
-		"notificationsContainer",
-	);
-	const totalNotifsSpan = document.getElementById("totalNotifs");
-	const unreadNotifsSpan = document.getElementById("unreadNotifs");
-	const markAllReadBtn = document.getElementById("markAllReadBtn");
-	const clearNotificationsBtn = document.getElementById(
-		"clearNotificationsBtn",
-	);
-	const filterButtons = document.querySelectorAll(".filter-btn");
-	const notificationsToggle = document.getElementById("notificationsToggle");
-	const notificationsPanel = document.getElementById("notificationsPanel");
-	const driveBackupsList = document.getElementById("driveBackupsList");
-	const driveOAuthDetails = document.getElementById("driveOAuthDetails");
-	const openLibrarySettingsFromPrompts = document.getElementById(
-		"openLibrarySettingsFromPrompts",
-	);
-	const randomizeSuggestionsBtn = document.getElementById(
-		"randomizeSuggestions",
-	);
-	let currentNotificationFilter = "all";
-
-	// Store current page novel data
-	let currentPageNovelData = null;
 	let currentSiteShelfId = null;
 	let siteSettings = {};
 	let backupHistory = [];
@@ -1231,9 +1187,12 @@ async function initializePopup() {
 			driveFolderIdInput.value = data.driveFolderId || "";
 		}
 
-		// Set debug mode checkbox
+		// Set debug mode checkbox (respect default when unset)
 		if (debugModeCheckbox) {
-			debugModeCheckbox.checked = data.debugMode || false;
+			debugModeCheckbox.checked =
+				typeof data.debugMode === "boolean"
+					? data.debugMode
+					: DEFAULT_DEBUG_MODE;
 		}
 
 		// Set emoji checkbox state
@@ -2527,52 +2486,6 @@ async function initializePopup() {
 		// Show the card, hide not supported message
 		currentNovelCard.style.display = "flex";
 		if (notSupportedMessage) notSupportedMessage.style.display = "none";
-
-		// Update status badge
-		if (pageStatusBadge) {
-			if (novelInfo.isInLibrary) {
-				pageStatusBadge.textContent = "✓ In Library";
-				pageStatusBadge.className = "status-badge in-library";
-			} else {
-				pageStatusBadge.textContent = "New Novel";
-				pageStatusBadge.className = "status-badge new";
-			}
-		}
-
-		// Get shelf info
-		const shelf = novelInfo.shelfId
-			? Object.values(SHELVES).find((s) => s.id === novelInfo.shelfId)
-			: null;
-		const shelfEmoji = shelf?.emoji || "📖";
-		const shelfIcon = shelf?.icon;
-
-		// Cover
-		if (currentNovelCover) {
-			if (novelInfo.coverUrl) {
-				currentNovelCover.innerHTML = `<img src="${escapeHtml(
-					novelInfo.coverUrl,
-				)}" alt="Cover" class="cover-image" onerror="this.parentElement.innerHTML='<div class=\\'cover-placeholder\\'>${shelfEmoji}</div>'">`;
-			} else {
-				const iconHtml =
-					shelfIcon && shelfIcon.startsWith("http")
-						? `<img src="${escapeHtml(
-								shelfIcon,
-							)}" alt="" class="cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
-						: shelfEmoji;
-				currentNovelCover.innerHTML = `<div class="cover-placeholder">${iconHtml}</div>`;
-			}
-		}
-
-		// Title & Author
-		if (currentNovelTitle) {
-			currentNovelTitle.textContent = novelInfo.title || "Unknown Title";
-			currentNovelTitle.title = novelInfo.title || "";
-		}
-		if (currentNovelAuthor) {
-			currentNovelAuthor.textContent = novelInfo.author
-				? `by ${novelInfo.author}`
-				: "";
-		}
 
 		// Page type tag
 		if (currentPageTypeTag) {
@@ -4029,10 +3942,19 @@ async function initializePopup() {
 					const libraryUrl = browser.runtime.getURL(
 						"library/library.html",
 					);
+					const popupUrl = browser.runtime.getURL("popup/popup.html");
+
 					if (currentUrl.startsWith(libraryUrl)) {
 						return {
 							title: "Library Page",
 							detail: "You're viewing your Ranobe Gemini Library.",
+						};
+					}
+
+					if (currentUrl.startsWith(popupUrl)) {
+						return {
+							title: "Extension Settings",
+							detail: "You're in Ranobe Gemini popup settings.",
 						};
 					}
 

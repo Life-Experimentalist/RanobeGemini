@@ -14,7 +14,7 @@ import {
 	CHUNK_STAGGER_MS,
 	CHUNK_RETRY_BACKOFF_MS,
 } from "../utils/constants.js";
-import { splitContentForProcessing } from "../utils/chunking.js";
+import chunkingSystem from "../utils/chunking/index.js";
 import {
 	ensureDriveAccessToken,
 	revokeDriveTokens,
@@ -2076,12 +2076,18 @@ if (typeof browser === "undefined") {
 			// Convert tokens to characters (roughly 4 chars per token for English text)
 			const maxCharsForInput = Math.max(availableInputTokens * 4, 4000);
 
-			// Use the smaller of: configured chunk size, calculated safe size, or 20000 default
-			// NOTE: Default 20000 MUST match content.js and other references for consistency
-			const configuredChunkSize = currentConfig.chunkSize || 20000;
-			const effectiveChunkSize = Math.min(
-				configuredChunkSize,
+			// Use the smaller of: configured chunk size (words), calculated safe size, or 3200 default
+			// NOTE: Default 3200 words MUST match content.js and other references for consistency
+			const configuredChunkSizeWords =
+				currentConfig.chunkSizeWords || 3200;
+			// Convert words to approximate character count for comparison (1 word ≈ 7 chars)
+			const configuredChunkSizeChars = configuredChunkSizeWords * 7;
+			const effectiveChunkSizeChars = Math.min(
+				configuredChunkSizeChars,
 				maxCharsForInput,
+			);
+			const effectiveChunkSizeWords = Math.floor(
+				effectiveChunkSizeChars / 7,
 			);
 
 			debugLog(
@@ -2091,16 +2097,16 @@ if (typeof browser === "undefined") {
 				`[processContentInChunks] Available for input: ~${availableInputTokens} tokens (~${maxCharsForInput} chars)`,
 			);
 			debugLog(
-				`[processContentInChunks] Using effective chunk size: ${effectiveChunkSize} characters`,
+				`[processContentInChunks] Using effective chunk size: ${effectiveChunkSizeWords} words (~${effectiveChunkSizeChars} characters)`,
 			);
 			debugLog(
-				`[processContentInChunks] Content length: ${content.length}, effectiveChunkSize: ${effectiveChunkSize}`,
+				`[processContentInChunks] Content length: ${content.length}, effectiveChunkSize: ${effectiveChunkSizeChars}`,
 			);
 
 			// Only split if content exceeds the chunk size
-			if (content.length <= effectiveChunkSize) {
+			if (content.length <= effectiveChunkSizeChars) {
 				debugLog(
-					`[processContentInChunks] Content (${content.length}) <= effectiveChunkSize (${effectiveChunkSize}), processing as single piece.`,
+					`[processContentInChunks] Content (${content.length}) <= effectiveChunkSize (${effectiveChunkSizeChars}), processing as single piece.`,
 				);
 				return await processContentWithGemini(
 					title,
@@ -2114,27 +2120,14 @@ if (typeof browser === "undefined") {
 			}
 
 			debugLog(
-				`[processContentInChunks] Content exceeds chunk size, calling splitContentForProcessing...`,
+				`[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...`,
 			);
-			// Split content for processing - improved method with better chunking
-			const chunkSplitter = splitContentForProcessing;
-			if (!chunkSplitter) {
-				console.warn(
-					"[processContentInChunks] Chunking utils not available, processing as single piece.",
-				);
-				return await processContentWithGemini(
-					title,
-					content,
-					false,
-					null,
-					useEmoji,
-					null,
-					siteSpecificPrompt,
-				);
-			}
-			const contentChunks = chunkSplitter(content, effectiveChunkSize, {
-				logPrefix: "[Chunking]",
-			});
+			// Use new modular chunking system with paragraph awareness
+			const chunks = chunkingSystem.core.splitContentByWords(
+				content,
+				effectiveChunkSizeWords,
+			);
+			const contentChunks = chunks.map((chunk) => chunk.content);
 			const totalChunks = contentChunks.length;
 
 			debugLog(

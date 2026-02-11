@@ -90,7 +90,7 @@ export class BaseWebsiteHandler {
 			const element = document.querySelector(selector);
 			if (element && element.textContent.length > 500) {
 				debugLog(
-					`Base handler: Found content with selector ${selector}`
+					`Base handler: Found content with selector ${selector}`,
 				);
 				return element;
 			}
@@ -112,7 +112,7 @@ export class BaseWebsiteHandler {
 
 		if (bestCandidate && maxLength > 200) {
 			debugLog(
-				"Base handler: Found content using largest text block method"
+				"Base handler: Found content using largest text block method",
 			);
 			return bestCandidate;
 		}
@@ -124,7 +124,7 @@ export class BaseWebsiteHandler {
 	// Extract the title of the chapter
 	extractTitle() {
 		throw new Error(
-			"Method extractTitle() must be implemented by subclass"
+			"Method extractTitle() must be implemented by subclass",
 		);
 	}
 
@@ -242,5 +242,15 @@ export class BaseWebsiteHandler {
 			description: null,
 			originalUrl: window.location.href,
 		};
+	}
+
+	/**
+	 * Detect the page's dark/light mode theme
+	 * Subclasses should override for site-specific dark mode detection
+	 * @returns {string} 'dark', 'light', or 'auto' (let extension decide)
+	 */
+	getPageTheme() {
+		// Default: Let extension use its own theme detection
+		return "auto";
 	}
 }

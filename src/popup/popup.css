@@ -162,6 +162,21 @@ textarea::placeholder {
 	color: var(--text-secondary);
 }
 
+/* Main Library Link */
+.main-library-link {
+	color: #667eea;
+	text-decoration: none;
+	font-weight: 600;
+	transition: all 0.2s ease;
+	display: inline-block;
+}
+
+.main-library-link:hover {
+	transform: translateY(-2px);
+	color: #764ba2;
+	text-decoration: underline;
+}
+
 /* Tabs */
 .tabs {
 	display: flex;
@@ -1092,6 +1107,9 @@ button:disabled {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
 }
 
 .suggested-novel-card:hover {
@@ -1183,6 +1201,8 @@ button:disabled {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: 10px;
+	max-width: 100%;
+	overflow: hidden;
 }
 
 /* Mobile responsive - 2 columns for small screens */

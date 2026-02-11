@@ -292,6 +292,9 @@ const elements = {
 	urlImportStatus: document.getElementById("url-import-status"),
 	libraryChunkingEnabled: document.getElementById("library-chunking-enabled"),
 	libraryChunkSize: document.getElementById("library-chunk-size"),
+	libraryChunkSummaryCount: document.getElementById(
+		"library-chunk-summary-count",
+	),
 	libraryMaxOutputTokens: document.getElementById(
 		"library-max-output-tokens",
 	),
@@ -371,6 +374,9 @@ const elements = {
 	telemetryDetails: document.getElementById("telemetry-details"),
 	sendErrorsToggle: document.getElementById("send-errors-toggle"),
 	webhookUrl: document.getElementById("webhook-url"),
+
+	// Debug Settings
+	debugModeToggle: document.getElementById("library-debug-mode"),
 
 	// Theme Settings (Library Modal)
 	libraryThemeMode: document.getElementById("library-theme-mode"),
@@ -997,6 +1003,13 @@ async function loadTelemetrySettings() {
 
 		if (elements.telemetryToggle) {
 			elements.telemetryToggle.checked = !!config.enabled;
+		}
+
+		// Load debug mode setting
+		if (elements.debugModeToggle) {
+			const debugResult = await browser.storage.local.get("debugMode");
+			// Default to true if not set
+			elements.debugModeToggle.checked = debugResult.debugMode !== false;
 		}
 
 		// Always show telemetry details since it's opt-out
@@ -2306,9 +2319,15 @@ function setupEventListeners() {
 					themeSettings: themeSettings || undefined,
 					chunkingEnabled:
 						elements.libraryChunkingEnabled?.checked ?? true,
-					chunkSize: elements.libraryChunkSize
-						? parseInt(elements.libraryChunkSize.value, 10) || 20000
-						: undefined,
+					chunkSizeWords: elements.libraryChunkSize
+						? parseInt(elements.libraryChunkSize.value, 10) || 3200
+						: 3200,
+					chunkSummaryCount: elements.libraryChunkSummaryCount
+						? parseInt(
+								elements.libraryChunkSummaryCount.value,
+								10,
+							) || 2
+						: 2,
 					maxOutputTokens: elements.libraryMaxOutputTokens
 						? parseInt(elements.libraryMaxOutputTokens.value, 10) ||
 							8192
@@ -2687,6 +2706,20 @@ function setupEventListeners() {
 			"click",
 			handleSaveOAuthFromJson,
 		);
+	}
+
+	// Debug mode toggle
+	if (elements.debugModeToggle) {
+		elements.debugModeToggle.addEventListener("change", async (e) => {
+			const enabled = e.target.checked;
+			await browser.storage.local.set({ debugMode: enabled });
+			showNotification(
+				enabled
+					? "Debug mode enabled. Check browser console for logs."
+					: "Debug mode disabled.",
+				enabled ? "success" : "info",
+			);
+		});
 	}
 
 	// Telemetry settings

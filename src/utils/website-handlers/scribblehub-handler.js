@@ -86,7 +86,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Fallback: Check for chapter-specific DOM elements
 		const chapterContent = document.querySelector(
-			"#chp_raw, #chp_contents, .chp_raw"
+			"#chp_raw, #chp_contents, .chp_raw",
 		);
 		const chapterTitle = document.querySelector(".chapter-title");
 
@@ -97,7 +97,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Check for chapter navigation buttons
 		const hasChapterNav = document.querySelector(
-			".btn-prev, .btn-next, .prenext"
+			".btn-prev, .btn-next, .prenext",
 		);
 		if (hasChapterNav && chapterContent) {
 			debugLog("ScribbleHub: Detected chapter page via navigation");
@@ -154,7 +154,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const text = element.innerText?.trim() || "";
 				if (text.length > 100) {
 					debugLog(
-						`ScribbleHub: Found content area with ${selector}`
+						`ScribbleHub: Found content area with ${selector}`,
 					);
 					return element;
 				}
@@ -215,7 +215,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Remove unwanted elements
 		const elementsToRemove = contentClone.querySelectorAll(
-			".ta_c_bm, .chapter_stats, .c_set, #my_popupreading, .nav_chp_fi, .prenext, .next_nav_links, script, style, .ad_336, .align_banner, [id^='div-gpt']"
+			".ta_c_bm, .chapter_stats, .c_set, #my_popupreading, .nav_chp_fi, .prenext, .next_nav_links, script, style, .ad_336, .align_banner, [id^='div-gpt']",
 		);
 		elementsToRemove.forEach((el) => el.remove());
 
@@ -242,10 +242,10 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	getChapterNavigation() {
 		try {
 			const prevLink = document.querySelector(
-				"a.btn-prev:not(.disabled)"
+				"a.btn-prev:not(.disabled)",
 			);
 			const nextLink = document.querySelector(
-				"a.btn-next:not(.disabled)"
+				"a.btn-next:not(.disabled)",
 			);
 
 			let currentChapter = 1;
@@ -431,14 +431,14 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			const isOnNovelPage = this.isNovelPage();
 
 			debugLog(
-				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`
+				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`,
 			);
 
 			if (isOnChapterPage) {
 				metadata.needsDetailPage = true; // Chapter pages lack full metadata
 				// ===== CHAPTER PAGE EXTRACTION =====
 				const breadcrumbLink = document.querySelector(
-					".wi_breadcrumb.chapter a[href*='/series/']"
+					".wi_breadcrumb.chapter a[href*='/series/']",
 				);
 				if (breadcrumbLink) {
 					metadata.title = breadcrumbLink.textContent.trim();
@@ -446,7 +446,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				}
 
 				const novelLink = document.querySelector(
-					".chp_byauthor a[href*='/series/']"
+					".chp_byauthor a[href*='/series/']",
 				);
 				if (!metadata.title && novelLink) {
 					metadata.title = novelLink.textContent.trim();
@@ -454,7 +454,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				}
 
 				const authorLink = document.querySelector(
-					".chp_byauthor a[href*='/profile/']"
+					".chp_byauthor a[href*='/profile/']",
 				);
 				if (authorLink) {
 					metadata.author = authorLink.textContent.trim();
@@ -479,14 +479,14 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 				// Try to get total chapters from chapter selector dropdown
 				const chapterSelector = document.querySelector(
-					"#chp_select, .chapter_select select"
+					"#chp_select, .chapter_select select",
 				);
 				if (chapterSelector) {
 					const options = chapterSelector.querySelectorAll("option");
 					if (options.length > 0) {
 						metadata.totalChapters = options.length;
 						debugLog(
-							`ScribbleHub: Found ${options.length} chapters from selector`
+							`ScribbleHub: Found ${options.length} chapters from selector`,
 						);
 					}
 				}
@@ -496,12 +496,12 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 					// Check for "Chapter X of Y" pattern
 					const pageText = document.body.innerText;
 					const chapterOfMatch = pageText.match(
-						/Chapter\s*\d+\s*(?:of|\/)\s*(\d+)/i
+						/Chapter\s*\d+\s*(?:of|\/)\s*(\d+)/i,
 					);
 					if (chapterOfMatch) {
 						metadata.totalChapters = parseInt(
 							chapterOfMatch[1],
-							10
+							10,
 						);
 					}
 				}
@@ -512,7 +512,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 						document.querySelector(".s_sinfo, .story_stats")
 							?.textContent || "";
 					const chaptersMatch = statsText.match(
-						/(\d+)\s*(?:Chapter|Chapters)/i
+						/(\d+)\s*(?:Chapter|Chapters)/i,
 					);
 					if (chaptersMatch) {
 						metadata.totalChapters = parseInt(chaptersMatch[1], 10);
@@ -526,7 +526,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				}
 
 				const authorLinks = document.querySelectorAll(
-					'a[href*="/profile/"]'
+					'a[href*="/profile/"]',
 				);
 				for (const link of authorLinks) {
 					const text = link.textContent.trim();
@@ -562,7 +562,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				});
 
 				const fandomLinks = document.querySelectorAll(
-					".wi_fic_genre a.stag[href*='/fandom/']"
+					".wi_fic_genre a.stag[href*='/fandom/']",
 				);
 				fandomLinks.forEach((link) => {
 					const fandom = link.textContent.trim();
@@ -572,7 +572,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				});
 
 				const tagLinks = document.querySelectorAll(
-					".wi_fic_showtags a.stag"
+					".wi_fic_showtags a.stag",
 				);
 				tagLinks.forEach((link) => {
 					const tag = link.textContent.trim();
@@ -656,7 +656,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		// Validate that we're on a valid page (chapter or novel page)
 		if (!this.isChapterPage() && !this.isNovelPage()) {
 			debugLog(
-				"ScribbleHub: Not on a valid novel or chapter page, returning null"
+				"ScribbleHub: Not on a valid novel or chapter page, returning null",
 			);
 			return null;
 		}
@@ -664,7 +664,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		// Additional validation: check if we have essential metadata
 		if (!metadata.title || metadata.title === "Scribble Hub") {
 			debugLog(
-				"ScribbleHub: Invalid metadata - likely on home/index page"
+				"ScribbleHub: Invalid metadata - likely on home/index page",
 			);
 			return null;
 		}
@@ -692,7 +692,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		try {
 			// Title from breadcrumb link to series
 			const seriesLink = document.querySelector(
-				'.wi_breadcrumb.chapter a[href*="/series/"]'
+				'.wi_breadcrumb.chapter a[href*="/series/"]',
 			);
 			if (seriesLink) {
 				context.title = seriesLink.textContent.trim();
@@ -700,7 +700,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 			// Author
 			const authorLink = document.querySelector(
-				".auth a[href*='/profile/'], .auth_name a, a[rel='author']"
+				".auth a[href*='/profile/'], .auth_name a, a[rel='author']",
 			);
 			if (authorLink) {
 				context.author = authorLink.textContent.trim();
@@ -716,14 +716,14 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			const genreEls = document.querySelectorAll(".fic_genre a");
 			if (genreEls.length) {
 				context.genres = Array.from(genreEls).map((el) =>
-					el.textContent.trim()
+					el.textContent.trim(),
 				);
 			}
 
 			const tagEls = document.querySelectorAll(".wi_fic_showtags a.stag");
 			if (tagEls.length) {
 				context.tags = Array.from(tagEls).map((el) =>
-					el.textContent.trim()
+					el.textContent.trim(),
 				);
 			}
 		} catch (error) {
@@ -781,7 +781,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		// Primary: Extract from .chp_byauthor (most reliable on chapter pages)
 		// <div class="chp_byauthor"><a href="https://www.scribblehub.com/series/1499718/...">Novel Title</a> by ...</div>
 		const novelLink = document.querySelector(
-			".chp_byauthor a[href*='/series/']"
+			".chp_byauthor a[href*='/series/']",
 		);
 		if (novelLink) {
 			return novelLink.href;
@@ -789,7 +789,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Fallback: Try breadcrumb
 		const breadcrumbLink = document.querySelector(
-			".wi_breadcrumb.chapter a[href*='/series/']"
+			".wi_breadcrumb.chapter a[href*='/series/']",
 		);
 		if (breadcrumbLink) {
 			return breadcrumbLink.href;
@@ -797,7 +797,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Last resort: Construct from URL pattern
 		const readMatch = window.location.pathname.match(
-			/\/read\/(\d+)-([^/]+)\//
+			/\/read\/(\d+)-([^/]+)\//,
 		);
 		if (readMatch) {
 			const [, id, slug] = readMatch;
@@ -841,6 +841,41 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			chapterNumber: chapterNumber,
 			timestamp: Date.now(),
 		};
+	}
+
+	/**
+	 * Detect ScribbleHub's dark mode theme
+	 * @returns {string} 'dark', 'light', or 'auto'
+	 */
+	getPageTheme() {
+		// Check theme selector value
+		const themeSelector = document.querySelector(".wi_themes");
+		if (themeSelector && themeSelector.value === "dark") {
+			return "dark";
+		}
+
+		// Check for dark mode class on body/html
+		if (
+			document.body?.classList.contains("dark-mode") ||
+			document.documentElement?.classList.contains("dark-mode")
+		) {
+			return "dark";
+		}
+
+		// Check localStorage
+		try {
+			const savedTheme =
+				localStorage.getItem("theme") ||
+				localStorage.getItem("wi_theme");
+			if (savedTheme === "dark") return "dark";
+			if (savedTheme === "light" || savedTheme === "default")
+				return "light";
+		} catch (e) {
+			// Ignore localStorage errors
+		}
+
+		// Default to extension's theme detection
+		return "auto";
 	}
 }
 
