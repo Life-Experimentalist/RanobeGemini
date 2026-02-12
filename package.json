@@ -12,7 +12,7 @@
 		"package:source": "node dev/build.js --source",
 		"publish": "node dev/build.js --package --source",
 		"update-domains": "node dev/build.js --update",
-		"watch": "node dev/watch.js"
+		"watch": "npm run build && node dev/watch.js"
 	},
 	"dependencies": {
 		"webextension-polyfill": "^0.12.0"

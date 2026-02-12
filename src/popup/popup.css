@@ -268,6 +268,268 @@ textarea::placeholder {
 	display: block;
 }
 
+/* ===== Notification badge on tab button ===== */
+.tab-btn .notification-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: #ef4444;
+	color: #fff;
+	font-size: 9px;
+	font-weight: 700;
+	margin-left: 4px;
+	vertical-align: middle;
+	box-shadow: 0 1px 3px rgba(239, 68, 68, 0.4);
+}
+
+/* ===== Novels Tab Redesign ===== */
+
+/* Chip base style (used for status/chapter badges in novel cards) */
+.chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 8px;
+	border-radius: 6px;
+	font-size: 10px;
+	font-weight: 600;
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-primary);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chip.chip-primary {
+	background: rgba(59, 130, 246, 0.2);
+	color: #93c5fd;
+	border-color: rgba(59, 130, 246, 0.3);
+}
+
+.chip.chip-warning {
+	background: rgba(251, 191, 36, 0.2);
+	color: #fde68a;
+	border-color: rgba(251, 191, 36, 0.3);
+}
+
+.chip.chip-info {
+	background: rgba(168, 85, 247, 0.2);
+	color: #d8b4fe;
+	border-color: rgba(168, 85, 247, 0.3);
+}
+
+.chip.chip-success {
+	background: rgba(34, 197, 94, 0.2);
+	color: #86efac;
+	border-color: rgba(34, 197, 94, 0.3);
+}
+
+.novels-section {
+	margin-bottom: 16px;
+}
+
+.novels-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-primary);
+	padding-bottom: 8px;
+	margin-bottom: 8px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.novels-action-btn {
+	background: none;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	color: var(--text-secondary);
+	font-size: 14px;
+	padding: 4px 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	line-height: 1;
+}
+
+.novels-action-btn:hover {
+	background: var(--hover-bg);
+	color: var(--text-primary);
+	border-color: var(--accent-primary);
+}
+
+.current-novel-card {
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 10px;
+	padding: 12px;
+	transition: border-color 0.2s;
+}
+
+.no-current-novel {
+	text-align: center;
+	padding: 16px 12px;
+	color: var(--text-secondary);
+	font-size: 13px;
+}
+
+.no-current-novel .description {
+	font-size: 11px;
+	margin-top: 4px;
+	opacity: 0.7;
+}
+
+.suggested-novels-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+}
+
+.no-suggestions {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 20px;
+	color: var(--text-secondary);
+	font-size: 12px;
+}
+
+/* Open library link */
+.open-library-link {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	margin-top: 12px;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 10px;
+	text-decoration: none;
+	color: #fff;
+	transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.open-library-link:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.open-library-icon {
+	font-size: 22px;
+	flex-shrink: 0;
+}
+
+.open-library-text {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.open-library-text strong {
+	font-size: 13px;
+}
+
+.open-library-text span {
+	font-size: 10px;
+	opacity: 0.85;
+}
+
+.open-library-arrow {
+	font-size: 18px;
+	opacity: 0.8;
+}
+
+/* ===== Notifications Tab ===== */
+.notifications-tab-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.notifications-stats {
+	font-size: 12px;
+	color: var(--text-secondary);
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.notif-stat-sep {
+	opacity: 0.5;
+}
+
+.notif-unread-count {
+	font-weight: 700;
+	color: #ef4444;
+}
+
+.notifications-tab-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.notif-action-btn {
+	padding: 5px 10px;
+	font-size: 11px;
+	font-weight: 500;
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.notif-action-btn:hover {
+	background: var(--hover-bg);
+	color: var(--text-primary);
+	border-color: var(--accent-primary);
+}
+
+.notif-action-danger:hover {
+	background: rgba(219, 68, 55, 0.15);
+	border-color: #db4437;
+	color: #db4437;
+}
+
+.notifications-filter-bar {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 12px;
+	padding: 3px;
+	background: var(--setting-bg);
+	border-radius: 8px;
+	border: 1px solid var(--border-color);
+}
+
+.notification-filter-btn {
+	flex: 1;
+	padding: 6px 8px;
+	font-size: 11px;
+	font-weight: 500;
+	background: transparent;
+	border: none;
+	border-radius: 6px;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition: all 0.15s;
+	text-align: center;
+}
+
+.notification-filter-btn:hover {
+	background: var(--hover-bg);
+	color: var(--text-primary);
+}
+
+.notification-filter-btn.active {
+	background: var(--accent-primary);
+	color: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 @keyframes fadeIn {
 	from {
 		opacity: 0;
@@ -2542,7 +2804,8 @@ button:disabled {
 	align-items: center;
 	justify-content: center;
 	font-size: 24px;
-	background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+	background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+	color: var(--text-secondary);
 }
 
 .current-novel-info {
@@ -2574,7 +2837,7 @@ button:disabled {
 .current-novel-title {
 	font-size: 13px;
 	font-weight: 600;
-	color: #212529;
+	color: var(--text-primary);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -2582,12 +2845,12 @@ button:disabled {
 
 .current-novel-author {
 	font-size: 11px;
-	color: #6c757d;
+	color: var(--text-secondary);
 }
 
 .current-novel-chapter {
 	font-size: 11px;
-	color: #495057;
+	color: var(--text-primary);
 	font-weight: 500;
 }
 
@@ -2601,7 +2864,7 @@ button:disabled {
 .progress-bar-mini {
 	flex: 1;
 	height: 4px;
-	background: #e9ecef;
+	background: var(--border-color);
 	border-radius: 2px;
 	overflow: hidden;
 }
@@ -2614,7 +2877,7 @@ button:disabled {
 
 .progress-text-mini {
 	font-size: 10px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	white-space: nowrap;
 }
 
@@ -2629,15 +2892,15 @@ button:disabled {
 	padding: 4px 8px;
 	font-size: 11px;
 	border-radius: 4px;
-	border: 1px solid #dee2e6;
-	background: white;
-	color: #495057;
+	border: 1px solid var(--border-color);
+	background: var(--setting-bg);
+	color: var(--text-primary);
 	cursor: pointer;
 	transition: all 0.2s ease;
 }
 
 .current-novel-actions .btn-small:hover {
-	background: #f8f9fa;
+	background: var(--hover-bg);
 	border-color: #667eea;
 }
 
@@ -2665,7 +2928,7 @@ button:disabled {
 .current-novel-not-supported {
 	text-align: center;
 	padding: 16px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	font-size: 12px;
 }
 
@@ -2693,51 +2956,51 @@ button:disabled {
 	font-size: 10px;
 	padding: 2px 6px;
 	border-radius: 4px;
-	background: #e9ecef;
-	color: #495057;
+	background: var(--hover-bg);
+	color: var(--text-secondary);
 }
 
 .current-novel-page-type.chapter {
-	background: #e7f5ff;
-	color: #1971c2;
+	background: rgba(59, 130, 246, 0.15);
+	color: #60a5fa;
 }
 
 .current-novel-page-type.novel {
-	background: #f3f0ff;
-	color: #7048e8;
+	background: rgba(168, 85, 247, 0.15);
+	color: #c084fc;
 }
 
 .current-novel-status-tag {
 	font-size: 10px;
 	padding: 2px 6px;
 	border-radius: 4px;
-	background: #e9ecef;
-	color: #495057;
+	background: var(--hover-bg);
+	color: var(--text-secondary);
 }
 
 .current-novel-status-tag.completed {
-	background: #d3f9d8;
-	color: #2b8a3e;
+	background: rgba(34, 197, 94, 0.15);
+	color: #4ade80;
 }
 
 .current-novel-status-tag.ongoing {
-	background: #fff3bf;
-	color: #e67700;
+	background: rgba(251, 191, 36, 0.15);
+	color: #fbbf24;
 }
 
 .current-novel-status-tag.hiatus {
-	background: #ffe8cc;
-	color: #d9480f;
+	background: rgba(251, 146, 60, 0.15);
+	color: #fb923c;
 }
 
 .current-novel-status-tag.dropped {
-	background: #ffe3e3;
-	color: #c92a2a;
+	background: rgba(239, 68, 68, 0.15);
+	color: #f87171;
 }
 
 /* Library Info Section (shown when novel is in library) */
 .current-novel-library-info {
-	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	background: var(--hover-bg);
 	border-radius: 6px;
 	padding: 8px;
 	margin: 8px 0;
@@ -2756,13 +3019,13 @@ button:disabled {
 }
 
 .library-info-label {
-	color: #6c757d;
+	color: var(--text-secondary);
 	min-width: 80px;
 	font-weight: 500;
 }
 
 .library-info-value {
-	color: #495057;
+	color: var(--text-primary);
 	flex: 1;
 }
 
@@ -2771,8 +3034,9 @@ button:disabled {
 	flex: 1;
 	padding: 3px 6px;
 	border-radius: 4px;
-	border: 1px solid #ced4da;
-	background: white;
+	border: 1px solid var(--input-border);
+	background: var(--input-bg);
+	color: var(--text-primary);
 	font-size: 11px;
 	cursor: pointer;
 }
@@ -2791,15 +3055,16 @@ button:disabled {
 }
 
 .genre-tag-mini {
-	background: #e9ecef;
-	color: #495057;
+	background: var(--hover-bg);
+	color: var(--text-secondary);
 	padding: 2px 6px;
 	border-radius: 3px;
 	font-size: 10px;
 }
 
 .genre-tag-mini.more {
-	background: #dee2e6;
+	background: var(--border-color);
+	color: var(--text-secondary);
 	cursor: help;
 }
 
@@ -2807,7 +3072,7 @@ button:disabled {
 .library-stats-compact {
 	display: flex;
 	justify-content: space-around;
-	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	background: var(--hover-bg);
 	border-radius: 8px;
 	padding: 12px;
 	margin-bottom: 16px;
@@ -2831,7 +3096,7 @@ button:disabled {
 .stat-mini-label {
 	display: block;
 	font-size: 11px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	text-transform: uppercase;
 	margin-top: 2px;
 }
@@ -2840,10 +3105,10 @@ button:disabled {
 .section-subtitle {
 	font-size: 14px;
 	font-weight: 600;
-	color: #495057;
+	color: var(--text-primary);
 	margin-bottom: 12px;
 	padding-bottom: 8px;
-	border-bottom: 1px solid #e9ecef;
+	border-bottom: 1px solid var(--border-color);
 }
 
 /* Recent Novels Section */
@@ -2857,7 +3122,7 @@ button:disabled {
 	gap: 8px;
 	margin-bottom: 12px;
 	padding-bottom: 8px;
-	border-bottom: 1px solid #e9ecef;
+	border-bottom: 1px solid var(--border-color);
 }
 
 .recent-novels-header .section-subtitle {
@@ -2880,11 +3145,11 @@ button:disabled {
 .no-recent-novels {
 	text-align: center;
 	padding: 24px 16px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	font-size: 13px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 8px;
-	border: 1px dashed #dee2e6;
+	border: 1px dashed var(--border-color);
 }
 
 .recent-novels-list {
@@ -2900,8 +3165,8 @@ button:disabled {
 	display: flex;
 	gap: 12px;
 	padding: 10px;
-	background: #fff;
-	border: 1px solid #e0e0e0;
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -2918,7 +3183,7 @@ button:disabled {
 	height: 70px;
 	object-fit: cover;
 	border-radius: 4px;
-	background: #f0f0f0;
+	background: var(--accent-primary);
 	flex-shrink: 0;
 }
 
@@ -2945,7 +3210,7 @@ button:disabled {
 .recent-novel-title {
 	font-size: 13px;
 	font-weight: 600;
-	color: #333;
+	color: var(--text-primary);
 	margin-bottom: 2px;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -2954,7 +3219,7 @@ button:disabled {
 
 .recent-novel-author {
 	font-size: 11px;
-	color: #6c757d;
+	color: var(--text-secondary);
 	margin-bottom: 4px;
 }
 
@@ -2968,8 +3233,8 @@ button:disabled {
 	font-size: 10px;
 	padding: 2px 6px;
 	border-radius: 4px;
-	background: #f0f0f0;
-	color: #666;
+	background: var(--hover-bg);
+	color: var(--text-secondary);
 }
 
 .recent-novel-badge.enhanced {
@@ -2985,24 +3250,24 @@ button:disabled {
 /* Legacy Novels Section */
 .legacy-novels-section {
 	margin-top: 16px;
-	border: 1px solid #e0e0e0;
+	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	overflow: hidden;
 }
 
 .legacy-novels-section summary {
 	padding: 12px 16px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	cursor: pointer;
 	font-size: 13px;
 	font-weight: 500;
-	color: #495057;
+	color: var(--text-primary);
 	user-select: none;
 	transition: background 0.2s ease;
 }
 
 .legacy-novels-section summary:hover {
-	background: #e9ecef;
+	background: var(--hover-bg);
 }
 
 .legacy-novels-section .novels-list {
@@ -3013,7 +3278,7 @@ button:disabled {
 .library-empty-compact {
 	text-align: center;
 	padding: 24px;
-	color: #6c757d;
+	color: var(--text-secondary);
 }
 
 .library-empty-compact .empty-icon {
@@ -3025,161 +3290,7 @@ button:disabled {
 	font-size: 12px;
 }
 
-/* Dark Mode for Library Compact View */
-@media (prefers-color-scheme: dark) {
-	.library-stats-compact {
-		background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
-	}
-
-	.stat-mini-label {
-		color: #adb5bd;
-	}
-
-	/* Dark Mode - Current Novel Section Enhancements */
-	.current-novel-meta {
-		display: flex;
-	}
-
-	.current-novel-page-type {
-		background: #3c4043;
-		color: #adb5bd;
-	}
-
-	.current-novel-page-type.chapter {
-		background: rgba(25, 113, 194, 0.3);
-		color: #74c0fc;
-	}
-
-	.current-novel-page-type.novel {
-		background: rgba(112, 72, 232, 0.3);
-		color: #b197fc;
-	}
-
-	.current-novel-status-tag {
-		background: #3c4043;
-		color: #adb5bd;
-	}
-
-	.current-novel-status-tag.completed {
-		background: rgba(43, 138, 62, 0.3);
-		color: #69db7c;
-	}
-
-	.current-novel-status-tag.ongoing {
-		background: rgba(230, 119, 0, 0.3);
-		color: #ffc078;
-	}
-
-	.current-novel-status-tag.hiatus {
-		background: rgba(217, 72, 15, 0.3);
-		color: #ffa94d;
-	}
-
-	.current-novel-status-tag.dropped {
-		background: rgba(201, 42, 42, 0.3);
-		color: #ff8787;
-	}
-
-	.current-novel-library-info {
-		background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
-	}
-
-	.library-info-label {
-		color: #adb5bd;
-	}
-
-	.library-info-value {
-		color: #e8ecef;
-	}
-
-	.reading-status-select-mini {
-		background: #1a1a2e;
-		border-color: #3a3a56;
-		color: #e8ecef;
-	}
-
-	.reading-status-select-mini:focus {
-		border-color: #8ab4f8;
-		box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
-	}
-
-	.genre-tag-mini {
-		background: #3c4043;
-		color: #adb5bd;
-	}
-
-	.genre-tag-mini.more {
-		background: #4a4a5e;
-	}
-
-	.section-subtitle {
-		color: #e8ecef;
-		border-bottom-color: #3c4043;
-	}
-
-	.recent-novel-card {
-		background: #2a2a3e;
-		border-color: #3c4043;
-	}
-
-	.recent-novel-card:hover {
-		border-color: #8ab4f8;
-	}
-
-	.recent-novel-title {
-		color: #e8ecef;
-	}
-
-	.recent-novel-author {
-		color: #adb5bd;
-	}
-
-	.recent-novel-badge {
-		background: #3c4043;
-		color: #adb5bd;
-	}
-
-	.recent-novel-badge.enhanced {
-		background: rgba(34, 197, 94, 0.2);
-		color: #4ade80;
-	}
-
-	.recent-novel-badge.shelf {
-		background: rgba(138, 180, 248, 0.2);
-		color: #8ab4f8;
-	}
-
-	.recent-novels-header {
-		border-bottom-color: #3c4043;
-	}
-
-	.recent-novels-site-badge {
-		background: linear-gradient(135deg, #5c6bc0 0%, #7c4dff 100%);
-	}
-
-	.no-recent-novels {
-		background: #2a2a3e;
-		color: #adb5bd;
-		border-color: #3c4043;
-	}
-
-	.legacy-novels-section {
-		border-color: #3c4043;
-	}
-
-	.legacy-novels-section summary {
-		background: #2a2a3e;
-		color: #e8ecef;
-	}
-
-	.legacy-novels-section summary:hover {
-		background: #3c4043;
-	}
-
-	.library-empty-compact {
-		color: #adb5bd;
-	}
-}
+/* Dark Mode for Library Compact View - handled via CSS variables, override removed */
 
 /* Dark Mode for Info Tab */
 @media (prefers-color-scheme: dark) {
@@ -3229,20 +3340,20 @@ button:disabled {
 .backup-keys-section summary {
 	cursor: pointer;
 	padding: 8px 12px;
-	background: #f8f9fa;
+	background: var(--setting-bg);
 	border-radius: 6px;
 	font-weight: 500;
-	color: #495057;
+	color: var(--text-primary);
 	transition: background 0.2s ease;
 }
 
 .backup-keys-section summary:hover {
-	background: #e9ecef;
+	background: var(--hover-bg);
 }
 
 .backup-keys-content {
 	padding: 12px;
-	background: #fafbfc;
+	background: var(--setting-bg);
 	border-radius: 0 0 6px 6px;
 	margin-top: 8px;
 }
@@ -3259,8 +3370,8 @@ button:disabled {
 	align-items: center;
 	gap: 8px;
 	padding: 8px 12px;
-	background: white;
-	border: 1px solid #e9ecef;
+	background: var(--input-bg);
+	border: 1px solid var(--border-color);
 	border-radius: 6px;
 }
 

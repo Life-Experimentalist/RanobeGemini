@@ -52,22 +52,6 @@
 							<span
 								id="notification-bell-badge"
 								class="hidden"
-								style="
-									position: absolute;
-									top: -4px;
-									right: -4px;
-									background: #ef4444;
-									color: white;
-									border-radius: 50%;
-									min-width: 18px;
-									height: 18px;
-									font-size: 10px;
-									font-weight: 600;
-									display: flex;
-									align-items: center;
-									justify-content: center;
-									padding: 2px;
-								"
 								>0</span
 							>
 						</button>
@@ -713,6 +697,9 @@
 						<button class="settings-tab" data-tab="site-settings">
 							🌐 Sites
 						</button>
+						<button class="settings-tab" data-tab="prompt-settings">
+							✍️ Prompts
+						</button>
 						<button class="settings-tab" data-tab="advanced-settings">
 							⚙️ Advanced
 						</button>
@@ -721,42 +708,7 @@
 					<!-- General Settings Tab -->
 			<div class="settings-tab-content" id="general-settings">
 				<div class="settings-grid">
-					<!-- SECTION 1: Data Management (1/4) -->
-					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid var(--accent-secondary, #667ee6);">
-						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: var(--accent-secondary, #667ee6);">
-							💾 Data Management
-						</h3>
-
-						<div class="settings-item" style="margin-bottom: 12px;">
-							<button id="export-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
-								📤 Export
-							</button>
-							<p class="settings-desc" style="font-size: 11px;">
-								Download library data
-							</p>
-						</div>
-
-						<div class="settings-item" style="margin-bottom: 12px;">
-							<button id="import-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
-								📥 Import
-							</button>
-							<input type="file" id="import-file" accept=".json" class="hidden" />
-							<p class="settings-desc" style="font-size: 11px;">
-								Restore from backup
-							</p>
-						</div>
-
-						<div class="settings-item">
-							<button id="clear-btn" class="btn btn-danger" style="width: 100%; font-size: 12px; padding: 8px;">
-								🗑️ Clear
-							</button>
-							<p class="settings-desc" style="font-size: 11px;">
-								Remove all novels
-							</p>
-						</div>
-					</div>
-
-					<!-- SECTION 8: Theme Settings (1/4) -->
+					<!-- SECTION: Theme Settings (1/4) -->
 					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #f97316;">
 						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #f97316;">
 							🎨 Theme
@@ -802,27 +754,6 @@
 							</div>
 						</div>
 
-						<!-- SECTION: URL Import (FULL WIDTH) -->
-						<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-							<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
-								🔗 Import URLs
-							</h3>
-							<p class="settings-desc" style="margin-bottom: 10px; font-size: 12px;">
-								Paste any text and we'll extract supported novel URLs, open them in the background, and add them to your library.
-							</p>
-							<textarea id="url-import-text" rows="5" placeholder="Paste links or text here..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; resize: vertical;"></textarea>
-							<div style="display: flex; gap: 8px; margin-top: 10px;">
-								<button id="url-import-btn" class="btn btn-primary" style="font-size: 12px; padding: 8px 12px;">
-									➕ Add URLs to Library
-								</button>
-								<button id="url-import-clear" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">
-									Clear
-								</button>
-							</div>
-							<p class="settings-desc" id="url-import-status" style="margin-top: 8px; font-size: 11px;">
-								Ready to import.
-							</p>
-						</div>
 						<div class="settings-item theme-actions">
 							<button id="library-reset-theme" class="btn btn-danger" style="font-size: 11px; padding: 6px 8px;">
 								Reset
@@ -831,9 +762,23 @@
 								Save Theme
 							</button>
 						</div>
+						<br>
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #ec4899;">
+							🔤 Font Size
+						</h3>
+						<div class="settings-item theme-actions">
+							<label style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Size: <span id="library-font-size-value" style="color: #ec4899;">100%</span>
+							</label>
+							<input type="range" id="library-font-size-slider" min="80" max="150" step="5" value="100" style="width: 100%; cursor: pointer;" />
+							<p class="settings-desc" style="font-size: 11px;">
+								80% - 150%
+							</p>
+						</div>
+
 					</div>
 
-					<!-- SECTION 4: AI Model Settings (1/4) -->
+					<!-- SECTION: AI Model Settings (1/4) -->
 					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #3b82f6;">
 						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #3b82f6;">
 							🤖 AI Model
@@ -910,21 +855,29 @@
 							</p>
 						</div>
 					</div>
-					<!-- SECTION 5: Font Size (1/4) -->
-					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #ec4899;">
-						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #ec4899;">
-							🔤 Font Size
+
+					<!-- SECTION: URL Import (FULL WIDTH) -->
+					<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
+							🔗 Import URLs
 						</h3>
-						<div class="settings-item">
-							<label style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-								Size: <span id="library-font-size-value" style="color: #ec4899;">100%</span>
-							</label>
-							<input type="range" id="library-font-size-slider" min="80" max="150" step="5" value="100" style="width: 100%; cursor: pointer;" />
-							<p class="settings-desc" style="font-size: 11px;">
-								80% - 150%
-							</p>
+						<p class="settings-desc" style="margin-bottom: 10px; font-size: 12px;">
+							Paste any text and we'll extract supported novel URLs, open them in the background, and add them to your library.
+						</p>
+						<textarea id="url-import-text" rows="5" placeholder="Paste links or text here..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; resize: vertical;"></textarea>
+						<div style="display: flex; gap: 8px; margin-top: 10px;">
+							<button id="url-import-btn" class="btn btn-primary" style="font-size: 12px; padding: 8px 12px;">
+								➕ Add URLs to Library
+							</button>
+							<button id="url-import-clear" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">
+								Clear
+							</button>
 						</div>
+						<p class="settings-desc" id="url-import-status" style="margin-top: 8px; font-size: 11px;">
+							Ready to import.
+						</p>
 					</div>
+
 				</div>
 			</div>
 
@@ -981,7 +934,7 @@
 								<label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">
 									Frequency: <span id="rollingBackupIntervalDisplay" style="color: #34a853;">60</span> minutes
 								</label>
-								<input type="range" id="rollingBackupInterval" min="5" max="1440" value="60" style="width: 100%;" />
+								<input type="number" id="rollingBackupInterval" min="5" value="360"  />
 								<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
 									Sets how often a rolling backup is created automatically.
 								</p>
@@ -1027,21 +980,6 @@
 						</button>
 					</div>
 
-					<!-- SECTION 3: Quick Backups (Library Only, Max 3) -->
-					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #f59e0b;">
-						<h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #f59e0b;">
-							📋 Quick Backups (Library Only, Max 3)
-						</h3>
-						<p class="settings-desc" style="margin-bottom: 12px; font-size: 11px;">
-							Recent manual backups of your library data.
-						</p>
-						<div id="backupHistoryList" style="margin-top: 8px;">
-							<div style="text-align: center; padding: 15px; color: #888; font-size: 12px;">
-								No backups yet
-							</div>
-						</div>
-					</div>
-
 					<!-- SECTION 4: Import & Merge Options -->
 					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
 						<h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #8b5cf6;">
@@ -1067,6 +1005,42 @@
 							</p>
 						</div>
 					</div>
+
+					<!-- SECTION: Data Management (1/4) -->
+					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid var(--accent-secondary, #667ee6);">
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: var(--accent-secondary, #667ee6);">
+							💾 Data Management
+						</h3>
+						<h4 style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: var(--accent-secondary, #f59e0b);">(Deprecated will be removed soon; for legacy support)</h4>
+						<div class="settings-item" style="margin-bottom: 12px; width: 100%;">
+							<button id="export-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
+								📤 Export
+							</button>
+							<p class="settings-desc" style="font-size: 11px;">
+								Download library data
+							</p>
+						</div>
+
+						<div class="settings-item" style="margin-bottom: 12px; width: 100%;">
+							<button id="import-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
+								📥 Import
+							</button>
+							<input type="file" id="import-file" accept=".json" class="hidden" />
+							<p class="settings-desc" style="font-size: 11px;">
+								Restore from backup
+							</p>
+						</div>
+
+						<div class="settings-item" style="width: 100%;">
+							<button id="clear-btn" class="btn btn-danger" style="width: 100%; font-size: 12px; padding: 8px;">
+								🗑️ Clear
+							</button>
+							<p class="settings-desc" style="font-size: 11px;">
+								Remove all novels
+							</p>
+						</div>
+					</div>
+
 
 					<!-- GOOGLE DRIVE BACKUPS HEADER -->
 					<div class="settings-section" data-full-width="true" style="background: rgba(66, 133, 244, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #4285f4; margin-top: 16px;">
@@ -1355,20 +1329,44 @@
 				</div>
 			</div>
 
-			<!-- Site Settings Tab -->
-			<div class="settings-tab-content hidden" id="site-settings">
+			<!-- Prompt Settings Tab -->
+			<div class="settings-tab-content hidden" id="prompt-settings">
 				<div class="settings-grid">
-					<!-- SECTION 9: Auto-Add by Site (FULL WIDTH) -->
-					<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
-						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #8b5cf6;">
-							🌐 Auto-Add by Site
-						</h3>
-						<p class="settings-desc" style="margin-bottom: 12px; font-size: 12px;">
-							Disable a site to hide its enhancements and auto-add rules.
-						</p>
-						<div id="site-autoadd-list" class="site-autoadd-list"></div>
-					</div>
+					<!-- SECTION: Prompts (full width) -->
+					<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #10b981;">
+						<h3>✍️ Prompt Templates</h3>
 
+						<!-- Main Enhancement Prompt -->
+						<div class="settings-item">
+							<label for="library-prompt-main">Main Enhancement Prompt</label>
+							<textarea id="library-prompt-main" rows="4" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
+							<button id="library-reset-prompt-main" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
+						</div>
+
+						<!-- Summary Prompt -->
+						<div class="settings-item">
+							<label for="library-prompt-summary">Summary Prompt</label>
+							<textarea id="library-prompt-summary" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
+							<button id="library-reset-prompt-summary" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
+						</div>
+
+						<details class="settings-item" style="padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.04)); border-radius: 6px; border: 1px solid var(--border-color);">
+							<summary style="cursor: pointer; font-weight: 600;">More Prompt Options</summary>
+
+							<div class="settings-item" style="margin-top: 10px;">
+								<label for="library-prompt-short-summary">Short Summary Prompt</label>
+								<textarea id="library-prompt-short-summary" rows="2" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
+								<button id="library-reset-prompt-short-summary" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
+							</div>
+
+							<div class="settings-item" style="margin-top: 10px;">
+								<label for="library-prompt-permanent">Permanent Context Prompt</label>
+								<textarea id="library-prompt-permanent" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
+								<button id="library-reset-prompt-permanent" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
+							</div>
+						</details>
+					</div>
+</div>
 				</div>
 
 			<!-- Advanced Settings Tab -->
@@ -1381,51 +1379,7 @@
 						</p>
 					</div>
 
-					<!-- SECTION: Processing Options -->
-					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
-							🧪 Processing Options
-						</h3>
-						<div class="settings-item" style="margin-bottom: 12px;">
-							<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-								<span style="font-weight: 500; font-size: 12px;">Split large chapters automatically</span>
-								<label class="toggle-switch toggle-switch-sm">
-									<input type="checkbox" id="library-chunking-enabled" />
-									<span class="toggle-slider"></span>
-								</label>
-							</div>
-							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-								Processes large chapters in parts to avoid token limits.
-							</p>
-						</div>
-						<div class="settings-item">
-							<label for="library-chunk-size" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-								Segment size (words per chunk):
-							</label>
-							<input type="number" id="library-chunk-size" min="100" max="10000" step="100" value="3200" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-								Recommended: 3200 words. Smaller = safer but more segments.
-							</p>
-						</div>
-						<div class="settings-item" style="margin-top: 12px;">
-							<label for="library-chunk-summary-count" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-								Summary buttons every N chunks:
-							</label>
-							<input type="number" id="library-chunk-summary-count" min="1" max="10" step="1" value="2" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-								Controls how often summary buttons appear between chunks.
-							</p>
-						</div>
-						<div class="settings-item" style="margin-top: 12px;">
-							<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-								Maximum Output Length (tokens):
-							</label>
-							<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192" style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
-								Controls maximum length of generated text.
-							</p>
-						</div>
-					</div>
+
 
 					<!-- SECTION: Analytics & Diagnostics -->
 					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #06b6d4;">
@@ -1486,7 +1440,51 @@
 							</p>
 						</div>
 					</div>
-
+					<!-- SECTION: Processing Options -->
+					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
+							🧪 Processing Options
+						</h3>
+						<div class="settings-item" style="margin-bottom: 12px;">
+							<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+								<span style="font-weight: 500; font-size: 12px;">Split large chapters automatically</span>
+								<label class="toggle-switch toggle-switch-sm">
+									<input type="checkbox" id="library-chunking-enabled" />
+									<span class="toggle-slider"></span>
+								</label>
+							</div>
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Processes large chapters in parts to avoid token limits.
+							</p>
+						</div>
+						<div class="settings-item">
+							<label for="library-chunk-size" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Segment size (words per chunk):
+							</label>
+							<input type="number" id="library-chunk-size" min="100" max="10000" step="100" value="3200" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Recommended: 3200 words. Smaller = safer but more segments.
+							</p>
+						</div>
+						<div class="settings-item" style="margin-top: 12px;">
+							<label for="library-chunk-summary-count" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Summary buttons every N chunks:
+							</label>
+							<input type="number" id="library-chunk-summary-count" min="1" max="10" step="1" value="2" style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Controls how often summary buttons appear between chunks.
+							</p>
+						</div>
+						<div class="settings-item" style="margin-top: 12px;">
+							<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								Maximum Output Length (tokens):
+							</label>
+							<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192" style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+							<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
+								Controls maximum length of generated text.
+							</p>
+						</div>
+					</div>
 					<!-- SECTION: AI Parameters -->
 					<div class="settings-section" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #64748b;">
 						<h3>🎯 AI Parameters</h3>
@@ -1514,41 +1512,6 @@
 							</div>
 							<p class="settings-desc">Auto-generated model API endpoint</p>
 						</div>
-					</div>
-
-					<!-- SECTION: Prompts (full width) -->
-					<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #10b981;">
-						<h3>✍️ Prompt Templates</h3>
-
-						<!-- Main Enhancement Prompt -->
-						<div class="settings-item">
-							<label for="library-prompt-main">Main Enhancement Prompt</label>
-							<textarea id="library-prompt-main" rows="4" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-							<button id="library-reset-prompt-main" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
-						</div>
-
-						<!-- Summary Prompt -->
-						<div class="settings-item">
-							<label for="library-prompt-summary">Summary Prompt</label>
-							<textarea id="library-prompt-summary" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-							<button id="library-reset-prompt-summary" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
-						</div>
-
-						<details class="settings-item" style="padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.04)); border-radius: 6px; border: 1px solid var(--border-color);">
-							<summary style="cursor: pointer; font-weight: 600;">More Prompt Options</summary>
-
-							<div class="settings-item" style="margin-top: 10px;">
-								<label for="library-prompt-short-summary">Short Summary Prompt</label>
-								<textarea id="library-prompt-short-summary" rows="2" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-								<button id="library-reset-prompt-short-summary" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
-							</div>
-
-							<div class="settings-item" style="margin-top: 10px;">
-								<label for="library-prompt-permanent">Permanent Context Prompt</label>
-								<textarea id="library-prompt-permanent" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-								<button id="library-reset-prompt-permanent" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
-							</div>
-						</details>
 					</div>
 
 					<!-- SECTION: Factory Reset (full width) -->
@@ -1581,6 +1544,22 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- Site Settings Tab -->
+			<div class="settings-tab-content hidden" id="site-settings">
+				<div class="settings-grid">
+					<!-- SECTION 9: Auto-Add by Site (FULL WIDTH) -->
+					<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+						<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #8b5cf6;">
+							🌐 Auto-Add by Site
+						</h3>
+						<p class="settings-desc" style="margin-bottom: 12px; font-size: 12px;">
+							Disable a site to hide its enhancements and auto-add rules.
+						</p>
+						<div id="site-autoadd-list" class="site-autoadd-list"></div>
+					</div>
+
+				</div>
 			</div>
 		</div>
 
@@ -1656,11 +1635,11 @@
 					</button>
 				</div>
 				<div class="notification-panel-body">
-					<div class="notification-actions" style="display: flex; gap: 8px; margin-bottom: 12px; padding: 0 16px;">
-						<button id="library-mark-all-read" class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 6px 12px;">
+					<div class="notification-actions">
+						<button id="library-mark-all-read" class="btn btn-secondary">
 							✓ Mark All Read
 						</button>
-						<button id="library-clear-all-notifications" class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 6px 12px;">
+						<button id="library-clear-all-notifications" class="btn btn-secondary">
 							🗑 Clear All
 						</button>
 					</div>

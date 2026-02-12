@@ -67,7 +67,10 @@ export async function saveChunkToCache(url, chunkIndex, chunkData) {
 		});
 
 		// Update metadata to track which chunks exist
-		await updateChunkMetadata(url, chunkIndex, "add");
+		await updateChunkMetadata(url, chunkIndex, "add", {
+			totalChunks: chunkData.totalChunks,
+			modelInfo: chunkData.modelInfo,
+		});
 
 		console.log(`[ChunkCache] Saved chunk ${chunkIndex} for ${url}`);
 	} catch (error) {
@@ -203,7 +206,7 @@ export async function deleteAllChunksForUrl(url) {
  * @param {string} url - Page URL
  * @returns {Promise<Object|null>} Metadata object or null
  */
-async function getChunkMetadata(url) {
+export async function getChunkMetadata(url) {
 	try {
 		const metadataKey = getChunkMetadataKey(url);
 		const result = await browser.storage.local.get(metadataKey);
@@ -221,7 +224,12 @@ async function getChunkMetadata(url) {
  * @param {string} action - 'add' or 'remove'
  * @returns {Promise<void>}
  */
-async function updateChunkMetadata(url, chunkIndex, action) {
+async function updateChunkMetadata(
+	url,
+	chunkIndex,
+	action,
+	metadataUpdate = null,
+) {
 	try {
 		const metadataKey = getChunkMetadataKey(url);
 		let metadata = await getChunkMetadata(url);
@@ -243,6 +251,15 @@ async function updateChunkMetadata(url, chunkIndex, action) {
 			metadata.chunkIndices = metadata.chunkIndices.filter(
 				(idx) => idx !== chunkIndex,
 			);
+		}
+
+		if (metadataUpdate) {
+			if (Number.isInteger(metadataUpdate.totalChunks)) {
+				metadata.totalChunks = metadataUpdate.totalChunks;
+			}
+			if (metadataUpdate.modelInfo) {
+				metadata.modelInfo = metadataUpdate.modelInfo;
+			}
 		}
 
 		metadata.lastUpdated = Date.now();
@@ -315,6 +332,7 @@ export default {
 	deleteChunkFromCache,
 	getAllChunksFromCache,
 	deleteAllChunksForUrl,
+	getChunkMetadata,
 	hasChunksInCache,
 	getChunkCount,
 	clearOldCache,

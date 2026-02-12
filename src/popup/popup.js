@@ -205,6 +205,12 @@ async function initializePopup() {
 				if (tabId === "novels" && typeof loadNovelsTab === "function") {
 					await loadNovelsTab();
 				}
+				if (
+					tabId === "notifications" &&
+					typeof initNotificationsTab === "function"
+				) {
+					await initNotificationsTab();
+				}
 			});
 		});
 		console.log("Tab switching setup complete!");
@@ -360,11 +366,31 @@ async function initializePopup() {
 	);
 	const driveSyncNowBtn = document.getElementById("driveSyncNowBtn");
 
+	// Declare variables for elements still used but previously undeclared (strict mode requires declaration)
 	let currentSiteShelfId = null;
+	let currentPageNovelData = null;
+	let currentNotificationFilter = "all";
 	let siteSettings = {};
 	let backupHistory = [];
 	const BACKUP_RETENTION = 3;
 	const BACKUP_INTERVAL_DAYS = 1;
+
+	// Element references for items that exist in popup HTML but were accessed as implicit globals
+	const randomizeSuggestionsBtn = document.getElementById(
+		"randomizeSuggestions",
+	);
+	const notificationsTabBtn = document.getElementById("notificationsTabBtn");
+	const notificationBadge = document.getElementById("notificationBadge");
+	const notificationsContainer = document.getElementById(
+		"notificationsContainer",
+	);
+	const markAllReadBtn = document.getElementById("markAllReadBtn");
+	const clearNotificationsBtn = document.getElementById(
+		"clearNotificationsBtn",
+	);
+	const filterButtons = document.querySelectorAll(".notification-filter-btn");
+	const totalNotifsSpan = document.getElementById("totalNotifs");
+	const unreadNotifsSpan = document.getElementById("unreadNotifs");
 
 	// Theme defaults
 	const defaultTheme = {
@@ -523,32 +549,19 @@ async function initializePopup() {
 		}
 	}
 
-	// Initialize theme controls
-	syncColorInputs(accentColorPicker, accentColorText);
-	syncColorInputs(accentSecondaryPicker, accentSecondaryText);
-	syncColorInputs(backgroundColorPicker, backgroundColorText);
-	syncColorInputs(textColorPicker, textColorText);
+	// Initialize theme controls (color pickers removed from popup HTML - managed in library settings)
+	// syncColorInputs calls removed - accentColorPicker etc. no longer exist in popup
 
-	// Theme event listeners
-	if (saveThemeBtn) {
-		saveThemeBtn.addEventListener("click", saveTheme);
-	}
-
-	if (resetThemeBtn) {
-		resetThemeBtn.addEventListener("click", resetTheme);
-	}
-
+	// Theme mode select (still in popup HTML)
+	const themeModeSelect = document.getElementById("themeMode");
 	if (themeModeSelect) {
 		themeModeSelect.addEventListener("change", () => {
 			const theme = {
 				mode: themeModeSelect.value,
-				accentPrimary:
-					accentColorPicker?.value || defaultTheme.accentPrimary,
-				accentSecondary:
-					accentSecondaryPicker?.value ||
-					defaultTheme.accentSecondary,
-				bgColor: backgroundColorPicker?.value || defaultTheme.bgColor,
-				textColor: textColorPicker?.value || defaultTheme.textColor,
+				accentPrimary: defaultTheme.accentPrimary,
+				accentSecondary: defaultTheme.accentSecondary,
+				bgColor: defaultTheme.bgColor,
+				textColor: defaultTheme.textColor,
 			};
 			applyTheme(theme);
 		});
@@ -1629,61 +1642,8 @@ async function initializePopup() {
 		});
 	}
 
-	// Enhance current page
-	enhancePageBtn.addEventListener("click", async () => {
-		try {
-			const data = await browser.storage.local.get("apiKey");
-			if (!data.apiKey) {
-				showStatus("Please save an API key first", "error");
-				return;
-			}
-
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-
-			if (tabs[0]) {
-				showStatus("Processing page...", "info");
-
-				try {
-					// First ping the content script to make sure it's responsive
-					const processResponse = await browser.tabs.sendMessage(
-						tabs[0].id,
-						{ action: "processWithGemini" },
-					);
-
-					if (processResponse && processResponse.success) {
-						showStatus("Page enhancement started!", "success");
-					} else {
-						showStatus(
-							"Error: " +
-								(processResponse?.error || "Unknown error"),
-							"error",
-						);
-					}
-				} catch (error) {
-					debugError("Communication error:", error);
-
-					if (
-						error.message?.includes(
-							"could not establish connection",
-						)
-					) {
-						showStatus(
-							"Error: This page is not supported by the extension.",
-							"error",
-						);
-					} else {
-						showStatus("Error: " + error.message, "error");
-					}
-				}
-			}
-		} catch (error) {
-			debugError("Error enhancing page:", error);
-			showStatus("Error enhancing page: " + error.message, "error");
-		}
-	});
+	// Enhance current page (button removed from popup HTML - enhancement is done from content script)
+	// enhancePageBtn handler removed
 
 	// Open Google AI Studio link to get API key
 	getKeyLink.addEventListener("click", (e) => {
@@ -2360,6 +2320,17 @@ async function initializePopup() {
 		} catch (e) {
 			return null;
 		}
+	}
+
+	/**
+	 * Helper: get the current active tab
+	 */
+	async function getCurrentTab() {
+		const tabs = await browser.tabs.query({
+			active: true,
+			currentWindow: true,
+		});
+		return tabs[0] || null;
 	}
 
 	/**
@@ -4240,22 +4211,6 @@ async function initializePopup() {
 	}
 
 	/**
-	 * Open a novel in the library page with modal
-	 * @param {string} novelId - The novel ID
-	 * @param {string} shelfId - The shelf ID (optional)
-	 */
-	async function openNovelInLibrary(novelId, shelfId) {
-		try {
-			const libraryUrl = browser.runtime.getURL(
-				`library/library.html?novel=${encodeURIComponent(novelId)}`,
-			);
-			await browser.tabs.create({ url: libraryUrl });
-		} catch (error) {
-			console.error("Failed to open novel in library:", error);
-		}
-	}
-
-	/**
 	 * Update suggested novels based on reading history
 	 */
 	async function updateSuggestedNovels(allNovels) {
@@ -5179,7 +5134,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	async function updateBackupConfig() {
 		try {
 			const config = {
-				autoBackupEnabled: autoBackupEnabled?.checked || false,
+				autoBackupEnabled: autoBackupCheckbox?.checked || false,
 				mergeMode:
 					document.querySelector('input[name="mergeMode"]:checked')
 						?.value || "merge",
@@ -5207,8 +5162,8 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		createManualBackup.addEventListener("click", handleCreateManualBackup);
 	}
 
-	if (autoBackupEnabled) {
-		autoBackupEnabled.addEventListener("change", updateBackupConfig);
+	if (autoBackupCheckbox) {
+		autoBackupCheckbox.addEventListener("change", updateBackupConfig);
 	}
 
 	mergeModRadios.forEach((radio) => {
@@ -5263,13 +5218,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		});
 	}
 
-	if (openLibrarySettingsFromPrompts) {
-		openLibrarySettingsFromPrompts.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html#settings"),
-			});
-		});
-	}
+	// openLibrarySettingsFromPrompts removed (prompts section moved to library settings)
 
 	// Handle Main Library button
 	const openMainLibrary = document.getElementById("openMainLibrary");
@@ -5815,8 +5764,8 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		await libraryBackupManager.initializeConfig();
 		const config = await libraryBackupManager.getConfig();
 
-		if (autoBackupEnabled) {
-			autoBackupEnabled.checked = config.autoBackupEnabled || false;
+		if (autoBackupCheckbox) {
+			autoBackupCheckbox.checked = config.autoBackupEnabled || false;
 		}
 
 		document
@@ -5852,39 +5801,8 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		}
 	})();
 
-	// Notifications bell icon - open modal
-	if (notificationsToggle) {
-		const notificationsModal =
-			document.getElementById("notificationsModal");
-		const closeNotificationsBtn = document.getElementById(
-			"closeNotificationsModal",
-		);
-
-		notificationsToggle.addEventListener("click", async () => {
-			if (notificationsModal) {
-				notificationsModal.style.display = "block";
-				await initNotificationsTab();
-			}
-		});
-
-		// Close modal when X button clicked
-		if (closeNotificationsBtn) {
-			closeNotificationsBtn.addEventListener("click", () => {
-				if (notificationsModal) {
-					notificationsModal.style.display = "none";
-				}
-			});
-		}
-
-		// Close modal when clicking outside
-		if (notificationsModal) {
-			notificationsModal.addEventListener("click", (e) => {
-				if (e.target === notificationsModal) {
-					notificationsModal.style.display = "none";
-				}
-			});
-		}
-	}
+	// Notifications tab is now a proper tab handled by tab switching above
+	// (Old modal toggle code removed)
 
 	// Log that the popup is initialized
 	debugLog("RanobeGemini popup initialized");
@@ -6449,15 +6367,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		});
 	}
 
-	// Add listener for tab switching to notifications tab
-	document.querySelectorAll(".tab-btn").forEach((button) => {
-		button.addEventListener("click", () => {
-			if (button.getAttribute("data-tab") === "notifications") {
-				initNotificationsTab();
-			}
-		});
-	});
-
-	// Initialize notifications on startup
-	initNotificationsTab();
+	// Tab switching for notifications is handled in the main tab switching code above
+	// Initialize notifications badge on startup (content loads on tab switch)
+	updateNotificationBadge();
 }

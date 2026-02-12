@@ -761,7 +761,7 @@ if (typeof browser === "undefined") {
 		if (area !== "local") return;
 		// Watch both old and new library keys for changes
 		if (changes.novelHistory || changes.rg_novel_library) {
-			scheduleContinuousBackup();
+			scheduleContinuousBackupCheck(); // Fixed: was scheduleContinuousBackup
 		}
 		if (
 			changes.backupMode ||
@@ -1540,11 +1540,17 @@ if (typeof browser === "undefined") {
 
 					// Use chunkSize as both the threshold and chunk size (simplified)
 					const chunkSize = config.chunkSize || 20000;
+					const forceChunking = message.forceChunking === true;
 
-					// For longer content, use chunk processing with progressive rendering
-					if (message.content && message.content.length > chunkSize) {
+					// For longer content or when forced, use chunk processing with progressive rendering
+					if (
+						forceChunking ||
+						(message.content && message.content.length > chunkSize)
+					) {
 						debugLog(
-							`Content length ${message.content.length} exceeds chunk size ${chunkSize}, using chunked processing`,
+							forceChunking
+								? "Chunking forced by content script"
+								: `Content length ${message.content.length} exceeds chunk size ${chunkSize}, using chunked processing`,
 						);
 						processContentInChunks(
 							message.title,
@@ -1552,6 +1558,7 @@ if (typeof browser === "undefined") {
 							message.useEmoji,
 							message.siteSpecificPrompt || "",
 							sender.tab?.id,
+							forceChunking,
 						)
 							.then((result) => {
 								sendResponse({
@@ -1606,7 +1613,7 @@ if (typeof browser === "undefined") {
 								});
 							});
 					}
-				})
+				};)
 				.catch((error) => {
 					debugError("Error loading config:", error);
 					sendResponse({
@@ -2030,6 +2037,7 @@ if (typeof browser === "undefined") {
 		useEmoji = false,
 		siteSpecificPrompt = "",
 		tabId = null,
+		forceChunking = false,
 	) {
 		debugLog(
 			`[processContentInChunks] Starting. Content length: ${content?.length}, tabId: ${tabId}`,
@@ -2099,12 +2107,17 @@ if (typeof browser === "undefined") {
 			debugLog(
 				`[processContentInChunks] Using effective chunk size: ${effectiveChunkSizeWords} words (~${effectiveChunkSizeChars} characters)`,
 			);
+			if (effectiveChunkSizeWords < configuredChunkSizeWords) {
+				debugLog(
+					`[processContentInChunks] WARNING: Model context (${modelContextSize} tokens) limits effective chunk size to ${effectiveChunkSizeWords} words, below configured ${configuredChunkSizeWords} words. Consider increasing model context or reducing chunk size.`,
+				);
+			}
 			debugLog(
 				`[processContentInChunks] Content length: ${content.length}, effectiveChunkSize: ${effectiveChunkSizeChars}`,
 			);
 
-			// Only split if content exceeds the chunk size
-			if (content.length <= effectiveChunkSizeChars) {
+			// Only split if content exceeds the chunk size (unless forced)
+			if (!forceChunking && content.length <= effectiveChunkSizeChars) {
 				debugLog(
 					`[processContentInChunks] Content (${content.length}) <= effectiveChunkSize (${effectiveChunkSizeChars}), processing as single piece.`,
 				);
@@ -2119,13 +2132,23 @@ if (typeof browser === "undefined") {
 				);
 			}
 
+			// When forceChunking is true, the content script already created DOM wrappers
+			// using the configured chunk size. We MUST split with the same size here
+			// so the chunk count matches, otherwise chunks won't find their DOM targets.
+			const splitSizeWords = forceChunking
+				? configuredChunkSizeWords
+				: effectiveChunkSizeWords;
+
 			debugLog(
 				`[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...`,
+			);
+			debugLog(
+				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured — matching content script" : "model-aware effective"})`,
 			);
 			// Use new modular chunking system with paragraph awareness
 			const chunks = chunkingSystem.core.splitContentByWords(
 				content,
-				effectiveChunkSizeWords,
+				splitSizeWords,
 			);
 			const contentChunks = chunks.map((chunk) => chunk.content);
 			const totalChunks = contentChunks.length;

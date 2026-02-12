@@ -32,11 +32,15 @@ let hasExtractButton = false;
 let autoExtracted = false;
 var isInitialized = false; // Track if the content script is fully initialized (var to avoid redeclaration)
 let storageManager = null; // Storage manager instance for caching
-let isCachedContent = false; // Track if current page has cached enhanced content
+let isCachedContent = false; // Track if cached content is currently applied
+let hasCachedContent = false; // Track if cached content exists
+let enhancementCancelRequested = false; // Track if user cancels enhancement
+let cancelEnhanceButton = null;
 let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let lastKnownNovelData = null; // Cached novel data for notifications
+let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
 const PROGRESS_PROMPT_TIMEOUT_MS = 15000;
@@ -589,6 +593,7 @@ if (window.__RGInitDone) {
 		enhancedContent,
 		modelInfo,
 		showDeleteButton = false,
+		cacheInfo = null,
 	) {
 		// Calculate word counts
 		const originalWordCount = countWords(originalContent);
@@ -607,33 +612,66 @@ if (window.__RGInitDone) {
 		// Get model name and provider from modelInfo if available
 		const modelName = modelInfo?.name || "AI";
 		const modelProvider = modelInfo?.provider || "Ranobe Gemini";
-		const cachedLabel = showDeleteButton ? " [ Cached ]" : "";
-		const modelDisplay = `Enhanced with ${modelProvider}${
+
+		// Cache status display
+		const isFromCache = cacheInfo?.fromCache === true;
+		const cacheTimestamp = cacheInfo?.timestamp;
+		let cacheLabel = "";
+		let cacheIcon = "";
+
+		if (isFromCache && cacheTimestamp) {
+			const age = Date.now() - cacheTimestamp;
+			const hours = Math.floor(age / (1000 * 60 * 60));
+			const days = Math.floor(hours / 24);
+			const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
+			cacheLabel = ` • Cached ${timeAgo}`;
+			cacheIcon = "✓ ";
+		}
+
+		const modelDisplay = `${cacheIcon}Enhanced with ${modelProvider}${
 			modelName !== "AI" ? ` (${modelName})` : ""
-		}${cachedLabel}`;
+		}${cacheLabel}`;
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-enhanced-banner";
+
+		// Base styling
+		let bannerBg = "#f7f7f7";
+		let bannerBorder = "#ddd";
+		let bannerColor = "inherit";
+
+		// Dark mode detection
+		const isDark =
+			document.querySelector(
+				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
+			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+		if (isDark) {
+			bannerBg = "#2c2c2c";
+			bannerBorder = "#444";
+			bannerColor = "#e0e0e0";
+		}
+
+		// Cache status styling - subtle green tint
+		if (isFromCache) {
+			if (isDark) {
+				bannerBg = "#1e3a1e"; // Dark green tint
+				bannerBorder = "#2e7d32"; // Green border
+			} else {
+				bannerBg = "#f1f8f4"; // Light green tint
+				bannerBorder = "#4caf50"; // Green border
+			}
+		}
+
 		banner.style.cssText = `
         margin: 15px 0;
         padding: 15px;
-        background-color: #f7f7f7;
+        background-color: ${bannerBg};
         border-radius: 8px;
-        border: 1px solid #ddd;
+        border: 2px solid ${bannerBorder};
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        color: ${bannerColor};
     `;
-
-		// Support dark mode
-		if (
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
-			) ||
-			window.matchMedia("(prefers-color-scheme: dark)").matches
-		) {
-			banner.style.backgroundColor = "#2c2c2c";
-			banner.style.borderColor = "#444";
-			banner.style.color = "#e0e0e0";
-		}
 
 		const deleteButtonHtml = showDeleteButton
 			? `<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>`
@@ -681,31 +719,66 @@ if (window.__RGInitDone) {
 
 	function handleCancelEnhancement() {
 		debugLog("Cancelling enhancement process...");
+		enhancementCancelRequested = true;
 
 		browser.runtime
 			.sendMessage({ action: "cancelEnhancement" })
 			.catch(debugerror);
 
-		const contentArea = findContentArea();
-		if (contentArea) {
-			const originalContent =
-				contentArea.getAttribute("data-original-html") ||
-				contentArea.getAttribute("data-original-content");
-			if (originalContent) {
-				contentArea.innerHTML = originalContent;
-				showStatusMessage(
-					"Enhancement cancelled. Original content restored.",
-					"info",
-				);
-			}
+		showStatusMessage(
+			"Cancelling enhancement... processed chunks will be kept.",
+			"info",
+		);
+
+		// Reset button states
+		if (cancelEnhanceButton) {
+			cancelEnhanceButton.style.display = "none";
 		}
 
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (button) {
-			button.textContent = "✨ Enhance with Gemini";
+			button.textContent = "⚡ Start Enhancement";
 			button.disabled = false;
 			button.classList.remove("loading");
 		}
+
+		// Clear WIP banner
+		const wipBanner = document.querySelector(".gemini-wip-banner");
+		if (wipBanner) {
+			wipBanner.remove();
+		}
+	}
+
+	// Toggle visibility of enhancement banners (WIP, chunk banners, master banner, summary banners)
+	function handleToggleBannersVisibility() {
+		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
+		if (!toggleBtn) return;
+
+		const banners = document.querySelectorAll(
+			".gemini-wip-banner, .gemini-chunk-banner, .gemini-master-banner, .gemini-summary-section-banner",
+		);
+		if (banners.length === 0) {
+			showStatusMessage("No enhancement banners to show/hide.", "info");
+			return;
+		}
+
+		// Check current visibility state
+		const isHidden = banners[0].style.display === "none";
+
+		// Toggle all banners
+		banners.forEach((banner) => {
+			banner.style.display = isHidden ? "" : "none";
+		});
+
+		// Update button text
+		toggleBtn.textContent = isHidden
+			? "👁 Hide Enhancements"
+			: "👁 Show Enhancements";
+		showStatusMessage(
+			isHidden ? "Showing enhancements..." : "Enhancements hidden.",
+			"info",
+			2000,
+		);
 	}
 
 	function buildChunkBanner(
@@ -714,6 +787,7 @@ if (window.__RGInitDone) {
 		totalChunks,
 		status,
 		errorMessage = null,
+		cacheInfo = null,
 	) {
 		return chunking.ui.createChunkBanner(
 			chunkIndex,
@@ -725,6 +799,7 @@ if (window.__RGInitDone) {
 				onToggle: handleChunkToggle,
 				onDelete: handleChunkDelete,
 			},
+			cacheInfo,
 		);
 	}
 
@@ -889,6 +964,10 @@ if (window.__RGInitDone) {
 			});
 
 			if (response && response.success && response.result) {
+				const modelInfo = response.result?.modelInfo || null;
+				if (modelInfo) {
+					lastChunkModelInfo = modelInfo;
+				}
 				if (chunkContent) {
 					const sanitizedContent = sanitizeHTML(
 						response.result.enhancedContent,
@@ -897,6 +976,9 @@ if (window.__RGInitDone) {
 					chunkContent.setAttribute("data-chunk-enhanced", "true");
 				}
 
+				totalChunks = document.querySelectorAll(
+					".gemini-chunk-wrapper",
+				).length;
 				await chunking.cache.saveChunkToCache(
 					window.location.href,
 					chunkIndex,
@@ -905,6 +987,8 @@ if (window.__RGInitDone) {
 						enhancedContent: response.result.enhancedContent,
 						wordCount: response.result.wordCount || 0,
 						timestamp: Date.now(),
+						totalChunks: totalChunks || undefined,
+						modelInfo: modelInfo,
 					},
 				);
 
@@ -970,6 +1054,12 @@ if (window.__RGInitDone) {
 		const chunkIndex = message.chunkIndex;
 		const totalChunks = message.totalChunks;
 		const chunkResult = message.result;
+		const chunkModelInfo = chunkResult?.modelInfo || null;
+		if (chunkModelInfo) {
+			lastChunkModelInfo = chunkModelInfo;
+		}
+
+		showWorkInProgressBanner(chunkIndex + 1, totalChunks);
 
 		const chunkedContainer = document.getElementById(
 			"gemini-chunked-content",
@@ -979,7 +1069,13 @@ if (window.__RGInitDone) {
 		const chunkWrapper = chunkedContainer.querySelector(
 			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
 		);
-		if (!chunkWrapper) return;
+		if (!chunkWrapper) {
+			debugLog(
+				`[handleChunkProcessed] WARNING: No DOM wrapper for chunk ${chunkIndex}/${totalChunks}. ` +
+					`Background may have split into more chunks than content script expected.`,
+			);
+			return;
+		}
 
 		if (chunkResult && chunkResult.enhancedContent) {
 			const chunkContent = chunkWrapper.querySelector(
@@ -1001,6 +1097,8 @@ if (window.__RGInitDone) {
 					enhancedContent: chunkResult.enhancedContent,
 					wordCount: chunkResult.wordCount || 0,
 					timestamp: Date.now(),
+					totalChunks: totalChunks,
+					modelInfo: chunkModelInfo,
 				},
 			);
 
@@ -1019,6 +1117,14 @@ if (window.__RGInitDone) {
 		}
 
 		if (message.isComplete) {
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
+			if (cancelEnhanceButton) {
+				cancelEnhanceButton.style.display = "none";
+			}
+
 			const contentArea = findContentArea();
 			const button = document.querySelector(".gemini-enhance-btn");
 			if (button) {
@@ -1050,6 +1156,8 @@ if (window.__RGInitDone) {
 						enhancedWords,
 						totalChunks,
 						false,
+						lastChunkModelInfo,
+						null,
 					);
 
 					const toggleAllBtn = masterBanner.querySelector(
@@ -1126,16 +1234,45 @@ if (window.__RGInitDone) {
 
 	function renderSummaryOutput(summaryDisplay, summary, summaryType) {
 		if (!summaryDisplay) return;
-		while (summaryDisplay.firstChild) {
-			summaryDisplay.removeChild(summaryDisplay.firstChild);
+
+		// Find or create the summary content div within the banner
+		let summaryContent = summaryDisplay.querySelector(
+			".gemini-summary-content",
+		);
+
+		if (!summaryContent) {
+			// Fallback: clear display and render old way (shouldn't happen with new banner structure)
+			while (summaryDisplay.firstChild) {
+				summaryDisplay.removeChild(summaryDisplay.firstChild);
+			}
+			summaryContent = document.createElement("div");
+			summaryContent.className = "gemini-summary-content";
+			summaryDisplay.appendChild(summaryContent);
+		} else {
+			// Clear existing content in the summary content div
+			while (summaryContent.firstChild) {
+				summaryContent.removeChild(summaryContent.firstChild);
+			}
 		}
 
-		const summaryHeader = document.createElement("h3");
-		summaryHeader.textContent = `${summaryType} Chapter Summary:`;
-		summaryDisplay.appendChild(summaryHeader);
+		// Add summary type header
+		const summaryHeader = document.createElement("h4");
+		summaryHeader.textContent = `${summaryType} Summary:`;
+		summaryHeader.style.cssText = `
+			margin: 0 0 12px 0;
+			color: #e8ecef;
+			font-size: 14px;
+			font-weight: 600;
+		`;
+		summaryContent.appendChild(summaryHeader);
 
+		// Create container for summary text
 		const summaryContentContainer = document.createElement("div");
 		summaryContentContainer.className = "summary-text-content";
+		summaryContentContainer.style.cssText = `
+			color: #d0d0c0;
+			line-height: 1.6;
+		`;
 
 		const paragraphs = extractParagraphsFromHtml(summary);
 		if (paragraphs.length > 0) {
@@ -1155,7 +1292,87 @@ if (window.__RGInitDone) {
 			summaryContentContainer.style.fontSize = `${currentFontSize}%`;
 		}
 
-		summaryDisplay.appendChild(summaryContentContainer);
+		summaryContent.appendChild(summaryContentContainer);
+	}
+
+	function ensureSummaryBannerExists(summaryDisplay) {
+		if (!summaryDisplay) return;
+
+		const banner = document.createElement("div");
+		banner.className = "gemini-summary-section-banner";
+		banner.style.cssText = `
+			padding: 16px 20px;
+			background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+			border: 1px solid rgba(139, 180, 248, 0.3);
+			border-radius: 8px;
+			margin: 12px 0 20px 0;
+		`;
+
+		const headerDiv = document.createElement("div");
+		headerDiv.style.cssText = `
+			font-size: 16px;
+			font-weight: 600;
+			margin-bottom: 12px;
+			color: #e8ecef;
+		`;
+		headerDiv.textContent = "📋 Full Chapter Summary";
+		banner.appendChild(headerDiv);
+
+		const buttonsContainer = document.createElement("div");
+		buttonsContainer.style.cssText = `
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+		`;
+		banner.appendChild(buttonsContainer);
+
+		// Add buttons from the stored refs
+		const buttons = summaryDisplay.summaryButtons;
+		if (buttons) {
+			if (buttons.summarizeButton) {
+				const clonedBtn = buttons.summarizeButton.cloneNode(true);
+				clonedBtn.addEventListener("click", (e) => {
+					buttons.summarizeButton.dispatchEvent(
+						new MouseEvent("click", { bubbles: true }),
+					);
+				});
+				buttonsContainer.appendChild(clonedBtn);
+			}
+			if (buttons.shortSummarizeButton) {
+				const clonedBtn = buttons.shortSummarizeButton.cloneNode(true);
+				clonedBtn.addEventListener("click", (e) => {
+					buttons.shortSummarizeButton.dispatchEvent(
+						new MouseEvent("click", { bubbles: true }),
+					);
+				});
+				buttonsContainer.appendChild(clonedBtn);
+			}
+			if (buttons.enhanceButton) {
+				const clonedBtn = buttons.enhanceButton.cloneNode(true);
+				clonedBtn.addEventListener("click", (e) => {
+					buttons.enhanceButton.dispatchEvent(
+						new MouseEvent("click", { bubbles: true }),
+					);
+				});
+				buttonsContainer.appendChild(clonedBtn);
+			}
+		}
+
+		// Add content area for summary text
+		const contentDiv = document.createElement("div");
+		contentDiv.className = "gemini-summary-content";
+		contentDiv.style.cssText = `
+			margin-top: 16px;
+			padding: 12px;
+			background: rgba(0, 0, 0, 0.2);
+			border-radius: 4px;
+			max-height: 400px;
+			overflow-y: auto;
+			color: #e8ecef;
+		`;
+		banner.appendChild(contentDiv);
+
+		summaryDisplay.insertBefore(banner, summaryDisplay.firstChild);
 	}
 
 	async function summarizeChunkRange(chunkIndices, isShort) {
@@ -1203,7 +1420,23 @@ if (window.__RGInitDone) {
 			}
 			if (summaryDisplay) {
 				summaryDisplay.style.display = "block";
-				summaryDisplay.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+
+				// Add summary banner with buttons if not already there
+				if (
+					!summaryDisplay.querySelector(
+						".gemini-summary-section-banner",
+					)
+				) {
+					ensureSummaryBannerExists(summaryDisplay);
+				}
+
+				// Update the summary content area message
+				const summaryContent = summaryDisplay.querySelector(
+					".gemini-summary-content",
+				);
+				if (summaryContent) {
+					summaryContent.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+				}
 			}
 
 			const modelInfoResponse = await sendMessageWithRetry({
@@ -1313,6 +1546,28 @@ if (window.__RGInitDone) {
 		}
 
 		return banner;
+	}
+
+	function showWorkInProgressBanner(currentChunk, totalChunks) {
+		const contentArea = findContentArea();
+		if (!contentArea) return;
+
+		const newBanner = createWorkInProgressBanner(currentChunk, totalChunks);
+		const existingBanner = document.querySelector(".gemini-wip-banner");
+		if (existingBanner && existingBanner.parentNode) {
+			existingBanner.parentNode.replaceChild(newBanner, existingBanner);
+			return;
+		}
+
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content",
+		);
+		if (chunkedContainer) {
+			contentArea.insertBefore(newBanner, chunkedContainer);
+			return;
+		}
+
+		contentArea.insertBefore(newBanner, contentArea.firstChild);
 	}
 
 	/**
@@ -1591,12 +1846,17 @@ if (window.__RGInitDone) {
 			contentArea.removeAttribute("data-total-chunks");
 		}
 
+		// Clear both chunk cache and single-content cache
 		const chunking = await loadChunkingSystem();
 		if (chunking) {
 			await chunking.cache.deleteAllChunksForUrl(window.location.href);
 		}
+		if (storageManager) {
+			await storageManager.removeEnhancedContent(window.location.href);
+		}
 
 		isCachedContent = false;
+		hasCachedContent = false;
 		showStatusMessage(
 			"All enhanced content deleted. Reverted to original.",
 			"info",
@@ -2219,18 +2479,294 @@ if (window.__RGInitDone) {
 			const cached = await storageManager.loadEnhancedContent(
 				window.location.href,
 			);
-			if (cached) {
+			if (cached && cached.enhancedContent) {
 				debugLog("Found cached enhanced content");
-				isCachedContent = true;
+				hasCachedContent = true;
 				return cached;
 			}
+			hasCachedContent = false;
 			isCachedContent = false;
 			return null;
 		} catch (error) {
 			debugError("Error checking cached content:", error);
 			isCachedContent = false;
+			hasCachedContent = false;
 			return null;
 		}
+	}
+
+	function isChunkCacheComplete(chunks, totalChunks) {
+		if (!chunks || chunks.length === 0) return false;
+		const indices = chunks
+			.map((chunk) => chunk?.chunkIndex)
+			.filter((idx) => Number.isInteger(idx))
+			.sort((a, b) => a - b);
+		if (indices.length === 0) return false;
+		const maxIndex = indices[indices.length - 1];
+		const expectedTotal = Number.isInteger(totalChunks)
+			? totalChunks
+			: maxIndex + 1;
+		if (indices.length !== expectedTotal) return false;
+		for (let i = 0; i < expectedTotal; i++) {
+			if (indices[i] !== i) return false;
+		}
+		return true;
+	}
+
+	function getChunkCacheTimestamp(metadata, chunks) {
+		if (metadata?.lastUpdated) return metadata.lastUpdated;
+		const timestamps = (chunks || [])
+			.map((chunk) => chunk?.timestamp)
+			.filter((ts) => Number.isFinite(ts));
+		if (timestamps.length === 0) return null;
+		return Math.max(...timestamps);
+	}
+
+	function getChunkCacheModelInfo(metadata, chunks) {
+		if (metadata?.modelInfo) return metadata.modelInfo;
+		const withModel = (chunks || []).find((chunk) => chunk?.modelInfo);
+		return withModel?.modelInfo || null;
+	}
+
+	async function restoreChunkedContentFromCache(chunking, chunks, metadata) {
+		const contentArea = findContentArea();
+		if (!contentArea) return false;
+
+		const totalChunks = Number.isInteger(metadata?.totalChunks)
+			? metadata.totalChunks
+			: chunks.length;
+		const cacheTimestamp = getChunkCacheTimestamp(metadata, chunks);
+		const modelInfo = getChunkCacheModelInfo(metadata, chunks);
+		if (modelInfo) {
+			lastChunkModelInfo = modelInfo;
+		}
+
+		const originalHtmlSnapshot = contentArea.innerHTML;
+		const originalText = chunks
+			.map((chunk) => stripHtmlTags(chunk?.originalContent || ""))
+			.join("\n\n");
+
+		contentArea.setAttribute("data-original-html", originalHtmlSnapshot);
+		contentArea.setAttribute("data-original-text", originalText);
+		contentArea.setAttribute("data-total-chunks", totalChunks);
+
+		const chunkedContentContainer = document.createElement("div");
+		chunkedContentContainer.id = "gemini-chunked-content";
+		chunkedContentContainer.style.width = "100%";
+
+		const sortedChunks = [...chunks].sort(
+			(a, b) => (a.chunkIndex || 0) - (b.chunkIndex || 0),
+		);
+
+		sortedChunks.forEach((chunk, fallbackIndex) => {
+			const chunkIndex = Number.isInteger(chunk.chunkIndex)
+				? chunk.chunkIndex
+				: fallbackIndex;
+			const chunkWrapper = document.createElement("div");
+			chunkWrapper.className = "gemini-chunk-wrapper";
+			chunkWrapper.setAttribute("data-chunk-index", chunkIndex);
+
+			const chunkTimestamp = chunk?.timestamp || cacheTimestamp;
+			const cacheInfo = chunkTimestamp
+				? { fromCache: true, timestamp: chunkTimestamp }
+				: { fromCache: true };
+			const banner = buildChunkBanner(
+				chunking,
+				chunkIndex,
+				totalChunks,
+				"cached",
+				null,
+				cacheInfo,
+			);
+			chunkWrapper.appendChild(banner);
+
+			const chunkContent = document.createElement("div");
+			chunkContent.className = "gemini-chunk-content";
+			chunkContent.setAttribute("data-chunk-index", chunkIndex);
+			chunkContent.setAttribute(
+				"data-original-chunk-content",
+				chunk?.originalContent || "",
+			);
+			if (/<[^>]+>/.test(chunk?.originalContent || "")) {
+				chunkContent.setAttribute(
+					"data-original-chunk-html",
+					chunk.originalContent,
+				);
+			}
+
+			const sanitizedContent = sanitizeHTML(chunk?.enhancedContent || "");
+			chunkContent.innerHTML = sanitizedContent;
+			chunkContent.setAttribute("data-chunk-enhanced", "true");
+			chunkContent.setAttribute("data-showing", "enhanced");
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				sanitizedContent,
+			);
+			chunkWrapper.appendChild(chunkContent);
+
+			chunkedContentContainer.appendChild(chunkWrapper);
+		});
+
+		contentArea.innerHTML = "";
+		contentArea.appendChild(chunkedContentContainer);
+
+		const chunkWrappers = Array.from(
+			chunkedContentContainer.querySelectorAll(".gemini-chunk-wrapper"),
+		);
+		if (chunking?.summaryUI) {
+			const summarySettings = await browser.storage.local.get([
+				"chunkSummaryCount",
+			]);
+			const chunkSummaryCount =
+				summarySettings.chunkSummaryCount ||
+				chunking?.config?.DEFAULT_CHUNK_SUMMARY_COUNT ||
+				2;
+
+			const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
+				totalChunks,
+				(indices) => summarizeChunkRange(indices, false),
+				(indices) => summarizeChunkRange(indices, true),
+			);
+			contentArea.insertBefore(mainSummaryGroup, chunkedContentContainer);
+
+			if (totalChunks > 1) {
+				chunking.summaryUI.insertSummaryGroups(
+					chunkedContentContainer,
+					chunkWrappers,
+					chunkSummaryCount,
+					(indices) => summarizeChunkRange(indices, false),
+					(indices) => summarizeChunkRange(indices, true),
+				);
+			}
+		}
+
+		if (chunking?.ui) {
+			const originalWords = chunking.core.countWords(originalText);
+			const enhancedWords = sortedChunks.reduce((sum, chunk) => {
+				return (
+					sum + chunking.core.countWords(chunk?.enhancedContent || "")
+				);
+			}, 0);
+			const masterBanner = chunking.ui.createMasterBanner(
+				originalWords,
+				enhancedWords,
+				totalChunks,
+				true,
+				modelInfo,
+				cacheTimestamp ? { timestamp: cacheTimestamp } : null,
+			);
+
+			const toggleAllBtn = masterBanner.querySelector(
+				".gemini-master-toggle-all-btn",
+			);
+			if (toggleAllBtn) {
+				toggleAllBtn.setAttribute("data-showing", "enhanced");
+				toggleAllBtn.addEventListener("click", (e) => {
+					e.preventDefault();
+					handleToggleAllChunks();
+				});
+			}
+			const deleteAllBtn = masterBanner.querySelector(
+				".gemini-master-delete-all-btn",
+			);
+			if (deleteAllBtn) {
+				deleteAllBtn.addEventListener("click", async (e) => {
+					e.preventDefault();
+					if (
+						confirm(
+							"Delete all cached enhanced content for this chapter?",
+						)
+					) {
+						await handleDeleteAllChunks();
+					}
+				});
+			}
+
+			contentArea.insertBefore(masterBanner, contentArea.firstChild);
+		}
+
+		isCachedContent = true;
+		hasCachedContent = true;
+		contentArea.setAttribute("data-showing-enhanced", "true");
+
+		const wipBanner = document.querySelector(".gemini-wip-banner");
+		if (wipBanner) wipBanner.remove();
+
+		const button = document.querySelector(".gemini-enhance-btn");
+		if (button) {
+			button.textContent = "♻ Regenerate with Gemini";
+			button.disabled = false;
+			button.classList.remove("loading");
+		}
+
+		showStatusMessage("Loaded cached enhanced content.", "success", 3000);
+
+		return true;
+	}
+
+	async function tryRestoreChunkedCache() {
+		const contentArea = findContentArea();
+		if (!contentArea) {
+			debugLog("[Cache Restore] No content area found — skipping.");
+			return false;
+		}
+		if (document.getElementById("gemini-chunked-content")) {
+			debugLog(
+				"[Cache Restore] Chunked content container already exists — skipping.",
+			);
+			return false;
+		}
+
+		const chunking = await loadChunkingSystem();
+		if (!chunking?.cache?.hasChunksInCache) {
+			debugLog(
+				"[Cache Restore] Chunking system or cache unavailable — skipping.",
+			);
+			return false;
+		}
+
+		const url = window.location.href;
+		const hasChunks = await chunking.cache.hasChunksInCache(url);
+		if (!hasChunks) {
+			debugLog("[Cache Restore] No chunks found in cache for this URL.");
+			return false;
+		}
+
+		const metadata = chunking.cache.getChunkMetadata
+			? await chunking.cache.getChunkMetadata(url)
+			: null;
+		const chunks = await chunking.cache.getAllChunksFromCache(url);
+		if (!chunks || chunks.length === 0) {
+			debugLog("[Cache Restore] getAllChunksFromCache returned empty.");
+			return false;
+		}
+
+		debugLog(
+			`[Cache Restore] Found ${chunks.length} cached chunks, metadata totalChunks: ${metadata?.totalChunks}`,
+		);
+
+		const isComplete = isChunkCacheComplete(chunks, metadata?.totalChunks);
+		if (!isComplete) {
+			debugLog(
+				`[Cache Restore] Chunk cache incomplete — have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
+			);
+			return false;
+		}
+
+		const allEnhanced = chunks.every(
+			(chunk) => chunk?.enhancedContent && chunk.enhancedContent.length,
+		);
+		if (!allEnhanced) {
+			debugLog(
+				"[Cache Restore] One or more chunks missing enhanced content — skipping.",
+			);
+			return false;
+		}
+
+		debugLog(
+			`[Cache Restore] Cache complete with ${chunks.length} enhanced chunks. Restoring...`,
+		);
+		return restoreChunkedContentFromCache(chunking, chunks, metadata);
 	}
 
 	// Generic content extraction that works across different websites
@@ -2321,20 +2857,7 @@ if (window.__RGInitDone) {
 			debugLog("Could not load font size setting:", error);
 		}
 
-		// Check for cached content
-		const cachedData = await checkCachedContent();
-		if (cachedData && cachedData.enhancedContent) {
-			debugLog("Found cached enhanced content, auto-loading...");
-			// Auto-load the cached content after UI is injected and content area is ready
-			// Use requestAnimationFrame to ensure DOM is fully rendered
-			requestAnimationFrame(() => {
-				setTimeout(() => {
-					replaceContentWithEnhancedVersion(cachedData);
-				}, 250);
-			});
-		}
-
-		// Get the appropriate handler for this website
+		// Load handler FIRST so findContentArea() can use site-specific selectors
 		currentHandler = await getHandlerForCurrentSite();
 
 		if (!currentHandler) {
@@ -2357,12 +2880,47 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		if (currentHandler) {
-			debugLog(`Using specific handler for ${window.location.hostname}`);
+		debugLog(`Using handler for ${window.location.hostname}`);
+
+		// Now that handler is loaded, attempt to restore cached content
+		let cacheRestored = false;
+		const restoredChunkedCache = await tryRestoreChunkedCache();
+		if (restoredChunkedCache) {
+			cacheRestored = true;
 		} else {
-			debugLog(
-				"No specific handler found, using generic extraction methods",
-			);
+			const cachedData = await checkCachedContent();
+			if (cachedData && cachedData.enhancedContent) {
+				debugLog("Found cached enhanced content, auto-loading...");
+				// Restore cached content synchronously now that the handler is ready
+				const contentArea = findContentArea();
+				if (contentArea) {
+					const restored =
+						await replaceContentWithEnhancedVersion(cachedData);
+					if (restored) {
+						cacheRestored = true;
+						debugLog("Cached content successfully restored");
+					} else {
+						debugLog(
+							"Failed to restore cached content, will show original",
+						);
+					}
+				} else {
+					debugLog(
+						"Content area not found for cache restore, scheduling retry...",
+					);
+					// Fallback: wait for DOM to be ready and retry once
+					requestAnimationFrame(() => {
+						setTimeout(async () => {
+							const retryArea = findContentArea();
+							if (retryArea) {
+								await replaceContentWithEnhancedVersion(
+									cachedData,
+								);
+							}
+						}, 500);
+					});
+				}
+			}
 		}
 
 		// Determine page type
@@ -3237,15 +3795,46 @@ if (window.__RGInitDone) {
 	// 	return button;
 	// }
 
-	// Function to create the Enhance button
+	// Function to create the Toggle Banners button (show/hide banners for enhanced content)
+	function createToggleBannersButton() {
+		const toggleButton = document.createElement("button");
+		toggleButton.className = "gemini-toggle-banners-btn";
+		toggleButton.textContent = "👁 Show Enhancements";
+		toggleButton.title = "Toggle visibility of enhanced content banners";
+
+		// Style to match the sample page buttons
+		toggleButton.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px;
+        margin: 15px 0;
+        background-color: #2a2a2a;
+        color: #8a8a7d;
+        border: 1px solid #444444;
+        box-shadow: inset 0 0 0 1px #5a5a5a4d;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 13px;
+        z-index: 1000;
+    `;
+		toggleButton.addEventListener("click", handleToggleBannersVisibility);
+		toggleButton.addEventListener("mouseover", () => {
+			toggleButton.style.backgroundColor = "#353535";
+		});
+		toggleButton.addEventListener("mouseout", () => {
+			toggleButton.style.backgroundColor = "#2a2a2a";
+		});
+		return toggleButton;
+	}
+
+	// Function to create the Start Enhancement button (actually start the enhancement process)
 	function createEnhanceButton() {
 		const enhanceButton = document.createElement("button");
 		enhanceButton.className = "gemini-enhance-btn";
-
-		// Change button text based on whether content is cached
-		enhanceButton.textContent = isCachedContent
-			? "♻ Regenerate with Gemini"
-			: "✨ Enhance with Gemini";
+		enhanceButton.textContent = "⚡ Start Enhancement";
+		enhanceButton.title = "Begin enhancement process";
 
 		// Style to match the sample page buttons
 		enhanceButton.style.cssText = `
@@ -3272,6 +3861,36 @@ if (window.__RGInitDone) {
 			enhanceButton.style.backgroundColor = "#222";
 		});
 		return enhanceButton;
+	}
+
+	function createCancelEnhanceButton() {
+		const cancelButton = document.createElement("button");
+		cancelButton.className = "gemini-cancel-enhance-btn";
+		cancelButton.textContent = "Cancel";
+		cancelButton.style.cssText = `
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px;
+        margin: 15px 0 15px 8px;
+        background-color: #b91c1c;
+        color: #ffffff;
+        border: 1px solid #7f1d1d;
+        box-shadow: inset 0 0 0 1px #5a5a5a4d;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 1000;
+    `;
+		cancelButton.addEventListener("click", handleCancelEnhancement);
+		cancelButton.addEventListener("mouseover", () => {
+			cancelButton.style.backgroundColor = "#991b1b";
+		});
+		cancelButton.addEventListener("mouseout", () => {
+			cancelButton.style.backgroundColor = "#b91c1c";
+		});
+		return cancelButton;
 	}
 
 	// Wrapper handler for Enhance button clicks
@@ -4209,6 +4828,8 @@ if (window.__RGInitDone) {
 		}
 
 		const enhanceButton = createEnhanceButton();
+		const toggleBannersButton = createToggleBannersButton();
+		cancelEnhanceButton = createCancelEnhanceButton();
 		const summarizeButton = createSummarizeButton();
 		const shortSummarizeButton = createShortSummarizeButton();
 
@@ -4234,10 +4855,21 @@ if (window.__RGInitDone) {
 			summaryDisplayShort.classList.add("mobile-view");
 		}
 
-		controlsContainer.appendChild(enhanceButton);
-		// Summary buttons moved to chunk summary banners
-		// controlsContainer.appendChild(summarizeButton);
-		// controlsContainer.appendChild(shortSummarizeButton);
+		// Only add toggle banners button to controls
+		controlsContainer.appendChild(toggleBannersButton);
+		controlsContainer.appendChild(cancelEnhanceButton);
+
+		// Store button refs for later use
+		summaryDisplayLong.summaryButtons = {
+			summarizeButton,
+			shortSummarizeButton,
+			enhanceButton,
+		};
+		summaryDisplayShort.summaryButtons = {
+			summarizeButton,
+			shortSummarizeButton,
+			enhanceButton,
+		};
 
 		// Get optimal insertion point based on the handler
 		let insertionPoint = contentArea;
@@ -4905,31 +5537,60 @@ if (window.__RGInitDone) {
 
 	// Handle click event for Enhance button
 	async function handleEnhanceClick() {
+		enhancementCancelRequested = false;
 		// Check cache first
-		if (storageManager && isCachedContent) {
+		if (storageManager && (isCachedContent || hasCachedContent)) {
 			const button = document.querySelector(".gemini-enhance-btn");
 			if (!button) return;
 			const originalText = button.textContent;
 			if (!originalText) return;
 
-			if (originalText.includes("Regenerate")) {
-				// Clear cache before regeneration but continue to process
+			if (isCachedContent && originalText.includes("Regenerate")) {
+				// Clear ALL caches before regeneration but continue to process
 				await storageManager.removeEnhancedContent(
 					window.location.href,
 				);
+				// Also clear chunked cache if it exists
+				const chunking = await loadChunkingSystem();
+				if (chunking?.cache?.deleteAllChunksForUrl) {
+					await chunking.cache.deleteAllChunksForUrl(
+						window.location.href,
+					);
+				}
 				isCachedContent = false;
+				hasCachedContent = false;
 				// Update button text immediately
 				button.textContent = "✨ Enhance with Gemini";
 				const contentArea = findContentArea();
 				if (contentArea) {
-					const isShowingEnhanced =
-						contentArea.getAttribute("data-showing-enhanced") ===
-						"true";
+					// Remove chunked content container if present
+					const chunkedContainer = document.getElementById(
+						"gemini-chunked-content",
+					);
+					const masterBanner = contentArea.querySelector(
+						".gemini-master-banner",
+					);
+					if (masterBanner) masterBanner.remove();
+
+					const originalHtml =
+						contentArea.getAttribute("data-original-html");
 					const originalContent = contentArea.getAttribute(
 						"data-original-content",
 					);
-					if (isShowingEnhanced && originalContent) {
-						contentArea.innerHTML = originalContent;
+					const isShowingEnhanced =
+						contentArea.getAttribute("data-showing-enhanced") ===
+						"true";
+
+					if (isShowingEnhanced) {
+						if (originalHtml) {
+							// Restore from chunked cache original HTML
+							contentArea.innerHTML = originalHtml;
+							contentArea.removeAttribute("data-original-html");
+							contentArea.removeAttribute("data-original-text");
+							contentArea.removeAttribute("data-total-chunks");
+						} else if (originalContent) {
+							contentArea.innerHTML = originalContent;
+						}
 						contentArea.setAttribute(
 							"data-showing-enhanced",
 							"false",
@@ -4952,10 +5613,15 @@ if (window.__RGInitDone) {
 							"info",
 						);
 						replaceContentWithEnhancedVersion(cachedData);
+						isCachedContent = true;
+						hasCachedContent = true;
 						if (button) {
 							button.textContent = originalText;
 							button.disabled = false;
 							button.classList.remove("loading");
+						}
+						if (cancelEnhanceButton) {
+							cancelEnhanceButton.style.display = "none";
 						}
 						return;
 					} else {
@@ -4963,12 +5629,14 @@ if (window.__RGInitDone) {
 							"Cached enhanced content is invalid or missing.",
 							"error",
 						);
+						hasCachedContent = false;
 					}
 				} catch (err) {
 					showStatusMessage(
 						"Failed to load cached enhanced content.",
 						"error",
 					);
+					hasCachedContent = false;
 				}
 			}
 		}
@@ -4987,6 +5655,9 @@ if (window.__RGInitDone) {
 			// Disable UI and show status
 			button.textContent = "Waking up AI...";
 			button.disabled = true;
+			if (cancelEnhanceButton) {
+				cancelEnhanceButton.style.display = "inline-flex";
+			}
 			showStatusMessage("Waking up AI service...", "info");
 
 			// Wake up background worker with retry logic
@@ -5068,7 +5739,9 @@ if (window.__RGInitDone) {
 					shouldChunk = false;
 				}
 
-				if (!chunks || chunks.length <= 1) {
+				// Always enable chunking UI if we have chunks array (even for single chunk)
+				// This ensures summary buttons appear for all chapters
+				if (!chunks || chunks.length === 0) {
 					shouldChunk = false;
 				}
 
@@ -5147,19 +5820,24 @@ if (window.__RGInitDone) {
 								chunkedContentContainer,
 							);
 
-							chunking.summaryUI.insertSummaryGroups(
-								chunkedContentContainer,
-								chunkWrappers,
-								chunkSummaryCount,
-								(indices) =>
-									summarizeChunkRange(indices, false),
-								(indices) => summarizeChunkRange(indices, true),
-							);
+							// Only insert per-chunk summary groups if we have multiple chunks
+							if (chunks.length > 1) {
+								chunking.summaryUI.insertSummaryGroups(
+									chunkedContentContainer,
+									chunkWrappers,
+									chunkSummaryCount,
+									(indices) =>
+										summarizeChunkRange(indices, false),
+									(indices) =>
+										summarizeChunkRange(indices, true),
+								);
+							}
 						}
 
 						debugLog(
 							`Prepared ${chunks.length} chunks for inline replacement with preserved HTML`,
 						);
+						showWorkInProgressBanner(1, chunks.length);
 					} catch (prepError) {
 						debugError(
 							"Failed to prepare chunked view:",
@@ -5208,38 +5886,71 @@ if (window.__RGInitDone) {
 
 			// Send content to background for processing (background will stream chunkProcessed messages)
 			// Using sendMessageWithRetry to handle service worker sleep issues
+			if (!shouldChunk) {
+				showWorkInProgressBanner(1, 1);
+			}
 			const response = await sendMessageWithRetry({
 				action: "processWithGemini",
 				title: extractedContent.title,
 				content: extractedContent.text,
 				siteSpecificPrompt: combinedPrompt,
 				useEmoji: useEmoji,
+				forceChunking: Boolean(shouldChunk),
 			});
 
 			// Restore button state
 			button.textContent = originalButtonText;
 			button.disabled = false;
 
+			if (enhancementCancelRequested) {
+				debugLog("Enhancement cancelled; ignoring response");
+				const wipBanner = document.querySelector(".gemini-wip-banner");
+				if (wipBanner) {
+					wipBanner.remove();
+				}
+				const cancelButton = document.querySelector(
+					".gemini-enhance-btn",
+				);
+				if (cancelButton) {
+					cancelButton.textContent = "✨ Enhance with Gemini";
+					cancelButton.disabled = false;
+					cancelButton.classList.remove("loading");
+				}
+				if (cancelEnhanceButton) {
+					cancelEnhanceButton.style.display = "none";
+				}
+				return;
+			}
+
 			if (response && response.success) {
 				// If background returned a combined result (non-chunked), handle it here
 				// Skip if we've already been handling chunks progressively
-				const enhancedContainer = document.getElementById(
-					"gemini-enhanced-container",
-				);
-				const hasProgressiveChunks =
-					enhancedContainer &&
-					enhancedContainer.querySelector(".gemini-chunk");
-
-				if (
-					response.result &&
-					response.result.enhancedContent &&
-					!hasProgressiveChunks
-				) {
-					replaceContentWithEnhancedVersion(response.result);
-				} else if (hasProgressiveChunks) {
-					debugLog(
-						"Skipping replaceContentWithEnhancedVersion - chunks already displayed progressively",
+				if (response.result && response.result.enhancedContent) {
+					const isChunkedUiActive = Boolean(
+						document.getElementById("gemini-chunked-content"),
 					);
+					if (isChunkedUiActive) {
+						const chunking = await loadChunkingSystem();
+						const totalChunks = chunks.length || 1;
+						const wordCount = chunking?.core?.countWords
+							? chunking.core.countWords(
+									response.result.enhancedContent,
+								)
+							: 0;
+						await handleChunkProcessed({
+							chunkIndex: 0,
+							totalChunks: totalChunks,
+							result: {
+								originalContent: extractedContent.text,
+								enhancedContent:
+									response.result.enhancedContent,
+								wordCount: wordCount,
+							},
+							isComplete: true,
+						});
+					} else {
+						replaceContentWithEnhancedVersion(response.result);
+					}
 				}
 			} else if (!response || !response.success) {
 				const errorMessage = response?.error || "Unknown error";
@@ -5276,12 +5987,18 @@ if (window.__RGInitDone) {
 					);
 				}
 			}
+			if (cancelEnhanceButton) {
+				cancelEnhanceButton.style.display = "none";
+			}
 		} catch (error) {
 			debugError("Error in handleEnhanceClick:", error);
 			showStatusMessage(`Error: ${error.message}`, "error");
 			if (button) {
 				button.textContent = "✨ Enhance with Gemini";
 				button.disabled = false;
+			}
+			if (cancelEnhanceButton) {
+				cancelEnhanceButton.style.display = "none";
 			}
 		}
 	}
@@ -5306,6 +6023,21 @@ if (window.__RGInitDone) {
 				typeof enhancedContent === "object" &&
 				enhancedContent.originalContent &&
 				enhancedContent.timestamp; // Timestamp indicates it's from cache
+			const cacheInfo = isFromCache
+				? {
+						fromCache: true,
+						timestamp: enhancedContent.timestamp,
+					}
+				: null;
+
+			if (isFromCache) {
+				isCachedContent = true;
+				hasCachedContent = true;
+				const button = document.querySelector(".gemini-enhance-btn");
+				if (button) {
+					button.textContent = "♻ Regenerate with Gemini";
+				}
+			}
 
 			// For fresh enhancements, always use contentArea.innerHTML to preserve HTML structure
 			// For cached content, use the stored originalContent (which was saved with HTML)
@@ -5474,6 +6206,7 @@ if (window.__RGInitDone) {
 					newContent,
 					modelInfo,
 					isCachedContent,
+					cacheInfo,
 				);
 
 				// Update toggle button text based on current state
@@ -5891,6 +6624,14 @@ if (window.__RGInitDone) {
 			contentArea.insertBefore(errorBox, contentArea.firstChild);
 		} else {
 			contentArea.appendChild(errorBox);
+		}
+	}
+
+	// Remove the initial word count display (called after enhancement replaces content)
+	function removeOriginalWordCount() {
+		const existingWordCount = document.querySelector(".gemini-word-count");
+		if (existingWordCount) {
+			existingWordCount.remove();
 		}
 	}
 
@@ -6454,6 +7195,14 @@ if (window.__RGInitDone) {
 				`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
 				"info",
 			);
+
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
+			if (cancelEnhanceButton) {
+				cancelEnhanceButton.style.display = "none";
+			}
 
 			// Reset button state
 			const button = document.querySelector(".gemini-enhance-btn");

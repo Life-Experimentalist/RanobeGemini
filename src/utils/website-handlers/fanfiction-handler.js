@@ -63,7 +63,14 @@ Please maintain:
 - Preserve the narrative flow and pacing
 When enhancing, improve readability while respecting the author's creative voice and the source material.`;
 
-	static initialize() {
+	/**
+	 * Normalize FanFiction.net URL - redirect bare domain to preferred subdomain
+	 * Implements BaseWebsiteHandler.normalizeURL() for instant redirects
+	 * @static
+	 * @async
+	 * @returns {Promise<boolean>} True if redirect occurred, false otherwise
+	 */
+	static async normalizeURL() {
 		try {
 			const { hostname, pathname, search, hash } = window.location;
 			const isFanfictionHost =
@@ -79,76 +86,78 @@ When enhancing, improve readability while respecting the author's creative voice
 				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
 				window.innerWidth <= 768;
 
-			const resolveTargetHost = (preference) => {
-				switch (preference) {
-					case "mobile":
-					case "m":
-						return "m.fanfiction.net";
-					case "desktop":
-					case "www":
-						return "www.fanfiction.net";
-					default:
-						return isMobile
-							? "m.fanfiction.net"
-							: "www.fanfiction.net";
-				}
-			};
-
-			const shouldRedirect = (preference) => {
-				if (!isFanfictionHost) return false;
-				if (isBareDomain || !isKnownSubdomain) return true;
-				if (preference === "mobile" && hostname !== "m.fanfiction.net")
-					return true;
-				if (
-					preference === "desktop" &&
-					hostname !== "www.fanfiction.net"
-				)
-					return true;
+			// Only process if on a FanFiction domain that needs normalization
+			if (!isFanfictionHost || !isBareDomain) {
 				return false;
-			};
+			}
 
-			const redirectTo = (targetHost) => {
-				const target = `https://${targetHost}${pathname}${search}${hash}`;
-				if (window.location.href !== target) {
-					// For .ws domain redirect, use try-catch with revert on error
-					if (isWSHost) {
-						try {
-							window.location.replace(target);
-						} catch (wsRedirectErr) {
-							debugError(
-								"FanFiction.ws redirect failed",
-								wsRedirectErr,
-							);
-							// Revert to original .ws URL on error
-						}
-					} else {
-						window.location.replace(target);
+			// Get stored domain preference
+			let preference = "www"; // Default to www
+			try {
+				const result =
+					await browser.storage.local.get(SITE_SETTINGS_KEY);
+				const settings = result?.[SITE_SETTINGS_KEY] || {};
+				const fanfictionSettings = settings?.fanfiction || {};
+				preference = fanfictionSettings.domainPreference || "www";
+			} catch (storageErr) {
+				debugError("Failed to load domain preference:", storageErr);
+				// Use default 'www'
+			}
+
+			// Resolve target host based on preference
+			let targetHost;
+			switch (preference) {
+				case "mobile":
+				case "m":
+					targetHost = "m.fanfiction.net";
+					break;
+				case "desktop":
+				case "www":
+					targetHost = "www.fanfiction.net";
+					break;
+				default:
+					targetHost = isMobile
+						? "m.fanfiction.net"
+						: "www.fanfiction.net";
+			}
+
+			// Perform redirect
+			const targetURL = `https://${targetHost}${pathname}${search}${hash}`;
+			if (window.location.href !== targetURL) {
+				debugLog(
+					`FanFiction URL normalization: ${hostname} -> ${targetHost}`,
+				);
+				if (isWSHost) {
+					// Handle .ws domain with error recovery
+					try {
+						window.location.replace(targetURL);
+						return true;
+					} catch (wsRedirectErr) {
+						debugError(
+							"FanFiction.ws redirect failed",
+							wsRedirectErr,
+						);
+						return false;
 					}
+				} else {
+					window.location.replace(targetURL);
+					return true;
 				}
-			};
+			}
 
-			browser.storage.local
-				.get(SITE_SETTINGS_KEY)
-				.then((result) => {
-					const settings = result?.[SITE_SETTINGS_KEY] || {};
-					const fanfictionSettings = settings?.fanfiction || {};
-					const preference =
-						fanfictionSettings.domainPreference || "www";
-					const targetHost = resolveTargetHost(preference);
-
-					if (isBareDomain && targetHost) {
-						redirectTo(targetHost);
-					}
-				})
-				.catch(() => {
-					const targetHost = resolveTargetHost("www");
-					if (isBareDomain && targetHost) {
-						redirectTo(targetHost);
-					}
-				});
-		} catch (_err) {
-			// no-op
+			return false;
+		} catch (err) {
+			debugError("FanFiction URL normalization error:", err);
+			return false;
 		}
+	}
+
+	// Legacy initialize method - now calls normalizeURL
+	static initialize() {
+		// Redirect to new async normalizeURL method
+		this.normalizeURL().catch((err) => {
+			debugError("FanFiction initialization error:", err);
+		});
 	}
 
 	constructor() {

@@ -44,6 +44,7 @@ import {
 	BACKUP_OPTIONS,
 } from "../utils/comprehensive-backup.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
+import { notificationManager } from "../utils/notification-manager.js";
 import {
 	getTelemetryConfig,
 	saveTelemetryConfig,
@@ -469,6 +470,22 @@ const elements = {
 	carouselPlayPause: document.getElementById("carousel-play-pause"),
 	carouselPrev: document.getElementById("carousel-prev"),
 	carouselNext: document.getElementById("carousel-next"),
+
+	// Notification Panel
+	notificationBellBtn: document.getElementById("notification-bell-btn"),
+	notificationBellBadge: document.getElementById("notification-bell-badge"),
+	notificationPanel: document.getElementById("notification-panel"),
+	notificationPanelClose: document.getElementById("notification-panel-close"),
+	notificationPanelBackdrop: document.querySelector(
+		".notification-panel-backdrop",
+	),
+	libraryNotificationList: document.getElementById(
+		"library-notification-list",
+	),
+	libraryMarkAllRead: document.getElementById("library-mark-all-read"),
+	libraryClearAllNotifications: document.getElementById(
+		"library-clear-all-notifications",
+	),
 };
 
 async function applyLibraryTheme() {
@@ -896,6 +913,9 @@ async function init() {
 	// Set up storage change listener for auto-updates
 	setupStorageListener();
 
+	// Initialize notification panel
+	initNotificationPanel();
+
 	// Load library data
 	await loadLibrary();
 	await openNovelFromQueryParams();
@@ -1299,6 +1319,7 @@ async function loadLibraryAdvancedSettings() {
 			"chunkingEnabled",
 			"chunkSize",
 			"maxOutputTokens",
+			"debugMode",
 		]);
 
 		// Load Top K
@@ -1349,6 +1370,10 @@ async function loadLibraryAdvancedSettings() {
 		if (elements.libraryMaxOutputTokens) {
 			elements.libraryMaxOutputTokens.value =
 				data.maxOutputTokens || 8192;
+		}
+
+		if (elements.debugModeToggle) {
+			elements.debugModeToggle.checked = data.debugMode === true;
 		}
 	} catch (error) {
 		debugError("Failed to load advanced settings:", error);
@@ -6179,6 +6204,245 @@ function escapeHtml(text) {
 	const div = document.createElement("div");
 	div.textContent = text;
 	return div.innerHTML;
+}
+
+// ============================================
+// Notification Panel (Sidebar)
+// ============================================
+
+/**
+ * Open the notification panel sidebar
+ */
+function openNotificationPanel() {
+	const panel = elements.notificationPanel;
+	if (!panel) return;
+	panel.classList.remove("hidden");
+	// Force reflow so transition plays
+	void panel.offsetWidth;
+	panel.classList.add("open");
+	loadLibraryNotifications();
+}
+
+/**
+ * Close the notification panel sidebar
+ */
+function closeNotificationPanel() {
+	const panel = elements.notificationPanel;
+	if (!panel) return;
+	panel.classList.remove("open");
+	// Wait for slide-out transition, then hide
+	setTimeout(() => {
+		if (!panel.classList.contains("open")) {
+			panel.classList.add("hidden");
+		}
+	}, 300);
+}
+
+/**
+ * Load and render notifications into the library panel
+ */
+async function loadLibraryNotifications() {
+	const list = elements.libraryNotificationList;
+	if (!list) return;
+
+	let notifications = [];
+	try {
+		const response = await browser.runtime.sendMessage({
+			action: "getNotifications",
+			grouped: true,
+		});
+		if (response?.success) {
+			notifications = response.notifications || [];
+		} else {
+			throw new Error(response?.error || "Failed to fetch");
+		}
+	} catch (_err) {
+		notifications = notificationManager.getAll({ grouped: true });
+	}
+
+	if (notifications.length === 0) {
+		list.innerHTML = `
+			<div class="lib-notif-empty">
+				<p>📭</p>
+				<p>No notifications</p>
+				<p class="description">Notifications will appear here as you use the extension</p>
+			</div>
+		`;
+		return;
+	}
+
+	list.innerHTML = notifications
+		.map((notif) => renderLibraryNotification(notif))
+		.join("");
+
+	// Click to mark as read
+	list.querySelectorAll(".lib-notif-item").forEach((item) => {
+		const id = item.dataset.id;
+		const notif = notifications.find((n) => n.id === id);
+		item.addEventListener("click", async (e) => {
+			if (e.target.closest(".lib-notif-delete")) return;
+			try {
+				if (notif?.isGroup && notif?.groupedNotifications) {
+					await Promise.all(
+						notif.groupedNotifications.map((n) =>
+							browser.runtime
+								.sendMessage({ action: "markNotificationRead", id: n.id })
+								.catch(() => notificationManager.markAsRead(n.id)),
+						),
+					);
+				} else {
+					await browser.runtime.sendMessage({
+						action: "markNotificationRead",
+						id,
+					});
+				}
+			} catch (_err) {
+				notificationManager.markAsRead(id);
+			}
+			item.classList.remove("unread");
+			await updateLibraryNotificationBadge();
+		});
+	});
+
+	// Delete buttons
+	list.querySelectorAll(".lib-notif-delete").forEach((btn) => {
+		btn.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			const id = btn.dataset.id;
+			try {
+				await browser.runtime.sendMessage({
+					action: "deleteNotification",
+					id,
+				});
+			} catch (_err) {
+				notificationManager.delete(id);
+			}
+			await loadLibraryNotifications();
+			await updateLibraryNotificationBadge();
+		});
+	});
+}
+
+/**
+ * Render a single notification item for the library panel
+ */
+function renderLibraryNotification(notif) {
+	const relativeTime = formatRelativeTime(notif.timestamp);
+	const fullTime = new Date(notif.timestamp).toLocaleString();
+
+	let title = notif.title ? `<div class="lib-notif-title">${escapeHtml(notif.title)}</div>` : "";
+	let groupBadge = "";
+
+	if (notif.isGroup && notif.groupedNotifications) {
+		groupBadge = ` <span style="opacity:0.6;font-size:0.7rem">(${notif.groupCount} updates)</span>`;
+	}
+
+	return `
+		<div class="lib-notif-item ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
+			<div class="lib-notif-header">
+				<span class="lib-notif-type ${notif.type}">${notif.type}${groupBadge}</span>
+				<span class="lib-notif-time" title="${fullTime}">${relativeTime}</span>
+			</div>
+			${title}
+			<div class="lib-notif-message">${escapeHtml(notif.message)}</div>
+			<button class="lib-notif-delete" data-id="${escapeHtml(notif.id)}">🗑️ Delete</button>
+		</div>
+	`;
+}
+
+/**
+ * Update the bell badge count in the library header
+ */
+async function updateLibraryNotificationBadge() {
+	const badge = elements.notificationBellBadge;
+	if (!badge) return;
+
+	let unreadCount = 0;
+	try {
+		const response = await browser.runtime.sendMessage({
+			action: "getNotifications",
+			limit: 0,
+		});
+		if (response?.success && response.stats) {
+			unreadCount = response.stats.unread || 0;
+		} else {
+			unreadCount = notificationManager.getUnreadCount();
+		}
+	} catch (_err) {
+		unreadCount = notificationManager.getUnreadCount();
+	}
+
+	if (unreadCount > 0) {
+		badge.textContent = unreadCount > 999 ? "999+" : `${unreadCount}`;
+		badge.classList.remove("hidden");
+	} else {
+		badge.classList.add("hidden");
+	}
+}
+
+/**
+ * Initialize the notification panel: wire up all event listeners
+ */
+function initNotificationPanel() {
+	// Bell button opens panel
+	if (elements.notificationBellBtn) {
+		elements.notificationBellBtn.addEventListener("click", openNotificationPanel);
+	}
+
+	// Close button
+	if (elements.notificationPanelClose) {
+		elements.notificationPanelClose.addEventListener("click", closeNotificationPanel);
+	}
+
+	// Click anywhere outside the panel to close it
+	document.addEventListener("click", (e) => {
+		const panel = elements.notificationPanel;
+		if (!panel || !panel.classList.contains("open")) return;
+		// If click is inside panel content or on the bell button, ignore
+		const panelContent = panel.querySelector(".notification-panel-content");
+		if (panelContent && panelContent.contains(e.target)) return;
+		if (elements.notificationBellBtn && elements.notificationBellBtn.contains(e.target)) return;
+		closeNotificationPanel();
+	});
+
+	// Escape key
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && elements.notificationPanel?.classList.contains("open")) {
+			closeNotificationPanel();
+		}
+	});
+
+	// Mark all read
+	if (elements.libraryMarkAllRead) {
+		elements.libraryMarkAllRead.addEventListener("click", async () => {
+			try {
+				await browser.runtime.sendMessage({ action: "markAllNotificationsRead" });
+			} catch (_err) {
+				notificationManager.markAllAsRead();
+			}
+			await loadLibraryNotifications();
+			await updateLibraryNotificationBadge();
+			showNotification("All notifications marked as read", "success");
+		});
+	}
+
+	// Clear all
+	if (elements.libraryClearAllNotifications) {
+		elements.libraryClearAllNotifications.addEventListener("click", async () => {
+			if (!confirm("Clear all notifications? This cannot be undone.")) return;
+			try {
+				await browser.runtime.sendMessage({ action: "clearNotifications" });
+			} catch (_err) {
+				notificationManager.clearAll();
+			}
+			await loadLibraryNotifications();
+			await updateLibraryNotificationBadge();
+			showNotification("All notifications cleared", "success");
+		});
+	}
+
+	// Initial badge update
+	updateLibraryNotificationBadge();
 }
 
 /**

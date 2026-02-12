@@ -6,14 +6,18 @@
 import { DEFAULT_CHUNK_SIZE_WORDS, MIN_CHUNK_WORDS } from "./chunk-config.js";
 
 /**
- * Count words in text (HTML-aware)
+ * Count words in text (HTML-aware, emoji-aware)
+ * Removes emojis before counting to get accurate word count
  * @param {string} text - Text to count words in
  * @returns {number} Word count
  */
 export function countWords(text) {
 	if (!text || typeof text !== "string") return 0;
-	// Remove HTML tags for accurate word count
-	const plainText = text.replace(/<[^>]*>/g, " ");
+	// Comprehensive emoji regex (covers most common emoji ranges)
+	const emojiRegex =
+		/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{231A}\u{231B}\u{23E9}-\u{23FA}]/gu;
+	// Remove HTML tags and emojis for accurate word count
+	const plainText = text.replace(/<[^>]*>/g, " ").replace(emojiRegex, "");
 	return plainText
 		.trim()
 		.split(/\s+/)
@@ -207,18 +211,21 @@ function splitByParagraphs(content, chunkSizeWords) {
 					paragraphCount: currentChunk.length,
 				});
 
-				// Apply Rule 2 to remaining paragraphs
+				// Apply Rule 2 to remaining paragraphs - split into exactly 2 balanced chunks
 				const remainingParas = paragraphs.slice(i);
 				const targetPerChunk = Math.ceil(totalRemaining / 2);
+				const numChunksBeforeSplit = chunks.length; // Remember where we started
 				currentChunk = [];
 				currentWords = 0;
 
 				for (const rPara of remainingParas) {
+					// Only create ONE split - when we exceed target AND haven't split yet
 					if (
 						currentWords > 0 &&
 						currentWords + rPara.wordCount > targetPerChunk &&
-						chunks.length === chunks.length
+						chunks.length === numChunksBeforeSplit // Haven't created penultimate chunk yet
 					) {
+						// Push the penultimate chunk
 						chunks.push({
 							index: chunks.length,
 							content: currentChunk
@@ -227,6 +234,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 							wordCount: currentWords,
 							paragraphCount: currentChunk.length,
 						});
+						// Start the final chunk
 						currentChunk = [rPara];
 						currentWords = rPara.wordCount;
 					} else {
@@ -235,7 +243,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 					}
 				}
 
-				// Add final chunk
+				// Add final chunk (the last of the two balanced chunks)
 				if (currentChunk.length > 0) {
 					chunks.push({
 						index: chunks.length,
@@ -247,7 +255,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 					});
 				}
 
-				break; // Done processing
+				break; // Done processing - no more paragraphs to process
 			} else {
 				// Create a new chunk with current paragraphs
 				chunks.push({

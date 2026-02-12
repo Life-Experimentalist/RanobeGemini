@@ -68,9 +68,10 @@ export function getThemeColors() {
  * Create a chunk banner with controls (regenerate, toggle, delete)
  * @param {number} chunkIndex - Index of the chunk (0-based)
  * @param {number} totalChunks - Total number of chunks
- * @param {string} status - Status: 'pending', 'processing', 'completed', 'error'
+ * @param {string} status - Status: 'pending', 'processing', 'completed', 'error', 'cached'
  * @param {string} errorMessage - Error message if status is 'error'
  * @param {Object} callbacks - Event handler callbacks { onRegenerate, onToggle, onDelete }
+ * @param {Object} cacheInfo - Cache metadata { fromCache: boolean, timestamp: number }
  * @returns {HTMLElement} The chunk banner element
  */
 export function createChunkBanner(
@@ -79,16 +80,31 @@ export function createChunkBanner(
 	status = "pending",
 	errorMessage = null,
 	callbacks = {},
+	cacheInfo = null,
 ) {
 	const banner = document.createElement("div");
 	banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
 	banner.setAttribute("data-chunk-index", chunkIndex);
 	banner.setAttribute("data-chunk-status", status);
 
+	// Determine if showing cache status
+	const isFromCache = cacheInfo?.fromCache === true || status === "cached";
+	const cacheTimestamp = cacheInfo?.timestamp;
+
 	// Status icon and text
 	let statusIcon = "⏳";
 	let statusText = "Pending";
 	let statusColor = "#666";
+
+	// Cache time display
+	let cacheTimeText = "";
+	if (isFromCache && cacheTimestamp) {
+		const age = Date.now() - cacheTimestamp;
+		const hours = Math.floor(age / (1000 * 60 * 60));
+		const days = Math.floor(hours / 24);
+		const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
+		cacheTimeText = ` (${timeAgo})`;
+	}
 
 	switch (status) {
 		case "processing":
@@ -97,8 +113,8 @@ export function createChunkBanner(
 			statusColor = "#4285f4";
 			break;
 		case "completed":
-			statusIcon = "✅";
-			statusText = "Complete";
+			statusIcon = isFromCache ? "✓" : "✅";
+			statusText = isFromCache ? `Cached${cacheTimeText}` : "Complete";
 			statusColor = "#0f9d58";
 			break;
 		case "error":
@@ -107,8 +123,8 @@ export function createChunkBanner(
 			statusColor = "#ea4335";
 			break;
 		case "cached":
-			statusIcon = "💾";
-			statusText = "Cached";
+			statusIcon = "✓";
+			statusText = `Cached${cacheTimeText}`;
 			statusColor = "#0f9d58";
 			break;
 		default:
@@ -119,14 +135,29 @@ export function createChunkBanner(
 
 	const colors = getThemeColors();
 
+	// Cache status styling - subtle green tint for cached chunks
+	let bannerBg = colors.surfaceVariant;
+	let bannerBorder = colors.outline;
+
+	if (isFromCache) {
+		const dark = isDarkMode();
+		if (dark) {
+			bannerBg = "#1e3a1e"; // Dark green tint
+			bannerBorder = "#2e7d32"; // Green border
+		} else {
+			bannerBg = "#f1f8f4"; // Light green tint
+			bannerBorder = "#4caf50"; // Green border
+		}
+	}
+
 	banner.innerHTML = `
 		<div style="
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			padding: 12px 16px;
-			background: ${colors.surfaceVariant};
-			border: 1px solid ${colors.outline};
+			background: ${bannerBg};
+			border: 2px solid ${bannerBorder};
 			border-radius: 8px;
 			margin: 16px 0;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -469,6 +500,8 @@ export function createWorkInProgressBanner(currentChunk, totalChunks) {
  * @param {number} enhancedWordCount - Enhanced content word count
  * @param {number} totalChunks - Total number of chunks
  * @param {boolean} isFromCache - Whether loaded from cache
+ * @param {Object|null} modelInfo - Model info object with name/provider
+ * @param {Object|null} cacheInfo - Cache metadata { timestamp: number }
  * @returns {HTMLElement} The master banner element
  */
 export function createMasterBanner(
@@ -476,6 +509,8 @@ export function createMasterBanner(
 	enhancedWordCount,
 	totalChunks,
 	isFromCache = false,
+	modelInfo = null,
+	cacheInfo = null,
 ) {
 	const colors = getThemeColors();
 	const wordDiff = enhancedWordCount - originalWordCount;
@@ -487,6 +522,24 @@ export function createMasterBanner(
 	const isIncrease = wordDiff > 0;
 	const changeColor = isIncrease ? colors.success : colors.error;
 	const changeIcon = isIncrease ? "↑" : "↓";
+
+	const modelName = modelInfo?.name || "AI";
+	const modelProvider = modelInfo?.provider || "Ranobe Gemini";
+	let cacheLabel = "";
+	let cacheIcon = "";
+	if (isFromCache) {
+		cacheIcon = "✓ ";
+		if (cacheInfo?.timestamp) {
+			const age = Date.now() - cacheInfo.timestamp;
+			const hours = Math.floor(age / (1000 * 60 * 60));
+			const days = Math.floor(hours / 24);
+			const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
+			cacheLabel = ` • Cached ${timeAgo}`;
+		}
+	}
+	const modelDisplay = `${cacheIcon}Enhanced with ${modelProvider}${
+		modelName !== "AI" ? ` (${modelName})` : ""
+	}${cacheLabel}`;
 
 	const banner = document.createElement("div");
 	banner.className = "gemini-master-banner";
@@ -504,7 +557,7 @@ export function createMasterBanner(
 			<div style="display: flex; align-items: center; justify-content: space-between;">
 				<div style="display: flex; align-items: center; gap: 12px;">
 					<span style="font-size: 20px;">✨</span>
-					<span style="font-weight: 600; font-size: 16px;">Enhanced Content ${isFromCache ? "(Cached)" : ""}</span>
+					<span style="font-weight: 600; font-size: 16px;">${modelDisplay}</span>
 				</div>
 				<div style="display: flex; gap: 8px;" class="master-controls">
 					<button class="gemini-master-toggle-all-btn" style="

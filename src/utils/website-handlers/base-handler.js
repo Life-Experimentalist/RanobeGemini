@@ -253,4 +253,46 @@ export class BaseWebsiteHandler {
 		// Default: Let extension use its own theme detection
 		return "auto";
 	}
+
+	/**
+	 * Normalize/redirect URL for site-specific requirements
+	 * Static method called BEFORE handler instantiation
+	 * Use for instant redirects (e.g., fanfiction.net -> www.fanfiction.net)
+	 * @static
+	 * @async
+	 * @returns {Promise<boolean>} True if redirect occurred, false otherwise
+	 */
+	static async normalizeURL() {
+		// Default: No normalization needed
+		return false;
+	}
+
+	/**
+	 * Get custom buttons to add to controls
+	 * Handlers can add site-specific buttons (e.g., mobile/desktop toggle)
+	 * @returns {Array<{text: string, icon: string, onClick: function, position: string}>}
+	 */
+	getCustomButtons() {
+		// Default: No custom buttons
+		return [];
+	}
+
+	/**
+	 * Inject custom UI elements into the control container
+	 * Called after main controls are created
+	 * @param {HTMLElement} container - Control container element
+	 * @async
+	 */
+	async injectCustomUI(container) {
+		// Default: No custom UI
+	}
+
+	/**
+	 * Get default enhancement display mode preference for this site
+	 * @returns {string} 'button' (show button to trigger) or 'direct' (show banners immediately)
+	 */
+	getDefaultDisplayMode() {
+		// Default: Button mode (less intrusive)
+		return "button";
+	}
 }

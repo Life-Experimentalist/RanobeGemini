@@ -31,20 +31,11 @@
 
 			<!-- Tab navigation -->
 			<div class="tabs">
-				<button class="tab-btn active" data-tab="config">Config</button>
 				<button class="tab-btn" data-tab="novels">Novels</button>
-				<button
-					class="tab-icon-btn"
-					id="notificationsToggle"
-					title="Notifications"
-				>
-					<span class="tab-icon">??</span>
-					<span
-						id="notificationBadge"
-						class="notification-badge"
-						style="display: none"
-						>0</span
-					>
+				<button class="tab-btn active" data-tab="config">Config</button>
+				<button class="tab-btn" data-tab="notifications" id="notificationsTabBtn">
+					🔔
+					<span id="notificationBadge" class="notification-badge" style="display: none">0</span>
 				</button>
 			</div>
 
@@ -89,7 +80,7 @@
 							class="icon-button"
 							title="Refresh models list"
 						>
-							?
+							↻
 						</button>
 					</div>
 					<div
@@ -106,13 +97,13 @@
 							class="icon-button"
 							title="Copy model endpoint"
 						>
-							??
+							📋
 						</button>
 					</div>
 				</div>
 
 				<div class="setting">
-					<label>?? Processing Options</label>
+					<label>⚙️ Processing Options</label>
 					<div class="description" style="margin-top: 6px">
 						Moved to Library Settings for better control.
 					</div>
@@ -167,7 +158,7 @@
 				</div>
 
 				<details class="setting backup-keys-section" open>
-					<summary>?? Alternate API Keys</summary>
+					<summary>🔑 Alternate API Keys</summary>
 					<div class="backup-keys-content">
 						<div id="backupKeysList" class="backup-keys-list"></div>
 						<div class="add-backup-key">
@@ -197,7 +188,7 @@
 
 				<!-- Theme Mode Quick Toggle -->
 				<div class="setting">
-					<label for="themeMode">?? Theme Mode</label>
+					<label for="themeMode">🎨 Theme Mode</label>
 					<select
 						id="themeMode"
 						style="width: 100%; padding: 10px; border-radius: 6px"
@@ -211,7 +202,7 @@
 				<!-- Site Toggles -->
 				<details class="setting">
 					<summary style="cursor: pointer; font-weight: 600">
-						?? Site Toggles
+						🌐 Site Toggles
 					</summary>
 					<div style="margin-top: 12px">
 						<div class="description" style="margin-bottom: 12px">
@@ -225,7 +216,7 @@
 				<div class="setting">
 					<div class="slider-block">
 						<label for="fontSizeSlider">
-							?? Enhanced Content Font Size
+							🔤 Enhanced Content Font Size
 							<span class="slider-value" id="fontSizeValue">100%</span>
 						</label>
 						<input
@@ -249,14 +240,14 @@
 						class="open-library-settings"
 						style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
 					>
-						?? Library Settings
+						⚙️ Library Settings
 					</button>
 				</div>
 
 				<!-- Advanced Settings Link -->
 				<details class="setting">
 					<summary style="cursor: pointer; font-weight: 600">
-						?? More Settings
+						➕ More Settings
 					</summary>
 					<div style="margin-top: 12px">
 						<div
@@ -274,13 +265,13 @@
 									color: var(--text-secondary);
 								"
 							>
-								?? Advanced settings (debug mode, custom prompts, AI parameters), backups, and Google Drive sync are in Library Settings.
+								🔧 Advanced settings (debug mode, custom prompts, AI parameters), backups, and Google Drive sync are in Library Settings.
 							</p>
 							<button
 								class="open-library-settings"
 								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
 							>
-								?? Library Settings
+								⚙️ Library Settings
 							</button>
 						</div>
 					</div>
@@ -289,237 +280,79 @@
 
 			<!-- Novels Tab -->
 			<div class="tab-content" id="novels">
-				<h3
-					style="
-						margin-bottom: 16px;
-						font-size: 16px;
-						font-weight: 600;
-						display: flex;
-						align-items: center;
-						justify-content: space-between;
-					"
-				>
-					<span>?? Your Reading</span>
-					<button
-						class="icon-button open-library-settings"
-						title="Open Library Settings"
-						style="font-size: 16px"
-					>
-						??
-					</button>
-				</h3>
-
-				<!-- Current Novel Section -->
-				<div class="current-novel-section">
+				<!-- Current Novel Card -->
+				<section class="novels-section">
+					<div class="novels-section-header">
+						<span>📖 Now Reading</span>
+					</div>
 					<div id="currentNovelInfo" class="current-novel-card">
 						<div class="no-current-novel">
-							<p>No novel detected on this page.</p>
-							<p class="description">
-								Visit a supported novel site to get started!
-							</p>
+							<p style="font-size: 24px; margin-bottom: 8px">📖</p>
+							<p>No novel detected on this page</p>
+							<p class="description">Visit a supported novel site to get started</p>
 						</div>
 					</div>
-				</div>
+				</section>
 
-				<!-- Suggested Novels Section -->
-				<div class="suggested-novels-section">
-					<div
-						class="section-header"
-						style="
-							display: flex;
-							justify-content: space-between;
-							align-items: center;
-						"
-					>
-						<span>? Suggested Reads</span>
-						<button
-							id="randomizeSuggestions"
-							class="icon-button"
-							title="Randomize suggestions"
-							style="
-								background: none;
-								border: none;
-								font-size: 18px;
-								cursor: pointer;
-								padding: 4px 8px;
-							"
-						>
-							??
-						</button>
+				<!-- Suggested Reads -->
+				<section class="novels-section">
+					<div class="novels-section-header">
+						<span>✨ Suggested Reads</span>
+						<button id="randomizeSuggestions" class="novels-action-btn" title="Randomize suggestions">🔀</button>
 					</div>
-					<div
-						id="suggestedNovelsList"
-						class="suggested-novels-container"
-					>
+					<div id="suggestedNovelsList" class="suggested-novels-grid">
 						<div class="no-suggestions">
-							<p>
-								No suggestions yet. Add novels to your library!
-							</p>
+							<p>No suggestions yet</p>
 						</div>
 					</div>
-				</div>
+				</section>
 
-				<!-- All Novels Section -->
-				<div class="all-novels-section">
-					<div class="section-header">
-						?? Your Library
-						<button
-							id="refreshNovels"
-							class="icon-button"
-							title="Refresh library"
-						>
-							?
-						</button>
+				<!-- Library -->
+				<section class="novels-section">
+					<div class="novels-section-header">
+						<span>📚 Your Library</span>
+						<button id="refreshNovels" class="novels-action-btn" title="Refresh library">↻</button>
 					</div>
 					<div class="novels-list" id="novelsList">
-						<div class="no-novels">
-							No novels in your library yet.
-						</div>
+						<div class="no-novels">No novels in your library yet.</div>
 					</div>
-				</div>
+				</section>
 
-				<!-- Quick Navigation -->
-				<!-- Main Library -->
-				<a
-					href="#"
-					id="openMainLibrary"
-					class="main-library-link"
-					style="
-						display: flex;
-						align-items: center;
-						gap: 12px;
-						padding: 14px;
-						background: linear-gradient(
-							135deg,
-							#667eea 0%,
-							#764ba2 100%
-						);
-						border-radius: 8px;
-						text-decoration: none;
-						color: white;
-						transition: transform 0.2s;
-					"
-				>
-					<span style="font-size: 24px">???</span>
-					<div style="flex: 1">
-						<div style="font-weight: 600; font-size: 14px">
-							Main Library
-						</div>
-						<div style="font-size: 11px; opacity: 0.9">
-							View all your saved novels
-						</div>
+				<!-- Open Library Link -->
+				<a href="#" id="openMainLibrary" class="open-library-link">
+					<span class="open-library-icon">🏛️</span>
+					<div class="open-library-text">
+						<strong>Open Full Library</strong>
+						<span>View all novels, settings &amp; more</span>
 					</div>
-					<span style="font-size: 18px">?</span>
+					<span class="open-library-arrow">→</span>
 				</a>
 			</div>
 
-			<!-- Prompts & Advanced settings moved to Library Settings -->
-
-			<!-- Notifications Modal (triggered by bell icon) -->
-			<div
-				id="notificationsModal"
-				style="
-					display: none;
-					position: absolute;
-					inset: 0;
-					background: rgba(0, 0, 0, 0.6);
-					z-index: 1000;
-					border-radius: 8px;
-					overflow-y: auto;
-				"
-			>
-				<div
-					style="
-						position: absolute;
-						top: 50%;
-						left: 50%;
-						transform: translate(-50%, -50%);
-						background: var(--bg-primary, #0f172a);
-						border: 1px solid var(--border-color, #334155);
-						border-radius: 12px;
-						padding: 20px;
-						width: 85%;
-						max-width: 450px;
-						max-height: 500px;
-						overflow-y: auto;
-						box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-					"
-				>
-					<div
-						style="
-							display: flex;
-							justify-content: space-between;
-							align-items: center;
-							margin-bottom: 16px;
-						"
-					>
-						<h2
-							style="margin: 0; font-size: 18px; font-weight: 600"
-						>
-							?? Notifications
-						</h2>
-						<button
-							id="closeNotificationsModal"
-							style="
-								background: none;
-								border: none;
-								font-size: 20px;
-								cursor: pointer;
-								color: var(--text-secondary, #999);
-							"
-						>
-							?
-						</button>
+			<!-- Notifications Tab -->
+			<div class="tab-content" id="notifications">
+				<div class="notifications-tab-header">
+					<div class="notifications-stats">
+						<span id="totalNotifs">0</span> total
+						<span class="notif-stat-sep">·</span>
+						<span id="unreadNotifs" class="notif-unread-count">0</span> unread
 					</div>
-					<div
-						id="notificationsContainer"
-						style="display: grid; gap: 8px"
-					>
-						<div
-							style="
-								text-align: center;
-								padding: 40px 20px;
-								color: var(--text-secondary, #999);
-							"
-						>
-							<p>?? No notifications yet</p>
-							<p style="font-size: 12px">
-								Notifications will appear here as you use the
-								extension
-							</p>
-						</div>
+					<div class="notifications-tab-actions">
+						<button id="markAllReadBtn" class="notif-action-btn">✓ Read All</button>
+						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">🗑 Clear</button>
 					</div>
-					<div style="margin-top: 16px; display: flex; gap: 8px">
-						<button
-							id="markAllReadBtn"
-							style="
-								flex: 1;
-								padding: 8px;
-								background: var(--accent-secondary, #475569);
-								border: none;
-								border-radius: 6px;
-								color: white;
-								cursor: pointer;
-								font-size: 12px;
-							"
-						>
-							Mark All Read
-						</button>
-						<button
-							id="clearNotificationsBtn"
-							style="
-								flex: 1;
-								padding: 8px;
-								background: #db4437;
-								border: none;
-								border-radius: 6px;
-								color: white;
-								cursor: pointer;
-								font-size: 12px;
-							"
-						>
-							Clear All
-						</button>
+				</div>
+				<div class="notifications-filter-bar">
+					<button class="notification-filter-btn active" data-filter="all">All</button>
+					<button class="notification-filter-btn" data-filter="success">Success</button>
+					<button class="notification-filter-btn" data-filter="error">Errors</button>
+					<button class="notification-filter-btn" data-filter="info">Info</button>
+				</div>
+				<div id="notificationsContainer" class="notifications-list">
+					<div class="no-notifications">
+						<p style="font-size: 36px; margin-bottom: 8px">📭</p>
+						<p>No notifications yet</p>
+						<p class="description">Notifications will appear here as you use the extension</p>
 					</div>
 				</div>
 			</div>

@@ -19,6 +19,8 @@ function buildDefaultSiteSettings() {
 		fanfiction: {
 			redirectToWww: true,
 			redirectToMobile: false,
+			domainPreference: "www",
+			enhancementDisplayMode: "button", // "button" or "direct"
 			autoEnhanceEnabled: false,
 		},
 	};
@@ -35,9 +37,11 @@ function buildDefaultSiteSettings() {
 			icon: shelf.icon,
 			emoji: shelf.emoji,
 			color: shelf.color,
-			...(shelf.id === "fanfiction"
-				? { domainPreference: "www", autoEnhanceEnabled: false }
-				: perSiteDefaults[shelf.id] || {}),
+			// Enhancement display settings (all sites get these)
+			enhancementDisplayMode: "button", // Default to button mode
+			autoEnhanceEnabled: false, // Default to disabled
+			// Site-specific overrides
+			...(perSiteDefaults[shelf.id] || {}),
 		};
 	}
 
