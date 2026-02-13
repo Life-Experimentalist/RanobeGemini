@@ -239,12 +239,14 @@ export function insertSummaryGroups(
  * @param {number} totalChunks - Total number of chunks
  * @param {Function} onLongSummary - Callback for long summary (receives all chunk indices)
  * @param {Function} onShortSummary - Callback for short summary (receives all chunk indices)
+ * @param {Function|null} onEnhance - Callback for enhance/re-enhance button
  * @returns {HTMLElement} The main summary button group
  */
 export function createMainSummaryGroup(
 	totalChunks,
 	onLongSummary,
 	onShortSummary,
+	onEnhance = null,
 ) {
 	const colors = getThemeColors();
 	const allIndices = Array.from({ length: totalChunks }, (_, i) => i);
@@ -332,6 +334,35 @@ export function createMainSummaryGroup(
 		}
 	});
 	groupContainer.appendChild(shortSummaryBtn);
+
+	// Add enhance/re-enhance button if callback provided
+	if (onEnhance) {
+		const enhanceBtn = document.createElement("button");
+		enhanceBtn.className = "gemini-enhance-btn";
+		enhanceBtn.style.cssText = `
+			padding: 10px 20px;
+			background: ${colors.surface};
+			color: #bab9a0;
+			border: 1px solid ${colors.outline};
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 600;
+			transition: box-shadow 0.2s;
+			font-family: inherit;
+		`;
+		enhanceBtn.textContent = "⚡ Enhance Chapter";
+		enhanceBtn.addEventListener("mouseenter", () => {
+			enhanceBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+		});
+		enhanceBtn.addEventListener("mouseleave", () => {
+			enhanceBtn.style.boxShadow = "none";
+		});
+		enhanceBtn.addEventListener("click", () => {
+			onEnhance();
+		});
+		groupContainer.appendChild(enhanceBtn);
+	}
 
 	// Add summary text container (initially hidden)
 	const summaryTextContainer = document.createElement("div");

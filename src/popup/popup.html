@@ -1,31 +1,22 @@
 <!doctype html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RanobeGemini</title>
 		<link rel="stylesheet" href="popup.css" />
 	</head>
+
 	<body>
 		<div class="container">
 			<div class="header">
 				<h1>
-					<img
-						src="../icons/logo-48.png"
-						alt="Ranobe Gemini"
-						style="width: 48px; height: 48px; margin-right: 8px"
-					/>Ranobe Gemini
+					<img src="../icons/logo-48.png" alt="Ranobe Gemini"
+						style="width: 48px; height: 48px; margin-right: 8px" />Ranobe Gemini
 				</h1>
-				<button
-					id="quickLibraryBtn"
-					class="quick-library-btn"
-					title="Open Full Library (Ctrl+Alt+N)"
-				>
-					<img
-						src="../icons/icon.png"
-						alt="Library"
-						style="width: 48px; height: 48px; margin-right: 8px"
-					/>
+				<button id="quickLibraryBtn" class="quick-library-btn" title="Open Full Library (Ctrl+Alt+N)">
+					<img src="../icons/icon.png" alt="Library" style="width: 48px; height: 48px; margin-right: 8px" />
 				</button>
 			</div>
 
@@ -43,20 +34,11 @@
 			<div id="config" class="tab-content active">
 				<div class="setting">
 					<label for="apiKey">Gemini API Key:</label>
-					<input
-						type="password"
-						id="apiKey"
-						placeholder="Enter your API key"
-					/>
-					<div
-						class="api-key-actions"
-						style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px"
-					>
+					<input type="password" id="apiKey" placeholder="Enter your API key" />
+					<div class="api-key-actions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px">
 						<button id="saveApiKey">Save Key</button>
 						<button id="testApiKey">Test Key</button>
-						<a id="getKeyLink" href="#" style="align-self: center"
-							>Get API Key</a
-						>
+						<a id="getKeyLink" href="#" style="align-self: center">Get API Key</a>
 					</div>
 					<div id="status" class="status" style="margin-top: 8px"></div>
 				</div>
@@ -75,28 +57,13 @@
 								Gemini 2.5 Pro (Better quality)
 							</option>
 						</select>
-						<button
-							id="refreshModels"
-							class="icon-button"
-							title="Refresh models list"
-						>
+						<button id="refreshModels" class="icon-button" title="Refresh models list">
 							↻
 						</button>
 					</div>
-					<div
-						style="display: flex; gap: 8px; margin-top: 8px; align-items: center"
-					>
-						<input
-							id="modelEndpointDisplay"
-							type="text"
-							readonly
-							style="flex: 1; min-width: 0"
-						/>
-						<button
-							id="copyModelEndpoint"
-							class="icon-button"
-							title="Copy model endpoint"
-						>
+					<div style="display: flex; gap: 8px; margin-top: 8px; align-items: center">
+						<input id="modelEndpointDisplay" type="text" readonly style="flex: 1; min-width: 0" />
+						<button id="copyModelEndpoint" class="icon-button" title="Copy model endpoint">
 							📋
 						</button>
 					</div>
@@ -109,30 +76,21 @@
 					</div>
 				</div>
 
-				<div
-					class="setting"
-					style="
+				<div class="setting" style="
 						margin-top: 15px;
 						padding: 10px;
 						border: 1px solid var(--border-color);
 						border-radius: 6px;
 						background: var(--accent-primary) 20;
-					"
-				>
-					<label
-						style="
+					">
+					<label style="
 							font-weight: normal;
 							display: flex;
 							align-items: center;
 							gap: 8px;
 							cursor: pointer;
-						"
-					>
-						<input
-							type="checkbox"
-							id="useEmoji"
-							style="cursor: pointer"
-						/>
+						">
+						<input type="checkbox" id="useEmoji" style="cursor: pointer" />
 						<span>Add emotion emojis to dialogue</span>
 					</label>
 					<div class="description" style="margin-top: 6px">
@@ -141,17 +99,8 @@
 				</div>
 
 				<div class="setting">
-					<label for="maxOutputTokens"
-						>Maximum Output Length (tokens):</label
-					>
-					<input
-						type="number"
-						id="maxOutputTokens"
-						min="1000"
-						max="32768"
-						step="512"
-						value="8192"
-					/>
+					<label for="maxOutputTokens">Maximum Output Length (tokens):</label>
+					<input type="number" id="maxOutputTokens" min="1000" max="32768" step="512" value="8192" />
 					<div class="description">
 						Controls maximum length of generated text (higher = longer outputs)
 					</div>
@@ -162,19 +111,12 @@
 					<div class="backup-keys-content">
 						<div id="backupKeysList" class="backup-keys-list"></div>
 						<div class="add-backup-key">
-							<input
-								type="text"
-								id="newBackupKey"
-								placeholder="Add another API key"
-							/>
+							<input type="text" id="newBackupKey" placeholder="Add another API key" />
 							<button id="addBackupKey">Add Key</button>
 						</div>
 						<div style="margin-top: 10px">
 							<label for="apiKeyRotation">Key Rotation</label>
-							<select
-								id="apiKeyRotation"
-								style="width: 100%; margin-top: 6px"
-							>
+							<select id="apiKeyRotation" style="width: 100%; margin-top: 6px">
 								<option value="off">Off</option>
 								<option value="round_robin">Round Robin</option>
 								<option value="random">Random</option>
@@ -189,10 +131,7 @@
 				<!-- Theme Mode Quick Toggle -->
 				<div class="setting">
 					<label for="themeMode">🎨 Theme Mode</label>
-					<select
-						id="themeMode"
-						style="width: 100%; padding: 10px; border-radius: 6px"
-					>
+					<select id="themeMode" style="width: 100%; padding: 10px; border-radius: 6px">
 						<option value="dark">Dark Mode (Default)</option>
 						<option value="light">Light Mode</option>
 						<option value="auto">Auto (System Preference)</option>
@@ -219,15 +158,8 @@
 							🔤 Enhanced Content Font Size
 							<span class="slider-value" id="fontSizeValue">100%</span>
 						</label>
-						<input
-							type="range"
-							min="80"
-							max="150"
-							step="5"
-							value="100"
-							class="slider"
-							id="fontSizeSlider"
-						/>
+						<input type="range" min="80" max="150" step="5" value="100" class="slider"
+							id="fontSizeSlider" />
 						<div class="description">
 							Adjusts font size of enhanced content (100% = default)
 						</div>
@@ -236,10 +168,8 @@
 
 				<div class="setting" style="display: flex; gap: 8px; flex-wrap: wrap">
 					<button id="saveSettings">Save Settings</button>
-					<button
-						class="open-library-settings"
-						style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-					>
+					<button class="open-library-settings"
+						style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
 						⚙️ Library Settings
 					</button>
 				</div>
@@ -250,27 +180,22 @@
 						➕ More Settings
 					</summary>
 					<div style="margin-top: 12px">
-						<div
-							style="
+						<div style="
 								background: var(--bg-tertiary, rgba(255, 255, 255, 0.05));
 								padding: 12px;
 								border-radius: 8px;
 								border-left: 3px solid #4285f4;
-							"
-						>
-							<p
-								style="
+							">
+							<p style="
 									margin: 0 0 8px 0;
 									font-size: 12px;
 									color: var(--text-secondary);
-								"
-							>
-								🔧 Advanced settings (debug mode, custom prompts, AI parameters), backups, and Google Drive sync are in Library Settings.
+								">
+								🔧 Advanced settings (debug mode, custom prompts, AI parameters), backups, and Google
+								Drive sync are in Library Settings.
 							</p>
-							<button
-								class="open-library-settings"
-								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-							>
+							<button class="open-library-settings"
+								style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
 								⚙️ Library Settings
 							</button>
 						</div>
@@ -298,7 +223,8 @@
 				<section class="novels-section">
 					<div class="novels-section-header">
 						<span>✨ Suggested Reads</span>
-						<button id="randomizeSuggestions" class="novels-action-btn" title="Randomize suggestions">🔀</button>
+						<button id="randomizeSuggestions" class="novels-action-btn"
+							title="Randomize suggestions">🔀</button>
 					</div>
 					<div id="suggestedNovelsList" class="suggested-novels-grid">
 						<div class="no-suggestions">
@@ -339,7 +265,8 @@
 					</div>
 					<div class="notifications-tab-actions">
 						<button id="markAllReadBtn" class="notif-action-btn">✓ Read All</button>
-						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">🗑 Clear</button>
+						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">🗑
+							Clear</button>
 					</div>
 				</div>
 				<div class="notifications-filter-bar">
@@ -362,14 +289,11 @@
 
 			<!-- * NOTICE: DO NOT TOUCH THIS BELOW DIV (FROM EXPERIENCE)!!! -->
 			<!-- Resize handle with improved visibility -->
-			<div
-				class="resize-handle"
-				id="resize-handle"
-				title="Drag to resize"
-			></div>
+			<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
 		</div>
 		<!-- Browser API polyfill for Chrome/Edge compatibility -->
 		<script src="../lib/browser-polyfill.min.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>
+
 </html>

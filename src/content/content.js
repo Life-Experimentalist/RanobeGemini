@@ -737,7 +737,7 @@ if (window.__RGInitDone) {
 
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (button) {
-			button.textContent = "⚡ Start Enhancement";
+			button.textContent = "⚡ Enhance Chapter";
 			button.disabled = false;
 			button.classList.remove("loading");
 		}
@@ -749,13 +749,24 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// Toggle visibility of enhancement banners (WIP, chunk banners, master banner, summary banners)
+	// Toggle visibility of enhancement banners (WIP, chunk banners, master banner, summary groups)
 	function handleToggleBannersVisibility() {
 		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
 		if (!toggleBtn) return;
 
+		// Guard: don't toggle while enhancement or summarization is in progress
+		const wipBanner = document.querySelector(".gemini-wip-banner");
+		if (wipBanner) {
+			showStatusMessage(
+				"Enhancement is still in progress. Wait until it finishes.",
+				"warning",
+				2000,
+			);
+			return;
+		}
+
 		const banners = document.querySelectorAll(
-			".gemini-wip-banner, .gemini-chunk-banner, .gemini-master-banner, .gemini-summary-section-banner",
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group",
 		);
 		if (banners.length === 0) {
 			showStatusMessage("No enhancement banners to show/hide.", "info");
@@ -765,17 +776,24 @@ if (window.__RGInitDone) {
 		// Check current visibility state
 		const isHidden = banners[0].style.display === "none";
 
-		// Toggle all banners
+		// Toggle all banners — summary groups need display:flex restored
 		banners.forEach((banner) => {
-			banner.style.display = isHidden ? "" : "none";
+			if (isHidden) {
+				const isSummaryGroup =
+					banner.classList.contains("gemini-main-summary-group") ||
+					banner.classList.contains("gemini-chunk-summary-group");
+				banner.style.display = isSummaryGroup ? "flex" : "";
+			} else {
+				banner.style.display = "none";
+			}
 		});
 
 		// Update button text
 		toggleBtn.textContent = isHidden
-			? "👁 Hide Enhancements"
-			: "👁 Show Enhancements";
+			? "👁 Hide Banners"
+			: "👁 Show Banners";
 		showStatusMessage(
-			isHidden ? "Showing enhancements..." : "Enhancements hidden.",
+			isHidden ? "Showing banners..." : "Banners hidden.",
 			"info",
 			2000,
 		);
@@ -1232,27 +1250,13 @@ if (window.__RGInitDone) {
 		);
 	}
 
-	function renderSummaryOutput(summaryDisplay, summary, summaryType) {
-		if (!summaryDisplay) return;
+	function renderSummaryOutput(container, summary, summaryType) {
+		if (!container) return;
 
-		// Find or create the summary content div within the banner
-		let summaryContent = summaryDisplay.querySelector(
-			".gemini-summary-content",
-		);
-
-		if (!summaryContent) {
-			// Fallback: clear display and render old way (shouldn't happen with new banner structure)
-			while (summaryDisplay.firstChild) {
-				summaryDisplay.removeChild(summaryDisplay.firstChild);
-			}
-			summaryContent = document.createElement("div");
-			summaryContent.className = "gemini-summary-content";
-			summaryDisplay.appendChild(summaryContent);
-		} else {
-			// Clear existing content in the summary content div
-			while (summaryContent.firstChild) {
-				summaryContent.removeChild(summaryContent.firstChild);
-			}
+		// Show the container and clear existing content
+		container.style.display = "block";
+		while (container.firstChild) {
+			container.removeChild(container.firstChild);
 		}
 
 		// Add summary type header
@@ -1260,17 +1264,15 @@ if (window.__RGInitDone) {
 		summaryHeader.textContent = `${summaryType} Summary:`;
 		summaryHeader.style.cssText = `
 			margin: 0 0 12px 0;
-			color: #e8ecef;
 			font-size: 14px;
 			font-weight: 600;
 		`;
-		summaryContent.appendChild(summaryHeader);
+		container.appendChild(summaryHeader);
 
 		// Create container for summary text
 		const summaryContentContainer = document.createElement("div");
 		summaryContentContainer.className = "summary-text-content";
 		summaryContentContainer.style.cssText = `
-			color: #d0d0c0;
 			line-height: 1.6;
 		`;
 
@@ -1292,102 +1294,37 @@ if (window.__RGInitDone) {
 			summaryContentContainer.style.fontSize = `${currentFontSize}%`;
 		}
 
-		summaryContent.appendChild(summaryContentContainer);
-	}
-
-	function ensureSummaryBannerExists(summaryDisplay) {
-		if (!summaryDisplay) return;
-
-		const banner = document.createElement("div");
-		banner.className = "gemini-summary-section-banner";
-		banner.style.cssText = `
-			padding: 16px 20px;
-			background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
-			border: 1px solid rgba(139, 180, 248, 0.3);
-			border-radius: 8px;
-			margin: 12px 0 20px 0;
-		`;
-
-		const headerDiv = document.createElement("div");
-		headerDiv.style.cssText = `
-			font-size: 16px;
-			font-weight: 600;
-			margin-bottom: 12px;
-			color: #e8ecef;
-		`;
-		headerDiv.textContent = "📋 Full Chapter Summary";
-		banner.appendChild(headerDiv);
-
-		const buttonsContainer = document.createElement("div");
-		buttonsContainer.style.cssText = `
-			display: flex;
-			gap: 10px;
-			flex-wrap: wrap;
-		`;
-		banner.appendChild(buttonsContainer);
-
-		// Add buttons from the stored refs
-		const buttons = summaryDisplay.summaryButtons;
-		if (buttons) {
-			if (buttons.summarizeButton) {
-				const clonedBtn = buttons.summarizeButton.cloneNode(true);
-				clonedBtn.addEventListener("click", (e) => {
-					buttons.summarizeButton.dispatchEvent(
-						new MouseEvent("click", { bubbles: true }),
-					);
-				});
-				buttonsContainer.appendChild(clonedBtn);
-			}
-			if (buttons.shortSummarizeButton) {
-				const clonedBtn = buttons.shortSummarizeButton.cloneNode(true);
-				clonedBtn.addEventListener("click", (e) => {
-					buttons.shortSummarizeButton.dispatchEvent(
-						new MouseEvent("click", { bubbles: true }),
-					);
-				});
-				buttonsContainer.appendChild(clonedBtn);
-			}
-			if (buttons.enhanceButton) {
-				const clonedBtn = buttons.enhanceButton.cloneNode(true);
-				clonedBtn.addEventListener("click", (e) => {
-					buttons.enhanceButton.dispatchEvent(
-						new MouseEvent("click", { bubbles: true }),
-					);
-				});
-				buttonsContainer.appendChild(clonedBtn);
-			}
-		}
-
-		// Add content area for summary text
-		const contentDiv = document.createElement("div");
-		contentDiv.className = "gemini-summary-content";
-		contentDiv.style.cssText = `
-			margin-top: 16px;
-			padding: 12px;
-			background: rgba(0, 0, 0, 0.2);
-			border-radius: 4px;
-			max-height: 400px;
-			overflow-y: auto;
-			color: #e8ecef;
-		`;
-		banner.appendChild(contentDiv);
-
-		summaryDisplay.insertBefore(banner, summaryDisplay.firstChild);
+		container.appendChild(summaryContentContainer);
 	}
 
 	async function summarizeChunkRange(chunkIndices, isShort) {
 		const statusDiv = document.getElementById("gemini-status");
-		const summaryDisplayLong = document.getElementById(
-			"summary-display-long",
-		);
-		const summaryDisplayShort = document.getElementById(
-			"summary-display-short",
-		);
-		const summaryDisplay = isShort
-			? summaryDisplayShort
-			: summaryDisplayLong;
-
 		const summaryType = isShort ? "Short" : "Long";
+
+		// Find the matching summary group's text container based on chunk indices
+		const startIdx = Math.min(...chunkIndices);
+		const endIdx = Math.max(...chunkIndices);
+		let summaryTextContainer = null;
+
+		// Look for the summary text container matching this chunk range
+		const allContainers = document.querySelectorAll(
+			".gemini-summary-text-container",
+		);
+		for (const container of allContainers) {
+			const groupStart = parseInt(
+				container.getAttribute("data-group-start"),
+				10,
+			);
+			const groupEnd = parseInt(
+				container.getAttribute("data-group-end"),
+				10,
+			);
+			if (groupStart === startIdx && groupEnd === endIdx) {
+				summaryTextContainer = container;
+				break;
+			}
+		}
+
 		const combinedText = (chunkIndices || [])
 			.map((index) => {
 				const chunkContent = document.querySelector(
@@ -1418,25 +1355,9 @@ if (window.__RGInitDone) {
 			if (statusDiv) {
 				statusDiv.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
 			}
-			if (summaryDisplay) {
-				summaryDisplay.style.display = "block";
-
-				// Add summary banner with buttons if not already there
-				if (
-					!summaryDisplay.querySelector(
-						".gemini-summary-section-banner",
-					)
-				) {
-					ensureSummaryBannerExists(summaryDisplay);
-				}
-
-				// Update the summary content area message
-				const summaryContent = summaryDisplay.querySelector(
-					".gemini-summary-content",
-				);
-				if (summaryContent) {
-					summaryContent.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
-				}
+			if (summaryTextContainer) {
+				summaryTextContainer.style.display = "block";
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
 			}
 
 			const modelInfoResponse = await sendMessageWithRetry({
@@ -1478,7 +1399,7 @@ if (window.__RGInitDone) {
 			}
 
 			if (summary) {
-				renderSummaryOutput(summaryDisplay, summary, summaryType);
+				renderSummaryOutput(summaryTextContainer, summary, summaryType);
 				if (statusDiv) {
 					statusDiv.textContent = "Summary generated successfully!";
 				}
@@ -1488,8 +1409,8 @@ if (window.__RGInitDone) {
 			if (statusDiv) {
 				statusDiv.textContent = `Failed to generate summary: ${error.message}`;
 			}
-			if (summaryDisplay) {
-				summaryDisplay.textContent = `Failed to generate summary: ${error.message}`;
+			if (summaryTextContainer) {
+				summaryTextContainer.textContent = `Failed to generate summary: ${error.message}`;
 			}
 		}
 	}
@@ -2161,29 +2082,15 @@ if (window.__RGInitDone) {
 	// Adjust UI based on device type
 	function adjustUIForDeviceType() {
 		const controlsContainer = document.getElementById("gemini-controls");
-		const summaryDisplayLong = document.getElementById(
-			"summary-display-long",
-		);
-		const summaryDisplayShort = document.getElementById(
-			"summary-display-short",
-		);
 
 		if (!controlsContainer) return;
 
 		if (isMobileDevice) {
 			// Mobile-specific adjustments
 			controlsContainer.classList.add("mobile-view");
-			if (summaryDisplayLong)
-				summaryDisplayLong.classList.add("mobile-view");
-			if (summaryDisplayShort)
-				summaryDisplayShort.classList.add("mobile-view");
 		} else {
 			// Desktop-specific adjustments
 			controlsContainer.classList.remove("mobile-view");
-			if (summaryDisplayLong)
-				summaryDisplayLong.classList.remove("mobile-view");
-			if (summaryDisplayShort)
-				summaryDisplayShort.classList.remove("mobile-view");
 		}
 	}
 
@@ -2626,6 +2533,7 @@ if (window.__RGInitDone) {
 				totalChunks,
 				(indices) => summarizeChunkRange(indices, false),
 				(indices) => summarizeChunkRange(indices, true),
+				() => handleEnhanceClick(),
 			);
 			contentArea.insertBefore(mainSummaryGroup, chunkedContentContainer);
 
@@ -3701,106 +3609,13 @@ if (window.__RGInitDone) {
 		return null;
 	}
 
-	// Function to create the Long Summary button
-	function createSummarizeButton() {
-		const button = document.createElement("button");
-		button.id = "summarize-button";
-		button.textContent = "📝 Long Summary";
-		button.title = "Generate a detailed summary of the chapter";
-		button.classList.add("gemini-button"); // Use the same class for styling
-		button.addEventListener("click", (event) =>
-			handleSummarizeButtonClick(event, false),
-		);
-		return button;
-	}
-
-	// Function to create the Short Summary button
-	function createShortSummarizeButton() {
-		const button = document.createElement("button");
-		button.id = "short-summarize-button";
-		button.textContent = "📋 Short Summary";
-		button.title = "Generate a brief summary of the chapter";
-		button.classList.add("gemini-button"); // Use the same class for styling
-		button.addEventListener("click", (event) =>
-			handleSummarizeButtonClick(event, true),
-		);
-		return button;
-	}
-
-	// // Function to create the FanFiction version switcher button (mobile ⟷ desktop)
-	// function createFanfictionVersionSwitcher() {
-	// 	const hostname = window.location.hostname;
-	// 	const isMobile = hostname === "m.fanfiction.net";
-	// 	const isDesktop =
-	// 		hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
-
-	// 	// Only show switcher on FanFiction.net sites
-	// 	if (!isMobile && !isDesktop) {
-	// 		return null;
-	// 	}
-
-	// 	const button = document.createElement("button");
-	// 	button.id = "fanfiction-version-switcher";
-	// 	button.textContent = isMobile ? "🖥️ Desktop" : "📱 Mobile";
-	// 	button.title = isMobile
-	// 		? "Switch to desktop version"
-	// 		: "Switch to mobile version";
-
-	// 	// Match the same styling as enhance/summarize buttons but compact
-	// 	button.style.cssText = `
-	// 		display: inline-flex;
-	// 		align-items: center;
-	// 		justify-content: center;
-	// 		padding: 8px 12px;
-	// 		margin: 0;
-	// 		background-color: #222;
-	// 		color: #bab9a0;
-	// 		border: 1px solid #ffffff21;
-	// 		box-shadow: inset 0 0 0 1px #5a5a5a4d;
-	// 		border-radius: 4px;
-	// 		cursor: pointer;
-	// 		font-weight: bold;
-	// 		font-size: 12px;
-	// 		z-index: 1000;
-	// 	`;
-
-	// 	button.addEventListener("click", () => {
-	// 		const currentUrl = window.location.href;
-	// 		let newUrl;
-
-	// 		if (isMobile) {
-	// 			// Switch to desktop: m.fanfiction.net → www.fanfiction.net
-	// 			newUrl = currentUrl.replace(
-	// 				"m.fanfiction.net",
-	// 				"www.fanfiction.net"
-	// 			);
-	// 		} else {
-	// 			// Switch to mobile: www.fanfiction.net → m.fanfiction.net
-	// 			newUrl = currentUrl.replace(
-	// 				/(?:www\.)?fanfiction\.net/,
-	// 				"m.fanfiction.net"
-	// 			);
-	// 		}
-
-	// 		window.location.href = newUrl;
-	// 	});
-
-	// 	button.addEventListener("mouseover", () => {
-	// 		button.style.backgroundColor = "#333";
-	// 	});
-	// 	button.addEventListener("mouseout", () => {
-	// 		button.style.backgroundColor = "#222";
-	// 	});
-
-	// 	return button;
-	// }
-
 	// Function to create the Toggle Banners button (show/hide banners for enhanced content)
 	function createToggleBannersButton() {
 		const toggleButton = document.createElement("button");
 		toggleButton.className = "gemini-toggle-banners-btn";
-		toggleButton.textContent = "👁 Show Enhancements";
-		toggleButton.title = "Toggle visibility of enhanced content banners";
+		toggleButton.textContent = "👁 Show Banners";
+		toggleButton.title =
+			"Toggle visibility of enhancement banners and summary groups";
 
 		// Style to match the sample page buttons
 		toggleButton.style.cssText = `
@@ -3827,40 +3642,6 @@ if (window.__RGInitDone) {
 			toggleButton.style.backgroundColor = "#2a2a2a";
 		});
 		return toggleButton;
-	}
-
-	// Function to create the Start Enhancement button (actually start the enhancement process)
-	function createEnhanceButton() {
-		const enhanceButton = document.createElement("button");
-		enhanceButton.className = "gemini-enhance-btn";
-		enhanceButton.textContent = "⚡ Start Enhancement";
-		enhanceButton.title = "Begin enhancement process";
-
-		// Style to match the sample page buttons
-		enhanceButton.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 15px;
-        margin: 15px 0;
-        background-color: #222;
-        color: #bab9a0;
-        border: 1px solid #ffffff21;
-        box-shadow: inset 0 0 0 1px #5a5a5a4d;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 14px;
-        z-index: 1000;
-    `;
-		enhanceButton.addEventListener("click", handleButtonClick);
-		enhanceButton.addEventListener("mouseover", () => {
-			enhanceButton.style.backgroundColor = "#333";
-		});
-		enhanceButton.addEventListener("mouseout", () => {
-			enhanceButton.style.backgroundColor = "#222";
-		});
-		return enhanceButton;
 	}
 
 	function createCancelEnhanceButton() {
@@ -3891,86 +3672,6 @@ if (window.__RGInitDone) {
 			cancelButton.style.backgroundColor = "#b91c1c";
 		});
 		return cancelButton;
-	}
-
-	// Wrapper handler for Enhance button clicks
-	async function handleButtonClick(event) {
-		const button = event.currentTarget;
-		const originalText = button.textContent;
-
-		// Check if background script is ready
-		if (!isBackgroundScriptReady) {
-			try {
-				button.disabled = true;
-				button.textContent = "Initializing...";
-				showStatusMessage("Verifying extension connection...", "info");
-
-				// Try to verify connection
-				const isConnected = await verifyBackgroundConnection();
-
-				if (!isConnected) {
-					throw new Error(
-						"Cannot connect to extension background script",
-					);
-				}
-
-				// Connection verified, proceed with enhancement
-				button.textContent = originalText;
-				button.disabled = false;
-				await handleEnhanceClick();
-			} catch (error) {
-				debugError("Connection error:", error);
-				showStatusMessage(
-					"Error connecting to extension. Please reload the page and try again.",
-					"error",
-				);
-				button.textContent = originalText;
-				button.disabled = false;
-			}
-		} else {
-			// Background script is already ready
-			await handleEnhanceClick();
-		}
-	}
-
-	// Wrapper handler for Summarize button clicks
-	async function handleSummarizeButtonClick(event, isShort = false) {
-		const button = event.currentTarget;
-		const originalText = button.textContent;
-
-		// Check if background script is ready
-		if (!isBackgroundScriptReady) {
-			try {
-				button.disabled = true;
-				button.textContent = "Initializing...";
-				showStatusMessage("Verifying extension connection...", "info");
-
-				// Try to verify connection
-				const isConnected = await verifyBackgroundConnection();
-
-				if (!isConnected) {
-					throw new Error(
-						"Cannot connect to extension background script",
-					);
-				}
-
-				// Connection verified, proceed with summarization
-				button.textContent = originalText;
-				button.disabled = false;
-				await handleSummarizeClick(isShort);
-			} catch (error) {
-				debugError("Connection error:", error);
-				showStatusMessage(
-					"Error connecting to extension. Please reload the page and try again.",
-					"error",
-				);
-				button.textContent = originalText;
-				button.disabled = false;
-			}
-		} else {
-			// Background script is already ready
-			await handleSummarizeClick(isShort);
-		}
 	}
 
 	// Function to add initial word count display below the buttons
@@ -4827,49 +4528,16 @@ if (window.__RGInitDone) {
 			controlsContainer.classList.add("mobile-view");
 		}
 
-		const enhanceButton = createEnhanceButton();
 		const toggleBannersButton = createToggleBannersButton();
 		cancelEnhanceButton = createCancelEnhanceButton();
-		const summarizeButton = createSummarizeButton();
-		const shortSummarizeButton = createShortSummarizeButton();
 
 		const statusDiv = document.createElement("div");
 		statusDiv.id = "gemini-status";
 		statusDiv.style.marginTop = "5px";
 
-		const summaryDisplayLong = document.createElement("div");
-		summaryDisplayLong.id = "summary-display-long";
-		summaryDisplayLong.style.marginTop = "10px";
-		summaryDisplayLong.style.padding = "10px";
-		summaryDisplayLong.style.display = "none"; // Initially hidden
-
-		const summaryDisplayShort = document.createElement("div");
-		summaryDisplayShort.id = "summary-display-short";
-		summaryDisplayShort.style.marginTop = "10px";
-		summaryDisplayShort.style.padding = "10px";
-		summaryDisplayShort.style.display = "none"; // Initially hidden
-
-		// Apply mobile-specific class if on a mobile device
-		if (isMobileDevice) {
-			summaryDisplayLong.classList.add("mobile-view");
-			summaryDisplayShort.classList.add("mobile-view");
-		}
-
-		// Only add toggle banners button to controls
+		// Only add toggle banners button and cancel button to controls
 		controlsContainer.appendChild(toggleBannersButton);
 		controlsContainer.appendChild(cancelEnhanceButton);
-
-		// Store button refs for later use
-		summaryDisplayLong.summaryButtons = {
-			summarizeButton,
-			shortSummarizeButton,
-			enhanceButton,
-		};
-		summaryDisplayShort.summaryButtons = {
-			summarizeButton,
-			shortSummarizeButton,
-			enhanceButton,
-		};
 
 		// Get optimal insertion point based on the handler
 		let insertionPoint = contentArea;
@@ -4896,14 +4564,6 @@ if (window.__RGInitDone) {
 				controlsContainer,
 				insertionPoint,
 			);
-			insertionPoint.parentNode.insertBefore(
-				summaryDisplayLong,
-				insertionPoint,
-			);
-			insertionPoint.parentNode.insertBefore(
-				summaryDisplayShort,
-				insertionPoint,
-			);
 		} else if (
 			insertionPosition === "after" ||
 			insertionPosition === "afterend"
@@ -4920,14 +4580,6 @@ if (window.__RGInitDone) {
 					? siteEnhancementsContainer.nextSibling
 					: insertionPoint.nextSibling,
 			);
-			insertionPoint.parentNode.insertBefore(
-				summaryDisplayLong,
-				controlsContainer.nextSibling,
-			);
-			insertionPoint.parentNode.insertBefore(
-				summaryDisplayShort,
-				controlsContainer.nextSibling,
-			);
 		} else if (
 			insertionPosition === "prepend" ||
 			insertionPosition === "afterbegin"
@@ -4936,7 +4588,6 @@ if (window.__RGInitDone) {
 				insertionPoint.prepend(versionSwitcherContainer);
 			}
 			insertionPoint.prepend(controlsContainer);
-			insertionPoint.prepend(summaryDisplay);
 		} else if (
 			insertionPosition === "append" ||
 			insertionPosition === "beforeend"
@@ -4945,15 +4596,10 @@ if (window.__RGInitDone) {
 				insertionPoint.appendChild(versionSwitcherContainer);
 			}
 			insertionPoint.appendChild(controlsContainer);
-			insertionPoint.appendChild(summaryDisplay);
 		} else {
 			// Default fallback to before
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
-				insertionPoint,
-			);
-			insertionPoint.parentNode.insertBefore(
-				summaryDisplay,
 				insertionPoint,
 			);
 		}
@@ -5155,32 +4801,33 @@ if (window.__RGInitDone) {
 		return extractContentGeneric();
 	}
 
-	// Handle click event for Summarize button
+	// Handle click event for Summarize button (used by message handler for non-chunked content)
 	async function handleSummarizeClick(isShort = false) {
-		const summarizeButton = isShort
-			? document.getElementById("short-summarize-button")
-			: document.getElementById("summarize-button");
-		const summaryDisplayLong = document.getElementById(
-			"summary-display-long",
-		);
-		const summaryDisplayShort = document.getElementById(
-			"summary-display-short",
-		);
 		const statusDiv = document.getElementById("gemini-status");
-
-		if (!summarizeButton || !statusDiv) return;
-
-		const summaryDisplay = isShort
-			? summaryDisplayShort
-			: summaryDisplayLong;
+		if (!statusDiv) return;
 
 		const summaryType = isShort ? "Short" : "Long";
-		const originalButtonText = summarizeButton.textContent;
+
+		// Find the summary button in the main summary group
+		const summarizeButton = isShort
+			? document.querySelector(".gemini-main-short-summary-btn")
+			: document.querySelector(".gemini-main-long-summary-btn");
+
+		// Find the main summary text container
+		let summaryTextContainer = document.querySelector(
+			".gemini-main-summary-text",
+		);
+
+		const originalButtonText = summarizeButton
+			? summarizeButton.textContent
+			: "";
 
 		try {
 			// Wake up background worker first
-			summarizeButton.disabled = true;
-			summarizeButton.textContent = "Waking up AI...";
+			if (summarizeButton) {
+				summarizeButton.disabled = true;
+				summarizeButton.textContent = "Waking up AI...";
+			}
 			statusDiv.textContent = "Waking up AI service...";
 
 			const isReady = await wakeUpBackgroundWorker();
@@ -5191,12 +4838,13 @@ if (window.__RGInitDone) {
 			}
 
 			// Now proceed with summarization
-			summarizeButton.textContent = "Summarizing...";
+			if (summarizeButton) {
+				summarizeButton.textContent = "Summarizing...";
+			}
 			statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary...`;
-			if (summaryDisplay) {
-				summaryDisplay.style.display = "block"; // Show the specific display area
-				// Do not clear the other summary display - keep long and short independent
-				summaryDisplay.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+			if (summaryTextContainer) {
+				summaryTextContainer.style.display = "block";
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
 			}
 			const extractedContent = extractContent();
 			const { title, text: content } = extractedContent;
@@ -5274,8 +4922,8 @@ if (window.__RGInitDone) {
 						browser.runtime.sendMessage({ action: "openPopup" });
 
 						// Show appropriate message in the target display
-						if (summaryDisplay) {
-							summaryDisplay.textContent =
+						if (summaryTextContainer) {
+							summaryTextContainer.textContent =
 								"API key is missing. Please add your Gemini API key in the settings.";
 						}
 						throw new Error("API key is missing");
@@ -5287,50 +4935,7 @@ if (window.__RGInitDone) {
 
 			// Display the summary
 			if (summary) {
-				if (summaryDisplay) {
-					// Clear only the target summary display area
-					while (summaryDisplay.firstChild) {
-						summaryDisplay.removeChild(summaryDisplay.firstChild);
-					}
-
-					const summaryHeader = document.createElement("h3");
-					summaryHeader.textContent = `${summaryType} Chapter Summary:`;
-					summaryDisplay.appendChild(summaryHeader);
-
-					// Create a container for the summary text
-					const summaryContentContainer =
-						document.createElement("div");
-					summaryContentContainer.className = "summary-text-content";
-
-					// Use the new paragraph extraction function to preserve structure
-					const paragraphs = extractParagraphsFromHtml(summary);
-					debugLog(
-						"[Render] Extracted paragraphs for summary:",
-						paragraphs.length,
-					);
-
-					if (paragraphs.length > 0) {
-						// Render each paragraph as a separate <p> element
-						paragraphs.forEach((paragraphText) => {
-							const p = document.createElement("p");
-							p.textContent = paragraphText;
-							p.style.marginBottom = "1em";
-							p.style.lineHeight = "1.6";
-							summaryContentContainer.appendChild(p);
-						});
-					} else {
-						// Fallback - just display as text
-						const cleanSummary = stripHtmlTags(summary);
-						summaryContentContainer.textContent = cleanSummary;
-					}
-
-					// Apply font size setting to summary content
-					if (currentFontSize && currentFontSize !== 100) {
-						summaryContentContainer.style.fontSize = `${currentFontSize}%`;
-					}
-
-					summaryDisplay.appendChild(summaryContentContainer);
-				}
+				renderSummaryOutput(summaryTextContainer, summary, summaryType);
 				statusDiv.textContent = "Summary generated successfully!";
 				logNotification({
 					type: "success",
@@ -5356,9 +4961,10 @@ if (window.__RGInitDone) {
 			} else {
 				// For other errors, display the error message
 				statusDiv.textContent = `Error: ${error.message}`;
-				if (summaryDisplay) {
-					summaryDisplay.textContent = "Failed to generate summary.";
-					summaryDisplay.style.display = "block"; // Keep display visible to show error
+				if (summaryTextContainer) {
+					summaryTextContainer.textContent =
+						"Failed to generate summary.";
+					summaryTextContainer.style.display = "block";
 				}
 			}
 			logNotification({
@@ -5372,8 +4978,10 @@ if (window.__RGInitDone) {
 				},
 			});
 		} finally {
-			summarizeButton.disabled = false;
-			summarizeButton.textContent = originalButtonText; // restore original label
+			if (summarizeButton) {
+				summarizeButton.disabled = false;
+				summarizeButton.textContent = originalButtonText;
+			}
 			// Optionally hide status message after a delay (except for API key missing)
 			setTimeout(() => {
 				if (
@@ -5814,6 +5422,7 @@ if (window.__RGInitDone) {
 										summarizeChunkRange(indices, false),
 									(indices) =>
 										summarizeChunkRange(indices, true),
+									() => handleEnhanceClick(),
 								);
 							contentArea.insertBefore(
 								mainSummaryGroup,
