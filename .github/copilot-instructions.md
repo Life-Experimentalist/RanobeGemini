@@ -3,6 +3,7 @@
 # Ranobe Gemini — Copilot instructions
 
 Purpose: make AI coding agents productive quickly when editing, building, and packaging this browser-extension.
+Use Powershell commands only since this is a Windows environment. Use `npm run` scripts for build/package steps, not direct calls to `dev/*.js` scripts, since the `npm run` scripts include important setup and validation.
 
 -   **Big picture**: this is a cross-browser (Firefox/Chromium) browser extension. Runtime pieces live under `src/`:
 

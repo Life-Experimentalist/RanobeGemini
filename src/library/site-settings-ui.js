@@ -15,10 +15,23 @@ export const WEBSITE_SETTINGS_DEFINITIONS = [
 				description:
 					"Choose how to handle bare domain (fanfiction.net) visits.",
 				type: "select",
+				defaultValue: "auto",
 				options: [
 					{ value: "auto", label: "Auto (device-based)" },
 					{ value: "www", label: "Desktop (www)" },
 					{ value: "mobile", label: "Mobile (m)" },
+				],
+			},
+			{
+				key: "preferredTld",
+				label: "Preferred TLD",
+				description:
+					"Default TLD to use when visiting FanFiction URLs.",
+				type: "select",
+				defaultValue: "net",
+				options: [
+					{ value: "net", label: "fanfiction.net (default)" },
+					{ value: "ws", label: "fanfiction.ws" },
 				],
 			},
 			{
@@ -44,7 +57,8 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 	const fieldsHtml = definition.fields
 		.map((field) => {
 			if (field.type === "select") {
-				const currentValue = settings[field.key] || "auto";
+				const currentValue =
+					settings[field.key] ?? field.defaultValue ?? "auto";
 				const optionsHtml = field.options
 					.map(
 						(opt) => `

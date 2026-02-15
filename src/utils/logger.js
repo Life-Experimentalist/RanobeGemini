@@ -17,6 +17,10 @@ export const LogLevel = {
 let debugModeCache = null;
 let lastDebugCheck = 0;
 const DEBUG_CACHE_TTL_MS = 3000;
+// Caching for debug truncation settings
+let debugTruncateCache = null;
+let debugLengthCache = 500;
+let lastTruncateCheck = 0;
 const originalConsoleError = console.error.bind(console);
 const originalConsoleLog = console.log.bind(console);
 let persistentLoggingEnabled = true;
@@ -60,6 +64,48 @@ async function isDebugEnabledAsync() {
 }
 
 /**
+ * Get debug truncation settings from storage
+ * @returns {Promise<{enabled: boolean, length: number}>}
+ */
+async function getTruncationSettings() {
+	try {
+		// Return cached values if recently checked
+		const now = Date.now();
+		if (lastTruncateCheck && now - lastTruncateCheck < DEBUG_CACHE_TTL_MS) {
+			return { enabled: debugTruncateCache, length: debugLengthCache };
+		}
+
+		const result = await browser.storage.local.get([
+			"debugTruncateOutput",
+			"debugTruncateLength",
+		]);
+		debugTruncateCache =
+			result.debugTruncateOutput !== false ? true : false;
+		debugLengthCache = result.debugTruncateLength || 500;
+		lastTruncateCheck = now;
+
+		return { enabled: debugTruncateCache, length: debugLengthCache };
+	} catch (err) {
+		// Return defaults on error
+		return { enabled: true, length: 500 };
+	}
+}
+
+/**
+ * Format and optionally truncate output
+ * @param {*} value - Value to format
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string}
+ */
+function formatOutput(value, maxLength = 500) {
+	const str = safeStringify(value);
+	if (str.length > maxLength) {
+		return str.substring(0, maxLength) + `... [truncated, ${str.length - maxLength} more chars]`;
+	}
+	return str;
+}
+
+/**
  * Debug-only logger. Replace console.log with this to respect the user's debug mode toggle.
  * Works in popup (sync checkbox) and other extension contexts (async storage lookup).
  * @param  {...any} args - Arguments to log
@@ -68,8 +114,19 @@ export function debugLog(...args) {
 	const immediate = isPopupDebugEnabledSync();
 	if (immediate !== null) {
 		if (immediate) {
-			originalConsoleLog(...args);
-			recordPersistent("debug", args);
+			// Apply truncation synchronously for popup context
+			getTruncationSettings()
+				.then((settings) => {
+					const truncatedArgs = settings.enabled
+						? args.map((arg) => formatOutput(arg, settings.length))
+						: args;
+					originalConsoleLog(...truncatedArgs);
+					recordPersistent("debug", truncatedArgs);
+				})
+				.catch(() => {
+					originalConsoleLog(...args);
+					recordPersistent("debug", args);
+				});
 		}
 		return;
 	}
@@ -78,8 +135,20 @@ export function debugLog(...args) {
 	isDebugEnabledAsync()
 		.then((enabled) => {
 			if (enabled) {
-				originalConsoleLog(...args);
-				recordPersistent("debug", args);
+				getTruncationSettings()
+					.then((settings) => {
+						const truncatedArgs = settings.enabled
+							? args.map((arg) =>
+									formatOutput(arg, settings.length),
+								)
+							: args;
+						originalConsoleLog(...truncatedArgs);
+						recordPersistent("debug", truncatedArgs);
+					})
+					.catch(() => {
+						originalConsoleLog(...args);
+						recordPersistent("debug", args);
+					});
 			}
 		})
 		.catch(() => {
@@ -140,8 +209,18 @@ function recordPersistent(level, args) {
  */
 export function debugError(...args) {
 	if (shouldLogNowSync()) {
-		originalConsoleError(...args);
-		recordPersistent("error", args);
+		getTruncationSettings()
+			.then((settings) => {
+				const truncatedArgs = settings.enabled
+					? args.map((arg) => formatOutput(arg, settings.length))
+					: args;
+				originalConsoleError(...truncatedArgs);
+				recordPersistent("error", truncatedArgs);
+			})
+			.catch(() => {
+				originalConsoleError(...args);
+				recordPersistent("error", args);
+			});
 		return;
 	}
 

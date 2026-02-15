@@ -3,8 +3,13 @@
  * The abstract class that all website-specific handlers should extend
  */
 import { debugLog, debugError } from "../logger.js";
-
+import { DEFAULT_BANNERS_VISIBLE } from "../constants.js";
 export class BaseWebsiteHandler {
+	// Default banner visibility on page load
+	// Set to false to hide enhancement banners by default
+	// Individual handlers can override this
+	static DEFAULT_BANNERS_VISIBLE = DEFAULT_BANNERS_VISIBLE;
+
 	constructor() {
 		// Optional initialization
 	}

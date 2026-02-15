@@ -3,6 +3,7 @@
  * Centralized configuration values used throughout the extension
  */
 
+export const DEFAULT_BANNERS_VISIBLE = true;
 export const DEFAULT_DEBUG_MODE = true;
 export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
 

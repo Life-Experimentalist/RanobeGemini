@@ -12,13 +12,19 @@
 		"package:source": "node dev/build.js --source",
 		"publish": "node dev/build.js --package --source",
 		"update-domains": "node dev/build.js --update",
-		"watch": "npm run build && node dev/watch.js"
+		"watch": "npm run build && node dev/watch.js",
+		"lint": "eslint src/**/*.js",
+		"lint:fix": "eslint src/**/*.js --fix",
+		"format": "prettier --write \"src/**/*.{js,json,css,html}\"",
+		"format:check": "prettier --check \"src/**/*.{js,json,css,html}\""
 	},
 	"dependencies": {
 		"webextension-polyfill": "^0.12.0"
 	},
 	"devDependencies": {
-		"archiver": "^5.3.2"
+		"archiver": "^5.3.2",
+		"eslint": "^8.57.0",
+		"prettier": "^3.2.5"
 	},
 	"files": [
 		".vscode",

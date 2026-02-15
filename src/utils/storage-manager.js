@@ -23,9 +23,11 @@ export class StorageManager {
 			const urlObj = new URL(url);
 			let pathname = urlObj.pathname;
 
-			// Normalize FanFiction.net URLs: treat m.fanfiction.net and www.fanfiction.net as same
-			// This allows cached content to be shared between mobile and desktop versions
-			if (urlObj.hostname.includes("fanfiction.net")) {
+			// Normalize FanFiction.net/.ws URLs: share cache between TLDs and subdomains
+			if (
+				urlObj.hostname.includes("fanfiction.net") ||
+				urlObj.hostname.includes("fanfiction.ws")
+			) {
 				// Use a normalized hostname for cache key
 				const normalizedHostname = "fanfiction.net";
 				return this.DB_KEY_PREFIX + normalizedHostname + pathname;

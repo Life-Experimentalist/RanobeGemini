@@ -885,3 +885,106 @@ html[data-darkreader-mode] .section-divider {
 	border-radius: 4px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* ============================================
+   Mobile Responsiveness
+   ============================================ */
+@media (max-width: 768px) {
+	/* Controls container */
+	.gemini-controls,
+	#gemini-controls {
+		flex-direction: column !important;
+		gap: 8px !important;
+	}
+
+	/* Buttons - full width and larger touch targets */
+	.gemini-toggle-banners-btn,
+	.gemini-enhance-btn,
+	.gemini-button,
+	.gemini-main-summary-group button,
+	.gemini-chunk-summary-group button,
+	.gemini-chunk-banner button {
+		width: 100% !important;
+		padding: 12px !important;
+		font-size: 16px !important;
+		min-height: 44px !important;
+	}
+
+	/* Summary groups - vertical layout */
+	.gemini-main-summary-group,
+	.gemini-chunk-summary-group {
+		flex-direction: column !important;
+		gap: 8px !important;
+		padding: 12px !important;
+	}
+
+	.gemini-main-summary-group > *,
+	.gemini-chunk-summary-group > * {
+		width: 100% !important;
+	}
+
+	/* WIP Banner - responsive */
+	.gemini-wip-banner {
+		padding: 12px !important;
+		font-size: 14px !important;
+	}
+
+	.gemini-wip-banner .progress-text {
+		font-size: 13px !important;
+	}
+
+	/* Chunk banners - vertical layout */
+	.gemini-chunk-banner {
+		flex-direction: column !important;
+		gap: 8px !important;
+		padding: 12px !important;
+	}
+
+	.gemini-chunk-banner button {
+		width: 100% !important;
+		margin: 4px 0 !important;
+	}
+
+	/* Enhanced banner - responsive */
+	.gemini-enhanced-banner {
+		padding: 12px !important;
+	}
+
+	.gemini-enhanced-banner > div {
+		flex-direction: column !important;
+		align-items: flex-start !important;
+	}
+
+	.gemini-enhanced-banner button {
+		width: 100%;
+		margin-top: 8px;
+	}
+
+	/* Master banner - responsive */
+	.gemini-master-banner {
+		flex-direction: column !important;
+		padding: 12px !important;
+	}
+
+	.gemini-master-banner button {
+		width: 100% !important;
+		margin: 4px 0 !important;
+	}
+}
+
+/* Smaller mobile devices */
+@media (max-width: 480px) {
+	.gemini-wip-banner,
+	.gemini-chunk-banner,
+	.gemini-main-summary-group,
+	.gemini-chunk-summary-group {
+		margin: 12px 0 !important;
+		font-size: 13px !important;
+	}
+
+	/* Adjust word count displays for small screens */
+	.gemini-wip-banner > div > div {
+		flex-direction: column !important;
+		gap: 8px !important;
+	}
+}

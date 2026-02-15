@@ -30,7 +30,6 @@ let formattingOptions = {
 };
 let hasExtractButton = false;
 let autoExtracted = false;
-var isInitialized = false; // Track if the content script is fully initialized (var to avoid redeclaration)
 let storageManager = null; // Storage manager instance for caching
 let isCachedContent = false; // Track if cached content is currently applied
 let hasCachedContent = false; // Track if cached content exists
@@ -98,6 +97,7 @@ if (window.__RGInitDone) {
 	const __rgOriginalLog = debugLog.bind(console);
 	const __rgOriginalError = debugError.bind(console);
 
+	// eslint-disable-next-line no-inner-declarations
 	function applyDebugFlag(enabled) {
 		debugModeEnabled = !!enabled;
 	}
@@ -131,6 +131,7 @@ if (window.__RGInitDone) {
 		if (debugModeEnabled) __rgOriginalError(...args);
 	};
 
+	// eslint-disable-next-line no-inner-declarations
 	function clearKeepAliveTimers() {
 		if (keepAliveHeartbeat) {
 			clearInterval(keepAliveHeartbeat);
@@ -142,6 +143,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// eslint-disable-next-line no-inner-declarations
 	function scheduleReconnect(reason) {
 		if (keepAliveReconnectTimer) return;
 		if (keepAliveRetryCount >= keepAliveConfig.maxRetries) return;
@@ -159,6 +161,7 @@ if (window.__RGInitDone) {
 		);
 	}
 
+	// eslint-disable-next-line no-inner-declarations
 	function startKeepAlivePort(trigger = "initial") {
 		if (keepAlivePort) return;
 		clearKeepAliveTimers();
@@ -201,6 +204,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// eslint-disable-next-line no-inner-declarations
 	function restartKeepAlive() {
 		keepAlivePort = null;
 		keepAliveRetryCount = 0;
@@ -208,6 +212,7 @@ if (window.__RGInitDone) {
 		startKeepAlivePort("config-change");
 	}
 
+	// eslint-disable-next-line no-inner-declarations
 	function ensureKeepAlivePort() {
 		if (!keepAlivePort) {
 			startKeepAlivePort();
@@ -221,6 +226,7 @@ if (window.__RGInitDone) {
 	let isMobileDevice = false;
 
 	// Function to detect if user is on a mobile device
+	// eslint-disable-next-line no-inner-declarations, no-useless-escape
 	function detectMobileDevice() {
 		// Check if using a mobile device based on user agent
 		const userAgent =
@@ -229,6 +235,7 @@ if (window.__RGInitDone) {
 			/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(
 				userAgent,
 			) ||
+			// eslint-disable-next-line no-useless-escape
 			/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
 				userAgent.substr(0, 4),
 			)
@@ -551,7 +558,7 @@ if (window.__RGInitDone) {
 						`[sendMessageWithRetry] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`,
 					);
 					debugLog(
-						`[sendMessageWithRetry] Waking up background worker before retry...`,
+						"[sendMessageWithRetry] Waking up background worker before retry...",
 					);
 					ensureKeepAlivePort();
 
@@ -674,7 +681,7 @@ if (window.__RGInitDone) {
     `;
 
 		const deleteButtonHtml = showDeleteButton
-			? `<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>`
+			? '<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>'
 			: "";
 
 		banner.innerHTML = `
@@ -721,9 +728,9 @@ if (window.__RGInitDone) {
 		debugLog("Cancelling enhancement process...");
 		enhancementCancelRequested = true;
 
-		browser.runtime
-			.sendMessage({ action: "cancelEnhancement" })
-			.catch(debugerror);
+		sendMessageWithRetry({ action: "cancelEnhancement" }).catch((error) => {
+			debugError("Failed to send cancel request:", error);
+		});
 
 		showStatusMessage(
 			"Cancelling enhancement... processed chunks will be kept.",
@@ -742,11 +749,63 @@ if (window.__RGInitDone) {
 			button.classList.remove("loading");
 		}
 
-		// Clear WIP banner
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) {
-			wipBanner.remove();
+		// Update WIP banner to paused state
+		const chunkedContainer = document.getElementById(
+			"gemini-chunked-content",
+		);
+		const totalChunks = chunkedContainer
+			? chunkedContainer.querySelectorAll(".gemini-chunk-content").length
+			: 1;
+		const completedChunks = chunkedContainer
+			? chunkedContainer.querySelectorAll(
+					'.gemini-chunk-content[data-chunk-enhanced="true"]',
+				).length
+			: 0;
+
+		// Calculate word counts for paused state
+		let wordCounts = null;
+		const chunking = window.chunkingSystemCache;
+		if (chunkedContainer && chunking?.core?.countWords) {
+			const allChunks = chunkedContainer.querySelectorAll(
+				".gemini-chunk-content",
+			);
+			let totalOriginalWords = 0;
+			let totalEnhancedWords = 0;
+
+			allChunks.forEach((chunk) => {
+				const originalContent =
+					chunk.getAttribute("data-original-chunk-content") || "";
+				const enhancedContent = chunk.innerHTML;
+				totalOriginalWords += chunking.core.countWords(originalContent);
+				totalEnhancedWords += chunking.core.countWords(enhancedContent);
+			});
+
+			wordCounts = {
+				original: totalOriginalWords,
+				enhanced: totalEnhancedWords,
+			};
 		}
+
+		showWorkInProgressBanner(
+			completedChunks,
+			totalChunks,
+			"paused",
+			wordCounts,
+		);
+	}
+
+	// Check if banners should be hidden based on toggle button state
+	// Returns true if banners are currently hidden (button shows "Show Banners")
+	function shouldBannersBeHidden() {
+		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
+		if (!toggleBtn) {
+			// No toggle button yet - check handler default
+			return (
+				currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
+			);
+		}
+		// Check button text to determine current state
+		return toggleBtn.textContent.includes("Show");
 	}
 
 	// Toggle visibility of enhancement banners (WIP, chunk banners, master banner, summary groups)
@@ -789,11 +848,13 @@ if (window.__RGInitDone) {
 		});
 
 		// Update button text
-		toggleBtn.textContent = isHidden
-			? "👁 Hide Banners"
-			: "👁 Show Banners";
+		toggleBtn.innerHTML = isHidden
+			? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
+			: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 		showStatusMessage(
-			isHidden ? "Showing banners..." : "Banners hidden.",
+			isHidden
+				? "Showing Ranobe Gemini UI..."
+				: "Ranobe Gemini UI hidden.",
 			"info",
 			2000,
 		);
@@ -806,6 +867,8 @@ if (window.__RGInitDone) {
 		status,
 		errorMessage = null,
 		cacheInfo = null,
+		wordCounts = null,
+		threshold = 25,
 	) {
 		return chunking.ui.createChunkBanner(
 			chunkIndex,
@@ -818,6 +881,8 @@ if (window.__RGInitDone) {
 				onDelete: handleChunkDelete,
 			},
 			cacheInfo,
+			wordCounts,
+			threshold,
 		);
 	}
 
@@ -843,8 +908,8 @@ if (window.__RGInitDone) {
 		const originalContent = chunkContent.getAttribute(
 			"data-original-chunk-content",
 		);
-		const enhancedContent =
-			chunkContent.getAttribute("data-enhanced-chunk-content") ||
+		// eslint-disable-next-line no-unused-vars
+		chunkContent.getAttribute("data-enhanced-chunk-content") ||
 			chunkContent.innerHTML;
 
 		if (isShowingEnhanced) {
@@ -1009,27 +1074,6 @@ if (window.__RGInitDone) {
 						modelInfo: modelInfo,
 					},
 				);
-
-				const totalChunks = document.querySelectorAll(
-					".gemini-chunk-banner",
-				).length;
-				const existingBanner = document.querySelector(
-					`.chunk-banner-${chunkIndex}`,
-				);
-				if (existingBanner) {
-					const newBanner = buildChunkBanner(
-						chunking,
-						chunkIndex,
-						totalChunks,
-						"completed",
-					);
-					existingBanner.replaceWith(newBanner);
-				}
-
-				showStatusMessage(
-					`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
-					"success",
-				);
 			} else {
 				const errorMsg = response?.error || "Unknown error";
 				const existingBanner = document.querySelector(
@@ -1069,6 +1113,15 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 		if (!contentArea) return;
 
+		// Get word count threshold for chunk warnings
+		const settingsData = await browser.storage.local.get([
+			"wordCountThreshold",
+		]);
+		const wordCountThreshold =
+			settingsData.wordCountThreshold !== undefined
+				? settingsData.wordCountThreshold
+				: 25;
+
 		const chunkIndex = message.chunkIndex;
 		const totalChunks = message.totalChunks;
 		const chunkResult = message.result;
@@ -1076,8 +1129,6 @@ if (window.__RGInitDone) {
 		if (chunkModelInfo) {
 			lastChunkModelInfo = chunkModelInfo;
 		}
-
-		showWorkInProgressBanner(chunkIndex + 1, totalChunks);
 
 		const chunkedContainer = document.getElementById(
 			"gemini-chunked-content",
@@ -1090,7 +1141,7 @@ if (window.__RGInitDone) {
 		if (!chunkWrapper) {
 			debugLog(
 				`[handleChunkProcessed] WARNING: No DOM wrapper for chunk ${chunkIndex}/${totalChunks}. ` +
-					`Background may have split into more chunks than content script expected.`,
+					"Background may have split into more chunks than content script expected.",
 			);
 			return;
 		}
@@ -1119,26 +1170,89 @@ if (window.__RGInitDone) {
 					modelInfo: chunkModelInfo,
 				},
 			);
-
 			const existingBanner = chunkWrapper.querySelector(
 				".gemini-chunk-banner",
 			);
 			if (existingBanner) {
+				// Calculate word counts for the updated chunk
+				const chunkContent = chunkWrapper.querySelector(
+					".gemini-chunk-content",
+				);
+				const originalContent =
+					chunkContent?.getAttribute("data-original-chunk-content") ||
+					"";
+				const enhancedContent = chunkContent?.innerHTML || "";
+				const originalWords = stripHtmlTags(originalContent)
+					.split(/\s+/)
+					.filter((w) => w).length;
+				const enhancedWords = stripHtmlTags(enhancedContent)
+					.split(/\s+/)
+					.filter((w) => w).length;
+				const wordCounts = {
+					original: originalWords,
+					enhanced: enhancedWords,
+				};
+
 				const newBanner = buildChunkBanner(
 					chunking,
 					chunkIndex,
 					totalChunks,
 					"completed",
+					null,
+					null,
+					wordCounts,
+					wordCountThreshold,
 				);
 				existingBanner.replaceWith(newBanner);
 			}
 		}
 
+		const completedChunks = chunkedContainer.querySelectorAll(
+			'.gemini-chunk-content[data-chunk-enhanced="true"]',
+		).length;
+
+		// Calculate running totals for word counts
+		let wordCounts = null;
+		if (chunking?.core?.countWords) {
+			const allChunks = chunkedContainer.querySelectorAll(
+				".gemini-chunk-content",
+			);
+			let totalOriginalWords = 0;
+			let totalEnhancedWords = 0;
+
+			allChunks.forEach((chunk) => {
+				const originalContent =
+					chunk.getAttribute("data-original-chunk-content") || "";
+				const isEnhanced =
+					chunk.getAttribute("data-chunk-enhanced") === "true";
+				const content = isEnhanced ? chunk.innerHTML : originalContent;
+
+				totalOriginalWords += chunking.core.countWords(originalContent);
+				if (isEnhanced) {
+					totalEnhancedWords += chunking.core.countWords(content);
+				}
+			});
+
+			wordCounts = {
+				original: totalOriginalWords,
+				enhanced: totalEnhancedWords,
+			};
+		}
+
+		showWorkInProgressBanner(
+			completedChunks,
+			totalChunks,
+			"processing",
+			wordCounts,
+		);
+
 		if (message.isComplete) {
-			const wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				wipBanner.remove();
-			}
+			showWorkInProgressBanner(
+				totalChunks,
+				totalChunks,
+				"complete",
+				wordCounts,
+			);
 			if (cancelEnhanceButton) {
 				cancelEnhanceButton.style.display = "none";
 			}
@@ -1202,6 +1316,11 @@ if (window.__RGInitDone) {
 								await handleDeleteAllChunks();
 							}
 						});
+					}
+
+					// Apply current visibility state to master banner
+					if (shouldBannersBeHidden()) {
+						masterBanner.style.display = "none";
 					}
 
 					contentArea.insertBefore(
@@ -1416,64 +1535,140 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to create a work-in-progress banner
-	function createWorkInProgressBanner(currentChunk, totalChunks) {
-		const progressPercent = Math.round((currentChunk / totalChunks) * 100);
+	function createWorkInProgressBanner(
+		completedChunks,
+		totalChunks,
+		state = "processing",
+		wordCounts = null,
+	) {
+		const safeTotal = Math.max(totalChunks, 1);
+		const clampedCompleted = Math.min(
+			Math.max(completedChunks, 0),
+			safeTotal,
+		);
+		const progressPercent = Math.round(
+			(clampedCompleted / safeTotal) * 100,
+		);
+		const isComplete =
+			state === "complete" || clampedCompleted >= safeTotal;
+		const isPaused = state === "paused";
+
+		const titleText = isComplete
+			? "✅ Enhancement Complete"
+			: isPaused
+				? "⏸️ Enhancement Paused"
+				: "⏳ Enhancing Content";
+
+		const statusLine = isComplete
+			? `All ${safeTotal} chunk${safeTotal > 1 ? "s" : ""} completed.`
+			: isPaused
+				? `Enhancement paused at ${clampedCompleted} of ${safeTotal} chunks.`
+				: `Completed ${clampedCompleted} of ${safeTotal} chunks.`;
+
+		// Word count display
+		let wordCountHTML = "";
+		if (
+			wordCounts &&
+			typeof wordCounts.original === "number" &&
+			typeof wordCounts.enhanced === "number"
+		) {
+			const diff = wordCounts.enhanced - wordCounts.original;
+			const diffPercent =
+				wordCounts.original > 0
+					? Math.round((diff / wordCounts.original) * 100)
+					: 0;
+			const diffColor =
+				diff > 0 ? "#4ade80" : diff < 0 ? "#f87171" : "#94a3b8";
+			const diffSign = diff > 0 ? "+" : "";
+
+			wordCountHTML = `
+				<div style="margin: 12px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; font-size: 13px;">
+					<div style="display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 10px;">
+						<div>
+							<div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;">Original</div>
+							<div style="font-weight: 600;">${wordCounts.original.toLocaleString()} words</div>
+						</div>
+						<div>
+							<div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;">Enhanced</div>
+							<div style="font-weight: 600;">${wordCounts.enhanced.toLocaleString()} words</div>
+						</div>
+						<div>
+							<div style="color: #94a3b8; font-size: 11px; margin-bottom: 4px;">Difference</div>
+							<div style="font-weight: 600; color: ${diffColor};">${diffSign}${diff.toLocaleString()} (${diffSign}${diffPercent}%)</div>
+						</div>
+					</div>
+				</div>
+			`;
+		}
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-wip-banner";
 		banner.style.cssText = `
-        margin: 15px 0;
-        padding: 15px;
-        background-color: #fffbea;
-        border-radius: 8px;
-        border: 1px solid #f0e0a2;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    `;
-
-		// Support dark mode
-		if (
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
-			) ||
-			window.matchMedia("(prefers-color-scheme: dark)").matches
-		) {
-			banner.style.backgroundColor = "#3a3a2c";
-			banner.style.borderColor = "#5a5a40";
-			banner.style.color = "#e0e0e0";
-		}
+			background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+			border: 1px solid #475569;
+			border-radius: 8px;
+			padding: 16px;
+			margin: 16px 0;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			color: #e5e7eb;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		`;
 
 		banner.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 18px; margin-right: 10px;">⏳</span>
-            <span style="font-weight: bold; font-size: 16px;">Enhancing Content: Work in Progress</span>
-        </div>
-        <div style="width: 100%; margin: 10px 0; background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
-            <div class="progress-bar" style="width: ${progressPercent}%; background: linear-gradient(90deg, #4285f4, #34a853); height: 100%; transition: width 0.3s ease;"></div>
-        </div>
-        <div class="progress-text" style="font-size: 14px; color: #555;">
-            Processing chunk ${currentChunk} of ${totalChunks} (${progressPercent}% complete). Please wait while the content is being enhanced...
-        </div>
-        <button class="gemini-cancel-btn" style="margin-top: 10px; padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
-            Cancel Enhancement
-        </button>
-    `;
+			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<span style="font-size: 18px; margin-right: 10px;">${isComplete ? "✅" : isPaused ? "⏸️" : "⏳"}</span>
+				<span style="font-weight: bold; font-size: 16px;">${titleText}</span>
+			</div>
+			<div style="width: 100%; margin: 10px 0; background: #475569; height: 10px; border-radius: 5px; overflow: hidden;">
+				<div class="progress-bar" style="width: ${progressPercent}%; background: ${isComplete ? "#4ade80" : isPaused ? "#fb923c" : "#3b82f6"}; height: 100%; transition: width 0.3s ease;"></div>
+			</div>
+			<div class="progress-text" style="font-size: 14px; color: #cbd5e1;">
+				${statusLine}
+			</div>
+			${wordCountHTML}
+			${
+				isComplete
+					? ""
+					: `
+				<button class="gemini-cancel-btn" style="margin-top: 10px; padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.2s; font-weight: 600;">
+					Cancel Enhancement
+				</button>
+			`
+			}
+		`;
 
 		// Add cancel button handler
-		const cancelBtn = banner.querySelector(".gemini-cancel-btn");
-		if (cancelBtn) {
-			cancelBtn.addEventListener("click", () => {
-				handleCancelEnhancement();
-			});
+		if (!isComplete) {
+			const cancelBtn = banner.querySelector(".gemini-cancel-btn");
+			if (cancelBtn) {
+				cancelBtn.addEventListener("click", handleCancelEnhancement);
+				cancelBtn.addEventListener("mouseenter", () => {
+					cancelBtn.style.background = "#b91c1c";
+				});
+				cancelBtn.addEventListener("mouseleave", () => {
+					cancelBtn.style.background = "#dc3545";
+				});
+			}
 		}
 
 		return banner;
 	}
 
-	function showWorkInProgressBanner(currentChunk, totalChunks) {
+	function showWorkInProgressBanner(
+		completedChunks,
+		totalChunks,
+		state = "processing",
+		wordCounts = null,
+	) {
 		const contentArea = findContentArea();
 		if (!contentArea) return;
 
-		const newBanner = createWorkInProgressBanner(currentChunk, totalChunks);
+		const newBanner = createWorkInProgressBanner(
+			completedChunks,
+			totalChunks,
+			state,
+			wordCounts,
+		);
 		const existingBanner = document.querySelector(".gemini-wip-banner");
 		if (existingBanner && existingBanner.parentNode) {
 			existingBanner.parentNode.replaceChild(newBanner, existingBanner);
@@ -1495,6 +1690,7 @@ if (window.__RGInitDone) {
 	 * Add model attribution to the content area
 	 * @param {Object} modelInfo - Information about the model used
 	 */
+	// eslint-disable-next-line no-unused-vars
 	function addModelAttribution(modelInfo) {
 		if (!modelInfo) return;
 
@@ -1539,6 +1735,7 @@ if (window.__RGInitDone) {
 	 * @param {number} completedChunks - Number of successfully enhanced chunks
 	 * @returns {HTMLElement} The main summary banner
 	 */
+	// eslint-disable-next-line no-unused-vars
 	function createMainSummaryBanner(modelInfo, totalChunks, completedChunks) {
 		const contentArea = findContentArea();
 		const originalText =
@@ -1697,7 +1894,7 @@ if (window.__RGInitDone) {
 			".gemini-chunk-toggle-btn",
 		);
 
-		allChunkContents.forEach((chunkContent, idx) => {
+		allChunkContents.forEach((chunkContent, _idx) => {
 			if (chunkContent.getAttribute("data-chunk-enhanced") !== "true")
 				return;
 
@@ -1707,6 +1904,7 @@ if (window.__RGInitDone) {
 			const originalContent = chunkContent.getAttribute(
 				"data-original-chunk-content",
 			);
+			// eslint-disable-next-line no-unused-vars
 			const enhancedContent =
 				chunkContent.getAttribute("data-enhanced-chunk-content") ||
 				chunkContent.innerHTML;
@@ -1823,6 +2021,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Helper function to finalize the progressive content display
+	// eslint-disable-next-line no-unused-vars
 	async function finalizePrefixEnhancedContent(modelInfo) {
 		const contentArea = findContentArea();
 		if (!contentArea) return;
@@ -2156,6 +2355,7 @@ if (window.__RGInitDone) {
 
 	// Novel library instance
 	let novelLibrary = null;
+	// eslint-disable-next-line no-unused-vars
 	let SHELVES = null;
 	let READING_STATUS = null;
 	let READING_STATUS_INFO = null;
@@ -2439,6 +2639,15 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 		if (!contentArea) return false;
 
+		// Get word count threshold for chunk warnings
+		const settingsData = await browser.storage.local.get([
+			"wordCountThreshold",
+		]);
+		const wordCountThreshold =
+			settingsData.wordCountThreshold !== undefined
+				? settingsData.wordCountThreshold
+				: 25;
+
 		const totalChunks = Number.isInteger(metadata?.totalChunks)
 			? metadata.totalChunks
 			: chunks.length;
@@ -2477,6 +2686,21 @@ if (window.__RGInitDone) {
 			const cacheInfo = chunkTimestamp
 				? { fromCache: true, timestamp: chunkTimestamp }
 				: { fromCache: true };
+
+			// Calculate word counts from content
+			const originalContent = chunk?.originalContent || "";
+			const enhancedContent = chunk?.enhancedContent || "";
+			const originalWords = stripHtmlTags(originalContent)
+				.split(/\s+/)
+				.filter((w) => w).length;
+			const enhancedWords = stripHtmlTags(enhancedContent)
+				.split(/\s+/)
+				.filter((w) => w).length;
+			const wordCounts = {
+				original: originalWords,
+				enhanced: enhancedWords,
+			};
+
 			const banner = buildChunkBanner(
 				chunking,
 				chunkIndex,
@@ -2484,6 +2708,8 @@ if (window.__RGInitDone) {
 				"cached",
 				null,
 				cacheInfo,
+				wordCounts,
+				wordCountThreshold,
 			);
 			chunkWrapper.appendChild(banner);
 
@@ -2535,6 +2761,12 @@ if (window.__RGInitDone) {
 				(indices) => summarizeChunkRange(indices, true),
 				() => handleEnhanceClick(),
 			);
+
+			// Apply current visibility state
+			if (shouldBannersBeHidden()) {
+				mainSummaryGroup.style.display = "none";
+			}
+
 			contentArea.insertBefore(mainSummaryGroup, chunkedContentContainer);
 
 			if (totalChunks > 1) {
@@ -2545,6 +2777,17 @@ if (window.__RGInitDone) {
 					(indices) => summarizeChunkRange(indices, false),
 					(indices) => summarizeChunkRange(indices, true),
 				);
+
+				// Apply current visibility state to chunk summary groups
+				if (shouldBannersBeHidden()) {
+					const chunkSummaryGroups =
+						chunkedContentContainer.querySelectorAll(
+							".gemini-chunk-summary-group",
+						);
+					chunkSummaryGroups.forEach((group) => {
+						group.style.display = "none";
+					});
+				}
 			}
 		}
 
@@ -2588,6 +2831,11 @@ if (window.__RGInitDone) {
 						await handleDeleteAllChunks();
 					}
 				});
+			}
+
+			// Apply current visibility state to master banner
+			if (shouldBannersBeHidden()) {
+				masterBanner.style.display = "none";
 			}
 
 			contentArea.insertBefore(masterBanner, contentArea.firstChild);
@@ -2805,6 +3053,7 @@ if (window.__RGInitDone) {
 					const restored =
 						await replaceContentWithEnhancedVersion(cachedData);
 					if (restored) {
+						// eslint-disable-next-line no-unused-vars
 						cacheRestored = true;
 						debugLog("Cached content successfully restored");
 					} else {
@@ -2855,7 +3104,7 @@ if (window.__RGInitDone) {
 		}
 		// Create enhance/summarize UI if it doesn't exist and we're on a chapter page
 		else if (!hasExtractButton && isChapterPage) {
-			injectUI();
+			await injectUI();
 		} else if (!isChapterPage && !isNovelPage) {
 			debugLog(
 				"Ranobe Gemini: Not a chapter or novel page, skipping UI injection",
@@ -3083,6 +3332,7 @@ if (window.__RGInitDone) {
 	 * Update the banner to show which field is being updated
 	 * @param {string} field - Field name being updated
 	 */
+	// eslint-disable-next-line no-unused-vars
 	function updateBannerField(field) {
 		const banner = document.getElementById("rg-notification-banner");
 		if (banner) {
@@ -3613,9 +3863,10 @@ if (window.__RGInitDone) {
 	function createToggleBannersButton() {
 		const toggleButton = document.createElement("button");
 		toggleButton.className = "gemini-toggle-banners-btn";
-		toggleButton.textContent = "👁 Show Banners";
+		toggleButton.innerHTML =
+			'<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 		toggleButton.title =
-			"Toggle visibility of enhancement banners and summary groups";
+			"Toggle visibility of Ranobe Gemini enhancement UI";
 
 		// Style to match the sample page buttons
 		toggleButton.style.cssText = `
@@ -4482,7 +4733,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to inject UI elements (buttons, status area)
-	function injectUI() {
+	async function injectUI() {
 		const contentArea = findContentArea();
 		if (!contentArea) {
 			console.warn(
@@ -4539,6 +4790,25 @@ if (window.__RGInitDone) {
 		controlsContainer.appendChild(toggleBannersButton);
 		controlsContainer.appendChild(cancelEnhanceButton);
 
+		// Create main summary group upfront so users can access summary/enhance buttons immediately
+		const chunking = await loadChunkingSystem();
+		let mainSummaryGroup = null;
+		if (chunking?.summaryUI) {
+			mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
+				1, // Placeholder: 1 chunk (will be updated after enhancement)
+				(indices) => summarizeChunkRange(indices, false),
+				(indices) => summarizeChunkRange(indices, true),
+				() => handleEnhanceClick(),
+			);
+
+			// Apply handler-level default visibility setting
+			if (
+				currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
+			) {
+				mainSummaryGroup.style.display = "none";
+			}
+		}
+
 		// Get optimal insertion point based on the handler
 		let insertionPoint = contentArea;
 		let insertionPosition = "before";
@@ -4564,6 +4834,12 @@ if (window.__RGInitDone) {
 				controlsContainer,
 				insertionPoint,
 			);
+			if (mainSummaryGroup) {
+				insertionPoint.parentNode.insertBefore(
+					mainSummaryGroup,
+					insertionPoint,
+				);
+			}
 		} else if (
 			insertionPosition === "after" ||
 			insertionPosition === "afterend"
@@ -4580,6 +4856,12 @@ if (window.__RGInitDone) {
 					? siteEnhancementsContainer.nextSibling
 					: insertionPoint.nextSibling,
 			);
+			if (mainSummaryGroup) {
+				insertionPoint.parentNode.insertBefore(
+					mainSummaryGroup,
+					controlsContainer.nextSibling,
+				);
+			}
 		} else if (
 			insertionPosition === "prepend" ||
 			insertionPosition === "afterbegin"
@@ -4588,6 +4870,12 @@ if (window.__RGInitDone) {
 				insertionPoint.prepend(versionSwitcherContainer);
 			}
 			insertionPoint.prepend(controlsContainer);
+			if (mainSummaryGroup) {
+				insertionPoint.insertBefore(
+					mainSummaryGroup,
+					controlsContainer.nextSibling,
+				);
+			}
 		} else if (
 			insertionPosition === "append" ||
 			insertionPosition === "beforeend"
@@ -4596,12 +4884,21 @@ if (window.__RGInitDone) {
 				insertionPoint.appendChild(versionSwitcherContainer);
 			}
 			insertionPoint.appendChild(controlsContainer);
+			if (mainSummaryGroup) {
+				insertionPoint.appendChild(mainSummaryGroup);
+			}
 		} else {
 			// Default fallback to before
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				insertionPoint,
 			);
+			if (mainSummaryGroup) {
+				insertionPoint.parentNode.insertBefore(
+					mainSummaryGroup,
+					insertionPoint,
+				);
+			}
 		}
 
 		debugLog(
@@ -4612,6 +4909,19 @@ if (window.__RGInitDone) {
 
 		// Add the initial word count display
 		addInitialWordCountDisplay(contentArea);
+
+		// Update toggle button text to match initial visibility state
+		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
+		if (
+			toggleBtn &&
+			currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
+		) {
+			toggleBtn.innerHTML =
+				'<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+		} else if (toggleBtn) {
+			toggleBtn.innerHTML =
+				'<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
+		}
 
 		// Add novel controls for CHAPTER_EMBEDDED type sites (like FanFiction.net)
 		// These are added asynchronously after main UI
@@ -4645,7 +4955,7 @@ if (window.__RGInitDone) {
 				console.warn(
 					"Ranobe Gemini: controls missing, re-injecting UI",
 				);
-				injectUI();
+				await injectUI();
 				return;
 			}
 
@@ -5007,7 +5317,8 @@ if (window.__RGInitDone) {
 			`Content is large, creating ${summaryType} summary in multiple parts...`,
 		);
 		if (statusDiv) {
-			statusDiv.textContent = `Content is large, summarizing in multiple parts...`;
+			statusDiv.textContent =
+				"Content is large, summarizing in multiple parts...";
 		}
 
 		// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
@@ -5143,6 +5454,24 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Helper: Get content area HTML without any Gemini UI elements
+	function getCleanContentHTML(contentArea) {
+		if (!contentArea) return "";
+
+		// Clone the content area to avoid modifying the actual DOM
+		const clone = contentArea.cloneNode(true);
+
+		// Remove all Gemini UI elements from the clone
+		const geminiElements = clone.querySelectorAll(
+			".gemini-main-summary-group, .gemini-chunk-summary-group, " +
+				".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, " +
+				".gemini-enhanced-banner, #gemini-chunked-content",
+		);
+		geminiElements.forEach((el) => el.remove());
+
+		return clone.innerHTML;
+	}
+
 	// Handle click event for Enhance button
 	async function handleEnhanceClick() {
 		enhancementCancelRequested = false;
@@ -5171,14 +5500,22 @@ if (window.__RGInitDone) {
 				button.textContent = "✨ Enhance with Gemini";
 				const contentArea = findContentArea();
 				if (contentArea) {
-					// Remove chunked content container if present
+					// Remove ALL Gemini UI elements before regenerating
 					const chunkedContainer = document.getElementById(
 						"gemini-chunked-content",
 					);
+					if (chunkedContainer) chunkedContainer.remove();
+
 					const masterBanner = contentArea.querySelector(
 						".gemini-master-banner",
 					);
 					if (masterBanner) masterBanner.remove();
+
+					// Remove placeholder summary group
+					const placeholderSummary = contentArea.querySelector(
+						".gemini-main-summary-group",
+					);
+					if (placeholderSummary) placeholderSummary.remove();
 
 					const originalHtml =
 						contentArea.getAttribute("data-original-html");
@@ -5258,6 +5595,7 @@ if (window.__RGInitDone) {
 
 		const button = document.querySelector(".gemini-enhance-btn");
 		if (!button) return;
+		// eslint-disable-next-line no-unused-vars
 		const originalButtonText = button.textContent;
 		try {
 			// Disable UI and show status
@@ -5318,6 +5656,7 @@ if (window.__RGInitDone) {
 
 			let chunks = []; // Array of {index, content, wordCount}
 			let chunkSummaryCount = 2;
+			let contentToSend = extractedContent.text; // Default to text, will be HTML if chunking
 
 			if (shouldChunk) {
 				try {
@@ -5325,12 +5664,13 @@ if (window.__RGInitDone) {
 					const chunkSizeWords = chunkConfig.chunkSizeWords;
 					chunkSummaryCount = chunkConfig.chunkSummaryCount;
 
-					const originalHTML = contentArea.innerHTML;
+					// Get clean HTML without Gemini UI elements for accurate chunking
+					const originalHTML = getCleanContentHTML(contentArea);
+					contentToSend = originalHTML; // Use HTML for chunking to match background
 					chunks = chunking.core.splitContentByWords(
 						originalHTML,
 						chunkSizeWords,
 					);
-
 					debugLog(
 						`[Chunking] Split content into ${chunks.length} chunks (word-based, ${chunkSizeWords} words per chunk)`,
 					);
@@ -5354,7 +5694,29 @@ if (window.__RGInitDone) {
 				}
 
 				if (shouldChunk) {
-					const originalHTML = contentArea.innerHTML;
+					// Remove ALL existing Gemini UI elements before creating new ones
+					// This prevents duplicate banners (especially the placeholder summary group from injectUI)
+					const existingChunkedContainer = document.getElementById(
+						"gemini-chunked-content",
+					);
+					if (existingChunkedContainer)
+						existingChunkedContainer.remove();
+
+					const existingMasterBanner = contentArea.querySelector(
+						".gemini-master-banner",
+					);
+					if (existingMasterBanner) existingMasterBanner.remove();
+
+					// Remove placeholder summary group created in injectUI
+					const existingPlaceholderGroup =
+						contentArea.parentNode?.querySelector(
+							".gemini-main-summary-group",
+						);
+					if (existingPlaceholderGroup)
+						existingPlaceholderGroup.remove();
+
+					// Get clean HTML without any Gemini UI elements
+					const originalHTML = getCleanContentHTML(contentArea);
 					try {
 						contentArea.setAttribute(
 							"data-original-html",
@@ -5415,19 +5777,16 @@ if (window.__RGInitDone) {
 							),
 						);
 						if (chunking?.summaryUI) {
-							const mainSummaryGroup =
-								chunking.summaryUI.createMainSummaryGroup(
-									chunks.length,
-									(indices) =>
-										summarizeChunkRange(indices, false),
-									(indices) =>
-										summarizeChunkRange(indices, true),
-									() => handleEnhanceClick(),
-								);
-							contentArea.insertBefore(
-								mainSummaryGroup,
-								chunkedContentContainer,
+							// The main summary group was created in injectUI() - just ensure visibility
+							const existingSummaryGroup = document.querySelector(
+								".gemini-main-summary-group",
 							);
+							if (
+								existingSummaryGroup &&
+								shouldBannersBeHidden()
+							) {
+								existingSummaryGroup.style.display = "none";
+							}
 
 							// Only insert per-chunk summary groups if we have multiple chunks
 							if (chunks.length > 1) {
@@ -5440,13 +5799,35 @@ if (window.__RGInitDone) {
 									(indices) =>
 										summarizeChunkRange(indices, true),
 								);
+
+								// Apply current visibility state to chunk summary groups
+								if (shouldBannersBeHidden()) {
+									const chunkSummaryGroups =
+										chunkedContentContainer.querySelectorAll(
+											".gemini-chunk-summary-group",
+										);
+									chunkSummaryGroups.forEach((group) => {
+										group.style.display = "none";
+									});
+								}
 							}
+						}
+
+						// Apply current visibility state to chunk banners
+						if (shouldBannersBeHidden()) {
+							const chunkBanners =
+								chunkedContentContainer.querySelectorAll(
+									".gemini-chunk-banner",
+								);
+							chunkBanners.forEach((banner) => {
+								banner.style.display = "none";
+							});
 						}
 
 						debugLog(
 							`Prepared ${chunks.length} chunks for inline replacement with preserved HTML`,
 						);
-						showWorkInProgressBanner(1, chunks.length);
+						showWorkInProgressBanner(0, chunks.length);
 					} catch (prepError) {
 						debugError(
 							"Failed to prepare chunked view:",
@@ -5496,20 +5877,16 @@ if (window.__RGInitDone) {
 			// Send content to background for processing (background will stream chunkProcessed messages)
 			// Using sendMessageWithRetry to handle service worker sleep issues
 			if (!shouldChunk) {
-				showWorkInProgressBanner(1, 1);
+				showWorkInProgressBanner(0, 1);
 			}
 			const response = await sendMessageWithRetry({
 				action: "processWithGemini",
 				title: extractedContent.title,
-				content: extractedContent.text,
+				content: contentToSend, // Send HTML when chunking, text otherwise
 				siteSpecificPrompt: combinedPrompt,
 				useEmoji: useEmoji,
 				forceChunking: Boolean(shouldChunk),
 			});
-
-			// Restore button state
-			button.textContent = originalButtonText;
-			button.disabled = false;
 
 			if (enhancementCancelRequested) {
 				debugLog("Enhancement cancelled; ignoring response");
@@ -5558,6 +5935,7 @@ if (window.__RGInitDone) {
 							isComplete: true,
 						});
 					} else {
+						showWorkInProgressBanner(1, 1, "complete");
 						replaceContentWithEnhancedVersion(response.result);
 					}
 				}
@@ -6024,6 +6402,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to display enhanced content with toggle ability
+	// eslint-disable-next-line no-unused-vars
 	function displayEnhancedContent(originalContent, enhancedContent) {
 		const contentArea = findContentArea();
 		if (!contentArea) {
@@ -6204,6 +6583,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to display an error message when processing fails
+	// eslint-disable-next-line no-unused-vars
 	function showProcessingError(errorMessage) {
 		debugError("Processing error:", errorMessage);
 
@@ -6255,6 +6635,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to add word count display to the content
+	// eslint-disable-next-line no-unused-vars
 	function addWordCountDisplay(contentArea, originalCount, newCount) {
 		// Check if there's already a word count display and update it
 		const existingWordCount = document.querySelector(".gemini-word-count");
@@ -6339,6 +6720,7 @@ if (window.__RGInitDone) {
 	}
 
 	// Function to add the Gemini processed notice banner
+	// eslint-disable-next-line no-unused-vars
 	function addGeminiProcessedNotice(contentArea) {
 		// Check if notice already exists
 		if (contentArea.querySelector(".gemini-processed-notice")) {

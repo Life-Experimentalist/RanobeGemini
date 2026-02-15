@@ -1613,7 +1613,7 @@ if (typeof browser === "undefined") {
 								});
 							});
 					}
-				};)
+				})
 				.catch((error) => {
 					debugError("Error loading config:", error);
 					sendResponse({
@@ -2326,6 +2326,32 @@ if (typeof browser === "undefined") {
 							siteSpecificPrompt,
 						);
 
+						// Guard against excessive shortening (avoid accidental summaries)
+						const originalWordCount = chunkingSystem?.core
+							?.countWords
+							? chunkingSystem.core.countWords(chunk)
+							: 0;
+						const enhancedWordCount = chunkingSystem?.core
+							?.countWords
+							? chunkingSystem.core.countWords(
+									result.enhancedContent,
+								)
+							: 0;
+						const minRetentionRatio = 0.7;
+						if (originalWordCount >= 200 && enhancedWordCount > 0) {
+							const minWords = Math.round(
+								originalWordCount * minRetentionRatio,
+							);
+							if (enhancedWordCount < minWords) {
+								debugError(
+									`[processContentInChunks] Enhanced content too short (${enhancedWordCount}/${originalWordCount} words). Retrying chunk ${i}.`,
+								);
+								throw new Error(
+									`Enhanced content too short (${enhancedWordCount}/${originalWordCount} words).`,
+								);
+							}
+						}
+
 						// Store the result for this chunk
 						results.push({
 							originalContent: chunk,
@@ -2532,17 +2558,15 @@ if (typeof browser === "undefined") {
 					);
 			}
 
-			// Combine results and return
+			// Return status info (DON'T include enhancedContent to avoid duplicate processing)
+			// Chunks were already sent individually via messages above
 			const combinedResult = {
 				originalContent: content,
-				enhancedContent: results.map((r) => r.enhancedContent).join(""),
 				processedChunks: results.length,
 				totalChunks: totalChunks,
 				failedChunks: failedChunks.length,
 				isComplete: failedChunks.length === 0,
-				unprocessedContent: failedChunks
-					.map((f) => f.originalContent)
-					.join(""),
+				chunksProcessed: true, // Flag to prevent re-processing in content script
 			};
 
 			return combinedResult;

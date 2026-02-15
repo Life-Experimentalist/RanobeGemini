@@ -1248,6 +1248,40 @@
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Enable console logging for debugging extension issues.
 									</p>
+<!-- Debug Sub-Options -->
+<div id="debug-sub-options" style="
+										margin-top: 12px;
+										padding-top: 12px;
+										border-top: 1px solid var(--border-color, #475569);
+										display: none;
+									">
+	<!-- Truncate Console Output -->
+	<div class="settings-item" style="margin-bottom: 10px;">
+		<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+			<span style="font-weight: 500; font-size: 12px;">📏 Truncate Console Output</span>
+			<label class="toggle-switch toggle-switch-sm">
+				<input type="checkbox" id="library-debug-truncate" checked />
+				<span class="toggle-slider"></span>
+			</label>
+		</div>
+		<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
+			Limits output length to prevent console overflow. Disable for complete output.
+		</p>
+	</div>
+
+	<!-- Truncation Length Setting -->
+	<div class="settings-item" style="margin-bottom: 8px;">
+		<label for="library-debug-truncate-length" class="settings-desc"
+			style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px;">
+			📌 Max Characters per Log:
+		</label>
+		<input type="number" id="library-debug-truncate-length" min="100" max="10000" value="500" step="100"
+			style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 11px;" />
+		<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
+			Characters before truncation (100-10000)
+		</p>
+	</div>
+</div>
 									</div>
 									<div class="settings-item">
 									<label for="webhook-url" class="settings-desc"
@@ -1329,6 +1363,14 @@
 									<input type="range" id="library-top-p-slider" min="0" max="1" step="0.05" value="0.95" style="width: 100%;" />
 									<p class="settings-desc">Nucleus sampling (0-1)</p>
 									</div>
+
+								<!-- Word Count Threshold slider -->
+								<div class="settings-item">
+									<label>Word Count Threshold: <span id="library-word-count-threshold-value">25</span>%</label>
+									<input type="range" id="library-word-count-threshold-slider" min="0" max="100" step="1" value="25"
+										style="width: 100%;" />
+									<p class="settings-desc">Warning if word change exceeds this percentage (0-100%)</p>
+								</div>
 
 								<!-- Model Endpoint URL -->
 								<div class="settings-item">

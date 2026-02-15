@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 /**
  * Novel Library Page Script
  * Handles UI interactions and data loading for the library page
@@ -22,6 +23,7 @@ import {
 	filterEnabledShelves,
 	getSiteSettings,
 	getDefaultSiteSettings,
+	// eslint-disable-next-line no-unused-vars
 	isSiteEnabled,
 	saveSiteSettings,
 	SITE_SETTINGS_KEY,
@@ -137,6 +139,7 @@ const themePalettes = {
 };
 
 // Track metadata refresh snapshots to show before/after banners
+// eslint-disable-next-line no-unused-vars
 const REFRESH_PREFIX = "rg-refresh-snapshot-";
 const REFRESH_TAB_TIMEOUT_MS = 18000; // Allow extra time for slower sites before auto-closing refresh tab
 
@@ -154,8 +157,10 @@ function getRelativeTimeString(date) {
 	const diffDays = Math.floor(diffHours / 24);
 
 	if (diffSeconds < 60) return "Just now";
-	if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
-	if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+	if (diffMinutes < 60)
+		return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
+	if (diffHours < 24)
+		return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
 	if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
 	if (diffDays < 30) {
 		const weeks = Math.floor(diffDays / 7);
@@ -169,6 +174,7 @@ function getRelativeTimeString(date) {
 	return `${years} year${years !== 1 ? "s" : ""} ago`;
 }
 
+// eslint-disable-next-line no-unused-vars
 function getRefreshTabTimeout(url) {
 	if (!url) return REFRESH_TAB_TIMEOUT_MS;
 
@@ -378,6 +384,11 @@ const elements = {
 
 	// Debug Settings
 	debugModeToggle: document.getElementById("library-debug-mode"),
+	debugSubOptions: document.getElementById("debug-sub-options"),
+	debugTruncateToggle: document.getElementById("library-debug-truncate"),
+	debugTruncateLengthInput: document.getElementById(
+		"library-debug-truncate-length",
+	),
 
 	// Theme Settings (Library Modal)
 	libraryThemeMode: document.getElementById("library-theme-mode"),
@@ -430,6 +441,12 @@ const elements = {
 	libraryTopKValue: document.getElementById("library-top-k-value"),
 	libraryTopPSlider: document.getElementById("library-top-p-slider"),
 	libraryTopPValue: document.getElementById("library-top-p-value"),
+	libraryWordCountThresholdSlider: document.getElementById(
+		"library-word-count-threshold-slider",
+	),
+	libraryWordCountThresholdValue: document.getElementById(
+		"library-word-count-threshold-value",
+	),
 	libraryAdvancedModelEndpoint: document.getElementById(
 		"library-advanced-model-endpoint",
 	),
@@ -508,7 +525,7 @@ function setThemeVariables(theme) {
 		root.setAttribute("data-theme", "light");
 	} else if (mode === "auto") {
 		const prefersDark = window.matchMedia(
-			"(prefers-color-scheme: dark)"
+			"(prefers-color-scheme: dark)",
 		).matches;
 		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
 	} else {
@@ -602,35 +619,41 @@ async function loadRollingBackups() {
 		.join("");
 
 	// Add event listeners
-	elements.rollingBackupList.querySelectorAll(".rolling-restore").forEach((btn) => {
-		btn.addEventListener("click", async () => {
-			const backup = await getRollingBackup(btn.dataset.key);
-			if (backup && confirm("Restore this backup? (Merge mode)")) {
-				await restoreComprehensiveBackup(backup, { mode: "merge" });
-				showNotification("✅ Backup restored!", "success");
-				setTimeout(() => location.reload(), 1000);
-			}
+	elements.rollingBackupList
+		.querySelectorAll(".rolling-restore")
+		.forEach((btn) => {
+			btn.addEventListener("click", async () => {
+				const backup = await getRollingBackup(btn.dataset.key);
+				if (backup && confirm("Restore this backup? (Merge mode)")) {
+					await restoreComprehensiveBackup(backup, { mode: "merge" });
+					showNotification("✅ Backup restored!", "success");
+					setTimeout(() => location.reload(), 1000);
+				}
+			});
 		});
-	});
 
-	elements.rollingBackupList.querySelectorAll(".rolling-download").forEach((btn) => {
-		btn.addEventListener("click", async () => {
-			const backup = await getRollingBackup(btn.dataset.key);
-			if (backup) {
-				downloadBackupAsFile(backup);
-			}
+	elements.rollingBackupList
+		.querySelectorAll(".rolling-download")
+		.forEach((btn) => {
+			btn.addEventListener("click", async () => {
+				const backup = await getRollingBackup(btn.dataset.key);
+				if (backup) {
+					downloadBackupAsFile(backup);
+				}
+			});
 		});
-	});
 
-	elements.rollingBackupList.querySelectorAll(".rolling-delete").forEach((btn) => {
-		btn.addEventListener("click", async () => {
-			if (confirm("Delete this backup?")) {
-				await deleteRollingBackup(btn.dataset.key);
-				await loadRollingBackups();
-				showNotification("Backup deleted", "success");
-			}
+	elements.rollingBackupList
+		.querySelectorAll(".rolling-delete")
+		.forEach((btn) => {
+			btn.addEventListener("click", async () => {
+				if (confirm("Delete this backup?")) {
+					await deleteRollingBackup(btn.dataset.key);
+					await loadRollingBackups();
+					showNotification("Backup deleted", "success");
+				}
+			});
 		});
-	});
 }
 
 /**
@@ -641,7 +664,9 @@ async function initializeRollingBackupStatus() {
 	const statusContainer = document.getElementById("rollingBackupStatus");
 	const statusIcon = document.getElementById("backupStatusIcon");
 	const statusText = document.getElementById("backupStatusText");
-	const countdownContainer = document.getElementById("backupCountdownContainer");
+	const countdownContainer = document.getElementById(
+		"backupCountdownContainer",
+	);
 	const countdownTime = document.getElementById("backupCountdownTime");
 	const lastBackupTimeDiv = document.getElementById("lastBackupTime");
 	const lastBackupTimeText = document.getElementById("lastBackupTimeText");
@@ -736,7 +761,10 @@ async function initializeRollingBackupStatus() {
 
 	// Update countdown every second
 	if (!window.rollingBackupCountdownInterval) {
-		window.rollingBackupCountdownInterval = setInterval(updateCountdown, 1000);
+		window.rollingBackupCountdownInterval = setInterval(
+			updateCountdown,
+			1000,
+		);
 	}
 }
 
@@ -788,13 +816,23 @@ async function loadBackupHistory() {
 		document.querySelectorAll(".backup-restore-btn").forEach((btn) => {
 			btn.addEventListener("click", async function () {
 				const backupId = this.dataset.backupId;
-				const mergeModeChecked = document.querySelector('input[name="mergeMode"]:checked')?.value || "merge";
+				const mergeModeChecked =
+					document.querySelector('input[name="mergeMode"]:checked')
+						?.value || "merge";
 
 				try {
-					const restored = await libraryBackupManager.restoreBackup(backupId, mergeModeChecked);
+					const restored = await libraryBackupManager.restoreBackup(
+						backupId,
+						mergeModeChecked,
+					);
 					if (restored) {
-						await browser.storage.local.set({ novelHistory: restored });
-						showNotification(`Backup restored successfully (${mergeModeChecked} mode)!`, "success");
+						await browser.storage.local.set({
+							novelHistory: restored,
+						});
+						showNotification(
+							`Backup restored successfully (${mergeModeChecked} mode)!`,
+							"success",
+						);
 						await loadBackupHistory();
 						await loadLibrary();
 					}
@@ -826,8 +864,10 @@ async function loadBackupHistory() {
 async function saveBackupCheckboxSettings() {
 	try {
 		const settings = {
-			backupIncludeApiKeys: elements.backupIncludeApiKeys?.checked ?? true,
-			backupIncludeCredentials: elements.backupIncludeCredentials?.checked ?? true,
+			backupIncludeApiKeys:
+				elements.backupIncludeApiKeys?.checked ?? true,
+			backupIncludeCredentials:
+				elements.backupIncludeCredentials?.checked ?? true,
 			rollingBackupIntervalMinutes: elements.rollingBackupInterval
 				? parseInt(elements.rollingBackupInterval.value, 10) || 60
 				: 60,
@@ -851,19 +891,23 @@ async function loadBackupCheckboxSettings() {
 		]);
 
 		if (elements.backupIncludeApiKeys) {
-			elements.backupIncludeApiKeys.checked = settings.backupIncludeApiKeys ?? true;
+			elements.backupIncludeApiKeys.checked =
+				settings.backupIncludeApiKeys ?? true;
 		}
 		if (elements.backupIncludeCredentials) {
-			elements.backupIncludeCredentials.checked = settings.backupIncludeCredentials ?? true;
+			elements.backupIncludeCredentials.checked =
+				settings.backupIncludeCredentials ?? true;
 		}
 		if (elements.autoBackupEnabled) {
-			elements.autoBackupEnabled.checked = settings.rg_rolling_backup_enabled ?? true;
+			elements.autoBackupEnabled.checked =
+				settings.rg_rolling_backup_enabled ?? true;
 		}
 		if (elements.rollingBackupInterval) {
 			const interval = settings.rollingBackupIntervalMinutes ?? 60;
 			elements.rollingBackupInterval.value = String(interval);
 			if (elements.rollingBackupIntervalDisplay) {
-				elements.rollingBackupIntervalDisplay.textContent = String(interval);
+				elements.rollingBackupIntervalDisplay.textContent =
+					String(interval);
 			}
 		}
 	} catch (error) {
@@ -1311,12 +1355,10 @@ async function loadLibraryAdvancedSettings() {
 		const data = await browser.storage.local.get([
 			"topK",
 			"topP",
+			"wordCountThreshold",
 			"modelEndpoint",
 			"customPrompt",
 			"customSummaryPrompt",
-			"customShortSummaryPrompt",
-			"permanentPrompt",
-			"chunkingEnabled",
 			"chunkSize",
 			"maxOutputTokens",
 			"debugMode",
@@ -1334,6 +1376,19 @@ async function loadLibraryAdvancedSettings() {
 			const topP = data.topP !== undefined ? data.topP : 0.95;
 			elements.libraryTopPSlider.value = topP;
 			elements.libraryTopPValue.textContent = topP.toFixed(2);
+		}
+
+		// Load Word Count Threshold
+		if (
+			elements.libraryWordCountThresholdSlider &&
+			elements.libraryWordCountThresholdValue
+		) {
+			const threshold =
+				data.wordCountThreshold !== undefined
+					? data.wordCountThreshold
+					: 25;
+			elements.libraryWordCountThresholdSlider.value = threshold;
+			elements.libraryWordCountThresholdValue.textContent = threshold;
 		}
 
 		// Load Model Endpoint
@@ -1374,6 +1429,22 @@ async function loadLibraryAdvancedSettings() {
 
 		if (elements.debugModeToggle) {
 			elements.debugModeToggle.checked = data.debugMode === true;
+
+			// Show/hide debug sub-options based on debug mode state
+			if (elements.debugSubOptions) {
+				elements.debugSubOptions.style.display =
+					data.debugMode === true ? "block" : "none";
+			}
+
+			// Load debug sub-settings
+			if (elements.debugTruncateToggle) {
+				elements.debugTruncateToggle.checked =
+					data.debugTruncateOutput !== false;
+			}
+			if (elements.debugTruncateLengthInput) {
+				elements.debugTruncateLengthInput.value =
+					data.debugTruncateLength || 500;
+			}
 		}
 	} catch (error) {
 		debugError("Failed to load advanced settings:", error);
@@ -1420,7 +1491,7 @@ async function enforceAutoHold(novels) {
 
 	const thresholdDays = Math.max(
 		1,
-		parseInt(librarySettings.autoHoldDays, 10) || 7
+		parseInt(librarySettings.autoHoldDays, 10) || 7,
 	);
 	const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
 	const now = Date.now();
@@ -1454,7 +1525,7 @@ async function enforceAutoHold(novels) {
 
 	showNotification(
 		`Moved ${updates.length} novel(s) to On Hold after inactivity.`,
-		"info"
+		"info",
 	);
 
 	return true;
@@ -1504,6 +1575,7 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
  * @param {string} emoji - Optional emoji fallback from shelf
  * @returns {string} The emoji/text to use
  */
+// eslint-disable-next-line no-unused-vars
 function getIconText(icon, emoji) {
 	if (!icon) return emoji || "📖";
 	// If it's a URL string, prefer emoji fallback instead of leaking URL text
@@ -1530,7 +1602,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 		// Check if it's a URL
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<img src="${escapeHtml(
-				icon
+				icon,
 			)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallbackEmoji}</span>`;
 		}
@@ -1542,7 +1614,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 	if (typeof icon === "object" && icon.url) {
 		const fallback = icon.fallback || fallbackEmoji;
 		return `<img src="${escapeHtml(
-			icon.url
+			icon.url,
 		)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallback}</span>`;
 	}
@@ -1555,6 +1627,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
  * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
  * @returns {string} HTML string for the icon overlay
  */
+// eslint-disable-next-line no-unused-vars
 function renderShelfIconOverlay(icon) {
 	if (!icon) return '<span class="novel-icon-overlay">📖</span>';
 
@@ -1620,7 +1693,7 @@ function attachIconFallbacks(root = document) {
 				span.textContent = emoji;
 				img.replaceWith(span);
 			});
-		}
+		},
 	);
 }
 
@@ -1632,6 +1705,7 @@ function createCoverPlaceholder(content, extraClasses = []) {
 	return placeholder;
 }
 
+// eslint-disable-next-line no-unused-vars
 function initCoverImage(imgEl, sources, placeholderContent) {
 	if (!imgEl) return;
 	const srcList = (sources || []).filter(Boolean);
@@ -1641,7 +1715,7 @@ function initCoverImage(imgEl, sources, placeholderContent) {
 		: [];
 	const placeholder = createCoverPlaceholder(
 		placeholderContent,
-		extraClasses
+		extraClasses,
 	);
 	const tryNext = () => {
 		if (index >= srcList.length) {
@@ -1733,7 +1807,7 @@ async function renderNovelMetadataForShelf(novel) {
 			elements.modalMetadataContainer.innerHTML.trim().length > 0;
 		if (!hasContent) {
 			debugLog(
-				`Modal renderer for ${novel.shelfId} produced no content; falling back`
+				`Modal renderer for ${novel.shelfId} produced no content; falling back`,
 			);
 			return false;
 		}
@@ -1787,7 +1861,7 @@ function populateSupportedSites() {
 			(shelf) =>
 				`<li>${renderShelfIcon(shelf.icon, "site-icon")} ${
 					shelf.name
-				}</li>`
+				}</li>`,
 		)
 		.join("");
 
@@ -1831,7 +1905,6 @@ function renderSiteAutoAddSettings() {
 			"site-icon",
 			shelf.emoji || "📖",
 		);
-
 
 		row.innerHTML = `
 			<div class="site-autoadd-header">
@@ -2073,6 +2146,7 @@ function bindSettingsTabListeners() {
 }
 
 function extractUrlsFromText(text = "") {
+	// eslint-disable-next-line no-useless-escape
 	const urls = text.match(/https?:\/\/[^\s)\]\[<>]+/gi) || [];
 	const cleaned = urls
 		.map((raw) => raw.replace(/[),.\]]+$/g, ""))
@@ -2515,7 +2589,7 @@ function setupEventListeners() {
 					const hasApiKey = backup.metadata?.hasApiKey;
 					const hasCredentials = backup.metadata?.hasDriveCredentials;
 
-					let confirmMsg = `Restore this backup?\n\n`;
+					let confirmMsg = "Restore this backup?\n\n";
 					if (backup.extensionVersion) {
 						confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
 					}
@@ -2525,7 +2599,7 @@ function setupEventListeners() {
 					confirmMsg += `📚 ${novelCount} novels\n`;
 					confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
 					confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
-					confirmMsg += `Mode: MERGE (preserves existing data)`;
+					confirmMsg += "Mode: MERGE (preserves existing data)";
 
 					if (!confirm(confirmMsg)) {
 						e.target.value = "";
@@ -2737,6 +2811,14 @@ function setupEventListeners() {
 	if (elements.debugModeToggle) {
 		elements.debugModeToggle.addEventListener("change", async (e) => {
 			const enabled = e.target.checked;
+
+			// Show/hide debug sub-options
+			if (elements.debugSubOptions) {
+				elements.debugSubOptions.style.display = enabled
+					? "block"
+					: "none";
+			}
+
 			await browser.storage.local.set({ debugMode: enabled });
 			showNotification(
 				enabled
@@ -2745,6 +2827,34 @@ function setupEventListeners() {
 				enabled ? "success" : "info",
 			);
 		});
+	}
+
+	// Debug truncate toggle
+	if (elements.debugTruncateToggle) {
+		elements.debugTruncateToggle.addEventListener("change", async (e) => {
+			const enabled = e.target.checked;
+			await browser.storage.local.set({ debugTruncateOutput: enabled });
+		});
+	}
+
+	// Debug truncate length input
+	if (elements.debugTruncateLengthInput) {
+		elements.debugTruncateLengthInput.addEventListener(
+			"change",
+			async (e) => {
+				const length = parseInt(e.target.value, 10);
+				if (length >= 100 && length <= 10000) {
+					await browser.storage.local.set({
+						debugTruncateLength: length,
+					});
+				} else {
+					e.target.value = "500"; // Reset to default
+					await browser.storage.local.set({
+						debugTruncateLength: 500,
+					});
+				}
+			},
+		);
 	}
 
 	// Telemetry settings
@@ -3050,6 +3160,28 @@ function setupEventListeners() {
 		});
 	}
 
+	// Advanced Settings - Word Count Threshold slider (Library Modal)
+	if (elements.libraryWordCountThresholdSlider) {
+		elements.libraryWordCountThresholdSlider.addEventListener(
+			"input",
+			(e) => {
+				const value = parseInt(e.target.value, 10);
+				if (elements.libraryWordCountThresholdValue) {
+					elements.libraryWordCountThresholdValue.textContent = value;
+				}
+			},
+		);
+
+		elements.libraryWordCountThresholdSlider.addEventListener(
+			"change",
+			async (e) => {
+				const value = parseInt(e.target.value, 10);
+				await browser.storage.local.set({ wordCountThreshold: value });
+				showNotification("✅ Word count threshold saved", "success");
+			},
+		);
+	}
+
 	// Advanced Settings - Copy endpoint button (Library Modal)
 	if (elements.libraryAdvancedCopyEndpoint) {
 		elements.libraryAdvancedCopyEndpoint.addEventListener(
@@ -3255,7 +3387,7 @@ async function loadLibrary() {
 		const cleanupResult = await novelLibrary.cleanupDuplicates();
 		if (cleanupResult.totalRemoved > 0) {
 			debugLog(
-				`📚 Cleaned up ${cleanupResult.totalRemoved} duplicate novels`
+				`📚 Cleaned up ${cleanupResult.totalRemoved} duplicate novels`,
 			);
 		}
 
@@ -3269,10 +3401,10 @@ async function loadLibrary() {
 		}
 
 		const enabledShelfIds = new Set(
-			filterEnabledShelves(siteSettings).map((shelf) => shelf.id)
+			filterEnabledShelves(siteSettings).map((shelf) => shelf.id),
 		);
 		allNovels = allNovels.filter((novel) =>
-			enabledShelfIds.has(novel.shelfId)
+			enabledShelfIds.has(novel.shelfId),
 		);
 
 		// Get library stats after any updates
@@ -3310,7 +3442,7 @@ function updateStats(stats) {
 	const enabledNovels = allNovels || [];
 	const enabledChapters = enabledNovels.reduce(
 		(sum, novel) => sum + (novel.enhancedChaptersCount || 0),
-		0
+		0,
 	);
 
 	if (elements.totalNovels)
@@ -3321,7 +3453,7 @@ function updateStats(stats) {
 	// Count active shelves
 	const activeShelfCount = Object.entries(stats.shelves || {}).filter(
 		([id, shelfStats]) =>
-			enabledShelfIds.has(id) && (shelfStats?.novelCount || 0) > 0
+			enabledShelfIds.has(id) && (shelfStats?.novelCount || 0) > 0,
 	).length;
 	if (elements.shelfCount) elements.shelfCount.textContent = activeShelfCount;
 }
@@ -3350,7 +3482,7 @@ function renderCurrentView() {
 	if (elements.readingStatusFilter) {
 		elements.readingStatusFilter.classList.toggle(
 			"hidden",
-			currentView !== "lists"
+			currentView !== "lists",
 		);
 	}
 
@@ -3382,7 +3514,7 @@ function filterAndSortNovels() {
 		novels = novels.filter(
 			(novel) =>
 				novel.title.toLowerCase().includes(query) ||
-				novel.author.toLowerCase().includes(query)
+				novel.author.toLowerCase().includes(query),
 		);
 	}
 
@@ -3409,7 +3541,7 @@ function filterAndSortNovels() {
 			novels.sort(
 				(a, b) =>
 					(b.enhancedChaptersCount || 0) -
-					(a.enhancedChaptersCount || 0)
+					(a.enhancedChaptersCount || 0),
 			);
 			break;
 	}
@@ -3578,9 +3710,9 @@ function renderShelvesView(novels) {
 				hasMore
 					? `<button class="shelf-show-more" data-shelf-id="${
 							shelfDefinition.id
-					  }" style="display: none;">${
+						}" style="display: none;">${
 							showAll ? "Show Less" : "Show More"
-					  }</button>`
+						}</button>`
 					: ""
 			}
 		`;
@@ -3600,7 +3732,7 @@ function renderShelvesView(novels) {
 			// Render novel cards (limited or all) - use shelf-specific card for this view
 			visibleNovels.forEach((novel) => {
 				grid.appendChild(
-					createNovelCardForShelf(novel, shelfDefinition)
+					createNovelCardForShelf(novel, shelfDefinition),
 				);
 			});
 		}
@@ -3608,13 +3740,13 @@ function renderShelvesView(novels) {
 		// Add event listeners
 		const collapseBtn = shelfSection.querySelector(".shelf-collapse-btn");
 		collapseBtn.addEventListener("click", () =>
-			toggleShelfCollapse(shelfDefinition.id)
+			toggleShelfCollapse(shelfDefinition.id),
 		);
 
 		const showMoreBtn = shelfSection.querySelector(".shelf-show-more");
 		if (showMoreBtn) {
 			showMoreBtn.addEventListener("click", () =>
-				toggleShelfExpand(shelfDefinition.id)
+				toggleShelfExpand(shelfDefinition.id),
 			);
 		}
 
@@ -3645,8 +3777,8 @@ function createNovelCardForShelf(novel, shelf) {
 
 	const coverHtml = novel.coverUrl
 		? `<img data-cover-src="${escapeHtml(
-				novel.coverUrl
-		  )}" alt="Cover" class="novel-cover" loading="lazy">`
+				novel.coverUrl,
+			)}" alt="Cover" class="novel-cover" loading="lazy">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -3656,6 +3788,7 @@ function createNovelCardForShelf(novel, shelf) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	// eslint-disable-next-line no-unused-vars
 	const statusInfo =
 		READING_STATUS_INFO[currentStatus] ||
 		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
@@ -3666,7 +3799,7 @@ function createNovelCardForShelf(novel, shelf) {
 			([status, info]) =>
 				`<option value="${status}" ${
 					status === currentStatus ? "selected" : ""
-				}>${info.label}</option>`
+				}>${info.label}</option>`,
 		)
 		.join("");
 
@@ -3675,7 +3808,7 @@ function createNovelCardForShelf(novel, shelf) {
 		.slice(0, 3)
 		.map(
 			(tag) =>
-				`<span class="meta-badge tag-badge">${escapeHtml(tag)}</span>`
+				`<span class="meta-badge tag-badge">${escapeHtml(tag)}</span>`,
 		)
 		.join("");
 
@@ -3796,6 +3929,7 @@ function createNovelCard(novel) {
 		: renderShelfIcon(null, "site-icon");
 
 	// Fallback to extension logo if cover fails to load
+	// eslint-disable-next-line no-unused-vars
 	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
 
 	// Generate placeholder content with icon image support
@@ -3805,8 +3939,8 @@ function createNovelCard(novel) {
 
 	const coverHtml = novel.coverUrl
 		? `<img data-cover-src="${escapeHtml(
-				novel.coverUrl
-		  )}" alt="Cover" class="novel-cover" loading="lazy">`
+				novel.coverUrl,
+			)}" alt="Cover" class="novel-cover" loading="lazy">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -3816,6 +3950,7 @@ function createNovelCard(novel) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+	// eslint-disable-next-line no-unused-vars
 	const statusInfo =
 		READING_STATUS_INFO[currentStatus] ||
 		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
@@ -3826,7 +3961,7 @@ function createNovelCard(novel) {
 			([status, info]) =>
 				`<option value="${status}" ${
 					status === currentStatus ? "selected" : ""
-				}>${info.label}</option>`
+				}>${info.label}</option>`,
 		)
 		.join("");
 
@@ -3838,8 +3973,8 @@ function createNovelCard(novel) {
 				<p class="novel-card-author">${escapeHtml(novel.author || "Unknown")}</p>
 				<div class="novel-card-meta">
 					<span class="meta-badge">${shelfIconHtml} ${escapeHtml(
-		shelf?.name || "Unknown"
-	)}</span>
+						shelf?.name || "Unknown",
+					)}</span>
 					${
 						novel.enhancedChaptersCount > 0
 							? `<span class="meta-badge enhanced">✨ ${novel.enhancedChaptersCount} enhanced</span>`
@@ -3905,7 +4040,7 @@ async function handleStatusChange(novelId, newStatus) {
 		showNotification(
 			`Status updated to ${
 				READING_STATUS_INFO[newStatus]?.label || newStatus
-			}`
+			}`,
 		);
 	} catch (error) {
 		debugError("Failed to update reading status:", error);
@@ -4272,7 +4407,7 @@ function populateNovelMetadata(novel) {
 		hasAnyMetadata = true;
 		elements.modalFandomsSection.style.display = "block";
 		elements.modalFandoms.innerHTML = `<span class="tag-item">${escapeHtml(
-			metadata.fandom
+			metadata.fandom,
 		)}</span>`;
 	} else {
 		elements.modalFandomsSection.style.display = "none";
@@ -4336,43 +4471,43 @@ function populateNovelMetadata(novel) {
 		let statsHtml = "";
 		if (stats.words) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.words
+				stats.words,
 			)}</span><span class="work-stat-label">Words</span></div>`;
 		}
 		if (stats.kudos) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.kudos
+				stats.kudos,
 			)}</span><span class="work-stat-label">Kudos</span></div>`;
 		}
 		if (stats.hits) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.hits
+				stats.hits,
 			)}</span><span class="work-stat-label">Hits</span></div>`;
 		}
 		if (stats.bookmarks) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.bookmarks
+				stats.bookmarks,
 			)}</span><span class="work-stat-label">Bookmarks</span></div>`;
 		}
 		if (stats.comments) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.comments
+				stats.comments,
 			)}</span><span class="work-stat-label">Comments</span></div>`;
 		}
 		// FanFiction-specific stats
 		if (stats.reviews) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.reviews
+				stats.reviews,
 			)}</span><span class="work-stat-label">Reviews</span></div>`;
 		}
 		if (stats.favorites) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.favorites
+				stats.favorites,
 			)}</span><span class="work-stat-label">Favorites</span></div>`;
 		}
 		if (stats.follows) {
 			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.follows
+				stats.follows,
 			)}</span><span class="work-stat-label">Follows</span></div>`;
 		}
 
@@ -4445,8 +4580,10 @@ async function handleRefreshMetadata() {
 	}
 
 	const confirmed = confirm(
+		// eslint-disable-next-line quotes
 		`Refresh metadata for "${novel.title}"?\n\n` +
-			`This will open the novel's page to fetch the latest details from the source.`
+			// eslint-disable-next-line quotes
+			`This will open the novel's page to fetch the latest details from the source.`,
 	);
 
 	if (!confirmed) return;
@@ -4493,7 +4630,7 @@ async function handleRemoveNovel() {
 
 	if (
 		confirm(
-			"Are you sure you want to remove this novel from your library? This cannot be undone."
+			"Are you sure you want to remove this novel from your library? This cannot be undone.",
 		)
 	) {
 		await novelLibrary.removeNovel(novelId);
@@ -4641,7 +4778,7 @@ function handleViewChange(view) {
 	document.querySelectorAll(".view-content").forEach((el) => {
 		el.classList.toggle(
 			"active",
-			el.id === `${view}-view` || el.id === `${view}s-view`
+			el.id === `${view}-view` || el.id === `${view}s-view`,
 		);
 	});
 
@@ -4720,6 +4857,7 @@ async function handleImport(e) {
 			throw new Error("Invalid library backup file format");
 		}
 
+		// eslint-disable-next-line no-unused-vars
 		const novelCount = Object.keys(data.library.novels || {}).length;
 		// Handle toggle inputs
 		const inputs = document.querySelectorAll(
@@ -4811,7 +4949,7 @@ async function handleImport(e) {
 async function handleClearLibrary() {
 	if (
 		confirm(
-			"Are you sure you want to clear your entire library? This cannot be undone!"
+			"Are you sure you want to clear your entire library? This cannot be undone!",
 		)
 	) {
 		if (confirm('Type "yes" to confirm you want to delete all novels.')) {
@@ -4830,7 +4968,10 @@ async function handleComprehensiveBackup() {
 		showNotification("Creating comprehensive backup...", "info");
 		const backup = await createComprehensiveBackup();
 		await downloadBackupAsFile(backup, "comprehensive");
-		showNotification("Comprehensive backup created successfully!", "success");
+		showNotification(
+			"Comprehensive backup created successfully!",
+			"success",
+		);
 
 		// Track feature usage
 		trackFeatureUsage("comprehensive_backup");
@@ -4851,29 +4992,44 @@ async function handleComprehensiveRestore(e) {
 		const backup = await readBackupFromFile(file);
 
 		// Show confirmation with backup details
-		const novelCount = backup.data?.novelHistory ? Object.keys(backup.data.novelHistory).length : 0;
-		const hasApiKeys = !!(backup.data?.apiKey || backup.data?.backupApiKeys?.length);
-		const hasPrompts = !!(backup.data?.promptTemplate || backup.data?.summaryPrompt || backup.data?.shortSummaryPrompt);
-		const hasDriveSettings = !!(backup.data?.driveClientId);
+		const novelCount = backup.data?.novelHistory
+			? Object.keys(backup.data.novelHistory).length
+			: 0;
+		const hasApiKeys = !!(
+			backup.data?.apiKey || backup.data?.backupApiKeys?.length
+		);
+		const hasPrompts = !!(
+			backup.data?.promptTemplate ||
+			backup.data?.summaryPrompt ||
+			backup.data?.shortSummaryPrompt
+		);
+		const hasDriveSettings = !!backup.data?.driveClientId;
 
 		const details = [
 			`📚 ${novelCount} novels`,
 			hasApiKeys ? "🔑 API Keys" : null,
 			hasPrompts ? "📝 Prompts" : null,
 			hasDriveSettings ? "☁️ Drive Settings" : null,
-		].filter(Boolean).join(", ");
+		]
+			.filter(Boolean)
+			.join(", ");
 
 		const choice = confirm(
+			// eslint-disable-next-line quotes
 			`Comprehensive Backup Found\n\n` +
-			`Created: ${new Date(backup.timestamp).toLocaleString()}\n` +
-			`Contains: ${details}\n\n` +
-			`Do you want to restore this backup?\n\n` +
-			`⚠️ This will overwrite your current settings.`
+				`Created: ${new Date(backup.timestamp).toLocaleString()}\n` +
+				`Contains: ${details}\n\n` +
+				// eslint-disable-next-line quotes
+				`Do you want to restore this backup?\n\n` +
+				// eslint-disable-next-line quotes
+				`⚠️ This will overwrite your current settings.`,
 		);
 
 		if (choice) {
 			showNotification("Restoring backup...", "info");
-			const result = await restoreComprehensiveBackup(backup, { merge: true });
+			const result = await restoreComprehensiveBackup(backup, {
+				merge: true,
+			});
 
 			if (result.success) {
 				await loadLibrary();
@@ -4882,7 +5038,7 @@ async function handleComprehensiveRestore(e) {
 				closeModal(elements.settingsModal);
 				showNotification(
 					`Backup restored! ${result.restored} items recovered.`,
-					"success"
+					"success",
 				);
 
 				// Track feature usage
@@ -4958,13 +5114,18 @@ async function handleViewDriveBackups() {
 				if (downloadResponse?.success && downloadResponse?.data) {
 					const backupData = downloadResponse.data;
 					// Check both new and old library keys for compatibility
-					const libraryData = backupData.data?.rg_novel_library?.novels || backupData.data?.novelHistory;
+					const libraryData =
+						backupData.data?.rg_novel_library?.novels ||
+						backupData.data?.novelHistory;
 					const novelCount = libraryData
 						? Object.keys(libraryData).length
 						: 0;
-					const hasApiKeys = !!(backupData.data?.apiKey || backupData.data?.backupApiKeys?.length);
-					const hasDriveSettings = !!(backupData.data?.driveClientId);
-					const hasTheme = !!(backupData.data?.themeSettings);
+					const hasApiKeys = !!(
+						backupData.data?.apiKey ||
+						backupData.data?.backupApiKeys?.length
+					);
+					const hasDriveSettings = !!backupData.data?.driveClientId;
+					const hasTheme = !!backupData.data?.themeSettings;
 
 					backupsWithMeta.push({
 						...backup,
@@ -5058,11 +5219,14 @@ function displayDriveBackups(backups) {
 		const formattedDate = backupDate.toLocaleString("en-US", dateOptions);
 		const relativeTime = getRelativeTimeString(backupDate);
 
-		const size = backup.size ? `${(backup.size / 1024).toFixed(1)} KB` : "Unknown";
+		const size = backup.size
+			? `${(backup.size / 1024).toFixed(1)} KB`
+			: "Unknown";
 
 		// Extract more metadata from backup
 		const features = [];
-		if (backup.novelCount > 0) features.push(`📚 ${backup.novelCount} novels`);
+		if (backup.novelCount > 0)
+			features.push(`📚 ${backup.novelCount} novels`);
 		if (backup.hasApiKeys) features.push("🔑 API Keys");
 		if (backup.hasDriveSettings) features.push("☁️ OAuth");
 		if (backup.hasTheme) features.push("🎨 Theme");
@@ -5094,11 +5258,15 @@ function displayDriveBackups(backups) {
 					📥 Restore
 				</button>
 			</div>
-			${features.length > 0 ? `
+			${
+				features.length > 0
+					? `
 				<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color, #374151);">
-					${features.map(f => `<span style="font-size: 10px; padding: 3px 7px; background: var(--bg-tertiary, #0f172a); border-radius: 4px; color: var(--text-secondary, #9ca3af);">${f}</span>`).join('')}
+					${features.map((f) => `<span style="font-size: 10px; padding: 3px 7px; background: var(--bg-tertiary, #0f172a); border-radius: 4px; color: var(--text-secondary, #9ca3af);">${f}</span>`).join("")}
 				</div>
-			` : ''}
+			`
+					: ""
+			}
 		`;
 
 		// Add click handler for restore button
@@ -5117,10 +5285,12 @@ function displayDriveBackups(backups) {
  */
 async function handleRestoreSpecificBackup(backup) {
 	const confirm = window.confirm(
+		// eslint-disable-next-line quotes
 		`Restore backup "${backup.name}"?\n\n` +
-		`Created: ${new Date(backup.createdTime).toLocaleString()}\n` +
-		`Novels: ${backup.novelCount || 0}\n\n` +
-		`⚠️ This will merge with your current library.`
+			`Created: ${new Date(backup.createdTime).toLocaleString()}\n` +
+			`Novels: ${backup.novelCount || 0}\n\n` +
+			// eslint-disable-next-line quotes
+			`⚠️ This will merge with your current library.`,
 	);
 
 	if (!confirm) return;
@@ -5130,14 +5300,16 @@ async function handleRestoreSpecificBackup(backup) {
 
 		if (backup.backupData) {
 			// We already have the data
-			const result = await restoreComprehensiveBackup(backup.backupData, { merge: true });
+			const result = await restoreComprehensiveBackup(backup.backupData, {
+				merge: true,
+			});
 			if (result.success) {
 				await loadLibrary();
 				await loadLibrarySettings();
 				closeModal(elements.driveBackupsModal);
 				showNotification(
 					`✅ Restored ${result.restored} items from backup!`,
-					"success"
+					"success",
 				);
 			} else {
 				throw new Error(result.error || "Restore failed");
@@ -5150,14 +5322,17 @@ async function handleRestoreSpecificBackup(backup) {
 			});
 
 			if (downloadResponse?.success && downloadResponse?.data) {
-				const result = await restoreComprehensiveBackup(downloadResponse.data, { merge: true });
+				const result = await restoreComprehensiveBackup(
+					downloadResponse.data,
+					{ merge: true },
+				);
 				if (result.success) {
 					await loadLibrary();
 					await loadLibrarySettings();
 					closeModal(elements.driveBackupsModal);
 					showNotification(
 						`✅ Restored ${result.restored} items from backup!`,
-						"success"
+						"success",
 					);
 				} else {
 					throw new Error(result.error || "Restore failed");
@@ -5224,8 +5399,7 @@ async function updateDriveUI() {
 		}
 
 		// Load continuous backup interval
-		const interval =
-			tokens.continuousBackupCheckIntervalMinutes || 2;
+		const interval = tokens.continuousBackupCheckIntervalMinutes || 2;
 		if (elements.continuousBackupCheckInterval) {
 			elements.continuousBackupCheckInterval.value = interval;
 		}
@@ -5297,14 +5471,10 @@ async function handleConnectDrive() {
 			"driveClientSecret",
 		]);
 		const clientIdInput = elements.driveClientIdInput?.value.trim();
-		const clientSecretInput =
-			elements.driveClientSecretInput?.value.trim();
+		const clientSecretInput = elements.driveClientSecretInput?.value.trim();
 		const clientId =
-			clientIdInput ||
-			saved.driveClientId ||
-			DEFAULT_DRIVE_CLIENT_ID;
-		const clientSecret =
-			clientSecretInput || saved.driveClientSecret || "";
+			clientIdInput || saved.driveClientId || DEFAULT_DRIVE_CLIENT_ID;
+		const clientSecret = clientSecretInput || saved.driveClientSecret || "";
 
 		await browser.storage.local.set({
 			driveClientId: clientId,
@@ -5373,7 +5543,9 @@ async function handleConnectDrive() {
  * Disconnect from Google Drive
  */
 async function handleDisconnectDrive() {
-	if (!confirm("Disconnect Google Drive? Backups won't sync automatically.")) {
+	if (
+		!confirm("Disconnect Google Drive? Backups won't sync automatically.")
+	) {
 		return;
 	}
 
@@ -5489,7 +5661,7 @@ async function handleFactoryReset() {
 				"• Google Drive OAuth credentials\n" +
 				"• All settings and preferences\n\n" +
 				"💡 This does NOT delete Google Drive cloud backups.\n\n" +
-				"Are you absolutely sure you want to continue?"
+				"Are you absolutely sure you want to continue?",
 		);
 
 		if (!confirmed1) {
@@ -5500,7 +5672,7 @@ async function handleFactoryReset() {
 		const confirmed2 = confirm(
 			"🔥 FINAL CONFIRMATION\n\n" +
 				"Type 'DELETE EVERYTHING' in your mind and click OK to proceed.\n\n" +
-				"This action CANNOT be undone!"
+				"This action CANNOT be undone!",
 		);
 
 		if (!confirmed2) {
@@ -5539,7 +5711,7 @@ async function handleFactoryReset() {
 		// 5. Show success message
 		showNotification(
 			"✅ Factory Reset complete - Extension restored to defaults",
-			"success"
+			"success",
 		);
 
 		// 6. Reload page after 2 seconds to ensure clean state
@@ -5548,10 +5720,7 @@ async function handleFactoryReset() {
 		}, 2000);
 	} catch (err) {
 		debugError("Factory Reset failed", err);
-		showNotification(
-			`❌ Factory Reset failed: ${err.message}`,
-			"error"
-		);
+		showNotification(`❌ Factory Reset failed: ${err.message}`, "error");
 	}
 }
 
@@ -5595,8 +5764,7 @@ async function handleDriveAutoRestoreToggle(e) {
  */
 async function handleSaveOAuthSettings() {
 	const clientId = elements.driveClientIdInput?.value.trim() || "";
-	const clientSecret =
-		elements.driveClientSecretInput?.value.trim() || "";
+	const clientSecret = elements.driveClientSecretInput?.value.trim() || "";
 
 	await browser.storage.local.set({
 		driveClientId: clientId,
@@ -5676,7 +5844,10 @@ async function handleDriveSyncFromLibrary() {
 		}
 
 		const originalText = elements.libraryDriveSyncNowBtn.textContent;
-		elements.libraryDriveSyncNowBtn.setAttribute("data-original-text", originalText);
+		elements.libraryDriveSyncNowBtn.setAttribute(
+			"data-original-text",
+			originalText,
+		);
 
 		// Check if connected to Drive
 		const tokens = await browser.storage.local.get("driveAuthTokens");
@@ -5724,14 +5895,22 @@ async function handleDriveSyncFromLibrary() {
 		}
 	} catch (err) {
 		debugError("Drive sync failed", err);
-		showNotification(`❌ Failed to sync from Drive: ${err.message}`, "error");
+		showNotification(
+			`❌ Failed to sync from Drive: ${err.message}`,
+			"error",
+		);
 	} finally {
 		if (elements.libraryDriveSyncNowBtn) {
 			elements.libraryDriveSyncNowBtn.disabled = false;
-			const originalText = elements.libraryDriveSyncNowBtn.getAttribute("data-original-text");
+			const originalText =
+				elements.libraryDriveSyncNowBtn.getAttribute(
+					"data-original-text",
+				);
 			if (originalText) {
 				elements.libraryDriveSyncNowBtn.textContent = originalText;
-				elements.libraryDriveSyncNowBtn.removeAttribute("data-original-text");
+				elements.libraryDriveSyncNowBtn.removeAttribute(
+					"data-original-text",
+				);
 			}
 		}
 	}
@@ -5783,7 +5962,7 @@ function initCarousel(novels) {
 
 	// Get top N most recent novels (configurable but capped by available count)
 	const sortedNovels = [...novels].sort(
-		(a, b) => b.lastAccessedAt - a.lastAccessedAt
+		(a, b) => b.lastAccessedAt - a.lastAccessedAt,
 	);
 	const maxItems = Math.min(carouselState.itemsToShow, sortedNovels.length);
 	const recentNovels = sortedNovels.slice(0, maxItems);
@@ -5827,10 +6006,10 @@ function initCarousel(novels) {
 		const shelfIconSmall = shelf?.icon
 			? shelf.icon.startsWith("http")
 				? `<img src="${escapeHtml(
-						shelf.icon
-				  )}" alt="" class="meta-icon" data-fallback-emoji="${escapeHtml(
-						shelfEmoji
-				  )}" style="width: 1em; height: 1em; vertical-align: middle;">`
+						shelf.icon,
+					)}" alt="" class="meta-icon" data-fallback-emoji="${escapeHtml(
+						shelfEmoji,
+					)}" style="width: 1em; height: 1em; vertical-align: middle;">`
 				: shelf.icon
 			: shelfEmoji;
 
@@ -5839,7 +6018,7 @@ function initCarousel(novels) {
 		const tagsHtml = novelTags
 			.slice(0, 2)
 			.map(
-				(tag) => `<span class="carousel-tag">${escapeHtml(tag)}</span>`
+				(tag) => `<span class="carousel-tag">${escapeHtml(tag)}</span>`,
 			)
 			.join("");
 		const moreTagsCount = novelTags.length > 2 ? novelTags.length - 2 : 0;
@@ -5858,7 +6037,7 @@ function initCarousel(novels) {
 		const siteBadge = shelf
 			? `<span class="website-badge" style="background: ${
 					shelf.color || "#666"
-			  }">${shelfIconSmall} ${escapeHtml(shelf.name)}</span>`
+				}">${shelfIconSmall} ${escapeHtml(shelf.name)}</span>`
 			: "";
 
 		const hoverDescription =
@@ -5869,7 +6048,7 @@ function initCarousel(novels) {
 		const hoverReadingLine = novel.lastReadChapter
 			? `Ch. ${novel.lastReadChapter}${
 					novel.totalChapters ? `/${novel.totalChapters}` : ""
-			  }`
+				}`
 			: "Not started";
 		const hoverTiming = formatRelativeTime(novel.lastAccessedAt);
 
@@ -5877,13 +6056,13 @@ function initCarousel(novels) {
 			<div class="carousel-item-image-wrapper">
 				${siteBadge ? `<div class="carousel-site-chip">${siteBadge}</div>` : ""}
 				<img data-cover-src="${escapeHtml(novel.coverUrl || "")}" alt="${escapeHtml(
-			novel.title
-		)}" class="carousel-cover">
+					novel.title,
+				)}" class="carousel-cover">
 			</div>
 			<div class="carousel-item-info">
 				<h3 class="carousel-item-title">${escapeHtml(novel.title)}</h3>
 				<p class="carousel-item-author">by ${escapeHtml(
-					novel.author || "Unknown Author"
+					novel.author || "Unknown Author",
 				)}</p>
 				<div class="carousel-item-tags">
 					${tagsHtml || '<span class="carousel-tag-none">No tags</span>'}${moreTagsHtml}
@@ -6144,7 +6323,7 @@ function formatRelativeTime(timestamp) {
  */
 function toggleShelfCollapse(shelfId) {
 	const shelfSection = document.querySelector(
-		`.shelf-section[data-shelf-id="${shelfId}"]`
+		`.shelf-section[data-shelf-id="${shelfId}"]`,
 	);
 	if (!shelfSection) return;
 
@@ -6178,7 +6357,7 @@ function toggleShelfCollapse(shelfId) {
  */
 function toggleShelfExpand(shelfId) {
 	const shelfSection = document.querySelector(
-		`.shelf-section[data-shelf-id="${shelfId}"]`
+		`.shelf-section[data-shelf-id="${shelfId}"]`,
 	);
 	if (!shelfSection) return;
 
@@ -6286,8 +6465,13 @@ async function loadLibraryNotifications() {
 					await Promise.all(
 						notif.groupedNotifications.map((n) =>
 							browser.runtime
-								.sendMessage({ action: "markNotificationRead", id: n.id })
-								.catch(() => notificationManager.markAsRead(n.id)),
+								.sendMessage({
+									action: "markNotificationRead",
+									id: n.id,
+								})
+								.catch(() =>
+									notificationManager.markAsRead(n.id),
+								),
 						),
 					);
 				} else {
@@ -6330,7 +6514,9 @@ function renderLibraryNotification(notif) {
 	const relativeTime = formatRelativeTime(notif.timestamp);
 	const fullTime = new Date(notif.timestamp).toLocaleString();
 
-	let title = notif.title ? `<div class="lib-notif-title">${escapeHtml(notif.title)}</div>` : "";
+	let title = notif.title
+		? `<div class="lib-notif-title">${escapeHtml(notif.title)}</div>`
+		: "";
 	let groupBadge = "";
 
 	if (notif.isGroup && notif.groupedNotifications) {
@@ -6386,12 +6572,18 @@ async function updateLibraryNotificationBadge() {
 function initNotificationPanel() {
 	// Bell button opens panel
 	if (elements.notificationBellBtn) {
-		elements.notificationBellBtn.addEventListener("click", openNotificationPanel);
+		elements.notificationBellBtn.addEventListener(
+			"click",
+			openNotificationPanel,
+		);
 	}
 
 	// Close button
 	if (elements.notificationPanelClose) {
-		elements.notificationPanelClose.addEventListener("click", closeNotificationPanel);
+		elements.notificationPanelClose.addEventListener(
+			"click",
+			closeNotificationPanel,
+		);
 	}
 
 	// Click anywhere outside the panel to close it
@@ -6401,13 +6593,20 @@ function initNotificationPanel() {
 		// If click is inside panel content or on the bell button, ignore
 		const panelContent = panel.querySelector(".notification-panel-content");
 		if (panelContent && panelContent.contains(e.target)) return;
-		if (elements.notificationBellBtn && elements.notificationBellBtn.contains(e.target)) return;
+		if (
+			elements.notificationBellBtn &&
+			elements.notificationBellBtn.contains(e.target)
+		)
+			return;
 		closeNotificationPanel();
 	});
 
 	// Escape key
 	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && elements.notificationPanel?.classList.contains("open")) {
+		if (
+			e.key === "Escape" &&
+			elements.notificationPanel?.classList.contains("open")
+		) {
 			closeNotificationPanel();
 		}
 	});
@@ -6416,7 +6615,9 @@ function initNotificationPanel() {
 	if (elements.libraryMarkAllRead) {
 		elements.libraryMarkAllRead.addEventListener("click", async () => {
 			try {
-				await browser.runtime.sendMessage({ action: "markAllNotificationsRead" });
+				await browser.runtime.sendMessage({
+					action: "markAllNotificationsRead",
+				});
 			} catch (_err) {
 				notificationManager.markAllAsRead();
 			}
@@ -6428,17 +6629,23 @@ function initNotificationPanel() {
 
 	// Clear all
 	if (elements.libraryClearAllNotifications) {
-		elements.libraryClearAllNotifications.addEventListener("click", async () => {
-			if (!confirm("Clear all notifications? This cannot be undone.")) return;
-			try {
-				await browser.runtime.sendMessage({ action: "clearNotifications" });
-			} catch (_err) {
-				notificationManager.clearAll();
-			}
-			await loadLibraryNotifications();
-			await updateLibraryNotificationBadge();
-			showNotification("All notifications cleared", "success");
-		});
+		elements.libraryClearAllNotifications.addEventListener(
+			"click",
+			async () => {
+				if (!confirm("Clear all notifications? This cannot be undone."))
+					return;
+				try {
+					await browser.runtime.sendMessage({
+						action: "clearNotifications",
+					});
+				} catch (_err) {
+					notificationManager.clearAll();
+				}
+				await loadLibraryNotifications();
+				await updateLibraryNotificationBadge();
+				showNotification("All notifications cleared", "success");
+			},
+		);
 	}
 
 	// Initial badge update

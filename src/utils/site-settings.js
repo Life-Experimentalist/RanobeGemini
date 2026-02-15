@@ -20,6 +20,8 @@ function buildDefaultSiteSettings() {
 			redirectToWww: true,
 			redirectToMobile: false,
 			domainPreference: "www",
+			preferredTld: "net",
+			convertWsToNet: true, // Backward compatibility for older settings
 			enhancementDisplayMode: "button", // "button" or "direct"
 			autoEnhanceEnabled: false,
 		},

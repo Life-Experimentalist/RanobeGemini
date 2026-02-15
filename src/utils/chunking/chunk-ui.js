@@ -81,6 +81,8 @@ export function createChunkBanner(
 	errorMessage = null,
 	callbacks = {},
 	cacheInfo = null,
+	wordCounts = null,
+	threshold = 25,
 ) {
 	const banner = document.createElement("div");
 	banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
@@ -150,11 +152,59 @@ export function createChunkBanner(
 		}
 	}
 
+	// Prepare word count display
+	let wordCountDisplay = "";
+	let thresholdWarning = "";
+	if (wordCounts && (wordCounts.original || wordCounts.enhanced)) {
+		const original = wordCounts.original || 0;
+		const enhanced = wordCounts.enhanced || 0;
+		const diff = enhanced - original;
+		const percentChange =
+			original > 0 ? ((diff / original) * 100).toFixed(1) : 0;
+		const absDiffPercent = Math.abs(percentChange);
+
+		let diffColor = "#999"; // Gray for no change
+		let diffSign = "";
+		if (diff > 0) {
+			diffColor = "#4caf50"; // Green for increase
+			diffSign = "+";
+		} else if (diff < 0) {
+			diffColor = "#ef4444"; // Red for decrease
+		}
+
+		// Check if threshold is exceeded
+		if (absDiffPercent > threshold) {
+			thresholdWarning = `
+				<div style="
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					background: rgba(239, 68, 68, 0.1);
+					border-left: 3px solid #ef4444;
+					padding: 8px 12px;
+					border-radius: 4px;
+					font-size: 12px;
+					color: #fca5a5;
+				">
+					<span style="font-size: 16px;">⚠️</span>
+					<span>Word count change (${percentChange}%) exceeds threshold (${threshold}%)</span>
+				</div>
+			`;
+		}
+
+		wordCountDisplay = `
+			<div style="display: flex; gap: 16px; align-items: center; font-size: 12px; color: ${colors.onSurfaceVariant};">
+				<span>📄 ${original} → ${enhanced}</span>
+				<span style="color: ${diffColor}; font-weight: 600;">${diffSign}${diff} (${percentChange}%)</span>
+			</div>
+		`;
+	}
+
 	banner.innerHTML = `
 		<div style="
 			display: flex;
-			align-items: center;
-			justify-content: space-between;
+			flex-direction: column;
+			gap: 8px;
 			padding: 12px 16px;
 			background: ${bannerBg};
 			border: 2px solid ${bannerBorder};
@@ -163,28 +213,32 @@ export function createChunkBanner(
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 			color: ${colors.onSurface};
 		">
-			<div style="display: flex; align-items: center; gap: 12px;">
-				<span style="font-size: 18px;">${statusIcon}</span>
-				<span style="
-					font-weight: 500;
-					color: ${status === "error" ? colors.error : colors.onSurface};
-				">${statusText}</span>
-				<span style="
-					padding: 4px 12px;
-					background: ${colors.overlay};
-					border: 1px solid ${colors.outline};
-					border-radius: 12px;
-					font-size: 12px;
-					font-weight: 600;
-					color: ${colors.onSurfaceVariant};
-				">Chunk ${chunkIndex + 1}/${totalChunks}</span>
-			</div>
-			<div style="display: flex; gap: 8px;" class="chunk-controls">
-				<div class="chunk-navigation" style="display: flex; gap: 4px; margin-right: 8px; border-right: 1px solid ${colors.outline}; padding-right: 8px;">
-					<!-- Navigation buttons will be added here -->
+			<div style="display: flex; align-items: center; justify-content: space-between;">
+				<div style="display: flex; align-items: center; gap: 12px;">
+					<span style="font-size: 18px;">${statusIcon}</span>
+					<span style="
+						font-weight: 500;
+						color: ${status === "error" ? colors.error : colors.onSurface};
+					">${statusText}</span>
+					<span style="
+						padding: 4px 12px;
+						background: ${colors.overlay};
+						border: 1px solid ${colors.outline};
+						border-radius: 12px;
+						font-size: 12px;
+						font-weight: 600;
+						color: ${colors.onSurfaceVariant};
+					">Chunk ${chunkIndex + 1}/${totalChunks}</span>
 				</div>
-				<!-- Action buttons will be added here -->
+				<div style="display: flex; gap: 8px;" class="chunk-controls">
+					<div class="chunk-navigation" style="display: flex; gap: 4px; margin-right: 8px; border-right: 1px solid ${colors.outline}; padding-right: 8px;">
+						<!-- Navigation buttons will be added here -->
+					</div>
+					<!-- Action buttons will be added here -->
+				</div>
 			</div>
+			${wordCountDisplay}
+			${thresholdWarning}
 		</div>
 	`;
 

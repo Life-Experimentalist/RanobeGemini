@@ -76,70 +76,84 @@ When enhancing, improve readability while respecting the author's creative voice
 			const isFanfictionHost =
 				hostname.endsWith("fanfiction.net") ||
 				hostname.endsWith("fanfiction.ws");
-			const isKnownSubdomain =
-				hostname === "www.fanfiction.net" ||
-				hostname === "m.fanfiction.net";
-			const isBareDomain =
-				hostname === "fanfiction.net" || hostname === "fanfiction.ws";
-			const isWSHost = hostname.endsWith("fanfiction.ws");
 			const isMobile =
 				/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
 				window.innerWidth <= 768;
 
 			// Only process if on a FanFiction domain that needs normalization
-			if (!isFanfictionHost || !isBareDomain) {
+			if (!isFanfictionHost) {
 				return false;
 			}
 
 			// Get stored domain preference
 			let preference = "www"; // Default to www
+			let preferredTld = "net"; // Default to .net
 			try {
 				const result =
 					await browser.storage.local.get(SITE_SETTINGS_KEY);
 				const settings = result?.[SITE_SETTINGS_KEY] || {};
 				const fanfictionSettings = settings?.fanfiction || {};
 				preference = fanfictionSettings.domainPreference || "www";
+				preferredTld = fanfictionSettings.preferredTld
+					? fanfictionSettings.preferredTld
+					: fanfictionSettings.convertWsToNet === false
+						? "ws"
+						: "net";
 			} catch (storageErr) {
 				debugError("Failed to load domain preference:", storageErr);
-				// Use default 'www'
+				// Use defaults
 			}
 
-			// Resolve target host based on preference
-			let targetHost;
+			const normalizedPreferredTld = preferredTld === "ws" ? "ws" : "net";
+			const tldOrder =
+				normalizedPreferredTld === "ws" ? ["ws", "net"] : ["net", "ws"];
+
+			// Resolve target subdomain based on preference
+			let targetSubdomain;
 			switch (preference) {
 				case "mobile":
 				case "m":
-					targetHost = "m.fanfiction.net";
+					targetSubdomain = "m";
 					break;
 				case "desktop":
 				case "www":
-					targetHost = "www.fanfiction.net";
+					targetSubdomain = "www";
 					break;
 				default:
-					targetHost = isMobile
-						? "m.fanfiction.net"
-						: "www.fanfiction.net";
+					targetSubdomain = isMobile ? "m" : "www";
 			}
 
-			// Perform redirect
-			const targetURL = `https://${targetHost}${pathname}${search}${hash}`;
-			if (window.location.href !== targetURL) {
-				debugLog(
-					`FanFiction URL normalization: ${hostname} -> ${targetHost}`,
-				);
-				if (isWSHost) {
-					// Handle .ws domain with error recovery
-					try {
-						window.location.replace(targetURL);
-						return true;
-					} catch (wsRedirectErr) {
-						debugError(
-							"FanFiction.ws redirect failed",
-							wsRedirectErr,
-						);
-						return false;
-					}
-				} else {
+			const isUrlReachable = async (url) => {
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => {
+					controller.abort();
+				}, 2500);
+				try {
+					await fetch(url, {
+						method: "GET",
+						mode: "no-cors",
+						cache: "no-store",
+						signal: controller.signal,
+					});
+					return true;
+				} catch (_err) {
+					return false;
+				} finally {
+					clearTimeout(timeoutId);
+				}
+			};
+
+			for (const tld of tldOrder) {
+				const targetHost = `${targetSubdomain}.fanfiction.${tld}`;
+				if (hostname === targetHost) {
+					return false;
+				}
+				const targetURL = `https://${targetHost}${pathname}${search}${hash}`;
+				const reachable = await isUrlReachable(targetURL);
+				if (reachable) {
+					debugLog(
+						`FanFiction URL normalization: ${hostname} -> ${targetHost}`,
+					);
 					window.location.replace(targetURL);
 					return true;
 				}
