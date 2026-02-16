@@ -39,7 +39,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
 
-	static DEFAULT_SITE_PROMPT = `This is a novel from ScribbleHub. Please maintain the author's style and any formatting features. Respect any special formatting for dialogue, thoughts, or scene transitions. Please improve grammar and readability while maintaining the original meaning and flow.`;
+	static DEFAULT_SITE_PROMPT = "This is a novel from ScribbleHub. Please maintain the author's style and any formatting features. Respect any special formatting for dialogue, thoughts, or scene transitions. Please improve grammar and readability while maintaining the original meaning and flow.";
 
 	constructor() {
 		super();

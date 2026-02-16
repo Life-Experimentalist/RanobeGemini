@@ -269,7 +269,7 @@ export class NovelLibrary {
 
 		const cleanName = (value) =>
 			String(value || "")
-				.replace(/[\[\]]/g, "")
+				.replace(/[[]\]]/g, "")
 				.replace(/\s+/g, " ")
 				.trim();
 
@@ -278,11 +278,9 @@ export class NovelLibrary {
 			const cleaned = value.trim();
 			if (!cleaned) return true;
 			if (/^\d+$/.test(cleaned)) return true;
-			if (/^\-?\s*status\s*:/i.test(cleaned)) return true;
-			if (/^\-?\s*complete\s*\-?$/i.test(cleaned)) return true;
-			if (
-				/^\-?\s*complete\s*\-?$/i.test(cleaned.replace(/\s*\-\s*/g, ""))
-			)
+			if (/^-?\s*status\s*:/i.test(cleaned)) return true;
+			if (/^-?\s*complete\s*-?$/i.test(cleaned)) return true;
+			if (/^-?\s*complete\s*-?$/i.test(cleaned.replace(/\s*-\s*/g, "")))
 				return true;
 			return false;
 		};
@@ -330,9 +328,9 @@ export class NovelLibrary {
 
 			// Extract bracketed relationships from tags/genres
 			const combined = [...sourceTags, ...sourceGenres].join(", ");
-			const bracketMatches = combined.match(/\[([^\]]+)\]/g) || [];
+			const bracketMatches = combined.match(/\[([^\]]+)]/g) || [];
 			bracketMatches.forEach((bracket) => {
-				const inside = bracket.replace(/[\[\]]/g, "").trim();
+				const inside = bracket.replace(/[[]\]]/g, "").trim();
 				if (!inside) return;
 				addRelationshipGroup(inside.split(","));
 			});
@@ -417,8 +415,6 @@ export class NovelLibrary {
 					lastReadChapter,
 					currentChapter,
 				);
-				const totalChapters =
-					novel.totalChapters || novel.metadata?.totalChapters || 0;
 
 				if (progressChapter <= 1) {
 					novel.readingStatus = READING_STATUS.PLAN_TO_READ;
@@ -464,7 +460,7 @@ export class NovelLibrary {
 			const urlObj = new URL(url);
 			const hostname = urlObj.hostname.toLowerCase();
 
-			for (const [key, shelf] of Object.entries(SHELVES)) {
+			for (const shelf of Object.values(SHELVES)) {
 				for (const domain of shelf.domains) {
 					if (
 						hostname === domain ||
@@ -748,24 +744,59 @@ export class NovelLibrary {
 				Number(options.totalChapters) ||
 				Number(novel.totalChapters) ||
 				0;
+			const isStoryComplete =
+				options.isStoryComplete || novel.isStoryComplete || false;
+
 			let nextStatus = null;
 
+			// Status transition logic per clarified rules:
+			// 1. COMPLETED: Only if story is flagged as complete (author finished publishing)
+			// 2. UP_TO_DATE: If user has read latest chapter AND story is still ongoing
+			// 3. READING: Default when reading ongoing story
+			// 4. RE_READING: Can overlay any other status (handled separately)
+
 			if (chapterNumber >= 1) {
-				if (totalChapters > 0 && totalChapters <= 1) {
-					nextStatus = READING_STATUS.READING;
-				} else if (
-					totalChapters > 0 &&
-					chapterNumber >= totalChapters
-				) {
+				// Check if user has reached the latest chapter
+				const isLatestChapter =
+					totalChapters > 0 && chapterNumber >= totalChapters;
+
+				// If story is marked complete and user has reached latest chapter
+				if (isStoryComplete && isLatestChapter) {
 					nextStatus = READING_STATUS.COMPLETED;
-				} else if (chapterNumber >= 2) {
-					nextStatus = READING_STATUS.READING;
-				} else if (chapterNumber === 1) {
-					nextStatus =
-						totalChapters > 1
-							? READING_STATUS.PLAN_TO_READ
-							: READING_STATUS.READING;
 				}
+				// If user has read latest chapter but story is still ongoing
+				else if (
+					isLatestChapter &&
+					!isStoryComplete &&
+					totalChapters > 0
+				) {
+					nextStatus = READING_STATUS.UP_TO_DATE;
+				}
+				// Default: user is reading (not caught up yet)
+				else if (chapterNumber > 0) {
+					nextStatus = READING_STATUS.READING;
+				}
+				// First chapter only
+				else if (chapterNumber === 1 && totalChapters > 1) {
+					nextStatus = READING_STATUS.READING;
+				}
+			}
+
+			// Don't downgrade from COMPLETED or ON_HOLD or DROPPED unless explicitly changed
+			const currentStatus = novel.readingStatus || READING_STATUS.READING;
+			const protectedStatuses = [
+				READING_STATUS.COMPLETED,
+				READING_STATUS.ON_HOLD,
+				READING_STATUS.DROPPED,
+				READING_STATUS.PLAN_TO_READ,
+			];
+
+			if (
+				protectedStatuses.includes(currentStatus) &&
+				nextStatus === READING_STATUS.READING
+			) {
+				// Don't auto-change unless it's an explicit status update
+				nextStatus = null;
 			}
 
 			if (nextStatus) {
@@ -777,12 +808,82 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 
 			debugLog(
-				`📚 Progress updated: Ch.${chapterNumber} - ${novel.title}`,
+				`📚 Progress updated: Ch.${chapterNumber}/${totalChapters} - ${novel.title}`,
 			);
 			return novel;
 		} catch (error) {
 			debugError("Error updating reading progress:", error);
 			return null;
+		}
+	}
+
+	/**
+	 * Update novel reading status (supports overlay for re-reading)
+	 * @param {string} novelId - Library novel ID
+	 * @param {string} newStatus - New reading status
+	 * @param {boolean} isRereadingOverlay - If true, adds re-reading tag without replacing main status
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async updateReadingStatus(novelId, newStatus, isRereadingOverlay = false) {
+		try {
+			const library = await this.getLibrary();
+			const novel = library.novels[novelId];
+
+			if (!novel) {
+				debugError(`Novel not found: ${novelId}`);
+				return false;
+			}
+
+			if (isRereadingOverlay) {
+				// Add re-reading as an overlay tag (stored in rereadingStatus field)
+				novel.rereadingStatus =
+					newStatus === READING_STATUS.RE_READING ? true : false;
+			} else {
+				// Replace main status
+				novel.readingStatus = newStatus;
+				novel.lastStatusChangedAt = Date.now();
+			}
+
+			novel.lastAccessedAt = Date.now();
+			await this.saveLibrary(library);
+
+			debugLog(
+				`📊 Status updated: ${novel.title} → ${newStatus}${isRereadingOverlay ? " (overlay)" : ""}`,
+			);
+			return true;
+		} catch (error) {
+			debugError("Error updating reading status:", error);
+			return false;
+		}
+	}
+
+	/**
+	 * Mark a novel as complete (story finished by author)
+	 * @param {string} novelId - Library novel ID
+	 * @returns {Promise<boolean>} Success status
+	 */
+	async markNovelComplete(novelId) {
+		try {
+			const library = await this.getLibrary();
+			const novel = library.novels[novelId];
+
+			if (!novel) {
+				debugError(`Novel not found: ${novelId}`);
+				return false;
+			}
+
+			novel.isStoryComplete = true;
+			novel.readingStatus = READING_STATUS.COMPLETED;
+			novel.completedAt = Date.now();
+			novel.lastAccessedAt = Date.now();
+
+			await this.saveLibrary(library);
+
+			debugLog(`✅ Novel marked complete: ${novel.title}`);
+			return true;
+		} catch (error) {
+			debugError("Error marking novel complete:", error);
+			return false;
 		}
 	}
 
@@ -922,7 +1023,7 @@ export class NovelLibrary {
 		};
 
 		// Stats per shelf
-		for (const [key, shelf] of Object.entries(SHELVES)) {
+		for (const shelf of Object.values(SHELVES)) {
 			const shelfNovels = novels.filter((n) => n.shelfId === shelf.id);
 			stats.shelves[shelf.id] = {
 				name: shelf.name,
@@ -984,34 +1085,6 @@ export class NovelLibrary {
 		return Object.values(library.novels)
 			.filter((novel) => novel.readingStatus === status)
 			.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt);
-	}
-
-	/**
-	 * Update a novel's reading status
-	 * @param {string} novelId - Library novel ID
-	 * @param {string} status - New reading status
-	 * @returns {Promise<boolean>} Success status
-	 */
-	async updateReadingStatus(novelId, status) {
-		try {
-			const library = await this.getLibrary();
-			if (!library.novels[novelId]) {
-				debugError(`Novel not found: ${novelId}`);
-				return false;
-			}
-
-			library.novels[novelId].readingStatus = status;
-			library.novels[novelId].lastAccessedAt = Date.now();
-
-			await this.saveLibrary(library);
-			debugLog(
-				`📚 Updated reading status for ${library.novels[novelId].title}: ${status}`,
-			);
-			return true;
-		} catch (error) {
-			debugError("Error updating reading status:", error);
-			return false;
-		}
 	}
 
 	/**
@@ -1637,7 +1710,7 @@ export class NovelLibrary {
 				}
 
 				// Update shelf stats
-				for (const [shelfId, shelf] of Object.entries(SHELVES)) {
+				for (const shelf of Object.values(SHELVES)) {
 					existingLibrary.shelves[shelf.id] = {
 						novelCount: Object.values(
 							existingLibrary.novels,

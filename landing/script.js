@@ -99,8 +99,8 @@ function createStatusBadge(status) {
 		status === "ready"
 			? "Ready"
 			: status === "paused"
-			? "Paused"
-			: "Coming soon";
+				? "Paused"
+				: "Coming soon";
 	return badge;
 }
 
@@ -193,8 +193,8 @@ function renderSites() {
 			site.status === "ready"
 				? "Supported"
 				: site.status === "paused"
-				? "Disabled"
-				: "Coming";
+					? "Disabled"
+					: "Coming";
 
 		meta.appendChild(title);
 		meta.appendChild(desc);
@@ -374,7 +374,7 @@ libraryBtn?.addEventListener("click", async () => {
 			window.open(target, "_blank", "noopener,noreferrer");
 		} else {
 			alert(
-				"Could not determine extension URL. Please open the library from the extension popup."
+				"Could not determine extension URL. Please open the library from the extension popup.",
 			);
 		}
 		return;
@@ -400,7 +400,7 @@ if (ctaLibraryBtn) {
 			window.open(target, "_blank", "noopener,noreferrer");
 		} else {
 			alert(
-				"Could not determine extension URL. Please open the library from the extension popup."
+				"Could not determine extension URL. Please open the library from the extension popup.",
 			);
 		}
 	});
@@ -423,7 +423,7 @@ const observer = new IntersectionObserver(
 			}
 		});
 	},
-	{ threshold: 0.2 }
+	{ threshold: 0.2 },
 );
 
 document.querySelectorAll(".fade-slide").forEach((el) => observer.observe(el));
@@ -445,3 +445,28 @@ links.forEach((link) => {
 renderBrowsers();
 renderSites();
 detectExtension();
+
+// Fetch version from package.json
+(async () => {
+	try {
+		// Try fetching from root first (local dev or root-served site)
+		let response = await fetch("../package.json");
+		if (!response.ok) {
+			// Fallback to GitHub raw for hosted landing page if relative fetch fails
+			response = await fetch(
+				"https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/main/package.json",
+			);
+		}
+
+		if (response.ok) {
+			const data = await response.json();
+			const versionElements =
+				document.querySelectorAll(".version-display");
+			versionElements.forEach((el) => {
+				el.textContent = `v${data.version}`;
+			});
+		}
+	} catch (e) {
+		console.error("Failed to fetch version", e);
+	}
+})();

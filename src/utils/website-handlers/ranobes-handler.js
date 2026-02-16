@@ -60,7 +60,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
 
-	static DEFAULT_SITE_PROMPT = `This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beginning or at the end of the chapter. And then add breaks to signify the separation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.`;
+	static DEFAULT_SITE_PROMPT =
+		"This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beginning or at the end of the chapter. And then add breaks to signify the separation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.";
 
 	constructor() {
 		super();
@@ -506,7 +507,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			/var\s+\w+\s*=\s*document\.(createElement|getElementById)[^;]*;/gi,
 
 			// Translator notes about ads (but keep meaningful translator notes)
-			/translator['']?s?\s*note:?\s*.*?ad[s\-]?.*?(removed|deleted|filtered).*?\.?\n?/gi,
+			/translator['']?s?\s*note:?\s*.*?ad[s-]?.*?(removed|deleted|filtered).*?\.?\n?/gi,
 			/\[?\s*TL\s*note:?\s*\]?\s*.*?ad[s]?\s*.*?(removed|omitted).*?\.?\n?/gi,
 
 			// Common ad network snippets
@@ -634,7 +635,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				// Fallback: Extract from page title
 				if (!metadata.title) {
 					const titleMatch = document.title.match(
-						/(.+?)\s*[|\-]\s*Chapter/i,
+						/(.+?)\s*[|-]\s*Chapter/i,
 					);
 					if (titleMatch) {
 						metadata.title = titleMatch[1].trim();
@@ -987,7 +988,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			// Fallback: Extract from page title
 			if (!context.title) {
 				const titleMatch = document.title.match(
-					/(.+?)\s*[|\-]\s*Chapter/i,
+					/(.+?)\s*[|-]\s*Chapter/i,
 				);
 				if (titleMatch) {
 					context.title = titleMatch[1].trim();

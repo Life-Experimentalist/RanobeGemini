@@ -1,7 +1,6 @@
 {
 	"useTabs": true,
 	"tabWidth": 4,
-	"semi": true,
 	"singleQuote": false,
 	"trailingComma": "all",
 	"printWidth": 80,
@@ -12,7 +11,8 @@
 		{
 			"files": [
 				"src/manifest-chromium.json",
-				"src/manifest-firefox.json"
+				"src/manifest-firefox.json",
+				"src/lib/browser-polyfill.min.js"
 			],
 			"options": {
 				"insertFinalNewline": false

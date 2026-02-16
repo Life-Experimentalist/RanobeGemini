@@ -40,7 +40,7 @@ function base64UrlEncode(buffer) {
 
 async function createPkcePair() {
 	const verifier = base64UrlEncode(
-		new TextEncoder().encode(getRandomString(43))
+		new TextEncoder().encode(getRandomString(43)),
 	);
 	const challengeBytes = await sha256(verifier);
 	const challenge = base64UrlEncode(challengeBytes);
@@ -204,6 +204,27 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 			return merged.access_token;
 		} catch (err) {
 			debugError("Drive token refresh failed", err);
+			// Only clear tokens if explicitly revoked by user (invalid_grant)
+			// Network errors or temporary failures should not clear refresh tokens
+			if (
+				err.message.includes("invalid_grant") ||
+				err.message.includes("revoked")
+			) {
+				// User explicitly revoked access - must re-authenticate
+				await revokeDriveTokens();
+				await setAuthError(
+					new Error(
+						"Google Drive access was revoked. Please reconnect in Library Settings.",
+					),
+				);
+			} else {
+				// Network or temporary error - keep tokens, set error for UI display
+				await setAuthError(
+					new Error(
+						`Temporary Drive error: ${err.message}. Will retry automatically.`,
+					),
+				);
+			}
 		}
 	}
 
@@ -263,7 +284,7 @@ export async function uploadBlobToDrive(
 		filename = "ranobe-logs.json",
 		mimeType = "application/json",
 		folderId,
-	} = {}
+	} = {},
 ) {
 	const accessToken = await ensureDriveAccessToken({ interactive: true });
 	const meta = { name: filename };
@@ -274,7 +295,7 @@ export async function uploadBlobToDrive(
 	const delimiter = `--${boundary}`;
 	const closeDelimiter = `--${boundary}--`;
 	const metadataPart = `${delimiter}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(
-		meta
+		meta,
 	)}\r\n`;
 	const dataPartHeader = `${delimiter}\r\nContent-Type: ${mimeType}\r\n\r\n`;
 	const body = new Blob([
@@ -293,7 +314,7 @@ export async function uploadBlobToDrive(
 				"Content-Type": `multipart/related; boundary=${boundary}`,
 			},
 			body,
-		}
+		},
 	);
 
 	if (!resp.ok) {
@@ -328,13 +349,13 @@ export async function ensureBackupFolder() {
 	try {
 		// Search for existing Ranobe Gemini backup folder
 		const searchQuery = encodeURIComponent(
-			`name='Ranobe Gemini Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false`
+			`name='Ranobe Gemini Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
 		);
 		const searchResp = await fetch(
 			`https://www.googleapis.com/drive/v3/files?q=${searchQuery}&spaces=drive&fields=files(id,name)&pageSize=1`,
 			{
 				headers: { Authorization: `Bearer ${accessToken}` },
-			}
+			},
 		);
 
 		if (searchResp.ok) {
@@ -363,13 +384,13 @@ export async function ensureBackupFolder() {
 					name: "Ranobe Gemini Backups",
 					mimeType: "application/vnd.google-apps.folder",
 				}),
-			}
+			},
 		);
 
 		if (!createResp.ok) {
 			const err = await createResp.text();
 			throw new Error(
-				`Folder creation failed: ${createResp.status} ${err}`
+				`Folder creation failed: ${createResp.status} ${err}`,
 			);
 		}
 
@@ -388,14 +409,14 @@ async function findDriveBackupByName(folderId, filename) {
 	const accessToken = await ensureDriveAccessToken({ interactive: false });
 	const safeName = filename.replace(/'/g, "\\'");
 	const query = encodeURIComponent(
-		`'${folderId}' in parents and name='${safeName}' and trashed=false`
+		`'${folderId}' in parents and name='${safeName}' and trashed=false`,
 	);
 
 	const resp = await fetch(
 		`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime,webViewLink)&pageSize=1`,
 		{
 			headers: { Authorization: `Bearer ${accessToken}` },
-		}
+		},
 	);
 
 	if (!resp.ok) return null;
@@ -411,7 +432,7 @@ async function updateDriveFile(fileId, blob, { filename, mimeType }) {
 	const metadataPart = `${delimiter}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(
 		{
 			name: filename,
-		}
+		},
 	)}\r\n`;
 	const dataPartHeader = `${delimiter}\r\nContent-Type: ${mimeType}\r\n\r\n`;
 	const body = new Blob([
@@ -430,7 +451,7 @@ async function updateDriveFile(fileId, blob, { filename, mimeType }) {
 				"Content-Type": `multipart/related; boundary=${boundary}`,
 			},
 			body,
-		}
+		},
 	);
 
 	if (!resp.ok) {
@@ -544,13 +565,13 @@ export async function listDriveBackups() {
 
 	try {
 		const query = encodeURIComponent(
-			`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`
+			`'${folderId}' in parents and name contains '${DRIVE_BACKUP_PREFIX}' and trashed=false`,
 		);
 		const resp = await fetch(
 			`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,createdTime,modifiedTime,size,webViewLink)&orderBy=modifiedTime%20desc&pageSize=50`,
 			{
 				headers: { Authorization: `Bearer ${accessToken}` },
-			}
+			},
 		);
 
 		if (!resp.ok) return [];
@@ -594,7 +615,7 @@ export async function downloadDriveBackup(fileId) {
 			`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
 			{
 				headers: { Authorization: `Bearer ${accessToken}` },
-			}
+			},
 		);
 
 		if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);

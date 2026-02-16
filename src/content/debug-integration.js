@@ -1,6 +1,6 @@
 // This script integrates the debug panel with the rest of the extension
 import { addDebugButton } from "./debug-utils.js";
-import { debugLog, debugError } from "../utils/logger.js";
+import { debugLog } from "../utils/logger.js";
 
 /**
  * Initializes the debug panel based on configuration

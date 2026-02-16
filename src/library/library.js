@@ -1,4 +1,5 @@
 /* eslint-disable quotes */
+/* eslint-disable no-unused-vars */
 /**
  * Novel Library Page Script
  * Handles UI interactions and data loading for the library page
@@ -16,6 +17,11 @@ import {
 	DEFAULT_SHORT_SUMMARY_PROMPT,
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_DRIVE_CLIENT_ID,
+	DEFAULT_DEBUG_TRUNCATE_OUTPUT,
+	DEFAULT_DEBUG_TRUNCATE_LENGTH,
+	CAROUSEL_ACTIVE_SITE_BONUS,
+	CAROUSEL_MIN_COUNT,
+	CAROUSEL_DEFAULT_MANUAL_COUNT,
 } from "../utils/constants.js";
 import { isSupportedDomain } from "../utils/domain-constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
@@ -91,6 +97,7 @@ let librarySettings = {
 	autoHoldEnabled: true,
 	autoHoldDays: 7,
 };
+let libraryBackupApiKeys = [];
 
 // Shared theme defaults (mirrors popup defaults)
 const defaultTheme = {
@@ -291,6 +298,14 @@ const elements = {
 	importBtn: document.getElementById("import-btn"),
 	importFile: document.getElementById("import-file"),
 	clearBtn: document.getElementById("clear-btn"),
+	// Carousel Settings
+	carouselAutoCount: document.getElementById("carousel-auto-count"),
+	carouselUseManual: document.getElementById("carousel-use-manual"),
+	carouselManualContainer: document.getElementById(
+		"carousel-manual-container",
+	),
+	carouselManualCount: document.getElementById("carousel-manual-count"),
+	// Auto-Hold Settings
 	autoHoldToggle: document.getElementById("auto-hold-toggle"),
 	autoHoldDays: document.getElementById("auto-hold-days"),
 	urlImportText: document.getElementById("url-import-text"),
@@ -430,6 +445,23 @@ const elements = {
 	),
 	libraryTemperatureValue: document.getElementById(
 		"library-temperature-value",
+	),
+
+	// Advanced API Key Settings
+	libraryApiKeyAdvInput: document.getElementById("library-api-key-adv"),
+	librarySaveApiKeyAdvBtn: document.getElementById(
+		"library-save-api-key-adv",
+	),
+	libraryTestApiKeyAdvBtn: document.getElementById(
+		"library-test-api-key-adv",
+	),
+
+	// Backup API Keys (Library Modal)
+	libraryBackupKeysList: document.getElementById("library-backup-keys-list"),
+	libraryNewBackupKeyInput: document.getElementById("library-new-backup-key"),
+	libraryAddBackupKeyBtn: document.getElementById("library-add-backup-key"),
+	libraryApiKeyRotationSelect: document.getElementById(
+		"library-api-key-rotation",
 	),
 
 	// Font Size (Library Modal)
@@ -1020,6 +1052,13 @@ function setupStorageListener() {
 		) {
 			updateDriveUI();
 		}
+
+		// Check for API key updates (e.g. from popup)
+		if (changes.apiKey || changes.backupApiKeys) {
+			debugLog("🔐 API Keys changed, reloading settings...");
+			loadLibraryModelSettings();
+			loadLibraryAdvancedSettings();
+		}
 	});
 }
 
@@ -1043,6 +1082,27 @@ async function loadLibrarySettings() {
 			librarySettings.autoHoldDays || librarySettings.autoHoldDays === 0
 				? librarySettings.autoHoldDays
 				: 7;
+	}
+
+	// Load carousel settings
+	try {
+		const result = await browser.storage.local.get("carouselManualCount");
+		if (
+			result.carouselManualCount !== null &&
+			result.carouselManualCount !== undefined
+		) {
+			if (elements.carouselUseManual) {
+				elements.carouselUseManual.checked = true;
+			}
+			if (elements.carouselManualContainer) {
+				elements.carouselManualContainer.style.display = "block";
+			}
+			if (elements.carouselManualCount) {
+				elements.carouselManualCount.value = result.carouselManualCount;
+			}
+		}
+	} catch (error) {
+		debugError("Failed to load carousel settings:", error);
 	}
 }
 
@@ -1315,6 +1375,9 @@ async function loadLibraryModelSettings() {
 		if (elements.libraryApiKeyInput) {
 			elements.libraryApiKeyInput.value = data.apiKey || "";
 		}
+		if (elements.libraryApiKeyAdvInput) {
+			elements.libraryApiKeyAdvInput.value = data.apiKey || "";
+		}
 		if (data.apiKey) {
 			await updateLibraryModelSelector(data.apiKey);
 		} else if (elements.libraryModelSelect) {
@@ -1362,6 +1425,9 @@ async function loadLibraryAdvancedSettings() {
 			"chunkSize",
 			"maxOutputTokens",
 			"debugMode",
+			"apiKey",
+			"backupApiKeys",
+			"apiKeyRotation",
 		]);
 
 		// Load Top K
@@ -1439,16 +1505,72 @@ async function loadLibraryAdvancedSettings() {
 			// Load debug sub-settings
 			if (elements.debugTruncateToggle) {
 				elements.debugTruncateToggle.checked =
-					data.debugTruncateOutput !== false;
+					data.debugTruncateOutput !== undefined
+						? data.debugTruncateOutput
+						: DEFAULT_DEBUG_TRUNCATE_OUTPUT;
 			}
 			if (elements.debugTruncateLengthInput) {
 				elements.debugTruncateLengthInput.value =
-					data.debugTruncateLength || 500;
+					data.debugTruncateLength || DEFAULT_DEBUG_TRUNCATE_LENGTH;
 			}
+		}
+
+		// Load Backup API Keys
+		libraryBackupApiKeys = data.backupApiKeys || [];
+		renderLibraryBackupKeys();
+
+		// Load API Key Rotation
+		if (elements.libraryApiKeyRotationSelect) {
+			elements.libraryApiKeyRotationSelect.value =
+				data.apiKeyRotation || "off";
 		}
 	} catch (error) {
 		debugError("Failed to load advanced settings:", error);
 	}
+}
+
+function renderLibraryBackupKeys() {
+	if (!elements.libraryBackupKeysList) return;
+
+	elements.libraryBackupKeysList.innerHTML = "";
+
+	if (!libraryBackupApiKeys || libraryBackupApiKeys.length === 0) {
+		elements.libraryBackupKeysList.innerHTML =
+			'<div class="description" style="padding: 8px; text-align: center; font-size: 12px;">No backup keys added yet</div>';
+		return;
+	}
+
+	libraryBackupApiKeys.forEach((key, index) => {
+		const keyItem = document.createElement("div");
+		keyItem.style.cssText =
+			"display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-secondary, #0f172a); border-radius: 4px; margin-bottom: 6px; border: 1px solid var(--border-color); font-size: 12px;";
+		const keyPreview =
+			key.substring(0, 8) +
+			"..." +
+			key.substring(Math.max(key.length - 4, 0));
+		const label = `Backup ${index + 1}`;
+		keyItem.innerHTML = `
+			<span style="font-weight: 500; color: #3b82f6;">${label}</span>
+			<span style="color: var(--text-secondary); font-family: monospace; font-size: 11px;">${keyPreview}</span>
+			<button class="library-remove-key-btn" data-index="${index}" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 0 4px;">✕</button>
+		`;
+		elements.libraryBackupKeysList.appendChild(keyItem);
+	});
+
+	elements.libraryBackupKeysList
+		.querySelectorAll(".library-remove-key-btn")
+		.forEach((btn) => {
+			btn.addEventListener("click", async (e) => {
+				const index = parseInt(e.target.dataset.index, 10);
+				if (Number.isNaN(index)) return;
+				libraryBackupApiKeys.splice(index, 1);
+				await browser.storage.local.set({
+					backupApiKeys: libraryBackupApiKeys,
+				});
+				renderLibraryBackupKeys();
+				showNotification("✅ Backup key removed", "success");
+			});
+		});
 }
 
 /**
@@ -2742,6 +2864,22 @@ function setupEventListeners() {
 	if (elements.backupNowBtn) {
 		elements.backupNowBtn.addEventListener("click", handleBackupNow);
 	}
+
+	// Quick backup buttons (simplified UI)
+	const quickLocalBackup = document.getElementById("quickLocalBackup");
+	const quickDriveBackup = document.getElementById("quickDriveBackup");
+	const quickViewBackups = document.getElementById("quickViewBackups");
+
+	if (quickLocalBackup) {
+		quickLocalBackup.addEventListener("click", handleExport);
+	}
+	if (quickDriveBackup) {
+		quickDriveBackup.addEventListener("click", handleBackupNow);
+	}
+	if (quickViewBackups) {
+		quickViewBackups.addEventListener("click", handleViewDriveBackups);
+	}
+
 	if (elements.driveBackupModeRadios) {
 		elements.driveBackupModeRadios.forEach((radio) => {
 			radio.addEventListener("change", handleDriveBackupModeChange);
@@ -3089,6 +3227,102 @@ function setupEventListeners() {
 		);
 	}
 
+	// Advanced API key handlers (in Advanced Settings tab)
+	if (elements.librarySaveApiKeyAdvBtn && elements.libraryApiKeyAdvInput) {
+		elements.librarySaveApiKeyAdvBtn.addEventListener("click", async () => {
+			const apiKey = elements.libraryApiKeyAdvInput.value.trim();
+			if (!apiKey) {
+				showNotification("❌ Please enter a valid API key", "error");
+				return;
+			}
+			try {
+				await browser.storage.local.set({ apiKey });
+				// Sync with the other API key input if it exists
+				if (elements.libraryApiKeyInput) {
+					elements.libraryApiKeyInput.value = apiKey;
+				}
+				await updateLibraryModelSelector(apiKey);
+				showNotification("✅ API key saved", "success");
+			} catch (error) {
+				debugError("Error saving API key:", error);
+				showNotification("❌ Failed to save API key", "error");
+			}
+		});
+	}
+
+	if (elements.libraryTestApiKeyAdvBtn && elements.libraryApiKeyAdvInput) {
+		elements.libraryTestApiKeyAdvBtn.addEventListener("click", async () => {
+			const apiKey = elements.libraryApiKeyAdvInput.value.trim();
+			if (!apiKey) {
+				showNotification("❌ Enter an API key to test", "error");
+				return;
+			}
+			try {
+				elements.libraryTestApiKeyAdvBtn.disabled = true;
+				showNotification("🔍 Testing API key...", "info");
+				const models = await fetchLibraryModels(apiKey);
+				if (models && models.length > 0) {
+					await browser.storage.local.set({ apiKey });
+					// Sync with the other API key input if it exists
+					if (elements.libraryApiKeyInput) {
+						elements.libraryApiKeyInput.value = apiKey;
+					}
+					await updateLibraryModelSelector(apiKey);
+					showNotification(
+						"✅ API key valid. Models loaded.",
+						"success",
+					);
+				} else {
+					showNotification(
+						"❌ API key invalid or no models",
+						"error",
+					);
+				}
+			} catch (error) {
+				debugError("Error testing API key:", error);
+				showNotification("❌ Failed to test API key", "error");
+			} finally {
+				elements.libraryTestApiKeyAdvBtn.disabled = false;
+			}
+		});
+	}
+
+	// Backup API Keys Management (Library Modal)
+	if (elements.libraryAddBackupKeyBtn && elements.libraryNewBackupKeyInput) {
+		elements.libraryAddBackupKeyBtn.addEventListener("click", async () => {
+			const newKey = elements.libraryNewBackupKeyInput.value.trim();
+			if (!newKey) {
+				showNotification("❌ Please enter a valid API key", "error");
+				return;
+			}
+
+			if (libraryBackupApiKeys.includes(newKey)) {
+				showNotification("❌ This key is already added", "error");
+				return;
+			}
+
+			libraryBackupApiKeys.push(newKey);
+			await browser.storage.local.set({
+				backupApiKeys: libraryBackupApiKeys,
+			});
+			elements.libraryNewBackupKeyInput.value = "";
+			renderLibraryBackupKeys();
+			showNotification("✅ Backup key added successfully", "success");
+		});
+	}
+
+	if (elements.libraryApiKeyRotationSelect) {
+		elements.libraryApiKeyRotationSelect.addEventListener(
+			"change",
+			async () => {
+				await browser.storage.local.set({
+					apiKeyRotation: elements.libraryApiKeyRotationSelect.value,
+				});
+				showNotification("✅ Key rotation strategy saved", "success");
+			},
+		);
+	}
+
 	// AI Model settings (Library Modal)
 	if (elements.libraryTemperatureSlider) {
 		elements.libraryTemperatureSlider.addEventListener("input", (e) => {
@@ -3358,6 +3592,50 @@ function setupEventListeners() {
 	elements.carouselPrev.addEventListener("click", () => moveCarousel(-1));
 	elements.carouselNext.addEventListener("click", () => moveCarousel(1));
 
+	// Carousel Settings
+	if (elements.carouselUseManual) {
+		elements.carouselUseManual.addEventListener("change", async (e) => {
+			const useManual = e.target.checked;
+			if (elements.carouselManualContainer) {
+				elements.carouselManualContainer.style.display = useManual
+					? "block"
+					: "none";
+			}
+
+			if (!useManual) {
+				// Clear manual override
+				await browser.storage.local.set({ carouselManualCount: null });
+				if (allNovels && allNovels.length > 0) {
+					await initCarousel(allNovels);
+				}
+				showNotification(
+					"Carousel count reset to automatic",
+					"success",
+				);
+			}
+		});
+	}
+
+	if (elements.carouselManualCount) {
+		elements.carouselManualCount.addEventListener("change", async (e) => {
+			const count = parseInt(e.target.value, 10);
+			if (count < 1 || count > 100) {
+				showNotification("Count must be between 1 and 100", "error");
+				e.target.value = Math.max(1, Math.min(100, count));
+				return;
+			}
+
+			await browser.storage.local.set({ carouselManualCount: count });
+			if (allNovels && allNovels.length > 0) {
+				await initCarousel(allNovels);
+			}
+			showNotification(
+				`Carousel count set to ${count} novels`,
+				"success",
+			);
+		});
+	}
+
 	// Modal backdrop clicks
 	document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
 		backdrop.addEventListener("click", (e) => {
@@ -3421,7 +3699,19 @@ async function loadLibrary() {
 		showEmptyState(false);
 
 		// Initialize carousel with recent novels
-		initCarousel(allNovels);
+		await initCarousel(allNovels);
+
+		// Update carousel auto-count display
+		if (elements.carouselAutoCount) {
+			const activeWebsites = new Set(
+				allNovels.map((n) => n.shelf).filter(Boolean),
+			).size;
+			const autoCount = Math.max(
+				activeWebsites + CAROUSEL_ACTIVE_SITE_BONUS,
+				CAROUSEL_MIN_COUNT,
+			);
+			elements.carouselAutoCount.textContent = autoCount;
+		}
 
 		// Render current view
 		renderCurrentView();
@@ -3778,7 +4068,7 @@ function createNovelCardForShelf(novel, shelf) {
 	const coverHtml = novel.coverUrl
 		? `<img data-cover-src="${escapeHtml(
 				novel.coverUrl,
-			)}" alt="Cover" class="novel-cover" loading="lazy">`
+			)}" alt="Cover" class="novel-cover" loading="eager" fetchpriority="high" crossorigin="anonymous">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -3940,7 +4230,7 @@ function createNovelCard(novel) {
 	const coverHtml = novel.coverUrl
 		? `<img data-cover-src="${escapeHtml(
 				novel.coverUrl,
-			)}" alt="Cover" class="novel-cover" loading="lazy">`
+			)}" alt="Cover" class="novel-cover" loading="eager" fetchpriority="high" crossorigin="anonymous">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
 
 	const progress =
@@ -4030,7 +4320,9 @@ function createNovelCard(novel) {
  */
 async function handleStatusChange(novelId, newStatus) {
 	try {
-		await novelLibrary.updateNovel(novelId, { readingStatus: newStatus });
+		await novelLibrary.updateNovel(novelId, {
+			readingStatus: newStatus,
+		});
 		// Update local cache
 		const novelIndex = allNovels.findIndex((n) => n.id === novelId);
 		if (novelIndex !== -1) {
@@ -4126,7 +4418,7 @@ async function openDefaultNovelDetail(novel) {
 		// Restore standard cover image if it was replaced/removed
 		if (!document.getElementById("modal-cover")) {
 			coverContainer.innerHTML =
-				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" />';
+				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" loading="eager" fetchpriority="high" crossorigin="anonymous" />';
 			// Re-bind cached element reference if possible, or we just rely on getElementById for robust code here?
 			// Since 'elements' object is cached at startup, its modalCover property is now stale (pointing to detached node).
 			// We must update the cached reference.
@@ -4136,7 +4428,7 @@ async function openDefaultNovelDetail(novel) {
 			// Just clear any siblings (placeholders) but keep the image?
 			// Actually simplest is to just reset InnerHTML always to be safe
 			coverContainer.innerHTML =
-				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" />';
+				'<img id="modal-cover" src="" alt="Cover" class="novel-cover-large" loading="eager" fetchpriority="high" crossorigin="anonymous" />';
 			if (elements)
 				elements.modalCover = document.getElementById("modal-cover");
 		}
@@ -4541,6 +4833,7 @@ function formatNumber(num) {
 /**
  * Handle status change from modal dropdown
  */
+// eslint-disable-next-line no-unused-vars
 async function handleModalStatusChange(e) {
 	const novelId = e.target.dataset.novelId;
 	const newStatus = e.target.value;
@@ -4549,7 +4842,9 @@ async function handleModalStatusChange(e) {
 
 	try {
 		// Update the novel reading status
-		await novelLibrary.updateNovel(novelId, { readingStatus: newStatus });
+		await novelLibrary.updateNovel(novelId, {
+			readingStatus: newStatus,
+		});
 
 		// Update the display badge
 		const statusInfo = READING_STATUS_INFO[newStatus];
@@ -5459,6 +5754,7 @@ async function updateDriveUI() {
 /**
  * Connect to Google Drive via OAuth
  */
+// eslint-disable-next-line no-unused-vars
 async function handleConnectDrive() {
 	try {
 		if (!elements.connectDriveBtn) return;
@@ -5948,7 +6244,7 @@ function openModal(modal) {
 /**
  * Initialize and populate the carousel with recent novels
  */
-function initCarousel(novels) {
+async function initCarousel(novels) {
 	stopCarousel(); // Reset any existing auto-scroll interval before rebuilding
 
 	if (!novels || novels.length === 0) {
@@ -5959,6 +6255,34 @@ function initCarousel(novels) {
 	}
 
 	elements.carouselSection.style.display = "block";
+
+	// Calculate number of active websites (shelves with novels)
+	const activeWebsites = new Set(
+		novels.map((novel) => novel.shelf).filter(Boolean),
+	).size;
+
+	// Calculate dynamic carousel count: max(activeWebsites + CAROUSEL_ACTIVE_SITE_BONUS, CAROUSEL_MIN_COUNT)
+	const dynamicCount = Math.max(
+		activeWebsites + CAROUSEL_ACTIVE_SITE_BONUS,
+		CAROUSEL_MIN_COUNT,
+	);
+
+	// Get manual override from storage if set
+	try {
+		const result = await browser.storage.local.get("carouselManualCount");
+		const manualCount =
+			result.carouselManualCount !== undefined &&
+			result.carouselManualCount !== null
+				? result.carouselManualCount
+				: CAROUSEL_DEFAULT_MANUAL_COUNT;
+		carouselState.itemsToShow =
+			manualCount !== null && manualCount > 0
+				? manualCount
+				: dynamicCount;
+	} catch (error) {
+		// Fallback to dynamic count if storage fails
+		carouselState.itemsToShow = dynamicCount;
+	}
 
 	// Get top N most recent novels (configurable but capped by available count)
 	const sortedNovels = [...novels].sort(
@@ -6055,9 +6379,12 @@ function initCarousel(novels) {
 		item.innerHTML = `
 			<div class="carousel-item-image-wrapper">
 				${siteBadge ? `<div class="carousel-site-chip">${siteBadge}</div>` : ""}
-				<img data-cover-src="${escapeHtml(novel.coverUrl || "")}" alt="${escapeHtml(
-					novel.title,
-				)}" class="carousel-cover">
+				<img data-cover-src="${escapeHtml(novel.coverUrl || "")}"
+					alt="${escapeHtml(novel.title)}"
+					class="carousel-cover"
+					loading="eager"
+					fetchpriority="high"
+					crossorigin="anonymous">
 			</div>
 			<div class="carousel-item-info">
 				<h3 class="carousel-item-title">${escapeHtml(novel.title)}</h3>
@@ -6137,14 +6464,6 @@ function initCarousel(novels) {
 		attachIconFallbacks(item);
 
 		elements.carouselTrack.appendChild(item);
-	});
-
-	// Start at the middle set for infinite scrolling
-	carouselState.currentIndex = carouselState.uniqueCount;
-
-	// Use requestAnimationFrame to ensure layout is complete before positioning
-	requestAnimationFrame(() => {
-		updateCarouselPosition(false);
 	});
 
 	// Populate indicators (only for actual novels, not duplicates)
@@ -6643,7 +6962,23 @@ function initNotificationPanel() {
 				}
 				await loadLibraryNotifications();
 				await updateLibraryNotificationBadge();
-				showNotification("All notifications cleared", "success");
+				// Show status message only (don't create a new notification)
+				const status = document.createElement("div");
+				status.style.cssText = `
+					position: fixed;
+					bottom: 20px;
+					right: 20px;
+					background: #34a853;
+					color: white;
+					padding: 12px 16px;
+					border-radius: 4px;
+					font-size: 12px;
+					z-index: 9999;
+					animation: slideIn 0.3s ease;
+				`;
+				status.textContent = "✓ All notifications cleared";
+				document.body.appendChild(status);
+				setTimeout(() => status.remove(), 3000);
 			},
 		);
 	}

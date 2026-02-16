@@ -405,7 +405,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 						${ratingBadge}
 						${statusBadge}
 						${language ? `<span class="chip">${this.escapeHtml(language)}</span>` : ""}
-						${isCrossover ? `<span class="chip">Crossover</span>` : ""}
+						${isCrossover ? "<span class=\"chip\">Crossover</span>" : ""}
 					</div>
 
 					${statsHTML}

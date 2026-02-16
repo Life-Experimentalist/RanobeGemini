@@ -653,7 +653,7 @@ When enhancing, improve readability while respecting the author's creative voice
 							} else {
 								// Fallback: try to parse from URL like "/Ben-10_and_My-Hero-Academia_Crossovers/"
 								const urlMatch = href.match(
-									/\/([^\/]+)_and_([^\/]+)_Crossovers\//i,
+									/\/([^/]+)_and_([^/]+)_Crossovers\//i,
 								);
 								if (urlMatch) {
 									const fandom1 = urlMatch[1].replace(
@@ -825,7 +825,7 @@ When enhancing, improve readability while respecting the author's creative voice
 
 						const genreString = genreSegments.join("/");
 						const genres = genreString
-							.split(/[\/,&]/)
+							.split(/[/,&]/)
 							.map((g) => g.trim())
 							.filter(
 								(g) =>
@@ -1024,7 +1024,7 @@ When enhancing, improve readability while respecting the author's creative voice
 					// Fallback: try between genre section and stats
 					if (!charSection) {
 						const genreCharMatch = infoText.match(
-							/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[\/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Chapters|Words)/i,
+							/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Chapters|Words)/i,
 						);
 						if (genreCharMatch && genreCharMatch[1]) {
 							charSection = genreCharMatch[1].trim();
@@ -1039,7 +1039,7 @@ When enhancing, improve readability while respecting the author's creative voice
 						if (bracketMatches) {
 							bracketMatches.forEach((bracket) => {
 								const insideBracket = bracket
-									.replace(/[\[\]]/g, "")
+									.replace(/[[]\]]/g, "")
 									.trim();
 								const charsInBracket = insideBracket
 									.split(",")

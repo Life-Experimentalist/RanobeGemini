@@ -344,7 +344,7 @@ function renderPillList(
 	if (!container) return;
 
 	if (!items || items.length === 0) {
-		container.innerHTML = `<span class="filter-chip">No options</span>`;
+		container.innerHTML = "<span class=\"filter-chip\">No options</span>";
 		return;
 	}
 
@@ -882,7 +882,7 @@ function setupFandomNav(novels) {
 	let html = "";
 
 	if (singleFandoms.size > 0) {
-		html += `<div class="category-group"><h4>Single Fandom Stories</h4><div class="fandom-grid">`;
+		html += "<div class=\"category-group\"><h4>Single Fandom Stories</h4><div class=\"fandom-grid\">";
 		singleFandoms.forEach((count, fandom) => {
 			html += `
 				<button class="fandom-card single" data-fandom="${encodeURIComponent(
@@ -894,11 +894,11 @@ function setupFandomNav(novels) {
 				</button>
 			`;
 		});
-		html += `</div></div>`;
+		html += "</div></div>";
 	}
 
 	if (crossoverPairs.size > 0) {
-		html += `<div class="category-group"><h4>Crossover Stories</h4><div class="fandom-grid">`;
+		html += "<div class=\"category-group\"><h4>Crossover Stories</h4><div class=\"fandom-grid\">";
 		crossoverPairs.forEach((otherFandoms, fandom) => {
 			html += `
 				<button class="fandom-card crossover" data-fandom="${encodeURIComponent(
@@ -912,7 +912,7 @@ function setupFandomNav(novels) {
 				</button>
 			`;
 		});
-		html += `</div></div>`;
+		html += "</div></div>";
 	}
 
 	renderTarget.innerHTML = html;

@@ -112,7 +112,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Also check for novel info elements
 		const novelInfo = document.querySelector(
-			".g_thumb, .det-info, .book-info"
+			".g_thumb, .det-info, .book-info",
 		);
 
 		return isBookPage || (!!novelInfo && !this.isChapterPage());
@@ -156,7 +156,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Try to find link to novel page on chapter page
 		const novelLink = document.querySelector(
-			'a[href*="/book/"][href$=".html"], .det-title a, .book-title a'
+			'a[href*="/book/"][href$=".html"], .det-title a, .book-title a',
 		);
 		if (novelLink) {
 			return novelLink.href;
@@ -232,7 +232,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Title
 		const titleEl = document.querySelector(
-			".det-title h2, .book-title, .g_thumb h1, .cha-tit h1 a"
+			".det-title h2, .book-title, .g_thumb h1, .cha-tit h1 a",
 		);
 		if (titleEl) {
 			metadata.title = titleEl.textContent.trim();
@@ -240,7 +240,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Author
 		const authorEl = document.querySelector(
-			".det-hd-detail a, .author-name, .g_thumb .g_author a"
+			".det-hd-detail a, .author-name, .g_thumb .g_author a",
 		);
 		if (authorEl) {
 			metadata.author = authorEl.textContent.trim();
@@ -248,7 +248,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Cover image
 		const coverEl = document.querySelector(
-			".g_thumb img, .det-pic img, .book-cover img"
+			".g_thumb img, .det-pic img, .book-cover img",
 		);
 		if (coverEl) {
 			metadata.coverUrl = coverEl.src || coverEl.getAttribute("data-src");
@@ -256,7 +256,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Description
 		const descEl = document.querySelector(
-			".det-abt, .book-intro, .g_thumb_intro"
+			".det-abt, .book-intro, .g_thumb_intro",
 		);
 		if (descEl) {
 			metadata.description = descEl.textContent.trim().substring(0, 500);
@@ -264,7 +264,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Genres/Tags
 		const tagEls = document.querySelectorAll(
-			".det-hd-detail .g_grey, .tag-item, .genre-item"
+			".det-hd-detail .g_grey, .tag-item, .genre-item",
 		);
 		tagEls.forEach((el) => {
 			const text = el.textContent.trim();
@@ -275,7 +275,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Chapter count
 		const chapterCountEl = document.querySelector(
-			".det-hd-detail .g_grey:last-child, .chapter-count"
+			".det-hd-detail .g_grey:last-child, .chapter-count",
 		);
 		if (chapterCountEl) {
 			const match = chapterCountEl.textContent.match(/(\d+)/);
@@ -286,7 +286,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Status (Ongoing/Completed)
 		const statusEl = document.querySelector(
-			".det-hd-detail .g_status, .book-status"
+			".det-hd-detail .g_status, .book-status",
 		);
 		if (statusEl) {
 			metadata.status = statusEl.textContent.trim().toLowerCase();
@@ -314,7 +314,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		try {
 			// Author
 			const authorEl = document.querySelector(
-				'.ell.dib.vam a[href*="/profile/"]'
+				'.ell.dib.vam a[href*="/profile/"]',
 			);
 			if (authorEl) {
 				context.author = authorEl.textContent.trim();
@@ -332,22 +332,6 @@ When enhancing, improve readability and grammar while respecting the author's or
 		}
 
 		return context;
-	}
-
-	/**
-	 * Get insertion point for novel page UI
-	 */
-	getNovelPageUIInsertionPoint() {
-		const selectors = [".det-info", ".g_thumb", ".book-info", ".det-hd"];
-
-		for (const selector of selectors) {
-			const el = document.querySelector(selector);
-			if (el) {
-				return { element: el, position: "after" };
-			}
-		}
-
-		return null;
 	}
 
 	/**
@@ -415,7 +399,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Check if buttons already exist
 		const existingButtons = chapterContainer.querySelector(
-			".webnovel-gemini-controls"
+			".webnovel-gemini-controls",
 		);
 		if (existingButtons) return;
 
@@ -500,7 +484,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Insert after title
 		titleArea.parentNode.insertBefore(
 			buttonContainer,
-			titleArea.nextSibling
+			titleArea.nextSibling,
 		);
 	}
 
@@ -525,7 +509,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 					chapterId: chapterId,
 					...chapterData,
 				},
-			})
+			}),
 		);
 	}
 
@@ -550,7 +534,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 					chapterId: chapterId,
 					...chapterData,
 				},
-			})
+			}),
 		);
 	}
 
@@ -564,7 +548,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// If chapterId provided, find that specific chapter
 		if (chapterId) {
 			const specificChapter = document.querySelector(
-				`.cha-content[data-cid="${chapterId}"] .cha-words`
+				`.cha-content[data-cid="${chapterId}"] .cha-words`,
 			);
 			if (specificChapter) {
 				debugLog(`WebNovel: Found chapter ${chapterId} content`);
@@ -603,11 +587,11 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// If chapterId provided, get title from that specific chapter
 		if (chapterId) {
 			const chapterContainer = document.querySelector(
-				`.cha-content[data-cid="${chapterId}"]`
+				`.cha-content[data-cid="${chapterId}"]`,
 			);
 			if (chapterContainer) {
 				const titleElement = chapterContainer.querySelector(
-					".cha-tit h1, .cha-tit h3"
+					".cha-tit h1, .cha-tit h3",
 				);
 				if (titleElement) {
 					return titleElement.textContent.trim();
@@ -633,12 +617,12 @@ When enhancing, improve readability and grammar while respecting the author's or
 		debugLog(`WebNovel: Extracting content for chapter ${chapterId}...`);
 
 		const chapterContainer = document.querySelector(
-			`.cha-content[data-cid="${chapterId}"]`
+			`.cha-content[data-cid="${chapterId}"]`,
 		);
 
 		if (!chapterContainer) {
 			debugError(
-				`WebNovel: Could not find chapter container ${chapterId}`
+				`WebNovel: Could not find chapter container ${chapterId}`,
 			);
 			return {
 				found: false,
@@ -649,7 +633,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		const contentArea = chapterContainer.querySelector(".cha-words");
 		if (!contentArea) {
 			debugError(
-				`WebNovel: Could not find content area for chapter ${chapterId}`
+				`WebNovel: Could not find content area for chapter ${chapterId}`,
 			);
 			return {
 				found: false,
@@ -659,7 +643,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		// Get the title from this specific chapter
 		const titleElement = chapterContainer.querySelector(
-			".cha-tit h1, .cha-tit h3"
+			".cha-tit h1, .cha-tit h3",
 		);
 		const title = titleElement
 			? titleElement.textContent.trim()
@@ -694,12 +678,12 @@ When enhancing, improve readability and grammar while respecting the author's or
 		debugLog(
 			"WebNovel: HTML content length:",
 			htmlContent.length,
-			"characters"
+			"characters",
 		);
 		debugLog(
 			"WebNovel: Text content length:",
 			textContent.length,
-			"characters"
+			"characters",
 		);
 
 		return {
@@ -761,13 +745,13 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// If chapterId provided, find that specific chapter's insertion point
 		if (chapterId) {
 			const chapterContainer = document.querySelector(
-				`.cha-content[data-cid="${chapterId}"]`
+				`.cha-content[data-cid="${chapterId}"]`,
 			);
 			if (chapterContainer) {
 				const title = chapterContainer.querySelector(".cha-tit");
 				if (title) {
 					debugLog(
-						`WebNovel: Inserting after chapter ${chapterId} title`
+						`WebNovel: Inserting after chapter ${chapterId} title`,
 					);
 					return {
 						element: title,

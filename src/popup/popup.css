@@ -164,7 +164,7 @@ textarea::placeholder {
 
 /* Main Library Link */
 .main-library-link {
-	color: #667eea;
+	color: var(--accent-primary);
 	text-decoration: none;
 	font-weight: 600;
 	transition: all 0.2s ease;
@@ -173,7 +173,7 @@ textarea::placeholder {
 
 .main-library-link:hover {
 	transform: translateY(-2px);
-	color: #764ba2;
+	color: var(--text-primary);
 	text-decoration: underline;
 }
 
@@ -277,16 +277,130 @@ textarea::placeholder {
 	height: 16px;
 	padding: 0 4px;
 	border-radius: 999px;
-	background: #ef4444;
-	color: #fff;
+	background: var(--error-color);
+	color: white;
 	font-size: 9px;
 	font-weight: 700;
 	margin-left: 4px;
 	vertical-align: middle;
-	box-shadow: 0 1px 3px rgba(239, 68, 68, 0.4);
+	box-shadow: 0 1px 3px rgba(219, 68, 68, 0.4);
 }
 
 /* ===== Novels Tab Redesign ===== */
+
+/* Novels list container */
+#novelsList {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* Novel card style (list view) */
+.novel-card {
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	padding: 10px;
+	transition: all 0.2s ease;
+	display: flex;
+	gap: 10px;
+	cursor: pointer;
+}
+
+.novel-card:hover {
+	border-color: var(--accent-primary);
+	background: var(--hover-bg);
+}
+
+.novel-card-cover {
+	width: 50px;
+	height: 65px;
+	flex-shrink: 0;
+	background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24px;
+	overflow: hidden;
+}
+
+.novel-card-cover img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.novel-card-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.novel-card-title {
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--text-primary);
+	margin-bottom: 4px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	word-break: break-word;
+}
+
+.novel-card-meta {
+	display: flex;
+	gap: 6px;
+	font-size: 10px;
+	color: var(--text-secondary);
+	margin-bottom: 4px;
+	flex-wrap: wrap;
+}
+
+.novel-card-progress {
+	width: 100%;
+	height: 4px;
+	background: var(--bg-tertiary);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.novel-card-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+	transition: width 0.3s ease;
+}
+
+/* Grid view styles */
+#novelsList.grid-view {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 8px;
+}
+
+#novelsList.grid-view .novel-card {
+	flex-direction: column;
+}
+
+#novelsList.grid-view .novel-card-cover {
+	width: 100%;
+	height: 80px;
+}
+
+/* View toggle buttons */
+#toggleListView,
+#toggleGridView {
+	transition: all 0.2s ease;
+}
+
+#toggleListView:hover,
+#toggleGridView:hover {
+	opacity: 0.8;
+}
 
 /* Chip base style (used for status/chapter badges in novel cards) */
 .chip {
@@ -359,86 +473,6 @@ textarea::placeholder {
 	border-color: var(--accent-primary);
 }
 
-.current-novel-card {
-	background: var(--setting-bg);
-	border: 1px solid var(--border-color);
-	border-radius: 10px;
-	padding: 12px;
-	transition: border-color 0.2s;
-}
-
-.no-current-novel {
-	text-align: center;
-	padding: 16px 12px;
-	color: var(--text-secondary);
-	font-size: 13px;
-}
-
-.no-current-novel .description {
-	font-size: 11px;
-	margin-top: 4px;
-	opacity: 0.7;
-}
-
-.suggested-novels-grid {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 8px;
-}
-
-.no-suggestions {
-	grid-column: 1 / -1;
-	text-align: center;
-	padding: 20px;
-	color: var(--text-secondary);
-	font-size: 12px;
-}
-
-/* Open library link */
-.open-library-link {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 12px 14px;
-	margin-top: 12px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	border-radius: 10px;
-	text-decoration: none;
-	color: #fff;
-	transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.open-library-link:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.open-library-icon {
-	font-size: 22px;
-	flex-shrink: 0;
-}
-
-.open-library-text {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-}
-
-.open-library-text strong {
-	font-size: 13px;
-}
-
-.open-library-text span {
-	font-size: 10px;
-	opacity: 0.85;
-}
-
-.open-library-arrow {
-	font-size: 18px;
-	opacity: 0.8;
-}
-
 /* ===== Notifications Tab ===== */
 .notifications-tab-header {
 	display: flex;
@@ -463,7 +497,7 @@ textarea::placeholder {
 
 .notif-unread-count {
 	font-weight: 700;
-	color: #ef4444;
+	color: var(--error-color);
 }
 
 .notifications-tab-actions {
@@ -491,8 +525,8 @@ textarea::placeholder {
 
 .notif-action-danger:hover {
 	background: rgba(219, 68, 55, 0.15);
-	border-color: #db4437;
-	color: #db4437;
+	border-color: var(--error-color);
+	color: var(--error-color);
 }
 
 .notifications-filter-bar {
@@ -526,7 +560,7 @@ textarea::placeholder {
 
 .notification-filter-btn.active {
 	background: var(--accent-primary);
-	color: #fff;
+	color: white;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -625,6 +659,135 @@ button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 	transform: none;
+}
+
+/* Config Section Styles */
+.config-section {
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	margin-bottom: 12px;
+	overflow: hidden;
+	transition: all 0.2s ease;
+}
+
+.config-section[open] {
+	border-color: var(--accent-primary);
+}
+
+.config-section-title {
+	margin: 0;
+	padding: 12px 15px;
+	font-size: 13px;
+	font-weight: 600;
+	background: var(--input-bg);
+	border-bottom: 1px solid var(--border-color);
+	color: var(--text-primary);
+	cursor: pointer;
+	user-select: none;
+}
+
+.config-section-content {
+	padding: 12px 15px;
+}
+
+.config-item {
+	margin-bottom: 12px;
+}
+
+.config-item:last-child {
+	margin-bottom: 0;
+}
+
+.config-item label {
+	display: block;
+	font-weight: 500;
+	font-size: 12px;
+	margin-bottom: 6px;
+	color: var(--text-primary);
+}
+
+.config-item input[type="text"],
+.config-item input[type="password"],
+.config-item input[type="number"],
+.config-item select {
+	width: 100%;
+	padding: 6px 10px;
+	border: 1px solid var(--input-border);
+	border-radius: 4px;
+	font-size: 12px;
+	background: var(--input-bg);
+	color: var(--text-primary);
+	transition: all 0.2s ease;
+}
+
+.config-item input:focus,
+.config-item select:focus {
+	outline: none;
+	border-color: var(--accent-primary);
+	box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.config-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 8px;
+	flex-wrap: wrap;
+}
+
+.config-actions button {
+	padding: 6px 10px;
+	font-size: 11px;
+	flex: 1;
+	min-width: 70px;
+}
+
+.config-link {
+	color: var(--accent-primary);
+	text-decoration: none;
+	font-size: 11px;
+	align-self: center;
+	transition: color 0.2s ease;
+}
+
+.config-link:hover {
+	color: var(--text-primary);
+	text-decoration: underline;
+}
+
+.description {
+	font-size: 11px;
+	color: var(--text-secondary);
+	line-height: 1.4;
+	margin-top: 4px;
+}
+
+/* Novel Filter & View Buttons */
+.novel-filter-btn,
+.novel-view-btn {
+	padding: 6px 10px;
+	background: var(--setting-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	font-size: 11px;
+	color: var(--text-primary);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.novel-filter-btn:hover,
+.novel-view-btn:hover {
+	border-color: var(--accent-primary);
+	background: var(--hover-bg);
+}
+
+.novel-filter-btn.active,
+.novel-view-btn.active {
+	background: var(--accent-primary);
+	color: white;
+	border-color: var(--accent-primary);
+	font-weight: 500;
 }
 
 .icon-button {
@@ -825,7 +988,7 @@ button:disabled {
 
 .slider-value {
 	font-weight: 700;
-	color: #ffffff;
+	color: white;
 	font-size: 13px;
 	background: linear-gradient(
 		135deg,
@@ -1236,9 +1399,9 @@ button:disabled {
 .novel-continue-btn {
 	font-size: 11px;
 	padding: 5px 10px;
-	background: rgba(34, 197, 94, 0.15);
-	color: #22c55e;
-	border: 1px solid rgba(34, 197, 94, 0.3);
+	background: rgba(52, 168, 83, 0.15);
+	color: var(--success-color);
+	border: 1px solid rgba(52, 168, 83, 0.3);
 	border-radius: 4px;
 	text-decoration: none;
 	cursor: pointer;
@@ -1301,7 +1464,7 @@ button:disabled {
 
 .novel-source-link {
 	font-size: 11px;
-	color: #8ab4f8;
+	color: var(--accent-primary);
 	text-decoration: none;
 }
 
@@ -1395,7 +1558,7 @@ button:disabled {
 	align-items: center;
 	justify-content: center;
 	font-size: 28px;
-	color: #fff;
+	color: white;
 	opacity: 0.85;
 }
 
@@ -1558,7 +1721,7 @@ button:disabled {
 }
 
 .novel-engagement {
-	color: #667eea;
+	color: var(--accent-primary);
 	font-weight: 500;
 	margin-bottom: 6px;
 }

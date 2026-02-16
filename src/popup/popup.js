@@ -149,10 +149,6 @@ async function initializePopup() {
 		"resetPermanentPrompt",
 	);
 	const debugModeCheckbox = document.getElementById("debugMode");
-	const modelEndpointDisplay = document.getElementById(
-		"modelEndpointDisplay",
-	);
-	const copyModelEndpoint = document.getElementById("copyModelEndpoint");
 
 	// Expose the debug toggle globally so shared debugLog can read it synchronously in the popup.
 	try {
@@ -365,6 +361,7 @@ async function initializePopup() {
 		"driveAutoRestoreEnabled",
 	);
 	const driveSyncNowBtn = document.getElementById("driveSyncNowBtn");
+	const driveOAuthDetails = document.getElementById("driveOAuthDetails");
 
 	// Declare variables for elements still used but previously undeclared (strict mode requires declaration)
 	let currentSiteShelfId = null;
@@ -412,35 +409,8 @@ async function initializePopup() {
 				themeModeSelect.value = theme.mode || "dark";
 			}
 
-			// Set color pickers and text inputs
-			if (accentColorPicker && accentColorText) {
-				accentColorPicker.value =
-					theme.accentPrimary || defaultTheme.accentPrimary;
-				accentColorText.value =
-					theme.accentPrimary || defaultTheme.accentPrimary;
-			}
-
-			if (accentSecondaryPicker && accentSecondaryText) {
-				accentSecondaryPicker.value =
-					theme.accentSecondary || defaultTheme.accentSecondary;
-				accentSecondaryText.value =
-					theme.accentSecondary || defaultTheme.accentSecondary;
-			}
-
-			if (backgroundColorPicker && backgroundColorText) {
-				backgroundColorPicker.value =
-					theme.bgColor || defaultTheme.bgColor;
-				backgroundColorText.value =
-					theme.bgColor || defaultTheme.bgColor;
-			}
-
-			if (textColorPicker && textColorText) {
-				textColorPicker.value =
-					theme.textColor || defaultTheme.textColor;
-				textColorText.value = theme.textColor || defaultTheme.textColor;
-			}
-
-			// Apply theme to UI
+			// Color pickers are in library settings, not popup
+			// Just apply the theme to UI
 			applyTheme(theme);
 		} catch (error) {
 			debugError("Error loading theme:", error);
@@ -488,18 +458,15 @@ async function initializePopup() {
 		try {
 			const theme = {
 				mode: themeModeSelect?.value || "dark",
-				accentPrimary:
-					accentColorPicker?.value || defaultTheme.accentPrimary,
-				accentSecondary:
-					accentSecondaryPicker?.value ||
-					defaultTheme.accentSecondary,
-				bgColor: backgroundColorPicker?.value || defaultTheme.bgColor,
-				textColor: textColorPicker?.value || defaultTheme.textColor,
+				accentPrimary: defaultTheme.accentPrimary,
+				accentSecondary: defaultTheme.accentSecondary,
+				bgColor: defaultTheme.bgColor,
+				textColor: defaultTheme.textColor,
 			};
 
 			await browser.storage.local.set({ themeSettings: theme });
 			applyTheme(theme);
-			showStatus("Theme saved successfully!", "success");
+			showStatus("Theme mode saved successfully!", "success");
 		} catch (error) {
 			debugError("Error saving theme:", error);
 			showStatus("Failed to save theme", "error");
@@ -512,20 +479,7 @@ async function initializePopup() {
 
 			// Reset UI controls
 			if (themeModeSelect) themeModeSelect.value = defaultTheme.mode;
-			if (accentColorPicker)
-				accentColorPicker.value = defaultTheme.accentPrimary;
-			if (accentColorText)
-				accentColorText.value = defaultTheme.accentPrimary;
-			if (accentSecondaryPicker)
-				accentSecondaryPicker.value = defaultTheme.accentSecondary;
-			if (accentSecondaryText)
-				accentSecondaryText.value = defaultTheme.accentSecondary;
-			if (backgroundColorPicker)
-				backgroundColorPicker.value = defaultTheme.bgColor;
-			if (backgroundColorText)
-				backgroundColorText.value = defaultTheme.bgColor;
-			if (textColorPicker) textColorPicker.value = defaultTheme.textColor;
-			if (textColorText) textColorText.value = defaultTheme.textColor;
+			// Color pickers are in library settings, not popup
 
 			applyTheme(defaultTheme);
 			showStatus("Theme reset to default", "success");
@@ -826,8 +780,9 @@ async function initializePopup() {
 			keyItem.className = "backup-key-item";
 			const keyPreview =
 				key.substring(0, 8) + "..." + key.substring(key.length - 4);
+			const label = index === 0 ? "Backup 1" : `Backup ${index + 1}`;
 			keyItem.innerHTML = `
-				<span class="key-label">Key ${index + 1}</span>
+				<span class="key-label">${label}</span>
 				<span class="key-preview">${keyPreview}</span>
 				<button class="remove-key-btn" data-index="${index}">✕</button>
 			`;
@@ -1266,8 +1221,7 @@ async function initializePopup() {
 			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
 		}
 
-		// Update model endpoint display
-		await updateModelEndpointDisplay();
+		// Model endpoint display removed from popup
 	} catch (error) {
 		debugError("Error loading settings:", error);
 		// If settings fail to load, at least set the default prompt
@@ -1698,42 +1652,13 @@ async function initializePopup() {
 			setTimeout(() => modelSelect.click(), 100);
 		}
 	});
-
-	// Update model endpoint display when model selection changes
-	modelSelect.addEventListener("change", updateModelEndpointDisplay);
+	// Model endpoint display removed: too advanced for popup
+	// Users can view/copy endpoint in Library Settings if needed
 
 	// Helper function to update model endpoint display
 	async function updateModelEndpointDisplay() {
-		if (!modelEndpointDisplay) return;
-
-		const selectedModelId = modelSelect.value;
-		if (!selectedModelId) {
-			modelEndpointDisplay.value = "";
-			return;
-		}
-
-		// Construct endpoint URL
-		const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
-		modelEndpointDisplay.value = endpoint;
-	}
-
-	// Copy model endpoint to clipboard
-	if (copyModelEndpoint) {
-		copyModelEndpoint.addEventListener("click", async () => {
-			const endpoint = modelEndpointDisplay.value;
-			if (!endpoint) {
-				showStatus("No endpoint to copy", "error");
-				return;
-			}
-
-			try {
-				await navigator.clipboard.writeText(endpoint);
-				showStatus("Endpoint copied to clipboard!", "success");
-			} catch (error) {
-				debugError("Failed to copy endpoint:", error);
-				showStatus("Failed to copy endpoint", "error");
-			}
-		});
+		// Removed: model endpoint display not needed in popup (too advanced)
+		// Users can see this in Library Settings if needed
 	}
 
 	// Helper function to show status messages
@@ -3809,11 +3734,7 @@ async function initializePopup() {
 
 	async function loadNovelsTab() {
 		try {
-			if (
-				!novelsListContainer ||
-				!suggestedNovelsList ||
-				!currentNovelInfo
-			) {
+			if (!novelsListContainer || !currentNovelInfo) {
 				debugLog(
 					"Novels tab elements missing; skipping novels tab render.",
 				);
@@ -3836,45 +3757,164 @@ async function initializePopup() {
 			}
 
 			const library = await novelLibrary.getLibrary();
-			const novelArray = Object.values(library.novels || {});
+			const novelArray = Object.values(library.novels || {}).slice(0, 50); // Limit to 50 most recent
 
-			// Get current novel info if on a supported site
-			const currentNovel = await updateCurrentNovelInfo(novelArray);
+			// Update current novel info and display progress
+			await updateCurrentNovelInfo(novelArray);
 
-			// Detect if current page is supported
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			const currentUrl = tabs[0]?.url || "";
-			const currentShelf = getShelfFromUrl(currentUrl);
-			const isSupported = Boolean(currentShelf);
+			// Render novels list in new card format
+			renderNovelsCardList(novelArray);
 
-			// Suggested novels: same website or recent fallback
-			if (currentNovel?.shelfId) {
-				await showSuggestedNovelsFromShelf(
-					currentNovel.shelfId,
-					novelArray,
-					currentNovel.id,
-				);
-			} else {
-				await showTopRecentNovels(novelArray);
+			// Update novel count badge
+			const countBadge = document.getElementById("novelCountBadge");
+			if (countBadge) {
+				countBadge.textContent = novelArray.length;
 			}
-
-			// Library list: collapsed by default on supported sites
-			const collapsed = isSupported;
-			const limitPerShelf = collapsed ? 1 : 0;
-			await displayNovelsByWebsite(novelArray, {
-				collapsed,
-				limitPerShelf,
-			});
 		} catch (error) {
 			debugError("Error loading novels tab:", error);
 			if (novelsListContainer) {
 				novelsListContainer.innerHTML =
-					'<div class="no-novels">Error loading novels. Try refreshing.</div>';
+					'<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px;">Error loading novels. Try refreshing.</div>';
 			}
 		}
+	}
+
+	function renderNovelsCardList(novels) {
+		if (!novelsList) return;
+
+		const filterBtn = document.querySelector(".novel-filter-btn.active");
+		const activeFilter = filterBtn
+			? filterBtn.getAttribute("data-filter")
+			: "all";
+
+		novelsList.innerHTML = "";
+
+		if (!novels || novels.length === 0) {
+			novelsList.innerHTML =
+				'<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">📚 No novels in library<br><span style="font-size: 10px">Open full library to add novels</span></div>';
+			return;
+		}
+
+		// Filter novels by status
+		let filtered = novels;
+		if (activeFilter !== "all") {
+			filtered = novels.filter((n) => {
+				const status = n.readingStatus || "reading";
+				if (activeFilter === "reading") return status === "reading";
+				if (activeFilter === "completed") return status === "completed";
+				if (activeFilter === "up-to-date")
+					return status === "up-to-date";
+				if (activeFilter === "on-hold") return status === "on-hold";
+				return true;
+			});
+		}
+
+		if (filtered.length === 0) {
+			novelsList.innerHTML = `
+				<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
+					No novels with status: ${activeFilter}
+				</div>
+			`;
+			return;
+		}
+
+		filtered.forEach((novel) => {
+			const readingStatus = novel.readingStatus || "reading";
+			const totalChapters = novel.totalChapters || 0;
+			const lastReadChapter =
+				novel.lastReadChapter || novel.currentChapter || 0;
+			const progress =
+				totalChapters > 0 ? lastReadChapter / totalChapters : 0;
+
+			const statusMap = {
+				reading: "📖",
+				completed: "✅",
+				"on-hold": "⏸️",
+				"plan-to-read": "📋",
+				dropped: "❌",
+				"up-to-date": "✨",
+				"re-reading": "🔁",
+			};
+
+			const statusEmoji = statusMap[readingStatus] || "📖";
+
+			const card = document.createElement("div");
+			card.className = "novel-card";
+			card.style.cursor = "pointer";
+			card.style.cssText = `
+				background: var(--setting-bg);
+				border: 1px solid var(--border-color);
+				border-radius: 6px;
+				padding: 10px;
+				transition: all 0.2s ease;
+				display: flex;
+				gap: 10px;
+				align-items: flex-start;
+			`;
+
+			const cover = document.createElement("div");
+			cover.style.cssText =
+				"font-size: 24px; flex-shrink: 0; width: 40px; text-align: center";
+			cover.textContent = "📕";
+
+			const info = document.createElement("div");
+			info.style.cssText = "flex: 1; min-width: 0";
+
+			const titleEl = document.createElement("div");
+			titleEl.style.cssText =
+				"font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px";
+			titleEl.textContent = novel.title || "Unknown Novel";
+
+			const metaEl = document.createElement("div");
+			metaEl.style.cssText =
+				"font-size: 10px; color: var(--text-secondary); margin-bottom: 6px";
+			metaEl.innerHTML = `<span>${statusEmoji} ${escapeHtml(readingStatus)}</span> • <span>${escapeHtml(novel.website || "Unknown")}</span>`;
+
+			const progressContainer = document.createElement("div");
+			progressContainer.style.cssText =
+				"background: var(--bg-secondary); border-radius: 3px; height: 4px; overflow: hidden; margin-bottom: 2px";
+			const progressBar = document.createElement("div");
+			progressBar.style.cssText = `
+				background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+				height: 100%;
+				width: ${Math.min(progress * 100, 100)}%;
+				transition: width 0.3s ease;
+			`;
+			progressContainer.appendChild(progressBar);
+
+			const progressText = document.createElement("div");
+			progressText.style.cssText =
+				"font-size: 9px; color: var(--text-secondary)";
+			progressText.textContent = `${lastReadChapter}/${totalChapters} chapters`;
+
+			info.appendChild(titleEl);
+			info.appendChild(metaEl);
+			info.appendChild(progressContainer);
+			info.appendChild(progressText);
+
+			card.appendChild(cover);
+			card.appendChild(info);
+
+			card.addEventListener("click", () => {
+				// Open library page with novel modal
+				const libraryUrl = browser.runtime.getURL(
+					`library/library.html?novelId=${encodeURIComponent(novel.id)}`,
+				);
+				browser.tabs.create({ url: libraryUrl });
+			});
+
+			card.addEventListener("mouseenter", () => {
+				card.style.borderColor = "var(--accent-primary)";
+				card.style.background = "var(--hover-bg)";
+			});
+
+			card.addEventListener("mouseleave", () => {
+				card.style.borderColor = "var(--border-color)";
+				card.style.background = "var(--setting-bg)";
+			});
+
+			novelsList.appendChild(card);
+		});
 	}
 
 	/**
@@ -4068,69 +4108,48 @@ async function initializePopup() {
 
 	function renderCurrentNovelDetails(novel) {
 		const title = novel.title || novel.bookTitle || "Unknown";
-		const author = novel.author || "Unknown";
-		const readingStatus = novel.readingStatus || "Unknown";
-		const lastAccessed = novel.lastAccessedAt
-			? new Date(novel.lastAccessedAt).toLocaleDateString()
-			: "Unknown";
-		const totalChapters = novel.totalChapters || novel.chapterCount || "?";
+		const site = novel.website || "Unknown Site";
+		const readingStatus = novel.readingStatus || "reading";
+		const totalChapters = novel.totalChapters || novel.chapterCount || 0;
 		const lastReadChapter =
-			novel.lastReadChapter || novel.currentChapter || null;
+			novel.lastReadChapter || novel.currentChapter || 0;
+		const progress =
+			totalChapters > 0 ? lastReadChapter / totalChapters : 0;
 
-		// Compact chips for mobile - show only most important 3
-		const chips = [];
-		if (readingStatus)
-			chips.push(
-				`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
-			);
-		if (lastReadChapter)
-			chips.push(
-				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}/${escapeHtml(String(totalChapters))}</span>`,
-			);
-		else if (totalChapters)
-			chips.push(
-				`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
-			);
+		// Map status to emoji and label
+		const statusMap = {
+			reading: "📖 Reading",
+			completed: "✅ Completed",
+			"on-hold": "⏸️ On Hold",
+			"plan-to-read": "📋 Plan to Read",
+			dropped: "❌ Dropped",
+			"up-to-date": "✨ Up-to-Date",
+			"re-reading": "🔁 Re-reading",
+		};
 
-		// Truncate description for mobile (2 lines max)
-		let description = novel.description || "";
-		if (description.length > 120) {
-			description = description.substring(0, 120) + "...";
-		}
+		const statusLabel = statusMap[readingStatus] || statusMap.reading;
 
+		// Display card
 		currentNovelInfo.innerHTML = `
 		<div class="current-novel-card">
-			<div class="current-novel-cover">
-				${
-					novel.coverUrl
-						? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
-						: `<div class="current-novel-cover-placeholder">📚</div>`
-				}
-			</div>
-			<div class="current-novel-info">
-				<div class="current-novel-title">${escapeHtml(title)}</div>
-				<div class="current-novel-author">by ${escapeHtml(author)}</div>
-				<div class="current-novel-chips">${chips.join(" ")}</div>
-				${
-					description
-						? `<div class="current-novel-description">${escapeHtml(description)}</div>`
-						: ""
-				}
-				<button class="btn-small btn-primary current-novel-library-link" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
-					📚 View Full Details
-				</button>
+			<div style="display: flex; gap: 10px">
+				<div style="font-size: 28px; flex-shrink: 0">📕</div>
+				<div style="flex: 1; min-width: 0">
+					<div style="font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px">${escapeHtml(title)}</div>
+					<div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px">${escapeHtml(site)}</div>
+					<div>
+						<div style="font-size: 9px; color: var(--text-secondary); margin-bottom: 2px">${statusLabel}</div>
+						<div style="background: var(--bg-secondary); border-radius: 3px; height: 5px; overflow: hidden">
+							<div id="current-novel-progress" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: ${Math.min(progress * 100, 100)}%; transition: width 0.3s ease"></div>
+						</div>
+						<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px" id="current-novel-progress-text">
+							${lastReadChapter}/${totalChapters} chapters
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	`;
-
-		const link = currentNovelInfo.querySelector(
-			".current-novel-library-link",
-		);
-		if (link) {
-			link.addEventListener("click", async () => {
-				await openNovelInLibrary(novel.id, novel.shelfId);
-			});
-		}
 	}
 
 	async function showSuggestedNovelsFromShelf(
@@ -4354,6 +4373,13 @@ async function initializePopup() {
 				driveConnected.style.display = "block";
 				driveStatusSpan.textContent = "🟢 Connected";
 				driveStatusSpan.style.color = "#4CAF50";
+				if (connectDriveBtn) {
+					connectDriveBtn.textContent = "🔄 Reconnect Drive";
+					connectDriveBtn.disabled = false;
+				}
+				if (disconnectDriveBtn) {
+					disconnectDriveBtn.disabled = false;
+				}
 				if (driveAuthError) {
 					driveAuthError.style.display = "none";
 					driveAuthError.textContent = "";
@@ -4408,6 +4434,13 @@ async function initializePopup() {
 			} else {
 				driveNotConnected.style.display = "block";
 				driveConnected.style.display = "none";
+				if (connectDriveBtn) {
+					connectDriveBtn.textContent = "🔗 Connect Drive";
+					connectDriveBtn.disabled = false;
+				}
+				if (disconnectDriveBtn) {
+					disconnectDriveBtn.disabled = true;
+				}
 				const authError = tokens.driveAuthError?.message;
 				if (authError) {
 					driveStatusSpan.textContent = "🔴 Auth failed";
@@ -5226,6 +5259,41 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		openMainLibrary.addEventListener("click", () => {
 			browser.tabs.create({
 				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	// Handle Novel Tab View Toggle (List/Grid)
+	const novelViewBtns = document.querySelectorAll(".novel-view-btn");
+	const novelsList = document.getElementById("novelsList");
+
+	if (novelViewBtns.length > 0 && novelsList) {
+		novelViewBtns.forEach((btn) => {
+			btn.addEventListener("click", () => {
+				const view = btn.getAttribute("data-view");
+				novelViewBtns.forEach((b) => b.classList.remove("active"));
+				btn.classList.add("active");
+
+				if (view === "grid") {
+					novelsList.style.gridTemplateColumns = "repeat(3, 1fr)";
+				} else {
+					novelsList.style.gridTemplateColumns = "1fr";
+				}
+			});
+		});
+	}
+
+	// Handle Novel Tab Filter
+	const novelFilterBtns = document.querySelectorAll(".novel-filter-btn");
+	if (novelFilterBtns.length > 0) {
+		novelFilterBtns.forEach((btn) => {
+			btn.addEventListener("click", () => {
+				const filter = btn.getAttribute("data-filter");
+				novelFilterBtns.forEach((b) => b.classList.remove("active"));
+				btn.classList.add("active");
+
+				// Trigger filter logic (will be implemented in renderNovelsCardList)
+				// For now, just toggle active state
 			});
 		});
 	}
@@ -6362,7 +6430,17 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				}
 				await loadNotifications();
 				await updateNotificationBadge();
-				showStatus("All notifications cleared", "info");
+				// Show only status message (no notification)
+				const statusDiv = document.getElementById("status");
+				if (statusDiv) {
+					statusDiv.className = "status success";
+					statusDiv.textContent = "✓ All notifications cleared";
+					statusDiv.style.display = "block";
+					setTimeout(() => {
+						statusDiv.style.display = "none";
+						statusDiv.textContent = "";
+					}, 3000);
+				}
 			}
 		});
 	}

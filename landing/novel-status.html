@@ -25,85 +25,7 @@
 			rel="stylesheet"
 		/>
 		<link rel="stylesheet" href="./styles.css" />
-		<style>
-			.status-card {
-				background: linear-gradient(
-					135deg,
-					rgba(75, 85, 99, 0.1),
-					rgba(102, 126, 234, 0.05)
-				);
-				border: 1px solid rgba(102, 126, 234, 0.3);
-				border-radius: 10px;
-				padding: 20px;
-				margin: 15px 0;
-				transition: all 0.3s ease;
-			}
-			.status-card:hover {
-				border-color: rgba(102, 126, 234, 0.6);
-				background: linear-gradient(
-					135deg,
-					rgba(75, 85, 99, 0.15),
-					rgba(102, 126, 234, 0.1)
-				);
-			}
-			.status-label {
-				display: inline-block;
-				padding: 6px 12px;
-				border-radius: 20px;
-				font-weight: 600;
-				font-size: 14px;
-				margin-bottom: 10px;
-			}
-			.reading {
-				background: rgba(76, 175, 80, 0.2);
-				color: #4caf50;
-			}
-			.up-to-date {
-				background: rgba(0, 188, 212, 0.2);
-				color: #00bcd4;
-			}
-			.completed {
-				background: rgba(33, 150, 243, 0.2);
-				color: #2196f3;
-			}
-			.plan {
-				background: rgba(255, 152, 0, 0.2);
-				color: #ff9800;
-			}
-			.on-hold {
-				background: rgba(158, 158, 158, 0.2);
-				color: #9e9e9e;
-			}
-			.dropped {
-				background: rgba(244, 67, 54, 0.2);
-				color: #f44336;
-			}
-			.flow-diagram {
-				background: rgba(102, 126, 234, 0.05);
-				border: 1px solid rgba(102, 126, 234, 0.3);
-				border-radius: 10px;
-				padding: 20px;
-				margin: 20px 0;
-				font-family: monospace;
-				font-size: 13px;
-				line-height: 1.8;
-				color: #e5e7eb;
-				overflow-x: auto;
-			}
-			.highlight {
-				background: rgba(255, 235, 59, 0.2);
-				padding: 2px 6px;
-				border-radius: 3px;
-				color: #ffeb3b;
-			}
-			.example-box {
-				background: rgba(76, 175, 80, 0.1);
-				border-left: 3px solid #4caf50;
-				padding: 15px;
-				margin: 15px 0;
-				border-radius: 5px;
-			}
-		</style>
+		<link rel="stylesheet" href="./styles-status.css" />
 	</head>
 	<body>
 		<div class="bg-glow"></div>
@@ -247,23 +169,45 @@
 				</div>
 
 				<div class="status-card">
-					<div
-						class="status-label"
-						style="
-							background: rgba(156, 39, 176, 0.2);
-							color: #9c27b0;
-						"
-					>
-						🔁 Re-reading
-					</div>
-					<h3>Re-reading</h3>
-					<p>
-						You're reading through a novel you've already completed.
-					</p>
-					<p>
-						<strong>Manual status:</strong> Perfect for novels you
-						want to revisit.
-					</p>
+				<div class="status-label rereading">
+					🔁 Re-reading
+				</div>
+				<h3>Re-reading</h3>
+				<p>
+					You're reading through a novel you've already completed.
+				</p>
+				<p>
+					<strong>Manual status:</strong> Perfect for novels you
+					want to revisit.
+				</p>
+			</div>
+
+			<div class="section-head" style="margin-top: 40px;">
+				<p class="eyebrow">Feature highlight</p>
+				<h2>🔁 Rereading Overlay</h2>
+				<p class="lede">
+					Visual indicator when revisiting chapters you've already read.
+				</p>
+			</div>
+
+			<div class="overlay-demo">
+				<p style="margin: 0 0 12px 0;">
+					When you set a novel's status to <span class="status-label rereading"
+						style="display: inline-block; padding: 4px 10px; font-size: 12px; margin: 0 4px;">🔁 Re-reading</span>,
+					the extension displays a subtle overlay on chapters you've already read.
+				</p>
+				<p style="margin: 0 0 12px 0;">
+					<strong>How it works:</strong>
+				</p>
+				<ul style="margin: 0 0 12px 0; padding-left: 20px;">
+					<li>Overlay appears automatically on revisited chapters</li>
+					<li>Shows rereading badge and status message</li>
+					<li>Doesn't interfere with reading experience</li>
+					<li>Helps you track which chapters you're revisiting</li>
+				</ul>
+				<p style="margin: 0;">
+					<strong>Perfect for:</strong> Series re-reads, catching details you missed,
+					refreshing your memory before new releases.
 				</div>
 			</section>
 

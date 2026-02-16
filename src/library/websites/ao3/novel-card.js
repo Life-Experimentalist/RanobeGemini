@@ -5,7 +5,7 @@
  */
 
 import { NovelCardRenderer, registerCardRenderer } from "../novel-card-base.js";
-import { debugLog, debugError } from "../../../utils/logger.js";
+import { debugError } from "../../../utils/logger.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,

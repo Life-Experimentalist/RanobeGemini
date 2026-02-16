@@ -353,7 +353,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				)}" alt="${this.escapeHtml(
 					novel.title,
 				)}" data-fallback="${fallbackCover}" loading="lazy">`
-			: `<div class="novel-cover-placeholder">📚</div>`;
+			: "<div class=\"novel-cover-placeholder\">📚</div>";
 
 		const readingKeyRaw =
 			novel.readingStatus ||

@@ -374,7 +374,7 @@ function renderPillList(
 	if (!container) return;
 
 	if (!items || items.length === 0) {
-		container.innerHTML = `<span class="filter-chip">No options</span>`;
+		container.innerHTML = "<span class=\"filter-chip\">No options</span>";
 		return;
 	}
 
@@ -781,7 +781,7 @@ function renderBasicModalMetadata(novel) {
 					.join("")}
 			</div>`;
 		}
-		html += `</div>`;
+		html += "</div>";
 	}
 
 	// Categories
@@ -901,7 +901,7 @@ function renderBasicModalMetadata(novel) {
 			html += `<div class="stat-badge"><span class="stat-label">Comments</span><span class="stat-value">${formatNumber(
 				stats.comments
 			)}</span></div>`;
-		html += `</div></div>`;
+		html += "</div></div>";
 	}
 
 	container.innerHTML = html;
@@ -1206,7 +1206,7 @@ function setupFandomNav(novels) {
 			</button>
 		`;
 	});
-	html += `</div></div>`;
+	html += "</div></div>";
 
 	renderTarget.innerHTML = html;
 

@@ -1,125 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Privacy Policy | Ranobe Gemini</title>
-		<meta
-			name="description"
-			content="Privacy policy for Ranobe Gemini. We keep processing local, with optional Google Drive backups to your own account."
-		/>
-		<link
-			rel="canonical"
-			href="https://ranobe.vkrishna04.me/privacy.html"
-		/>
+		<meta name="description"
+			content="Privacy policy for Ranobe Gemini. We keep processing local, with optional Google Drive backups to your own account." />
+		<link rel="canonical" href="https://ranobe.vkrishna04.me/privacy.html" />
+		<meta name="theme-color" content="#0b1628" />
+		<link rel="icon"
+			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			sizes="32x32" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet" />
 		<link rel="stylesheet" href="./styles.css" />
 	</head>
+
 	<body>
-		<div class="topbar">
+		<div class="bg-glow"></div>
+		<div class="bg-dots"></div>
+		<header class="topbar">
 			<div class="brand">
-				<div class="logo">RG</div>
+				<img class="logo-img"
+					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong>Ranobe Gemini</strong>
 					<span>Privacy Policy</span>
+					<span class="version-display"></span>
 				</div>
 			</div>
-		</div>
-		<main style="max-width: 900px; padding: 32px 24px 80px; margin: 0 auto">
-			<h1>Privacy Policy</h1>
-			<p>Last updated: December 6, 2025</p>
-
-			<h2>Data we do not collect</h2>
-			<p>
-				Ranobe Gemini does not collect, transmit, or sell your personal
-				data. There are no analytics, trackers, or ads in the extension
-				or this site.
-			</p>
-
-			<h2>Local processing</h2>
-			<p>
-				All enhancement and summarization happens locally in your
-				browser. Requests to Gemini or your selected model use the API
-				key you provide; keys are stored only in your browser storage.
-			</p>
-
-			<h2>Google Drive backups</h2>
-			<ul>
-				<li>
-					Backups are optional and use your own Google Drive account.
-				</li>
-				<li>
-					OAuth is performed via Google; tokens are stored in your
-					extension storage.
-				</li>
-				<li>
-					No backup data is sent to third-party servers owned by us.
-				</li>
-			</ul>
-
-			<h2>Permissions</h2>
-			<ul>
-				<li>
-					<strong>activeTab / tabs:</strong> to inject UI on supported
-					sites.
-				</li>
-				<li>
-					<strong>storage:</strong> to keep your settings, prompts,
-					and library.
-				</li>
-				<li>
-					<strong>identity:</strong> to complete Google OAuth when you
-					opt into Drive backups.
-				</li>
-				<li>
-					<strong>downloads:</strong> to export local backups when you
-					trigger them.
-				</li>
-			</ul>
-
-			<h2>Data retention</h2>
-			<p>
-				All extension data lives in your browser profile until you clear
-				it. Drive backups stay in your Drive until you delete them.
-			</p>
-
-			<h2>Your controls</h2>
-			<ul>
-				<li>
-					Clear tokens: use “Reset Drive Auth” in the popup to remove
-					OAuth tokens.
-				</li>
-				<li>
-					Remove data: clear extension storage via your browser or
-					uninstall the extension.
-				</li>
-			</ul>
-
-			<h2>Contact</h2>
-			<p>
-				For privacy questions, open an issue on the
-				<a
-					href="https://github.com/Life-Experimentalist/RanobeGemini"
-					target="_blank"
-					rel="noreferrer"
-					>GitHub repository</a
-				>.
-			</p>
-		</main>
-		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini</div>
-			<div class="footer-links">
+			<nav class="nav">
 				<a href="./index.html">Home</a>
 				<a href="./terms.html">Terms</a>
-				<a
-					href="https://github.com/Life-Experimentalist/RanobeGemini"
-					target="_blank"
-					rel="noreferrer"
-					>GitHub</a
-				>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero section">
+				<div class="hero-copy">
+					<p class="eyebrow">Legal</p>
+					<h1>Privacy Policy</h1>
+					<p class="lede">
+						Your data stays with you. Here's how we protect your privacy.
+					</p>
+					<p class="micro">Last updated: December 6, 2024</p>
+				</div>
+			</section>
+
+			<section class="section">
+				<div class="card-grid">
+					<div class="card">
+						<div class="card-header">
+							<h2>🚫 Data We Do Not Collect</h2>
+						</div>
+						<div class="card-body">
+							<p>
+								Ranobe Gemini does not collect, trans mit, or sell your personal
+								data. There are no analytics, trackers, or ads in the extension
+								or this site.
+							</p>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>💻 Local Processing</h2>
+						</div>
+						<div class="card-body">
+							<p>
+								All enhancement and summarization happens locally in your
+								browser. Requests to Gemini or your selected model use the API
+								key you provide; keys are stored only in your browser storage.
+							</p>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>☁️ Google Drive Backups</h2>
+						</div>
+						<div class="card-body">
+							<ul>
+								<li>
+									Backups are optional and use your own Google Drive account.
+								</li>
+								<li>
+									OAuth is performed via Google; tokens are stored in your
+									extension storage.
+								</li>
+								<li>
+									No backup data is sent to third-party servers owned by us.
+								</li>
+							</ul>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>🔐 Permissions</h2>
+						</div>
+						<div class="card-body">
+							<ul>
+								<li>
+									<strong>activeTab / tabs:</strong> to inject UI on supported
+									sites.
+								</li>
+								<li>
+									<strong>storage:</strong> to keep your settings, prompts,
+									and library.
+								</li>
+								<li>
+									<strong>identity:</strong> to complete Google OAuth when you
+									opt into Drive backups.
+								</li>
+								<li>
+									<strong>downloads:</strong> to export local backups when you
+									trigger them.
+								</li>
+							</ul>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>⏱️ Data Retention</h2>
+						</div>
+						<div class="card-body">
+							<p>
+								All extension data lives in your browser profile until you clear
+								it. Drive backups stay in your Drive until you delete them.
+							</p>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>⚙️ Your Controls</h2>
+						</div>
+						<div class="card-body">
+							<ul>
+								<li>
+									<strong>Clear tokens:</strong> use "Reset Drive Auth" in the popup to remove
+									OAuth tokens.
+								</li>
+								<li>
+									<strong>Remove data:</strong> clear extension storage via your browser or
+									uninstall the extension.
+								</li>
+							</ul>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-header">
+							<h2>📧 Contact</h2>
+						</div>
+						<div class="card-body">
+							<p>
+								For privacy questions, open an issue on the
+								<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+									rel="noreferrer">GitHub
+									repository</a>.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer">
+			<img class="footer-logo"
+				src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/logo-64.png"
+				alt="Ranobe Gemini" width="40" height="40" />
+			<div class="footer-links">
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Status Guide</a>
+				<a href="./terms.html">Terms</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
 			</div>
 			<p class="footnote">
 				Privacy-first by design. Your data stays with you.
 			</p>
 		</footer>
+		<script src="./script.js"></script>
 	</body>
+
 </html>

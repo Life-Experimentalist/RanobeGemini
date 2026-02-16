@@ -468,6 +468,21 @@ if (typeof browser === "undefined") {
 		force = false,
 		reason = "auto",
 	} = {}) {
+		// Check if OAuth credentials are configured before attempting sync
+		const oauthPrefs = await browser.storage.local.get([
+			"driveClientId",
+			"driveClientSecret",
+		]);
+
+		if (!oauthPrefs.driveClientId || !oauthPrefs.driveClientSecret) {
+			// OAuth not configured - skip silently (no error logging)
+			return {
+				success: false,
+				skipped: true,
+				reason: "oauth-not-configured",
+			};
+		}
+
 		const prefs = await browser.storage.local.get([
 			"driveAutoRestoreEnabled",
 			"driveAutoRestoreMergeMode",
@@ -1715,7 +1730,7 @@ if (typeof browser === "undefined") {
 							}
 						} catch (error) {
 							debugError(
-								`Error processing resumed chunk:`,
+								"Error processing resumed chunk:",
 								error,
 							);
 
@@ -2140,7 +2155,7 @@ if (typeof browser === "undefined") {
 				: effectiveChunkSizeWords;
 
 			debugLog(
-				`[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...`,
+				"[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...",
 			);
 			debugLog(
 				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured — matching content script" : "model-aware effective"})`,
@@ -2258,7 +2273,7 @@ if (typeof browser === "undefined") {
 					// Check cancellation in retry loop too
 					if (isCancellationRequested) {
 						debugLog(
-							`[processContentInChunks] Cancellation during retry`,
+							"[processContentInChunks] Cancellation during retry",
 						);
 						break;
 					}
@@ -2672,7 +2687,7 @@ if (typeof browser === "undefined") {
 			// Get model endpoint from settings - use the selected model endpoint or fall back to default
 			const modelEndpoint =
 				currentConfig.modelEndpoint ||
-				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 			debugLog(`Using model endpoint: ${modelEndpoint}`);
 
@@ -2709,7 +2724,8 @@ if (typeof browser === "undefined") {
 
 			// Add emoji instructions if enabled
 			if (shouldUseEmoji) {
-				promptPrefix += `\n\nAdditional instruction: Add appropriate emojis next to dialogues to enhance emotional expressions. Place the emoji immediately after the quotation marks that end the dialogue. For example: "I'm so happy!" 😊 she said. Or "This is terrible." 😠 he growled. Choose emojis that fit the emotion being expressed in the dialogue.`;
+				promptPrefix +=
+					'\n\nAdditional instruction: Add appropriate emojis next to dialogues to enhance emotional expressions. Place the emoji immediately after the quotation marks that end the dialogue. For example: "I\'m so happy!" 😊 she said. Or "This is terrible." 😠 he growled. Choose emojis that fit the emotion being expressed in the dialogue.';
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
@@ -2997,7 +3013,7 @@ if (typeof browser === "undefined") {
 
 			const modelEndpoint =
 				currentConfig.modelEndpoint ||
-				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 			// Use the appropriate summary prompt based on isShort flag
 			let summarizationBasePrompt;
@@ -3127,7 +3143,7 @@ if (typeof browser === "undefined") {
 
 			const modelEndpoint =
 				currentConfig.modelEndpoint ||
-				`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 			// Use the summary prompt from settings
 			const combinationBasePrompt =

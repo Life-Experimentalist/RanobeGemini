@@ -20,13 +20,6 @@
 			"error",
 			"always"
 		],
-		"quotes": [
-			"error",
-			"double",
-			{
-				"avoidEscape": true
-			}
-		],
 		"no-unused-vars": [
 			"warn",
 			{
@@ -41,5 +34,12 @@
 		],
 		"indent": "off",
 		"no-mixed-spaces-and-tabs": "off"
-	}
+	},
+	"ignorePatterns": [
+		"dist/",
+		"build/",
+		"src/manifest-chromium.json",
+		"src/manifest-firefox.json",
+		"src/lib/browser-polyfill.min.js"
+	]
 }

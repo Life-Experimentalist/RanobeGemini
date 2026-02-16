@@ -14,8 +14,7 @@ import { DEFAULT_CHUNK_SIZE_WORDS, MIN_CHUNK_WORDS } from "./chunk-config.js";
 export function countWords(text) {
 	if (!text || typeof text !== "string") return 0;
 	// Comprehensive emoji regex (covers most common emoji ranges)
-	const emojiRegex =
-		/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{231A}\u{231B}\u{23E9}-\u{23FA}]/gu;
+	const emojiRegex = /\p{Extended_Pictographic}/gu;
 	// Remove HTML tags and emojis for accurate word count
 	const plainText = text.replace(/<[^>]*>/g, " ").replace(emojiRegex, "");
 	return plainText

@@ -1,7 +1,5 @@
 // Debug panel for RanobeGemini extension
 
-import { debugLog, debugError } from "./logger.js";
-
 /**
  * Creates a debug panel element for displaying trace and debugging information
  *
@@ -226,7 +224,7 @@ export function createDebugPanel() {
 			// Show current tab content
 			const tabName = e.target.dataset.tab;
 			const activeContent = document.querySelector(
-				`.tab-content[data-tab="${tabName}"]`
+				`.tab-content[data-tab="${tabName}"]`,
 			);
 			if (activeContent) {
 				activeContent.style.display = "block";

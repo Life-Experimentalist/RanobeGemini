@@ -1,0 +1,135 @@
+/* Novel Status Page - Specific Styles */
+
+.status-card {
+	background: linear-gradient(
+		135deg,
+		rgba(75, 85, 99, 0.1),
+		rgba(102, 126, 234, 0.05)
+	);
+	border: 1px solid rgba(102, 126, 234, 0.3);
+	border-radius: 10px;
+	padding: 20px;
+	margin: 15px 0;
+	transition: all 0.3s ease;
+}
+
+.status-card:hover {
+	border-color: rgba(102, 126, 234, 0.6);
+	background: linear-gradient(
+		135deg,
+		rgba(75, 85, 99, 0.15),
+		rgba(102, 126, 234, 0.1)
+	);
+}
+
+.status-label {
+	display: inline-block;
+	padding: 6px 12px;
+	border-radius: 20px;
+	font-weight: 600;
+	font-size: 14px;
+	margin-bottom: 10px;
+}
+
+.reading {
+	background: rgba(76, 175, 80, 0.2);
+	color: #4caf50;
+}
+
+.up-to-date {
+	background: rgba(0, 188, 212, 0.2);
+	color: #00bcd4;
+}
+
+.completed {
+	background: rgba(33, 150, 243, 0.2);
+	color: #2196f3;
+}
+
+.plan {
+	background: rgba(255, 152, 0, 0.2);
+	color: #ff9800;
+}
+
+.on-hold {
+	background: rgba(158, 158, 158, 0.2);
+	color: #9e9e9e;
+}
+
+.dropped {
+	background: rgba(244, 67, 54, 0.2);
+	color: #f44336;
+}
+
+.rereading {
+	background: rgba(156, 39, 176, 0.2);
+	color: #9c27b0;
+}
+
+.flow-diagram {
+	background: rgba(102, 126, 234, 0.05);
+	border: 1px solid rgba(102, 126, 234, 0.3);
+	border-radius: 10px;
+	padding: 20px;
+	margin: 20px 0;
+	font-family: monospace;
+	font-size: 13px;
+	line-height: 1.8;
+	color: #e5e7eb;
+	overflow-x: auto;
+}
+
+.highlight {
+	background: rgba(255, 235, 59, 0.2);
+	padding: 2px 6px;
+	border-radius: 3px;
+	color: #ffeb3b;
+}
+
+.example-box {
+	background: rgba(76, 175, 80, 0.1);
+	border-left: 3px solid #4caf50;
+	padding: 15px;
+	margin: 15px 0;
+	border-radius: 5px;
+}
+
+.overlay-demo {
+	background: rgba(156, 39, 176, 0.08);
+	border: 2px solid rgba(156, 39, 176, 0.3);
+	border-radius: 10px;
+	padding: 20px;
+	margin: 20px 0;
+	position: relative;
+}
+
+.overlay-demo::before {
+	content: "🔁 REREADING MODE";
+	position: absolute;
+	top: -12px;
+	left: 20px;
+	background: #9c27b0;
+	color: white;
+	padding: 4px 12px;
+	border-radius: 4px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.status-card {
+		padding: 15px;
+		margin: 12px 0;
+	}
+
+	.flow-diagram {
+		font-size: 11px;
+		padding: 15px;
+	}
+
+	.overlay-demo {
+		padding: 15px;
+	}
+}

@@ -5,7 +5,14 @@
 
 export const DEFAULT_BANNERS_VISIBLE = true;
 export const DEFAULT_DEBUG_MODE = true;
+export const DEFAULT_DEBUG_TRUNCATE_OUTPUT = true; // Truncate console output by default
+export const DEFAULT_DEBUG_TRUNCATE_LENGTH = 500; // Max characters per log entry when truncated
 export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
+
+// Carousel Configuration
+export const CAROUSEL_ACTIVE_SITE_BONUS = 5; // Add this many novels per active website
+export const CAROUSEL_MIN_COUNT = 10; // Minimum number of novels to show in carousel
+export const CAROUSEL_DEFAULT_MANUAL_COUNT = null; // Manual override count (null = use dynamic calculation)
 
 // Default prompt template for Gemini AI
 export const DEFAULT_PROMPT = `**CRITICAL INSTRUCTION:** You are enhancing EXISTING text only. You must NEVER generate new content, create new stories, or add content that doesn't exist in the provided text. Your ONLY task is to improve the writing quality of the EXACT content given to you below. If no content is provided or the content is empty, respond with "ERROR: No content provided for enhancement."

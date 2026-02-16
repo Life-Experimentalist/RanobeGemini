@@ -1666,14 +1666,18 @@ body {
 	);
 	border: 1px solid var(--border-color);
 	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
 }
 
 /* Settings Tabs */
 .settings-tabs {
 	display: flex;
+	flex-shrink: 0;
 	gap: 4px;
 	border-bottom: 1px solid var(--border-color);
 	margin-bottom: var(--spacing-lg);
+	width: 100%;
 }
 
 .settings-tab {
@@ -1726,6 +1730,11 @@ body {
 
 .settings-tab-content {
 	display: block;
+	width: 100%;
+	max-width: 100%;
+	position: relative;
+	overflow: visible;
+	flex: 1 1 auto;
 }
 
 .settings-tab-content.hidden {
@@ -1752,12 +1761,14 @@ body {
 
 .settings-grid {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: 1fr;
 	gap: var(--spacing-md);
 	grid-auto-flow: row;
 	width: 100%;
+	max-width: 100%;
 	overflow-x: hidden;
 	overflow-y: visible;
+	box-sizing: border-box;
 }
 
 .settings-section {
@@ -1820,13 +1831,12 @@ body {
 }
 
 .settings-section.button-row {
-  display: flex;          /* overrides the base flex */
-  flex-direction: row;    /* force horizontal alignment */
-  gap: 12px;              /* spacing between buttons */
-  justify-content: flex-start; /* or center/space-between */
-  align-items: center;    /* keeps them aligned vertically */
+	display: flex; /* overrides the base flex */
+	flex-direction: row; /* force horizontal alignment */
+	gap: 12px; /* spacing between buttons */
+	justify-content: flex-start; /* or center/space-between */
+	align-items: center; /* keeps them aligned vertically */
 }
-
 
 .theme-color-grid {
 	display: grid;
@@ -2773,14 +2783,25 @@ html.sidebar-mode .novel-detail-cover {
 	pointer-events: none;
 	width: 420px;
 	max-width: 90vw;
+	visibility: hidden;
+	opacity: 0;
+	transition:
+		visibility 0s 0.3s,
+		opacity 0.3s ease;
 }
 
 .notification-panel.hidden {
-	display: none;
+	visibility: hidden;
+	opacity: 0;
 }
 
 .notification-panel.open {
 	pointer-events: auto;
+	visibility: visible;
+	opacity: 1;
+	transition:
+		visibility 0s,
+		opacity 0.3s ease;
 }
 
 .notification-panel-backdrop {
@@ -2900,7 +2921,11 @@ html.sidebar-mode .novel-detail-cover {
 
 .notification-panel .notification-list .lib-notif-item.unread {
 	border-left: 3px solid var(--primary-color);
-	background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-secondary));
+	background: color-mix(
+		in srgb,
+		var(--primary-color) 8%,
+		var(--bg-secondary)
+	);
 }
 
 .lib-notif-header {

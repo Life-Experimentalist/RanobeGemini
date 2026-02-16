@@ -8,7 +8,7 @@ import {
 	DEFAULT_MODEL_ID,
 	DEFAULT_CHUNK_SIZE,
 } from "../utils/constants.js";
-import { debugLog, debugError } from "../utils/logger.js";
+import { debugError } from "../utils/logger.js";
 
 // Default configuration values
 const DEFAULT_CONFIG = {

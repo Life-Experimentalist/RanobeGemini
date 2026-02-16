@@ -27,7 +27,8 @@
 						<button class="btn btn-icon" id="refresh-btn" title="Refresh Library">
 							🔄
 						</button>
-						<button class="btn btn-icon" id="notification-bell-btn" title="Notifications" style="position: relative;">
+						<button class="btn btn-icon" id="notification-bell-btn" title="Notifications"
+							style="position: relative;">
 							🔔
 							<span id="notification-bell-badge" class="hidden">0</span>
 						</button>
@@ -139,7 +140,8 @@
 
 			<!-- Reading Status Filter (shown in Lists view) -->
 			<div id="reading-status-filter" class="reading-status-filter hidden">
-				<button class="status-filter-btn active" style="align-items: center" data-status="all" title="All Novels">
+				<button class="status-filter-btn active" style="align-items: center" data-status="all"
+					title="All Novels">
 					📚 All
 				</button>
 				<button class="status-filter-btn" data-status="reading" title="Currently Reading">
@@ -241,7 +243,8 @@
 								<div class="novel-meta">
 									<span class="meta-badge" id="modal-shelf"></span>
 									<span class="meta-badge" id="modal-status"></span>
-									<select id="modal-status-selector" class="status-selector" title="Change Reading Status">
+									<select id="modal-status-selector" class="status-selector"
+										title="Change Reading Status">
 										<!-- Options populated by JavaScript from READING_STATUS_INFO -->
 									</select>
 								</div>
@@ -326,8 +329,10 @@
 							<div class="novel-actions">
 								<a id="modal-continue-btn" href="#" class="btn btn-primary" target="_blank">Continue
 									Reading</a>
-								<a id="modal-source-btn" href="#" target="_blank" class="btn btn-secondary" target="_blank">View on Site</a>
-								<button id="modal-refresh-btn" class="btn btn-secondary" title="Reset manual edits and refresh metadata from source">
+								<a id="modal-source-btn" href="#" target="_blank" class="btn btn-secondary"
+									target="_blank">View on Site</a>
+								<button id="modal-refresh-btn" class="btn btn-secondary"
+									title="Reset manual edits and refresh metadata from source">
 									🔄 Refresh Metadata
 								</button>
 								<button id="modal-edit-btn" class="btn btn-secondary">
@@ -369,7 +374,8 @@
 
 						<div class="form-group">
 							<label for="edit-description">Description</label>
-							<textarea id="edit-description" rows="4" placeholder="Novel description/summary..."></textarea>
+							<textarea id="edit-description" rows="4"
+								placeholder="Novel description/summary..."></textarea>
 						</div>
 
 						<div class="form-row">
@@ -460,7 +466,8 @@
 									🎨 Theme
 								</h3>
 								<div class="settings-item">
-									<label for="library-theme-mode" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+									<label for="library-theme-mode"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Mode
 									</label>
 									<select id="library-theme-mode"
@@ -469,68 +476,71 @@
 										<option value="light">☀️ Light</option>
 										<option value="auto">🔄 Auto</option>
 									</select>
-									</div>
-									<div class="settings-item theme-color-grid">
-										<div class="theme-color-field">
-											<label for="library-accentColorPicker">Accent Primary</label>
-											<div class="color-row">
+								</div>
+								<div class="settings-item theme-color-grid">
+									<div class="theme-color-field">
+										<label for="library-accentColorPicker">Accent Primary</label>
+										<div class="color-row">
 											<input type="color" id="library-accentColorPicker" value="#4b5563"
 												style="width: 46px; height: 34px; border: none; border-radius: 6px; cursor: pointer;" />
 											<input type="text" id="library-accentColorText" value="#4b5563"
 												style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-											</div>
-											</div>
-											<div class="theme-color-field">
-												<label for="library-accentSecondaryPicker">Accent Secondary</label>
-												<div class="color-row">
+										</div>
+									</div>
+									<div class="theme-color-field">
+										<label for="library-accentSecondaryPicker">Accent Secondary</label>
+										<div class="color-row">
 											<input type="color" id="library-accentSecondaryPicker" value="#6b7280"
 												style="width: 46px; height: 34px; border: none; border-radius: 6px; cursor: pointer;" />
 											<input type="text" id="library-accentSecondaryText" value="#6b7280"
 												style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-											</div>
-											</div>
-											<div class="theme-color-field">
-												<label for="library-backgroundColorPicker">Background</label>
-												<div class="color-row">
+										</div>
+									</div>
+									<div class="theme-color-field">
+										<label for="library-backgroundColorPicker">Background</label>
+										<div class="color-row">
 											<input type="color" id="library-backgroundColorPicker" value="#111827"
 												style="width: 46px; height: 34px; border: none; border-radius: 6px; cursor: pointer;" />
 											<input type="text" id="library-backgroundColorText" value="#111827"
 												style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-											</div>
-											</div>
-											<div class="theme-color-field">
-												<label for="library-textColorPicker">Text</label>
-												<div class="color-row">
+										</div>
+									</div>
+									<div class="theme-color-field">
+										<label for="library-textColorPicker">Text</label>
+										<div class="color-row">
 											<input type="color" id="library-textColorPicker" value="#e5e7eb"
 												style="width: 46px; height: 34px; border: none; border-radius: 6px; cursor: pointer;" />
 											<input type="text" id="library-textColorText" value="#e5e7eb"
 												style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-											</div>
-											</div>
-											</div>
+										</div>
+									</div>
+								</div>
 
 								<div class="settings-item theme-actions">
-									<button id="library-reset-theme" class="btn btn-danger" style="font-size: 11px; padding: 6px 8px;">
+									<button id="library-reset-theme" class="btn btn-danger"
+										style="font-size: 11px; padding: 6px 8px;">
 										Reset
 									</button>
-									<button id="library-save-theme" class="btn btn-primary" style="font-size: 11px; padding: 6px 8px;">
+									<button id="library-save-theme" class="btn btn-primary"
+										style="font-size: 11px; padding: 6px 8px;">
 										Save Theme
 									</button>
-									</div>
-									<br>
-									<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #ec4899;">
-										🔤 Font Size
-									</h3>
-									<div class="settings-item theme-actions">
-									<label style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								</div>
+								<br>
+								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #ec4899;">
+									🔤 Font Size
+								</h3>
+								<div class="settings-item theme-actions">
+									<label
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Size: <span id="library-font-size-value" style="color: #ec4899;">100%</span>
 									</label>
-									<input type="range" id="library-font-size-slider" min="80" max="150" step="5" value="100"
-										style="width: 100%; cursor: pointer;" />
+									<input type="range" id="library-font-size-slider" min="80" max="150" step="5"
+										value="100" style="width: 100%; cursor: pointer;" />
 									<p class="settings-desc" style="font-size: 11px;">
 										80% - 150%
 									</p>
-									</div>
+								</div>
 
 							</div>
 
@@ -541,27 +551,31 @@
 									🤖 AI Model
 								</h3>
 								<div class="settings-item">
-									<label for="library-api-key" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+									<label for="library-api-key"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Gemini API Key
 									</label>
 									<div class="settings-inline">
 										<input type="password" id="library-api-key" placeholder="Gemini API Key 'AI...'"
 											style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
 										<div class="settings-inline-actions">
-											<button id="library-save-api-key" class="btn btn-secondary" style="font-size: 11px; padding: 6px 8px;">
+											<button id="library-save-api-key" class="btn btn-secondary"
+												style="font-size: 11px; padding: 6px 8px;">
 												Save
 											</button>
-											<button id="library-test-api-key" class="btn btn-secondary" style="font-size: 11px; padding: 6px 8px;">
+											<button id="library-test-api-key" class="btn btn-secondary"
+												style="font-size: 11px; padding: 6px 8px;">
 												Test
 											</button>
-											</div>
-											</div>
-											<p class="settings-desc" style="font-size: 11px;">
-												Needed to fetch models and use Gemini.
-											</p>
-											</div>
-											<div class="settings-item">
-									<label for="library-model-select" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+										</div>
+									</div>
+									<p class="settings-desc" style="font-size: 11px;">
+										Needed to fetch models and use Gemini.
+									</p>
+								</div>
+								<div class="settings-item">
+									<label for="library-model-select"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Model
 									</label>
 									<div class="settings-inline">
@@ -571,20 +585,23 @@
 											<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
 											<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 										</select>
-										<button id="library-refresh-models" class="btn btn-secondary" style="font-size: 11px; padding: 6px 8px;">
+										<button id="library-refresh-models" class="btn btn-secondary"
+											style="font-size: 11px; padding: 6px 8px;">
 											Refresh
 										</button>
-										</div>
-										<p class="settings-desc" style="font-size: 11px;">
-											Model list updates using your API key.
-										</p>
-										</div>
-										<div class="settings-item">
-									<label for="library-model-endpoint" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+									</div>
+									<p class="settings-desc" style="font-size: 11px;">
+										Model list updates using your API key.
+									</p>
+								</div>
+								<div class="settings-item">
+									<label for="library-model-endpoint"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Model Endpoint URL
 									</label>
 									<div class="settings-inline">
-										<input type="text" id="library-model-endpoint" readonly placeholder="https://generativelanguage.googleapis.com/..."
+										<input type="text" id="library-model-endpoint" readonly
+											placeholder="https://generativelanguage.googleapis.com/..."
 											style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 11px;" />
 										<button id="library-copy-model-endpoint" class="btn btn-secondary"
 											style="font-size: 11px; padding: 6px 8px;">
@@ -596,16 +613,54 @@
 									</p>
 								</div>
 								<div class="settings-item">
-									<label style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-										Temperature: <span id="library-temperature-value" style="color: #3b82f6;">0.7</span>
+									<label
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+										Temperature: <span id="library-temperature-value"
+											style="color: #3b82f6;">0.7</span>
 									</label>
-									<input type="range" id="library-temperature-slider" min="0" max="1" step="0.1" value="0.7"
-										style="width: 100%; cursor: pointer;" />
+									<input type="range" id="library-temperature-slider" min="0" max="1" step="0.1"
+										value="0.7" style="width: 100%; cursor: pointer;" />
 									<p class="settings-desc" style="font-size: 11px;">
 										0=Deterministic, 1=Creative
 									</p>
+								</div>
+							</div>
+
+							<!-- SECTION: Backup API Keys (1/4) -->
+							<div class="settings-section"
+								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #10b981;">
+								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #10b981;">
+									🔑 Backup API Keys
+								</h3>
+								<div class="settings-item">
+									<div id="library-backup-keys-list"
+										style="max-height: 150px; overflow-y: auto; margin-bottom: 8px; padding: 4px; background: var(--bg-tertiary, rgba(0,0,0,0.2)); border-radius: 4px; border: 1px solid var(--border-color);">
+										<!-- Backup keys will be populated here -->
 									</div>
+									<div style="display: flex; gap: 6px; margin-bottom: 12px;">
+										<input type="password" id="library-new-backup-key"
+											placeholder="Add backup API key..."
+											style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+										<button id="library-add-backup-key" class="btn btn-secondary"
+											style="font-size: 11px; padding: 6px 12px;">
+											➕ Add
+										</button>
 									</div>
+									<label for="library-api-key-rotation"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+										Rotation Strategy
+									</label>
+									<select id="library-api-key-rotation"
+										style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;">
+										<option value="off">Off</option>
+										<option value="round_robin">Round Robin</option>
+										<option value="random">Random</option>
+									</select>
+									<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
+										Auto-use backup keys if primary hits rate limits
+									</p>
+								</div>
+							</div>
 
 							<!-- SECTION: URL Import (FULL WIDTH) -->
 							<div class="settings-section" data-full-width="true"
@@ -616,24 +671,27 @@
 								<p class="settings-desc" style="margin-bottom: 10px; font-size: 12px;">
 									Paste any text and we'll extract supported novel URLs, open them in the background,
 									and add them to your library.
-									</p>
+								</p>
 								<textarea id="url-import-text" rows="5" placeholder="Paste links or text here..."
 									style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; resize: vertical;"></textarea>
 								<div style="display: flex; gap: 8px; margin-top: 10px;">
-									<button id="url-import-btn" class="btn btn-primary" style="font-size: 12px; padding: 8px 12px;">
+									<button id="url-import-btn" class="btn btn-primary"
+										style="font-size: 12px; padding: 8px 12px;">
 										➕ Add URLs to Library
 									</button>
-									<button id="url-import-clear" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">
+									<button id="url-import-clear" class="btn btn-secondary"
+										style="font-size: 12px; padding: 8px 12px;">
 										Clear
 									</button>
-									</div>
-								<p class="settings-desc" id="url-import-status" style="margin-top: 8px; font-size: 11px;">
+								</div>
+								<p class="settings-desc" id="url-import-status"
+									style="margin-top: 8px; font-size: 11px;">
 									Ready to import.
 								</p>
-								</div>
+							</div>
 
 						</div>
-						</div>
+					</div>
 
 					<!-- Backup Settings Tab -->
 					<div class="settings-tab-content hidden" id="backup-settings">
@@ -659,49 +717,58 @@
 								</p>
 
 								<div class="settings-item" style="margin-bottom: 12px;">
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
 										<input type="checkbox" id="backupIncludeApiKeys" checked />
 										<span style="font-weight: 500; font-size: 12px;">Include API keys and
 											credentials</span>
-										</label>
-										<label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
-											<input type="checkbox" id="backupIncludeCredentials" checked />
+									</label>
+									<label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
+										<input type="checkbox" id="backupIncludeCredentials" checked />
 										<span style="font-weight: 500; font-size: 12px;">Include OAuth
 											credentials</span>
-										</label>
-										</div>
+									</label>
+								</div>
 
-								<div class="settings-item" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-									<button id="createComprehensiveBackup" class="btn btn-secondary" style="font-size: 12px; padding: 8px;">
+								<div class="settings-item"
+									style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+									<button id="createComprehensiveBackup" class="btn btn-secondary"
+										style="font-size: 12px; padding: 8px;">
 										💾 Full Backup
 									</button>
-									<button id="restoreComprehensiveBackup" class="btn btn-secondary" style="font-size: 12px; padding: 8px;">
+									<button id="restoreComprehensiveBackup" class="btn btn-secondary"
+										style="font-size: 12px; padding: 8px;">
 										📂 Restore Full
 									</button>
 									<input type="file" id="comprehensiveBackupFile" accept=".json" class="hidden" />
-									</div>
+								</div>
 
 								<div class="settings-item">
 									<label style="display: flex; gap: 8px; align-items: center; cursor: pointer;">
 										<input type="checkbox" id="autoBackupEnabled" checked />
 										<span style="font-weight: 500; font-size: 12px;">Enable automatic rolling
 											backups</span>
-										</label>
-										<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
+									</label>
+									<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
 										Creates browser-stored backups automatically when your library changes (keeps
 										last 5).
-										</p>
-										<div style="margin-top: 10px;">
-										<label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">
-											Frequency: <span id="rollingBackupIntervalDisplay" style="color: #34a853;">60</span> minutes
+									</p>
+									<div style="margin-top: 10px;">
+										<label
+											style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px;">
+											Frequency: <span id="rollingBackupIntervalDisplay"
+												style="color: #34a853;">60</span> minutes
 										</label>
-										<input type="number" id="rollingBackupInterval" min="5" value="360" />
-										<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
-											Sets how often a rolling backup is created automatically.
-										</p>
+										<div id="carousel-manual-container" style="display: none;">
+											<input type="number" id="rollingBackupInterval" min="5" value="360"
+												style="width: 120px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+											<p class="settings-desc" style="font-size: 11px; margin-top: 4px;">
+												Sets how often a rolling backup is created automatically.
+											</p>
 										</div>
-										</div>
-										</div>
+									</div>
+								</div>
+							</div>
 
 							<!-- SECTION 2: Rolling Backups (Browser Storage, Max 5) -->
 							<div class="settings-section"
@@ -718,33 +785,36 @@
 									style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid rgba(102, 126, 234, 0.3); display: none;">
 									<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
 										<span id="backupStatusIcon" style="font-size: 14px;">⏳</span>
-										<span id="backupStatusText" style="font-size: 12px; font-weight: 500; color: #667eea;">Backup
+										<span id="backupStatusText"
+											style="font-size: 12px; font-weight: 500; color: #667eea;">Backup
 											status...</span>
-										</div>
-										<div id="backupCountdownContainer" style="display: none; margin-top: 8px;">
-										<div style="font-size: 11px; color: var(--text-secondary, #9ca3af); margin-bottom: 6px;">
+									</div>
+									<div id="backupCountdownContainer" style="display: none; margin-top: 8px;">
+										<div
+											style="font-size: 11px; color: var(--text-secondary, #9ca3af); margin-bottom: 6px;">
 											Next automatic backup in:
 										</div>
 										<div style="font-size: 13px; font-weight: 600; color: #4f46e5;">
 											<span id="backupCountdownTime">--:--</span>
 										</div>
-										</div>
+									</div>
 									<div id="lastBackupTime"
 										style="font-size: 10px; color: var(--text-secondary, #9ca3af); margin-top: 8px; display: none;">
 										Last backup: <span id="lastBackupTimeText">Never</span>
 									</div>
-									</div>
+								</div>
 
 								<div id="rollingBackupList" style="margin-top: 8px;">
-									<div class="no-backups" style="text-align: center; padding: 15px; color: #888; font-size: 12px;">
+									<div class="no-backups"
+										style="text-align: center; padding: 15px; color: #888; font-size: 12px;">
 										No rolling backups yet. Enable auto-backup or create one manually.
 									</div>
-									</div>
+								</div>
 								<button id="createRollingBackup" class="btn btn-secondary"
 									style="width: 100%; margin-top: 8px; font-size: 12px; padding: 8px;">
 									➕ Create Rolling Backup Now
 								</button>
-								</div>
+							</div>
 
 							<!-- SECTION 4: Import & Merge Options -->
 							<div class="settings-section"
@@ -756,60 +826,69 @@
 									Choose how backups are restored to your library.
 								</p>
 								<div class="settings-item" style="margin-bottom: 8px;">
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
 										<input type="radio" name="mergeMode" value="merge" checked />
 										<span style="font-weight: 500; font-size: 12px;">Merge (Recommended)</span>
 									</label>
-									<p class="settings-desc" style="font-size: 11px; margin-left: 28px; margin-bottom: 8px;">
+									<p class="settings-desc"
+										style="font-size: 11px; margin-left: 28px; margin-bottom: 8px;">
 										Combines backup with existing data. Newer entries take priority. Preserves your
 										current library.
 									</p>
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
 										<input type="radio" name="mergeMode" value="replace" />
 										<span style="font-weight: 500; font-size: 12px;">Replace</span>
 									</label>
 									<p class="settings-desc" style="font-size: 11px; margin-left: 28px;">
-										Completely replaces your library with the backup. <strong style="color: #f59e0b;">Use with caution!</strong>
-										</p>
-										</div>
-										</div>
+										Completely replaces your library with the backup. <strong
+											style="color: #f59e0b;">Use with caution!</strong>
+									</p>
+								</div>
+							</div>
 
 							<!-- SECTION: Data Management (1/4) -->
 							<div class="settings-section"
 								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid var(--accent-secondary, #667ee6);">
-								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: var(--accent-secondary, #667ee6);">
+								<h3
+									style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: var(--accent-secondary, #667ee6);">
 									💾 Data Management
 								</h3>
-								<h4 style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: var(--accent-secondary, #f59e0b);">
+								<h4
+									style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: var(--accent-secondary, #f59e0b);">
 									(Deprecated will be removed soon; for legacy support)</h4>
 								<div class="settings-item" style="margin-bottom: 12px; width: 100%;">
-									<button id="export-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
+									<button id="export-btn" class="btn btn-secondary"
+										style="width: 100%; font-size: 12px; padding: 8px;">
 										📤 Export
 									</button>
 									<p class="settings-desc" style="font-size: 11px;">
 										Download library data
 									</p>
-									</div>
+								</div>
 
 								<div class="settings-item" style="margin-bottom: 12px; width: 100%;">
-									<button id="import-btn" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px;">
+									<button id="import-btn" class="btn btn-secondary"
+										style="width: 100%; font-size: 12px; padding: 8px;">
 										📥 Import
 									</button>
 									<input type="file" id="import-file" accept=".json" class="hidden" />
 									<p class="settings-desc" style="font-size: 11px;">
 										Restore from backup
 									</p>
-									</div>
+								</div>
 
 								<div class="settings-item" style="width: 100%;">
-									<button id="clear-btn" class="btn btn-danger" style="width: 100%; font-size: 12px; padding: 8px;">
+									<button id="clear-btn" class="btn btn-danger"
+										style="width: 100%; font-size: 12px; padding: 8px;">
 										🗑️ Clear
 									</button>
 									<p class="settings-desc" style="font-size: 11px;">
 										Remove all novels
 									</p>
-									</div>
-									</div>
+								</div>
+							</div>
 
 
 							<!-- GOOGLE DRIVE BACKUPS HEADER -->
@@ -834,7 +913,8 @@
 
 								<div
 									style="margin-bottom: 12px; padding: 10px; background: rgba(66, 133, 244, 0.1); border-radius: 6px; border-left: 3px solid #4285F4">
-									<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+									<div
+										style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
 										<label style="font-weight: bold; color: #4285F4">
 											☁️ Google Drive Backup
 										</label>
@@ -847,62 +927,76 @@
 										<p style="font-size: 12px; margin: 0 0 8px 0">
 											Backup your library to Google Drive with automatic version history and easy
 											restore.
-											</p>
+										</p>
 										<div id="driveAuthError" class="settings-desc"
 											style="display: none; margin-bottom: 8px; color: #f59e0b; font-size: 11px">
 										</div>
-										<button id="connectDriveBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px">
+										<button id="connectDriveBtn" class="btn btn-secondary"
+											style="width: 100%; margin-bottom: 8px">
 											🔗 Connect Google Drive
 										</button>
-										</div>
+									</div>
 
 									<div id="driveConnected" style="display: none">
 										<div style="margin-bottom: 12px">
-											<label style="font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block; color: #4285F4">⚙️
+											<label
+												style="font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block; color: #4285F4">⚙️
 												Backup Mode:</label>
-											<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px">
+											<div
+												style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px">
 												<!-- Scheduled Option -->
 												<label class="backup-mode-card"
 													style="display: flex; flex-direction: column; padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.05)); border: 2px solid var(--border-color, #374151); border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative;">
-													<input type="radio" name="driveBackupMode" id="driveScheduled" value="scheduled" checked
+													<input type="radio" name="driveBackupMode" id="driveScheduled"
+														value="scheduled" checked
 														style="position: absolute; opacity: 0; width: 0; height: 0;" />
-													<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+													<div
+														style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
 														<span style="font-size: 18px;">📅</span>
-														<span style="font-weight: 600; font-size: 12px;">Scheduled</span>
-														</div>
-													<p style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
+														<span
+															style="font-weight: 600; font-size: 12px;">Scheduled</span>
+													</div>
+													<p
+														style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
 														Daily versioned backups at regular intervals</p>
-													</label>
-													<!-- Continuous Option -->
+												</label>
+												<!-- Continuous Option -->
 												<label class="backup-mode-card"
 													style="display: flex; flex-direction: column; padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.05)); border: 2px solid var(--border-color, #374151); border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative;">
-													<input type="radio" name="driveBackupMode" id="driveContinuous" value="continuous"
+													<input type="radio" name="driveBackupMode" id="driveContinuous"
+														value="continuous"
 														style="position: absolute; opacity: 0; width: 0; height: 0;" />
-													<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+													<div
+														style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
 														<span style="font-size: 18px;">🔄</span>
-														<span style="font-weight: 600; font-size: 12px;">Continuous</span>
-														</div>
-													<p style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
+														<span
+															style="font-weight: 600; font-size: 12px;">Continuous</span>
+													</div>
+													<p
+														style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
 														Auto-backup when changes detected every N minutes</p>
-													</label>
-													<!-- Both Option -->
+												</label>
+												<!-- Both Option -->
 												<label class="backup-mode-card"
 													style="display: flex; flex-direction: column; padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.05)); border: 2px solid var(--border-color, #374151); border-radius: 8px; cursor: pointer; transition: all 0.2s; position: relative;">
-													<input type="radio" name="driveBackupMode" id="driveBoth" value="both"
+													<input type="radio" name="driveBackupMode" id="driveBoth"
+														value="both"
 														style="position: absolute; opacity: 0; width: 0; height: 0;" />
-													<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+													<div
+														style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
 														<span style="font-size: 18px;">⚡</span>
 														<span style="font-weight: 600; font-size: 12px;">Both</span>
 													</div>
-													<p style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
+													<p
+														style="margin: 0; font-size: 10px; color: var(--text-secondary, #9ca3af); line-height: 1.4;">
 														Scheduled daily + continuous change detection</p>
-													</label>
-													</div>
-													<style>
-														.backup-mode-card:has(input:checked) {
-															border-color: #4285F4 !important;
-															background: rgba(66, 133, 244, 0.15) !important;
-														}
+												</label>
+											</div>
+											<style>
+												.backup-mode-card:has(input:checked) {
+													border-color: #4285F4 !important;
+													background: rgba(66, 133, 244, 0.15) !important;
+												}
 
 												.backup-mode-card:hover {
 													border-color: #4285F4;
@@ -910,28 +1004,32 @@
 													box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
 												}
 											</style>
-											</div>
+										</div>
 
 										<!-- Continuous Backup Check Interval -->
 										<div style="margin-bottom: 12px; padding: 10px; background: rgba(66, 133, 244, 0.08); border-radius: 6px; border-left: 3px solid #34a853"
 											id="continuousBackupCheckContainer">
-											<label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; color: #667ee6">
+											<label
+												style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; color: #667ee6">
 												🔄 Check for changes every:
-												<span id="continuousCheckIntervalDisplay" style="color: #4285F4; font-weight: bold; font-size: 13px;">2</span>
+												<span id="continuousCheckIntervalDisplay"
+													style="color: #4285F4; font-weight: bold; font-size: 13px;">2</span>
 												minutes
-												</label>
-											<input type="range" id="continuousBackupCheckInterval" min="1" max="60" value="2"
-												style="width: 100%; cursor: pointer;" />
-											<div class="settings-desc" style="font-size: 10px; margin-top: 4px; color: var(--text-secondary, #9ca3af);">
+											</label>
+											<input type="range" id="continuousBackupCheckInterval" min="1" max="60"
+												value="2" style="width: 100%; cursor: pointer;" />
+											<div class="settings-desc"
+												style="font-size: 10px; margin-top: 4px; color: var(--text-secondary, #9ca3af);">
 												⚡ Lower = more frequent checks, higher = less CPU usage. Backup triggers
 												instantly when changes detected.
 											</div>
-											</div>
+										</div>
 
 										<!-- Drive Backup Retention -->
 										<div
 											style="margin-bottom: 12px; padding: 10px; background: rgba(66, 133, 244, 0.08); border-radius: 6px; border-left: 3px solid #f59e0b">
-											<label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; color: #f59e0b">
+											<label
+												style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 6px; color: #f59e0b">
 												🗂️ Backup Policy (Per Google Account)
 											</label>
 											<div
@@ -943,25 +1041,28 @@
 												<div style="font-size: 10px; margin-top: 6px; font-style: italic;">💡
 													Oldest backups deleted automatically. This quota is <strong>unified
 														per Google Account</strong> across all browsers.</div>
-												</div>
-												<div class="settings-desc" style="font-size: 10px; color: var(--text-secondary, #9ca3af);">
-													All browsers linked to this Google Account share the same backup quota.
-													Backups automatically managed based on creation time.
-												</div>
-												</div>
+											</div>
+											<div class="settings-desc"
+												style="font-size: 10px; color: var(--text-secondary, #9ca3af);">
+												All browsers linked to this Google Account share the same backup quota.
+												Backups automatically managed based on creation time.
+											</div>
+										</div>
 
 										<div style="margin-bottom: 8px">
-											<label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+											<label
+												style="display: flex; align-items: center; gap: 6px; font-size: 12px">
 												<input type="checkbox" id="driveAutoRestoreEnabled" />
 												<span>Auto-restore from Drive (merge latest)</span>
 											</label>
 											<div class="settings-desc" style="font-size: 11px; margin-top: 4px">
 												Checks Drive every 10 minutes and merges the newest backup.
 											</div>
-											</div>
+										</div>
 
 										<!-- Drive Action Buttons -->
-										<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+										<div
+											style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
 											<button id="backupNowBtn" class="drive-action-btn"
 												style="background: linear-gradient(135deg, #34a853 0%, #2d9447 100%); color: white; border: none; border-radius: 8px; padding: 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(52, 168, 83, 0.3);">
 												<span style="font-size: 16px;">📤</span>
@@ -982,145 +1083,203 @@
 												<span style="font-size: 16px;">🔌</span>
 												<span>Disconnect</span>
 											</button>
-											</div>
-											<style>
-												.drive-action-btn:hover {
-													transform: translateY(-2px);
-													box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-												}
+										</div>
+										<style>
+											.drive-action-btn:hover {
+												transform: translateY(-2px);
+												box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+											}
 
 											.drive-action-btn:active {
 												transform: translateY(0);
 											}
 										</style>
+									</div>
+									</details>
+
+									<!-- Disconnect Button -->
+									<button id="disconnectDriveBtn" class="drive-action-btn"
+										style="background: linear-gradient(135deg, #ea4335 0%, #d33b2c 100%); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(234, 67, 53, 0.3); width: 100%;">
+										<span style="font-size: 14px">🔌</span>
+										<span>Disconnect Drive</span>
+									</button>
+									<style>
+										.drive-action-btn:hover {
+											transform: translateY(-2px);
+											box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+										}
+
+										.drive-action-btn:active {
+											transform: translateY(0);
+										}
+									</style>
+								</div>
+								<summary
+									style="cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary, #9fb3c8); padding: 8px 0; display: flex; align-items: center; gap: 6px; list-style: none; user-select: none">
+									<span>🔧</span>
+									<span>OAuth Setup (Required for Google Drive)</span>
+									<span style="flex: 1"></span>
+									<span
+										style="font-size: 11px; color: var(--text-secondary, #999); font-weight: normal">(Takes
+										2 minutes)</span>
+								</summary>
+								<div
+									style="margin-top: 12px; padding: 10px; background: var(--accent-secondary, rgba(66, 133, 244, 0.05)); border-radius: 6px">
+									<div style="display: flex; gap: 12px; align-items: flex-start">
+										<div style="flex: 1">
+											<p
+												style="font-size: 12px; margin: 0 0 6px 0; color: var(--accent-secondary, #4285F4); font-weight: 600">
+												ℹ️ What is OAuth Setup?</p>
+											<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank"
+												style="color: var(--accent-secondary, #4285F4); font-size: 11px; display: inline-block; margin-top: 6px; text-decoration: none; font-weight: 500">
+												<p
+													style="font-size: 11px; margin: 0; color: var(--text-secondary, #666)">
+													Create free Google OAuth credentials to enable automatic
+													backups. This is a one-time setup.
+													📖 Detailed Setup Guide →
+												</p>
+											</a>
+										</div>
+									</div>
+								</div>
+
+								<div style="margin-top: 14px; display: grid; gap: 12px">
+									<!-- JSON Upload Method -->
+									<div
+										style="padding: 10px; background: var(--accent-primary, rgba(66, 133, 244, 0.05)); border-radius: 6px; border: 1px solid var(--border-color, #1f2937)">
+										<label
+											style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+											📋 Method 1: Paste OAuth JSON (Recommended)
+										</label>
+										<p
+											style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 6px 0">
+											Download your credentials JSON file from Google Cloud Console and
+											paste here:
+										</p>
+										<textarea id="oauthJsonPaste"
+											placeholder='Paste your client_secret_*.json file contents here...'
+											style="width: 100%; height: 70px; font-family: 'Courier New', monospace; font-size: 10px; resize: vertical; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; background: var(--bg-tertiary); color: var(--text-primary, black)"></textarea>
+										<div
+											style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px">
+											<button id="parseOAuthJson" class="btn btn-secondary"
+												style="font-size: 11px; padding: 6px">
+												✓ Parse JSON
+											</button>
+											<button id="saveOAuthFromJson" class="btn btn-secondary"
+												style="font-size: 11px; padding: 6px">
+												💾 Save to Storage
+											</button>
+										</div>
+									</div>
+
+									<!-- Manual Entry Method -->
+									<div
+										style="padding: 10px; background: var(--accent-primary, rgba(66, 133, 244, 0.05)); border-radius: 6px; border: 1px solid var(--border-color, #1f2937)">
+										<label
+											style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+											✏️ Method 2: Manual Entry
+										</label>
+										<p
+											style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 6px 0">
+											Copy from Google Cloud Console
+										</p>
+										<label for="driveClientId"
+											style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
+											Client ID:
+										</label>
+										<input id="driveClientId" type="text" placeholder="Your OAuth Client ID"
+											style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; margin-bottom: 6px; background: var(--bg-tertiary); color: var(--text-primary, black)" />
+										<label for="driveClientSecret"
+											style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
+											Client Secret:
+										</label>
+										<div style="position: relative">
+											<input id="driveClientSecret" type="password"
+												placeholder="Client Secret (optional)"
+												style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; background: var(--bg-tertiary); color: var(--text-primary, black); padding-right: 30px" />
+											<button id="toggleClientSecretVisibility" type="button"
+												title="Show/Hide Client Secret"
+												style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; color: var(--text-secondary, #9ca3af); transition: color 0.2s;">
+												👁️
+											</button>
 										</div>
 
-									<details id="oauthSetupDetails"
-										style="margin-top: 10px; padding: 12px; background: var(--accent-primary, rgba(0, 0, 0, 0.1)); border-radius: 8px; border-left: 3px solid var(--accent-secondary, #667ee6)">
-										<summary
-											style="cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary, #9fb3c8); padding: 8px 0; display: flex; align-items: center; gap: 6px; list-style: none; user-select: none">
-											<span>🔧</span>
-											<span>OAuth Setup (Required for Google Drive)</span>
-											<span style="flex: 1"></span>
-											<span style="font-size: 11px; color: var(--text-secondary, #999); font-weight: normal">(Takes
-												2 minutes)</span>
-											</summary>
-										<div
-											style="margin-top: 12px; padding: 10px; background: var(--accent-secondary, rgba(66, 133, 244, 0.05)); border-radius: 6px">
-											<div style="display: flex; gap: 12px; align-items: flex-start">
-												<div style="flex: 1">
-													<p style="font-size: 12px; margin: 0 0 6px 0; color: var(--accent-secondary, #4285F4); font-weight: 600">
-														ℹ️ What is OAuth Setup?</p>
-													<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank"
-														style="color: var(--accent-secondary, #4285F4); font-size: 11px; display: inline-block; margin-top: 6px; text-decoration: none; font-weight: 500">
-														<p style="font-size: 11px; margin: 0; color: var(--text-secondary, #666)">
-															Create free Google OAuth credentials to enable automatic
-															backups. This is a one-time setup.
-															📖 Detailed Setup Guide →
-														</p>
-													</a>
-													</div>
-													</div>
-													</div>
+										<button id="saveOAuthSettings" class="btn btn-secondary"
+											style="width: 100%; font-size: 11px; padding: 6px; margin-top: 6px;">
+											💾 Save Credentials
+										</button>
+									</div>
+								</div>
 
-										<div style="margin-top: 14px; display: grid; gap: 12px">
-											<!-- JSON Upload Method -->
-											<div
-												style="padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
-												<label
-													style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
-													📋 Method 1: Paste OAuth JSON (Recommended)
-												</label>
-												<p style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 6px 0">
-													Download your credentials JSON file from Google Cloud Console and
-													paste here:
-												</p>
-												<textarea id="oauthJsonPaste" placeholder='Paste your client_secret_*.json file contents here...'
-													style="width: 100%; height: 70px; font-family: 'Courier New', monospace; font-size: 10px; resize: vertical; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; background: var(--input-bg, white); color: var(--text-primary, black)"></textarea>
-												<div
-													style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px">
-													<button id="parseOAuthJson" class="btn btn-secondary"
-														style="font-size: 11px; padding: 6px">
-														✓ Parse JSON
-													</button>
-													<button id="saveOAuthFromJson" class="btn btn-secondary" style="font-size: 11px; padding: 6px">
-														💾 Save to Storage
-													</button>
-													</div>
-													</div>
+								<!-- Optional Folder ID - Hidden for now (not working properly) -->
+								<div
+									style="display: none; padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
+									<label
+										style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
+										📁 Optional: Specify Drive Folder
+									</label>
+									<label for="driveFolderId"
+										style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
+										Folder ID (leave empty for auto-create):
+									</label>
+									<input id="driveFolderId" type="text" placeholder="e.g., 1a2b3c4d5e6f7g8h9i0j..."
+										style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; margin-bottom: 4px; background: var(--input-bg, white); color: var(--text-primary, black)" />
+									<p style="font-size: 10px; color: var(--text-secondary, #999); margin: 0">
+										💡 How to find Folder ID: Open a folder in Google Drive → Copy the ID
+										from the URL (after /folders/)
+									</p>
+								</div>
+								</details>
+							</div>
+						</div>
+					</div>
 
-											<!-- Manual Entry Method -->
-											<div
-												style="padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
-												<label
-													style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
-													✏️ Method 2: Manual Entry
-												</label>
-												<p style="font-size: 11px; color: var(--text-secondary, #666); margin: 0 0 6px 0">
-													Copy from Google Cloud Console
-												</p>
-												<label for="driveClientId"
-													style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
-													Client ID:
-												</label>
-												<input id="driveClientId" type="text" placeholder="Your OAuth Client ID"
-													style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; margin-bottom: 6px; background: var(--input-bg, white); color: var(--text-primary, black)" />
-												<label for="driveClientSecret"
-													style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
-													Client Secret:
-												</label>
-												<div style="position: relative">
-													<input id="driveClientSecret" type="password" placeholder="Client Secret (optional)"
-														style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; background: var(--input-bg, white); color: var(--text-primary, black); padding-right: 30px" />
-													<button id="toggleClientSecretVisibility" type="button"
-														title="Show/Hide Client Secret"
-														style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; padding: 4px; font-size: 14px; line-height: 1; color: var(--text-secondary, #9ca3af); transition: color 0.2s;">
-														👁️
-													</button>
-												</div>
-
-												<button id="saveOAuthSettings" class="btn btn-secondary"
-													style="width: 100%; font-size: 11px; padding: 6px; margin-top: 6px;">
-													💾 Save Credentials
-												</button>
-												</div>
-												</div>
-
-										<!-- Optional Folder ID - Hidden for now (not working properly) -->
-										<div
-											style="display: none; padding: 10px; background: var(--accent-primary, #f8f9fa); border-radius: 6px; border: 1px solid var(--border-color, #e5e7eb)">
-											<label
-												style="font-size: 12px; font-weight: 600; color: var(--text-primary, #1f2937); display: block; margin-bottom: 6px">
-												📁 Optional: Specify Drive Folder
-											</label>
-											<label for="driveFolderId"
-												style="font-size: 11px; color: var(--text-secondary, #666); display: block; margin-bottom: 3px">
-												Folder ID (leave empty for auto-create):
-											</label>
-											<input id="driveFolderId" type="text" placeholder="e.g., 1a2b3c4d5e6f7g8h9i0j..."
-												style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #d1d5db); border-radius: 4px; font-size: 11px; margin-bottom: 4px; background: var(--input-bg, white); color: var(--text-primary, black)" />
-											<p style="font-size: 10px; color: var(--text-secondary, #999); margin: 0">
-												💡 How to find Folder ID: Open a folder in Google Drive → Copy the ID
-												from the URL (after /folders/)
-												</p>
-												</div>
-												</details>
-												</div>
-												</div>
-												</div>
-												</div>
 
 					<!-- Automation Settings Tab -->
 					<div class="settings-tab-content hidden" id="automation-settings">
 						<div class="settings-grid">
-							<!-- SECTION 3: Reading Status Automation (1/4) -->
+							<!-- SECTION: Carousel Configuration (1/4) -->
+							<div class="settings-section"
+								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #8b5cf6;">
+									🎠 Carousel Settings
+								</h3>
+								<div class="settings-item">
+									<label
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+										Recent Novels Count
+									</label>
+									<p class="settings-desc" style="margin-bottom: 8px; font-size: 11px;">
+										Auto-calculated: <span id="carousel-auto-count"
+											style="color: #8b5cf6; font-weight: 600;">10</span>
+										<span style="color: var(--text-secondary);">(Active sites + 5, min 10)</span>
+									</p>
+									<div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+										<label style="display: flex; gap: 6px; align-items: center; cursor: pointer;">
+											<input type="checkbox" id="carousel-use-manual" />
+											<span style="font-weight: 500; font-size: 12px;">Manual override</span>
+										</label>
+									</div>
+									<div id="carousel-manual-container" style="display: none;">
+										<input type="number" id="carousel-manual-count" min="1" max="100" step="1"
+											value="10"
+											style="width: 120px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
+										<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
+											1-100 novels (overrides automatic calculation)
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- SECTION 3: Reading Status Automation (2/4) -->
 							<div class="settings-section"
 								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #f59e0b;">
 								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #f59e0b;">
 									⏰ Auto-Hold
 								</h3>
 								<div class="settings-item">
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; cursor: pointer;">
 										<input type="checkbox" id="auto-hold-toggle" />
 										<span style="font-weight: 500; font-size: 12px;">Enable</span>
 									</label>
@@ -1133,11 +1292,11 @@
 									</label>
 									<input type="number" id="auto-hold-days" min="1" max="90" step="1" value="7"
 										style="width: 80px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
-									</div>
-									</div>
+								</div>
+							</div>
 
 						</div>
-						</div>
+					</div>
 
 					<!-- Prompt Settings Tab -->
 					<div class="settings-tab-content hidden" id="prompt-settings">
@@ -1152,18 +1311,20 @@
 									<label for="library-prompt-main">Main Enhancement Prompt</label>
 									<textarea id="library-prompt-main" rows="4"
 										style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-									<button id="library-reset-prompt-main" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to
+									<button id="library-reset-prompt-main" class="btn btn-secondary"
+										style="font-size: 11px; margin-top: 4px;">Reset to
 										Default</button>
-									</div>
+								</div>
 
 								<!-- Summary Prompt -->
 								<div class="settings-item">
 									<label for="library-prompt-summary">Summary Prompt</label>
 									<textarea id="library-prompt-summary" rows="3"
 										style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-									<button id="library-reset-prompt-summary" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to
+									<button id="library-reset-prompt-summary" class="btn btn-secondary"
+										style="font-size: 11px; margin-top: 4px;">Reset to
 										Default</button>
-									</div>
+								</div>
 
 								<details class="settings-item"
 									style="padding: 12px; background: var(--bg-tertiary, rgba(255,255,255,0.04)); border-radius: 6px; border: 1px solid var(--border-color);">
@@ -1175,19 +1336,20 @@
 											style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
 										<button id="library-reset-prompt-short-summary" class="btn btn-secondary"
 											style="font-size: 11px; margin-top: 4px;">Reset to Default</button>
-										</div>
+									</div>
 
 									<div class="settings-item" style="margin-top: 10px;">
 										<label for="library-prompt-permanent">Permanent Context Prompt</label>
 										<textarea id="library-prompt-permanent" rows="3"
 											style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; font-family: monospace;"></textarea>
-										<button id="library-reset-prompt-permanent" class="btn btn-secondary" style="font-size: 11px; margin-top: 4px;">Reset to
+										<button id="library-reset-prompt-permanent" class="btn btn-secondary"
+											style="font-size: 11px; margin-top: 4px;">Reset to
 											Default</button>
-										</div>
-										</details>
-										</div>
-										</div>
-										</div>
+									</div>
+								</details>
+							</div>
+						</div>
+					</div>
 
 					<!-- Advanced Settings Tab -->
 					<div class="settings-tab-content hidden" id="advanced-settings">
@@ -1211,25 +1373,27 @@
 								</h3>
 
 								<div class="settings-item" style="margin-bottom: 12px;">
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
 										<input type="checkbox" id="telemetry-toggle" checked />
 										<span style="font-weight: 500; font-size: 12px;">Usage data</span>
 									</label>
 									<p class="settings-desc" style="font-size: 11px;">
 										Anonymous only
 									</p>
-									</div>
+								</div>
 
 								<div class="settings-item">
-									<label style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
+									<label
+										style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer;">
 										<input type="checkbox" id="send-errors-toggle" checked />
 										<span style="font-weight: 500; font-size: 12px;">Error reports</span>
 									</label>
 									<p class="settings-desc" style="font-size: 11px;">
 										Help fix bugs
 									</p>
-									</div>
-									</div>
+								</div>
+							</div>
 
 							<!-- SECTION: Developer Options -->
 							<div class="settings-section"
@@ -1238,7 +1402,8 @@
 									⚙️ Developer
 								</h3>
 								<div class="settings-item" style="margin-bottom: 12px;">
-									<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+									<div
+										style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
 										<span style="font-weight: 500; font-size: 12px;">🧪 Debug Mode</span>
 										<label class="toggle-switch toggle-switch-sm">
 											<input type="checkbox" id="library-debug-mode" />
@@ -1248,42 +1413,46 @@
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Enable console logging for debugging extension issues.
 									</p>
-<!-- Debug Sub-Options -->
-<div id="debug-sub-options" style="
+									<!-- Debug Sub-Options -->
+									<div id="debug-sub-options" style="
 										margin-top: 12px;
 										padding-top: 12px;
 										border-top: 1px solid var(--border-color, #475569);
 										display: none;
 									">
-	<!-- Truncate Console Output -->
-	<div class="settings-item" style="margin-bottom: 10px;">
-		<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-			<span style="font-weight: 500; font-size: 12px;">📏 Truncate Console Output</span>
-			<label class="toggle-switch toggle-switch-sm">
-				<input type="checkbox" id="library-debug-truncate" checked />
-				<span class="toggle-slider"></span>
-			</label>
-		</div>
-		<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
-			Limits output length to prevent console overflow. Disable for complete output.
-		</p>
-	</div>
+										<!-- Truncate Console Output -->
+										<div class="settings-item" style="margin-bottom: 10px;">
+											<div
+												style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+												<span style="font-weight: 500; font-size: 12px;">📏 Truncate Console
+													Output</span>
+												<label class="toggle-switch toggle-switch-sm">
+													<input type="checkbox" id="library-debug-truncate" checked />
+													<span class="toggle-slider"></span>
+												</label>
+											</div>
+											<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
+												Limits output length to prevent console overflow. Disable for complete
+												output.
+											</p>
+										</div>
 
-	<!-- Truncation Length Setting -->
-	<div class="settings-item" style="margin-bottom: 8px;">
-		<label for="library-debug-truncate-length" class="settings-desc"
-			style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px;">
-			📌 Max Characters per Log:
-		</label>
-		<input type="number" id="library-debug-truncate-length" min="100" max="10000" value="500" step="100"
-			style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 11px;" />
-		<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
-			Characters before truncation (100-10000)
-		</p>
-	</div>
-</div>
+										<!-- Truncation Length Setting -->
+										<div class="settings-item" style="margin-bottom: 8px;">
+											<label for="library-debug-truncate-length" class="settings-desc"
+												style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px;">
+												📌 Max Characters per Log:
+											</label>
+											<input type="number" id="library-debug-truncate-length" min="100"
+												max="10000" value="500" step="100"
+												style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 11px;" />
+											<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
+												Characters before truncation (100-10000)
+											</p>
+										</div>
 									</div>
-									<div class="settings-item">
+								</div>
+								<div class="settings-item">
 									<label for="webhook-url" class="settings-desc"
 										style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px;">
 										Webhook URL:
@@ -1293,16 +1462,17 @@
 									<p class="settings-desc" style="margin-top: 4px; font-size: 11px;">
 										Custom endpoint for errors
 									</p>
-									</div>
-									</div>
-									<!-- SECTION: Processing Options -->
+								</div>
+							</div>
+							<!-- SECTION: Processing Options -->
 							<div class="settings-section"
 								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
 								<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
 									🧪 Processing Options
 								</h3>
 								<div class="settings-item" style="margin-bottom: 12px;">
-									<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+									<div
+										style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
 										<span style="font-weight: 500; font-size: 12px;">Split large chapters
 											automatically</span>
 										<label class="toggle-switch toggle-switch-sm">
@@ -1313,39 +1483,45 @@
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Processes large chapters in parts to avoid token limits.
 									</p>
-									</div>
-									<div class="settings-item">
-									<label for="library-chunk-size" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								</div>
+								<div class="settings-item">
+									<label for="library-chunk-size"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Segment size (words per chunk):
 									</label>
-									<input type="number" id="library-chunk-size" min="100" max="10000" step="100" value="3200"
+									<input type="number" id="library-chunk-size" min="100" max="10000" step="100"
+										value="3200"
 										style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Recommended: 3200 words. Smaller = safer but more segments.
 									</p>
-									</div>
-									<div class="settings-item" style="margin-top: 12px;">
-									<label for="library-chunk-summary-count" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								</div>
+								<div class="settings-item" style="margin-top: 12px;">
+									<label for="library-chunk-summary-count"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Summary buttons every N chunks:
 									</label>
-									<input type="number" id="library-chunk-summary-count" min="1" max="10" step="1" value="2"
+									<input type="number" id="library-chunk-summary-count" min="1" max="10" step="1"
+										value="2"
 										style="width: 140px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Controls how often summary buttons appear between chunks.
 									</p>
-									</div>
-									<div class="settings-item" style="margin-top: 12px;">
-									<label for="library-max-output-tokens" style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+								</div>
+								<div class="settings-item" style="margin-top: 12px;">
+									<label for="library-max-output-tokens"
+										style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
 										Maximum Output Length (tokens):
 									</label>
-									<input type="number" id="library-max-output-tokens" min="1000" max="32768" step="512" value="8192"
+									<input type="number" id="library-max-output-tokens" min="1000" max="32768"
+										step="512" value="8192"
 										style="width: 160px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;" />
 									<p class="settings-desc" style="margin-top: 6px; font-size: 11px;">
 										Controls maximum length of generated text.
 									</p>
-									</div>
-									</div>
-									<!-- SECTION: AI Parameters -->
+								</div>
+							</div>
+							<!-- SECTION: AI Parameters -->
 							<div class="settings-section"
 								style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #64748b;">
 								<h3>🎯 AI Parameters</h3>
@@ -1353,22 +1529,25 @@
 								<!-- Top K slider -->
 								<div class="settings-item">
 									<label>Top K: <span id="library-top-k-value">40</span></label>
-									<input type="range" id="library-top-k-slider" min="1" max="100" step="1" value="40" style="width: 100%;" />
+									<input type="range" id="library-top-k-slider" min="1" max="100" step="1" value="40"
+										style="width: 100%;" />
 									<p class="settings-desc">Limits token selection pool (1-100)</p>
-									</div>
+								</div>
 
 								<!-- Top P slider -->
 								<div class="settings-item">
 									<label>Top P: <span id="library-top-p-value">0.95</span></label>
-									<input type="range" id="library-top-p-slider" min="0" max="1" step="0.05" value="0.95" style="width: 100%;" />
+									<input type="range" id="library-top-p-slider" min="0" max="1" step="0.05"
+										value="0.95" style="width: 100%;" />
 									<p class="settings-desc">Nucleus sampling (0-1)</p>
-									</div>
+								</div>
 
 								<!-- Word Count Threshold slider -->
 								<div class="settings-item">
-									<label>Word Count Threshold: <span id="library-word-count-threshold-value">25</span>%</label>
-									<input type="range" id="library-word-count-threshold-slider" min="0" max="100" step="1" value="25"
-										style="width: 100%;" />
+									<label>Word Count Threshold: <span
+											id="library-word-count-threshold-value">25</span>%</label>
+									<input type="range" id="library-word-count-threshold-slider" min="0" max="100"
+										step="1" value="25" style="width: 100%;" />
 									<p class="settings-desc">Warning if word change exceeds this percentage (0-100%)</p>
 								</div>
 
@@ -1376,14 +1555,14 @@
 								<div class="settings-item">
 									<label for="library-advanced-model-endpoint">Model Endpoint URL</label>
 									<div class="settings-inline">
-										<input type="text" id="library-advanced-model-endpoint" readonly placeholder="https://..."
-											style="width: 100%; font-size: 11px;" />
+										<input type="text" id="library-advanced-model-endpoint" readonly
+											placeholder="https://..." style="width: 100%; font-size: 11px;" />
 										<button id="library-advanced-copy-endpoint" class="btn btn-secondary"
 											style="font-size: 11px; padding: 6px 8px;">Copy</button>
-										</div>
-										<p class="settings-desc">Auto-generated model API endpoint</p>
-										</div>
-										</div>
+									</div>
+									<p class="settings-desc">Auto-generated model API endpoint</p>
+								</div>
+							</div>
 
 							<!-- SECTION: Factory Reset (full width) -->
 							<div class="settings-section" data-full-width="true"
@@ -1398,7 +1577,8 @@
 									<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #fecaca;">
 										⚡ This will permanently delete:
 									</p>
-									<ul style="margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.8; color: var(--text-secondary, #d1d5db);">
+									<ul
+										style="margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.8; color: var(--text-secondary, #d1d5db);">
 										<li>All novels from your library</li>
 										<li>All enhanced chapters and summaries</li>
 										<li>Google Drive OAuth credentials</li>
@@ -1408,8 +1588,8 @@
 									<p style="margin: 8px 0 0 0; font-size: 11px; color: #fca5a5; font-style: italic;">
 										💡 This does NOT delete Google Drive cloud backups. You can restore from them
 										later.
-										</p>
-										</div>
+									</p>
+								</div>
 								<button id="library-factory-reset-btn" class="btn"
 									style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; font-weight: 700; font-size: 13px; padding: 14px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);"
 									onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 6px 16px rgba(239, 68, 68, 0.4)'"
@@ -1420,9 +1600,9 @@
 									style="margin-top: 12px; text-align: center; font-size: 10px; color: var(--text-secondary, #9ca3af);">
 									⚠️ This action cannot be undone. Create a backup first!
 								</p>
-								</div>
-								</div>
-								</div>
+							</div>
+						</div>
+					</div>
 
 					<!-- Site Settings Tab -->
 					<div class="settings-tab-content hidden" id="site-settings">
@@ -1438,102 +1618,102 @@
 								</p>
 								<div id="site-autoadd-list" class="site-autoadd-list"></div>
 							</div>
-
-						</div>
-						</div>
-						</div>
-
-				<!-- Drive Backups Modal -->
-				<div id="drive-backups-modal" class="modal hidden">
-					<div class="modal-backdrop"></div>
-					<div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
-						<button class="modal-close" id="drive-backups-close">&times;</button>
-						<h2 style="margin-bottom: 8px;">☁️ Google Drive Backups</h2>
-						<p style="margin: 0 0 24px 0; font-size: 13px; color: var(--text-secondary, #999);">
-							View and restore backups from your Google Drive
-						</p>
-						<div id="drive-backups-loading" style="text-align: center; padding: 40px;">
-							<div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
-							<p>Loading backups from Drive...</p>
-						</div>
-						<div id="drive-backups-list" class="hidden" style="display: grid; gap: 12px;"></div>
-						<div id="drive-backups-empty" class="hidden" style="text-align: center; padding: 40px;">
-							<div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-							<p>No backups found on Google Drive</p>
-							<p style="font-size: 12px; color: var(--text-secondary, #999); margin-top: 8px;">
-								Create backups from the Popup settings
-							</p>
 						</div>
 					</div>
 				</div>
+			</div>
 
-				<!-- Telemetry Consent Modal (First Run) -->
-				<div id="telemetry-consent-modal" class="modal hidden">
-					<div class="modal-backdrop"></div>
-					<div class="modal-content modal-small" style="max-width: 480px;">
-						<h2>📊 Anonymous Usage Analytics</h2>
-						<p style="margin: 16px 0; line-height: 1.6;">
-							Ranobe Gemini collects anonymous usage statistics to help improve the extension.
-							This is <strong>enabled by default</strong> but you can opt out anytime.
+			<!-- Drive Backups Modal -->
+			<div id="drive-backups-modal" class="modal hidden">
+				<div class="modal-backdrop"></div>
+				<div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+					<button class="modal-close" id="drive-backups-close">&times;</button>
+					<h2 style="margin-bottom: 8px;">☁️ Google Drive Backups</h2>
+					<p style="margin: 0 0 24px 0; font-size: 13px; color: var(--text-secondary, #999);">
+						View and restore backups from your Google Drive
+					</p>
+					<div id="drive-backups-loading" style="text-align: center; padding: 40px;">
+						<div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+						<p>Loading backups from Drive...</p>
+					</div>
+					<div id="drive-backups-list" class="hidden" style="display: grid; gap: 12px;"></div>
+					<div id="drive-backups-empty" class="hidden" style="text-align: center; padding: 40px;">
+						<div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+						<p>No backups found on Google Drive</p>
+						<p style="font-size: 12px; color: var(--text-secondary, #999); margin-top: 8px;">
+							Create backups from the Popup settings
 						</p>
-						<div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; margin: 16px 0;">
-							<h4 style="margin: 0 0 12px 0; font-size: 14px;">What we collect:</h4>
-							<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-								<li>Anonymous view counts (via CFlair-Counter)</li>
-								<li>Feature usage counts (no content, just counts)</li>
-								<li>Error reports (optional, helps fix bugs)</li>
-							</ul>
-							<h4 style="margin: 16px 0 12px 0; font-size: 14px;">What we NEVER collect:</h4>
-							<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-								<li>API keys or credentials</li>
-								<li>Novel reading history or library data</li>
-								<li>Personal information of any kind</li>
-							</ul>
+					</div>
+				</div>
+			</div>
+
+			<!-- Telemetry Consent Modal (First Run) -->
+			<div id="telemetry-consent-modal" class="modal hidden">
+				<div class="modal-backdrop"></div>
+				<div class="modal-content modal-small" style="max-width: 480px;">
+					<h2>📊 Anonymous Usage Analytics</h2>
+					<p style="margin: 16px 0; line-height: 1.6;">
+						Ranobe Gemini collects anonymous usage statistics to help improve the extension.
+						This is <strong>enabled by default</strong> but you can opt out anytime.
+					</p>
+					<div style="background: var(--bg-tertiary); padding: 16px; border-radius: 8px; margin: 16px 0;">
+						<h4 style="margin: 0 0 12px 0; font-size: 14px;">What we collect:</h4>
+						<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+							<li>Anonymous view counts (via CFlair-Counter)</li>
+							<li>Feature usage counts (no content, just counts)</li>
+							<li>Error reports (optional, helps fix bugs)</li>
+						</ul>
+						<h4 style="margin: 16px 0 12px 0; font-size: 14px;">What we NEVER collect:</h4>
+						<ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+							<li>API keys or credentials</li>
+							<li>Novel reading history or library data</li>
+							<li>Personal information of any kind</li>
+						</ul>
+					</div>
+					<p style="margin: 16px 0; font-size: 13px; color: var(--text-secondary);">
+						You can change this setting anytime in Library Settings → Analytics & Diagnostics.
+					</p>
+					<div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+						<button id="telemetry-decline-btn" class="btn btn-secondary">
+							Opt Out
+						</button>
+						<button id="telemetry-accept-btn" class="btn btn-primary">
+							Keep Enabled
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Notification Panel -->
+			<div id="notification-panel" class="notification-panel hidden">
+				<div class="notification-panel-backdrop"></div>
+				<div class="notification-panel-content">
+					<div class="notification-panel-header">
+						<h3>🔔 Notifications</h3>
+						<button class="notification-panel-close" id="notification-panel-close">
+							&times;
+						</button>
+					</div>
+					<div class="notification-panel-body">
+						<div class="notification-actions">
+							<button id="library-mark-all-read" class="btn btn-secondary">
+								✓ Mark All Read
+							</button>
+							<button id="library-clear-all-notifications" class="btn btn-secondary">
+								🗑 Clear All
+							</button>
 						</div>
-						<p style="margin: 16px 0; font-size: 13px; color: var(--text-secondary);">
-							You can change this setting anytime in Library Settings → Analytics & Diagnostics.
-						</p>
-						<div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-							<button id="telemetry-decline-btn" class="btn btn-secondary">
-								Opt Out
-							</button>
-							<button id="telemetry-accept-btn" class="btn btn-primary">
-								Keep Enabled
-							</button>
+						<div id="library-notification-list" class="notification-list">
+							<!-- Notifications will be populated by JavaScript -->
 						</div>
 					</div>
 				</div>
+			</div>
 
-				<!-- Notification Panel -->
-				<div id="notification-panel" class="notification-panel hidden">
-					<div class="notification-panel-backdrop"></div>
-					<div class="notification-panel-content">
-						<div class="notification-panel-header">
-							<h3>🔔 Notifications</h3>
-							<button class="notification-panel-close" id="notification-panel-close">
-								&times;
-							</button>
-						</div>
-						<div class="notification-panel-body">
-							<div class="notification-actions">
-								<button id="library-mark-all-read" class="btn btn-secondary">
-									✓ Mark All Read
-								</button>
-								<button id="library-clear-all-notifications" class="btn btn-secondary">
-									🗑 Clear All
-								</button>
-							</div>
-							<div id="library-notification-list" class="notification-list">
-								<!-- Notifications will be populated by JavaScript -->
-							</div>
-						</div>
-					</div>
-				</div>
+			<!-- Browser API polyfill for Chrome/Edge compatibility -->
+			<script src="../lib/browser-polyfill.min.js"></script>
 
-				<!-- Browser API polyfill for Chrome/Edge compatibility -->
-				<script src="../lib/browser-polyfill.min.js"></script>
-
-				<script type="module" src="library.js"></script>
+			<script type="module" src="library.js"></script>
 	</body>
 
 </html>
