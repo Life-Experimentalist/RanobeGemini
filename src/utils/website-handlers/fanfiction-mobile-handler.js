@@ -3,36 +3,40 @@
  * Specialized handler for mobile version (m.fanfiction.net)
  *
  * This is a SECONDARY handler that shares a shelf with the primary FanfictionHandler.
- * Shelf display metadata (name, icon, color, primaryDomain) is inherited from primary.
+ * It inherits robust validation logic from the primary handler and only overrides
+ * mobile-specific DOM selectors and content finding.
+ *
+ * Design principles:
+ * 1. Inherit all validation logic from FanfictionHandler to ensure consistency
+ * 2. Never classify non-chapter pages as novels
+ * 3. Validate both URL pattern AND actual DOM content presence
+ * 4. Use same robust error handling as desktop version
  */
-import { BaseWebsiteHandler } from "./base-handler.js";
+import { FanfictionHandler } from "./fanfiction-handler.js";
 import { debugLog, debugError } from "../logger.js";
 
-export class FanfictionMobileHandler extends BaseWebsiteHandler {
+export class FanfictionMobileHandler extends FanfictionHandler {
 	// Static properties for domain management
 	static SUPPORTED_DOMAINS = [
-		"m.fanfiction.net", // Mobile-specific domain
-		"m.fanfiction.ws", // Alternate domain but only used to redirect to default domain
+		"m.fanfiction.net", // Mobile-specific domain only
+		"m.fanfiction.ws",
 	];
 
 	static DEFAULT_ENABLED = false;
 
-	// Ensure mobile handler runs before desktop
+	// Ensure mobile handler runs before desktop and validates properly
 	static PRIORITY = 10;
 
 	// Shelf metadata - SECONDARY handler, shares shelf with desktop FanFiction.net
 	// Only id and novelIdPattern are required for secondary handlers
-	// Other display properties are inherited from the PRIMARY handler (FanfictionHandler)
 	static SHELF_METADATA = {
 		id: "fanfiction", // Must match primary handler's shelf ID
 		isPrimary: false, // Mark as secondary handler
 		novelIdPattern: /\/s\/(\d+)\//, // Same pattern as primary
 	};
 
-	// Handler type: Metadata requires visiting dedicated novel info page
-	// For mobile users, we need to redirect to www subdomain for full novel details
-	static HANDLER_TYPE = "dedicated_page";
-	static DETAILS_DOMAIN = "www.fanfiction.net";
+	// Inherit HANDLER_TYPE from parent - chapter_embedded works on mobile too
+	// (Mobile has full metadata on chapter pages just like desktop)
 
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net mobile, a fanfiction archive.
 Please maintain:
@@ -47,168 +51,403 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	constructor() {
 		super();
-		this.selectors = {
-			content: [
-				"#storycontent", // Main content area for mobile FanFiction.net
-				".storycontent",
-				"div[role='main'] .storycontent",
-			],
-			title: [
-				"#content b", // Story title in mobile version
-				"div[align='center'] b",
-			],
-		};
-
-		// Enhancement mode specific to mobile fanfiction.net
+		// Override enhancement mode for mobile ONLY
 		this.enhancementMode = "text-only";
 	}
 
-	// Return true if this handler can handle the mobile version
+	/**
+	 * Check if handler can manage this domain
+	 * Only handles m.fanfiction.net - desktop takes care of www and other subdomains
+	 * @returns {boolean}
+	 */
 	canHandle() {
 		const hostname = window.location.hostname;
-		const path = window.location.pathname;
-		// Exclude user profile pages
-		if (path.startsWith("/u/")) {
-			return false;
-		}
+		// ONLY handle m.fanfiction.net
 		return hostname === "m.fanfiction.net";
 	}
 
 	/**
-	 * Check if current page is a chapter/story page (reading content)
-	 * @returns {boolean}
+	 * ROBUST isChapterPage() - inherited validation from parent with mobile content check
+	 * Ensures we NEVER classify non-chapter pages as novels
+	 *
+	 * Validation rules (MUST ALL BE TRUE):
+	 * 1. URL must match /^\/s\/\d+/ (story URL pattern)
+	 * 2. URL must NOT start with /u/ (user profile pages)
+	 * 3. Must find #storycontent element containing actual story text
+	 *
+	 * @returns {boolean} True only if on an actual chapter page
 	 */
 	isChapterPage() {
 		const url = window.location.pathname;
-		// Explicit check for user profile pages (matches desktop handler pattern)
-		if (url.startsWith("/u/")) return false;
 
-		// Exclude other user/author profile pages - they contain /users/, /profile/, or /author/
-		if (/\/(users|profile|author)\//.test(url)) {
+		// Rule 1: Exclude user profile pages
+		if (url.startsWith("/u/")) {
+			debugLog(
+				"[Mobile] Not a chapter page: matched user profile pattern",
+			);
 			return false;
 		}
 
-		// Story pages have /s/ in the URL (e.g., /s/12345/1/Title)
+		// Rule 2: Check URL is a story URL (/s/12345/...)
 		const isStoryUrl = /^\/s\/\d+/.test(url);
-		// Also check for story content
-		const hasStoryContent = !!document.getElementById("storycontent");
-		return isStoryUrl && hasStoryContent;
-	}
-
-	/**
-	 * Check if current page is a novel info page
-	 * Mobile version doesn't have detailed novel info pages
-	 * Users should visit desktop version for full details
-	 * @returns {boolean}
-	 */
-	isNovelPage() {
-		return false;
-	}
-
-	/**
-	 * Generate a unique novel ID from URL
-	 * @param {string} url - The story URL
-	 * @returns {string} Unique novel ID
-	 */
-	generateNovelId(url = window.location.href) {
-		// Extract story ID from URL: /s/12345/...
-		const match = url.match(/\/s\/(\d+)/);
-		if (match) {
-			return `fanfiction-${match[1]}`; // Same as desktop version for shared shelf
-		}
-
-		const urlPath = new URL(url).pathname;
-		const urlHash = btoa(urlPath)
-			.substring(0, 16)
-			.replace(/[^a-zA-Z0-9]/g, "");
-		return `fanfiction-${urlHash}`;
-	}
-
-	/**
-	 * Get the story details page URL - redirects to desktop version for full details
-	 * @returns {string}
-	 */
-	getNovelPageUrl() {
-		try {
-			const url = new URL(window.location.href);
-			url.hostname = "www.fanfiction.net";
-			return url.toString();
-		} catch (_err) {
-			return window.location.href.replace(
-				"m.fanfiction.net",
-				"www.fanfiction.net",
+		if (!isStoryUrl) {
+			debugLog(
+				"[Mobile] Not a chapter page: URL does not match story pattern",
 			);
+			return false;
 		}
+
+		// Rule 3: MUST have actual story content element
+		// This is the critical check that prevents misclassifying non-chapter pages
+		const storyContent = document.getElementById("storycontent");
+		if (!storyContent) {
+			debugLog(
+				"[Mobile] Not a chapter page: storycontent element not found",
+			);
+			return false;
+		}
+
+		// Rule 4: Content element must have actual text (not empty)
+		const hasText = storyContent.textContent?.trim().length > 0;
+		if (!hasText) {
+			debugLog("[Mobile] Not a chapter page: storycontent has no text");
+			return false;
+		}
+
+		debugLog("[Mobile] Validated as chapter page");
+		return true;
 	}
 
 	/**
-	 * Fetch desktop version metadata in background and save to library
-	 * This ensures mobile users get full novel details (description, etc.)
+	 * Inherit isNovelPage() from parent
+	 * FanFiction.net doesn't have separate novel info pages
+	 * All details are embedded on the chapter page
+	 * No need to override
 	 */
-	async fetchDesktopMetadata() {
+
+	/**
+	 * Find the content area on mobile FanFiction.net
+	 * Mobile uses #storycontent instead of desktop's #storytext
+	 *
+	 * Robust validation:
+	 * 1. Check element exists
+	 * 2. Validate it contains actual text content
+	 * 3. Fall back to parent's method if needed
+	 *
+	 * @returns {HTMLElement|null} The story content container
+	 */
+	findContentArea() {
+		// Primary target: #storycontent (mobile's main story container)
+		const storyContent = document.getElementById("storycontent");
+		if (storyContent && storyContent.textContent?.trim().length > 0) {
+			debugLog("[Mobile] Found story content in #storycontent");
+			return storyContent;
+		}
+
+		// Fallback: try class-based selector if ID doesn't work
+		const byClass = document.querySelector(".storycontent");
+		if (byClass && byClass.textContent?.trim().length > 0) {
+			debugLog("[Mobile] Found story content by .storycontent class");
+			return byClass;
+		}
+
+		// Last resort: use parent's implementation
+		// This might find it via base handler's selectors
+		const parentResult = super.findContentArea();
+		if (parentResult) {
+			debugLog("[Mobile] Using parent handler's content area");
+		}
+		return parentResult;
+	}
+
+	/**
+	 * Extract title from mobile page
+	 * Mobile layout differs from desktop - title is in different location
+	 *
+	 * @returns {string} Story title or fallback
+	 */
+	extractTitle() {
 		try {
-			const desktopUrl = this.getNovelPageUrl();
-			const novelId = this.generateNovelId();
-
-			debugLog("[Mobile] Fetching desktop metadata from:", desktopUrl);
-
-			// Send message to background script to fetch desktop version
-			const response = await browser.runtime.sendMessage({
-				action: "fetchDesktopMetadata",
-				url: desktopUrl,
-				novelId: novelId,
-				handler: "fanfiction",
-			});
-
-			if (response?.success && response?.metadata) {
-				debugLog(
-					"[Mobile] Desktop metadata fetched successfully:",
-					response.metadata,
+			// Mobile structure: <div align=center><b>Story Title</b> by <a>author</a></div>
+			const contentDiv = document.getElementById("content");
+			if (contentDiv) {
+				const titleEl = contentDiv.querySelector(
+					"div[align='center'] b",
 				);
-				return response.metadata;
-			} else {
-				debugError(
-					"[Mobile] Failed to fetch desktop metadata:",
-					response?.error,
-				);
-				return null;
+				if (titleEl) {
+					const title = titleEl.textContent?.trim();
+					if (title && title.length > 0) {
+						debugLog("[Mobile] Extracted title from content div");
+						return title;
+					}
+				}
 			}
+
+			// Fallback: try page title
+			if (
+				document.title &&
+				document.title.trim().length > 0 &&
+				document.title !== "FanFiction"
+			) {
+				debugLog("[Mobile] Using page title as fallback");
+				return document.title;
+			}
+
+			debugError("[Mobile] Could not extract valid title");
+			return null;
 		} catch (err) {
-			debugError("[Mobile] Error fetching desktop metadata:", err);
+			debugError("[Mobile] Error extracting title:", err);
 			return null;
 		}
 	}
 
 	/**
-	 * Get novel controls configuration for FanFiction mobile
-	 * @returns {Object} Configuration for novel controls UI
+	 * Extract author from mobile page
+	 * Author link is in the title area
+	 *
+	 * @returns {string|null} Author name or null
 	 */
-	getNovelControlsConfig() {
-		return {
-			showControls: this.isChapterPage(),
-			insertionPoint: this.getNovelPageUIInsertionPoint(),
-			position: "before",
-			isChapterPage: true,
-			customStyles: {
-				background: "linear-gradient(135deg, #1a2540 0%, #16213e 100%)",
-				borderColor: "#2a4b8d",
-				accentColor: "#4a7c9c",
-			},
-		};
+	extractAuthor() {
+		try {
+			const contentDiv = document.getElementById("content");
+			if (!contentDiv) return null;
+
+			// Author is in an anchor tag with href starting with /u/
+			const authorLink = contentDiv.querySelector("a[href^='/u/']");
+			if (authorLink) {
+				const author = authorLink.textContent?.trim();
+				if (author && author.length > 0) {
+					debugLog("[Mobile] Extracted author from link");
+					return author;
+				}
+			}
+
+			return null;
+		} catch (err) {
+			debugError("[Mobile] Error extracting author:", err);
+			return null;
+		}
+	}
+
+	/**
+	 * Extract description from mobile page
+	 * Mobile chapter pages don't typically show story description
+	 * Description is not visible on the chapter reading view
+	 *
+	 * @returns {null} Always returns null on mobile (not available)
+	 */
+	extractDescription() {
+		// Mobile doesn't expose description on chapter pages
+		// It would need to be fetched from a separate mobile info page (if available)
+		// For now, return null - users should visit desktop for full description
+		debugLog("[Mobile] Description not available on mobile chapter pages");
+		return null;
+	}
+
+	/**
+	 * Extract metadata for novel library storage - MOBILE SPECIFIC
+	 * Mobile DOM structure is different from desktop
+	 * Mobile: Simple <div align=center> with title and author
+	 * Desktop: Complex <div id=profile_top> with full metadata
+	 *
+	 * Validation:
+	 * 1. Must be on a confirmed chapter page (isChapterPage validation)
+	 * 2. Extract what's available from mobile's simpler DOM
+	 *
+	 * @returns {Object} Novel metadata
+	 */
+	extractNovelMetadata() {
+		// CRITICAL VALIDATION: Must be on a confirmed chapter page
+		if (!this.isChapterPage()) {
+			debugError(
+				"[Mobile] extractNovelMetadata called on non-chapter page",
+			);
+			return null;
+		}
+
+		try {
+			// Start with core metadata
+			const metadata = {
+				title: this.extractTitle(),
+				author: this.extractAuthor(),
+				description: null, // Mobile typically doesn't show description on chapter page
+				coverUrl: null, // Mobile doesn't show cover on chapter page
+				mainNovelUrl: this.getNovelPageUrl(),
+				genres: [],
+				status: "unknown",
+				totalChapters: 0,
+				metadataIncomplete: true, // Mobile lacks some metadata
+				metadata: {
+					isCrossover: false,
+					fandoms: [],
+					characters: [],
+					rating: null,
+					language: null,
+					words: 0,
+					reviews: 0,
+					favorites: 0,
+					follows: 0,
+					publishedDate: null,
+					updatedDate: null,
+					storyId: null,
+				},
+			};
+
+			// Validation: must have at least title
+			if (!metadata.title) {
+				debugError("[Mobile] Failed to extract required title");
+				return null;
+			}
+
+			// Extract story ID from URL
+			const storyIdMatch = window.location.href.match(/\/s\/(\d+)/);
+			if (storyIdMatch) {
+				metadata.metadata.storyId = storyIdMatch[1];
+			}
+
+			// Extract chapter count from page info
+			// Mobile shows: "Ch 1 of 14" or similar
+			try {
+				const contentDiv = document.getElementById("content");
+				if (contentDiv) {
+					// Look for chapter info like "Chapter 1" or "Ch 1 of 14"
+					const chapterText = contentDiv.textContent || "";
+					const chapterMatch = chapterText.match(
+						/Ch(?:apter)?\s+\d+\s+of\s+(\d+)/i,
+					);
+					if (chapterMatch) {
+						metadata.totalChapters = parseInt(chapterMatch[1], 10);
+						debugLog(
+							`[Mobile] Extracted chapter count: ${metadata.totalChapters}`,
+						);
+					}
+				}
+			} catch (err) {
+				debugLog("[Mobile] Could not extract chapter count:", err);
+			}
+
+			// Extract metadata from text content
+			// Mobile metadata line: "Rated: T, English, Romance & Adventure, Harry P., OC, Words: 17k+, Favs: 12, Follows: 4, Published: 8/25/2011"
+			try {
+				const contentDiv = document.getElementById("content");
+				if (contentDiv) {
+					const fullText = contentDiv.textContent || "";
+
+					// Extract rating (T, M, etc)
+					const ratingMatch =
+						fullText.match(/Rated:\s*Fiction\s*([A-Z])/i) ||
+						fullText.match(/Rated:\s*([A-Z])/i) ||
+						fullText.match(/Fiction\s+([TMK])\s*-/i);
+					if (ratingMatch) {
+						metadata.metadata.rating = ratingMatch[1];
+						metadata.rating = ratingMatch[1];
+					}
+
+					// Extract language (English, Spanish, etc)
+					const langMatch = fullText.match(
+						/(English|Spanish|French|German|Japanese|Chinese|Russian)/i,
+					);
+					if (langMatch) {
+						metadata.metadata.language = langMatch[1];
+						metadata.language = langMatch[1];
+					}
+
+					// Extract word count
+					const wordsMatch =
+						fullText.match(/Words?:\s*([\d.]+[kmb]*)/i) ||
+						fullText.match(/([\d,]+)\s*words?/i);
+					if (wordsMatch) {
+						const wordStr = wordsMatch[1].toLowerCase();
+						let wordCount = parseInt(
+							wordStr.replace(/[,kmb]/g, ""),
+							10,
+						);
+						if (wordStr.includes("k")) wordCount *= 1000;
+						if (wordStr.includes("m")) wordCount *= 1000000;
+						metadata.metadata.words = wordCount;
+						metadata.words = wordCount;
+					}
+
+					// Extract genre/categories
+					const genreMatch = fullText.match(
+						/([A-Za-z]+(?:\s+&\s+[A-Za-z]+)?)\s*-\s*/,
+					);
+					if (genreMatch) {
+						const genres = genreMatch[1].split(/\s*&\s*/);
+						metadata.genres = genres.map((g) => g.trim());
+					}
+
+					// Extract published date
+					const pubMatch = fullText.match(
+						/Published:\s*<span[^>]*>([^<]+)</,
+					);
+					if (pubMatch) {
+						metadata.metadata.publishedDate = pubMatch[1].trim();
+						metadata.publishedDate = pubMatch[1].trim();
+					}
+
+					debugLog("[Mobile] Extracted metadata from text content");
+				}
+			} catch (err) {
+				debugError("[Mobile] Error extracting text metadata:", err);
+			}
+
+			// Detect fandom from URL or breadcrumbs if available
+			try {
+				const contentDiv = document.getElementById("content");
+				if (contentDiv) {
+					// Look for fandom links like: Books › Harry Potter
+					const breadcrumbs = contentDiv.querySelectorAll(
+						"a[href*='/book/'], a[href*='/anime/'], a[href*='/tv/']",
+					);
+					if (breadcrumbs.length > 0) {
+						metadata.metadata.fandoms = Array.from(breadcrumbs)
+							.slice(1) // Skip the first 'Books' or 'TV' link
+							.map((a) => a.textContent.trim())
+							.filter((f) => f && f.length > 0);
+						debugLog(
+							`[Mobile] Extracted fandoms: ${metadata.metadata.fandoms.join(", ")}`,
+						);
+					}
+				}
+			} catch (err) {
+				debugLog("[Mobile] Could not extract fandoms:", err);
+			}
+
+			// Surface frequently-used fields to top level
+			metadata.tags = [...metadata.genres, ...metadata.metadata.fandoms];
+
+			// Create stats object for filtering
+			metadata.stats = {
+				words: metadata.words || 0,
+				reviews: metadata.reviews || 0,
+				favorites: metadata.favorites || 0,
+				follows: metadata.follows || 0,
+				publishedDate: metadata.publishedDate || null,
+				updatedDate: metadata.updatedDate || null,
+			};
+
+			debugLog("[Mobile] Extracted metadata successfully", metadata);
+			return metadata;
+		} catch (error) {
+			debugError("[Mobile] Error in extractNovelMetadata:", error);
+			return null;
+		}
 	}
 
 	/**
 	 * Get insertion point for novel controls UI on FanFiction mobile
+	 * Insert before story content for mobile UX
+	 *
 	 * @returns {Object|null} { element, position } or null
 	 */
 	getNovelPageUIInsertionPoint() {
-		// Insert before story content on mobile
 		const storyContent = document.getElementById("storycontent");
 		if (storyContent) {
 			return { element: storyContent, position: "before" };
 		}
 
-		// Fallback to content div
+		// Fallback to before content div
 		const contentDiv = document.getElementById("content");
 		if (contentDiv) {
 			const titleArea = contentDiv.querySelector("div[align='center']");
@@ -222,11 +461,12 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	/**
 	 * Get site-specific enhancement buttons for FanFiction.net mobile
-	 * These buttons are injected into the control panel alongside enhance/summarize
+	 * Provides a desktop version switcher for users wanting full view
+	 *
 	 * @returns {Array<HTMLElement>} Array of button elements
 	 */
 	getSiteSpecificEnhancements() {
-		// Only show on chapter pages
+		// Only show on confirmed chapter pages - CRITICAL VALIDATION
 		if (!this.isChapterPage()) {
 			return [];
 		}
@@ -236,7 +476,7 @@ When enhancing, improve readability while respecting the author's creative voice
 		button.textContent = "🖥️ Desktop";
 		button.title = "Switch to desktop version";
 
-		// Match the same styling as enhance/summarize buttons but compact
+		// Match desktop button styling
 		button.style.cssText = `
 			display: inline-flex;
 			align-items: center;
@@ -256,7 +496,6 @@ When enhancing, improve readability while respecting the author's creative voice
 
 		button.addEventListener("click", () => {
 			const currentUrl = window.location.href;
-			// Switch from m.fanfiction.net to www.fanfiction.net
 			const newUrl = currentUrl.replace(
 				"m.fanfiction.net",
 				"www.fanfiction.net",
@@ -275,231 +514,94 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 
 	/**
-	 * Extract basic metadata from mobile page
-	 * Note: Mobile version has limited metadata, prefer desktop for full details
-	 * @returns {Object}
+	 * Apply enhanced content in text-only manner for mobile
+	 * Mobile has simpler paragraphs than desktop
+	 * Reuse parent's logic but with mobile content area
+	 *
+	 * @param {HTMLElement} contentArea - The story content root element
+	 * @param {string} enhancedText - The enhanced content
+	 * @returns {number} Total paragraphs updated/appended
 	 */
-	extractNovelMetadata() {
-		const title = this.extractTitle();
-
-		// Validate we have at least a title before proceeding
-		if (!title || title === "Untitled Story") {
-			debugError("Mobile handler: Could not extract valid title");
+	applyEnhancedContent(contentArea, enhancedText) {
+		if (!contentArea || typeof enhancedText !== "string") {
+			debugError("[Mobile] Invalid content area or enhanced text");
+			return 0;
 		}
 
-		const metadata = {
-			title: title,
-			author: null,
-			description: null,
-			coverUrl: null,
-			genres: [],
-			tags: [],
-			status: null,
-			chapterCount: null,
-			mainNovelUrl: this.getNovelPageUrl(),
-			needsDetailPage: true,
-			metadataIncomplete: true,
-		};
-
-		// Try to extract author from mobile page
-		const contentDiv = document.getElementById("content");
-		if (contentDiv) {
-			const authorLink = contentDiv.querySelector("a[href*='/u/']");
-			if (authorLink) {
-				const authorText = authorLink.textContent.trim();
-				if (authorText && authorText.length > 0) {
-					metadata.author = authorText;
-				}
-			}
+		if (!enhancedText || enhancedText.trim().length === 0) {
+			debugError("[Mobile] Enhanced text is empty");
+			return 0;
 		}
 
-		return metadata;
-	}
-
-	// Find the content area on mobile Fanfiction.net
-	findContentArea() {
-		// Mobile version uses div#storycontent with class="storycontent nocopy"
-		const contentDiv = document.getElementById("storycontent");
-		if (contentDiv) {
-			debugLog("FanFiction Mobile: Found storycontent div");
-			// Validate it has content
-			if (
-				contentDiv.textContent &&
-				contentDiv.textContent.trim().length > 0
-			) {
-				return contentDiv;
-			}
-		}
-
-		// Fallback: try finding by class
-		const storyContentByClass = document.querySelector(".storycontent");
-		if (storyContentByClass) {
-			debugLog("FanFiction Mobile: Found content by class");
-			if (
-				storyContentByClass.textContent &&
-				storyContentByClass.textContent.trim().length > 0
-			) {
-				return storyContentByClass;
-			}
-		}
-
-		// Final fallback to base implementation
-		return super.findContentArea();
-	}
-
-	// Extract the title of the chapter
-	extractTitle() {
-		// Mobile version has title in: <div align=center><b>Story Title</b> by <a>author</a></div>
-		const contentDiv = document.getElementById("content");
-		if (contentDiv) {
-			const titleElement = contentDiv.querySelector(
-				"div[align='center'] b",
-			);
-			if (titleElement) {
-				const title = titleElement.textContent.trim();
-				if (title && title.length > 0) {
-					return title;
-				}
-			}
-		}
-
-		// Fallback to page title if available
-		if (document.title && document.title.trim().length > 0) {
-			return document.title;
-		}
-
-		// Final fallback
-		return "Untitled Story";
-	}
-
-	// Format content after enhancement - DO NOT MODIFY STYLING
-	formatAfterEnhancement(contentArea) {
-		// Leave all styling as-is from original content
-		// No modifications to preserve original formatting
+		// Use parent's robust implementation
+		// It handles both HTML and plain text cases
+		const result = super.applyEnhancedContent(contentArea, enhancedText);
+		debugLog(`[Mobile] Applied enhancement to ${result} paragraphs`);
+		return result;
 	}
 
 	/**
-	 * Indicates this site prefers text-only enhancement (no structural/style changes)
+	 * Inherit remaining methods from parent:
+	 * - generateNovelId() - same story ID pattern
+	 * - getNovelPageUrl() - same structure
+	 * - getPageTheme() - same theme detection
+	 * - getDefaultPrompt() - override below if needed
+	 * - getSiteIdentifier() - override below if needed
+	 * - supportsTextOnlyEnhancement() - return true (mobile prefers text-only)
+	 * - formatAfterEnhancement() - parent's no-op is fine
+	 * - getNovelControlsConfig() - customize for mobile if needed
+	 */
+
+	/**
+	 * Override to return true for mobile
+	 * Mobile prefers text-only enhancement to avoid rendering issues
+	 * @returns {boolean}
 	 */
 	supportsTextOnlyEnhancement() {
 		return true;
 	}
 
 	/**
-	 * Apply enhanced content in a text-only manner for mobile version.
-	 * Mobile version has simpler structure with direct <p> tags in #storycontent
-	 * @param {HTMLElement} contentArea - The story content root element
-	 * @param {string} enhancedText - The enhanced content (plain or lightly formatted)
-	 * @returns {number} total paragraphs updated/appended
+	 * Mobile-specific default prompt
+	 * Inherits parent's philosophy but emphasizes mobile constraints
+	 * @returns {string}
 	 */
-	applyEnhancedContent(contentArea, enhancedText) {
-		// Validate inputs
-		if (!contentArea || typeof enhancedText !== "string") {
-			debugError("Mobile handler: Invalid content area or enhanced text");
-			return 0;
-		}
-
-		if (!enhancedText || enhancedText.trim().length === 0) {
-			debugError("Mobile handler: Enhanced text is empty");
-			return 0;
-		}
-
-		debugLog(
-			"FanFiction Mobile applyEnhancedContent: contentArea is",
-			contentArea.id,
-			contentArea.className,
-		);
-
-		// Check if the enhanced text contains HTML tags
-		const hasHTMLTags = /<p>|<\/p>|<br>|<div>/.test(enhancedText);
-
-		let enhancedParagraphs = [];
-
-		if (hasHTMLTags) {
-			// Parse HTML content to extract paragraph text
-			debugLog(
-				"FanFiction Mobile: Enhanced text contains HTML, parsing...",
-			);
-			const tempDiv = document.createElement("div");
-			tempDiv.innerHTML = enhancedText;
-
-			// Extract text from all <p> tags
-			const pTags = tempDiv.querySelectorAll("p");
-			enhancedParagraphs = Array.from(pTags)
-				.map((p) => p.textContent.trim())
-				.filter((text) => text.length > 0);
-
-			debugLog(
-				`FanFiction Mobile: Extracted ${enhancedParagraphs.length} paragraphs from HTML`,
-			);
-		} else {
-			// Plain text - split on double newlines as paragraph boundaries
-			debugLog(
-				"FanFiction Mobile: Enhanced text is plain text, splitting by newlines...",
-			);
-			enhancedParagraphs = enhancedText
-				.replace(/\r/g, "")
-				.split(/\n\n+/)
-				.map((p) => p.trim())
-				.filter((p) => p.length > 0);
-		}
-
-		// Get all existing paragraphs
-		const originalParagraphEls = Array.from(
-			contentArea.querySelectorAll("p"),
-		);
-		const replaceCount = Math.min(
-			originalParagraphEls.length,
-			enhancedParagraphs.length,
-		);
-
-		debugLog(
-			`FanFiction Mobile: Replacing ${replaceCount} existing paragraphs, adding ${
-				enhancedParagraphs.length - replaceCount
-			} new ones`,
-		);
-
-		// Replace existing paragraphs
-		for (let i = 0; i < replaceCount; i++) {
-			// Preserve existing inline styles (like text-align:center)
-			const existingStyle = originalParagraphEls[i].getAttribute("style");
-			originalParagraphEls[i].textContent = enhancedParagraphs[i];
-
-			// Restore original style if it existed
-			if (existingStyle) {
-				originalParagraphEls[i].setAttribute("style", existingStyle);
-			}
-
-			// Ensure user-select is enabled
-			if (!originalParagraphEls[i].style.userSelect) {
-				originalParagraphEls[i].style.userSelect = "text";
-			}
-		}
-
-		// Add new paragraphs if enhanced content has more
-		for (let i = replaceCount; i < enhancedParagraphs.length; i++) {
-			const p = document.createElement("p");
-			p.textContent = enhancedParagraphs[i];
-			p.style.userSelect = "text";
-			contentArea.appendChild(p);
-		}
-
-		return enhancedParagraphs.length;
-	}
-
-	// Implement site-specific default prompt
 	getDefaultPrompt() {
-		return "This is a fanfiction from FanFiction.net mobile. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions.";
+		return FanfictionMobileHandler.DEFAULT_SITE_PROMPT;
 	}
 
-	// Get a readable site name for the UI
+	/**
+	 * Mobile-specific site identifier for UI
+	 * @returns {string}
+	 */
 	getSiteIdentifier() {
 		return "Fanfiction.net (Mobile)";
 	}
 
-	// Get site-specific prompt enhancement
+	/**
+	 * Mobile-specific site prompt
+	 * @returns {string}
+	 */
 	getSiteSpecificPrompt() {
 		return FanfictionMobileHandler.DEFAULT_SITE_PROMPT;
+	}
+
+	/**
+	 * Customize controls configuration for mobile
+	 * @returns {Object}
+	 */
+	getNovelControlsConfig() {
+		return {
+			showControls: this.isChapterPage(),
+			insertionPoint: this.getNovelPageUIInsertionPoint(),
+			position: "before",
+			isChapterPage: true,
+			customStyles: {
+				background: "linear-gradient(135deg, #1a2540 0%, #16213e 100%)",
+				borderColor: "#2a4b8d",
+				accentColor: "#4a7c9c",
+			},
+		};
 	}
 }
 

@@ -1247,6 +1247,8 @@ When enhancing, improve readability while respecting the author's creative voice
 
 	// Format content after enhancement - DO NOT MODIFY STYLING
 	formatAfterEnhancement(contentArea) {
+		contentArea;
+		pass;
 		// Leave all styling as-is from original content
 		// No modifications to preserve original formatting
 	}
@@ -1386,5 +1388,6 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 }
 
-// Default export
+// Named export for class (used by subclasses like mobile handler)
+// Default export for singleton instance
 export default new FanfictionHandler();

@@ -1,0 +1,12 @@
+{
+	"no-inline-html": false,
+	"line-length": false,
+	"blanks-around-lists": false,
+	"table-column-style": false,
+	"no-duplicate-heading": false,
+	"no-trailing-punctuation": false,
+	"ul-indent": false,
+	"no-hard-tabs": false,
+	"first-line-h1": false,
+	"single-trailing-newline": false
+}
