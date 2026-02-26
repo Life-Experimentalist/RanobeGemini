@@ -194,14 +194,14 @@ sequenceDiagram
 
 Novels are organized into shelves based on their source website:
 
-| Shelf          | Websites                             | Icon | Color   |
-| -------------- | ------------------------------------ | ---- | ------- |
-| **FanFiction** | www.fanfiction.net, m.fanfiction.net | 📖    | #6c5ce7 |
-| **Ranobes**    | ranobes.net + 10 variants            | 📚    | #00b894 |
-| **AO3**        | archiveofourown.org, ao3.org         | 📕    | #990000 |
-| **WebNovel**   | webnovel.com                         | 📘    | #f39c12 |
+| Shelf          | Websites                                                           | Icon | Color   |
+| -------------- | ------------------------------------------------------------------ | ---- | ------- |
+| **FanFiction** | [www.fanfiction.net](https://www.fanfiction.net), m.fanfiction.net | 📖    | #6c5ce7 |
+| **Ranobes**    | ranobes.net + 10 variants                                          | 📚    | #00b894 |
+| **AO3**        | archiveofourown.org, ao3.org                                       | 📕    | #990000 |
+| **WebNovel**   | webnovel.com                                                       | 📘    | #f39c12 |
 
-**Mobile & Desktop Unity**: Mobile and desktop versions of the same site share novels (e.g., www.fanfiction.net and m.fanfiction.net both use the FanFiction shelf).
+**Mobile & Desktop Unity**: Mobile and desktop versions of the same site share novels (e.g., [www.fanfiction.net](https://www.fanfiction.net) and m.fanfiction.net both use the FanFiction shelf).
 
 ### 3. Full Library Page
 

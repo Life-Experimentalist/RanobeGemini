@@ -1,0 +1,24 @@
+{
+    "name": "Ranobe Gemini Library",
+    "short_name": "RG Library",
+    "description": "Your Novel Library powered by Ranobe Gemini",
+    "start_url": "library.html",
+    "display": "standalone",
+    "background_color": "#0f1419",
+    "theme_color": "#e94560",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "../icons/icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "books",
+        "entertainment",
+        "productivity"
+    ],
+    "screenshots": []
+}

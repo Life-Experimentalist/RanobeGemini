@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Archive of Our Own - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
 		<link rel="stylesheet" href="./style.css" />
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="../../../icons/icon.png"
-		/>
+		<link rel="stylesheet" href="../../edit-modal.css" />
+		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
 	</head>
+
 	<body class="ao3-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span
-						class="shelf-page-color-bar"
-						id="color-bar"
-						style="background: #990000"
-					></span>
-					<img
-						src="https://archiveofourown.org/images/ao3_logos/logo_42.png"
-						alt="Archive of Our Own"
-						class="shelf-page-icon-img"
-						id="page-icon-img"
-					/>
-					<span
-						class="shelf-page-icon"
-						id="page-icon"
-						style="display: none"
-						>🏛️</span
-					>
+					<span class="shelf-page-color-bar" id="color-bar" style="background: #990000"></span>
+					<img src="https://archiveofourown.org/images/ao3_logos/logo_42.png" alt="Archive of Our Own"
+						class="shelf-page-icon-img" id="page-icon-img" />
+					<span class="shelf-page-icon" id="page-icon" style="display: none">🏛️</span>
 					<h1 id="page-title">Archive of Our Own</h1>
 					<span class="novel-count" id="novel-count">(0 works)</span>
 				</div>
@@ -232,7 +217,8 @@
 							<div class="filter-item">
 								<label>Fandoms:</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="fandoms-dropdown-toggle">Choose Fandoms</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="fandoms-dropdown-toggle">Choose Fandoms</button>
 									<div class="multi-dropdown-panel" id="fandoms-dropdown-panel">
 										<div class="filter-pill-list" id="fandoms-filter"></div>
 									</div>
@@ -242,7 +228,8 @@
 							<div class="filter-item">
 								<label>Relationships:</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="relationships-dropdown-toggle">Choose Relationships</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="relationships-dropdown-toggle">Choose Relationships</button>
 									<div class="multi-dropdown-panel" id="relationships-dropdown-panel">
 										<div class="filter-pill-list" id="relationships-filter"></div>
 									</div>
@@ -252,7 +239,8 @@
 							<div class="filter-item">
 								<label>Characters (max 4):</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="characters-dropdown-toggle">Choose Characters</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="characters-dropdown-toggle">Choose Characters</button>
 									<div class="multi-dropdown-panel" id="characters-dropdown-panel">
 										<div class="filter-pill-list" id="characters-filter"></div>
 									</div>
@@ -269,7 +257,8 @@
 											<option value="all">All tags (AND)</option>
 										</select>
 									</div>
-									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose Tags</button>
+									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose
+										Tags</button>
 									<div class="multi-dropdown-panel" id="tags-dropdown-panel">
 										<div class="filter-pill-list" id="tags-filter"></div>
 									</div>
@@ -297,12 +286,8 @@
 				</div>
 
 				<div class="search-bar-container search-right">
-					<input
-						type="text"
-						id="search-input"
-						class="search-bar"
-						placeholder="🔍 Search by title or author..."
-					/>
+					<input type="text" id="search-input" class="search-bar"
+						placeholder="🔍 Search by title or author..." />
 				</div>
 			</div>
 
@@ -353,8 +338,10 @@
 					<div class="modal-status-section">
 						<div class="status-label">Reading Status:</div>
 						<div class="status-buttons">
-							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To Read</button>
-							<button class="status-btn" data-status="reading" title="Currently Reading">📖 Reading</button>
+							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To
+								Read</button>
+							<button class="status-btn" data-status="reading" title="Currently Reading">📖
+								Reading</button>
 							<button class="status-btn" data-status="completed" title="Completed">✅ Completed</button>
 							<button class="status-btn" data-status="on-hold" title="On Hold">⏸️ On Hold</button>
 							<button class="status-btn" data-status="dropped" title="Dropped">❌ Dropped</button>
@@ -363,7 +350,8 @@
 					</div>
 					<div class="modal-actions-divider"></div>
 					<div class="modal-actions-primary">
-						<a id="modal-continue-btn" class="btn btn-primary ao3-read-btn" target="_blank">Continue Reading</a>
+						<a id="modal-continue-btn" class="btn btn-primary ao3-read-btn" target="_blank">Continue
+							Reading</a>
 						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on AO3</a>
 					</div>
 					<div class="modal-actions-secondary">
@@ -381,7 +369,11 @@
 			</div>
 		</div>
 
+		<!-- Inline Edit Modal Container -->
+		<div id="shelf-edit-modal"></div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
 		<script type="module" src="./shelf-page.js"></script>
 	</body>
+
 </html>

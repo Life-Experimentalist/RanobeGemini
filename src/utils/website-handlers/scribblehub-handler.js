@@ -30,6 +30,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "ScribbleHub",
 		icon: "https://www.scribblehub.com/favicon.ico",
+		invertIconInDarkMode: true,
 		emoji: "✨",
 		color: "#6c5ce7",
 		novelIdPattern: /\/series\/(\d+)\/|\/read\/(\d+)-/,
@@ -39,7 +40,52 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
 
-	static DEFAULT_SITE_PROMPT = "This is a novel from ScribbleHub. Please maintain the author's style and any formatting features. Respect any special formatting for dialogue, thoughts, or scene transitions. Please improve grammar and readability while maintaining the original meaning and flow.";
+	/** Configurable settings exposed in the Library Settings page. */
+	static SETTINGS_DEFINITION = {
+		fields: [
+			{
+				key: "autoEnhanceEnabled",
+				label: "Auto-enhance chapters",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Automatically run Enhance when a ScribbleHub chapter loads.",
+			},
+			{
+				key: "fontSize",
+				label: "Font Size",
+				type: "number",
+				defaultValue: 100,
+				min: 50,
+				max: 200,
+				step: 10,
+				description:
+					"Font size percentage for enhanced/summary content (50-200%).",
+			},
+			{
+				key: "globalCSS",
+				label: "Custom Global CSS",
+				type: "textarea",
+				defaultValue: "",
+				description:
+					"CSS applied globally to all ScribbleHub pages when extension is active.",
+				placeholder:
+					"body { font-family: 'Georgia'; }\n.chapter { line-height: 1.8; }",
+			},
+			{
+				key: "logoCSS",
+				label: "Custom Logo CSS",
+				type: "textarea",
+				defaultValue: "",
+				description:
+					"CSS specifically for the ScribbleHub logo/header area.",
+				placeholder: ".site-logo { display: none !important; }",
+			},
+		],
+	};
+
+	static DEFAULT_SITE_PROMPT =
+		"This is a novel from ScribbleHub. Please maintain the author's style and any formatting features. Respect any special formatting for dialogue, thoughts, or scene transitions. Please improve grammar and readability while maintaining the original meaning and flow.";
 
 	constructor() {
 		super();
@@ -202,9 +248,10 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		if (!contentArea) {
 			return {
 				found: false,
-				title: "",
+				title: document.title,
 				text: "",
-				selector: "",
+				selector: "scribblehub-no-content",
+				reason: "Could not locate chapter content on this ScribbleHub page.",
 			};
 		}
 
@@ -876,6 +923,147 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		// Default to extension's theme detection
 		return "auto";
+	}
+
+	/**
+	 * Get handler-proposed library settings for ScribbleHub
+	 * @returns {Object} Settings schema
+	 */
+	getProposedLibrarySettings() {
+		return {
+			fetchRatings: {
+				type: "boolean",
+				default: true,
+				label: "Fetch Ratings",
+				description:
+					"Include user rating and review count in library metadata",
+			},
+			trackUpdates: {
+				type: "boolean",
+				default: false,
+				label: "Track Updates",
+				description:
+					"Monitor for new chapters and notify when story updates",
+			},
+			includeComments: {
+				type: "boolean",
+				default: false,
+				label: "Include Reader Comments",
+				description:
+					"Store recent reader comments for library (uses more storage)",
+			},
+		};
+	}
+
+	/**
+	 * Get the URL where metadata should be fetched from
+	 * ScribbleHub is a "dedicated_page" type - metadata only on story pages
+	 * @returns {string|null}
+	 */
+	getMetadataSourceUrl() {
+		// Extract story ID from current URL
+		// URL formats:
+		// /s/12345/story-title/
+		// /story/12345
+		// /series/12345/
+		const match = window.location.href.match(/\/(?:s|story|series)\/(\d+)/);
+		if (!match) {
+			return null;
+		}
+
+		const storyId = match[1];
+
+		// Return the story page URL
+		return `https://www.scribblehub.com/series/${storyId}/`;
+	}
+
+	/**
+	 * ScribbleHub-specific metadata fields for the library edit modal.
+	 * @returns {Array<Object>}
+	 */
+	static getEditableFields() {
+		return [
+			{
+				key: "rating",
+				label: "Content Rating",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. Everyone, Teen, Mature",
+			},
+			{
+				key: "language",
+				label: "Language",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. English",
+			},
+			{
+				key: "status",
+				label: "Work Status",
+				type: "select",
+				source: "metadata",
+				options: [
+					{ value: "", label: "Unknown" },
+					{ value: "Ongoing", label: "Ongoing" },
+					{ value: "Completed", label: "Completed" },
+					{ value: "Hiatus", label: "Hiatus" },
+					{ value: "Dropped", label: "Dropped" },
+				],
+			},
+			{
+				key: "words",
+				label: "Word Count",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "views",
+				label: "Views",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "favorites",
+				label: "Favorites",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "follows",
+				label: "Follows",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "reviews",
+				label: "Reviews",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "isCrossover",
+				label: "Is Crossover",
+				type: "toggle",
+				source: "metadata",
+			},
+			{
+				key: "publishedDate",
+				label: "Published Date",
+				type: "date",
+				source: "metadata",
+			},
+			{
+				key: "updatedDate",
+				label: "Last Updated",
+				type: "date",
+				source: "metadata",
+			},
+		];
 	}
 }
 

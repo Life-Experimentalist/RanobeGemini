@@ -34,6 +34,10 @@ function buildDefaultSiteSettings() {
 			autoAddEnabled: true,
 			autoAddStatusChapter: "reading",
 			autoAddStatusNovel: "plan-to-read",
+			// Auto-update settings for library novels
+			autoUpdateMetadata: false, // Disable by default (user must opt-in per site)
+			autoUpdateTotalChaptersOnly: true, // When auto-update is ON, only update total chapters
+			autoUpdateShowBanner: true, // Show "Check for Updates" banner
 			name: shelf.name || shelf.id,
 			domains: shelf.domains || [],
 			icon: shelf.icon,

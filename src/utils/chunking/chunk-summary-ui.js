@@ -263,6 +263,7 @@ export function createMainSummaryGroup(
 		margin: 20px 0;
 		justify-content: center;
 		flex-wrap: wrap;
+		align-items: center;
 	`;
 
 	const label = document.createElement("div");
@@ -277,29 +278,54 @@ export function createMainSummaryGroup(
 	label.textContent = "Full Chapter Summary";
 	groupContainer.appendChild(label);
 
-	// Add enhance/re-enhance button if callback provided
-	if (onEnhance) {
-		const enhanceBtn = document.createElement("button");
-		enhanceBtn.className = "gemini-enhance-btn";
-		enhanceBtn.style.cssText = `
-			padding: 10px 20px;
-			background: ${colors.primary};
-			color: #ffffff;
-			border: 1px solid ${colors.outline};
-			border-radius: 4px;
+	// Helper function to create consistently styled buttons
+	const createButton = (text, className, bgColor, textColor) => {
+		const btn = document.createElement("button");
+		btn.className = className;
+		btn.style.cssText = `
+			padding: 12px 16px;
+			background: ${bgColor};
+			color: ${textColor};
+			border: none;
+			border-radius: 6px;
 			cursor: pointer;
 			font-size: 14px;
 			font-weight: 600;
-			transition: box-shadow 0.2s;
+			transition: all 0.2s ease;
 			font-family: inherit;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+			white-space: nowrap;
+			min-height: 42px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex: 1 1 auto;
+			min-width: 100px;
+			max-width: 180px;
 		`;
-		enhanceBtn.textContent = "⚡ Enhance Chapter";
-		enhanceBtn.addEventListener("mouseenter", () => {
-			enhanceBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+		btn.textContent = text;
+		btn.addEventListener("mouseenter", () => {
+			btn.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
+			btn.style.transform = "translateY(-1px)";
 		});
-		enhanceBtn.addEventListener("mouseleave", () => {
-			enhanceBtn.style.boxShadow = "none";
+		btn.addEventListener("mouseleave", () => {
+			btn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+			btn.style.transform = "translateY(0)";
 		});
+		btn.addEventListener("active", () => {
+			btn.style.transform = "translateY(0)";
+		});
+		return btn;
+	};
+
+	// Add enhance/re-enhance button if callback provided
+	if (onEnhance) {
+		const enhanceBtn = createButton(
+			"⚡ Enhance Chapter",
+			"gemini-enhance-btn",
+			colors.primary,
+			"#ffffff",
+		);
 		enhanceBtn.addEventListener("click", () => {
 			onEnhance();
 		});
@@ -307,27 +333,12 @@ export function createMainSummaryGroup(
 	}
 
 	// Long summary button
-	const longSummaryBtn = document.createElement("button");
-	longSummaryBtn.className = "gemini-main-long-summary-btn";
-	longSummaryBtn.style.cssText = `
-		padding: 10px 20px;
-		background: ${colors.primary};
-		color: #ffffff;
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 600;
-		transition: box-shadow 0.2s;
-		font-family: inherit;
-	`;
-	longSummaryBtn.textContent = "📝 Long Summary";
-	longSummaryBtn.addEventListener("mouseenter", () => {
-		longSummaryBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-	});
-	longSummaryBtn.addEventListener("mouseleave", () => {
-		longSummaryBtn.style.boxShadow = "none";
-	});
+	const longSummaryBtn = createButton(
+		"📝 Long Summary",
+		"gemini-main-long-summary-btn",
+		colors.primary,
+		"#ffffff",
+	);
 	longSummaryBtn.addEventListener("click", () => {
 		if (onLongSummary) {
 			onLongSummary(allIndices);
@@ -336,27 +347,12 @@ export function createMainSummaryGroup(
 	groupContainer.appendChild(longSummaryBtn);
 
 	// Short summary button
-	const shortSummaryBtn = document.createElement("button");
-	shortSummaryBtn.className = "gemini-main-short-summary-btn";
-	shortSummaryBtn.style.cssText = `
-		padding: 10px 20px;
-		background: ${colors.surface};
-		color: ${colors.primary};
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 600;
-		transition: box-shadow 0.2s;
-		font-family: inherit;
-	`;
-	shortSummaryBtn.textContent = "✨ Short Summary";
-	shortSummaryBtn.addEventListener("mouseenter", () => {
-		shortSummaryBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-	});
-	shortSummaryBtn.addEventListener("mouseleave", () => {
-		shortSummaryBtn.style.boxShadow = "none";
-	});
+	const shortSummaryBtn = createButton(
+		"✨ Short Summary",
+		"gemini-main-short-summary-btn",
+		colors.surface,
+		colors.primary,
+	);
 	shortSummaryBtn.addEventListener("click", () => {
 		if (onShortSummary) {
 			onShortSummary(allIndices);

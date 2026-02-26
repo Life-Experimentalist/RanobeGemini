@@ -49,6 +49,20 @@ export class AO3Handler extends BaseWebsiteHandler {
 	// Handler type: Full metadata available on chapter pages (no separate info page needed)
 	static HANDLER_TYPE = "chapter_embedded";
 
+	/** Configurable settings exposed in the Library Settings page. */
+	static SETTINGS_DEFINITION = {
+		fields: [
+			{
+				key: "autoEnhanceEnabled",
+				label: "Auto-enhance chapters",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Automatically run Enhance when an AO3 chapter loads.",
+			},
+		],
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting
@@ -96,7 +110,7 @@ When enhancing, improve readability while respecting the author's original style
 		const isWork = /^\/works\/\d+/.test(url);
 		// Check for chapter content on page
 		const hasContent = !!document.querySelector(
-			'div.userstuff.module[role="article"], #chapters .userstuff.module, .userstuff.module'
+			'div.userstuff.module[role="article"], #chapters .userstuff.module, .userstuff.module',
 		);
 		return isWork && hasContent;
 	}
@@ -112,7 +126,7 @@ When enhancing, improve readability while respecting the author's original style
 		const isSingleWork =
 			/^\/works\/\d+\/?$/.test(url) || /^\/works\/\d+\?/.test(url);
 		const hasContent = !!document.querySelector(
-			'div.userstuff.module[role="article"], .userstuff.module'
+			'div.userstuff.module[role="article"], .userstuff.module',
 		);
 
 		// Check if there's a chapter selector (means multi-chapter)
@@ -212,13 +226,85 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Fallback to before chapter content
 		const chapterContent = document.querySelector(
-			'.userstuff.module[role="article"]'
+			'.userstuff.module[role="article"]',
 		);
 		if (chapterContent) {
 			return { element: chapterContent, position: "before" };
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get custom chapter page control buttons for AO3
+	 * Adds a download button for FichHub integration
+	 * Opens in new tab and optionally copies metadata to clipboard
+	 * @returns {Array} Array of button specifications
+	 */
+	getCustomChapterButtons() {
+		return [
+			{
+				text: "Download",
+				emoji: "⬇️",
+				color: "#ff6b6b",
+				onClick: () => {
+					// Get library settings to check if clipboard copy is enabled
+					try {
+						const settingsJson = localStorage.getItem(
+							"rg_library_settings",
+						);
+						const settings = settingsJson
+							? JSON.parse(settingsJson)
+							: {};
+						const enableClipboard =
+							settings.enableClipboardCopyOnDownload !== false;
+
+						if (enableClipboard) {
+							const clipboardText = this.generateClipboardText();
+							if (clipboardText) {
+								navigator.clipboard
+									.writeText(clipboardText)
+									.catch(() => {
+										console.log(
+											"Could not copy to clipboard",
+										);
+									});
+							}
+						}
+					} catch (error) {
+						console.warn(
+							"Error checking clipboard setting:",
+							error,
+						);
+					}
+
+					// FichHub download bookmarklet - open in new tab
+					const url = `https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`;
+					window.open(url, "_blank");
+				},
+			},
+		];
+	}
+
+	/**
+	 * Generate clipboard text in format: "Title" by Author WorkId.epub
+	 * @returns {string|null} Formatted text or null if unable to generate
+	 */
+	generateClipboardText() {
+		try {
+			const title = this.extractTitle();
+			const author = this.extractAuthor();
+			const workId = window.location.href.match(/works\/(\d+)/)?.[1];
+
+			if (!title || !author || !workId) {
+				return null;
+			}
+
+			return `"${title}" by ${author} ${workId}.epub`;
+		} catch (error) {
+			console.error("Error generating clipboard text:", error);
+			return null;
+		}
 	}
 
 	/**
@@ -267,7 +353,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Title
 		const titleEl = document.querySelector(
-			".preface h2.title.heading, .work h2.title"
+			".preface h2.title.heading, .work h2.title",
 		);
 		if (titleEl) {
 			metadata.title = titleEl.textContent.trim();
@@ -275,7 +361,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Author(s)
 		const authorEls = document.querySelectorAll(
-			".preface .byline a[rel='author'], .byline a[rel='author']"
+			".preface .byline a[rel='author'], .byline a[rel='author']",
 		);
 		if (authorEls.length > 0) {
 			metadata.author = Array.from(authorEls)
@@ -285,7 +371,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Summary/Description
 		const summaryEl = document.querySelector(
-			".summary .userstuff blockquote, .summary .userstuff"
+			".summary .userstuff blockquote, .summary .userstuff",
 		);
 		if (summaryEl) {
 			metadata.description = summaryEl.textContent
@@ -321,18 +407,17 @@ When enhancing, improve readability while respecting the author's original style
 				metadata.tags.push(`Category: ${category}`);
 			});
 
-			// Fandoms
+			// Fandoms — stored in metadata.fandoms and tags but NOT merged into genres
 			const fandomEls = workMeta.querySelectorAll("dd.fandom a.tag");
 			fandomEls.forEach((el) => {
 				const fandom = el.textContent.trim();
 				metadata.metadata.fandoms.push(fandom);
-				metadata.genres.push(fandom);
 				metadata.tags.push(fandom);
 			});
 
 			// Relationships
 			const relationshipEls = workMeta.querySelectorAll(
-				"dd.relationship a.tag"
+				"dd.relationship a.tag",
 			);
 			relationshipEls.forEach((el) => {
 				const relationship = el.textContent.trim();
@@ -423,7 +508,7 @@ When enhancing, improve readability while respecting the author's original style
 						// Has explicit total chapter count (e.g., "5/10")
 						metadata.metadata.totalChapters = parseInt(
 							match[2],
-							10
+							10,
 						);
 						metadata.totalChapters =
 							metadata.metadata.totalChapters;
@@ -444,7 +529,7 @@ When enhancing, improve readability while respecting the author's original style
 						metadata.totalChapters = publishedChapters;
 						metadata.status = "ongoing";
 						debugLog(
-							`AO3: Work ongoing with ${publishedChapters} published chapters (totalChapters = ${publishedChapters})`
+							`AO3: Work ongoing with ${publishedChapters} published chapters (totalChapters = ${publishedChapters})`,
 						);
 					}
 				} else {
@@ -580,7 +665,7 @@ When enhancing, improve readability while respecting the author's original style
 		try {
 			// Author
 			const authorLink = document.querySelector(
-				'.byline a[rel="author"]'
+				'.byline a[rel="author"]',
 			);
 			if (authorLink) {
 				context.author = authorLink.textContent.trim();
@@ -594,10 +679,10 @@ When enhancing, improve readability while respecting the author's original style
 
 			// Tags/Genres
 			const tagLinks = document.querySelectorAll(
-				".fandom.tags a.tag, .freeform.tags a.tag"
+				".fandom.tags a.tag, .freeform.tags a.tag",
 			);
 			context.tags = Array.from(tagLinks).map((a) =>
-				a.textContent.trim()
+				a.textContent.trim(),
 			);
 
 			// Status
@@ -618,7 +703,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// AO3's main chapter content is in div.userstuff.module with role="article"
 		const mainContent = document.querySelector(
-			'div.userstuff.module[role="article"]'
+			'div.userstuff.module[role="article"]',
 		);
 		if (mainContent) {
 			debugLog("AO3: Found main chapter content with role=article");
@@ -627,7 +712,7 @@ When enhancing, improve readability while respecting the author's original style
 
 		// Alternative: look for userstuff module inside chapters div
 		const chaptersContent = document.querySelector(
-			"#chapters .userstuff.module"
+			"#chapters .userstuff.module",
 		);
 		if (chaptersContent) {
 			debugLog("AO3: Found chapter content in #chapters");
@@ -663,7 +748,7 @@ When enhancing, improve readability while respecting the author's original style
 
 			// Check if there's a chapter title
 			const chapterTitle = document.querySelector(
-				".chapter.preface h3.title"
+				".chapter.preface h3.title",
 			);
 			if (chapterTitle) {
 				const chapterText = chapterTitle.textContent.trim();
@@ -743,7 +828,7 @@ When enhancing, improve readability while respecting the author's original style
 
 			// Get warnings
 			const warnings = Array.from(
-				document.querySelectorAll(".warning.tags a.tag")
+				document.querySelectorAll(".warning.tags a.tag"),
 			).map((tag) => tag.textContent.trim());
 			if (warnings.length > 0) {
 				metadata.warnings = warnings;
@@ -751,7 +836,7 @@ When enhancing, improve readability while respecting the author's original style
 
 			// Get relationships
 			const relationships = Array.from(
-				document.querySelectorAll(".relationship.tags a.tag")
+				document.querySelectorAll(".relationship.tags a.tag"),
 			).map((tag) => tag.textContent.trim());
 			if (relationships.length > 0) {
 				metadata.relationships = relationships;
@@ -759,7 +844,7 @@ When enhancing, improve readability while respecting the author's original style
 
 			// Get characters
 			const characters = Array.from(
-				document.querySelectorAll(".character.tags a.tag")
+				document.querySelectorAll(".character.tags a.tag"),
 			).map((tag) => tag.textContent.trim());
 			if (characters.length > 0) {
 				metadata.characters = characters;
@@ -851,6 +936,9 @@ When enhancing, improve readability while respecting the author's original style
 			debugError("AO3: Could not find content area");
 			return {
 				found: false,
+				title: document.title,
+				text: "",
+				selector: "ao3-no-content",
 				reason: "Could not locate chapter content on this AO3 page.",
 			};
 		}
@@ -936,31 +1024,31 @@ When enhancing, improve readability while respecting the author's original style
 		// Convert ***text*** to <strong><em>text</em></strong> (bold italic)
 		protectedContent = protectedContent.replace(
 			/\*\*\*([^*]+)\*\*\*/g,
-			"<strong><em>$1</em></strong>"
+			"<strong><em>$1</em></strong>",
 		);
 
 		// Convert **text** to <strong>text</strong> (bold)
 		protectedContent = protectedContent.replace(
 			/\*\*([^*]+)\*\*/g,
-			"<strong>$1</strong>"
+			"<strong>$1</strong>",
 		);
 
 		// Convert *text* to <em>text</em> (italic)
 		// Be more careful here - only match if not preceded/followed by space after/before asterisk
 		protectedContent = protectedContent.replace(
 			/\*([^\s*][^*]*[^\s*])\*/g,
-			"<em>$1</em>"
+			"<em>$1</em>",
 		);
 		// Also handle single word italics like *word*
 		protectedContent = protectedContent.replace(
 			/\*([^\s*]+)\*/g,
-			"<em>$1</em>"
+			"<em>$1</em>",
 		);
 
 		// Restore HTML tags
 		protectedContent = protectedContent.replace(
 			/__HTML_TAG_(\d+)__/g,
-			(_, index) => htmlTagPlaceholders[parseInt(index)]
+			(_, index) => htmlTagPlaceholders[parseInt(index)],
 		);
 
 		return protectedContent;
@@ -969,6 +1057,120 @@ When enhancing, improve readability while respecting the author's original style
 	// Get site-specific prompt enhancement
 	getSiteSpecificPrompt() {
 		return AO3Handler.DEFAULT_SITE_PROMPT;
+	}
+
+	/**
+	 * Get handler-proposed library settings
+	 * @returns {Object} Settings schema
+	 */
+	getProposedLibrarySettings() {
+		return {
+			enableClipboardCopyOnDownload: {
+				label: "Copy to Clipboard on Download",
+				type: "boolean",
+				default: true,
+				description:
+					'Automatically copy "Title" by Author WorkId.epub to clipboard when downloading',
+			},
+		};
+	}
+
+	/**
+	 * AO3-specific metadata fields for the library edit modal.
+	 * @returns {Array<Object>}
+	 */
+	static getEditableFields() {
+		return [
+			{
+				key: "fandoms",
+				label: "Fandoms",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Harry Potter, Marvel",
+			},
+			{
+				key: "relationships",
+				label: "Relationships",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Harry/Ginny",
+			},
+			{
+				key: "characters",
+				label: "Characters",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Harry Potter",
+			},
+			{
+				key: "additionalTags",
+				label: "Additional Tags",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Fluff, Angst",
+			},
+			{
+				key: "language",
+				label: "Language",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. English",
+			},
+			{
+				key: "rating",
+				label: "Rating",
+				type: "select",
+				source: "metadata",
+				options: [
+					{ value: "", label: "Unknown" },
+					{ value: "General Audiences", label: "General Audiences" },
+					{ value: "Teen And Up Audiences", label: "Teen And Up" },
+					{ value: "Mature", label: "Mature" },
+					{ value: "Explicit", label: "Explicit" },
+					{ value: "Not Rated", label: "Not Rated" },
+				],
+			},
+			{
+				key: "words",
+				label: "Word Count",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "kudos",
+				label: "Kudos",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "comments",
+				label: "Comments",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "bookmarks",
+				label: "Bookmarks",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "publishedDate",
+				label: "Published Date",
+				type: "date",
+				source: "metadata",
+			},
+			{
+				key: "updatedDate",
+				label: "Last Updated",
+				type: "date",
+				source: "metadata",
+			},
+		];
 	}
 }
 

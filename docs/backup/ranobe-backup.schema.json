@@ -1,0 +1,379 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json",
+	"title": "Ranobe Gemini Backup",
+	"description": "Complete backup format for Ranobe Gemini browser extension, including library data, settings, and enhanced chapter content",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"version",
+		"type",
+		"createdAt",
+		"createdAtISO",
+		"extensionVersion",
+		"browser",
+		"data"
+	],
+	"properties": {
+		"version": {
+			"type": "string",
+			"description": "Backup format version number"
+		},
+		"type": {
+			"type": "string",
+			"description": "Type of backup: library (novels only), settings (configuration only), full (everything), or custom (user-selected)",
+			"enum": [
+				"library",
+				"settings",
+				"full",
+				"custom"
+			]
+		},
+		"createdAt": {
+			"type": "integer",
+			"minimum": 0,
+			"description": "Unix timestamp (milliseconds) when backup was created"
+		},
+		"createdAtISO": {
+			"type": "string",
+			"format": "date-time",
+			"description": "ISO 8601 formatted timestamp for human readability"
+		},
+		"extensionVersion": {
+			"type": "string",
+			"description": "Version of Ranobe Gemini that created this backup"
+		},
+		"browser": {
+			"type": "string",
+			"description": "Browser type (firefox, chromium, etc.)"
+		},
+		"data": {
+			"type": "object",
+			"description": "Extension data including library, settings, and user configuration",
+			"additionalProperties": true,
+			"properties": {
+				"rg_novel_library": {
+					"$ref": "#/$defs/library",
+					"description": "Complete novel library with all tracked novels"
+				},
+				"apiKey": {
+					"type": "string",
+					"description": "Primary Google Gemini API key"
+				},
+				"backupApiKeys": {
+					"type": "array",
+					"description": "Additional Gemini API keys for rotation",
+					"items": {
+						"type": "string"
+					}
+				},
+				"selectedModelId": {
+					"type": "string",
+					"description": "Currently selected Gemini model (e.g., gemini-2.0-flash)"
+				},
+				"customEndpoint": {
+					"type": "string",
+					"description": "Custom API endpoint URL if not using default Google endpoint"
+				},
+				"customModelEndpoint": {
+					"type": "string",
+					"description": "Alternative model endpoint URL"
+				},
+				"promptTemplate": {
+					"type": "string",
+					"description": "User-customized prompt template for content enhancement"
+				},
+				"summaryPrompt": {
+					"type": "string",
+					"description": "Prompt template for generating detailed chapter summaries"
+				},
+				"shortSummaryPrompt": {
+					"type": "string",
+					"description": "Prompt template for generating short summaries"
+				},
+				"permanentPrompt": {
+					"type": "string",
+					"description": "Permanent system prompt prepended to all requests"
+				},
+				"siteSpecificPrompts": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"chunkingEnabled": {
+					"type": "boolean"
+				},
+				"chunkSizeWords": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"chunkSummaryCount": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"useEmoji": {
+					"type": "boolean"
+				},
+				"maxOutputTokens": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"temperature": {
+					"type": "number"
+				},
+				"customTemperature": {
+					"type": "number"
+				},
+				"topP": {
+					"type": "number"
+				},
+				"topK": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"debugMode": {
+					"type": "boolean"
+				},
+				"driveClientId": {
+					"type": "string"
+				},
+				"driveClientSecret": {
+					"type": "string"
+				},
+				"driveFolderId": {
+					"type": "string"
+				},
+				"backupMode": {
+					"type": "string"
+				},
+				"driveAutoRestoreEnabled": {
+					"type": "boolean"
+				},
+				"driveAutoRestoreMergeMode": {
+					"type": "string"
+				},
+				"continuousBackupCheckIntervalMinutes": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"driveSyncIntervalMinutes": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"siteSettingsApi": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"autoHoldEnabled": {
+					"type": "boolean"
+				},
+				"autoHoldDays": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"rg_library_settings": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"themeSettings": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"fontSize": {
+					"type": "integer",
+					"minimum": 50
+				},
+				"autoEnhanceNovels": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"backupIncludeApiKeys": {
+					"type": "boolean"
+				},
+				"backupIncludeCredentials": {
+					"type": "boolean"
+				},
+				"rg_rolling_backup_enabled": {
+					"type": "boolean"
+				},
+				"rollingBackupIntervalMinutes": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"rg_rolling_backup_meta": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"rg_backup_config": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"backupHistory": {
+					"type": "array",
+					"items": {
+						"type": "object"
+					}
+				},
+				"lastBackupAt": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"backupFolder": {
+					"type": "string"
+				},
+				"backupRetention": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"backupIntervalDays": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"rg_domain_settings": {
+					"type": "object",
+					"additionalProperties": true
+				}
+			}
+		},
+		"chapters": {
+			"type": "object",
+			"description": "Enhanced chapter content stored by novel ID, including original and AI-enhanced text",
+			"additionalProperties": {
+				"type": "object",
+				"additionalProperties": true
+			}
+		},
+		"metadata": {
+			"type": "object",
+			"description": "Summary statistics about this backup",
+			"additionalProperties": false,
+			"properties": {
+				"novelCount": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Total number of novels in backup"
+				},
+				"hasApiKey": {
+					"type": "boolean"
+				},
+				"hasPrompts": {
+					"type": "boolean"
+				},
+				"hasDriveCredentials": {
+					"type": "boolean"
+				},
+				"includesCredentials": {
+					"type": "boolean"
+				},
+				"includesApiKeys": {
+					"type": "boolean"
+				}
+			}
+		}
+	},
+	"$defs": {
+		"library": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"novels": {
+					"type": "object",
+					"additionalProperties": {
+						"$ref": "#/$defs/novel"
+					}
+				},
+				"shelves": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"metadata": {
+					"type": "object",
+					"additionalProperties": true
+				}
+			}
+		},
+		"novel": {
+			"type": "object",
+			"additionalProperties": true,
+			"required": [
+				"id",
+				"shelfId",
+				"title"
+			],
+			"properties": {
+				"id": {
+					"type": "string"
+				},
+				"shelfId": {
+					"type": "string"
+				},
+				"siteNovelId": {
+					"type": "string"
+				},
+				"title": {
+					"type": "string"
+				},
+				"author": {
+					"type": "string"
+				},
+				"coverUrl": {
+					"type": "string"
+				},
+				"description": {
+					"type": "string"
+				},
+				"sourceUrl": {
+					"type": "string"
+				},
+				"totalChapters": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"lastReadChapter": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"lastReadUrl": {
+					"type": "string"
+				},
+				"status": {
+					"type": "string"
+				},
+				"genres": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"tags": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"addedAt": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"lastAccessedAt": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"enhancedChaptersCount": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"autoEnhance": {
+					"type": "boolean"
+				},
+				"metadata": {
+					"type": "object",
+					"additionalProperties": true
+				},
+				"editedFields": {
+					"type": "object",
+					"additionalProperties": true
+				}
+			}
+		}
+	}
+}

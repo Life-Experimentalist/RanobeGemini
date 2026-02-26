@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>ScribbleHub - Novel Library</title>
-	<link rel="stylesheet" href="../shelf-page.css" />
-	<link rel="stylesheet" href="./style.css" />
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="../../../icons/icon.png"
-		/>
+		<title>ScribbleHub - Novel Library</title>
+		<link rel="stylesheet" href="../shelf-page.css" />
+		<link rel="stylesheet" href="./style.css" />
+		<link rel="stylesheet" href="../../edit-modal.css" />
+		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
 	</head>
+
 	<body class="scribblehub-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span
-						class="shelf-page-color-bar"
-						id="color-bar"
-						style="background: #6c5ce7"
-					></span>
-					<img
-						src="https://www.scribblehub.com/favicon.ico"
-						alt="ScribbleHub"
-						class="shelf-page-icon-img"
-						id="page-icon-img"
-					/>
-					<span
-						class="shelf-page-icon"
-						id="page-icon"
-						style="display: none"
-						>✨</span
-					>
+					<span class="shelf-page-color-bar" id="color-bar" style="background: #6c5ce7"></span>
+					<img src="https://www.scribblehub.com/favicon.ico" alt="ScribbleHub" class="shelf-page-icon-img"
+						id="page-icon-img" />
+					<span class="shelf-page-icon" id="page-icon" style="display: none">✨</span>
 					<h1 id="page-title">ScribbleHub</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -53,9 +38,7 @@
 							<span class="stat-label">Novels</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-enhanced"
-								>0</span
-							>
+							<span class="stat-value" id="stats-enhanced">0</span>
 							<span class="stat-label">Enhanced Chapters</span>
 						</div>
 						<div class="stat-card">
@@ -67,33 +50,23 @@
 							<span class="stat-label">Avg Words</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-completed"
-								>0</span
-							>
+							<span class="stat-value" id="stats-completed">0</span>
 							<span class="stat-label">Completed</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-avgrating"
-								>-</span
-							>
+							<span class="stat-value" id="stats-avgrating">-</span>
 							<span class="stat-label">Avg Rating</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-reading"
-								>0%</span
-							>
+							<span class="stat-value" id="stats-reading">0%</span>
 							<span class="stat-label">Reading</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-languages"
-								>-</span
-							>
+							<span class="stat-value" id="stats-languages">-</span>
 							<span class="stat-label">Languages</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-avglength"
-								>-</span
-							>
+							<span class="stat-value" id="stats-avglength">-</span>
 							<span class="stat-label">Avg Chapter Count</span>
 						</div>
 					</div>
@@ -148,20 +121,10 @@
 						<div class="analytics-chart" id="status-chart-card">
 							<div class="chart-header">
 								<h4>Reading Status Mix</h4>
-								<span
-									class="chart-summary"
-									id="status-chart-summary"
-									>-</span
-								>
+								<span class="chart-summary" id="status-chart-summary">-</span>
 							</div>
-							<div
-								class="bar-chart"
-								id="reading-status-chart"
-							></div>
-							<div
-								class="bar-chart-legend"
-								id="reading-status-legend"
-							></div>
+							<div class="bar-chart" id="reading-status-chart"></div>
+							<div class="bar-chart-legend" id="reading-status-legend"></div>
 						</div>
 					</div>
 				</div>
@@ -172,20 +135,11 @@
 				<div class="filter-dropdown-container">
 					<button class="filter-toggle-btn" id="filter-toggle-btn">
 						⚙️ Filters
-						<span
-							class="filter-badge"
-							id="filter-badge"
-							style="display: none"
-							>✓</span
-						>
+						<span class="filter-badge" id="filter-badge" style="display: none">✓</span>
 					</button>
 					<div class="active-filters" id="active-filters"></div>
 
-					<div
-						class="filter-dropdown"
-						id="filter-dropdown"
-						style="display: none"
-					>
+					<div class="filter-dropdown" id="filter-dropdown" style="display: none">
 						<div class="filter-grid">
 							<!-- Sorting & Basics -->
 							<div class="filter-item">
@@ -225,9 +179,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label for="work-status-filter"
-									>Work Status:</label
-								>
+								<label for="work-status-filter">Work Status:</label>
 								<select id="work-status-filter">
 									<option value="all">All</option>
 									<option value="completed">Completed</option>
@@ -236,9 +188,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label for="status-filter"
-									>Reading Status:</label
-								>
+								<label for="status-filter">Reading Status:</label>
 								<select id="status-filter">
 									<option value="all">All</option>
 									<option value="plan-to-read">
@@ -279,7 +229,8 @@
 							<div class="filter-item">
 								<label>Fandoms (max 2):</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="fandoms-dropdown-toggle">Choose Fandoms</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="fandoms-dropdown-toggle">Choose Fandoms</button>
 									<div class="multi-dropdown-panel" id="fandoms-dropdown-panel">
 										<div class="filter-pill-list" id="fandoms-filter"></div>
 									</div>
@@ -289,7 +240,8 @@
 							<div class="filter-item">
 								<label>Genres:</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="genres-dropdown-toggle">Choose Genres</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="genres-dropdown-toggle">Choose Genres</button>
 									<div class="multi-dropdown-panel" id="genres-dropdown-panel">
 										<div class="filter-pill-list" id="genres-filter"></div>
 									</div>
@@ -299,7 +251,8 @@
 							<div class="filter-item">
 								<label>Characters (max 4):</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="characters-dropdown-toggle">Choose Characters</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="characters-dropdown-toggle">Choose Characters</button>
 									<div class="multi-dropdown-panel" id="characters-dropdown-panel">
 										<div class="filter-pill-list" id="characters-filter"></div>
 									</div>
@@ -316,7 +269,8 @@
 											<option value="all">All tags (AND)</option>
 										</select>
 									</div>
-									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose Tags</button>
+									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose
+										Tags</button>
 									<div class="multi-dropdown-panel" id="tags-dropdown-panel">
 										<div class="filter-pill-list" id="tags-filter"></div>
 									</div>
@@ -326,19 +280,9 @@
 							<div class="filter-item full-width">
 								<label>Word Count Range:</label>
 								<div class="wordcount-row">
-									<input
-										type="number"
-										id="wordcount-min"
-										placeholder="Min"
-										min="0"
-									/>
+									<input type="number" id="wordcount-min" placeholder="Min" min="0" />
 									<span class="range-separator">to</span>
-									<input
-										type="number"
-										id="wordcount-max"
-										placeholder="Max"
-										min="0"
-									/>
+									<input type="number" id="wordcount-max" placeholder="Max" min="0" />
 								</div>
 								<p class="filter-hint">
 									Leave blank for no limit
@@ -346,10 +290,7 @@
 							</div>
 
 							<div class="filter-item full-width">
-								<button
-									class="clear-filters-btn"
-									id="clear-filters-btn"
-								>
+								<button class="clear-filters-btn" id="clear-filters-btn">
 									Clear All Filters
 								</button>
 							</div>
@@ -359,12 +300,8 @@
 				</div>
 
 				<div class="search-bar-container search-right">
-					<input
-						type="text"
-						id="search-input"
-						class="search-bar"
-						placeholder="🔍 Search by title or author..."
-					/>
+					<input type="text" id="search-input" class="search-bar"
+						placeholder="🔍 Search by title or author..." />
 				</div>
 			</div>
 
@@ -396,12 +333,7 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<div class="modal-title-section">
-						<img
-							id="modal-cover"
-							src=""
-							alt="Cover"
-							class="modal-cover-img"
-						/>
+						<img id="modal-cover" src="" alt="Cover" class="modal-cover-img" />
 						<div class="modal-header-text">
 							<h2 id="modal-title"></h2>
 							<p id="modal-author"></p>
@@ -419,8 +351,10 @@
 					<div class="modal-status-section">
 						<div class="status-label">Reading Status:</div>
 						<div class="status-buttons">
-							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To Read</button>
-							<button class="status-btn" data-status="reading" title="Currently Reading">📖 Reading</button>
+							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To
+								Read</button>
+							<button class="status-btn" data-status="reading" title="Currently Reading">📖
+								Reading</button>
 							<button class="status-btn" data-status="completed" title="Completed">✅ Completed</button>
 							<button class="status-btn" data-status="on-hold" title="On Hold">⏸️ On Hold</button>
 							<button class="status-btn" data-status="dropped" title="Dropped">❌ Dropped</button>
@@ -447,7 +381,11 @@
 			</div>
 		</div>
 
+		<!-- Inline Edit Modal Container -->
+		<div id="shelf-edit-modal"></div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
 		<script type="module" src="./shelf-page.js"></script>
 	</body>
+
 </html>

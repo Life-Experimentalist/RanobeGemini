@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Ranobes - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
 		<link rel="stylesheet" href="./style.css" />
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="../../../icons/icon.png"
-		/>
+		<link rel="stylesheet" href="../../edit-modal.css" />
+		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
 	</head>
+
 	<body class="ranobes-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span
-						class="shelf-page-color-bar"
-						id="color-bar"
-						style="background: #4a7c4e"
-					></span>
-					<img
-						src="https://ranobes.top/templates/Dark/images/favicon.ico?v=2"
-						alt="Ranobes"
-						class="shelf-page-icon-img"
-						id="page-icon-img"
-					/>
-					<span
-						class="shelf-page-icon"
-						id="page-icon"
-						style="display: none"
-						>🍃</span
-					>
+					<span class="shelf-page-color-bar" id="color-bar" style="background: #4a7c4e"></span>
+					<img src="https://ranobes.top/templates/Dark/images/favicon.ico?v=2" alt="Ranobes"
+						class="shelf-page-icon-img" id="page-icon-img" />
+					<span class="shelf-page-icon" id="page-icon" style="display: none">🍃</span>
 					<h1 id="page-title">Ranobes</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -53,9 +38,7 @@
 							<span class="stat-label">Novels</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-enhanced"
-								>0</span
-							>
+							<span class="stat-value" id="stats-enhanced">0</span>
 							<span class="stat-label">Enhanced Chapters</span>
 						</div>
 						<div class="stat-card">
@@ -67,33 +50,23 @@
 							<span class="stat-label">Avg Words</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-completed"
-								>0</span
-							>
+							<span class="stat-value" id="stats-completed">0</span>
 							<span class="stat-label">Completed</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-ongoing"
-								>0</span
-							>
+							<span class="stat-value" id="stats-ongoing">0</span>
 							<span class="stat-label">Ongoing</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-translating"
-								>0</span
-							>
+							<span class="stat-value" id="stats-translating">0</span>
 							<span class="stat-label">Translating</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-avglength"
-								>-</span
-							>
+							<span class="stat-value" id="stats-avglength">-</span>
 							<span class="stat-label">Avg Chapters</span>
 						</div>
 						<div class="stat-card">
-							<span class="stat-value" id="stats-reading"
-								>0%</span
-							>
+							<span class="stat-value" id="stats-reading">0%</span>
 							<span class="stat-label">Reading</span>
 						</div>
 					</div>
@@ -105,40 +78,22 @@
 							<div class="analytics-item">
 								<span class="analytics-icon">⭐</span>
 								<div class="analytics-detail">
-									<span class="analytics-label"
-										>Highest Rated</span
-									>
-									<span
-										class="analytics-value"
-										id="highest-rated"
-										>-</span
-									>
+									<span class="analytics-label">Highest Rated</span>
+									<span class="analytics-value" id="highest-rated">-</span>
 								</div>
 							</div>
 							<div class="analytics-item">
 								<span class="analytics-icon">📈</span>
 								<div class="analytics-detail">
-									<span class="analytics-label"
-										>Most Popular</span
-									>
-									<span
-										class="analytics-value"
-										id="most-popular"
-										>-</span
-									>
+									<span class="analytics-label">Most Popular</span>
+									<span class="analytics-value" id="most-popular">-</span>
 								</div>
 							</div>
 							<div class="analytics-item">
 								<span class="analytics-icon">🌐</span>
 								<div class="analytics-detail">
-									<span class="analytics-label"
-										>Languages</span
-									>
-									<span
-										class="analytics-value"
-										id="language-count"
-										>-</span
-									>
+									<span class="analytics-label">Languages</span>
+									<span class="analytics-value" id="language-count">-</span>
 								</div>
 							</div>
 							<div class="analytics-item">
@@ -166,20 +121,10 @@
 						<div class="analytics-chart" id="status-chart-card">
 							<div class="chart-header">
 								<h4>Reading Status Mix</h4>
-								<span
-									class="chart-summary"
-									id="status-chart-summary"
-									>-</span
-								>
+								<span class="chart-summary" id="status-chart-summary">-</span>
 							</div>
-							<div
-								class="bar-chart"
-								id="reading-status-chart"
-							></div>
-							<div
-								class="bar-chart-legend"
-								id="reading-status-legend"
-							></div>
+							<div class="bar-chart" id="reading-status-chart"></div>
+							<div class="bar-chart-legend" id="reading-status-legend"></div>
 						</div>
 					</div>
 				</div>
@@ -190,20 +135,11 @@
 				<div class="filter-dropdown-container">
 					<button class="filter-toggle-btn" id="filter-toggle-btn">
 						⚙️ Filters
-						<span
-							class="filter-badge"
-							id="filter-badge"
-							style="display: none"
-							>✓</span
-						>
+						<span class="filter-badge" id="filter-badge" style="display: none">✓</span>
 					</button>
 					<div class="active-filters" id="active-filters"></div>
 
-					<div
-						class="filter-dropdown"
-						id="filter-dropdown"
-						style="display: none"
-					>
+					<div class="filter-dropdown" id="filter-dropdown" style="display: none">
 						<div class="filter-grid">
 							<div class="filter-item">
 								<label for="sort-select">Sort by:</label>
@@ -229,9 +165,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label for="work-status-filter"
-									>Work Status:</label
-								>
+								<label for="work-status-filter">Work Status:</label>
 								<select id="work-status-filter">
 									<option value="all">All</option>
 									<option value="Completed">Completed</option>
@@ -241,9 +175,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label for="translation-status-filter"
-									>Translation Status:</label
-								>
+								<label for="translation-status-filter">Translation Status:</label>
 								<select id="translation-status-filter">
 									<option value="all">All</option>
 									<option value="Completed">Completed</option>
@@ -253,9 +185,7 @@
 							</div>
 
 							<div class="filter-item">
-								<label for="status-filter"
-									>Reading Status:</label
-								>
+								<label for="status-filter">Reading Status:</label>
 								<select id="status-filter">
 									<option value="all">All</option>
 									<option value="plan-to-read">
@@ -283,7 +213,8 @@
 							<div class="filter-item">
 								<label>Genres:</label>
 								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle" id="genres-dropdown-toggle">Choose Genres</button>
+									<button type="button" class="multi-dropdown-toggle"
+										id="genres-dropdown-toggle">Choose Genres</button>
 									<div class="multi-dropdown-panel" id="genres-dropdown-panel">
 										<div class="filter-pill-list" id="genres-filter"></div>
 									</div>
@@ -300,7 +231,8 @@
 											<option value="all">All tags (AND)</option>
 										</select>
 									</div>
-									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose Tags</button>
+									<button type="button" class="multi-dropdown-toggle" id="tags-dropdown-toggle">Choose
+										Tags</button>
 									<div class="multi-dropdown-panel" id="tags-dropdown-panel">
 										<div class="filter-pill-list" id="tags-filter"></div>
 									</div>
@@ -310,19 +242,9 @@
 							<div class="filter-item full-width">
 								<label>Word Count Range:</label>
 								<div class="wordcount-row">
-									<input
-										type="number"
-										id="wordcount-min"
-										placeholder="Min"
-										min="0"
-									/>
+									<input type="number" id="wordcount-min" placeholder="Min" min="0" />
 									<span class="range-separator">to</span>
-									<input
-										type="number"
-										id="wordcount-max"
-										placeholder="Max"
-										min="0"
-									/>
+									<input type="number" id="wordcount-max" placeholder="Max" min="0" />
 								</div>
 								<p class="filter-hint">
 									Leave blank for no limit
@@ -330,10 +252,7 @@
 							</div>
 
 							<div class="filter-item full-width">
-								<button
-									class="clear-filters-btn"
-									id="clear-filters-btn"
-								>
+								<button class="clear-filters-btn" id="clear-filters-btn">
 									Clear All Filters
 								</button>
 							</div>
@@ -343,12 +262,8 @@
 				</div>
 
 				<div class="search-bar-container search-right">
-					<input
-						type="text"
-						id="search-input"
-						class="search-bar"
-						placeholder="🔍 Search by title or author..."
-					/>
+					<input type="text" id="search-input" class="search-bar"
+						placeholder="🔍 Search by title or author..." />
 				</div>
 			</div>
 
@@ -365,9 +280,7 @@
 				<h2>No novels from Ranobes yet!</h2>
 				<p>
 					Visit a chapter on
-					<a href="https://ranobes.top" target="_blank"
-						>ranobes.top</a
-					>
+					<a href="https://ranobes.top" target="_blank">ranobes.top</a>
 					to add novels to your library
 				</p>
 			</div>
@@ -382,12 +295,7 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<div class="modal-title-section">
-						<img
-							id="modal-cover"
-							src=""
-							alt="Cover"
-							class="modal-cover-img"
-						/>
+						<img id="modal-cover" src="" alt="Cover" class="modal-cover-img" />
 						<div class="modal-header-text">
 							<h2 id="modal-title"></h2>
 							by <p id="modal-author"></p>
@@ -405,8 +313,10 @@
 					<div class="modal-status-section">
 						<div class="status-label">Reading Status:</div>
 						<div class="status-buttons">
-							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To Read</button>
-							<button class="status-btn" data-status="reading" title="Currently Reading">📖 Reading</button>
+							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">📋 To
+								Read</button>
+							<button class="status-btn" data-status="reading" title="Currently Reading">📖
+								Reading</button>
 							<button class="status-btn" data-status="completed" title="Completed">✅ Completed</button>
 							<button class="status-btn" data-status="on-hold" title="On Hold">⏸️ On Hold</button>
 							<button class="status-btn" data-status="dropped" title="Dropped">❌ Dropped</button>
@@ -433,7 +343,11 @@
 			</div>
 		</div>
 
+		<!-- Inline Edit Modal Container -->
+		<div id="shelf-edit-modal"></div>
+
 		<script src="../../../lib/browser-polyfill.min.js"></script>
 		<script type="module" src="./shelf-page.js"></script>
 	</body>
+
 </html>

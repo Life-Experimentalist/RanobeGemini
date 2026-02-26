@@ -4,8 +4,8 @@ let debugError = console.error.bind(console);
 (async () => {
 	try {
 		if (typeof browser !== "undefined" && browser.runtime?.getURL) {
-			const url = browser.runtime.getURL("utils/logger.js");
-			const mod = await import(url);
+			const loggerUrl = browser.runtime.getURL("utils/logger.js");
+			const mod = await import(loggerUrl);
 			debugLog = mod.debugLog || debugLog;
 			debugError = mod.debugError || debugError;
 		}
@@ -42,7 +42,7 @@ let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
-const PROGRESS_PROMPT_TIMEOUT_MS = 15000;
+const PROGRESS_PROMPT_TIMEOUT_MS = 30000; // 30 s — user needs time to decide
 if (window.__RGInitDone) {
 	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load.",
@@ -67,9 +67,9 @@ if (window.__RGInitDone) {
 	(async () => {
 		try {
 			if (typeof browser !== "undefined" && browser.runtime?.getURL) {
-				const mod = await import(
-					browser.runtime.getURL("utils/constants.js")
-				);
+				const constantsUrl =
+					browser.runtime.getURL("utils/constants.js");
+				const mod = await import(constantsUrl);
 				keepAliveConfig = {
 					...keepAliveConfigDefaults,
 					heartbeatMs:
@@ -396,6 +396,20 @@ if (window.__RGInitDone) {
 				.replace(/&#039;/g, "'")
 				.replace(/&nbsp;/g, " ");
 		});
+	}
+
+	/**
+	 * Make an element immune to Dark Reader and other theme extensions
+	 * @param {HTMLElement} element - The element to protect
+	 */
+	function protectFromThemeExtensions(element) {
+		if (!element) return;
+		// Dark Reader isolation
+		element.setAttribute("data-darkreader-lock", "");
+		// Prevent other theme extensions
+		element.setAttribute("data-theme-lock", "true");
+		// Add class marker for styling
+		element.classList.add("rg-protected");
 	}
 
 	/**
@@ -851,6 +865,58 @@ if (window.__RGInitDone) {
 		toggleBtn.innerHTML = isHidden
 			? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
 			: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+		showStatusMessage(
+			isHidden
+				? "Showing Ranobe Gemini UI..."
+				: "Ranobe Gemini UI hidden.",
+			"info",
+			2000,
+		);
+	}
+
+	/**
+	 * Dedicated toggle function for Show/Hide button in chapter novel controls
+	 * Works independently without updating the old toggle button
+	 * ONLY hides enhancement banners, NEVER hides the controls container itself
+	 */
+	function handleChapterControlsToggleBanners() {
+		// Guard: don't toggle while enhancement or summarization is in progress
+		const wipBanner = document.querySelector(".gemini-wip-banner");
+		if (wipBanner) {
+			showStatusMessage(
+				"Enhancement is still in progress. Wait until it finishes.",
+				"warning",
+				2000,
+			);
+			return;
+		}
+
+		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container
+		const banners = document.querySelectorAll(
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group",
+		);
+		if (banners.length === 0) {
+			showStatusMessage("No enhancement banners to show/hide.", "info");
+			return;
+		}
+
+		// Check current visibility state of first banner
+		const isHidden = banners[0].style.display === "none";
+
+		// Toggle all enhancement banners
+		banners.forEach((banner) => {
+			if (isHidden) {
+				const isSummaryGroup =
+					banner.classList.contains("gemini-main-summary-group") ||
+					banner.classList.contains("gemini-chunk-summary-group");
+				// Restore to flex for summary groups, normal display for others
+				banner.style.display = isSummaryGroup ? "flex" : "";
+			} else {
+				// Hide the banner
+				banner.style.display = "none";
+			}
+		});
+
 		showStatusMessage(
 			isHidden
 				? "Showing Ranobe Gemini UI..."
@@ -2267,8 +2333,18 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Guard flag to prevent double-initialization from DOMContentLoaded + load firing together
+	let __rgInitStarted = false;
+
 	// Initialize with device detection
 	async function initializeWithDeviceDetection() {
+		if (__rgInitStarted) {
+			debugLog(
+				"Ranobe Gemini: Initialization already in progress, skipping duplicate call.",
+			);
+			return;
+		}
+		__rgInitStarted = true;
 		isMobileDevice = detectMobileDevice();
 		debugLog(
 			`Ranobe Gemini: Initializing for ${
@@ -2280,31 +2356,24 @@ if (window.__RGInitDone) {
 
 	// Adjust UI based on device type
 	function adjustUIForDeviceType() {
-		const controlsContainer = document.getElementById("gemini-controls");
+		const containers = [
+			document.getElementById("gemini-controls"),
+			document.getElementById("rg-novel-controls"),
+		].filter(Boolean);
 
-		if (!controlsContainer) return;
-
-		if (isMobileDevice) {
-			// Mobile-specific adjustments
-			controlsContainer.classList.add("mobile-view");
-		} else {
-			// Desktop-specific adjustments
-			controlsContainer.classList.remove("mobile-view");
-		}
+		containers.forEach((container) => {
+			if (isMobileDevice) {
+				container.classList.add("mobile-view");
+			} else {
+				container.classList.remove("mobile-view");
+			}
+		});
 	}
 
 	// Load handler modules dynamically
 	async function loadHandlers() {
-		try {
-			const handlerManagerUrl = browser.runtime.getURL(
-				"utils/website-handlers/handler-manager.js",
-			);
-
-			return { handlerManagerUrl };
-		} catch (error) {
-			debugError("Error loading handlers:", error);
-			return null;
-		}
+		// Handlers are loaded directly by relative import, no URL needed
+		return { handlersLoaded: true };
 	}
 
 	// Get the appropriate handler for the current site
@@ -2313,9 +2382,11 @@ if (window.__RGInitDone) {
 			const handlerUrls = await loadHandlers();
 			if (!handlerUrls) return null;
 
-			const handlerManagerModule = await import(
-				handlerUrls.handlerManagerUrl
+			// Import handler manager using extension URL
+			const handlerManagerUrl = browser.runtime.getURL(
+				"utils/website-handlers/handler-manager.js",
 			);
+			const handlerManagerModule = await import(handlerManagerUrl);
 
 			// Handler manager exports a default instance
 			const handlerManager =
@@ -2363,15 +2434,102 @@ if (window.__RGInitDone) {
 	// Load site settings helpers
 	async function loadSiteSettingsModule() {
 		try {
+			// Site settings module is in utils/site-settings.js
 			const settingsUrl = browser.runtime.getURL(
 				"utils/site-settings.js",
 			);
-			return await import(settingsUrl);
+			const settingsModule = await import(settingsUrl);
+			return settingsModule;
 		} catch (error) {
 			debugError("Error loading site settings:", error);
 			return null;
 		}
 	}
+
+	// Inject handler-specific custom CSS from settings
+	async function injectHandlerCustomCSS() {
+		if (!currentHandler) return;
+
+		const handlerShelfId = currentHandler?.constructor?.SHELF_METADATA?.id;
+		if (!handlerShelfId) return;
+
+		try {
+			// Fetch handler settings from background
+			const response = await sendMessageWithRetry(
+				{
+					action: "getHandlerSettings",
+					handlerDomain: handlerShelfId,
+				},
+				2,
+				500,
+			); // Reduced retries and delay for non-critical operation
+
+			if (!response || !response.success || !response.settings) {
+				debugLog(
+					`No custom CSS settings available for ${handlerShelfId}`,
+				);
+				return;
+			}
+
+			const handlerSettings =
+				response.settings[handlerShelfId]?.validated ||
+				response.settings[handlerShelfId]?.proposed ||
+				{};
+
+			// Extract CSS fields
+			const globalCSS = handlerSettings.globalCSS?.trim() || "";
+			const logoCSS = handlerSettings.logoCSS?.trim() || "";
+
+			// Inject globalCSS if provided
+			if (globalCSS) {
+				const globalStyleId = `rg-handler-global-css-${handlerShelfId}`;
+				if (!document.getElementById(globalStyleId)) {
+					const styleTag = document.createElement("style");
+					styleTag.id = globalStyleId;
+					styleTag.textContent = globalCSS;
+					document.head.appendChild(styleTag);
+					debugLog(
+						`Injected global CSS for handler: ${handlerShelfId}`,
+					);
+				}
+			}
+
+			// Inject logoCSS if provided
+			if (logoCSS) {
+				const logoStyleId = `rg-handler-logo-css-${handlerShelfId}`;
+				if (!document.getElementById(logoStyleId)) {
+					const styleTag = document.createElement("style");
+					styleTag.id = logoStyleId;
+					styleTag.textContent = logoCSS;
+					document.head.appendChild(styleTag);
+					debugLog(
+						`Injected logo CSS for handler: ${handlerShelfId}`,
+					);
+				}
+			}
+
+			// Load per-handler font size
+			if (handlerSettings.fontSize !== undefined) {
+				const handlerFontSize = parseInt(handlerSettings.fontSize, 10);
+				if (
+					!isNaN(handlerFontSize) &&
+					handlerFontSize >= 50 &&
+					handlerFontSize <= 200
+				) {
+					currentFontSize = handlerFontSize;
+					debugLog(
+						`Using handler-specific font size: ${currentFontSize}%`,
+					);
+				}
+			}
+		} catch (error) {
+			// Silently fail for CSS injection - not critical
+			debugLog(
+				`Could not load custom CSS for ${handlerShelfId}: ${error.message}`,
+			);
+		}
+	}
+
 	// Load novel library for tracking novels
 	async function loadNovelLibrary() {
 		try {
@@ -3038,6 +3196,9 @@ if (window.__RGInitDone) {
 
 		debugLog(`Using handler for ${window.location.hostname}`);
 
+		// Inject custom CSS from handler settings (if any)
+		await injectHandlerCustomCSS();
+
 		// Now that handler is loaded, attempt to restore cached content
 		let cacheRestored = false;
 		const restoredChunkedCache = await tryRestoreChunkedCache();
@@ -3091,6 +3252,37 @@ if (window.__RGInitDone) {
 		// This happens regardless of whether it's a chapter or novel info page
 		if (currentHandler) {
 			await autoUpdateNovelOnVisit();
+
+			// For mobile fanfiction handler, inject desktop metadata summary
+			if (
+				currentHandler.constructor.name === "FanfictionMobileHandler" &&
+				currentHandler.isChapterPage?.()
+			) {
+				try {
+					// Fetch metadata from desktop version asynchronously
+					setTimeout(async () => {
+						if (
+							typeof currentHandler.fetchDesktopMetadata ===
+							"function"
+						) {
+							const metadata =
+								await currentHandler.fetchDesktopMetadata();
+							if (
+								metadata &&
+								typeof currentHandler.injectMetadataSummary ===
+									"function"
+							) {
+								currentHandler.injectMetadataSummary(metadata);
+							}
+						}
+					}, 500);
+				} catch (error) {
+					debugLog(
+						"Ranobe Gemini: Error injecting mobile metadata summary:",
+						error,
+					);
+				}
+			}
 		}
 
 		// For DEDICATED_PAGE-type handlers on novel info pages, show novel management UI
@@ -3174,6 +3366,9 @@ if (window.__RGInitDone) {
 		const banner = document.createElement("div");
 		banner.id = "rg-notification-banner";
 		banner.className = `rg-banner rg-banner-${type}`;
+
+		// Protect from Dark Reader and other theme extensions
+		protectFromThemeExtensions(banner);
 
 		// Banner styles
 		const colors = {
@@ -3376,6 +3571,7 @@ if (window.__RGInitDone) {
 		currentChapter,
 		storedChapter,
 		totalChapters,
+		novelTitle,
 	}) {
 		if (!shouldShowProgressPrompt(novelId)) return;
 		progressPromptState.set(novelId, Date.now());
@@ -3387,39 +3583,97 @@ if (window.__RGInitDone) {
 		banner.id = "rg-progress-banner";
 		banner.style.cssText = `
 			position: fixed;
-			bottom: 20px;
-			right: 20px;
-			background: #1a237e;
-			border: 2px solid #3949ab;
-			border-radius: 8px;
-			padding: 12px 16px;
-			color: #ffffff;
+			bottom: 24px;
+			right: 24px;
+			background: #0f172a;
+			border: 1px solid #3949ab;
+			border-left: 4px solid #6366f1;
+			border-radius: 10px;
+			padding: 14px 16px;
+			color: #e2e8f0;
 			font-family: system-ui, -apple-system, sans-serif;
 			font-size: 13px;
 			z-index: 999999;
-			box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-			max-width: 360px;
+			box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+			max-width: 380px;
+			min-width: 280px;
 			display: flex;
 			flex-direction: column;
-			gap: 8px;
+			gap: 10px;
+			animation: rg-slide-in 0.25s ease;
 		`;
 
+		// Inject keyframe animation once
+		if (!document.getElementById("rg-banner-style")) {
+			const style = document.createElement("style");
+			style.id = "rg-banner-style";
+			style.textContent = `
+				@keyframes rg-slide-in {
+					from { opacity: 0; transform: translateY(12px); }
+					to   { opacity: 1; transform: translateY(0); }
+				}
+			`;
+			document.head.appendChild(style);
+		}
+
+		// Header row
+		const header = document.createElement("div");
+		header.style.cssText =
+			"display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
+
+		const titleEl = document.createElement("div");
+		titleEl.style.cssText =
+			"font-weight:700;font-size:13px;color:#818cf8;flex:1;";
+		titleEl.textContent = "📖 Reading Progress";
+
+		const closeBtn = document.createElement("button");
+		closeBtn.textContent = "×";
+		closeBtn.style.cssText =
+			"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+		closeBtn.addEventListener("click", () => banner.remove());
+
+		header.appendChild(titleEl);
+		header.appendChild(closeBtn);
+		banner.appendChild(header);
+
+		// Novel title if provided
+		if (novelTitle) {
+			const nTitle = document.createElement("div");
+			nTitle.style.cssText =
+				"font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
+			nTitle.textContent = novelTitle;
+			banner.appendChild(nTitle);
+		}
+
 		const message = document.createElement("div");
-		message.textContent = `Saved progress is chapter ${storedChapter}, but you're on chapter ${currentChapter}. Update progress?`;
+		message.style.cssText = "font-size:13px;color:#cbd5e1;line-height:1.5;";
+		if (storedChapter) {
+			message.textContent = `Saved progress: Chapter ${storedChapter}. You are now on Chapter ${currentChapter}.${totalChapters ? ` (of ${totalChapters})` : ""} Update progress?`;
+		} else {
+			message.textContent = `No saved progress. You are on Chapter ${currentChapter}.${totalChapters ? ` (of ${totalChapters})` : ""} Save progress?`;
+		}
 		banner.appendChild(message);
 
 		const actions = document.createElement("div");
-		actions.style.cssText = "display: flex; gap: 8px;";
+		actions.style.cssText = "display:flex;gap:8px;";
 
 		const updateBtn = document.createElement("button");
-		updateBtn.textContent = `Update to ${currentChapter}`;
+		updateBtn.textContent = storedChapter
+			? `Update to Ch. ${currentChapter}`
+			: `Save Ch. ${currentChapter}`;
 		updateBtn.style.cssText =
-			"background: #ffffff; color: #1a237e; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;";
+			"background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
+		updateBtn.addEventListener("mouseover", () => {
+			updateBtn.style.background = "#4f46e5";
+		});
+		updateBtn.addEventListener("mouseout", () => {
+			updateBtn.style.background = "#6366f1";
+		});
 
 		const ignoreBtn = document.createElement("button");
-		ignoreBtn.textContent = "Ignore";
+		ignoreBtn.textContent = "Dismiss";
 		ignoreBtn.style.cssText =
-			"background: transparent; color: #ffffff; border: 1px solid rgba(255,255,255,0.4); padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;";
+			"background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;";
 
 		updateBtn.addEventListener("click", async () => {
 			try {
@@ -3427,9 +3681,7 @@ if (window.__RGInitDone) {
 					novelId,
 					currentChapter,
 					window.location.href,
-					{
-						totalChapters: totalChapters,
-					},
+					{ totalChapters: totalChapters },
 				);
 				showTimedBanner(
 					`Progress updated to Chapter ${currentChapter}`,
@@ -3472,12 +3724,12 @@ if (window.__RGInitDone) {
 		}
 
 		if (!novelLibrary) {
-			debugLog("Novel library not available for auto-update");
+			debugLog("Novel library not available");
 			return;
 		}
 
 		try {
-			// Get handler type
+			// Get handler type and page context
 			const handlerType = getHandlerType();
 			const isChapter = currentHandler.isChapterPage();
 			const isNovelPage = currentHandler.isNovelPage?.() || false;
@@ -3490,7 +3742,6 @@ if (window.__RGInitDone) {
 			) {
 				const novelPageUrl = currentHandler.getNovelPageUrl?.();
 				if (novelPageUrl) {
-					// Check if we have the novel in library
 					const novelId = getNovelIdFromCurrentPage();
 					const existingNovels =
 						await novelLibrary.getRecentNovels(0);
@@ -3499,7 +3750,6 @@ if (window.__RGInitDone) {
 						: null;
 
 					if (!existingNovel) {
-						// Novel not in library, show banner to visit novel page
 						showTimedBanner(
 							"Add this novel to your library?",
 							"action",
@@ -3521,7 +3771,7 @@ if (window.__RGInitDone) {
 				return;
 			}
 
-			// Extract metadata from current page
+			// Extract metadata
 			const metadata = currentHandler.extractNovelMetadata();
 			if (!metadata || !metadata.title) {
 				debugLog("Could not extract novel metadata");
@@ -3529,10 +3779,9 @@ if (window.__RGInitDone) {
 			}
 			cacheNovelData(buildNovelDataFromMetadata(metadata));
 
-			// Generate novel ID using handler or fallback method
+			// Get novel ID
 			let novelId = getNovelIdFromCurrentPage();
 			if (!novelId) {
-				// Fallback: use shelf ID + URL-based ID
 				const shelfId =
 					currentHandler.constructor.SHELF_METADATA?.id || "unknown";
 				const urlPath = window.location.pathname;
@@ -3542,274 +3791,627 @@ if (window.__RGInitDone) {
 				novelId = `${shelfId}-${urlHash}`;
 			}
 
-			// Determine if we're on a chapter page to set proper initial progress
+			// Get chapter info
 			const chapterNav = currentHandler.getChapterNavigation?.() || {};
 			const currentChapterNum = chapterNav.currentChapter;
 			const totalChapterCount =
 				metadata.totalChapters || metadata.chapterCount || null;
-			const progressStatus = deriveReadingStatusFromProgress(
-				currentChapterNum,
-				totalChapterCount,
-			);
 
-			// Create novel data object
-			// CRITICAL: For dedicated_page handlers, sourceUrl MUST be mainNovelUrl (novel details page)
-			// NOT the current chapter URL, so "View on Site" and "Refresh Metadata" go to the right place
-			const novelData = {
-				id: novelId,
-				title: metadata.title,
-				author: metadata.author || "Unknown",
-				description: metadata.description || "",
-				coverUrl: metadata.coverUrl || "",
-				// For dedicated_page: Always use mainNovelUrl if available (extracted from breadcrumbs/links)
-				// For chapter_embedded: mainNovelUrl will be the same as current URL on chapter pages
-				sourceUrl: metadata.mainNovelUrl || window.location.href,
-				sourceSite: window.location.hostname,
-				shelfId:
-					currentHandler.constructor.SHELF_METADATA?.id || "unknown",
-				genres: metadata.genres || [],
-				tags: metadata.tags || [],
-				status: metadata.status || null,
-				// CRITICAL: Ensure totalChapters is set from chapterCount or totalChapters
-				totalChapters:
-					metadata.totalChapters || metadata.chapterCount || null,
-				// Ensure nested metadata and stats are preserved for site-specific features
-				// Merge top-level metadata fields into nested metadata object for consistency
-				metadata: {
-					...(metadata.metadata || {}),
-					// Also copy top-level fields that belong in metadata
-					...(metadata.rating && { rating: metadata.rating }),
-					...(metadata.language && { language: metadata.language }),
-					...(metadata.publishedDate && {
-						publishedDate: metadata.publishedDate,
-					}),
-					...(metadata.updatedDate && {
-						updatedDate: metadata.updatedDate,
-					}),
-				},
-				// Build stats from both nested stats object and top-level stat fields
-				stats: {
-					...(metadata.stats || {}),
-					// Also copy top-level stat fields for FanFiction compatibility
-					...(metadata.words && { words: metadata.words }),
-					...(metadata.reviews && { reviews: metadata.reviews }),
-					...(metadata.favorites && {
-						favorites: metadata.favorites,
-					}),
-					...(metadata.follows && { follows: metadata.follows }),
-				},
-				lastUpdated: Date.now(),
-				// Only set progress if on a chapter page, otherwise let library set defaults
-				...(isChapter && currentChapterNum
-					? {
-							lastReadChapter: currentChapterNum,
-							lastReadUrl: window.location.href,
-							readingStatus:
-								progressStatus || READING_STATUS.READING,
-						}
-					: {}),
-				...(metadata.siteReadingStatus && !isChapter
-					? { readingStatus: metadata.siteReadingStatus }
-					: {}),
-			}; // Check if this novel already exists in the library
-			const shelfId =
-				currentHandler.constructor.SHELF_METADATA?.id || "unknown";
-			const defaultSiteSettings =
-				siteSettingsModule?.getDefaultSiteSettings?.() || {};
-			const siteAutoAddSettings =
-				siteSettings?.[shelfId] || defaultSiteSettings[shelfId] || {};
-			const autoAddEnabled = siteAutoAddSettings.autoAddEnabled !== false;
-			const autoAddStatusChapter =
-				siteAutoAddSettings.autoAddStatusChapter ||
-				READING_STATUS.READING;
-			const autoAddStatusNovel =
-				siteAutoAddSettings.autoAddStatusNovel ||
-				READING_STATUS.PLAN_TO_READ;
+			// Check if novel exists in library
 			const existingNovels = await novelLibrary.getRecentNovels(0);
 			const existingNovel = existingNovels.find((n) => n.id === novelId);
 
-			// Auto-add logic:
-			// - For CHAPTER_EMBEDDED-type sites: auto-add/update on chapter pages (full metadata available)
-			// - For DEDICATED_PAGE-type sites:
-			//   - On novel info pages: auto-add/update (full metadata available)
-			//   - On chapter pages: auto-add with partial metadata (will be updated when visiting novel page)
-			// This ensures users don't miss tracking novels they're reading
-			const hasGoodMetadata =
-				handlerType === HANDLER_TYPES.CHAPTER_EMBEDDED ||
-				(handlerType === HANDLER_TYPES.DEDICATED_PAGE && isNovelPage);
-
-			// Always allow auto-add if we have some metadata (title at minimum)
-			const shouldAutoAdd =
-				autoAddEnabled && metadata.title && metadata.title.length > 0;
-
+			// SILENT: Only update total chapters if it's additive OR if site setting allows
+			// MANUAL ONLY: User must click "Check for Updates" button to update metadata
 			if (existingNovel) {
-				if (isChapter && currentChapterNum) {
-					const shouldUpdateProgress =
-						!existingNovel.lastReadChapter ||
-						currentChapterNum >= existingNovel.lastReadChapter;
-					if (shouldUpdateProgress) {
+				// Check per-site auto-update settings
+				const shelfId =
+					currentHandler.constructor.SHELF_METADATA?.id || "unknown";
+				const defaultSiteSettings =
+					siteSettingsModule?.getDefaultSiteSettings?.() || {};
+				const siteAutoUpdateSettings =
+					siteSettings?.[shelfId] ||
+					defaultSiteSettings[shelfId] ||
+					{};
+
+				// Determine if auto-update is enabled for this site
+				const autoUpdateEnabled =
+					siteAutoUpdateSettings.autoUpdateMetadata === true;
+				const totalChaptersOnlyMode =
+					siteAutoUpdateSettings.autoUpdateTotalChaptersOnly !==
+					false;
+				const showUpdateBanner =
+					siteAutoUpdateSettings.autoUpdateShowBanner !== false;
+
+				// Auto-update metadata if enabled for this site
+				if (autoUpdateEnabled && !totalChaptersOnlyMode) {
+					// Full metadata auto-update
+					const changes = detectMetadataChanges(
+						existingNovel,
+						metadata,
+					);
+					if (Object.keys(changes).length > 0) {
+						debugLog(
+							`📚 Auto-updating ${Object.keys(changes).length} metadata fields for ${existingNovel.title}`,
+						);
+						const updatedData =
+							buildNovelDataFromMetadata(metadata);
+						await novelLibrary.updateNovelMetadata(
+							novelId,
+							updatedData,
+						);
+
+						// Show update banner with changes
+						displayChangeSummary(existingNovel.title, changes);
+					}
+				} else {
+					// Only update total chapters (default mode)
+					if (
+						totalChapterCount &&
+						(!existingNovel.totalChapters ||
+							totalChapterCount > existingNovel.totalChapters)
+					) {
+						debugLog(
+							`📚 Auto-updating total chapters to ${totalChapterCount}`,
+						);
+						await novelLibrary.updateNovel(novelId, {
+							totalChapters: totalChapterCount,
+						});
+					}
+
+					// Show "Check for Updates" button in banner if enabled
+					if (showUpdateBanner) {
+						showUpdateAvailableBanner(existingNovel, metadata);
+					}
+				}
+
+				// Handle chapter regression
+				if (
+					isChapter &&
+					currentChapterNum &&
+					existingNovel.lastReadChapter
+				) {
+					const storedChapter = existingNovel.lastReadChapter || 0;
+					if (currentChapterNum < storedChapter) {
+						// Chapter went backward - ask if user wants to go back
+						await showChapterRegressionPrompt({
+							novelId,
+							novelTitle: existingNovel.title,
+							currentChapter: currentChapterNum,
+							storedChapter: storedChapter,
+							totalChapters: totalChapterCount,
+						});
+					} else if (currentChapterNum > storedChapter) {
+						// Chapter progressed - silently update (trusted navigation)
 						await novelLibrary.updateReadingProgress(
 							novelId,
 							currentChapterNum,
 							window.location.href,
-							{
-								totalChapters: totalChapterCount,
-							},
+							{ totalChapters: totalChapterCount },
 						);
 					}
 				}
+			} else {
+				// New novel - auto-add with auto-add settings
+				const shelfId =
+					currentHandler.constructor.SHELF_METADATA?.id || "unknown";
+				const defaultSiteSettings =
+					siteSettingsModule?.getDefaultSiteSettings?.() || {};
+				const siteAutoAddSettings =
+					siteSettings?.[shelfId] ||
+					defaultSiteSettings[shelfId] ||
+					{};
+				const autoAddEnabled =
+					siteAutoAddSettings.autoAddEnabled !== false;
+				const autoAddStatus = isChapter
+					? siteAutoAddSettings.autoAddStatusChapter ||
+						READING_STATUS.READING
+					: siteAutoAddSettings.autoAddStatusNovel ||
+						READING_STATUS.PLAN_TO_READ;
 
 				if (
-					metadata.siteReadingStatus &&
-					isNovelPage &&
-					existingNovel.readingStatus !== metadata.siteReadingStatus
+					autoAddEnabled &&
+					metadata.title &&
+					!isNovelBlocklisted(novelId)
 				) {
-					await novelLibrary.updateNovel(novelId, {
-						readingStatus: metadata.siteReadingStatus,
-					});
-				}
-				// Avoid overwriting reading status unless auto-add is configured for chapter pages
-				const statusUsesProgress = [
-					READING_STATUS.READING,
-					READING_STATUS.RE_READING,
-					READING_STATUS.UP_TO_DATE,
-				].includes(autoAddStatusChapter);
-				if (isChapter && !statusUsesProgress) {
-					delete novelData.readingStatus;
-					delete novelData.lastReadChapter;
-					delete novelData.lastReadUrl;
-				}
-				// Check if this novel has pending refresh (from library refresh button)
-				const hasPendingRefresh = existingNovel.pendingRefresh === true;
-
-				if (hasPendingRefresh) {
-					// Force update - user requested refresh, skip editedFields protection
-					showTimedBanner(
-						`Refreshing: ${metadata.title}`,
-						"updating",
-						2000,
-						{ field: "all metadata" },
+					// Build novel data
+					const progressStatus = deriveReadingStatusFromProgress(
+						currentChapterNum,
+						totalChapterCount,
 					);
+					const novelData = {
+						id: novelId,
+						title: metadata.title,
+						author: metadata.author || "Unknown",
+						description: metadata.description || "",
+						coverUrl: metadata.coverUrl || "",
+						sourceUrl:
+							metadata.mainNovelUrl || window.location.href,
+						sourceSite: window.location.hostname,
+						shelfId: shelfId,
+						genres: metadata.genres || [],
+						tags: metadata.tags || [],
+						status: metadata.status || null,
+						totalChapters: totalChapterCount,
+						metadata: {
+							...(metadata.metadata || {}),
+							...(metadata.rating && { rating: metadata.rating }),
+							...(metadata.language && {
+								language: metadata.language,
+							}),
+							...(metadata.publishedDate && {
+								publishedDate: metadata.publishedDate,
+							}),
+							...(metadata.updatedDate && {
+								updatedDate: metadata.updatedDate,
+							}),
+						},
+						stats: {
+							...(metadata.stats || {}),
+							...(metadata.words && { words: metadata.words }),
+							...(metadata.reviews && {
+								reviews: metadata.reviews,
+							}),
+							...(metadata.favorites && {
+								favorites: metadata.favorites,
+							}),
+							...(metadata.follows && {
+								follows: metadata.follows,
+							}),
+						},
+						readingStatus:
+							(isChapter && progressStatus) || autoAddStatus,
+						...(isChapter && currentChapterNum
+							? {
+									lastReadChapter: currentChapterNum,
+									lastReadUrl: window.location.href,
+								}
+							: {}),
+					};
 
-					// Clear the pending refresh flag and reset edited fields
-					const library = await novelLibrary.getLibrary();
-					if (library.novels[novelId]) {
-						library.novels[novelId].pendingRefresh = false;
-						library.novels[novelId].editedFields = {};
-						// Apply all new metadata directly
-						Object.assign(library.novels[novelId], novelData);
-						library.novels[novelId].lastMetadataUpdate = Date.now();
-						library.novels[novelId].lastAccessedAt = Date.now();
-						await novelLibrary.saveLibrary(library);
-					}
-
-					debugLog(
-						"📚 Force-refreshed novel metadata:",
-						metadata.title,
-					);
+					await novelLibrary.addOrUpdateNovel(novelData);
+					debugLog("📚 Auto-added novel to library:", metadata.title);
 					showTimedBanner(
-						`Refreshed: ${metadata.title}`,
+						`Added to library: ${metadata.title}`,
 						"success",
 						3000,
 					);
-				} else {
-					// Normal update - respects editedFields
-					if (hasGoodMetadata) {
-						showTimedBanner(
-							`Updating: ${metadata.title}`,
-							"updating",
-							2000,
-							{
-								field: "metadata",
-							},
-						);
-					}
-					await novelLibrary.updateNovelMetadata(novelId, novelData);
-					debugLog("📚 Auto-updated novel metadata:", metadata.title);
-					if (hasGoodMetadata) {
-						showTimedBanner(
-							`Updated: ${metadata.title}`,
-							"success",
-							2000,
-						);
-					}
 				}
-			} else if (shouldAutoAdd) {
-				// Apply configured auto-add status for new novels
-				const autoAddStatus = isChapter
-					? autoAddStatusChapter
-					: autoAddStatusNovel;
-				const preferredStatus =
-					(isChapter && progressStatus) ||
-					(!isChapter && metadata.siteReadingStatus) ||
-					autoAddStatus;
-				if (preferredStatus) {
-					novelData.readingStatus = preferredStatus;
-					const statusUsesProgress = [
-						READING_STATUS.READING,
-						READING_STATUS.RE_READING,
-						READING_STATUS.UP_TO_DATE,
-					].includes(preferredStatus);
-					if (!isChapter || !statusUsesProgress) {
-						delete novelData.lastReadChapter;
-						delete novelData.lastReadUrl;
-					}
-				}
-				// Add new novel to library
-				const addMessage = hasGoodMetadata
-					? `Adding: ${metadata.title}`
-					: `Tracking: ${metadata.title}`;
-				showTimedBanner(addMessage, "updating", 2000, {
-					field: "new novel",
-				});
-				await novelLibrary.addOrUpdateNovel(novelData);
-				debugLog("📚 Auto-added novel to library:", metadata.title);
-
-				const successMessage = hasGoodMetadata
-					? `Added to library: ${metadata.title}`
-					: `Now tracking: ${metadata.title}`;
-				showTimedBanner(successMessage, "success", 3000);
-
-				// For DEDICATED_PAGE type on chapter pages, remind user to visit novel page for full details
-				if (
-					handlerType === HANDLER_TYPES.DEDICATED_PAGE &&
-					isChapter &&
-					!isNovelPage
-				) {
-					const novelPageUrl = currentHandler.getNovelPageUrl?.();
-					if (novelPageUrl) {
-						setTimeout(() => {
-							showTimedBanner(
-								"Visit novel page for full details",
-								"action",
-								5000,
-								{
-									actionButton: {
-										text: "📖 View Details",
-										url: novelPageUrl,
-									},
-								},
-							);
-						}, 3500);
-					}
-				}
-			}
-
-			// If on a chapter page, also update chapter tracking
-			if (isChapter) {
-				const chapterNav =
-					currentHandler.getChapterNavigation?.() || {};
-				await novelLibrary.updateChapter(novelId, {
-					chapterNumber: chapterNav.currentChapter || 1,
-					title: document.title,
-					url: window.location.href,
-					readAt: Date.now(),
-				});
-				debugLog("📖 Updated chapter tracking");
 			}
 		} catch (error) {
 			debugError("Error in auto-update novel:", error);
 		}
+	}
+
+	/**
+	 * Show "Check for Updates" banner for existing novels
+	 */
+	function showUpdateAvailableBanner(existingNovel, currentMetadata) {
+		// Use showTimedBanner with action button for manual update
+		showTimedBanner(
+			`Check for updates for "${existingNovel.title}"?`,
+			"action",
+			0, // 0 = no auto-dismiss
+			{
+				title: "Novel Update Available",
+				actionButton: {
+					text: "🔄 Check Updates",
+					onClick: () => {
+						manuallyCheckAndUpdateNovel(
+							existingNovel,
+							currentMetadata,
+						);
+					},
+				},
+				source: "novel-library",
+			},
+		);
+	}
+
+	/**
+	 * Manually check and update novel with change detection and display
+	 */
+	async function manuallyCheckAndUpdateNovel(existingNovel, currentMetadata) {
+		if (!novelLibrary || !currentHandler) return;
+
+		try {
+			// Get novel ID
+			let novelId = existingNovel.id;
+
+			// Detect what changed
+			const changes = detectMetadataChanges(
+				existingNovel,
+				currentMetadata,
+			);
+
+			if (Object.keys(changes).length === 0) {
+				// No changes detected
+				showTimedBanner(
+					"✓ No updates available (metadata is current)",
+					"success",
+					4000,
+				);
+				debugLog("📚 No metadata changes detected");
+				return;
+			}
+
+			// Show "Updating..." message
+			showTimedBanner(
+				`🔄 Checking: ${existingNovel.title}`,
+				"updating",
+				1500,
+			);
+
+			// Update the novel
+			const updatedData = buildNovelDataFromMetadata(currentMetadata);
+			await novelLibrary.updateNovelMetadata(novelId, updatedData);
+
+			debugLog("📚 Manually updated novel, changes:", changes);
+
+			// Display what changed
+			displayChangeSummary(existingNovel.title, changes);
+		} catch (error) {
+			debugError("Error in manual update:", error);
+			showTimedBanner(
+				`❌ Error updating: ${error.message}`,
+				"error",
+				5000,
+			);
+		}
+	}
+
+	/**
+	 * Detect what metadata changed between old and new
+	 */
+	function detectMetadataChanges(oldNovel, newMetadata) {
+		const changes = {};
+
+		const fieldsToCheck = [
+			{ old: "description", new: "description", label: "Summary" },
+			{ old: "author", new: "author", label: "Author" },
+			{ old: "status", new: "status", label: "Status" },
+			{ old: "totalChapters", new: "totalChapters", label: "Chapters" },
+			{ old: "genres", new: "genres", label: "Genres" },
+			{
+				old: ["metadata", "rating"],
+				new: ["metadata", "rating"],
+				label: "Rating",
+			},
+			{
+				old: ["metadata", "language"],
+				new: ["metadata", "language"],
+				label: "Language",
+			},
+			{
+				old: ["metadata", "words"],
+				new: ["stats", "words"],
+				label: "Word Count",
+			},
+			{
+				old: ["metadata", "publishedDate"],
+				new: ["metadata", "publishedDate"],
+				label: "Published",
+			},
+		];
+
+		for (const field of fieldsToCheck) {
+			const oldKey = Array.isArray(field.old) ? field.old[0] : field.old;
+			const oldPath = Array.isArray(field.old) ? field.old : [field.old];
+			const newKey = Array.isArray(field.new) ? field.new[0] : field.new;
+			const newPath = Array.isArray(field.new) ? field.new : [field.new];
+
+			// Get old and new values
+			let oldValue = oldNovel;
+			for (const key of oldPath) {
+				oldValue = oldValue?.[key];
+			}
+
+			let newValue = newMetadata;
+			for (const key of newPath) {
+				newValue = newValue?.[key];
+			}
+
+			// Normalize for comparison
+			const oldStr = Array.isArray(oldValue)
+				? oldValue.join(", ")
+				: String(oldValue || "");
+			const newStr = Array.isArray(newValue)
+				? newValue.join(", ")
+				: String(newValue || "");
+
+			// Detect change
+			if (oldStr !== newStr && newStr) {
+				changes[field.label] = {
+					old: oldStr || "(not set)",
+					new: newStr,
+				};
+			}
+		}
+
+		return changes;
+	}
+
+	/**
+	 * Display changes in a change modal
+	 */
+	function displayChangeSummary(novelTitle, changes) {
+		// Create a styled modal div for showing changes
+		const modalId = `rg-changes-modal-${Date.now()}`;
+		const modal = document.createElement("div");
+		modal.id = modalId;
+		protectFromThemeExtensions(modal);
+		modal.style.cssText = `
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background: linear-gradient(135deg, #1a2942 0%, #0f3460 100%);
+			border: 2px solid #4a7c9c;
+			border-radius: 12px;
+			padding: 20px;
+			color: white;
+			font-family: system-ui, -apple-system, sans-serif;
+			z-index: 999999;
+			box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+			max-width: 500px;
+			max-height: 70vh;
+			overflow-y: auto;
+		`;
+
+		// Title
+		const title = document.createElement("h3");
+		title.textContent = `✨ Updated: ${novelTitle}`;
+		title.style.cssText =
+			"margin-top: 0; margin-bottom: 16px; color: #88bbff;";
+		modal.appendChild(title);
+
+		// Changes
+		const changesDiv = document.createElement("div");
+		for (const [field, change] of Object.entries(changes)) {
+			const fieldDiv = document.createElement("div");
+			fieldDiv.style.cssText = `
+				margin: 8px 0;
+				padding: 12px;
+				background: #0a1f35;
+				border-left: 3px solid #4a7c9c;
+				border-radius: 4px;
+			`;
+
+			const fieldName = document.createElement("div");
+			fieldName.style.cssText = "font-weight: bold; margin-bottom: 6px;";
+			fieldName.textContent = field;
+			fieldDiv.appendChild(fieldName);
+
+			const oldValue = document.createElement("div");
+			oldValue.style.cssText = `
+				margin: 6px 0;
+				font-size: 0.9em;
+				color: #cc6666;
+				text-decoration: line-through;
+			`;
+			oldValue.textContent = `↚ ${change.old}`;
+			fieldDiv.appendChild(oldValue);
+
+			const newValue = document.createElement("div");
+			newValue.style.cssText = `
+				margin: 6px 0;
+				font-size: 0.9em;
+				color: #66dd66;
+			`;
+			newValue.textContent = `↦ ${change.new}`;
+			fieldDiv.appendChild(newValue);
+
+			changesDiv.appendChild(fieldDiv);
+		}
+		modal.appendChild(changesDiv);
+
+		// Summary
+		const summary = document.createElement("div");
+		summary.style.cssText = `
+			margin-top: 16px;
+			padding-top: 12px;
+			border-top: 1px solid #3a5a7a;
+			font-size: 0.85em;
+			color: #aaa;
+		`;
+		summary.textContent = `${Object.keys(changes).length} field(s) updated`;
+		modal.appendChild(summary);
+
+		// Close button
+		const closeBtn = document.createElement("button");
+		closeBtn.textContent = "✓ Got it";
+		closeBtn.style.cssText = `
+			margin-top: 16px;
+			width: 100%;
+			padding: 10px;
+			background: #4a7c9c;
+			border: 1px solid #3a6a8c;
+			color: white;
+			border-radius: 6px;
+			cursor: pointer;
+			font-weight: bold;
+			transition: all 0.2s;
+		`;
+		closeBtn.addEventListener("click", () => modal.remove());
+		closeBtn.addEventListener("mouseenter", () => {
+			closeBtn.style.background = "#5a8cac";
+		});
+		closeBtn.addEventListener("mouseleave", () => {
+			closeBtn.style.background = "#4a7c9c";
+		});
+		modal.appendChild(closeBtn);
+
+		document.body.appendChild(modal);
+
+		// Auto-close after 8 seconds
+		setTimeout(() => {
+			if (modal.parentElement) {
+				modal.style.opacity = "0";
+				modal.style.transition = "opacity 0.3s ease-out";
+				setTimeout(() => modal.remove(), 300);
+			}
+		}, 8000);
+	}
+
+	/**
+	 * Prompt user if library chapter is higher than current (chapter regression)
+	 */
+	async function showChapterRegressionPrompt(options) {
+		const {
+			novelId,
+			novelTitle,
+			currentChapter,
+			storedChapter,
+			totalChapters,
+		} = options;
+
+		return new Promise((resolve) => {
+			// Create modal overlay
+			const overlay = document.createElement("div");
+			protectFromThemeExtensions(overlay);
+			overlay.style.cssText = `
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background: rgba(0, 0, 0, 0.7);
+				z-index: 999998;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			`;
+
+			// Create modal
+			const modal = document.createElement("div");
+			protectFromThemeExtensions(modal);
+			modal.style.cssText = `
+				background: linear-gradient(135deg, #1a2942 0%, #0f3460 100%);
+				border: 2px solid #ff9800;
+				border-radius: 12px;
+				padding: 24px;
+				color: white;
+				font-family: system-ui, -apple-system, sans-serif;
+				max-width: 450px;
+				box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+			`;
+
+			// Title
+			const title = document.createElement("div");
+			title.style.cssText = `
+				font-size: 1.1em;
+				font-weight: bold;
+				margin-bottom: 12px;
+				color: #ffbb88;
+			`;
+			title.textContent = "⚠️ Chapter Regression Detected";
+			modal.appendChild(title);
+
+			// Info message
+			const infoDiv = document.createElement("div");
+			infoDiv.style.cssText = `
+				margin-bottom: 16px;
+				line-height: 1.5;
+				color: #ddd;
+			`;
+			infoDiv.innerHTML = `
+				<div style="margin-bottom: 8px;">Your library shows you're at <strong style="color: #88ff88;">Chapter ${storedChapter}</strong></div>
+				<div>But you're now reading <strong style="color: #ffbb88;">Chapter ${currentChapter}</strong></div>
+			`;
+			modal.appendChild(infoDiv);
+
+			// Buttons container
+			const buttonsDiv = document.createElement("div");
+			buttonsDiv.style.cssText = `
+				display: flex;
+				gap: 10px;
+				margin-top: 16px;
+			`;
+
+			// Keep button
+			const keepBtn = document.createElement("button");
+			keepBtn.textContent = `↩️ Keep Reading Ch. ${currentChapter}`;
+			keepBtn.style.cssText = `
+				flex: 1;
+				padding: 12px;
+				background: #4a7c9c;
+				border: 1px solid #2a5b8d;
+				color: white;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: bold;
+				transition: all 0.2s;
+			`;
+			keepBtn.addEventListener("click", () => {
+				debugLog(
+					`💾 Keeping chapter ${currentChapter} for ${novelTitle}`,
+				);
+				overlay.remove();
+				resolve({ action: "keep" });
+			});
+			keepBtn.addEventListener("mouseenter", () => {
+				keepBtn.style.background = "#5a8cac";
+			});
+			keepBtn.addEventListener("mouseleave", () => {
+				keepBtn.style.background = "#4a7c9c";
+			});
+			buttonsDiv.appendChild(keepBtn);
+
+			// Resume button
+			const resumeBtn = document.createElement("button");
+			resumeBtn.textContent = `📖 Go Back to Ch. ${storedChapter}`;
+			resumeBtn.style.cssText = `
+				flex: 1;
+				padding: 12px;
+				background: #c2655b;
+				border: 1px solid #a0453a;
+				color: white;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: bold;
+				transition: all 0.2s;
+			`;
+			resumeBtn.addEventListener("click", async () => {
+				debugLog(
+					`↩️ Resuming chapter ${storedChapter} for ${novelTitle}`,
+				);
+
+				// Update the reading progress
+				await novelLibrary.updateReadingProgress(
+					novelId,
+					storedChapter,
+					null,
+					{ totalChapters },
+				);
+
+				showTimedBanner(
+					`📖 Resumed at Chapter ${storedChapter}`,
+					"success",
+					2000,
+				);
+				overlay.remove();
+				resolve({ action: "resume" });
+			});
+			resumeBtn.addEventListener("mouseenter", () => {
+				resumeBtn.style.background = "#d17566";
+			});
+			resumeBtn.addEventListener("mouseleave", () => {
+				resumeBtn.style.background = "#c2655b";
+			});
+			buttonsDiv.appendChild(resumeBtn);
+
+			modal.appendChild(buttonsDiv);
+			overlay.appendChild(modal);
+			document.body.appendChild(overlay);
+
+			// Close on overlay click (outside modal)
+			overlay.addEventListener("click", (e) => {
+				if (e.target === overlay) {
+					overlay.remove();
+					resolve({ action: "keep" });
+				}
+			});
+		});
 	}
 
 	/**
@@ -4008,6 +4610,7 @@ if (window.__RGInitDone) {
 		// Create the controls container
 		const controlsContainer = document.createElement("div");
 		controlsContainer.id = "rg-novel-controls";
+		protectFromThemeExtensions(controlsContainer);
 		controlsContainer.style.cssText = `
 			display: flex;
 			flex-wrap: wrap;
@@ -4019,6 +4622,11 @@ if (window.__RGInitDone) {
 			border-radius: 8px;
 			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 		`;
+
+		// Apply mobile class if on mobile device
+		if (isMobileDevice) {
+			controlsContainer.classList.add("mobile-view");
+		}
 
 		// Create header
 		const header = document.createElement("div");
@@ -4114,6 +4722,64 @@ if (window.__RGInitDone) {
 		);
 		buttonRow.appendChild(addUpdateBtn);
 
+		// Helper to handle status changes
+		const handleReadingStatusChange = async (newStatus) => {
+			if (!novelLibrary || !existingNovel) return;
+			try {
+				const updated = await novelLibrary.updateReadingStatus(
+					existingNovel.id,
+					newStatus,
+				);
+				if (!updated) {
+					showTimedBanner("Failed to change status", "warning", 3000);
+					return;
+				}
+				existingNovel.readingStatus = newStatus;
+				showTimedBanner(
+					`Status changed to: ${newStatus}`,
+					"success",
+					2000,
+				);
+				debugLog(`📖 Reading status changed to: ${newStatus}`);
+
+				// Always refresh the UI so the dropdown reflects the saved status.
+				// Do NOT gate this on finding the element – the element may have
+				// been temporarily absent during the async storage round-trip.
+				const controls = document.getElementById("rg-novel-controls");
+				if (controls) controls.remove();
+				hasExtractButton = false;
+				await injectNovelPageUI();
+			} catch (error) {
+				debugError("Error changing reading status:", error);
+				showTimedBanner("Failed to change status", "warning", 3000);
+			}
+		};
+
+		// Helper to handle novel deletion
+		const handleNovelDelete = async () => {
+			if (!novelLibrary || !existingNovel) return;
+			const confirmed = confirm(
+				`Remove "${existingNovel.title}" from library?`,
+			);
+			if (!confirmed) return;
+
+			try {
+				await novelLibrary.removeNovel(existingNovel.id);
+				showTimedBanner("Novel removed from library", "success", 3000);
+
+				// Refresh UI
+				const controls = document.getElementById("rg-novel-controls");
+				if (controls) {
+					controls.remove();
+					hasExtractButton = false;
+					await injectNovelPageUI();
+				}
+			} catch (error) {
+				debugError("Error removing novel:", error);
+				showTimedBanner("Failed to remove novel", "warning", 3000);
+			}
+		};
+
 		// Reading status dropdown (if novel exists)
 		if (existingNovel) {
 			const statusSelect = document.createElement("select");
@@ -4166,6 +4832,24 @@ if (window.__RGInitDone) {
 			window.open(libraryUrl, "_blank");
 		});
 		buttonRow.appendChild(libraryBtn);
+
+		// Handler-supplied extra buttons (after defaults)
+		if (typeof currentHandler?.getCustomChapterButtons === "function") {
+			const extraBtns = currentHandler.getCustomChapterButtons();
+			if (Array.isArray(extraBtns)) {
+				extraBtns.forEach((spec) => {
+					if (spec?.text && typeof spec.onClick === "function") {
+						const btn = createButton(
+							spec.text,
+							spec.emoji || "",
+							spec.color || "#1976d2",
+							spec.onClick,
+						);
+						buttonRow.appendChild(btn);
+					}
+				});
+			}
+		}
 
 		controlsContainer.appendChild(buttonRow);
 
@@ -4260,7 +4944,15 @@ if (window.__RGInitDone) {
 				lastUpdated: Date.now(),
 			};
 
-			await novelLibrary.addOrUpdateNovel(novelData);
+			const savedNovel = await novelLibrary.addOrUpdateNovel(novelData);
+			if (!savedNovel) {
+				showTimedBanner(
+					"Failed to save novel to library",
+					"warning",
+					4000,
+				);
+				return;
+			}
 
 			// Also update with extracted metadata
 			await novelLibrary.updateNovelMetadata(novelId, metadata);
@@ -4313,7 +5005,11 @@ if (window.__RGInitDone) {
 			}
 		} catch (error) {
 			debugError("Error saving novel:", error);
-			showTimedBanner("Error saving novel", "warning", 3000);
+			showTimedBanner(
+				`Error saving novel${error?.message ? ": " + error.message : ""}`,
+				"warning",
+				4000,
+			);
 		}
 	}
 
@@ -4414,6 +5110,137 @@ if (window.__RGInitDone) {
 	}
 
 	/**
+	 * Remove a novel from library and add its ID to the auto-add blocklist
+	 * This prevents the novel from being automatically re-added on reload
+	 * @param {string} novelId - The novel ID to remove and blocklist
+	 */
+	async function handleRemoveNovelWithBlocklist(novelId) {
+		if (!novelLibrary || !novelId) return;
+
+		try {
+			// Delete from library
+			await novelLibrary.removeNovel(novelId);
+
+			// Add to blocklist to prevent auto-add
+			try {
+				const blocklistJson = localStorage.getItem(
+					"rg_auto_add_blocklist",
+				);
+				const blocklist = blocklistJson
+					? JSON.parse(blocklistJson)
+					: [];
+
+				// Add novel ID if not already in blocklist
+				if (!blocklist.includes(novelId)) {
+					blocklist.push(novelId);
+					localStorage.setItem(
+						"rg_auto_add_blocklist",
+						JSON.stringify(blocklist),
+					);
+					debugLog(
+						"Ranobe Gemini: Added novelId to blocklist:",
+						novelId,
+					);
+				}
+			} catch (storageError) {
+				debugWarn(
+					"Ranobe Gemini: Error writing to blocklist:",
+					storageError,
+				);
+				// Continue even if blocklist write fails
+			}
+
+			showTimedBanner(
+				"Novel removed from library (won't auto-add)",
+				"success",
+				3000,
+			);
+
+			// Refresh the controls – remove first so the DOM guard allows re-creation.
+			const controls = document.getElementById(
+				"rg-chapter-novel-controls",
+			);
+			if (controls) {
+				controls.remove();
+				const config = currentHandler?.getNovelControlsConfig?.() || {};
+				const newControls =
+					await createChapterPageNovelControls(config);
+				if (newControls) {
+					placeChapterNovelControls(newControls, config);
+				}
+			}
+		} catch (error) {
+			debugError("Error removing novel with blocklist:", error);
+			showTimedBanner("Error removing novel", "warning", 3000);
+		}
+	}
+
+	/**
+	 * Check if a novel should be added to library (not blocklisted)
+	 * @param {string} novelId - The novel ID to check
+	 * @returns {boolean} True if novel can be auto-added, false if blocklisted
+	 */
+	function isNovelBlocklisted(novelId) {
+		try {
+			const blocklistJson = localStorage.getItem("rg_auto_add_blocklist");
+			const blocklist = blocklistJson ? JSON.parse(blocklistJson) : [];
+			return blocklist.includes(novelId);
+		} catch (error) {
+			debugWarn("Ranobe Gemini: Error checking blocklist:", error);
+			return false;
+		}
+	}
+
+	/**
+	 * Check and collect metadata for a novel if it was pending collection
+	 * This is called when visiting a novel page after a failed metadata update
+	 * @param {string} novelId - The novel ID to potentially collect metadata for
+	 */
+	async function autoCollectMetadataOnPageIfPending(novelId) {
+		if (!novelId || !novelLibrary || !currentHandler) return;
+
+		try {
+			const pendingJson = localStorage.getItem(
+				"rg_pending_metadata_collect",
+			);
+			if (!pendingJson) return;
+
+			const pending = JSON.parse(pendingJson);
+			// Check if this is the pending novel and within 10-minute window
+			if (
+				pending.novelId === novelId &&
+				Date.now() - pending.timestamp < 600000
+			) {
+				debugLog(
+					"Ranobe Gemini: Collecting pending metadata for novelId:",
+					novelId,
+				);
+
+				// Extract metadata from current page
+				const metadata = currentHandler.extractNovelMetadata();
+				if (metadata) {
+					// Update the novel in library with the newly collected metadata
+					await novelLibrary.updateNovel(novelId, metadata);
+					debugLog(
+						"Ranobe Gemini: Updated pending metadata for:",
+						novelId,
+					);
+					showTimedBanner(
+						"Metadata synchronized from page",
+						"success",
+						2000,
+					);
+				}
+
+				// Clear the pending flag
+				localStorage.removeItem("rg_pending_metadata_collect");
+			}
+		} catch (error) {
+			debugWarn("Ranobe Gemini: Error auto-collecting metadata:", error);
+		}
+	}
+
+	/**
 	 * Create compact novel controls for CHAPTER_EMBEDDED type sites
 	 * These appear inline with enhance/summarize controls on chapter pages
 	 * @returns {HTMLElement|null} The novel controls container or null if not applicable
@@ -4492,6 +5319,14 @@ if (window.__RGInitDone) {
 			}
 		}
 
+		// Hide the old toggle banners button since we have the Show/Hide button in novel controls now
+		const oldToggleBtn = document.querySelector(
+			".gemini-toggle-banners-btn",
+		);
+		if (oldToggleBtn) {
+			oldToggleBtn.style.display = "none";
+		}
+
 		const insertion = resolveNovelControlsInsertion(controlsConfig);
 		if (insertion?.element) {
 			let target = insertion.element;
@@ -4529,6 +5364,9 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Concurrency guard: prevent two simultaneous createChapterPageNovelControls calls
+	let __rgCreatingChapterControls = false;
+
 	async function createChapterPageNovelControls(controlsConfig = {}) {
 		const handlerType = getHandlerType();
 
@@ -4541,27 +5379,120 @@ if (window.__RGInitDone) {
 			return null;
 		}
 
-		// Load novel library if needed
-		if (!novelLibrary) {
-			await loadNovelLibrary();
+		// Prevent concurrent calls from creating two containers simultaneously
+		if (__rgCreatingChapterControls) {
+			debugLog(
+				"Chapter controls already being created, skipping concurrent call.",
+			);
+			return null;
 		}
+		__rgCreatingChapterControls = true;
 
-		if (!novelLibrary) {
-			debugLog("Novel library not available for chapter page controls");
+		// DOM guard: if controls are already in the page, skip creation to prevent duplicates.
+		// Callers that want a forced refresh must remove the existing element first.
+		const existingDOMControls = document.getElementById(
+			"rg-chapter-novel-controls",
+		);
+		if (existingDOMControls?.isConnected) {
+			debugLog(
+				"Chapter novel controls already exist in DOM – skipping creation to prevent duplicates.",
+			);
+			__rgCreatingChapterControls = false;
 			return null;
 		}
 
-		// Get novel ID and check if it exists in library
-		const novelId = getNovelIdFromCurrentPage();
-		const existingNovels = await novelLibrary.getRecentNovels(0);
-		const existingNovel = novelId
-			? existingNovels.find((n) => n.id === novelId)
-			: null;
+		try {
+			if (!novelLibrary) {
+				await loadNovelLibrary();
+			}
 
-		// Create the compact controls container
-		const controlsContainer = document.createElement("div");
-		controlsContainer.id = "rg-chapter-novel-controls";
-		controlsContainer.style.cssText = `
+			if (!novelLibrary) {
+				debugLog(
+					"Novel library not available for chapter page controls",
+				);
+				return null;
+			}
+
+			// Get novel ID and check if it exists in library
+			const novelId = getNovelIdFromCurrentPage();
+			const existingNovels = await novelLibrary.getRecentNovels(0);
+			const existingNovel = novelId
+				? existingNovels.find((n) => n.id === novelId)
+				: null;
+
+			// Define helper functions early so they're available to all UI elements
+			const handleReadingStatusChange = async (newStatus) => {
+				if (!novelLibrary || !existingNovel) return;
+				try {
+					const updated = await novelLibrary.updateReadingStatus(
+						existingNovel.id,
+						newStatus,
+					);
+					if (!updated) {
+						showTimedBanner(
+							"Failed to change status",
+							"warning",
+							3000,
+						);
+						return;
+					}
+					existingNovel.readingStatus = newStatus;
+					showTimedBanner(
+						`Status changed to: ${newStatus}`,
+						"success",
+						2000,
+					);
+					debugLog(`📖 Reading status changed to: ${newStatus}`);
+
+					// Always refresh controls – remove-then-recreate pattern.
+					// Don't gate recreation on whether the old element is in the
+					// DOM; it may be briefly absent during the async storage round-
+					// trip. The DOM guard inside createChapterPageNovelControls
+					// prevents duplicates once the old node is removed.
+					const oldControls = document.getElementById(
+						"rg-chapter-novel-controls",
+					);
+					if (oldControls) oldControls.remove();
+					const newControls =
+						await createChapterPageNovelControls(controlsConfig);
+					if (newControls) {
+						placeChapterNovelControls(newControls, controlsConfig);
+					}
+				} catch (error) {
+					debugError("Error changing reading status:", error);
+					showTimedBanner("Failed to change status", "warning", 3000);
+				}
+			};
+
+			const handleRemoveNovelWithBlocklist = async (novelId) => {
+				if (!novelLibrary || !novelId) return;
+
+				try {
+					await novelLibrary.removeNovel(novelId);
+					showTimedBanner(
+						"Novel removed from library",
+						"success",
+						3000,
+					);
+
+					// Refresh controls
+					const oldControls = document.getElementById(
+						"rg-chapter-novel-controls",
+					);
+					if (oldControls) {
+						oldControls.remove();
+					}
+				} catch (error) {
+					debugError("Error removing novel:", error);
+					showTimedBanner("Failed to remove novel", "warning", 3000);
+				}
+			};
+
+			// Create the compact controls container
+			const controlsContainer = document.createElement("div");
+			controlsContainer.id = "rg-chapter-novel-controls";
+			protectFromThemeExtensions(controlsContainer);
+			controlsContainer.style.cssText = `
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
@@ -4574,20 +5505,23 @@ if (window.__RGInitDone) {
 			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 		`;
 
-		if (controlsConfig.wrapInDefinitionList) {
-			controlsContainer.style.justifyContent = "center";
-			controlsContainer.style.width = "100%";
-			controlsContainer.style.textAlign = "center";
-		}
+			if (controlsConfig.wrapInDefinitionList) {
+				controlsContainer.style.justifyContent = "center";
+				controlsContainer.style.width = "100%";
+				controlsContainer.style.textAlign = "center";
+			}
 
-		// Allow handler to customize styling (e.g., AO3/FanFiction specific palettes)
-		if (controlsConfig?.customStyles) {
-			Object.assign(controlsContainer.style, controlsConfig.customStyles);
-		}
+			// Allow handler to customize styling (e.g., AO3/FanFiction specific palettes)
+			if (controlsConfig?.customStyles) {
+				Object.assign(
+					controlsContainer.style,
+					controlsConfig.customStyles,
+				);
+			}
 
-		// Status indicator
-		const statusBadge = document.createElement("span");
-		statusBadge.style.cssText = `
+			// Status indicator
+			const statusBadge = document.createElement("span");
+			statusBadge.style.cssText = `
 			padding: 4px 8px;
 			background: ${existingNovel ? "#1b5e20" : "#424242"};
 			color: white;
@@ -4595,22 +5529,22 @@ if (window.__RGInitDone) {
 			font-size: 11px;
 			font-weight: 600;
 		`;
-		statusBadge.textContent = existingNovel
-			? "📚 In Library"
-			: "📖 Not Saved";
-		controlsContainer.appendChild(statusBadge);
+			statusBadge.textContent = existingNovel
+				? "📚 In Library"
+				: "📖 Not Saved";
+			controlsContainer.appendChild(statusBadge);
 
-		// Separator
-		const separator = document.createElement("span");
-		separator.textContent = "•";
-		separator.style.cssText = "color: #666; margin: 0 4px;";
-		controlsContainer.appendChild(separator);
+			// Separator
+			const separator = document.createElement("span");
+			separator.textContent = "•";
+			separator.style.cssText = "color: #666; margin: 0 4px;";
+			controlsContainer.appendChild(separator);
 
-		// Button style helper
-		const createCompactButton = (text, icon, color, onClick) => {
-			const btn = document.createElement("button");
-			btn.innerHTML = `${icon} ${text}`;
-			btn.style.cssText = `
+			// Button style helper
+			const createCompactButton = (text, icon, color, onClick) => {
+				const btn = document.createElement("button");
+				btn.innerHTML = `${icon} ${text}`;
+				btn.style.cssText = `
 				padding: 6px 10px;
 				background: ${color};
 				color: white;
@@ -4623,42 +5557,42 @@ if (window.__RGInitDone) {
 				white-space: nowrap;
 				flex: 0 0 auto;
 			`;
-			btn.addEventListener("mouseover", () => {
-				btn.style.filter = "brightness(1.1)";
-			});
-			btn.addEventListener("mouseout", () => {
-				btn.style.filter = "brightness(1)";
-			});
-			btn.addEventListener("click", onClick);
-			return btn;
-		};
+				btn.addEventListener("mouseover", () => {
+					btn.style.filter = "brightness(1.1)";
+				});
+				btn.addEventListener("mouseout", () => {
+					btn.style.filter = "brightness(1)";
+				});
+				btn.addEventListener("click", onClick);
+				return btn;
+			};
 
-		// Add/Update button
-		const addUpdateBtn = createCompactButton(
-			existingNovel ? "Update" : "Add to Library",
-			existingNovel ? "🔄" : "➕",
-			existingNovel ? "#00695c" : "#1976d2",
-			async () => {
-				await handleNovelAddUpdate();
-				// Refresh the controls
-				const oldControls = document.getElementById(
-					"rg-chapter-novel-controls",
-				);
-				if (oldControls) {
-					const newControls = await createChapterPageNovelControls();
+			// Add/Update button
+			const addUpdateBtn = createCompactButton(
+				existingNovel ? "Update" : "Add to Library",
+				existingNovel ? "🔄" : "➕",
+				existingNovel ? "#00695c" : "#1976d2",
+				async () => {
+					await handleNovelAddUpdate();
+					// Always refresh: remove first so the DOM guard allows re-creation.
+					const oldControls = document.getElementById(
+						"rg-chapter-novel-controls",
+					);
+					if (oldControls) oldControls.remove();
+					const newControls =
+						await createChapterPageNovelControls(controlsConfig);
 					if (newControls) {
-						oldControls.replaceWith(newControls);
+						placeChapterNovelControls(newControls, controlsConfig);
 					}
-				}
-			},
-		);
-		controlsContainer.appendChild(addUpdateBtn);
+				},
+			);
+			controlsContainer.appendChild(addUpdateBtn);
 
-		// Reading status dropdown (if novel exists)
-		if (existingNovel) {
-			const statusSelect = document.createElement("select");
-			statusSelect.id = "rg-chapter-reading-status";
-			statusSelect.style.cssText = `
+			// Reading status dropdown (if novel exists)
+			if (existingNovel) {
+				const statusSelect = document.createElement("select");
+				statusSelect.id = "rg-chapter-reading-status";
+				statusSelect.style.cssText = `
 				padding: 6px 8px;
 				background: #424242;
 				color: white;
@@ -4674,62 +5608,99 @@ if (window.__RGInitDone) {
 				flex: 0 0 auto;
 			`;
 
-			const statusOptions = getReadingStatusOptions();
+				const statusOptions = getReadingStatusOptions();
 
-			statusOptions.forEach((opt) => {
-				const option = document.createElement("option");
-				option.value = opt.value;
-				option.textContent = opt.label;
-				if (existingNovel.readingStatus === opt.value) {
-					option.selected = true;
-				}
-				statusSelect.appendChild(option);
-			});
-
-			statusSelect.addEventListener("change", async (e) => {
-				await handleReadingStatusChange(e.target.value);
-			});
-
-			controlsContainer.appendChild(statusSelect);
-
-			// Remove button
-			const removeBtn = createCompactButton(
-				"Remove",
-				"🗑️",
-				"#c62828",
-				async () => {
-					await handleNovelDelete();
-					// Refresh the controls
-					const oldControls = document.getElementById(
-						"rg-chapter-novel-controls",
-					);
-					if (oldControls) {
-						const newControls =
-							await createChapterPageNovelControls();
-						if (newControls) {
-							oldControls.replaceWith(newControls);
-						}
+				statusOptions.forEach((opt) => {
+					const option = document.createElement("option");
+					option.value = opt.value;
+					option.textContent = opt.label;
+					if (existingNovel.readingStatus === opt.value) {
+						option.selected = true;
 					}
+					statusSelect.appendChild(option);
+				});
+
+				statusSelect.addEventListener("change", async (e) => {
+					await handleReadingStatusChange(e.target.value);
+				});
+
+				controlsContainer.appendChild(statusSelect);
+
+				// Remove button
+				const removeBtn = createCompactButton(
+					"Remove",
+					"🗑️",
+					"#c62828",
+					async () => {
+						// Confirm deletion
+						if (!confirm("Remove this novel from your library?")) {
+							return;
+						}
+						await handleRemoveNovelWithBlocklist(existingNovel.id);
+					},
+				);
+				controlsContainer.appendChild(removeBtn);
+			}
+
+			// Open Library button
+			const libraryBtn = createCompactButton(
+				"Library",
+				"📚",
+				"#7b1fa2",
+				() => {
+					const libraryUrl = browser.runtime.getURL(
+						"library/library.html",
+					);
+					window.open(libraryUrl, "_blank");
 				},
 			);
-			controlsContainer.appendChild(removeBtn);
-		}
+			controlsContainer.appendChild(libraryBtn);
 
-		// Open Library button
-		const libraryBtn = createCompactButton(
-			"Library",
-			"📚",
-			"#7b1fa2",
-			() => {
-				const libraryUrl = browser.runtime.getURL(
-					"library/library.html",
+			// Add toggle banners button (except for dedicated_page handler types)
+			// which don't need to hide/show enhancement banners
+			if (handlerType !== HANDLER_TYPES.DEDICATED_PAGE) {
+				const toggleBannersBtn = createCompactButton(
+					"Show/Hide",
+					"⚡",
+					"#ff9800",
+					() => {
+						handleChapterControlsToggleBanners();
+					},
 				);
-				window.open(libraryUrl, "_blank");
-			},
-		);
-		controlsContainer.appendChild(libraryBtn);
+				controlsContainer.appendChild(toggleBannersBtn);
+			}
 
-		return controlsContainer;
+			// Add custom handler buttons (e.g., FichHub download for FF.net and AO3)
+			if (
+				currentHandler &&
+				typeof currentHandler.getCustomChapterButtons === "function"
+			) {
+				const customButtons = currentHandler.getCustomChapterButtons();
+				if (customButtons && Array.isArray(customButtons)) {
+					customButtons.forEach((btnSpec) => {
+						if (
+							btnSpec &&
+							btnSpec.text &&
+							btnSpec.emoji &&
+							btnSpec.color &&
+							btnSpec.onClick
+						) {
+							const customBtn = createCompactButton(
+								btnSpec.text,
+								btnSpec.emoji,
+								btnSpec.color,
+								btnSpec.onClick,
+							);
+							controlsContainer.appendChild(customBtn);
+						}
+					});
+				}
+			}
+
+			return controlsContainer;
+		} finally {
+			__rgCreatingChapterControls = false;
+		}
 	}
 
 	// Function to inject UI elements (buttons, status area)
@@ -4772,6 +5743,7 @@ if (window.__RGInitDone) {
 		}
 		const controlsContainer = document.createElement("div");
 		controlsContainer.id = "gemini-controls";
+		protectFromThemeExtensions(controlsContainer);
 		controlsContainer.style.marginBottom = "10px"; // Add some space below buttons
 
 		// Apply mobile-specific class if on a mobile device
@@ -5159,8 +6131,20 @@ if (window.__RGInitDone) {
 			const extractedContent = extractContent();
 			const { title, text: content } = extractedContent;
 
-			if (!content) {
-				throw new Error("Could not extract chapter content.");
+			if (!content || !content.trim()) {
+				const noContentMsg = extractedContent.reason
+					? `No content available for summary: ${extractedContent.reason}`
+					: "No content available for summary.";
+				if (summaryTextContainer) {
+					summaryTextContainer.style.display = "block";
+					summaryTextContainer.textContent = noContentMsg;
+				}
+				statusDiv.textContent = noContentMsg;
+				if (summarizeButton) {
+					summarizeButton.disabled = false;
+					summarizeButton.textContent = originalButtonText;
+				}
+				return;
 			}
 
 			debugLog(

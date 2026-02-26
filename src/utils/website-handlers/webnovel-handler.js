@@ -41,6 +41,20 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
 
+	/** Configurable settings exposed in the Library Settings page. */
+	static SETTINGS_DEFINITION = {
+		fields: [
+			{
+				key: "autoEnhanceEnabled",
+				label: "Auto-enhance chapters",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Automatically run Enhance when a WebNovel chapter loads.",
+			},
+		],
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from WebNovel.com, a web novel platform.
 Please maintain:
 - Proper paragraph breaks and formatting
@@ -731,6 +745,9 @@ When enhancing, improve readability and grammar while respecting the author's or
 
 		return {
 			found: false,
+			title: document.title,
+			text: "",
+			selector: "webnovel-no-content",
 			reason: "Could not locate any chapter content on this WebNovel page.",
 		};
 	}

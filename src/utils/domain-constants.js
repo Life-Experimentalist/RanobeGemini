@@ -83,7 +83,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 	});
 
 	// Build shelf registry from handler metadata
-    if (shelfMeta && shelfMeta.id) {
+	if (shelfMeta && shelfMeta.id) {
 		const shelfId = shelfMeta.id.toUpperCase();
 		const expandedDomains = expandWildcards(domains);
 		const isPrimary = shelfMeta.isPrimary !== false; // Default to true if not specified
@@ -99,6 +99,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 				icon: shelfMeta.icon || "📖",
 				emoji: shelfMeta.emoji || "📖",
 				color: shelfMeta.color || "#666",
+				invertIconInDarkMode: shelfMeta.invertIconInDarkMode || false,
 				domains: expandedDomains,
 				novelIdPattern: shelfMeta.novelIdPattern,
 				primaryDomain: shelfMeta.primaryDomain,
@@ -162,12 +163,12 @@ function matchesDomainPattern(hostname, pattern) {
  */
 export const RANOBES_DOMAINS = expandWildcards(DOMAIN_REGISTRY.RANOBES || []);
 export const FANFICTION_DOMAINS = expandWildcards(
-	DOMAIN_REGISTRY.FANFICTION || []
+	DOMAIN_REGISTRY.FANFICTION || [],
 );
 export const AO3_DOMAINS = expandWildcards(DOMAIN_REGISTRY.AO3 || []);
 export const WEBNOVEL_DOMAINS = expandWildcards(DOMAIN_REGISTRY.WEBNOVEL || []);
 export const SCRIBBLEHUB_DOMAINS = expandWildcards(
-	DOMAIN_REGISTRY.SCRIBBLEHUB || []
+	DOMAIN_REGISTRY.SCRIBBLEHUB || [],
 );
 
 /**
@@ -178,7 +179,7 @@ export const SCRIBBLEHUB_DOMAINS = expandWildcards(
  */
 export function isSupportedDomain(hostname) {
 	return ALL_SUPPORTED_DOMAINS.some((pattern) =>
-		matchesDomainPattern(hostname, pattern)
+		matchesDomainPattern(hostname, pattern),
 	);
 }
 

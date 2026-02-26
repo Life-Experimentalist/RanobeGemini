@@ -106,6 +106,8 @@ export async function createComprehensiveBackup(options = {}) {
 		const librarySnapshot =
 			allData.rg_novel_library?.novels || allData.novelHistory || {};
 		const backup = {
+			$schema:
+				"https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json",
 			version: BACKUP_VERSION,
 			type,
 			createdAt: Date.now(),

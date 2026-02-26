@@ -77,5 +77,6 @@ export function ensureRandomSelectButton(
 		onRandomPicked(pick);
 	});
 
-	container.appendChild(button);
+	// Insert before the search input so the button appears to its left
+	container.insertBefore(button, searchInput);
 }

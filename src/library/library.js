@@ -39,6 +39,27 @@ import {
 	renderWebsiteSettingsPanel,
 } from "./site-settings-ui.js";
 import {
+	initStatusSettingsTab,
+	applyStatusConfig,
+} from "./status-settings-ui.js";
+import {
+	getAllStatuses,
+	getDefaultRereadingOverlay,
+} from "./status-machine.js";
+import { openInlineEditModal } from "./edit-modal.js";
+import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
+import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
+import { RanobesHandler } from "../utils/website-handlers/ranobes-handler.js";
+import { ScribbleHubHandler } from "../utils/website-handlers/scribblehub-handler.js";
+
+/** Map shelfId → handler class for inline edit modal. */
+const SHELF_HANDLER_MAP = {
+	ao3: AO3Handler,
+	fanfiction: FanfictionHandler,
+	ranobes: RanobesHandler,
+	scribblehub: ScribbleHubHandler,
+};
+import {
 	createComprehensiveBackup,
 	restoreComprehensiveBackup,
 	downloadBackupAsFile,
@@ -62,6 +83,10 @@ import {
 	optOutTelemetry,
 	trackFeatureUsage,
 } from "../utils/telemetry.js";
+import {
+	formatNovelInfo,
+	resolveTemplate,
+} from "../utils/novel-copy-format.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
 // Modal renderer cache
@@ -240,16 +265,17 @@ const elements = {
 	modalShelf: document.getElementById("modal-shelf"),
 	modalStatus: document.getElementById("modal-status"),
 	modalStatusSelector: document.getElementById("modal-status-selector"),
+	modalRereadingToggle: document.getElementById("modal-rereading-toggle"),
 	modalChapters: document.getElementById("modal-chapters"),
 	modalEnhanced: document.getElementById("modal-enhanced"),
 	modalLastRead: document.getElementById("modal-last-read"),
 	modalDescription: document.getElementById("modal-description"),
 	modalGenres: document.getElementById("modal-genres"),
-	modalGenresContainer: document.getElementById("modal-genres-container"),
 	modalContinueBtn: document.getElementById("modal-continue-btn"),
 	modalSourceBtn: document.getElementById("modal-source-btn"),
 	modalRefreshBtn: document.getElementById("modal-refresh-btn"),
 	modalEditBtn: document.getElementById("modal-edit-btn"),
+	modalCopyInfoBtn: document.getElementById("modal-copy-info-btn"),
 	modalRemoveBtn: document.getElementById("modal-remove-btn"),
 
 	// Modal Metadata Sections
@@ -512,6 +538,16 @@ const elements = {
 	telemetryBannerDisable: document.getElementById("telemetry-banner-disable"),
 	telemetryBannerKeep: document.getElementById("telemetry-banner-keep"),
 
+	// Hero "Continue Reading" section
+	heroSection: document.getElementById("hero-section"),
+	heroCover: document.getElementById("hero-cover"),
+	heroSiteBadge: document.getElementById("hero-site-badge"),
+	heroTitle: document.getElementById("hero-title"),
+	heroAuthor: document.getElementById("hero-author"),
+	heroProgress: document.getElementById("hero-progress"),
+	heroContinueBtn: document.getElementById("hero-continue-btn"),
+	heroDetailsBtn: document.getElementById("hero-details-btn"),
+
 	// Carousel
 	carouselSection: document.getElementById("carousel-section"),
 	carouselTrack: document.getElementById("carousel-track"),
@@ -519,6 +555,9 @@ const elements = {
 	carouselPlayPause: document.getElementById("carousel-play-pause"),
 	carouselPrev: document.getElementById("carousel-prev"),
 	carouselNext: document.getElementById("carousel-next"),
+
+	// Random novel button
+	libraryRandomBtn: document.getElementById("library-random-btn"),
 
 	// Notification Panel
 	notificationBellBtn: document.getElementById("notification-bell-btn"),
@@ -599,11 +638,25 @@ if (isSidebar) {
 async function openNovelFromQueryParams() {
 	try {
 		const params = new URLSearchParams(window.location.search);
+
+		// Open novel detail panel
 		const novelId = params.get("novel");
-		if (!novelId) return;
-		const novel = await novelLibrary.getNovel(novelId);
-		if (novel) {
-			openNovelDetail(novel);
+		if (novelId) {
+			const novel = await novelLibrary.getNovel(novelId);
+			if (novel) openNovelDetail(novel);
+		}
+
+		// Open inline edit modal directly (e.g. deep-link from old shelf edit button)
+		const editId = params.get("edit");
+		if (editId) {
+			const novel = await novelLibrary.getNovel(editId);
+			if (novel) {
+				const HandlerClass = SHELF_HANDLER_MAP[novel.shelfId] ?? null;
+				openInlineEditModal(novel, HandlerClass, {
+					onSaved: () => loadLibrary(),
+					showToast: (msg) => debugLog("Edit saved:", msg),
+				});
+			}
 		}
 	} catch (_err) {
 		debugError("Failed to open novel from query params:", _err);
@@ -714,7 +767,12 @@ async function initializeRollingBackupStatus() {
 
 	const isEnabled = stored.rg_rolling_backup_enabled ?? true;
 	const intervalMinutes = parseInt(stored.rollingBackupIntervalMinutes) || 60;
-	const metadata = stored.rg_rolling_backup_meta || {};
+	// rg_rolling_backup_meta is stored as an array by comprehensive-backup.js;
+	// most-recent entry is at index 0 and has shape { key, timestamp, reason, novelCount }
+	const backupList = Array.isArray(stored.rg_rolling_backup_meta)
+		? stored.rg_rolling_backup_meta
+		: [];
+	const lastEntry = backupList[0] ?? null;
 
 	// Hide status if rolling backups are disabled
 	if (!isEnabled) {
@@ -726,7 +784,7 @@ async function initializeRollingBackupStatus() {
 
 	// Function to update countdown display
 	const updateCountdown = () => {
-		if (!metadata.lastBackupTime) {
+		if (!lastEntry) {
 			statusIcon.textContent = "⏳";
 			statusText.textContent = "Waiting for first backup...";
 			if (countdownContainer) countdownContainer.style.display = "none";
@@ -734,7 +792,7 @@ async function initializeRollingBackupStatus() {
 			return;
 		}
 
-		const lastBackupMs = parseInt(metadata.lastBackupTime);
+		const lastBackupMs = lastEntry.timestamp;
 		const nextBackupMs = lastBackupMs + intervalMinutes * 60 * 1000;
 		const nowMs = Date.now();
 
@@ -956,6 +1014,24 @@ async function init() {
 			(isSidebar ? " (Sidebar mode)" : ""),
 	);
 
+	// Register service worker for PWA support on mobile
+	if (
+		"serviceWorker" in navigator &&
+		window.location.protocol !== "moz-extension:" &&
+		window.location.protocol !== "chrome-extension:"
+	) {
+		try {
+			const registration =
+				await navigator.serviceWorker.register("sw.js");
+			debugLog("📱 PWA Service Worker registered:", registration);
+		} catch (error) {
+			debugLog(
+				"PWA Service Worker registration failed (non-critical):",
+				error,
+			);
+		}
+	}
+
 	// Add sidebar class to body if in sidebar
 	if (isSidebar) {
 		document.body.classList.add("sidebar-mode");
@@ -969,6 +1045,29 @@ async function init() {
 
 	// Load saved library-level settings
 	await loadLibrarySettings();
+
+	// Render status filter buttons dynamically (supports custom statuses)
+	renderStatusFilterButtons();
+
+	// Apply any saved status label/colour overrides globally
+	applyStatusConfig(librarySettings?.statusConfig);
+
+	// Initialise the Status Settings tab (lazy-renders on first open)
+	initStatusSettingsTab(
+		() => librarySettings,
+		async (patch) => {
+			const next = { ...librarySettings, ...patch };
+			librarySettings = await novelLibrary.saveSettings(next);
+			applyStatusConfig(librarySettings.statusConfig);
+			// Re-render filter buttons if statuses or overlay changed
+			if (
+				patch.customStatuses !== undefined ||
+				patch.rereadingOverlay !== undefined
+			) {
+				renderStatusFilterButtons();
+			}
+		},
+	);
 
 	// Load telemetry settings
 	await loadTelemetrySettings();
@@ -1115,7 +1214,6 @@ async function loadSiteToggleSettings() {
 	}
 
 	renderSiteAutoAddSettings();
-	renderWebsiteSettingsTabs();
 }
 
 /**
@@ -2374,24 +2472,27 @@ function setupEventListeners() {
 		btn.addEventListener("click", () => handleViewChange(btn.dataset.view));
 	});
 
-	// Reading status filter
-	if (elements.statusFilterBtns) {
-		elements.statusFilterBtns.forEach((btn) => {
-			btn.addEventListener("click", () =>
-				handleStatusFilterChange(btn.dataset.status),
-			);
-		});
-	}
+	// Reading status filter buttons are wired via event delegation in
+	// renderStatusFilterButtons() (called after settings load in init())
 
 	// Refresh
 	elements.refreshBtn.addEventListener("click", loadLibrary);
 
-	// Settings
+	// Random novel
+	if (elements.libraryRandomBtn) {
+		elements.libraryRandomBtn.addEventListener("click", () => {
+			const pool = filterAndSortNovels();
+			if (!pool.length) return;
+			const pick = pool[Math.floor(Math.random() * pool.length)];
+			openNovelDetail(pick);
+		});
+	}
+
+	// Settings — opens the dedicated settings page in a new tab
 	elements.settingsBtn.addEventListener("click", () =>
-		openModal(elements.settingsModal),
-	);
-	elements.settingsClose.addEventListener("click", () =>
-		closeModal(elements.settingsModal),
+		browser.tabs.create({
+			url: browser.runtime.getURL("library/library-settings.html"),
+		}),
 	);
 
 	if (elements.urlImportBtn && elements.urlImportText) {
@@ -2431,7 +2532,13 @@ function setupEventListeners() {
 	);
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);
 	elements.modalRefreshBtn.addEventListener("click", handleRefreshMetadata);
-	elements.modalEditBtn.addEventListener("click", handleOpenEditModal);
+	elements.modalEditBtn.addEventListener("click", () =>
+		openInlineEditModal(
+			currentModalNovel,
+			SHELF_HANDLER_MAP[currentModalNovel?.shelfId] ?? null,
+			{ onSaved: () => loadLibrary(), showToast: showNotification },
+		),
+	);
 	if (elements.modalStatusSelector) {
 		elements.modalStatusSelector.addEventListener(
 			"change",
@@ -2453,30 +2560,6 @@ function setupEventListeners() {
 			}
 		}
 	});
-
-	// Edit modal
-	elements.editClose.addEventListener("click", () =>
-		closeModal(elements.editModal),
-	);
-	elements.editCancelBtn.addEventListener("click", () =>
-		closeModal(elements.editModal),
-	);
-	elements.editForm.addEventListener("submit", handleSaveEdit);
-	elements.editCover.addEventListener(
-		"input",
-		debounce(handleCoverPreview, 500),
-	);
-
-	// Settings actions
-	elements.exportBtn.addEventListener("click", handleExport);
-	elements.importBtn.addEventListener("click", () =>
-		elements.importFile.click(),
-	);
-	elements.importFile.addEventListener("change", handleImport);
-	elements.clearBtn.addEventListener("click", handleClearLibrary);
-
-	// Settings tabs
-	bindSettingsTabListeners();
 
 	// Settings save button - saves library settings configuration
 	if (elements.settingsSaveBtn) {
@@ -3715,12 +3798,90 @@ async function loadLibrary() {
 
 		// Render current view
 		renderCurrentView();
+
+		// Populate "Continue Reading" hero with the most recently read novel
+		populateContinueReadingHero(allNovels);
 	} catch (error) {
 		debugError("Failed to load library:", error);
 		showEmptyState(true);
 	}
 
 	showLoading(false);
+}
+
+/**
+ * Populate the "Continue Reading" hero card above the carousel.
+ * Picks the most recently accessed novel that has a continue URL.
+ * @param {Array} novels
+ */
+function populateContinueReadingHero(novels) {
+	if (!elements.heroSection) return;
+	if (!novels || novels.length === 0) {
+		elements.heroSection.classList.add("hidden");
+		return;
+	}
+
+	// Candidates: novels with a source URL, sorted by lastAccessed desc
+	const candidates = novels
+		.filter((n) => n.lastReadUrl || n.sourceUrl)
+		.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+
+	if (candidates.length === 0) {
+		elements.heroSection.classList.add("hidden");
+		return;
+	}
+
+	const hero = candidates[0];
+	const shelf = getShelfById(hero.shelfId);
+	const fallback = browser.runtime.getURL("icons/logo-256.png");
+
+	if (elements.heroCover) {
+		elements.heroCover.src = hero.coverUrl || fallback;
+		elements.heroCover.alt = hero.title || "";
+		elements.heroCover.onerror = () => {
+			elements.heroCover.src = fallback;
+			elements.heroCover.onerror = null;
+		};
+	}
+	if (elements.heroSiteBadge) {
+		elements.heroSiteBadge.textContent = shelf?.name || hero.shelfId || "";
+	}
+	if (elements.heroTitle) {
+		elements.heroTitle.textContent = hero.title || "Unknown Title";
+	}
+	if (elements.heroAuthor) {
+		elements.heroAuthor.textContent = hero.author
+			? `by ${hero.author}`
+			: "";
+	}
+	if (elements.heroProgress) {
+		const chapCount = hero.enhancedChaptersCount || 0;
+		elements.heroProgress.textContent = chapCount
+			? `${chapCount} chapter${chapCount !== 1 ? "s" : ""} enhanced`
+			: "";
+	}
+	if (elements.heroContinueBtn) {
+		elements.heroContinueBtn.href = hero.lastReadUrl || hero.sourceUrl;
+		elements.heroContinueBtn.onclick = () => {
+			try {
+				localStorage.setItem(
+					"rg_trusted_nav",
+					JSON.stringify({
+						novelId: hero.id,
+						time: Date.now(),
+						source: "hero",
+					}),
+				);
+			} catch (_e) {
+				// ignore localStorage write errors
+			}
+		};
+	}
+	if (elements.heroDetailsBtn) {
+		elements.heroDetailsBtn.onclick = () => openNovelDetail(hero);
+	}
+
+	elements.heroSection.classList.remove("hidden");
 }
 
 /**
@@ -3810,10 +3971,15 @@ function filterAndSortNovels() {
 
 	// Filter by reading status (only in lists view)
 	if (currentView === "lists" && currentStatusFilter !== "all") {
-		novels = novels.filter((novel) => {
-			const novelStatus = novel.readingStatus || "unset";
-			return novelStatus === currentStatusFilter;
-		});
+		if (currentStatusFilter === "_rereading") {
+			// Re-reading overlay filter: show novels with the re-reading flag
+			novels = novels.filter((novel) => novel.rereadingStatus === true);
+		} else {
+			novels = novels.filter((novel) => {
+				const novelStatus = novel.readingStatus || "unset";
+				return novelStatus === currentStatusFilter;
+			});
+		}
 	}
 
 	// Sort
@@ -3846,12 +4012,27 @@ function renderListsView(novels) {
 	if (!elements.listsNovels) return;
 
 	// Update title based on current filter
-	const statusInfo = READING_STATUS_INFO[currentStatusFilter];
 	if (elements.listsTitle) {
 		if (currentStatusFilter === "all") {
 			elements.listsTitle.textContent = "📖 Reading Lists";
-		} else if (statusInfo) {
-			elements.listsTitle.textContent = `${statusInfo.label}`;
+		} else if (currentStatusFilter === "_rereading") {
+			// Re-reading overlay filter
+			const rr = librarySettings?.rereadingOverlay;
+			elements.listsTitle.textContent = rr?.label || "🔁 Re-reading";
+		} else {
+			// Check built-in statuses first, then custom statuses
+			const statusInfo = READING_STATUS_INFO[currentStatusFilter];
+			if (statusInfo) {
+				elements.listsTitle.textContent = statusInfo.label;
+			} else {
+				// Custom status — look it up from librarySettings
+				const customStatuses = librarySettings?.customStatuses || [];
+				const cs = customStatuses.find(
+					(s) => s.id === currentStatusFilter,
+				);
+				elements.listsTitle.textContent =
+					cs?.label || currentStatusFilter;
+			}
 		}
 	}
 
@@ -3885,12 +4066,15 @@ function renderListsView(novels) {
 async function renderListsStats() {
 	if (!elements.listsStats) return;
 
+	// Get all statuses (built-in + custom)
+	const settings = librarySettings || {};
+	const allStatuses = getAllStatuses(settings, READING_STATUS_INFO);
+
 	// Count novels by status
-	const statusCounts = {};
-	Object.values(READING_STATUS).forEach((status) => {
-		statusCounts[status] = 0;
+	const statusCounts = { unset: 0 };
+	allStatuses.forEach((s) => {
+		statusCounts[s.id] = 0;
 	});
-	statusCounts["unset"] = 0;
 
 	allNovels.forEach((novel) => {
 		const status = novel.readingStatus || "unset";
@@ -3901,17 +4085,35 @@ async function renderListsStats() {
 		}
 	});
 
+	// Re-reading overlay count
+	const rrCount = allNovels.filter((n) => n.rereadingStatus).length;
+
 	// Build stats HTML
 	let statsHtml = "";
-	Object.entries(READING_STATUS_INFO).forEach(([status, info]) => {
-		const count = statusCounts[status] || 0;
+	allStatuses.forEach((s) => {
+		if (s.isRereadingOverlay) return; // shown separately
+		const count = statusCounts[s.id] || 0;
 		statsHtml += `
-			<div class="lists-stat-item">
-				<span>${info.label.split(" ")[0]}</span>
+			<div class="lists-stat-item" title="${s.label}">
+				<span>${s.label.split(" ")[0]}</span>
 				<span class="count">${count}</span>
 			</div>
 		`;
 	});
+
+	// Re-reading overlay badge
+	const rrSettings = {
+		...getDefaultRereadingOverlay(),
+		...(settings.rereadingOverlay || {}),
+	};
+	if (rrSettings.enabled && rrCount > 0) {
+		statsHtml += `
+			<div class="lists-stat-item" title="${rrSettings.label}" style="color:${rrSettings.color};">
+				<span>${rrSettings.label.split(" ")[0]}</span>
+				<span class="count">${rrCount}</span>
+			</div>
+		`;
+	}
 
 	// Add unset count
 	if (statusCounts["unset"] > 0) {
@@ -4078,20 +4280,38 @@ function createNovelCardForShelf(novel, shelf) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
-	// eslint-disable-next-line no-unused-vars
-	const statusInfo =
-		READING_STATUS_INFO[currentStatus] ||
-		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
 
-	// Generate status dropdown options
-	const statusOptions = Object.entries(READING_STATUS_INFO)
+	// Generate status dropdown options including custom statuses
+	const allStatusesForCard = getAllStatuses(
+		librarySettings || {},
+		READING_STATUS_INFO,
+	);
+	const statusOptions = allStatusesForCard
+		.filter((s) => !s.isRereadingOverlay)
 		.map(
-			([status, info]) =>
-				`<option value="${status}" ${
-					status === currentStatus ? "selected" : ""
-				}>${info.label}</option>`,
+			(s) =>
+				`<option value="${escapeHtml(s.id)}" ${
+					s.id === currentStatus ? "selected" : ""
+				}>${escapeHtml(s.label)}</option>`,
 		)
 		.join("");
+
+	// Re-reading overlay toggle (shown when overlay is enabled)
+	const rereadingOverlayCfg = librarySettings?.rereadingOverlay;
+	const showRereadingToggle = rereadingOverlayCfg?.enabled;
+	const isRereading = novel.rereadingStatus === true;
+	const rereadingToggleHtml = showRereadingToggle
+		? `<button class="rereading-toggle ${
+				isRereading ? "active" : ""
+			}" data-novel-id="${novel.id}" title="${
+				isRereading
+					? "Clear re-reading flag"
+					: "Mark as " +
+						escapeHtml(rereadingOverlayCfg?.label || "Re-reading")
+			}" style="--rereading-color: ${
+				rereadingOverlayCfg?.color || "#9c27b0"
+			}">${escapeHtml(rereadingOverlayCfg?.label || "🔁 Re-reading")}</button>`
+		: "";
 
 	// Show tags/genres instead of website name (since we're already in a shelf)
 	const tagsHtml = (novel.genres || novel.tags || [])
@@ -4122,6 +4342,7 @@ function createNovelCardForShelf(novel, shelf) {
 					}" title="Change reading status">
 						${statusOptions}
 					</select>
+					${rereadingToggleHtml}
 				</div>
 				${
 					novel.totalChapters > 0
@@ -4152,6 +4373,45 @@ function createNovelCardForShelf(novel, shelf) {
 		e.target.dataset.status = newStatus;
 		await handleStatusChange(novel.id, newStatus);
 	});
+
+	// Re-reading toggle click handler
+	const rereadingToggleBtn = card.querySelector(".rereading-toggle");
+	if (rereadingToggleBtn) {
+		rereadingToggleBtn.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			const wasRereading = novel.rereadingStatus === true;
+			const newRereadingState = !wasRereading;
+			try {
+				await novelLibrary.updateNovel(novel.id, {
+					rereadingStatus: newRereadingState,
+				});
+				// Update local cache
+				const novelIndex = allNovels.findIndex(
+					(n) => n.id === novel.id,
+				);
+				if (novelIndex !== -1) {
+					allNovels[novelIndex].rereadingStatus = newRereadingState;
+				}
+				// Update button appearance without full re-render
+				rereadingToggleBtn.classList.toggle(
+					"active",
+					newRereadingState,
+				);
+				novel.rereadingStatus = newRereadingState;
+				showNotification(
+					newRereadingState
+						? `Marked as ${
+								librarySettings?.rereadingOverlay?.label ||
+								"Re-reading"
+							}`
+						: "Re-reading flag cleared",
+				);
+			} catch (error) {
+				debugError("Failed to update re-reading status:", error);
+				showNotification("Failed to update re-reading status", "error");
+			}
+		});
+	}
 
 	// Attach cover fallback using inline onerror
 	const coverImg = card.querySelector(".novel-cover");
@@ -4240,20 +4500,40 @@ function createNovelCard(novel) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
-	// eslint-disable-next-line no-unused-vars
-	const statusInfo =
-		READING_STATUS_INFO[currentStatus] ||
-		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
 
-	// Generate status dropdown options
-	const statusOptions = Object.entries(READING_STATUS_INFO)
+	// Generate status dropdown options including custom statuses
+	const allStatusesForCard = getAllStatuses(
+		librarySettings || {},
+		READING_STATUS_INFO,
+	);
+	const statusOptions = allStatusesForCard
+		.filter((s) => !s.isRereadingOverlay)
 		.map(
-			([status, info]) =>
-				`<option value="${status}" ${
-					status === currentStatus ? "selected" : ""
-				}>${info.label}</option>`,
+			(s) =>
+				`<option value="${escapeHtml(s.id)}" ${
+					s.id === currentStatus ? "selected" : ""
+				}>${escapeHtml(s.label)}</option>`,
 		)
 		.join("");
+
+	// Re-reading overlay toggle (shown when overlay is enabled)
+	const rereadingOverlayCfg = librarySettings?.rereadingOverlay;
+	const showRereadingToggle = rereadingOverlayCfg?.enabled;
+	const isRereading = novel.rereadingStatus === true;
+	const rereadingToggleHtml = showRereadingToggle
+		? `<button class="rereading-toggle ${
+				isRereading ? "active" : ""
+			}" data-novel-id="${novel.id}" title="${
+				isRereading
+					? "Clear re-reading flag"
+					: "Mark as " +
+						escapeHtml(rereadingOverlayCfg?.label || "Re-reading")
+			}" style="--rereading-color: ${
+				rereadingOverlayCfg?.color || "#9c27b0"
+			}">${escapeHtml(
+				rereadingOverlayCfg?.label || "🔁 Re-reading",
+			)}</button>`
+		: "";
 
 	card.innerHTML = `
 		<div class="novel-card-inner">
@@ -4277,6 +4557,7 @@ function createNovelCard(novel) {
 					}" title="Change reading status">
 						${statusOptions}
 					</select>
+					${rereadingToggleHtml}
 				</div>
 				${
 					novel.totalChapters > 0
@@ -4309,6 +4590,43 @@ function createNovelCard(novel) {
 		e.target.dataset.status = newStatus;
 		await handleStatusChange(novel.id, newStatus);
 	});
+
+	// Re-reading toggle click handler
+	const rereadingToggleBtnCard = card.querySelector(".rereading-toggle");
+	if (rereadingToggleBtnCard) {
+		rereadingToggleBtnCard.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			const wasRereading = novel.rereadingStatus === true;
+			const newRereadingState = !wasRereading;
+			try {
+				await novelLibrary.updateNovel(novel.id, {
+					rereadingStatus: newRereadingState,
+				});
+				const novelIndex = allNovels.findIndex(
+					(n) => n.id === novel.id,
+				);
+				if (novelIndex !== -1) {
+					allNovels[novelIndex].rereadingStatus = newRereadingState;
+				}
+				rereadingToggleBtnCard.classList.toggle(
+					"active",
+					newRereadingState,
+				);
+				novel.rereadingStatus = newRereadingState;
+				showNotification(
+					newRereadingState
+						? `Marked as ${
+								librarySettings?.rereadingOverlay?.label ||
+								"Re-reading"
+							}`
+						: "Re-reading flag cleared",
+				);
+			} catch (error) {
+				debugError("Failed to update re-reading status:", error);
+				showNotification("Failed to update re-reading status", "error");
+			}
+		});
+	}
 
 	card.addEventListener("click", () => openNovelDetail(novel));
 
@@ -4484,7 +4802,7 @@ async function openDefaultNovelDetail(novel) {
 		: "Unknown";
 	attachIconFallbacks(elements.modalShelf);
 
-	// Set reading status selector with options from READING_STATUS_INFO
+	// Set reading status selector with options from getAllStatuses (includes custom)
 	if (elements.modalStatusSelector) {
 		const currentStatus =
 			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
@@ -4492,16 +4810,22 @@ async function openDefaultNovelDetail(novel) {
 		// Clear existing options
 		elements.modalStatusSelector.innerHTML = "";
 
-		// Populate options from READING_STATUS_INFO
-		Object.entries(READING_STATUS_INFO).forEach(([status, info]) => {
-			const option = document.createElement("option");
-			option.value = status;
-			option.textContent = info.label;
-			if (status === currentStatus) {
-				option.selected = true;
-			}
-			elements.modalStatusSelector.appendChild(option);
-		});
+		// Populate options from all statuses (built-in + custom)
+		const allStatusesForModal = getAllStatuses(
+			librarySettings || {},
+			READING_STATUS_INFO,
+		);
+		allStatusesForModal
+			.filter((s) => !s.isRereadingOverlay)
+			.forEach((s) => {
+				const option = document.createElement("option");
+				option.value = s.id;
+				option.textContent = s.label;
+				if (s.id === currentStatus) {
+					option.selected = true;
+				}
+				elements.modalStatusSelector.appendChild(option);
+			});
 
 		elements.modalStatusSelector.dataset.novelId = novel.id;
 	}
@@ -4516,6 +4840,68 @@ async function openDefaultNovelDetail(novel) {
 	// Store current novel ID for status changes
 	elements.modalStatus.dataset.novelId = novel.id;
 
+	// Wire re-reading overlay toggle in modal
+	if (elements.modalRereadingToggle) {
+		const rereadingCfg = librarySettings?.rereadingOverlay;
+		if (rereadingCfg?.enabled) {
+			const isRereading = novel.rereadingStatus === true;
+			elements.modalRereadingToggle.textContent =
+				rereadingCfg.label || "🔁 Re-reading";
+			elements.modalRereadingToggle.title = isRereading
+				? "Clear re-reading flag"
+				: `Mark as ${rereadingCfg.label || "Re-reading"}`;
+			elements.modalRereadingToggle.style.setProperty(
+				"--rereading-color",
+				rereadingCfg.color || "#9c27b0",
+			);
+			elements.modalRereadingToggle.classList.toggle(
+				"active",
+				isRereading,
+			);
+			elements.modalRereadingToggle.classList.remove("hidden");
+			elements.modalRereadingToggle.dataset.novelId = novel.id;
+
+			// Replace click handler
+			elements.modalRereadingToggle.onclick = async () => {
+				const wasRereading = novel.rereadingStatus === true;
+				const newRereadingState = !wasRereading;
+				try {
+					await novelLibrary.updateNovel(novel.id, {
+						rereadingStatus: newRereadingState,
+					});
+					novel.rereadingStatus = newRereadingState;
+					const novelIndex = allNovels.findIndex(
+						(n) => n.id === novel.id,
+					);
+					if (novelIndex !== -1) {
+						allNovels[novelIndex].rereadingStatus =
+							newRereadingState;
+					}
+					elements.modalRereadingToggle.classList.toggle(
+						"active",
+						newRereadingState,
+					);
+					elements.modalRereadingToggle.title = newRereadingState
+						? "Clear re-reading flag"
+						: `Mark as ${rereadingCfg.label || "Re-reading"}`;
+					showNotification(
+						newRereadingState
+							? `Marked as ${rereadingCfg.label || "Re-reading"}`
+							: "Re-reading flag cleared",
+					);
+				} catch (error) {
+					debugError("Failed to update re-reading status:", error);
+					showNotification(
+						"Failed to update re-reading status",
+						"error",
+					);
+				}
+			};
+		} else {
+			elements.modalRereadingToggle.classList.add("hidden");
+		}
+	}
+
 	// Set stats
 	elements.modalChapters.textContent = novel.totalChapters || "?";
 	elements.modalEnhanced.textContent = novel.enhancedChaptersCount || 0;
@@ -4524,19 +4910,6 @@ async function openDefaultNovelDetail(novel) {
 	// Set description
 	elements.modalDescription.textContent =
 		novel.description || "No description available.";
-
-	// Set genres
-	if (novel.genres && novel.genres.length > 0) {
-		elements.modalGenres.innerHTML = novel.genres
-			.map(
-				(genre) =>
-					`<span class="genre-tag">${escapeHtml(genre)}</span>`,
-			)
-			.join("");
-		elements.modalGenresContainer.style.display = "block";
-	} else {
-		elements.modalGenresContainer.style.display = "none";
-	}
 
 	// Populate rich metadata from site-specific renderer (fallback to generic)
 	const renderedBySite = await renderNovelMetadataForShelf(novel);
@@ -4598,8 +4971,23 @@ async function openDefaultNovelDetail(novel) {
 
 	// Set action buttons
 	const refreshTarget = resolveMetadataRefreshUrl(novel);
-	elements.modalContinueBtn.href =
-		novel.lastReadUrl || novel.sourceUrl || "#";
+	const _continueHref = novel.lastReadUrl || novel.sourceUrl || "#";
+	elements.modalContinueBtn.href = _continueHref;
+	// Tag as trusted library navigation so the chapter page can auto-update progress
+	elements.modalContinueBtn.onclick = () => {
+		try {
+			localStorage.setItem(
+				"rg_trusted_nav",
+				JSON.stringify({
+					novelId: novel.id,
+					time: Date.now(),
+					source: "library",
+				}),
+			);
+		} catch (_e) {
+			// ignore localStorage write errors (e.g. private browsing)
+		}
+	};
 	if (elements.modalSourceBtn) {
 		elements.modalSourceBtn.href = refreshTarget || novel.sourceUrl || "#";
 	}
@@ -4611,6 +4999,29 @@ async function openDefaultNovelDetail(novel) {
 
 	// Store current novel ID for removal
 	elements.modalRemoveBtn.dataset.novelId = novel.id;
+
+	// Wire copy button
+	if (elements.modalCopyInfoBtn) {
+		const fmt = librarySettings?.novelCopyFormats || {};
+		const copyEnabled = fmt.enabled !== false;
+		elements.modalCopyInfoBtn.classList.toggle("hidden", !copyEnabled);
+		if (copyEnabled) {
+			elements.modalCopyInfoBtn.onclick = async () => {
+				try {
+					const currentSettings = await novelLibrary.getSettings();
+					const template = resolveTemplate(
+						currentSettings.novelCopyFormats,
+						novel.shelfId,
+					);
+					const text = formatNovelInfo(novel, template);
+					await navigator.clipboard.writeText(text);
+					showNotification("📋 Copied to clipboard!");
+				} catch (err) {
+					showNotification("Failed to copy: " + err.message, "error");
+				}
+			};
+		}
+	}
 
 	openModal(elements.novelModal);
 }
@@ -5086,12 +5497,72 @@ function handleViewChange(view) {
 function handleStatusFilterChange(status) {
 	currentStatusFilter = status;
 
-	// Update button states
-	elements.statusFilterBtns.forEach((btn) => {
-		btn.classList.toggle("active", btn.dataset.status === status);
-	});
+	// Update button states (query live to include dynamically rendered buttons)
+	const filter = elements.readingStatusFilter;
+	if (filter) {
+		filter.querySelectorAll(".status-filter-btn").forEach((btn) => {
+			btn.classList.toggle("active", btn.dataset.status === status);
+		});
+	}
 
 	renderCurrentView();
+}
+
+/**
+ * Render reading status filter buttons from librarySettings (built-in + custom).
+ * Replaces any previously rendered buttons.
+ */
+function renderStatusFilterButtons() {
+	const filter = elements.readingStatusFilter;
+	if (!filter) return;
+
+	const settings = librarySettings || {};
+	const statuses = getAllStatuses(settings, READING_STATUS_INFO);
+	const rereadingOverlay = {
+		...getDefaultRereadingOverlay(),
+		...(settings.rereadingOverlay || {}),
+	};
+
+	// Build button HTML
+	const allBtn = `<button class="status-filter-btn active" data-status="all" title="All Novels">📚 All</button>`;
+
+	const statusBtns = statuses
+		.filter((s) => !s.isRereadingOverlay) // RE_READING handled inline as overlay
+		.map(
+			(s) =>
+				`<button class="status-filter-btn" data-status="${s.id}" title="${s.label}"
+				style="--status-color:${s.color};">${s.label}</button>`,
+		)
+		.join("");
+
+	// Re-reading overlay toggle (only if enabled in settings)
+	const rrBtn = rereadingOverlay.enabled
+		? `<button class="status-filter-btn status-filter-rereading" data-status="_rereading"
+			title="${rereadingOverlay.label} (overlay filter)"
+			style="--status-color:${rereadingOverlay.color};">${rereadingOverlay.label}</button>`
+		: "";
+
+	filter.innerHTML = allBtn + statusBtns + rrBtn;
+
+	// Attach click listeners via event delegation on the container
+	filter.addEventListener("click", (e) => {
+		const btn = e.target.closest(".status-filter-btn");
+		if (!btn) return;
+		handleStatusFilterChange(btn.dataset.status);
+	});
+
+	// Restore active state if a filter was already set
+	if (currentStatusFilter && currentStatusFilter !== "all") {
+		const active = filter.querySelector(
+			`[data-status="${currentStatusFilter}"]`,
+		);
+		if (active) {
+			filter
+				.querySelector(".status-filter-btn.active")
+				?.classList.remove("active");
+			active.classList.add("active");
+		}
+	}
 }
 
 /**
@@ -6284,12 +6755,40 @@ async function initCarousel(novels) {
 		carouselState.itemsToShow = dynamicCount;
 	}
 
-	// Get top N most recent novels (configurable but capped by available count)
+	// Build carousel pool:
+	// 1. Take the top `itemsToShow` most-recently-accessed novels (recency first).
+	// 2. Find any shelves NOT already represented in that list.
+	// 3. Append one representative (most-recent) per unrepresented shelf at the END.
 	const sortedNovels = [...novels].sort(
 		(a, b) => b.lastAccessedAt - a.lastAccessedAt,
 	);
 	const maxItems = Math.min(carouselState.itemsToShow, sortedNovels.length);
-	const recentNovels = sortedNovels.slice(0, maxItems);
+	const recentSlice = sortedNovels.slice(0, maxItems);
+
+	// Determine which shelves are already covered by the recency slice
+	const coveredShelves = new Set(
+		recentSlice.map((n) => n.shelfId || n.shelf).filter(Boolean),
+	);
+	const coveredIds = new Set(recentSlice.map((n) => n.id));
+
+	// Find the best (most-recent) rep for each shelf NOT in coveredShelves
+	const varietyReps = [];
+	const varietyShelvesSeen = new Set();
+	for (const novel of sortedNovels) {
+		if (coveredIds.has(novel.id)) continue;
+		const shelf = novel.shelfId || novel.shelf;
+		if (
+			shelf &&
+			!coveredShelves.has(shelf) &&
+			!varietyShelvesSeen.has(shelf)
+		) {
+			varietyShelvesSeen.add(shelf);
+			varietyReps.push(novel);
+		}
+	}
+
+	// Recent novels first, variety appended at the end
+	const recentNovels = [...recentSlice, ...varietyReps];
 	// Rotate so the first item moves to the end (prevents initial half-hidden card)
 	const displayNovels =
 		recentNovels.length > 1
@@ -6436,6 +6935,18 @@ async function initCarousel(novels) {
 			continueBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
 				if (novel.lastReadUrl) {
+					try {
+						localStorage.setItem(
+							"rg_trusted_nav",
+							JSON.stringify({
+								novelId: novel.id,
+								time: Date.now(),
+								source: "library",
+							}),
+						);
+					} catch (_e) {
+						// ignore localStorage write errors (e.g. private browsing)
+					}
 					window.open(novel.lastReadUrl, "_blank");
 				}
 			});

@@ -587,21 +587,169 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 
 	/**
-	 * Customize controls configuration for mobile
-	 * @returns {Object}
+	 * Fetch and process metadata from desktop version
+	 * Mobile pages lack full metadata, so we fetch from www.fanfiction.net
+	 * @returns {Promise<Object|null>} Processed metadata or null
 	 */
-	getNovelControlsConfig() {
-		return {
-			showControls: this.isChapterPage(),
-			insertionPoint: this.getNovelPageUIInsertionPoint(),
-			position: "before",
-			isChapterPage: true,
-			customStyles: {
-				background: "linear-gradient(135deg, #1a2540 0%, #16213e 100%)",
-				borderColor: "#2a4b8d",
-				accentColor: "#4a7c9c",
-			},
-		};
+	async fetchDesktopMetadata() {
+		try {
+			const desktopUrl = this.getMetadataSourceUrl();
+			if (!desktopUrl) {
+				debugLog("[Mobile] No desktop metadata URL available");
+				return null;
+			}
+
+			const response = await fetch(desktopUrl);
+			if (!response.ok) {
+				debugError(
+					`[Mobile] Failed to fetch desktop metadata: ${response.status}`,
+				);
+				return null;
+			}
+
+			const html = await response.text();
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+
+			// Create a temporary container with desktop HTML
+			// Then use parent handler's extraction methods
+			const originalDoc = document;
+			window.document = doc;
+
+			// Extract full metadata using parent handler's methods
+			const metadata = new FanfictionHandler().extractNovelMetadata();
+
+			// Restore original document
+			window.document = originalDoc;
+
+			if (metadata) {
+				debugLog("[Mobile] Successfully fetched desktop metadata");
+			}
+			return metadata;
+		} catch (error) {
+			debugError("[Mobile] Error fetching desktop metadata:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Process remotely-fetched metadata (from desktop version)
+	 * Enriches mobile metadata with desktop's comprehensive data
+	 * @param {Object} metadata - Metadata from desktop version
+	 * @returns {Object} Enhanced metadata
+	 */
+	processRemoteMetadata(metadata) {
+		if (!metadata) return this.extractNovelMetadata();
+
+		try {
+			// Enrich mobile metadata with desktop data
+			const mobileMetadata = this.extractNovelMetadata();
+
+			// Keep mobile's confirmed title/author, but enhance with desktop's additional metadata
+			return {
+				...metadata,
+				title: mobileMetadata?.title || metadata.title,
+				author: mobileMetadata?.author || metadata.author,
+				mainNovelUrl:
+					mobileMetadata?.mainNovelUrl || metadata.mainNovelUrl,
+				metadataIncomplete: false, // Now complete with desktop metadata
+			};
+		} catch (error) {
+			debugError("[Mobile] Error processing remote metadata:", error);
+			return metadata;
+		}
+	}
+
+	/**
+	 * Inject desktop metadata summary into mobile view
+	 * Creates a styled summary section above the chapter content
+	 * @param {Object} metadata - Desktop metadata to display
+	 */
+	injectMetadataSummary(metadata) {
+		if (!metadata) return;
+
+		try {
+			const contentDiv = document.getElementById("content");
+			if (!contentDiv) return;
+
+			// Find the story content area
+			const storyContent = contentDiv.querySelector("#storycontent");
+			if (!storyContent) return;
+
+			// Create summary section
+			const summarySection = document.createElement("div");
+			summarySection.id = "rg-mobile-metadata-summary";
+			summarySection.style.cssText = `
+				background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+				border: 1px solid #3a5a7a;
+				border-radius: 6px;
+				padding: 15px;
+				margin: 15px 0;
+				color: #d0d0d0;
+				font-size: 0.95em;
+				line-height: 1.6;
+			`;
+
+			// Build metadata display
+			let html =
+				'<div style="margin-bottom: 10px; font-weight: bold; color: #88bbff; border-bottom: 1px solid #3a5a7a; padding-bottom: 8px;">📖 Story Details</div>';
+
+			if (metadata.description) {
+				html += `<div style="margin: 10px 0;"><strong>Summary:</strong><br/>${metadata.description}</div>`;
+			}
+
+			if (
+				metadata.metadata?.fandoms &&
+				metadata.metadata.fandoms.length > 0
+			) {
+				html += `<div style="margin: 8px 0;"><strong>Fandoms:</strong> ${metadata.metadata.fandoms.join(", ")}</div>`;
+			}
+
+			if (metadata.metadata?.rating) {
+				html += `<div style="margin: 8px 0;"><strong>Rating:</strong> ${metadata.metadata.rating}</div>`;
+			}
+
+			if (metadata.metadata?.language) {
+				html += `<div style="margin: 8px 0;"><strong>Language:</strong> ${metadata.metadata.language}</div>`;
+			}
+
+			if (metadata.genres && metadata.genres.length > 0) {
+				html += `<div style="margin: 8px 0;"><strong>Genres:</strong> ${metadata.genres.join(", ")}</div>`;
+			}
+
+			if (metadata.metadata?.words) {
+				html += `<div style="margin: 8px 0;"><strong>Words:</strong> ${metadata.metadata.words.toLocaleString()}</div>`;
+			}
+
+			if (metadata.totalChapters) {
+				html += `<div style="margin: 8px 0;"><strong>Chapters:</strong> ${metadata.totalChapters}</div>`;
+			}
+
+			if (metadata.metadata?.publishedDate) {
+				html += `<div style="margin: 8px 0;"><strong>Published:</strong> ${metadata.metadata.publishedDate}</div>`;
+			}
+
+			summarySection.innerHTML = html;
+
+			// Insert before story content
+			storyContent.parentNode.insertBefore(summarySection, storyContent);
+			debugLog("[Mobile] Injected metadata summary into mobile view");
+		} catch (error) {
+			debugError("[Mobile] Error injecting metadata summary:", error);
+		}
+	}
+
+	/**
+	 * Mobile specifically needs desktop metadata source
+	 * Redirect m.fanfiction.net -> www.fanfiction.net for full metadata
+	 */
+	getMetadataSourceUrl() {
+		const match = window.location.href.match(/\/s\/(\d+)/);
+		if (match) {
+			// Always fetch from desktop version for complete metadata
+			return `https://www.fanfiction.net/s/${match[1]}/1/`;
+		}
+		return super.getMetadataSourceUrl?.();
 	}
 }
 

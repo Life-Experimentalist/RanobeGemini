@@ -6,6 +6,7 @@
 import { AO3CardRenderer } from "./novel-card.js";
 import { AO3Handler } from "../../../utils/website-handlers/ao3-handler.js";
 import { NovelCardRenderer } from "../novel-card-base.js";
+import { openInlineEditModal } from "../../edit-modal.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
@@ -102,15 +103,15 @@ function buildTaxonomyFromNovels(novels) {
 		(metadata.fandoms || []).forEach((v) => registerLabel(v, "fandoms"));
 		// Register relationships
 		(metadata.relationships || []).forEach((v) =>
-			registerLabel(v, "relationships")
+			registerLabel(v, "relationships"),
 		);
 		// Register characters
 		(metadata.characters || []).forEach((v) =>
-			registerLabel(v, "characters")
+			registerLabel(v, "characters"),
 		);
 		// Register additional tags
 		(metadata.additionalTags || []).forEach((v) =>
-			registerLabel(v, "additionalTags")
+			registerLabel(v, "additionalTags"),
 		);
 	});
 }
@@ -166,7 +167,7 @@ function applyFilterStateToUI() {
 	syncMultiSelectUI(
 		"relationships-filter",
 		filterState.relationships || [],
-		{}
+		{},
 	);
 	syncMultiSelectUI("characters-filter", filterState.characters || [], {});
 	syncMultiSelectUI("tags-filter", filterState.tags || [], {});
@@ -230,7 +231,7 @@ function renderActiveFilters() {
 		const el = document.createElement("span");
 		el.className = "filter-chip";
 		el.innerHTML = `<strong>${escapeHtml(
-			chip.label
+			chip.label,
 		)}</strong> <button aria-label="Clear filter" data-key="${
 			chip.key
 		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
@@ -264,17 +265,17 @@ function updateDropdownLabels() {
 	setLabel(
 		"fandoms-dropdown-toggle",
 		"Choose Fandoms",
-		(filterState.fandoms || []).length
+		(filterState.fandoms || []).length,
 	);
 	setLabel(
 		"relationships-dropdown-toggle",
 		"Choose Relationships",
-		(filterState.relationships || []).length
+		(filterState.relationships || []).length,
 	);
 	setLabel(
 		"characters-dropdown-toggle",
 		"Choose Characters",
-		(filterState.characters || []).length
+		(filterState.characters || []).length,
 	);
 	const tagsCount = (filterState.tags || []).length;
 	const baseTagsLabel =
@@ -304,17 +305,17 @@ function clearFilter(key, value) {
 			break;
 		case "fandoms":
 			filterState.fandoms = filterState.fandoms.filter(
-				(f) => f !== value
+				(f) => f !== value,
 			);
 			break;
 		case "relationships":
 			filterState.relationships = filterState.relationships.filter(
-				(r) => r !== value
+				(r) => r !== value,
 			);
 			break;
 		case "characters":
 			filterState.characters = filterState.characters.filter(
-				(c) => c !== value
+				(c) => c !== value,
 			);
 			break;
 		case "wordCountMin":
@@ -368,13 +369,13 @@ function renderPillList(
 	items,
 	selectedValues,
 	stateKey,
-	options = {}
+	options = {},
 ) {
 	const container = document.getElementById(containerId);
 	if (!container) return;
 
 	if (!items || items.length === 0) {
-		container.innerHTML = "<span class=\"filter-chip\">No options</span>";
+		container.innerHTML = '<span class="filter-chip">No options</span>';
 		return;
 	}
 
@@ -478,8 +479,8 @@ function populateDynamicFilters() {
 						.map(
 							(lang) =>
 								`<option value="${escapeHtml(
-									lang
-								)}">${escapeHtml(lang)}</option>`
+									lang,
+								)}">${escapeHtml(lang)}</option>`,
 						)
 						.join("")
 				: '<option value="all" disabled>No languages found</option>');
@@ -492,13 +493,13 @@ function populateDynamicFilters() {
 		"relationships-filter",
 		relationships,
 		filterState.relationships,
-		"relationships"
+		"relationships",
 	);
 	renderPillList(
 		"characters-filter",
 		characters,
 		filterState.characters,
-		"characters"
+		"characters",
 	);
 	renderPillList("tags-filter", tags, filterState.tags, "tags");
 	applyFilterStateToUI();
@@ -766,8 +767,8 @@ function renderBasicModalMetadata(novel) {
 			<h4>Rating & Warnings</h4>
 			<div class="modal-metadata-content">
 				<span class="rating-badge ${getRatingClass(metadata.rating)}">${escapeHtml(
-			metadata.rating
-		)}</span>
+					metadata.rating,
+				)}</span>
 			</div>`;
 		if (metadata.warnings && metadata.warnings.length > 0) {
 			html += `<div class="modal-metadata-content">
@@ -775,8 +776,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(w) =>
 							`<span class="tag-item warning-tag">${escapeHtml(
-								w
-							)}</span>`
+								w,
+							)}</span>`,
 					)
 					.join("")}
 			</div>`;
@@ -793,8 +794,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(c) =>
 							`<span class="tag-item category-tag">${escapeHtml(
-								c
-							)}</span>`
+								c,
+							)}</span>`,
 					)
 					.join("")}
 			</div>
@@ -810,8 +811,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(f) =>
 							`<span class="tag-item fandom-tag">${escapeHtml(
-								f
-							)}</span>`
+								f,
+							)}</span>`,
 					)
 					.join("")}
 			</div>
@@ -827,8 +828,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(r) =>
 							`<span class="tag-item relationship-tag">${escapeHtml(
-								r
-							)}</span>`
+								r,
+							)}</span>`,
 					)
 					.join("")}
 			</div>
@@ -844,8 +845,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(c) =>
 							`<span class="tag-item character-tag">${escapeHtml(
-								c
-							)}</span>`
+								c,
+							)}</span>`,
 					)
 					.join("")}
 			</div>
@@ -861,8 +862,8 @@ function renderBasicModalMetadata(novel) {
 					.map(
 						(t) =>
 							`<span class="tag-item additional-tag">${escapeHtml(
-								t
-							)}</span>`
+								t,
+							)}</span>`,
 					)
 					.join("")}
 			</div>
@@ -883,23 +884,23 @@ function renderBasicModalMetadata(novel) {
 			<div class="modal-stats-grid">`;
 		if (stats.words)
 			html += `<div class="stat-badge"><span class="stat-label">Words</span><span class="stat-value">${formatNumber(
-				stats.words
+				stats.words,
 			)}</span></div>`;
 		if (stats.kudos)
 			html += `<div class="stat-badge"><span class="stat-label">Kudos</span><span class="stat-value">${formatNumber(
-				stats.kudos
+				stats.kudos,
 			)}</span></div>`;
 		if (stats.hits)
 			html += `<div class="stat-badge"><span class="stat-label">Hits</span><span class="stat-value">${formatNumber(
-				stats.hits
+				stats.hits,
 			)}</span></div>`;
 		if (stats.bookmarks)
 			html += `<div class="stat-badge"><span class="stat-label">Bookmarks</span><span class="stat-value">${formatNumber(
-				stats.bookmarks
+				stats.bookmarks,
 			)}</span></div>`;
 		if (stats.comments)
 			html += `<div class="stat-badge"><span class="stat-label">Comments</span><span class="stat-value">${formatNumber(
-				stats.comments
+				stats.comments,
 			)}</span></div>`;
 		html += "</div></div>";
 	}
@@ -982,7 +983,7 @@ function applyFiltersAndSort() {
 	if (language && language !== "all") {
 		const targetLang = language.toLowerCase();
 		filteredNovels = filteredNovels.filter(
-			(n) => (n.metadata?.language || "").toLowerCase() === targetLang
+			(n) => (n.metadata?.language || "").toLowerCase() === targetLang,
 		);
 	}
 
@@ -1011,7 +1012,7 @@ function applyFiltersAndSort() {
 		filteredNovels = filteredNovels.filter((n) => {
 			const storyRelationships = n.metadata?.relationships || [];
 			return relationships.every((rel) =>
-				storyRelationships.includes(rel)
+				storyRelationships.includes(rel),
 			);
 		});
 	}
@@ -1406,19 +1407,19 @@ function updateAnalytics(novels) {
 	const totalNovels = novels.length;
 	const totalEnhanced = novels.reduce(
 		(sum, n) => sum + (n.enhancedChaptersCount || 0),
-		0
+		0,
 	);
 	const totalWords = novels.reduce(
 		(sum, n) => sum + (n.metadata?.words || n.metadata?.stats?.words || 0),
-		0
+		0,
 	);
 	const totalKudos = novels.reduce(
 		(sum, n) => sum + (n.metadata?.kudos || n.metadata?.stats?.kudos || 0),
-		0
+		0,
 	);
 	const totalHits = novels.reduce(
 		(sum, n) => sum + (n.metadata?.hits || n.metadata?.stats?.hits || 0),
-		0
+		0,
 	);
 	const completedWorks = novels.filter(
 		(n) =>
@@ -1756,7 +1757,7 @@ function setupFilters() {
 						(toggle && toggle.contains(e.target)) ||
 						(panel && panel.contains(e.target))
 					);
-				}
+				},
 			);
 
 			if (!clickedInsideDropdown && !clickedToggle && !clickedPanel) {
@@ -1849,7 +1850,7 @@ function ensureRandomSelectButton() {
 		showNovelModal(pick);
 	});
 
-	container.appendChild(button);
+	container.insertBefore(button, searchInput);
 }
 
 async function initializeAO3Shelf() {
@@ -1910,7 +1911,7 @@ async function initializeAO3Shelf() {
 	} catch (error) {
 		console.error(
 			"[AO3 Shelf] CRITICAL ERROR during initialization:",
-			error
+			error,
 		);
 		if (loadingState) loadingState.style.display = "none";
 		if (emptyState) {
@@ -1983,7 +1984,7 @@ async function refreshNovelMetadata(novelId) {
 
 		// Dispatch event for main library to handle
 		window.dispatchEvent(
-			new CustomEvent("refreshNovelMetadata", { detail: { novelId } })
+			new CustomEvent("refreshNovelMetadata", { detail: { novelId } }),
 		);
 
 		// Reload the page after a short delay to get updated data
@@ -1997,13 +1998,21 @@ async function refreshNovelMetadata(novelId) {
 }
 
 function openEditModal(novel) {
-	const targetUrl =
-		typeof browser !== "undefined" && browser.runtime?.getURL
-			? browser.runtime.getURL(
-					`library.html?edit=${encodeURIComponent(novel.id)}`,
-				)
-			: `../../library.html?edit=${encodeURIComponent(novel.id)}`;
-	window.open(targetUrl, "_blank", "noopener");
+	if (!novel?.id) {
+		showToast("Missing novel id for edit", "error");
+		return;
+	}
+	openInlineEditModal(novel, AO3Handler, {
+		onSaved: (updatedNovel) => {
+			const idx = allNovels.findIndex((n) => n?.id === updatedNovel.id);
+			if (idx >= 0) allNovels[idx] = updatedNovel;
+			const fi = filteredNovels.findIndex(
+				(n) => n?.id === updatedNovel.id,
+			);
+			if (fi >= 0) filteredNovels[fi] = updatedNovel;
+		},
+		showToast,
+	});
 }
 
 /**

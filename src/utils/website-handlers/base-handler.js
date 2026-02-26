@@ -10,6 +10,13 @@ export class BaseWebsiteHandler {
 	// Individual handlers can override this
 	static DEFAULT_BANNERS_VISIBLE = DEFAULT_BANNERS_VISIBLE;
 
+	/**
+	 * Settings definition for the library settings page.
+	 * null = no configurable settings for this handler.
+	 * Subclasses override this with a { fields: [...] } object.
+	 */
+	static SETTINGS_DEFINITION = null;
+
 	constructor() {
 		// Optional initialization
 	}
@@ -47,6 +54,16 @@ export class BaseWebsiteHandler {
 			// Whether this is a chapter page (vs novel info page)
 			isChapterPage: this.isChapterPage(),
 		};
+	}
+
+	/**
+	 * Get custom chapter page control buttons for this handler
+	 * Handlers can override this to add site-specific buttons (e.g., download buttons)
+	 * @returns {Array} Array of button specifications { text, emoji, color, onClick }
+	 */
+	getCustomChapterButtons() {
+		// Default: no custom buttons
+		return [];
 	}
 
 	/**
@@ -289,6 +306,7 @@ export class BaseWebsiteHandler {
 	 * @async
 	 */
 	async injectCustomUI(container) {
+		container;
 		// Default: No custom UI
 	}
 
@@ -299,5 +317,60 @@ export class BaseWebsiteHandler {
 	getDefaultDisplayMode() {
 		// Default: Button mode (less intrusive)
 		return "button";
+	}
+
+	/**
+	 * Get handler-proposed library settings
+	 * Handlers can propose custom settings that appear in library UI
+	 * Settings are only shown when the handler is enabled for a novel
+	 * @returns {Object} Settings schema as { key: { type, enum, default, label, description, ... } }
+	 *                   Empty object means no custom settings for this handler
+	 */
+	getProposedLibrarySettings() {
+		// Default: No custom settings
+		return {};
+	}
+
+	/**
+	 * Get the URL where metadata should be fetched from
+	 * Used for dedicated_page and redirect handler types
+	 * @returns {string|null} URL to fetch metadata from, or null if metadata is on current page
+	 */
+	getMetadataSourceUrl() {
+		// Default: Metadata is on current page (chapter_embedded type)
+		return null;
+	}
+
+	/**
+	 * Process remotely-fetched metadata before returning
+	 * Allows handlers to normalize or enrich metadata from other sources
+	 * @param {Object} metadata - Metadata fetched from remote source
+	 * @returns {Object} Processed metadata
+	 */
+	processRemoteMetadata(metadata) {
+		// Default: Return metadata as-is
+		return metadata;
+	}
+
+	/**
+	 * Get handler-specific editable fields for the library edit modal.
+	 * These are shown BELOW the common fields (title, author, cover, etc.) in a
+	 * site-specific section so users can edit metadata unique to this website.
+	 *
+	 * Field spec object shape:
+	 *   { key, label, type, source, options?, placeholder?, min?, max? }
+	 *
+	 *  key      - property name inside novel.metadata (or novel[key] if source='top')
+	 *  label    - human-readable label
+	 *  type     - 'text' | 'number' | 'select' | 'tags' | 'toggle' | 'date'
+	 *  source   - 'metadata' (default, reads/writes novel.metadata[key])
+	 *             'top' (reads/writes novel[key] directly)
+	 *  options  - array of { value, label } for 'select' type
+	 *  placeholder - optional hint text
+	 *
+	 * @returns {Array<Object>} Array of field spec objects. Empty = no site-specific fields.
+	 */
+	static getEditableFields() {
+		return [];
 	}
 }

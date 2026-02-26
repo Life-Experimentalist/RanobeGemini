@@ -36,46 +36,31 @@
 				<div class="config-section">
 					<h3 class="config-section-title">🔐 API Keys</h3>
 					<div class="config-section-content">
-						<!-- Primary API Key -->
 						<div class="config-item">
-							<label for="apiKey">Primary Gemini API Key</label>
-							<input type="password" id="apiKey" placeholder="Paste your API key" />
-							<div class="config-actions">
-								<button id="saveApiKey">💾 Save</button>
-								<button id="testApiKey">🧪 Test</button>
+							<label>Gemini API Keys</label>
+							<div id="apiKeysList" class="backup-keys-list"
+								style="max-height: 150px; overflow-y: auto; margin-bottom: 8px"></div>
+							<div style="display: flex; gap: 6px; margin-bottom: 8px">
+								<input type="password" id="newApiKey" placeholder="Add API key"
+									style="flex: 1; font-size: 11px" />
+								<button id="addApiKey" style="font-size: 11px">+ Add</button>
+								<button id="testApiKey" style="font-size: 11px">🧪 Test</button>
 								<a id="getKeyLink" href="#" class="config-link">Get Key</a>
 							</div>
 							<div id="status" class="status" style="margin-top: 8px; font-size: 11px"></div>
-						</div>
-
-						<!-- Backup API Keys -->
-						<details open style="margin-top: 12px">
-							<summary
-								style="cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary)">
-								🔑 Backup Keys
-							</summary>
-							<div style="margin-top: 10px">
-								<div id="backupKeysList" class="backup-keys-list"
-									style="max-height: 150px; overflow-y: auto; margin-bottom: 8px"></div>
-								<div style="display: flex; gap: 6px; margin-bottom: 8px">
-									<input type="password" id="newBackupKey" placeholder="Add backup key"
-										style="flex: 1; font-size: 11px" />
-									<button id="addBackupKey" style="font-size: 11px">+ Add</button>
-								</div>
-								<div>
-									<label for="apiKeyRotation" style="font-size: 12px; font-weight: 500">Rotation
-										Strategy</label>
-									<select id="apiKeyRotation" style="width: 100%; font-size: 11px; margin-top: 4px">
-										<option value="off">Off</option>
-										<option value="round_robin">Round Robin</option>
-										<option value="random">Random</option>
-									</select>
-									<div class="description" style="font-size: 10px; margin-top: 4px">
-										Auto-use backup keys if primary hits rate limits
-									</div>
+							<div>
+								<label for="apiKeyRotation" style="font-size: 12px; font-weight: 500">Rotation
+									Strategy</label>
+								<select id="apiKeyRotation" style="width: 100%; font-size: 11px; margin-top: 4px">
+									<option value="round_robin">Round Robin</option>
+									<option value="random">Random</option>
+									<option value="off">Off</option>
+								</select>
+								<div class="description" style="font-size: 10px; margin-top: 4px">
+									Auto-rotate through keys. Round Robin is recommended.
 								</div>
 							</div>
-						</details>
+						</div>
 					</div>
 				</div>
 

@@ -52,6 +52,45 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	// Handler type: Full metadata available on chapter pages (no separate info page needed)
 	static HANDLER_TYPE = "chapter_embedded";
 
+	/** Configurable settings exposed in the Library Settings page. */
+	static SETTINGS_DEFINITION = {
+		fields: [
+			{
+				key: "domainPreference",
+				label: "Domain Preference",
+				type: "select",
+				defaultValue: "auto",
+				description:
+					"Choose how to handle bare domain (fanfiction.net) visits.",
+				options: [
+					{ value: "auto", label: "Auto (device-based)" },
+					{ value: "www", label: "Desktop (www)" },
+					{ value: "mobile", label: "Mobile (m)" },
+				],
+			},
+			{
+				key: "preferredTld",
+				label: "Preferred TLD",
+				type: "select",
+				defaultValue: "net",
+				description:
+					"Default TLD to use when visiting FanFiction URLs.",
+				options: [
+					{ value: "net", label: "fanfiction.net (default)" },
+					{ value: "ws", label: "fanfiction.ws" },
+				],
+			},
+			{
+				key: "autoEnhanceEnabled",
+				label: "Auto-enhance chapters",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Automatically run Enhance when a FanFiction.net chapter loads.",
+			},
+		],
+	};
+
 	static DEFAULT_SITE_PROMPT = `This content is from FanFiction.net, a fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting
@@ -518,6 +557,257 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 
 	/**
+	 * Extract metadata from enhanced HTML structure (Better Fiction plugin, etc.)
+	 * Enhanced structure uses separate spans: .ratedmeta, .languagemeta, .genremeta, .charactersmeta, .statusmeta
+	 * @returns {Object|null} Object with enhanced metadata or null if structure not found
+	 */
+	extractEnhancedMetadata() {
+		try {
+			const profileTop = document.getElementById("profile_top");
+			if (!profileTop) {
+				return null;
+			}
+
+			// Check if enhanced structure exists
+			const ratedMeta = profileTop.querySelector(".ratedmeta");
+			if (!ratedMeta) {
+				// Not enhanced structure
+				return null;
+			}
+
+			const enhanced = {};
+
+			// Extract rating from .ratedmeta
+			const ratedText = ratedMeta.textContent?.trim() || "";
+			const ratingMatch = ratedText.match(
+				/Rated:\s*(?:Fiction\s+)?([A-Z](?:\+)?)/i,
+			);
+			if (ratingMatch) {
+				enhanced.rating = ratingMatch[1].toUpperCase();
+				debugLog("FanFiction Enhanced: Rating:", enhanced.rating);
+			}
+
+			// Extract language from .languagemeta
+			const languageMeta = profileTop.querySelector(".languagemeta");
+			if (languageMeta) {
+				const langText = languageMeta.textContent?.trim() || "";
+				// Remove "Language:" prefix if present
+				const cleanLang = langText.replace(/^Language:\s*/i, "").trim();
+				if (cleanLang && /^[A-Za-z]+$/.test(cleanLang)) {
+					enhanced.language = cleanLang;
+					debugLog(
+						"FanFiction Enhanced: Language:",
+						enhanced.language,
+					);
+				}
+			}
+
+			// Extract genres from .genremeta
+			const genreMeta = profileTop.querySelector(".genremeta");
+			if (genreMeta) {
+				const genreText = genreMeta.textContent?.trim() || "";
+				// Remove "Genre:" prefix if present
+				const cleanGenre = genreText.replace(/^Genre:\s*/i, "").trim();
+				if (cleanGenre) {
+					const genres = cleanGenre
+						.split("/")
+						.map((g) => g.trim())
+						.filter((g) => g.length > 0 && !g.match(/^\d/));
+					if (genres.length > 0) {
+						enhanced.genres = genres;
+						debugLog(
+							"FanFiction Enhanced: Genres:",
+							enhanced.genres,
+						);
+					}
+				}
+			}
+
+			// Extract status from .statusmeta
+			const statusMeta = profileTop.querySelector(".statusmeta");
+			if (statusMeta) {
+				const statusText = statusMeta.textContent?.trim() || "";
+				if (statusText.toLowerCase().includes("complete")) {
+					enhanced.status = "completed";
+				} else {
+					enhanced.status = "ongoing";
+				}
+				debugLog("FanFiction Enhanced: Status:", enhanced.status);
+			}
+
+			// Extract chapters from .chaptersmeta
+			const chaptersMeta = profileTop.querySelector(".chaptersmeta");
+			if (chaptersMeta) {
+				const chaptersText = chaptersMeta.textContent?.trim() || "";
+				const chaptersMatch = chaptersText.match(/(\d+)/);
+				if (chaptersMatch) {
+					enhanced.totalChapters = parseInt(chaptersMatch[1], 10);
+					debugLog(
+						"FanFiction Enhanced: Chapters:",
+						enhanced.totalChapters,
+					);
+				}
+			}
+
+			// Extract words from .wordsmeta
+			const wordsMeta = profileTop.querySelector(".wordsmeta");
+			if (wordsMeta) {
+				const wordsText = wordsMeta.textContent?.trim() || "";
+				const wordsMatch = wordsText.match(/([\d,]+)/);
+				if (wordsMatch) {
+					enhanced.words = parseInt(
+						wordsMatch[1].replace(/,/g, ""),
+						10,
+					);
+					debugLog("FanFiction Enhanced: Words:", enhanced.words);
+				}
+			}
+
+			// Extract characters from .charactersmeta
+			const charactersMeta = profileTop.querySelector(".charactersmeta");
+			if (charactersMeta) {
+				const charsText = charactersMeta.textContent?.trim() || "";
+				// Remove "Characters:" prefix if present
+				cleanChars = charsText.replace(/^Characters:\s*/i, "").trim();
+				if (cleanChars) {
+					const allCharacters = new Set();
+					const relationships = [];
+
+					// Extract relationship brackets first [Harry P., Hermione G., etc.]
+					const bracketMatches = cleanChars.match(/\[([^\]]+)\]/g);
+					if (bracketMatches) {
+						bracketMatches.forEach((bracket) => {
+							const insideBracket = bracket
+								.replace(/[[\]]/g, "")
+								.trim();
+							const charsInBracket = insideBracket
+								.split(",")
+								.map((c) => c.trim())
+								.filter((c) => c.length > 0)
+								.slice(0, 4);
+
+							// Store relationship group (with 2+ characters)
+							if (charsInBracket.length >= 2) {
+								relationships.push(charsInBracket);
+							}
+
+							// Add individual characters from the bracket
+							charsInBracket.forEach((c) => allCharacters.add(c));
+						});
+
+						// Remove brackets from section to process remaining characters
+						cleanChars = cleanChars.replace(/\[[^\]]+\]/g, "");
+					}
+
+					// Extract remaining non-bracketed characters
+					const remainingChars = cleanChars
+						.split(",")
+						.map((c) => c.trim())
+						.filter((c) => c.length > 0 && c !== "-");
+
+					remainingChars.forEach((c) => {
+						if (c) allCharacters.add(c);
+					});
+
+					if (allCharacters.size > 0) {
+						enhanced.characters = [...allCharacters];
+						if (relationships.length > 0) {
+							enhanced.relationships = relationships;
+						}
+						debugLog(
+							"FanFiction Enhanced: Characters:",
+							[...allCharacters],
+							"relationships:",
+							relationships,
+						);
+					}
+				}
+			}
+
+			// Return the enhanced metadata object
+			return Object.keys(enhanced).length > 0 ? enhanced : null;
+		} catch (error) {
+			debugError(
+				"FanFiction: Error extracting enhanced metadata:",
+				error,
+			);
+			return null;
+		}
+	}
+
+	/**
+	 * Get custom chapter page control buttons for FanFiction.net
+	 * Adds a download button for FichHub integration
+	 * Opens in new tab and optionally copies metadata to clipboard
+	 * @returns {Array} Array of button specifications
+	 */
+	getCustomChapterButtons() {
+		return [
+			{
+				text: "Download",
+				emoji: "⬇️",
+				color: "#ff6b6b",
+				onClick: () => {
+					// Get library settings to check if clipboard copy is enabled
+					try {
+						const settingsJson = localStorage.getItem(
+							"rg_library_settings",
+						);
+						const settings = settingsJson
+							? JSON.parse(settingsJson)
+							: {};
+						const enableClipboard =
+							settings.enableClipboardCopyOnDownload !== false;
+
+						if (enableClipboard) {
+							const clipboardText = this.generateClipboardText();
+							if (clipboardText) {
+								navigator.clipboard
+									.writeText(clipboardText)
+									.catch(() => {
+										console.log(
+											"Could not copy to clipboard",
+										);
+									});
+							}
+						}
+					} catch (error) {
+						console.warn(
+							"Error checking clipboard setting:",
+							error,
+						);
+					}
+
+					// FichHub download bookmarklet - open in new tab
+					const url = `https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`;
+					window.open(url, "_blank");
+				},
+			},
+		];
+	}
+
+	/**
+	 * Generate clipboard text in format: "Title" by Author StoryId.epub
+	 * @returns {string|null} Formatted text or null if unable to generate
+	 */
+	generateClipboardText() {
+		try {
+			const title = this.extractTitle();
+			const author = this.extractAuthor();
+			const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1];
+
+			if (!title || !author || !storyId) {
+				return null;
+			}
+
+			return `"${title}" by ${author} ${storyId}.epub`;
+		} catch (error) {
+			console.error("Error generating clipboard text:", error);
+			return null;
+		}
+	}
+
+	/**
 	 * Extract metadata for novel library storage
 	 * @returns {Object} Object containing title, author, description, coverUrl, and more
 	 */
@@ -726,6 +1016,47 @@ When enhancing, improve readability while respecting the author's creative voice
 					);
 				}
 
+				// Try to extract metadata from enhanced HTML structure first (Better Fiction plugin, etc.)
+				const enhancedData = this.extractEnhancedMetadata();
+				if (enhancedData) {
+					debugLog(
+						"FanFiction: Using enhanced HTML metadata:",
+						enhancedData,
+					);
+					// Apply enhanced metadata to the metadata object
+					if (enhancedData.rating) {
+						metadata.metadata.rating = enhancedData.rating;
+					}
+					if (enhancedData.language) {
+						metadata.metadata.language = enhancedData.language;
+					}
+					if (enhancedData.genres && enhancedData.genres.length > 0) {
+						metadata.genres = enhancedData.genres;
+					}
+					if (enhancedData.status) {
+						metadata.status = enhancedData.status;
+					}
+					if (enhancedData.totalChapters) {
+						metadata.totalChapters = enhancedData.totalChapters;
+					}
+					if (enhancedData.words) {
+						metadata.metadata.words = enhancedData.words;
+					}
+					if (
+						enhancedData.characters &&
+						enhancedData.characters.length > 0
+					) {
+						metadata.metadata.characters = enhancedData.characters;
+					}
+					if (
+						enhancedData.relationships &&
+						enhancedData.relationships.length > 0
+					) {
+						metadata.metadata.relationships =
+							enhancedData.relationships;
+					}
+				}
+
 				// Extract info from the xgray span
 				// Format: Rated: Fiction T - English - Romance/Adventure - Harry P., OC - Chapters: 14 - Words: 17,128 - Reviews: 3 - Favs: 12 - Follows: 4 - Published: 8/25/2011 - Status: Complete - id: 7322782
 				const infoSpan =
@@ -743,8 +1074,8 @@ When enhancing, improve readability while respecting the author's creative voice
 						.filter((s) => s.length > 0);
 					debugLog("FanFiction: Metadata segments:", segments);
 
-					// Extract rating from segment 0 (e.g., "Rated: Fiction T")
-					if (segments.length > 0) {
+					// Extract rating from segment 0 (e.g., "Rated: Fiction T") — only if not already set by enhanced
+					if (segments.length > 0 && !metadata.metadata.rating) {
 						const ratingMatch = segments[0].match(
 							/Rated:\s*(?:Fiction\s+)?([A-Z](?:\+)?)/i,
 						);
@@ -761,8 +1092,8 @@ When enhancing, improve readability while respecting the author's creative voice
 					// Segment 2 typically contains genres (e.g., "Romance/Adventure")
 					// Remaining segments contain characters, chapters, words, etc.
 
-					// Extract language from segment 1 (usually just the language name)
-					if (segments.length > 1) {
+					// Extract language from segment 1 (usually just the language name) — only if not already set by enhanced
+					if (segments.length > 1 && !metadata.metadata.language) {
 						const langSegment = segments[1];
 						// Language is usually a single word like "English", "Spanish", etc.
 						if (
@@ -776,331 +1107,344 @@ When enhancing, improve readability while respecting the author's creative voice
 								metadata.metadata.language,
 							);
 						}
-					} // Extract genres from segment 2 (usually Genre1/Genre2)
-					// Note: Sometimes the metadata text has malformed segments where
-					// "RomanceChapters: 30" appears without proper " - " separator
-					if (segments.length > 2) {
-						// Collect genre-looking segments until we hit a stat field
-						const stopFields = [
-							"chapters:",
-							"words:",
-							"reviews:",
-							"favs:",
-							"follows:",
-							"published:",
-							"updated:",
-							"status:",
-							"id:",
-						];
-
-						const genreSegments = [];
-						for (let i = 2; i < segments.length; i++) {
-							const segment = segments[i];
-							const lower = segment.toLowerCase();
-
-							// Stop once we reach stats-like segment
-							const hitStopField = stopFields.find((field) =>
-								lower.includes(field),
+					} // Extract genres from segment[2] ONLY — always "Genre1/Genre2" format.
+					// Segment[3] onwards is the character list, not more genres.
+					// Only extract genres if not already set by enhanced metadata
+					if (
+						segments.length > 2 &&
+						(!metadata.genres || metadata.genres.length === 0)
+					) {
+						const genreRaw = segments[2]
+							.replace(/Chapters:.*/i, "")
+							.replace(/Words:.*/i, "")
+							.trim();
+						// Genre segment uses "/" as separator. If it already looks like a character
+						// list (comma-separated "First L." abbreviations) then genres are absent.
+						const looksLikeCharList =
+							/[A-Z][a-z]+\.\s*,|[A-Z][a-z]+\s+[A-Z]\./.test(
+								genreRaw,
 							);
-
-							// Clean out any stats suffix that got glued to genre text
-							const cleaned = segment
-								.replace(/Chapters:.*/i, "")
-								.replace(/Words:.*/i, "")
-								.replace(/Reviews:.*/i, "")
-								.replace(/Favs:.*/i, "")
-								.replace(/Follows:.*/i, "")
-								.replace(/Published:.*/i, "")
-								.replace(/Updated:.*/i, "")
-								.replace(/Status:.*/i, "")
-								.replace(/id:.*/i, "")
-								.trim();
-
-							if (cleaned) {
-								genreSegments.push(cleaned);
+						if (!genreRaw.includes(":") && !looksLikeCharList) {
+							const genres = genreRaw
+								.split("/")
+								.map((g) => g.trim())
+								.filter(
+									(g) =>
+										g.length > 0 &&
+										!g.match(/^\d/) &&
+										!g.includes(":"),
+								);
+							if (genres.length > 0) {
+								metadata.genres = genres;
+								debugLog(
+									"FanFiction: Extracted genres:",
+									metadata.genres,
+								);
 							}
-
-							if (hitStopField) break;
-						}
-
-						const genreString = genreSegments.join("/");
-						const genres = genreString
-							.split(/[/,&]/)
-							.map((g) => g.trim())
-							.filter(
-								(g) =>
-									g.length > 0 &&
-									!g.match(/^\d/) &&
-									!g.includes(":"),
-							);
-
-						if (genres.length > 0) {
-							metadata.genres = genres;
+						} else if (looksLikeCharList) {
+							// No genres present — segment[2] is already the character list
 							debugLog(
-								"FanFiction: Extracted genres:",
-								metadata.genres,
+								"FanFiction: No genre segment detected; segment[2] looks like characters.",
 							);
 						}
 					}
 
-					// Extract chapters - first try from metadata text
-					const chaptersMatch = infoText.match(/Chapters:\s*(\d+)/i);
-					if (chaptersMatch) {
-						metadata.totalChapters = parseInt(chaptersMatch[1], 10);
-						debugLog(
-							"FanFiction: Extracted chapters from text:",
-							metadata.totalChapters,
-						);
-					}
-
-					// Fallback: count options in chapter selector if no chapters found
+					// Extract chapters - first try from metadata text — only if not already set by enhanced
 					if (
 						!metadata.totalChapters ||
 						metadata.totalChapters === 0
 					) {
-						const chapSelect =
-							document.getElementById("chap_select");
-						if (chapSelect) {
-							const options =
-								chapSelect.querySelectorAll("option");
-							if (options.length > 0) {
-								metadata.totalChapters = options.length;
-								debugLog(
-									"FanFiction: Extracted chapters from selector:",
-									metadata.totalChapters,
-								);
-							}
+						const chaptersMatch =
+							infoText.match(/Chapters:\s*(\d+)/i);
+						if (chaptersMatch) {
+							metadata.totalChapters = parseInt(
+								chaptersMatch[1],
+								10,
+							);
+							debugLog(
+								"FanFiction: Extracted chapters from text:",
+								metadata.totalChapters,
+							);
 						}
-						// If still no chapters found, it's likely a one-shot
+
+						// Fallback: count options in chapter selector if no chapters found
 						if (
 							!metadata.totalChapters ||
 							metadata.totalChapters === 0
 						) {
-							metadata.totalChapters = 1;
-							debugLog(
-								"FanFiction: Assuming one-shot (single chapter)",
+							const chapSelect =
+								document.getElementById("chap_select");
+							if (chapSelect) {
+								const options =
+									chapSelect.querySelectorAll("option");
+								if (options.length > 0) {
+									metadata.totalChapters = options.length;
+									debugLog(
+										"FanFiction: Extracted chapters from selector:",
+										metadata.totalChapters,
+									);
+								}
+							}
+							// If still no chapters found, it's likely a one-shot
+							if (
+								!metadata.totalChapters ||
+								metadata.totalChapters === 0
+							) {
+								metadata.totalChapters = 1;
+								debugLog(
+									"FanFiction: Assuming one-shot (single chapter)",
+								);
+							}
+						}
+
+						// Extract words — only if not already set by enhanced
+						if (
+							!metadata.metadata.words ||
+							metadata.metadata.words === 0
+						) {
+							const wordsMatch =
+								infoText.match(/Words:\s*([\d,]+)/i);
+							if (wordsMatch) {
+								metadata.metadata.words = parseInt(
+									wordsMatch[1].replace(/,/g, ""),
+									10,
+								);
+							}
+						}
+
+						// Extract reviews
+						const reviewsMatch =
+							infoText.match(/Reviews:\s*([\d,]+)/i);
+						if (reviewsMatch) {
+							metadata.metadata.reviews = parseInt(
+								reviewsMatch[1].replace(/,/g, ""),
+								10,
 							);
 						}
-					}
 
-					// Extract words
-					const wordsMatch = infoText.match(/Words:\s*([\d,]+)/i);
-					if (wordsMatch) {
-						metadata.metadata.words = parseInt(
-							wordsMatch[1].replace(/,/g, ""),
-							10,
-						);
-					}
-
-					// Extract reviews
-					const reviewsMatch = infoText.match(/Reviews:\s*([\d,]+)/i);
-					if (reviewsMatch) {
-						metadata.metadata.reviews = parseInt(
-							reviewsMatch[1].replace(/,/g, ""),
-							10,
-						);
-					}
-
-					// Extract favorites
-					const favsMatch = infoText.match(/Favs:\s*([\d,]+)/i);
-					if (favsMatch) {
-						metadata.metadata.favorites = parseInt(
-							favsMatch[1].replace(/,/g, ""),
-							10,
-						);
-					}
-
-					// Extract follows
-					const followsMatch = infoText.match(/Follows:\s*([\d,]+)/i);
-					if (followsMatch) {
-						metadata.metadata.follows = parseInt(
-							followsMatch[1].replace(/,/g, ""),
-							10,
-						);
-					}
-
-					// Normalize stats for UI consumption
-					metadata.stats = {
-						words: metadata.metadata.words,
-						reviews: metadata.metadata.reviews,
-						favorites: metadata.metadata.favorites,
-						follows: metadata.metadata.follows,
-					};
-
-					// Extract published date
-					// Try to find specific published span first (from user provided structure)
-					const publishedMetaSpan = profileTop.querySelector(
-						".publishedmeta span[data-xutime]",
-					);
-					if (publishedMetaSpan) {
-						const timestamp =
-							publishedMetaSpan.getAttribute("data-xutime");
-						if (timestamp) {
-							metadata.metadata.publishedDate =
-								parseInt(timestamp, 10) * 1000;
+						// Extract favorites
+						const favsMatch = infoText.match(/Favs:\s*([\d,]+)/i);
+						if (favsMatch) {
+							metadata.metadata.favorites = parseInt(
+								favsMatch[1].replace(/,/g, ""),
+								10,
+							);
 						}
-					} else {
-						// Fallback to standard FF.net structure
-						// If "Updated:" is present, the second data-xutime is Published
-						// If not, the first data-xutime is Published
-						const xutimeSpans =
-							infoSpan.querySelectorAll("span[data-xutime]");
-						if (infoText.includes("Updated:")) {
-							if (xutimeSpans.length > 1) {
+
+						// Extract follows
+						const followsMatch =
+							infoText.match(/Follows:\s*([\d,]+)/i);
+						if (followsMatch) {
+							metadata.metadata.follows = parseInt(
+								followsMatch[1].replace(/,/g, ""),
+								10,
+							);
+						}
+
+						// Normalize stats for UI consumption
+						metadata.stats = {
+							words: metadata.metadata.words,
+							reviews: metadata.metadata.reviews,
+							favorites: metadata.metadata.favorites,
+							follows: metadata.metadata.follows,
+						};
+
+						// Extract published date
+						// Try to find specific published span first (from user provided structure)
+						const publishedMetaSpan = profileTop.querySelector(
+							".publishedmeta span[data-xutime]",
+						);
+						if (publishedMetaSpan) {
+							const timestamp =
+								publishedMetaSpan.getAttribute("data-xutime");
+							if (timestamp) {
+								metadata.metadata.publishedDate =
+									parseInt(timestamp, 10) * 1000;
+							}
+						} else {
+							// Fallback to standard FF.net structure
+							// If "Updated:" is present, the second data-xutime is Published
+							// If not, the first data-xutime is Published
+							const xutimeSpans =
+								infoSpan.querySelectorAll("span[data-xutime]");
+							if (infoText.includes("Updated:")) {
+								if (xutimeSpans.length > 1) {
+									const timestamp =
+										xutimeSpans[1].getAttribute(
+											"data-xutime",
+										);
+									if (timestamp) {
+										metadata.metadata.publishedDate =
+											parseInt(timestamp, 10) * 1000;
+									}
+								}
+							} else if (xutimeSpans.length > 0) {
 								const timestamp =
-									xutimeSpans[1].getAttribute("data-xutime");
+									xutimeSpans[0].getAttribute("data-xutime");
 								if (timestamp) {
 									metadata.metadata.publishedDate =
 										parseInt(timestamp, 10) * 1000;
 								}
 							}
-						} else if (xutimeSpans.length > 0) {
+						}
+
+						// Extract updated date
+						// Try to find specific updated span first
+						const updatedMetaSpan = profileTop.querySelector(
+							".updatedmeta span[data-xutime]",
+						);
+						if (updatedMetaSpan) {
 							const timestamp =
-								xutimeSpans[0].getAttribute("data-xutime");
+								updatedMetaSpan.getAttribute("data-xutime");
 							if (timestamp) {
-								metadata.metadata.publishedDate =
+								metadata.metadata.updatedDate =
 									parseInt(timestamp, 10) * 1000;
 							}
-						}
-					}
-
-					// Extract updated date
-					// Try to find specific updated span first
-					const updatedMetaSpan = profileTop.querySelector(
-						".updatedmeta span[data-xutime]",
-					);
-					if (updatedMetaSpan) {
-						const timestamp =
-							updatedMetaSpan.getAttribute("data-xutime");
-						if (timestamp) {
-							metadata.metadata.updatedDate =
-								parseInt(timestamp, 10) * 1000;
-						}
-					} else {
-						// Fallback to standard FF.net structure
-						// If "Updated:" is present, the first data-xutime is Updated
-						if (infoText.includes("Updated:")) {
-							const xutimeSpans =
-								infoSpan.querySelectorAll("span[data-xutime]");
-							if (xutimeSpans.length > 0) {
-								const timestamp =
-									xutimeSpans[0].getAttribute("data-xutime");
-								if (timestamp) {
-									metadata.metadata.updatedDate =
-										parseInt(timestamp, 10) * 1000;
+						} else {
+							// Fallback to standard FF.net structure
+							// If "Updated:" is present, the first data-xutime is Updated
+							if (infoText.includes("Updated:")) {
+								const xutimeSpans =
+									infoSpan.querySelectorAll(
+										"span[data-xutime]",
+									);
+								if (xutimeSpans.length > 0) {
+									const timestamp =
+										xutimeSpans[0].getAttribute(
+											"data-xutime",
+										);
+									if (timestamp) {
+										metadata.metadata.updatedDate =
+											parseInt(timestamp, 10) * 1000;
+									}
 								}
 							}
 						}
-					}
 
-					// Detect status
-					if (infoText.toLowerCase().includes("complete")) {
-						metadata.status = "completed";
-					} else {
-						metadata.status = "ongoing";
-					}
-
-					// Extract characters from the metadata text
-					// FanFiction format varies but characters typically appear:
-					// 1. After Published date: "Published: Apr 19, 2021 Ben T., Izuku M., Momo Y., 1-A Studentsid: 13865360"
-					// 2. Or between genres and stats: "Adventure/Sci-Fi - Harry P., OC - Chapters:"
-					// Brackets [X, Y] indicate romantic/platonic relationships (max 4 characters)
-					// Multiple bracket groups possible: [Harry P., Hermione G.] [Luna L., Neville L.]
-					const allCharacters = new Set();
-					const relationships = [];
-
-					// Strategy: Look for character names after the Published date and before "id:"
-					// Format: "Published: <date> <characters>id: <id>"
-					let charSection = "";
-
-					// Try to find characters after Published date
-					const publishedMatch = infoText.match(
-						/Published:\s*[A-Za-z]{3}\s+\d{1,2},?\s*\d{4}\s+(.+?)(?:id:|$)/i,
-					);
-					if (publishedMatch && publishedMatch[1]) {
-						charSection = publishedMatch[1].trim();
-					}
-
-					// Fallback: try between genre section and stats
-					if (!charSection) {
-						const genreCharMatch = infoText.match(
-							/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Chapters|Words)/i,
-						);
-						if (genreCharMatch && genreCharMatch[1]) {
-							charSection = genreCharMatch[1].trim();
+						// Detect status — only if not already set by enhanced
+						if (!metadata.status || metadata.status === "unknown") {
+							if (infoText.toLowerCase().includes("complete")) {
+								metadata.status = "completed";
+							} else {
+								metadata.status = "ongoing";
+							}
 						}
-					}
 
-					if (charSection && charSection.length > 0) {
-						// Extract relationship brackets first [Harry P., Hermione G., etc.]
-						// Can have multiple brackets: [Harry P., Hermione G.] [Luna L., Neville L.]
-						const bracketMatches =
-							charSection.match(/\[([^\]]+)\]/g);
-						if (bracketMatches) {
-							bracketMatches.forEach((bracket) => {
-								const insideBracket = bracket
-									.replace(/[[]\]]/g, "")
-									.trim();
-								const charsInBracket = insideBracket
-									.split(",")
-									.map((c) => c.trim())
-									.filter((c) => c.length > 0)
-									.slice(0, 4);
+						// Extract characters from the metadata text — only if not already set by enhanced
+						// FanFiction format varies but characters typically appear:
+						// 1. After Published date: "Published: Apr 19, 2021 Ben T., Izuku M., Momo Y., 1-A Studentsid: 13865360"
+						// 2. Or between genres and stats: "Adventure/Sci-Fi - Harry P., OC - Chapters:"
+						// Brackets [X, Y] indicate romantic/platonic relationships (max 4 characters)
+						// Multiple bracket groups possible: [Harry P., Hermione G.] [Luna L., Neville L.]
+						if (
+							!metadata.metadata.characters ||
+							metadata.metadata.characters.length === 0
+						) {
+							const allCharacters = new Set();
+							const relationships = [];
 
-								// Store relationship group (with 2+ characters)
-								if (charsInBracket.length >= 2) {
-									relationships.push(charsInBracket);
+							// Strategy: Look for character names after the Published date and before "id:"
+							// Format: "Published: <date> <characters>id: <id>"
+							let charSection = "";
+
+							// Try to find characters after Published date
+							const publishedMatch = infoText.match(
+								/Published:\s*[A-Za-z]{3}\s+\d{1,2},?\s*\d{4}\s+(.+?)(?:id:|$)/i,
+							);
+							if (publishedMatch && publishedMatch[1]) {
+								charSection = publishedMatch[1].trim();
+							}
+
+							// Fallback: try between genre section and stats.
+							// Handles both:
+							//   "Genre - Char1, Char2 - Chapters:"
+							//   "Genre - Char1, Char2 - Complete - Chapters:"  (Complete between chars & stats)
+							if (!charSection) {
+								const genreCharMatch = infoText.match(
+									/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Complete|Status|Chapters|Words)/i,
+								);
+								if (genreCharMatch && genreCharMatch[1]) {
+									charSection = genreCharMatch[1].trim();
+								}
+							}
+
+							if (charSection && charSection.length > 0) {
+								// Extract relationship brackets first [Harry P., Hermione G., etc.]
+								// Can have multiple brackets: [Harry P., Hermione G.] [Luna L., Neville L.]
+								const bracketMatches =
+									charSection.match(/\[([^\]]+)\]/g);
+								if (bracketMatches) {
+									bracketMatches.forEach((bracket) => {
+										const insideBracket = bracket
+											.replace(/[[]\]]/g, "")
+											.trim();
+										const charsInBracket = insideBracket
+											.split(",")
+											.map((c) => c.trim())
+											.filter((c) => c.length > 0)
+											.slice(0, 4);
+
+										// Store relationship group (with 2+ characters)
+										if (charsInBracket.length >= 2) {
+											relationships.push(charsInBracket);
+										}
+
+										// Add individual characters from the bracket
+										charsInBracket.forEach((c) =>
+											allCharacters.add(c),
+										);
+									});
+
+									// Remove brackets from section to process remaining characters
+									charSection = charSection.replace(
+										/\[[^\]]+\]/g,
+										"",
+									);
 								}
 
-								// Add individual characters from the bracket
-								charsInBracket.forEach((c) =>
-									allCharacters.add(c),
+								// Extract remaining non-bracketed characters
+								// This includes individual characters and group names like "1-A Students"
+								const remainingChars = charSection
+									.split(",")
+									.map((c) => c.trim())
+									.filter(
+										(c) =>
+											c.length > 0 &&
+											c !== "-" &&
+											!c.match(/^\d+$/) &&
+											!c.match(/status\s*:/i) &&
+											!c.match(
+												/^(-\s*)?complete(-\s*)?$/i,
+											),
+									);
+
+								remainingChars.forEach((c) => {
+									if (c) allCharacters.add(c);
+								});
+							}
+
+							if (allCharacters.size > 0) {
+								metadata.metadata.characters = [
+									...allCharacters,
+								];
+								if (relationships.length > 0) {
+									metadata.metadata.relationships =
+										relationships;
+								}
+								debugLog(
+									"FanFiction: Extracted characters:",
+									[...allCharacters],
+									"relationships:",
+									relationships,
 								);
-							});
+							}
+						} // End character extraction block
 
-							// Remove brackets from section to process remaining characters
-							charSection = charSection.replace(
-								/\[[^\]]+\]/g,
-								"",
-							);
+						// Extract story ID from info text
+						const idMatch = infoText.match(/id:\s*(\d+)/i);
+						if (idMatch && !metadata.metadata.storyId) {
+							metadata.metadata.storyId = idMatch[1];
 						}
-
-						// Extract remaining non-bracketed characters
-						// This includes individual characters and group names like "1-A Students"
-						const remainingChars = charSection
-							.split(",")
-							.map((c) => c.trim())
-							.filter(
-								(c) =>
-									c.length > 0 &&
-									c !== "-" &&
-									!c.match(/^\d+$/) &&
-									!c.match(/status\s*:/i) &&
-									!c.match(/^(-\s*)?complete(-\s*)?$/i),
-							);
-
-						remainingChars.forEach((c) => {
-							if (c) allCharacters.add(c);
-						});
-					}
-
-					if (allCharacters.size > 0) {
-						metadata.metadata.characters = [...allCharacters];
-						if (relationships.length > 0) {
-							metadata.metadata.relationships = relationships;
-						}
-						debugLog(
-							"FanFiction: Extracted characters:",
-							[...allCharacters],
-							"relationships:",
-							relationships,
-						);
-					}
-
-					// Extract story ID from info text
-					const idMatch = infoText.match(/id:\s*(\d+)/i);
-					if (idMatch && !metadata.metadata.storyId) {
-						metadata.metadata.storyId = idMatch[1];
 					}
 				}
 			}
@@ -1131,13 +1475,15 @@ When enhancing, improve readability while respecting the author's creative voice
 			updatedDate: metadata.updatedDate,
 		};
 
-		// Surface useful tags for card/modal rendering
+		// Surface useful tags for card/modal rendering — genres + characters only;
+		// fandoms are kept in metadata.metadata.fandoms and shown separately.
 		const combinedTags = new Set();
 		(metadata.genres || []).forEach((g) => combinedTags.add(g));
-		(metadata.metadata?.characters || []).forEach((c) =>
-			combinedTags.add(c),
-		);
-		(metadata.metadata?.fandoms || []).forEach((f) => combinedTags.add(f));
+		(metadata.metadata?.characters || []).forEach((c) => {
+			// Exclude fandom names that leaked into characters during parsing
+			const isFandom = (metadata.metadata?.fandoms || []).includes(c);
+			if (!isFandom) combinedTags.add(c);
+		});
 		metadata.tags = Array.from(combinedTags);
 
 		// Flag metadata that still needs a dedicated refresh
@@ -1386,8 +1732,144 @@ When enhancing, improve readability while respecting the author's creative voice
 	getPageTheme() {
 		return "light";
 	}
+
+	/**
+	 * Propose library settings for FanFiction.net
+	 * Allows users to customize domain and metadata preferences
+	 */
+	getProposedLibrarySettings() {
+		return {
+			domainPreference: {
+				label: "Preferred Domain",
+				type: "select",
+				options: ["www", "m"],
+				default: "www",
+				description: "Use desktop (www) or mobile (m) version",
+			},
+			preferredTld: {
+				label: "Preferred TLD",
+				type: "select",
+				options: ["net", "ws"],
+				default: "net",
+				description: "FanFiction.net or FanFiction.ws",
+			},
+			autoRefreshMetadata: {
+				label: "Auto Refresh Metadata",
+				type: "boolean",
+				default: true,
+				description: "Automatically refresh story metadata on visits",
+			},
+			enableClipboardCopyOnDownload: {
+				label: "Copy to Clipboard on Download",
+				type: "boolean",
+				default: true,
+				description:
+					'Automatically copy "Title" by Author StoryId.epub to clipboard when downloading',
+			},
+		};
+	}
+
+	/**
+	 * Get metadata source URL (for mobile -> desktop redirect)
+	 */
+	getMetadataSourceUrl() {
+		// For desktop, metadata is embedded
+		const match = window.location.href.match(/\/s\/(\d+)/);
+		if (match) {
+			return `https://www.fanfiction.net/s/${match[1]}/1/`;
+		}
+		return null;
+	}
+
+	/**
+	 * FanFiction.net-specific metadata fields for the library edit modal.
+	 * @returns {Array<Object>}
+	 */
+	static getEditableFields() {
+		return [
+			{
+				key: "fandoms",
+				label: "Fandoms",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Harry Potter, Naruto",
+			},
+			{
+				key: "characters",
+				label: "Characters",
+				type: "tags",
+				source: "metadata",
+				placeholder: "Harry, Hermione",
+			},
+			{
+				key: "language",
+				label: "Language",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. English",
+			},
+			{
+				key: "rating",
+				label: "Rating",
+				type: "select",
+				source: "metadata",
+				options: [
+					{ value: "", label: "Unknown" },
+					{ value: "K", label: "K (Kids)" },
+					{ value: "K+", label: "K+ (Older Kids)" },
+					{ value: "T", label: "T (Teen)" },
+					{ value: "M", label: "M (Mature)" },
+				],
+			},
+			{
+				key: "isCrossover",
+				label: "Crossover",
+				type: "toggle",
+				source: "metadata",
+			},
+			{
+				key: "words",
+				label: "Word Count",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "reviews",
+				label: "Reviews",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "favorites",
+				label: "Favorites",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "follows",
+				label: "Follows",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "publishedDate",
+				label: "Published Date",
+				type: "date",
+				source: "metadata",
+			},
+			{
+				key: "updatedDate",
+				label: "Last Updated",
+				type: "date",
+				source: "metadata",
+			},
+		];
+	}
 }
 
-// Named export for class (used by subclasses like mobile handler)
 // Default export for singleton instance
 export default new FanfictionHandler();

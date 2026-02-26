@@ -7,21 +7,14 @@ import {
 	DEFAULT_SUMMARY_PROMPT,
 	DEFAULT_SHORT_SUMMARY_PROMPT,
 	KEEP_ALIVE_ALARM_INTERVAL_MINUTES,
-	KEEP_ALIVE_HEARTBEAT_MS,
-	KEEP_ALIVE_HEARTBEAT_JITTER_MS,
-	KEEP_ALIVE_RECONNECT_DELAY_MS,
-	KEEP_ALIVE_MAX_PORT_RETRIES,
-	CHUNK_STAGGER_MS,
-	CHUNK_RETRY_BACKOFF_MS,
+	NOVEL_CHAPTER_CHECK_ALARM_NAME,
 } from "../utils/constants.js";
 import chunkingSystem from "../utils/chunking/index.js";
 import {
 	ensureDriveAccessToken,
 	revokeDriveTokens,
 	uploadLogsToDriveWithAdapter,
-	uploadBlobToDrive,
 	uploadLibraryBackupToDrive,
-	ensureBackupFolder,
 	listDriveBackups,
 	downloadDriveBackup,
 	getContinuousDriveBackup,
@@ -38,6 +31,11 @@ import {
 	sendTelemetryPing,
 	trackInstall,
 } from "../utils/telemetry.js";
+import { processMessage } from "./message-handlers/index.js";
+import {
+	setupNovelUpdateAlarm,
+	handleNovelUpdateAlarm,
+} from "./novel-updater.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -90,11 +88,8 @@ if (typeof browser === "undefined") {
 	const AUTO_BACKUP_ALARM_NAME = "ranobe-gemini-auto-backup";
 	const ROLLING_BACKUP_ALARM_NAME = "ranobe-gemini-rolling-backup";
 	const DRIVE_SYNC_ALARM_NAME = "ranobe-gemini-drive-sync";
-	const CONTINUOUS_BACKUP_CHECK_ALARM_NAME =
-		"ranobe-gemini-continuous-backup-check";
 	const DEFAULT_BACKUP_RETENTION = 3;
 	const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
-	const CONTINUOUS_BACKUP_DEFAULT_DELAY_MINUTES = 5;
 	const CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES = 2;
 	const DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES = 60;
 	const DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES = 10;
@@ -182,12 +177,18 @@ if (typeof browser === "undefined") {
 				syncLibraryFromDrive({ reason: "scheduled" }).catch((err) =>
 					debugError("Drive sync failed:", err),
 				);
+			} else if (alarm.name === NOVEL_CHAPTER_CHECK_ALARM_NAME) {
+				handleNovelUpdateAlarm().catch((err) =>
+					debugError("[NovelUpdater] Alarm handler failed:", err),
+				);
 			}
 		});
 	}
 
 	// Initialize the keep-alive system
 	setupKeepAliveAlarm();
+	// Initialize periodic novel chapter-check alarm
+	setupNovelUpdateAlarm(alarmApi);
 
 	// Port-based keep-alive for MV3: content scripts open a long-lived port and ping periodically.
 	browser.runtime.onConnect.addListener((port) => {
@@ -1996,6 +1997,92 @@ if (typeof browser === "undefined") {
 			return true;
 		}
 
+		// Handle metadata fetching for background operations
+		if (message.action === "fetchNovelMetadata") {
+			return processMessage(message, sender, sendResponse);
+		}
+
+		// Handle handler settings proposal requests
+		if (message.action === "getHandlerSettings") {
+			return processMessage(message, sender, sendResponse);
+		}
+
+		// Handle updating novel metadata from content script
+		if (message.action === "updateNovelMetadata") {
+			(async () => {
+				try {
+					const { novelId, metadata } = message;
+
+					if (!novelId) {
+						sendResponse({
+							success: false,
+							error: "Missing novelId",
+						});
+						return;
+					}
+
+					// Load novel library
+					let lib = await loadNovelLibraryForBackground();
+					if (!lib || !lib.novels) {
+						sendResponse({
+							success: false,
+							error: "Failed to load novel library",
+						});
+						return;
+					}
+
+					// Get the novel from library
+					const novel = lib.novels[novelId];
+					if (!novel) {
+						sendResponse({
+							success: false,
+							error: `Novel ${novelId} not found in library`,
+						});
+						return;
+					}
+
+					// If metadata was provided, update the novel
+					if (metadata && typeof metadata === "object") {
+						// Update the novel with new metadata
+						const updated = {
+							...novel,
+							...metadata,
+							lastMetadataUpdate: Date.now(),
+							lastAccessedAt: Date.now(),
+						};
+
+						// Save updated novel
+						lib.novels[novelId] = updated;
+						await saveLibraryData(lib);
+
+						debugLog(
+							`[Background] Updated novel ${novelId} metadata`,
+						);
+						sendResponse({
+							success: true,
+							metadata: updated,
+						});
+					} else {
+						sendResponse({
+							success: false,
+							error: "No metadata provided",
+						});
+					}
+				} catch (error) {
+					debugError(
+						"[Background] Error updating novel metadata:",
+						error,
+					);
+					sendResponse({
+						success: false,
+						error:
+							error.message || "Unknown error updating metadata",
+					});
+				}
+			})();
+			return true;
+		}
+
 		return false;
 	});
 
@@ -3362,7 +3449,7 @@ if (typeof browser === "undefined") {
 	}
 
 	// Handle context menu clicks
-	browser.contextMenus.onClicked.addListener((info, tab) => {
+	browser.contextMenus.onClicked.addListener((info, _tab) => {
 		switch (info.menuItemId) {
 			case "openNovelLibrary":
 				browser.tabs.create({

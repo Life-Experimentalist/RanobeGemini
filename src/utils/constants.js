@@ -136,12 +136,15 @@ export const DEFAULT_DRIVE_CLIENT_SECRET = "";
 export const OAUTH_REDIRECT_URIS = {
 	web: "https://ranobe.vkrishna04.me/oauth-redirect.html",
 	chrome: "https://achemoeefcaafoiepmikeiocahcjkjop.chromiumapp.org/drive",
-	firefox: "https://118c432092a1998774ae13e72eca8365acc21858.extensions.allizom.org/drive"
+	firefox:
+		"https://118c432092a1998774ae13e72eca8365acc21858.extensions.allizom.org/drive",
 };
 
 // Google OAuth scopes required for backup functionality
 // https://www.googleapis.com/auth/drive.file - Create/modify/delete only files created by this app (safest)
-export const GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/drive.file"];
+export const GOOGLE_OAUTH_SCOPES = [
+	"https://www.googleapis.com/auth/drive.file",
+];
 
 // Backup configuration constants
 export const DEFAULT_BACKUP_RETENTION_DAYS = 7; // Keep backups for 7 days
@@ -149,11 +152,19 @@ export const DEFAULT_BACKUP_SCHEDULE_HOUR = 2; // Default daily backup at 2 AM
 export const CONTINUOUS_BACKUP_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minute debounce for continuous mode
 export const DRIVE_BACKUP_MAX_COUNT = 4; // Keep at most 4 manual backups per Google Account (daily auto + user-created)
 export const DRIVE_BACKUP_PREFIX = "ranobe-library-"; // Prefix for Drive backup files
-export const DRIVE_CONTINUOUS_BACKUP_BASENAME = "ranobe-library-continuous.json"; // Single rolling file for continuous mode (separate from manual quota)
+export const DRIVE_CONTINUOUS_BACKUP_BASENAME =
+	"ranobe-library-continuous.json"; // Single rolling file for continuous mode (separate from manual quota)
 
 // Auto "On Hold" settings
 export const DEFAULT_AUTO_HOLD_ENABLED = true;
 export const DEFAULT_AUTO_HOLD_DAYS = 7;
+
+// Periodic novel chapter-count check (disabled by default - enable for testing)
+// Only checks novels with status "up-to-date" to detect new chapters
+export const NOVEL_PERIODIC_UPDATE_ENABLED = false;
+export const NOVEL_PERIODIC_UPDATE_INTERVAL_MINUTES = 60; // How often to run the check alarm
+export const NOVEL_PERIODIC_UPDATE_STALENESS_MINUTES = 30; // Min time since last check before re-checking a novel
+export const NOVEL_CHAPTER_CHECK_ALARM_NAME = "rg-novel-chapter-check";
 
 // Telemetry settings (opt-in only)
 export const TELEMETRY_ENDPOINT = ""; // User must configure if they want telemetry

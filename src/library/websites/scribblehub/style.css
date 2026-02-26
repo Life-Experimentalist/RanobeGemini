@@ -113,6 +113,8 @@ body {
 	width: 48px;
 	height: 48px;
 	object-fit: contain;
+	/* ScribbleHub favicon is dark - invert it so it's visible on dark backgrounds */
+	filter: invert(1) brightness(1.5);
 }
 
 .shelf-page-title h1 {
@@ -219,7 +221,8 @@ body {
 	right: 0;
 	bottom: 0;
 	z-index: 1000;
-	display: none; /* Toggled by JS */
+	display: none;
+	/* Toggled by JS */
 	align-items: center;
 	justify-content: center;
 	padding: 20px;
@@ -445,14 +448,17 @@ body {
 	background: var(--success-color);
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: var(--warning-color);
 	color: #000;
 }
+
 .rating-m {
 	background: var(--error-color);
 	color: #fff;
@@ -685,11 +691,9 @@ body {
 }
 
 .chip-crossover {
-	background: linear-gradient(
-		135deg,
-		rgba(102, 126, 234, 0.2),
-		rgba(118, 75, 162, 0.2)
-	);
+	background: linear-gradient(135deg,
+			rgba(102, 126, 234, 0.2),
+			rgba(118, 75, 162, 0.2));
 	color: #a5b3ff;
 	border: 1px solid rgba(118, 75, 162, 0.3);
 }
@@ -782,16 +786,19 @@ body {
 	color: #fff;
 	border-color: var(--success-color);
 }
+
 .chip.rating-kp {
 	background: #8bc34a;
 	color: #fff;
 	border-color: #8bc34a;
 }
+
 .chip.rating-t {
 	background: var(--warning-color);
 	color: #000;
 	border-color: var(--warning-color);
 }
+
 .chip.rating-m {
 	background: var(--error-color);
 	color: #fff;
@@ -840,11 +847,9 @@ body {
 	width: 80px;
 	height: 110px;
 	border-radius: var(--radius-sm);
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -928,14 +933,17 @@ body {
 	background: #4caf50;
 	color: white;
 }
+
 .rating-k\+ {
 	background: #8bc34a;
 	color: white;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: white;
 }
+
 .rating-m {
 	background: #f44336;
 	color: white;
@@ -1352,11 +1360,9 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	font-size: 3rem;
 	color: var(--text-muted);
 }
@@ -1521,7 +1527,7 @@ body {
 }
 
 /* Background blur image (separate from cover) */
-.scribblehub-card-horizontal > .scribblehub-bg-blur {
+.scribblehub-card-horizontal>.scribblehub-bg-blur {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -1562,11 +1568,9 @@ body {
 	align-items: center;
 	justify-content: center;
 	font-size: 40px;
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	color: var(--text-muted);
 }
 
@@ -1651,11 +1655,9 @@ body {
 
 .progress-fill {
 	height: 100%;
-	background: linear-gradient(
-		90deg,
-		var(--primary-color) 0%,
-		var(--primary-hover) 100%
-	);
+	background: linear-gradient(90deg,
+			var(--primary-color) 0%,
+			var(--primary-hover) 100%);
 	border-radius: 3px;
 }
 
@@ -2192,6 +2194,7 @@ body {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
@@ -2336,14 +2339,17 @@ body {
 	background: #4caf50;
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: #fff;
 }
+
 .rating-m {
 	background: #f44336;
 	color: #fff;

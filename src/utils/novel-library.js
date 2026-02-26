@@ -5,8 +5,20 @@
  */
 
 import { debugLog, debugError } from "./logger.js";
-import { DOMAIN_REGISTRY, SHELF_REGISTRY } from "./domain-constants.js";
+import {
+	DEFAULT_AUTO_HOLD_ENABLED,
+	DEFAULT_AUTO_HOLD_DAYS,
+} from "./constants.js";
+import { SHELF_REGISTRY } from "./domain-constants.js";
 import { SITE_SETTINGS_KEY } from "./site-settings.js";
+import {
+	mergeRules,
+	evaluateChapterReadTransitions,
+	evaluateInactivityTransitions,
+	applyRereadingAutoClear,
+	getAllStatuses as _getAllStatusesFromMachine,
+	getDefaultRereadingOverlay,
+} from "../library/status-machine.js";
 
 /**
  * Reading status constants
@@ -115,13 +127,43 @@ export class NovelLibrary {
 	 */
 	async getSettings() {
 		const defaults = {
-			autoHoldEnabled: true,
-			autoHoldDays: 7,
+			autoHoldEnabled: DEFAULT_AUTO_HOLD_ENABLED,
+			autoHoldDays: DEFAULT_AUTO_HOLD_DAYS,
+			statusConfig: {},
+			customStatuses: [],
+			stateMachineRules: [],
+			rereadingOverlay: getDefaultRereadingOverlay(),
+			// Novel info copy-to-clipboard format
+			novelCopyFormats: {
+				enabled: true,
+				globalTemplate: "{title} by {author} {wordCount}",
+				siteOverrides: {}, // map of shelfId → template string
+			},
 		};
 
 		try {
 			const result = await browser.storage.local.get(this.SETTINGS_KEY);
-			return { ...defaults, ...(result[this.SETTINGS_KEY] || {}) };
+			const saved = result[this.SETTINGS_KEY] || {};
+			// Deep-merge rereadingOverlay so partial saves don't lose sub-keys
+			const rereadingOverlay = {
+				...defaults.rereadingOverlay,
+				...(saved.rereadingOverlay || {}),
+			};
+			// Deep-merge novelCopyFormats so partial saves keep siteOverrides
+			const novelCopyFormats = {
+				...defaults.novelCopyFormats,
+				...(saved.novelCopyFormats || {}),
+				siteOverrides: {
+					...defaults.novelCopyFormats.siteOverrides,
+					...(saved.novelCopyFormats?.siteOverrides || {}),
+				},
+			};
+			return {
+				...defaults,
+				...saved,
+				rereadingOverlay,
+				novelCopyFormats,
+			};
 		} catch (error) {
 			debugError("Failed to load library settings:", error);
 			return { ...defaults };
@@ -242,7 +284,10 @@ export class NovelLibrary {
 
 			await this.applyStaleStatusRules(library);
 			if (this.normalizeFanfictionMetadata(library)) {
-				await this.saveLibrary(library);
+				// Best-effort background save; never let a save failure break the read.
+				this.saveLibrary(library).catch((err) =>
+					debugError("getLibrary: normalization save failed:", err),
+				);
 			}
 			return library;
 		} catch (error) {
@@ -388,47 +433,46 @@ export class NovelLibrary {
 	}
 
 	/**
-	 * Auto-adjust stale reading statuses:
-	 * - If a novel hasn't been touched for 7+ days and is still READING:
-	 *   - If progress is at chapter 1 (not started) → PLAN_TO_READ
-	 *   - Otherwise → ON_HOLD
-	 * Completed remains user-controlled.
+	 * Auto-adjust stale reading statuses using the configurable state machine.
+	 * Falls back to built-in default rules if no custom rules are configured.
 	 * @param {Object} library
 	 */
 	async applyStaleStatusRules(library) {
 		if (!library || !library.novels) return;
 
-		const now = Date.now();
-		const thresholdMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+		// Load settings to get rule config + inactivity threshold
+		const settings = await this.getSettings();
+		const rules = mergeRules(settings.stateMachineRules, settings);
+
 		let changed = false;
 
 		for (const novel of Object.values(library.novels)) {
-			const lastActivity =
-				novel.lastAccessedAt || novel.lastUpdated || novel.addedAt;
-			if (!lastActivity || now - lastActivity < thresholdMs) continue;
+			const newStatus = evaluateInactivityTransitions(novel, rules);
+			if (!newStatus) continue;
+			if (newStatus === novel.readingStatus) continue;
 
-			if (novel.readingStatus === READING_STATUS.READING) {
-				const lastReadChapter = novel.lastReadChapter || 0;
-				const currentChapter =
-					novel.currentChapter || novel.metadata?.currentChapter || 0;
-				const progressChapter = Math.max(
-					lastReadChapter,
-					currentChapter,
-				);
-
-				if (progressChapter <= 1) {
-					novel.readingStatus = READING_STATUS.PLAN_TO_READ;
-				} else {
-					novel.readingStatus = READING_STATUS.ON_HOLD;
-				}
-
-				novel.lastAccessedAt = now;
-				changed = true;
-			}
+			novel.readingStatus = newStatus;
+			// Apply re-reading auto-clear if needed
+			applyRereadingAutoClear(
+				novel,
+				newStatus,
+				settings.rereadingOverlay,
+			);
+			novel.lastAccessedAt = Date.now();
+			changed = true;
 		}
 
 		if (changed) {
-			await this.saveLibrary(library);
+			try {
+				await this.saveLibrary(library);
+			} catch (err) {
+				// Non-fatal: log but don't propagate; the caller (getLibrary) treats
+				// its own read as successful even if the background save fails here.
+				debugError(
+					"applyStaleStatusRules: failed to persist status changes:",
+					err,
+				);
+			}
 		}
 	}
 
@@ -446,7 +490,9 @@ export class NovelLibrary {
 			return true;
 		} catch (error) {
 			debugError("Failed to save library:", error);
-			return false;
+			// Re-throw so callers (addOrUpdateNovel, updateReadingStatus, etc.)
+			// can surface the real cause to the user instead of silently swallowing it.
+			throw error;
 		}
 	}
 
@@ -749,54 +795,30 @@ export class NovelLibrary {
 
 			let nextStatus = null;
 
-			// Status transition logic per clarified rules:
-			// 1. COMPLETED: Only if story is flagged as complete (author finished publishing)
-			// 2. UP_TO_DATE: If user has read latest chapter AND story is still ongoing
-			// 3. READING: Default when reading ongoing story
-			// 4. RE_READING: Can overlay any other status (handled separately)
-
+			// Use the configurable state machine for status transitions
 			if (chapterNumber >= 1) {
-				// Check if user has reached the latest chapter
 				const isLatestChapter =
 					totalChapters > 0 && chapterNumber >= totalChapters;
 
-				// If story is marked complete and user has reached latest chapter
-				if (isStoryComplete && isLatestChapter) {
-					nextStatus = READING_STATUS.COMPLETED;
-				}
-				// If user has read latest chapter but story is still ongoing
-				else if (
-					isLatestChapter &&
-					!isStoryComplete &&
-					totalChapters > 0
-				) {
-					nextStatus = READING_STATUS.UP_TO_DATE;
-				}
-				// Default: user is reading (not caught up yet)
-				else if (chapterNumber > 0) {
-					nextStatus = READING_STATUS.READING;
-				}
-				// First chapter only
-				else if (chapterNumber === 1 && totalChapters > 1) {
-					nextStatus = READING_STATUS.READING;
-				}
-			}
+				// Load settings + rules (cached within the call is fine; this
+				// path is hot but not called in a tight loop)
+				const settings = await this.getSettings();
+				const rules = mergeRules(settings.stateMachineRules, settings);
+				const context = { isLatestChapter, isStoryComplete };
+				nextStatus = evaluateChapterReadTransitions(
+					novel,
+					context,
+					rules,
+				);
 
-			// Don't downgrade from COMPLETED or ON_HOLD or DROPPED unless explicitly changed
-			const currentStatus = novel.readingStatus || READING_STATUS.READING;
-			const protectedStatuses = [
-				READING_STATUS.COMPLETED,
-				READING_STATUS.ON_HOLD,
-				READING_STATUS.DROPPED,
-				READING_STATUS.PLAN_TO_READ,
-			];
-
-			if (
-				protectedStatuses.includes(currentStatus) &&
-				nextStatus === READING_STATUS.READING
-			) {
-				// Don't auto-change unless it's an explicit status update
-				nextStatus = null;
+				// If a status transition occurred, check re-reading auto-clear
+				if (nextStatus && nextStatus !== novel.readingStatus) {
+					applyRereadingAutoClear(
+						novel,
+						nextStatus,
+						settings.rereadingOverlay,
+					);
+				}
 			}
 
 			if (nextStatus) {
@@ -821,7 +843,7 @@ export class NovelLibrary {
 	 * Update novel reading status (supports overlay for re-reading)
 	 * @param {string} novelId - Library novel ID
 	 * @param {string} newStatus - New reading status
-	 * @param {boolean} isRereadingOverlay - If true, adds re-reading tag without replacing main status
+	 * @param {boolean} isRereadingOverlay - If true, sets/clears the re-reading overlay flag
 	 * @returns {Promise<boolean>} Success status
 	 */
 	async updateReadingStatus(novelId, newStatus, isRereadingOverlay = false) {
@@ -835,13 +857,24 @@ export class NovelLibrary {
 			}
 
 			if (isRereadingOverlay) {
-				// Add re-reading as an overlay tag (stored in rereadingStatus field)
+				// Toggle the re-reading overlay flag without changing primary status
 				novel.rereadingStatus =
 					newStatus === READING_STATUS.RE_READING ? true : false;
 			} else {
 				// Replace main status
+				const prevStatus = novel.readingStatus;
 				novel.readingStatus = newStatus;
 				novel.lastStatusChangedAt = Date.now();
+
+				// Apply re-reading auto-clear if status changed
+				if (prevStatus !== newStatus) {
+					const settings = await this.getSettings();
+					applyRereadingAutoClear(
+						novel,
+						newStatus,
+						settings.rereadingOverlay,
+					);
+				}
 			}
 
 			novel.lastAccessedAt = Date.now();
@@ -1088,35 +1121,60 @@ export class NovelLibrary {
 	}
 
 	/**
-	 * Get reading status statistics
+	 * Get reading status statistics (built-in + custom statuses)
 	 * @returns {Promise<Object>} Object with count per status
 	 */
 	async getReadingStatusStats() {
-		const library = await this.getLibrary();
+		const [library, settings] = await Promise.all([
+			this.getLibrary(),
+			this.getSettings(),
+		]);
 		const novels = Object.values(library.novels);
+
+		// Build the full set of known status keys
+		const allStatusKeys = new Set([
+			...Object.values(READING_STATUS),
+			...(settings.customStatuses || []).map((cs) => cs.id),
+			"unset",
+		]);
 
 		const stats = {
 			total: novels.length,
 			byStatus: {},
 		};
 
-		// Initialize all statuses with 0
-		Object.values(READING_STATUS).forEach((status) => {
-			stats.byStatus[status] = 0;
-		});
-		stats.byStatus["unset"] = 0;
+		// Initialize all known statuses with 0
+		for (const key of allStatusKeys) {
+			stats.byStatus[key] = 0;
+		}
 
-		// Count novels per status
+		// Count re-reading overlay separately
+		stats.rereadingOverlay = 0;
+
 		novels.forEach((novel) => {
 			const status = novel.readingStatus || "unset";
 			if (stats.byStatus[status] !== undefined) {
 				stats.byStatus[status]++;
 			} else {
-				stats.byStatus["unset"]++;
+				// Unknown (may be an old custom status that was deleted)
+				stats.byStatus["unset"] = (stats.byStatus["unset"] || 0) + 1;
+			}
+			if (novel.rereadingStatus) {
+				stats.rereadingOverlay++;
 			}
 		});
 
 		return stats;
+	}
+
+	/**
+	 * Get the full ordered list of statuses (built-in + custom from settings).
+	 * Each entry: { id, label, color, builtIn, isRereadingOverlay, order }
+	 * @returns {Promise<Array<Object>>}
+	 */
+	async getAllStatuses() {
+		const settings = await this.getSettings();
+		return _getAllStatusesFromMachine(settings, READING_STATUS_INFO);
 	}
 
 	/**
@@ -1499,6 +1557,8 @@ export class NovelLibrary {
 		};
 
 		return {
+			$schema:
+				"https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json",
 			library,
 			chapters: chaptersData,
 			settings,

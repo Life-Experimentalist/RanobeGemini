@@ -1,50 +1,56 @@
 /**
- * Website-specific settings UI definitions
+ * Website-specific settings UI definitions.
+ *
+ * Settings are auto-discovered from each handler's static SETTINGS_DEFINITION
+ * property. To add settings for a new site, simply add SETTINGS_DEFINITION to
+ * its handler class — no changes needed here.
  */
 
-export const WEBSITE_SETTINGS_DEFINITIONS = [
-	{
-		id: "fanfiction",
-		label: "✍️ FanFiction.net",
-		description:
-			"FanFiction.net preferences for redirects and auto enhancements.",
-		fields: [
-			{
-				key: "domainPreference",
-				label: "Domain Preference",
-				description:
-					"Choose how to handle bare domain (fanfiction.net) visits.",
-				type: "select",
-				defaultValue: "auto",
-				options: [
-					{ value: "auto", label: "Auto (device-based)" },
-					{ value: "www", label: "Desktop (www)" },
-					{ value: "mobile", label: "Mobile (m)" },
-				],
-			},
-			{
-				key: "preferredTld",
-				label: "Preferred TLD",
-				description:
-					"Default TLD to use when visiting FanFiction URLs.",
-				type: "select",
-				defaultValue: "net",
-				options: [
-					{ value: "net", label: "fanfiction.net (default)" },
-					{ value: "ws", label: "fanfiction.ws" },
-				],
-			},
-			{
-				key: "autoEnhanceEnabled",
-				label: "Auto-enhance chapters",
-				description:
-					"Automatically run Enhance when a FanFiction.net chapter loads.",
-				type: "toggle",
-			},
-		],
-	},
+import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
+import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
+import { RanobesHandler } from "../utils/website-handlers/ranobes-handler.js";
+import { ScribbleHubHandler } from "../utils/website-handlers/scribblehub-handler.js";
+import { WebNovelHandler } from "../utils/website-handlers/webnovel-handler.js";
+
+/**
+ * All registered handler classes.
+ * Add new handlers here when they are created.
+ * @type {typeof import("../utils/website-handlers/base-handler.js").BaseWebsiteHandler[]}
+ */
+const ALL_HANDLERS = [
+	FanfictionHandler,
+	AO3Handler,
+	RanobesHandler,
+	ScribbleHubHandler,
+	WebNovelHandler,
 ];
 
+/**
+ * Auto-generated settings definitions built from each handler's SETTINGS_DEFINITION.
+ * Only handlers that declare SETTINGS_DEFINITION (non-null) are included.
+ *
+ * @type {Array<{id: string, label: string, description: string, fields: Array}>}
+ */
+export const WEBSITE_SETTINGS_DEFINITIONS = ALL_HANDLERS.filter(
+	(H) => H.SETTINGS_DEFINITION != null,
+).map((H) => {
+	const meta = H.SHELF_METADATA;
+	return {
+		id: meta.id,
+		label: meta.name,
+		icon: meta.icon || null, // website favicon/logo URL
+		invertIconInDarkMode: meta.invertIconInDarkMode || false,
+		emoji: meta.emoji || "🌐", // fallback emoji if icon fails or is absent
+		description: `Site-specific settings for ${meta.name}.`,
+		fields: H.SETTINGS_DEFINITION.fields,
+	};
+});
+
+/**
+ * Look up the settings definition for a specific site by shelf ID.
+ * @param {string} shelfId
+ * @returns {{ id: string, label: string, description: string, fields: Array } | null}
+ */
 export function getWebsiteSettingsDefinition(shelfId) {
 	return (
 		WEBSITE_SETTINGS_DEFINITIONS.find((def) => def.id === shelfId) || null
@@ -61,57 +67,66 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 					settings[field.key] ?? field.defaultValue ?? "auto";
 				const optionsHtml = field.options
 					.map(
-						(opt) => `
-					<option value="${opt.value}" ${
-						currentValue === opt.value ? "selected" : ""
-					}>${opt.label}</option>
-				`,
+						(opt) =>
+							`<option value="${opt.value}" ${currentValue === opt.value ? "selected" : ""}>${opt.label}</option>`,
 					)
 					.join("");
 				return `
-					<div class="website-setting-item">
-						<div class="website-setting-text">
-							<div class="website-setting-label">${field.label}</div>
-							<div class="settings-desc">${field.description}</div>
-						</div>
-						<select class="website-setting-select" data-shelf="${definition.id}" data-setting="${field.key}" style="padding: 6px 10px; border: 1px solid var(--border-color, #334155); border-radius: 4px; background: var(--bg-tertiary, #1f2937); color: var(--text-primary, #e5e7eb); font-size: 13px;">
-							${optionsHtml}
-						</select>
+				<div class="ls-handler-field">
+					<div class="ls-handler-field-info">
+						<div class="ls-handler-field-label">${field.label}</div>
+						<div class="ls-handler-field-desc">${field.description}</div>
 					</div>
-				`;
+					<select class="ls-select ls-handler-field-select"
+						data-shelf="${definition.id}" data-setting="${field.key}">
+						${optionsHtml}
+					</select>
+				</div>`;
 			}
 
 			const value = Boolean(settings[field.key]);
 			return `
-				<div class="website-setting-item">
-					<div class="website-setting-text">
-						<div class="website-setting-label">${field.label}</div>
-						<div class="settings-desc">${field.description}</div>
-					</div>
-					<label class="toggle-switch toggle-switch-sm">
-						<input type="checkbox" data-shelf="${definition.id}" data-setting="${field.key}" ${
-							value ? "checked" : ""
-						} />
-						<span class="toggle-slider"></span>
-					</label>
+			<div class="ls-handler-field">
+				<div class="ls-handler-field-info">
+					<div class="ls-handler-field-label">${field.label}</div>
+					<div class="ls-handler-field-desc">${field.description}</div>
 				</div>
-			`;
+				<label class="ls-toggle">
+					<input type="checkbox" data-shelf="${definition.id}" data-setting="${field.key}" ${value ? "checked" : ""} />
+					<span class="ls-toggle-track"></span>
+				</label>
+			</div>`;
 		})
 		.join("");
 
+	const fieldCount = definition.fields.length;
+	// Use Google's favicon proxy to avoid hotlink-blocked direct URLs
+	const faviconUrl = definition.icon
+		? (() => {
+				try {
+					return `https://www.google.com/s2/favicons?domain=${new URL(definition.icon).hostname}&sz=32`;
+				} catch {
+					return null;
+				}
+			})()
+		: null;
+	const iconHtml = faviconUrl
+		? `<img src="${faviconUrl}" class="ls-handler-panel-icon" alt="" data-emoji="${definition.emoji}" ${definition.invertIconInDarkMode ? 'data-invert="true"' : ""} />`
+		: `<span class="ls-handler-panel-icon ls-handler-panel-emoji">${definition.emoji}</span>`;
+
 	return `
-		<div class="settings-grid">
-			<div class="settings-section" data-full-width="true" style="background: var(--bg-secondary, #1e293b); padding: 16px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-				<h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #38bdf8;">
-					${definition.label} Settings
-				</h3>
-				<p class="settings-desc" style="margin-bottom: 12px; font-size: 12px;">
-					${definition.description}
-				</p>
-				<div class="website-settings-list">
+		<details class="ls-handler-panel">
+			<summary class="ls-handler-panel-summary">
+				${iconHtml}
+				<span class="ls-handler-panel-title">${definition.label}</span>
+				<span class="ls-handler-panel-badge">${fieldCount} setting${fieldCount !== 1 ? "s" : ""}</span>
+				<span class="ls-handler-panel-chevron">▾</span>
+			</summary>
+			<div class="ls-handler-panel-body">
+				<p class="ls-hint" style="margin-bottom:14px;">${definition.description}</p>
+				<div class="ls-handler-fields">
 					${fieldsHtml}
 				</div>
 			</div>
-		</div>
-	`;
+		</details>`;
 }

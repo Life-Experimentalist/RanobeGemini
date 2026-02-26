@@ -6,6 +6,7 @@
 import RanobesNovelCard from "./novel-card.js";
 import { RanobesHandler } from "../../../utils/website-handlers/ranobes-handler.js";
 import { NovelCardRenderer } from "../novel-card-base.js";
+import { openInlineEditModal } from "../../edit-modal.js";
 import {
 	READING_STATUS,
 	READING_STATUS_INFO,
@@ -184,7 +185,7 @@ function renderActiveFilters() {
 	)
 		addChip(
 			"translationStatus",
-			`Translation: ${filterState.translationStatus}`
+			`Translation: ${filterState.translationStatus}`,
 		);
 
 	(filterState.genres || []).forEach((genre) => {
@@ -214,7 +215,7 @@ function renderActiveFilters() {
 		const el = document.createElement("span");
 		el.className = "filter-chip";
 		el.innerHTML = `<strong>${escapeHtml(
-			chip.label
+			chip.label,
 		)}</strong> <button aria-label="Clear filter" data-key="${
 			chip.key
 		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
@@ -248,12 +249,12 @@ function updateDropdownLabels() {
 	setLabel(
 		"genres-dropdown-toggle",
 		"Choose Genres",
-		(filterState.genres || []).length
+		(filterState.genres || []).length,
 	);
 	setLabel(
 		"characters-dropdown-toggle",
 		"Choose Characters",
-		(filterState.characters || []).length
+		(filterState.characters || []).length,
 	);
 	const tagsCount = (filterState.tags || []).length;
 	const baseTagsLabel =
@@ -338,13 +339,13 @@ function renderPillList(
 	items,
 	selectedValues,
 	stateKey,
-	options = {}
+	options = {},
 ) {
 	const container = document.getElementById(containerId);
 	if (!container) return;
 
 	if (!items || items.length === 0) {
-		container.innerHTML = "<span class=\"filter-chip\">No options</span>";
+		container.innerHTML = '<span class="filter-chip">No options</span>';
 		return;
 	}
 
@@ -434,8 +435,8 @@ function populateDynamicFilters() {
 						.map(
 							(lang) =>
 								`<option value="${escapeHtml(
-									lang
-								)}">${escapeHtml(lang)}</option>`
+									lang,
+								)}">${escapeHtml(lang)}</option>`,
 						)
 						.join("")
 				: '<option value="all" disabled>No languages found</option>');
@@ -518,7 +519,7 @@ function showNovelModal(novel) {
 	if (authorEl) {
 		if (authorUrl) {
 			authorEl.innerHTML = `<a href="${authorUrl}" target="_blank" rel="noreferrer">${escapeHtml(
-				novel.author || "Unknown"
+				novel.author || "Unknown",
 			)}</a>`;
 		} else {
 			authorEl.textContent = `${novel.author || "Unknown"}`;
@@ -584,7 +585,7 @@ function showNovelModal(novel) {
 		removeBtn.onclick = async () => {
 			if (
 				confirm(
-					`Are you sure you want to remove "${novel.title}" from your library?`
+					`Are you sure you want to remove "${novel.title}" from your library?`,
 				)
 			) {
 				await removeNovelFromLibrary(novel.id);
@@ -705,13 +706,13 @@ function applyFiltersAndSort() {
 	if (language && language !== "all") {
 		const targetLang = language.toLowerCase();
 		filteredNovels = filteredNovels.filter(
-			(n) => (n.metadata?.language || "").toLowerCase() === targetLang
+			(n) => (n.metadata?.language || "").toLowerCase() === targetLang,
 		);
 	}
 
 	if (translationStatus && translationStatus !== "all") {
 		filteredNovels = filteredNovels.filter(
-			(n) => n.metadata?.translationStatus === translationStatus
+			(n) => n.metadata?.translationStatus === translationStatus,
 		);
 	}
 
@@ -882,11 +883,12 @@ function setupFandomNav(novels) {
 	let html = "";
 
 	if (singleFandoms.size > 0) {
-		html += "<div class=\"category-group\"><h4>Single Fandom Stories</h4><div class=\"fandom-grid\">";
+		html +=
+			'<div class="category-group"><h4>Single Fandom Stories</h4><div class="fandom-grid">';
 		singleFandoms.forEach((count, fandom) => {
 			html += `
 				<button class="fandom-card single" data-fandom="${encodeURIComponent(
-					fandom
+					fandom,
 				)}" data-type="single">
 					<span class="fandom-icon">📖</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
@@ -898,17 +900,18 @@ function setupFandomNav(novels) {
 	}
 
 	if (crossoverPairs.size > 0) {
-		html += "<div class=\"category-group\"><h4>Crossover Stories</h4><div class=\"fandom-grid\">";
+		html +=
+			'<div class="category-group"><h4>Crossover Stories</h4><div class="fandom-grid">';
 		crossoverPairs.forEach((otherFandoms, fandom) => {
 			html += `
 				<button class="fandom-card crossover" data-fandom="${encodeURIComponent(
-					fandom
+					fandom,
 				)}" data-type="crossover">
 					<span class="fandom-icon">🔀</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
 					<span class="fandom-count">${otherFandoms.size} ${
-				otherFandoms.size === 1 ? "crossover" : "crossovers"
-			}</span>
+						otherFandoms.size === 1 ? "crossover" : "crossovers"
+					}</span>
 				</button>
 			`;
 		});
@@ -1041,11 +1044,11 @@ function updateAnalytics(novels) {
 	const totalNovels = novels.length;
 	const totalEnhanced = novels.reduce(
 		(sum, n) => sum + (n.enhancedChaptersCount || 0),
-		0
+		0,
 	);
 	const totalWords = novels.reduce(
 		(sum, n) => sum + (n.metadata?.words || n.words || 0),
-		0
+		0,
 	);
 	const avgWords = totalNovels > 0 ? Math.round(totalWords / totalNovels) : 0;
 	const readingBuckets = novels.reduce((acc, novel) => {
@@ -1064,29 +1067,30 @@ function updateAnalytics(novels) {
 	// Ranobes-specific status counts
 	const completedWorks = novels.filter(
 		(n) =>
-			(n.metadata?.status || n.status || "").toLowerCase() === "completed"
+			(n.metadata?.status || n.status || "").toLowerCase() ===
+			"completed",
 	).length;
 	const ongoingWorks = novels.filter(
 		(n) =>
-			(n.metadata?.status || n.status || "").toLowerCase() === "ongoing"
+			(n.metadata?.status || n.status || "").toLowerCase() === "ongoing",
 	).length;
 	const translatingWorks = novels.filter(
 		(n) =>
 			(n.metadata?.translationStatus || "").toLowerCase() ===
-			"translating"
+			"translating",
 	).length;
 
 	// Calculate average chapters
 	const totalChapters = novels.reduce(
 		(sum, n) => sum + (n.metadata?.totalChapters || n.totalChapters || 0),
-		0
+		0,
 	);
 	const avgChapters =
 		totalNovels > 0 ? (totalChapters / totalNovels).toFixed(1) : "-";
 
 	// Get unique languages
 	const languages = new Set(
-		novels.map((n) => n.metadata?.language).filter((l) => l && l.trim())
+		novels.map((n) => n.metadata?.language).filter((l) => l && l.trim()),
 	);
 	const languageCount = languages.size || "-";
 
@@ -1266,7 +1270,7 @@ function positionFilterDropdown() {
 	const measuredWidth = dropdown.offsetWidth || 440;
 	const clampedWidth = Math.min(
 		Math.max(measuredWidth, 320),
-		viewportWidth - minPadding * 2
+		viewportWidth - minPadding * 2,
 	);
 	dropdown.style.width = `${clampedWidth}px`;
 
@@ -1304,7 +1308,7 @@ function setupFilters() {
 	const statusFilter = document.getElementById("status-filter");
 	const workStatusFilter = document.getElementById("work-status-filter");
 	const translationStatusFilter = document.getElementById(
-		"translation-status-filter"
+		"translation-status-filter",
 	);
 	const languageFilter = document.getElementById("language-filter");
 	const searchInput = document.getElementById("search-input");
@@ -1389,7 +1393,7 @@ function setupFilters() {
 						(toggle && toggle.contains(e.target)) ||
 						(panel && panel.contains(e.target))
 					);
-				}
+				},
 			);
 
 			if (!clickedInsideDropdown && !clickedToggle && !clickedPanel) {
@@ -1481,7 +1485,7 @@ function ensureRandomSelectButton() {
 		showNovelModal(pick);
 	});
 
-	container.appendChild(button);
+	container.insertBefore(button, searchInput);
 }
 
 async function initializeRanobesShelf() {
@@ -1540,7 +1544,7 @@ async function initializeRanobesShelf() {
 	} catch (error) {
 		console.error(
 			"[Ranobes Shelf] CRITICAL ERROR during initialization:",
-			error
+			error,
 		);
 		if (loadingState) loadingState.style.display = "none";
 		if (emptyState) {
@@ -1593,8 +1597,8 @@ function showToast(message, type = "success") {
 			type === "success"
 				? "#10b981"
 				: type === "error"
-				? "#ef4444"
-				: "#3b82f6"
+					? "#ef4444"
+					: "#3b82f6"
 		};
 	`;
 	document.body.appendChild(toast);
@@ -1637,14 +1641,19 @@ function refreshNovelMetadata(novel) {
 }
 
 function openEditModal(novel) {
-	const id = novel?.id || "";
-	if (!id) {
+	if (!novel?.id) {
 		showToast("Missing novel id for edit", "error");
 		return;
 	}
-	const baseUrl =
-		typeof browser !== "undefined" && browser?.runtime?.getURL
-			? browser.runtime.getURL("library/library.html")
-			: "../library.html";
-	window.open(`${baseUrl}?edit=${encodeURIComponent(id)}`, "_blank");
+	openInlineEditModal(novel, RanobesHandler, {
+		onSaved: (updatedNovel) => {
+			const idx = allNovels.findIndex((n) => n?.id === updatedNovel.id);
+			if (idx >= 0) allNovels[idx] = updatedNovel;
+			const fi = filteredNovels.findIndex(
+				(n) => n?.id === updatedNovel.id,
+			);
+			if (fi >= 0) filteredNovels[fi] = updatedNovel;
+		},
+		showToast,
+	});
 }

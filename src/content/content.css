@@ -318,6 +318,7 @@ html[data-darkreader-mode] .dark-mode-icon {
 
 /* Dark mode styling - applied based on various site-specific dark mode classes */
 @media (prefers-color-scheme: dark) {
+
 	#summary-display-long,
 	#summary-display-short {
 		background-color: #2b2b2b;
@@ -361,6 +362,7 @@ html[data-darkreader-mode] #summary-display-short {
 
 /* Summary heading dark mode */
 @media (prefers-color-scheme: dark) {
+
 	#summary-display-long h3,
 	#summary-display-short h3 {
 		color: #8ab4f8;
@@ -710,6 +712,7 @@ html[data-darkreader-mode] .section-divider {
 }
 
 @media (prefers-color-scheme: light) {
+
 	.section-divider,
 	hr.section-divider {
 		background: linear-gradient(90deg, transparent, rgba(100, 100, 100, 0.3), transparent);
@@ -722,32 +725,86 @@ html[data-darkreader-mode] .section-divider {
 	/* Adjust controls for smaller screens */
 	#gemini-controls {
 		display: flex;
-			flex-direction: row;
-			flex-wrap: wrap;
-			justify-content: center;
-			gap: 10px;
-			padding: 5px;
+		flex-direction: column;
+		gap: 8px;
+		padding: 8px;
 	}
 
-		/* Make buttons more compact and attractive on mobile */
+	/* Standardized touch-friendly buttons with consistent sizing */
 	.gemini-button,
-	.gemini-enhance-btn {
-		width: auto;
-			min-width: 120px;
-			max-width: 45%;
-		justify-content: center;
-		padding: 10px 15px;
-			margin: 5px;
-			border-radius: 6px;
-			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-			font-size: 13px;
+	.gemini-enhance-btn,
+	.gemini-toggle-banners-btn {
+		width: 100% !important;
+		padding: 12px !important;
+		font-size: 16px !important;
+		min-height: 44px !important;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+		border-radius: 6px;
+	}
+
+	/* Main summary group buttons - consistent sizing and spacing */
+	.gemini-main-summary-group button {
+		padding: 12px 16px !important;
+		font-size: 14px !important;
+		font-weight: 600 !important;
+		min-height: 42px !important;
+		border: none !important;
+		border-radius: 6px !important;
+		cursor: pointer !important;
+		transition: all 0.2s ease !important;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+		white-space: nowrap !important;
+		flex: 1 1 auto !important;
+		min-width: 100px !important;
+		max-width: 180px !important;
+	}
+
+	.gemini-main-summary-group button:hover {
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+		transform: translateY(-1px) !important;
+	}
+
+	.gemini-main-summary-group button:active {
+		transform: translateY(0) !important;
+	}
+
+	/* Chunk banner buttons - match summary group style */
+	.gemini-chunk-summary-group button,
+	.gemini-chunk-banner button {
+		padding: 10px 14px !important;
+		font-size: 13px !important;
+		font-weight: 600 !important;
+		min-height: 40px !important;
+		border: none !important;
+		border-radius: 6px !important;
+		cursor: pointer !important;
+		transition: all 0.2s ease !important;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+	}
+
+	.gemini-chunk-summary-group button:hover,
+	.gemini-chunk-banner button:hover {
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+		transform: translateY(-1px) !important;
+	}
+
+	.gemini-chunk-summary-group button:active,
+	.gemini-chunk-banner button:active {
+		transform: translateY(0) !important;
+	}
+
+	/* Active state for better touch feedback */
+	.gemini-button:active,
+	.gemini-enhance-btn:active,
+	.gemini-toggle-banners-btn:active {
+		transform: scale(0.98);
 	}
 
 	/* Adjust summary display for mobile */
 	#summary-display {
 		padding: 10px;
 		margin-top: 10px;
-		font-size: 13px;
+		font-size: 14px;
 	}
 
 	/* Make status messages more visible on mobile */
@@ -768,159 +825,58 @@ html[data-darkreader-mode] .section-divider {
 		margin-left: 0;
 		margin-top: 8px;
 		width: 100%;
+		min-height: 44px;
 	}
 
-		/* Make game stats boxes responsive on small screens */
-		.game-stats-box {
-			width: fit-content;
-			max-width: 100%;
-			overflow-x: auto;
-			padding: 10px;
-			font-size: 13px;
-		}
-/* Mobile styles for enhanced banner and toggle button */
-.gemini-enhanced-banner {
-	padding: 10px !important;
-}
-
-.gemini-toggle-btn {
-	padding: 8px 10px;
-	font-size: 13px;
-	border-radius: 5px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-/* Adjust layout of banner contents on mobile */
-.gemini-enhanced-banner>div {
-	flex-direction: column;
-}
-
-.gemini-enhanced-banner>div>div:first-child {
-	margin-bottom: 10px;
-	width: 100%;
-	justify-content: space-between;
-}
-
-/* Mobile styles for work-in-progress and error banners */
-.gemini-wip-banner,
-.gemini-error-banner {
-	padding: 12px !important;
-	margin: 10px 0 !important;
-}
-
-.gemini-wip-banner>div:first-child,
-.gemini-error-banner>div:first-child {
-	margin-bottom: 12px;
-}
-
-/* Progress bar enhancements for mobile */
-.gemini-wip-banner>div:nth-child(2) {
-	height: 12px !important;
-	border-radius: 6px !important;
-	margin: 12px 0 !important;
-}
-}
-
-/* Additional tweaks for very small screens */
-@media screen and (max-width: 480px) {
-
-	/* Adjust button sizing for very small screens */
-		.gemini-button,
-		.gemini-enhance-btn {
-			min-width: 100px;
-			font-size: 12px;
-			padding: 8px 12px;
-		}
-
-		/* Active state for better touch feedback */
-		.gemini-button:active,
-		.gemini-enhance-btn:active {
-			transform: translateY(1px);
-			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-		}
-	/* Further reduce padding to maximize content space */
-	#summary-display,
-	.summary-text-content {
-		padding: 8px;
+	/* Make game stats boxes responsive on small screens */
+	.game-stats-box {
+		width: fit-content;
+		max-width: 100%;
+		overflow-x: auto;
+		padding: 10px;
+		font-size: 13px;
 	}
 
-	/* Adjust status message positioning */
-	.extraction-message {
-		width: 95%;
-	}
-}
-/* Styling for enhanced banner toggle button */
-.gemini-toggle-btn {
-	padding: 6px 12px;
-	background: #4285f4;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: background-color 0.2s, transform 0.1s;
-}
-
-.gemini-toggle-btn:hover {
-	background: #3367d6;
-}
-
-.gemini-toggle-btn:active {
-	transform: translateY(1px);
-}
-/* Preserved images container styling */
-.preserved-images-container {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 10px;
-	margin: 20px 0;
-	padding: 10px;
-	background-color: rgba(0, 0, 0, 0.02);
-	border-radius: 5px;
-}
-
-.preserved-images-container img {
-	max-width: 100%;
-	height: auto;
-	border-radius: 4px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ============================================
-   Mobile Responsiveness
-   ============================================ */
-@media (max-width: 768px) {
-	/* Controls container */
-	.gemini-controls,
-	#gemini-controls {
-		flex-direction: column !important;
-		gap: 8px !important;
+	/* Mobile styles for enhanced banner and toggle button */
+	.gemini-enhanced-banner {
+		padding: 10px !important;
 	}
 
-	/* Buttons - full width and larger touch targets */
-	.gemini-toggle-banners-btn,
-	.gemini-enhance-btn,
-	.gemini-button,
-	.gemini-main-summary-group button,
-	.gemini-chunk-summary-group button,
-	.gemini-chunk-banner button {
-		width: 100% !important;
-		padding: 12px !important;
-		font-size: 16px !important;
-		min-height: 44px !important;
+	.gemini-toggle-btn {
+		padding: 12px;
+		font-size: 16px;
+		min-height: 44px;
+		border-radius: 6px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 	}
 
-	/* Summary groups - vertical layout */
+	/* Summary groups - better layout for mobile */
 	.gemini-main-summary-group,
 	.gemini-chunk-summary-group {
+		display: flex !important;
 		flex-direction: column !important;
-		gap: 8px !important;
+		gap: 10px !important;
 		padding: 12px !important;
+		width: 100% !important;
 	}
 
-	.gemini-main-summary-group > *,
-	.gemini-chunk-summary-group > * {
+	/* Main summary group on mobile - improved spacing */
+	.gemini-main-summary-group {
+		align-items: stretch !important;
+	}
+
+	.gemini-main-summary-group>div:first-child {
 		width: 100% !important;
+		text-align: center !important;
+		margin-bottom: 4px !important;
+	}
+
+	/* Buttons in summary groups fill available space on mobile */
+	.gemini-main-summary-group button,
+	.gemini-chunk-summary-group button {
+		width: 100% !important;
+		min-height: 42px !important;
+		font-size: 14px !important;
 	}
 
 	/* WIP Banner - responsive */
@@ -945,35 +901,77 @@ html[data-darkreader-mode] .section-divider {
 		margin: 4px 0 !important;
 	}
 
-	/* Enhanced banner - responsive */
-	.gemini-enhanced-banner {
+	/* Progress bar enhancements for mobile */
+	.gemini-wip-banner>div:nth-child(2) {
+		height: 12px !important;
+		border-radius: 6px !important;
+		margin: 12px 0 !important;
+	}
+
+	/* Novel page UI controls (#rg-novel-controls) - mobile layout */
+	#rg-novel-controls {
+		flex-direction: column !important;
+		gap: 8px !important;
 		padding: 12px !important;
 	}
 
-	.gemini-enhanced-banner > div {
-		flex-direction: column !important;
-		align-items: flex-start !important;
-	}
-
-	.gemini-enhanced-banner button {
-		width: 100%;
-		margin-top: 8px;
-	}
-
-	/* Master banner - responsive */
-	.gemini-master-banner {
-		flex-direction: column !important;
-		padding: 12px !important;
-	}
-
-	.gemini-master-banner button {
+	#rg-novel-controls button,
+	#rg-novel-controls select {
 		width: 100% !important;
-		margin: 4px 0 !important;
+		min-height: 44px !important;
+		font-size: 15px !important;
+		padding: 12px 10px !important;
+		box-sizing: border-box !important;
 	}
 }
 
-/* Smaller mobile devices */
+/* Styling for enhanced banner toggle button */
+.gemini-toggle-btn {
+	padding: 6px 12px;
+	background: #4285f4;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.2s, transform 0.1s;
+}
+
+.gemini-toggle-btn:hover {
+	background: #3367d6;
+}
+
+.gemini-toggle-btn:active {
+	transform: translateY(1px);
+}
+
+/* Preserved images container styling */
+.preserved-images-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 10px;
+	margin: 20px 0;
+	padding: 10px;
+	background-color: rgba(0, 0, 0, 0.02);
+	border-radius: 5px;
+}
+
+.preserved-images-container img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 4px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Smaller mobile devices - additional adjustments */
 @media (max-width: 480px) {
+
+	.gemini-button,
+	.gemini-enhance-btn {
+		font-size: 15px !important;
+		padding: 10px !important;
+	}
+
 	.gemini-wip-banner,
 	.gemini-chunk-banner,
 	.gemini-main-summary-group,
@@ -983,7 +981,7 @@ html[data-darkreader-mode] .section-divider {
 	}
 
 	/* Adjust word count displays for small screens */
-	.gemini-wip-banner > div > div {
+	.gemini-wip-banner>div>div {
 		flex-direction: column !important;
 		gap: 8px !important;
 	}

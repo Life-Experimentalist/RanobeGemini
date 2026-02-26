@@ -130,8 +130,9 @@ async function initializePopup() {
 	}
 
 	// DOM elements
-	const apiKeyInput = document.getElementById("apiKey");
-	const saveApiKeyBtn = document.getElementById("saveApiKey");
+	const apiKeysListContainer = document.getElementById("apiKeysList");
+	const newApiKeyInput = document.getElementById("newApiKey");
+	const addApiKeyBtn = document.getElementById("addApiKey");
 	const testApiKeyBtn = document.getElementById("testApiKey");
 	const getKeyLink = document.getElementById("getKeyLink");
 	const statusDiv = document.getElementById("status");
@@ -235,10 +236,7 @@ async function initializePopup() {
 	const siteToggleList = document.getElementById("siteToggleList");
 	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
 
-	// Backup API Keys elements
-	const backupKeysListContainer = document.getElementById("backupKeysList");
-	const newBackupKeyInput = document.getElementById("newBackupKey");
-	const addBackupKeyBtn = document.getElementById("addBackupKey");
+	// API Keys elements
 	const apiKeyRotationSelect = document.getElementById("apiKeyRotation");
 
 	// Novels tab elements
@@ -761,69 +759,73 @@ async function initializePopup() {
 		});
 	}
 
-	// Backup API Keys Management
-	let backupApiKeys = [];
+	// API Keys Management (Unified)
+	let apiKeys = [];
 
-	function renderBackupKeys() {
-		if (!backupKeysListContainer) return;
+	function renderApiKeys() {
+		if (!apiKeysListContainer) return;
 
-		backupKeysListContainer.innerHTML = "";
+		apiKeysListContainer.innerHTML = "";
 
-		if (backupApiKeys.length === 0) {
-			backupKeysListContainer.innerHTML =
-				'<div class="description" style="padding: 8px; text-align: center;">No backup keys added yet</div>';
+		if (apiKeys.length === 0) {
+			apiKeysListContainer.innerHTML =
+				'<div class="description" style="padding: 8px; text-align: center;">No API keys added yet</div>';
 			return;
 		}
 
-		backupApiKeys.forEach((key, index) => {
+		apiKeys.forEach((key, index) => {
 			const keyItem = document.createElement("div");
 			keyItem.className = "backup-key-item";
 			const keyPreview =
 				key.substring(0, 8) + "..." + key.substring(key.length - 4);
-			const label = index === 0 ? "Backup 1" : `Backup ${index + 1}`;
+			const label = `Key ${index + 1}`;
 			keyItem.innerHTML = `
 				<span class="key-label">${label}</span>
 				<span class="key-preview">${keyPreview}</span>
 				<button class="remove-key-btn" data-index="${index}">✕</button>
 			`;
-			backupKeysListContainer.appendChild(keyItem);
+			apiKeysListContainer.appendChild(keyItem);
 		});
 
 		// Add event listeners for remove buttons
-		backupKeysListContainer
+		apiKeysListContainer
 			.querySelectorAll(".remove-key-btn")
 			.forEach((btn) => {
 				btn.addEventListener("click", async (e) => {
 					const index = parseInt(e.target.dataset.index);
-					backupApiKeys.splice(index, 1);
+					apiKeys.splice(index, 1);
 					await browser.storage.local.set({
-						backupApiKeys: backupApiKeys,
+						apiKey: apiKeys[0] || "",
+						backupApiKeys: apiKeys.slice(1),
 					});
-					renderBackupKeys();
-					showStatus("Backup key removed", "success");
+					renderApiKeys();
+					showStatus("API key removed", "success");
 				});
 			});
 	}
 
-	// Add backup key handler
-	if (addBackupKeyBtn && newBackupKeyInput) {
-		addBackupKeyBtn.addEventListener("click", async () => {
-			const newKey = newBackupKeyInput.value.trim();
+	// Add API key handler
+	if (addApiKeyBtn && newApiKeyInput) {
+		addApiKeyBtn.addEventListener("click", async () => {
+			const newKey = newApiKeyInput.value.trim();
 			if (!newKey) {
 				showStatus("Please enter a valid API key", "error");
 				return;
 			}
 
-			if (backupApiKeys.includes(newKey)) {
+			if (apiKeys.includes(newKey)) {
 				showStatus("This key is already added", "error");
 				return;
 			}
 
-			backupApiKeys.push(newKey);
-			await browser.storage.local.set({ backupApiKeys: backupApiKeys });
-			newBackupKeyInput.value = "";
-			renderBackupKeys();
-			showStatus("Backup key added successfully", "success");
+			apiKeys.push(newKey);
+			await browser.storage.local.set({
+				apiKey: apiKeys[0],
+				backupApiKeys: apiKeys.slice(1),
+			});
+			newApiKeyInput.value = "";
+			renderApiKeys();
+			showStatus("API key added successfully", "success");
 		});
 	}
 
@@ -862,6 +864,168 @@ async function initializePopup() {
 			fontSizeValue.textContent = fontSizeSlider.value + "%";
 		});
 	}
+
+	// ===== AUTOSAVE FUNCTIONALITY =====
+	// Debounce helper to prevent excessive saves
+	let autosaveTimeout = null;
+	const AUTOSAVE_DELAY = 500; // 500ms delay after last change
+
+	async function autosaveSettings() {
+		clearTimeout(autosaveTimeout);
+		autosaveTimeout = setTimeout(async () => {
+			try {
+				const apiKey = apiKeys[0] || "";
+				if (!apiKey) {
+					// Skip autosave if no API key is set
+					return;
+				}
+
+				const selectedModelId = modelSelect.value;
+				const useEmojiCheckbox = document.getElementById("useEmoji");
+				const stored =
+					await browser.storage.local.get("maxOutputTokens");
+				const maxTokens = stored?.maxOutputTokens || 8192;
+				const temperature = temperatureSlider
+					? parseFloat(temperatureSlider.value)
+					: 0.7;
+
+				// Determine model endpoint based on selection
+				let modelEndpoint;
+
+				// Try to find the model endpoint from stored available models
+				const storedData =
+					await browser.storage.local.get("availableModels");
+				if (storedData.availableModels) {
+					const selectedModel = storedData.availableModels.find(
+						(m) => m.id === selectedModelId,
+					);
+					if (selectedModel) {
+						modelEndpoint = selectedModel.endpoint;
+					}
+				}
+
+				// Fallback to constructing the endpoint if not found
+				if (!modelEndpoint) {
+					modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+				}
+
+				// Collect all settings
+				const updates = {
+					apiKey: apiKey,
+					selectedModelId: selectedModelId,
+					modelEndpoint: modelEndpoint,
+					debugMode: debugModeCheckbox?.checked ?? false,
+					useEmoji: useEmojiCheckbox
+						? useEmojiCheckbox.checked
+						: false,
+					formatGameStats:
+						document.getElementById("formatGameStats")?.checked !==
+						false,
+					centerSceneHeadings:
+						document.getElementById("centerSceneHeadings")
+							?.checked !== false,
+					maxOutputTokens: maxTokens,
+					temperature: temperature,
+					topP: topPSlider ? parseFloat(topPSlider.value) : 0.95,
+					topK: topKSlider ? parseInt(topKSlider.value, 10) : 40,
+					fontSize: fontSizeSlider
+						? parseInt(fontSizeSlider.value, 10)
+						: 100,
+					defaultPrompt: promptTemplate?.value || "",
+					summaryPrompt: summaryPrompt?.value || "",
+					permanentPrompt: permanentPrompt?.value || "",
+					customEndpoint: customEndpointInput?.value?.trim() || "",
+				};
+
+				const chunkingEnabledInput =
+					document.getElementById("chunkingEnabled");
+				const chunkSizeInput = document.getElementById("chunkSize");
+				if (chunkingEnabledInput) {
+					updates.chunkingEnabled =
+						chunkingEnabledInput.checked !== false;
+				}
+				if (chunkSizeInput) {
+					updates.chunkSize = Math.min(
+						Math.max(
+							parseInt(chunkSizeInput.value, 10) || 20000,
+							5000,
+						),
+						50000,
+					);
+				}
+
+				await browser.storage.local.set(updates);
+				debugLog("Settings autosaved");
+			} catch (error) {
+				debugError("Error autosaving settings:", error);
+			}
+		}, AUTOSAVE_DELAY);
+	}
+
+	// Attach autosave to all relevant inputs
+	if (modelSelect) {
+		modelSelect.addEventListener("change", autosaveSettings);
+	}
+	if (temperatureSlider) {
+		temperatureSlider.addEventListener("input", autosaveSettings);
+	}
+	if (topPSlider) {
+		topPSlider.addEventListener("input", autosaveSettings);
+	}
+	if (topKSlider) {
+		topKSlider.addEventListener("input", autosaveSettings);
+	}
+	if (fontSizeSlider) {
+		fontSizeSlider.addEventListener("input", autosaveSettings);
+	}
+	if (debugModeCheckbox) {
+		debugModeCheckbox.addEventListener("change", autosaveSettings);
+	}
+
+	const useEmojiCheckbox = document.getElementById("useEmoji");
+	if (useEmojiCheckbox) {
+		useEmojiCheckbox.addEventListener("change", autosaveSettings);
+	}
+
+	const formatGameStatsCheckbox = document.getElementById("formatGameStats");
+	if (formatGameStatsCheckbox) {
+		formatGameStatsCheckbox.addEventListener("change", autosaveSettings);
+	}
+
+	const centerSceneHeadingsCheckbox = document.getElementById(
+		"centerSceneHeadings",
+	);
+	if (centerSceneHeadingsCheckbox) {
+		centerSceneHeadingsCheckbox.addEventListener(
+			"change",
+			autosaveSettings,
+		);
+	}
+
+	const chunkingEnabledCheckbox = document.getElementById("chunkingEnabled");
+	if (chunkingEnabledCheckbox) {
+		chunkingEnabledCheckbox.addEventListener("change", autosaveSettings);
+	}
+
+	const chunkSizeInputField = document.getElementById("chunkSize");
+	if (chunkSizeInputField) {
+		chunkSizeInputField.addEventListener("input", autosaveSettings);
+	}
+
+	if (promptTemplate) {
+		promptTemplate.addEventListener("input", autosaveSettings);
+	}
+	if (summaryPrompt) {
+		summaryPrompt.addEventListener("input", autosaveSettings);
+	}
+	if (permanentPrompt) {
+		permanentPrompt.addEventListener("input", autosaveSettings);
+	}
+	if (customEndpointInput) {
+		customEndpointInput.addEventListener("input", autosaveSettings);
+	}
+
+	// ===== END AUTOSAVE FUNCTIONALITY =====
 
 	// Toggle advanced parameters section
 	if (toggleAdvancedParamsBtn && advancedParamsContent) {
@@ -1074,11 +1238,13 @@ async function initializePopup() {
 
 		const data = await browser.storage.local.get();
 
-		if (data.apiKey && apiKeyInput && !apiKeyInput.value) {
-			apiKeyInput.value = data.apiKey;
+		// Load API keys (primary + backups) into a unified list
+		apiKeys = [data.apiKey, ...(data.backupApiKeys || [])].filter(Boolean);
+		renderApiKeys();
 
+		if (apiKeys.length > 0) {
 			// If we have an API key, load available models
-			await updateModelSelector(data.apiKey);
+			await updateModelSelector(apiKeys[0]);
 		} else {
 			// No API key, use static default options
 			modelSelect.innerHTML = `
@@ -1203,10 +1369,6 @@ async function initializePopup() {
 			customEndpointInput.value = data.customEndpoint || "";
 		}
 
-		// Load backup API keys
-		backupApiKeys = data.backupApiKeys || [];
-		renderBackupKeys();
-
 		// Load backup preferences
 		const backupFolder = data.backupFolder || "RanobeGeminiBackups";
 		if (backupFolderInput) backupFolderInput.value = backupFolder;
@@ -1218,7 +1380,7 @@ async function initializePopup() {
 
 		// Set API key rotation strategy
 		if (apiKeyRotationSelect) {
-			apiKeyRotationSelect.value = data.apiKeyRotation || "failover";
+			apiKeyRotationSelect.value = data.apiKeyRotation || "round_robin";
 		}
 
 		// Model endpoint display removed from popup
@@ -1238,33 +1400,9 @@ async function initializePopup() {
 		}
 	}
 
-	// Save individual API key and refresh models
-	saveApiKeyBtn.addEventListener("click", async () => {
-		const apiKey = apiKeyInput.value.trim();
-
-		if (!apiKey) {
-			showStatus("Please enter a valid API key", "error");
-			return;
-		}
-
-		try {
-			debugLog("Saving API key...");
-			await browser.storage.local.set({ apiKey });
-			debugLog("API key saved, updating model selector...");
-			showStatus("API key saved successfully!", "success");
-
-			// Refresh model list with new API key
-			await updateModelSelector(apiKey);
-			debugLog("Model selector updated successfully");
-		} catch (error) {
-			debugError("Error saving API key:", error);
-			showStatus("Error saving API key: " + error.message, "error");
-		}
-	});
-
 	// Test API key and update models list
 	testApiKeyBtn.addEventListener("click", async () => {
-		const apiKey = apiKeyInput.value.trim();
+		const apiKey = apiKeys[0] || "";
 
 		if (!apiKey) {
 			showStatus("Please enter an API key to test", "error");
@@ -1282,8 +1420,11 @@ async function initializePopup() {
 				// Update model dropdown
 				await updateModelSelector(apiKey);
 
-				// Auto-save the API key if valid
-				await browser.storage.local.set({ apiKey });
+				// Auto-save the first key if valid
+				await browser.storage.local.set({
+					apiKey: apiKeys[0] || apiKey,
+					backupApiKeys: apiKeys.slice(1),
+				});
 
 				showStatus("API key is valid! Models loaded ✓", "success");
 			} else {
@@ -1302,7 +1443,7 @@ async function initializePopup() {
 
 	// Save all basic settings
 	saveSettingsBtn.addEventListener("click", async () => {
-		const apiKey = apiKeyInput.value.trim();
+		const apiKey = apiKeys[0] || "";
 		const selectedModelId = modelSelect.value;
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		const stored = await browser.storage.local.get("maxOutputTokens");
@@ -1312,7 +1453,7 @@ async function initializePopup() {
 			: 0.7;
 
 		if (!apiKey) {
-			showStatus("Please enter a valid API key", "error");
+			showStatus("Please add an API key", "error");
 			return;
 		}
 
@@ -1611,9 +1752,9 @@ async function initializePopup() {
 	const refreshModelsBtn = document.getElementById("refreshModels");
 	if (refreshModelsBtn) {
 		refreshModelsBtn.addEventListener("click", async () => {
-			const apiKey = apiKeyInput.value.trim();
+			const apiKey = apiKeys[0] || "";
 			if (!apiKey) {
-				showStatus("Please enter an API key first", "error");
+				showStatus("Please add an API key first", "error");
 				return;
 			}
 
@@ -3898,7 +4039,7 @@ async function initializePopup() {
 			card.addEventListener("click", () => {
 				// Open library page with novel modal
 				const libraryUrl = browser.runtime.getURL(
-					`library/library.html?novelId=${encodeURIComponent(novel.id)}`,
+					`library/library.html?novel=${encodeURIComponent(novel.id)}`,
 				);
 				browser.tabs.create({ url: libraryUrl });
 			});
@@ -5234,7 +5375,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	allLibrarySettingsButtons.forEach((button) => {
 		button.addEventListener("click", () => {
 			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html#settings"),
+				url: browser.runtime.getURL("library/library-settings.html"),
 			});
 		});
 	});
@@ -5246,7 +5387,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	if (openLibrarySettingsFromBackup) {
 		openLibrarySettingsFromBackup.addEventListener("click", () => {
 			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html#settings"),
+				url: browser.runtime.getURL("library/library-settings.html"),
 			});
 		});
 	}
@@ -5318,11 +5459,11 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	const openBackupManager = document.getElementById("openBackupManager");
 	if (openBackupManager) {
 		openBackupManager.addEventListener("click", () => {
-			// Open library settings on Backup tab
-			// The hash will be handled to open settings, then we need to switch to backup tab
-			// For now, just open settings - user can click Backup tab
+			// Open library settings directly on the Backups tab
 			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html#settings"),
+				url: browser.runtime.getURL(
+					"library/library-settings.html?tab=backups",
+				),
 			});
 		});
 	}

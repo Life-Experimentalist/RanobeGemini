@@ -60,6 +60,20 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	// Handler type: Metadata requires visiting dedicated novel info page
 	static HANDLER_TYPE = "dedicated_page";
 
+	/** Configurable settings exposed in the Library Settings page. */
+	static SETTINGS_DEFINITION = {
+		fields: [
+			{
+				key: "autoEnhanceEnabled",
+				label: "Auto-enhance chapters",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Automatically run Enhance when a Ranobes chapter loads.",
+			},
+		],
+	};
+
 	static DEFAULT_SITE_PROMPT =
 		"This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beginning or at the end of the chapter. And then add breaks to signify the separation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.";
 
@@ -321,9 +335,10 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		if (!contentArea) {
 			return {
 				found: false,
-				title: "",
+				title: document.title,
 				text: "",
-				selector: "",
+				selector: "ranobes-no-content",
+				reason: "Could not locate chapter content on this Ranobes page.",
 			};
 		}
 
@@ -1064,6 +1079,135 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Default to extension's theme detection
 		return "auto";
+	}
+
+	/**
+	 * Get handler-proposed library settings for Ranobes
+	 * @returns {Object} Settings schema
+	 */
+	getProposedLibrarySettings() {
+		return {
+			preferredDomain: {
+				type: "string",
+				enum: this.constructor.SUPPORTED_DOMAINS.filter(
+					(d) => !d.includes("*"),
+				), // Only specific domains, not wildcards
+				default: "ranobes.top",
+				label: "Preferred Domain",
+				description: "Which Ranobes domain to use for library links",
+				required: true,
+			},
+			fetchDescription: {
+				type: "boolean",
+				default: true,
+				label: "Fetch Description",
+				description:
+					"Automatically fetch novel description for library entries",
+			},
+			includeChapterList: {
+				type: "boolean",
+				default: false,
+				label: "Include Chapter List",
+				description:
+					"Fetch and store chapter list data (uses more storage)",
+			},
+		};
+	}
+
+	/**
+	 * Get the URL where metadata should be fetched from
+	 * Ranobes is a "dedicated_page" type - metadata only on novel pages
+	 * @returns {string|null}
+	 */
+	getMetadataSourceUrl() {
+		// Extract novel ID from current URL
+		const match = window.location.href.match(
+			this.constructor.SHELF_METADATA.novelIdPattern,
+		);
+		if (!match) {
+			return null;
+		}
+
+		// Get the captured group (one of the groups contains the ID)
+		const novelId = match[1] || match[2] || match[3] || match[4];
+
+		// Return the novel page URL on preferred domain
+		return `https://ranobes.top/novels/${novelId}/`;
+	}
+
+	/**
+	 * Ranobes-specific metadata fields for the library edit modal.
+	 * @returns {Array<Object>}
+	 */
+	static getEditableFields() {
+		return [
+			{
+				key: "rating",
+				label: "Content Rating",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. 18+, PG-13",
+			},
+			{
+				key: "language",
+				label: "Language",
+				type: "text",
+				source: "metadata",
+				placeholder: "e.g. Korean, Chinese",
+			},
+			{
+				key: "status",
+				label: "Work Status (COO)",
+				type: "select",
+				source: "metadata",
+				options: [
+					{ value: "", label: "Unknown" },
+					{ value: "Ongoing", label: "Ongoing" },
+					{ value: "Completed", label: "Completed" },
+					{ value: "Hiatus", label: "Hiatus" },
+					{ value: "Dropped", label: "Dropped" },
+				],
+			},
+			{
+				key: "translationStatus",
+				label: "Translation Status",
+				type: "select",
+				source: "metadata",
+				options: [
+					{ value: "", label: "Unknown" },
+					{ value: "Ongoing", label: "Ongoing" },
+					{ value: "Completed", label: "Completed" },
+					{ value: "Dropped", label: "Dropped" },
+					{ value: "Hiatus", label: "Hiatus" },
+				],
+			},
+			{
+				key: "words",
+				label: "Word Count",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "views",
+				label: "Views",
+				type: "number",
+				source: "metadata",
+				min: 0,
+			},
+			{
+				key: "publishedDate",
+				label: "Published Date",
+				type: "date",
+				source: "metadata",
+			},
+			{
+				key: "updatedDate",
+				label: "Last Updated",
+				type: "date",
+				source: "metadata",
+			},
+		];
 	}
 }
 

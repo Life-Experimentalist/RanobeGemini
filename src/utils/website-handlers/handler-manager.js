@@ -36,10 +36,8 @@ export class HandlerManager {
 			const initialized = new Set();
 			for (const modulePath of HANDLER_MODULES) {
 				try {
-					const url = browser.runtime.getURL(
-						`utils/website-handlers/${modulePath}`,
-					);
-					const mod = await import(url);
+					// Use relative import instead of browser.runtime.getURL
+					const mod = await import(`./${modulePath}`);
 
 					const candidates = [];
 					const classCandidates = [];
@@ -111,7 +109,7 @@ export class HandlerManager {
 			loadedHandlers.sort(
 				(a, b) =>
 					(a?.constructor?.PRIORITY || 100) -
-					(b?.constructor?.PRIORITY || 100)
+					(b?.constructor?.PRIORITY || 100),
 			);
 
 			return loadedHandlers;
@@ -136,7 +134,7 @@ export class HandlerManager {
 				const domains = handler?.constructor?.SUPPORTED_DOMAINS || [];
 				const shelfId = handler?.constructor?.SHELF_METADATA?.id;
 				const matchesHost = domains.some((domain) =>
-					matchesHostname(hostname, domain)
+					matchesHostname(hostname, domain),
 				);
 
 				if (shelfId && !isSiteEnabled(siteSettings, shelfId)) {
@@ -163,14 +161,14 @@ export class HandlerManager {
 				// Fallback: match against SUPPORTED_DOMAINS if provided
 				if (matchesHost) {
 					debugLog(
-						`Loaded handler via SUPPORTED_DOMAINS: ${handler.constructor.name}`
+						`Loaded handler via SUPPORTED_DOMAINS: ${handler.constructor.name}`,
 					);
 					return handler;
 				}
 			} catch (handlerError) {
 				console.warn(
 					"HandlerManager: error evaluating handler",
-					handlerError
+					handlerError,
 				);
 			}
 		}
