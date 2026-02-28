@@ -24,6 +24,7 @@ import {
 	CAROUSEL_ACTIVE_SITE_BONUS,
 	CAROUSEL_MIN_COUNT,
 	CAROUSEL_DEFAULT_MANUAL_COUNT,
+	DEFAULT_MODEL_ID,
 } from "../utils/constants.js";
 import { isSupportedDomain } from "../utils/domain-constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
@@ -59,9 +60,12 @@ import { getTelemetryConfig, saveTelemetryConfig } from "../utils/telemetry.js";
 import {
 	formatNovelInfo,
 	resolveTemplate,
+	resolveEpubTemplate,
 	COPY_FORMAT_TOKENS,
+	EPUB_FILENAME_TOKENS,
 	PREVIEW_NOVEL,
 	DEFAULT_COPY_TEMPLATE,
+	DEFAULT_EPUB_TEMPLATE,
 } from "../utils/novel-copy-format.js";
 
 // ── Navigation tabs definition ────────────────────────────────────────────────
@@ -426,7 +430,7 @@ async function updateLibraryModelSelector(apiKey) {
 			const opt = document.createElement("option");
 			opt.value = model.id;
 			opt.textContent = model.displayName;
-			if (!selectedModelId && model.id === "gemini-2.0-flash")
+			if (!selectedModelId && model.id === DEFAULT_MODEL_ID)
 				selectedModelId = model.id;
 			sel.appendChild(opt);
 		});
@@ -454,8 +458,8 @@ async function updateLibraryModelSelector(apiKey) {
 	} catch (err) {
 		debugError("Error updating model selector:", err);
 		sel.innerHTML = `
-			<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-			<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+			<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+			<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
 			<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
 		`;
 	} finally {
@@ -482,8 +486,8 @@ async function loadLibraryModelSettings() {
 			const sel = $("library-model-select");
 			if (sel) {
 				sel.innerHTML = `
-					<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-					<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
+					<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+					<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
 					<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 				`;
 				if (data.selectedModelId) sel.value = data.selectedModelId;
@@ -1162,6 +1166,42 @@ async function updateDriveUI() {
 	const driveStatus = $("driveStatus");
 	if (!driveNotConn || !driveConn || !driveStatus) return;
 
+	// Always show redirect URI list so user knows what to add to Google Console
+	try {
+		const uriListEl = $("drive-redirect-uri-list");
+		if (uriListEl) {
+			const primary = browser.identity.getRedirectURL("drive");
+			// Some browser builds also accept the bare extension URL as a redirect
+			const secondary = browser.identity.getRedirectURL("");
+			const uris = [...new Set([primary, secondary].filter(Boolean))];
+			uriListEl.innerHTML = uris
+				.map(
+					(uri) =>
+						`<div style="display:flex;align-items:center;gap:6px;">
+							<code style="flex:1;font-size:10px;background:var(--bg-secondary);padding:3px 6px;border-radius:4px;word-break:break-all;">${uri}</code>
+							<button class="ls-btn ls-btn-sm ls-btn-secondary copy-redirect-uri-btn" data-uri="${uri}" title="Copy" style="min-width:32px;flex-shrink:0;">📋</button>
+						</div>`,
+				)
+				.join("");
+			uriListEl
+				.querySelectorAll(".copy-redirect-uri-btn")
+				.forEach((btn) => {
+					btn.addEventListener("click", () => {
+						navigator.clipboard
+							.writeText(btn.dataset.uri)
+							.then(() =>
+								showToast("✅ Redirect URI copied!", "success"),
+							)
+							.catch(() =>
+								showToast("❌ Failed to copy", "error"),
+							);
+					});
+				});
+		}
+	} catch (_) {
+		// identity API not available in this context — fail silently
+	}
+
 	try {
 		const tokens = await browser.storage.local.get([
 			"driveAuthTokens",
@@ -1405,12 +1445,63 @@ async function handleDisconnectDrive() {
 
 // ── Copy Format Tab ───────────────────────────────────────────────────────────
 async function initCopyFormatTab() {
+	// ── Helpers ────────────────────────────────────────────────────────────────
+	function escHtml(str) {
+		return String(str ?? "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;");
+	}
+
 	// Load current settings
 	const settings = await novelLibrary.getSettings();
 	const fmt = settings.novelCopyFormats || {};
 	const enabled = fmt.enabled !== false;
 	const globalTemplate = fmt.globalTemplate || DEFAULT_COPY_TEMPLATE;
 	const siteOverrides = fmt.siteOverrides || {};
+	const epubTemplate = fmt.epubTemplate || DEFAULT_EPUB_TEMPLATE;
+	const epubSiteOverrides = fmt.epubSiteOverrides || {};
+
+	// ── Load real library novels for live preview ──────────────────────────────
+	let previewNovel = PREVIEW_NOVEL; // fallback if library is empty
+	const novelBySite = {}; // shelfId → most recently read novel
+
+	try {
+		const allNovels = await novelLibrary.getNovels();
+		if (allNovels.length > 0) {
+			// Sort by most recently read date
+			const sorted = [...allNovels].sort((a, b) => {
+				const da = new Date(
+					a.lastReadDate || a.lastReadTime || a.updatedAt || 0,
+				).getTime();
+				const db = new Date(
+					b.lastReadDate || b.lastReadTime || b.updatedAt || 0,
+				).getTime();
+				return db - da;
+			});
+			previewNovel = sorted[0];
+
+			// Map each site to its most recently read novel
+			allNovels.forEach((n) => {
+				if (!n.shelfId) return;
+				const ex = novelBySite[n.shelfId];
+				if (!ex) {
+					novelBySite[n.shelfId] = n;
+				} else {
+					const da = new Date(
+						n.lastReadDate || n.lastReadTime || n.updatedAt || 0,
+					).getTime();
+					const db = new Date(
+						ex.lastReadDate || ex.lastReadTime || ex.updatedAt || 0,
+					).getTime();
+					if (da > db) novelBySite[n.shelfId] = n;
+				}
+			});
+		}
+	} catch (_err) {
+		// silently fall back to PREVIEW_NOVEL
+	}
 
 	// Populate enabled toggle
 	const enabledCb = $("copy-format-enabled");
@@ -1420,12 +1511,13 @@ async function initCopyFormatTab() {
 	const tplInput = $("copy-global-template");
 	if (tplInput) tplInput.value = globalTemplate;
 
-	// Render token chips
+	// ── Token chips ────────────────────────────────────────────────────────────
+	// COPY_FORMAT_TOKENS already uses {token} with braces — do NOT add extra braces
 	const tokensGrid = $("copy-format-tokens-grid");
 	if (tokensGrid) {
 		tokensGrid.innerHTML = COPY_FORMAT_TOKENS.map(
 			(t) =>
-				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary" data-token="{${t.token}}" title="${t.desc} — e.g. ${t.example}" style="font-family:monospace;">{${t.token}}</button>`,
+				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary" data-token="${escHtml(t.token)}" title="${escHtml(t.desc)} — e.g. ${escHtml(t.example)}" style="font-family:monospace;">${escHtml(t.token)}</button>`,
 		).join("");
 		tokensGrid.querySelectorAll("button[data-token]").forEach((btn) => {
 			btn.addEventListener("click", () => {
@@ -1445,33 +1537,216 @@ async function initCopyFormatTab() {
 		});
 	}
 
-	// Live preview on input
+	// ── Global live preview ────────────────────────────────────────────────────
 	function updateCopyPreview() {
 		const previewEl = $("copy-format-preview");
 		if (!previewEl) return;
 		const template = tplInput?.value?.trim() || DEFAULT_COPY_TEMPLATE;
-		previewEl.textContent = formatNovelInfo(PREVIEW_NOVEL, template);
+		previewEl.textContent = formatNovelInfo(previewNovel, template);
 	}
 
 	if (tplInput) {
-		tplInput.addEventListener("input", updateCopyPreview);
+		tplInput.addEventListener("input", () => {
+			updateCopyPreview();
+			// Also refresh per-site previews that are still showing global template
+			updateAllSitePreviews();
+		});
 		updateCopyPreview();
 	}
 
-	// Per-site overrides
+	// ── Epub template ─────────────────────────────────────────────────────────
+	const epubTplInput = $("copy-epub-template");
+	if (epubTplInput) epubTplInput.value = epubTemplate;
+
+	function updateEpubPreview() {
+		const previewEl = $("copy-epub-preview");
+		if (!previewEl) return;
+		const template = epubTplInput?.value?.trim() || DEFAULT_EPUB_TEMPLATE;
+		previewEl.textContent = formatNovelInfo(previewNovel, template);
+	}
+
+	// Epub token chips
+	const epubTokensGrid = $("copy-epub-tokens-grid");
+	if (epubTokensGrid) {
+		epubTokensGrid.innerHTML = EPUB_FILENAME_TOKENS.map(
+			(t) =>
+				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary" data-epub-token="${escHtml(t.token)}" title="${escHtml(t.desc)} — e.g. ${escHtml(t.example)}" style="font-family:monospace;">${escHtml(t.token)}</button>`,
+		).join("");
+		epubTokensGrid
+			.querySelectorAll("button[data-epub-token]")
+			.forEach((btn) => {
+				btn.addEventListener("click", () => {
+					if (!epubTplInput) return;
+					const token = btn.dataset.epubToken;
+					const start =
+						epubTplInput.selectionStart ??
+						epubTplInput.value.length;
+					const end =
+						epubTplInput.selectionEnd ?? epubTplInput.value.length;
+					epubTplInput.value =
+						epubTplInput.value.slice(0, start) +
+						token +
+						epubTplInput.value.slice(end);
+					epubTplInput.focus();
+					epubTplInput.selectionStart = epubTplInput.selectionEnd =
+						start + token.length;
+					updateEpubPreview();
+				});
+			});
+	}
+
+	if (epubTplInput) {
+		epubTplInput.addEventListener("input", () => {
+			updateEpubPreview();
+			updateAllEpubSitePreviews();
+		});
+		updateEpubPreview();
+	}
+
+	// ── Per-site epub overrides ────────────────────────────────────────────────
+	const epubOverridesList = $("copy-epub-site-overrides-list");
+	if (epubOverridesList) {
+		epubOverridesList.innerHTML = Object.values(SHELVES)
+			.map((shelf) => {
+				const val = epubSiteOverrides[shelf.id] || "";
+				const siteNovel = novelBySite[shelf.id] || previewNovel;
+				const resolvedTpl = val.trim() || epubTemplate;
+				const previewText = escHtml(
+					formatNovelInfo(siteNovel, resolvedTpl),
+				);
+				const siteIcon = shelf.emoji
+					? shelf.emoji
+					: shelf.icon
+						? `<img src="${escHtml(shelf.icon)}" style="width:14px;height:14px;vertical-align:middle;" />`
+						: "🌐";
+				return `
+			<div class="ls-copy-site-override" data-shelf-id="${shelf.id}">
+				<label class="ls-label" for="epub-override-${shelf.id}">
+					<span class="ls-copy-site-icon">${siteIcon}</span>
+					${escHtml(shelf.name)}
+					${val.trim() ? '<span class="ls-copy-site-badge-custom">custom</span>' : '<span class="ls-copy-site-badge-global">global</span>'}
+				</label>
+				<input type="text" id="epub-override-${shelf.id}" class="ls-input epub-override-input"
+					data-shelf-id="${shelf.id}"
+					placeholder="(uses global epub template)"
+					value="${val.replace(/"/g, "&quot;")}" />
+				<div class="ls-copy-site-preview" id="epub-site-preview-${shelf.id}">
+					${previewText || "<em>\u2014</em>"}
+				</div>
+			</div>`;
+			})
+			.join("");
+
+		epubOverridesList
+			.querySelectorAll(".epub-override-input")
+			.forEach((inp) => {
+				inp.addEventListener("input", () => {
+					updateEpubSitePreview(inp.dataset.shelfId);
+					const container = inp.closest(".ls-copy-site-override");
+					const badge = container?.querySelector(
+						".ls-copy-site-badge-custom, .ls-copy-site-badge-global",
+					);
+					if (badge) {
+						const hasCustom = inp.value.trim() !== "";
+						badge.className = hasCustom
+							? "ls-copy-site-badge-custom"
+							: "ls-copy-site-badge-global";
+						badge.textContent = hasCustom ? "custom" : "global";
+					}
+				});
+			});
+	}
+
+	function updateEpubSitePreview(shelfId) {
+		const inp = document.getElementById(`epub-override-${shelfId}`);
+		const previewEl = $(`epub-site-preview-${shelfId}`);
+		if (!inp || !previewEl) return;
+		const template =
+			inp.value.trim() || epubTplInput?.value?.trim() || epubTemplate;
+		const siteNovel = novelBySite[shelfId] || previewNovel;
+		previewEl.textContent = formatNovelInfo(siteNovel, template) || "—";
+	}
+
+	function updateAllEpubSitePreviews() {
+		Object.values(SHELVES).forEach((shelf) => {
+			const inp = document.getElementById(`epub-override-${shelf.id}`);
+			if (inp && !inp.value.trim()) updateEpubSitePreview(shelf.id);
+		});
+	}
+
+	// ── Per-site overrides with per-site per-novel live preview ────────────────
 	const overridesList = $("copy-site-overrides-list");
 	if (overridesList) {
-		overridesList.innerHTML = SHELVES.map((shelf) => {
-			const val = siteOverrides[shelf.id] || "";
-			return `
-			<div class="ls-form-group" style="margin-bottom:12px;">
-				<label class="ls-label" for="copy-override-${shelf.id}">${shelf.icon || "🌐"} ${shelf.name}</label>
+		overridesList.innerHTML = Object.values(SHELVES)
+			.map((shelf) => {
+				const val = siteOverrides[shelf.id] || "";
+				const siteNovel = novelBySite[shelf.id] || previewNovel;
+				const resolvedTpl = val.trim() || globalTemplate;
+				const previewText = escHtml(
+					formatNovelInfo(siteNovel, resolvedTpl),
+				);
+				const siteIcon = shelf.emoji
+					? shelf.emoji
+					: shelf.icon
+						? `<img src="${escHtml(shelf.icon)}" style="width:14px;height:14px;vertical-align:middle;" />`
+						: "🌐";
+				return `
+			<div class="ls-copy-site-override" data-shelf-id="${shelf.id}">
+				<label class="ls-label" for="copy-override-${shelf.id}">
+					<span class="ls-copy-site-icon">${siteIcon}</span>
+					${escHtml(shelf.name)}
+					${val.trim() ? '<span class="ls-copy-site-badge-custom">custom</span>' : '<span class="ls-copy-site-badge-global">global</span>'}
+				</label>
 				<input type="text" id="copy-override-${shelf.id}" class="ls-input copy-override-input"
 					data-shelf-id="${shelf.id}"
-					placeholder="${DEFAULT_COPY_TEMPLATE}"
+					placeholder="(uses global template)"
 					value="${val.replace(/"/g, "&quot;")}" />
+				<div class="ls-copy-site-preview" id="copy-site-preview-${shelf.id}">
+					${previewText || "<em>—</em>"}
+				</div>
 			</div>`;
-		}).join("");
+			})
+			.join("");
+
+		// Wire live preview for each per-site input
+		overridesList
+			.querySelectorAll(".copy-override-input")
+			.forEach((inp) => {
+				inp.addEventListener("input", () => {
+					updateSitePreview(inp.dataset.shelfId);
+					// Update the badge label
+					const container = inp.closest(".ls-copy-site-override");
+					const badge = container?.querySelector(
+						".ls-copy-site-badge-custom, .ls-copy-site-badge-global",
+					);
+					if (badge) {
+						const hasCustom = inp.value.trim() !== "";
+						badge.className = hasCustom
+							? "ls-copy-site-badge-custom"
+							: "ls-copy-site-badge-global";
+						badge.textContent = hasCustom ? "custom" : "global";
+					}
+				});
+			});
+	}
+
+	function updateSitePreview(shelfId) {
+		const inp = document.getElementById(`copy-override-${shelfId}`);
+		const previewEl = $(`copy-site-preview-${shelfId}`);
+		if (!inp || !previewEl) return;
+		const template =
+			inp.value.trim() || tplInput?.value?.trim() || globalTemplate;
+		const siteNovel = novelBySite[shelfId] || previewNovel;
+		const text = formatNovelInfo(siteNovel, template);
+		previewEl.textContent = text || "—";
+	}
+
+	function updateAllSitePreviews() {
+		Object.values(SHELVES).forEach((shelf) => {
+			const inp = document.getElementById(`copy-override-${shelf.id}`);
+			// Only refresh sites that are falling back to global (no custom override)
+			if (inp && !inp.value.trim()) updateSitePreview(shelf.id);
+		});
 	}
 
 	// Save button
@@ -1491,12 +1766,24 @@ async function initCopyFormatTab() {
 						if (shelfId && v) newOverrides[shelfId] = v;
 					});
 				const current = await novelLibrary.getSettings();
+				const newEpubTemplate =
+					epubTplInput?.value?.trim() || DEFAULT_EPUB_TEMPLATE;
+				const newEpubOverrides = {};
+				document
+					.querySelectorAll(".epub-override-input")
+					.forEach((inp) => {
+						const shelfId = inp.dataset.shelfId;
+						const v = inp.value.trim();
+						if (shelfId && v) newEpubOverrides[shelfId] = v;
+					});
 				await novelLibrary.saveSettings({
 					...current,
 					novelCopyFormats: {
 						enabled: newEnabled,
 						globalTemplate: newTemplate,
 						siteOverrides: newOverrides,
+						epubTemplate: newEpubTemplate,
+						epubSiteOverrides: newEpubOverrides,
 					},
 				});
 				showToast("✅ Copy format saved!", "success");

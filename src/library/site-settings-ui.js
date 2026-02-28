@@ -62,6 +62,31 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 
 	const fieldsHtml = definition.fields
 		.map((field) => {
+			// Section separator
+			if (field.type === "section") {
+				return `<div class="ls-handler-field-section">
+					<span class="ls-handler-field-section-label">${field.label}</span>
+				</div>`;
+			}
+
+			// Text input
+			if (field.type === "text") {
+				const val = String(
+					settings[field.key] ?? field.defaultValue ?? "",
+				).replace(/"/g, "&quot;");
+				const ph = (field.placeholder || "").replace(/"/g, "&quot;");
+				return `
+				<div class="ls-handler-field ls-handler-field--text">
+					<div class="ls-handler-field-info">
+						<div class="ls-handler-field-label">${field.label}</div>
+						<div class="ls-handler-field-desc">${field.description || ""}</div>
+					</div>
+					<input type="text" class="ls-input ls-handler-field-text-input"
+						data-shelf="${definition.id}" data-setting="${field.key}"
+						value="${val}" placeholder="${ph}" />
+				</div>`;
+			}
+
 			if (field.type === "select") {
 				const currentValue =
 					settings[field.key] ?? field.defaultValue ?? "auto";
@@ -99,7 +124,9 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 		})
 		.join("");
 
-	const fieldCount = definition.fields.length;
+	const fieldCount = definition.fields.filter(
+		(f) => f.type !== "section",
+	).length;
 	// Use Google's favicon proxy to avoid hotlink-blocked direct URLs
 	const faviconUrl = definition.icon
 		? (() => {

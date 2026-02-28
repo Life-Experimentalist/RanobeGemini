@@ -8,6 +8,8 @@
  * Available tokens:
  *   {title}       - Novel title
  *   {author}      - Author name
+ *   {titleSafe}   - Title with filesystem-illegal characters removed
+ *   {authorSafe}  - Author with filesystem-illegal characters removed
  *   {wordCount}   - Total word count (plain integer, 0 = omitted)
  *   {chapters}    - Total chapter count
  *   {lastRead}    - Last read chapter number
@@ -22,10 +24,35 @@
  * @example
  *   formatNovelInfo(novel, "{title} by {author} {wordCount}")
  *   // → "Partners? by ReluctantSidekick 288578"
+ *   formatNovelInfo(novel, "{titleSafe} - {authorSafe}.epub")
+ *   // → "Partners - ReluctantSidekick.epub"
  */
 
 /** Default global copy template. */
 export const DEFAULT_COPY_TEMPLATE = "{title} by {author} {wordCount}";
+
+/**
+ * Default epub filename template.
+ * Uses filesystem-safe tokens so the result is usable as a real filename.
+ */
+export const DEFAULT_EPUB_TEMPLATE = "{titleSafe} - {authorSafe}.epub";
+
+/**
+ * Strip characters that are illegal in Windows / macOS / Linux filenames.
+ * Collapses multiple spaces and trims.
+ * @param {string} str
+ * @returns {string}
+ */
+export function toFilenameSafe(str) {
+	return (
+		String(str || "")
+			.replace(/[<>:"/\\|?*\x00-\x1F]/g, "") // illegal chars
+			.replace(/\s+/g, " ") // collapse whitespace
+			.trim()
+			.replace(/\.+$/, "") || // no trailing dots
+		"Unknown"
+	);
+}
 
 /**
  * Human-readable token reference shown in the settings UI.
@@ -35,6 +62,16 @@ export const COPY_FORMAT_TOKENS = [
 	{
 		token: "{author}",
 		desc: "Author name",
+		example: "ReluctantSidekick",
+	},
+	{
+		token: "{titleSafe}",
+		desc: "Title, filesystem-safe (no special chars)",
+		example: "Partners",
+	},
+	{
+		token: "{authorSafe}",
+		desc: "Author, filesystem-safe",
 		example: "ReluctantSidekick",
 	},
 	{
@@ -61,6 +98,32 @@ export const COPY_FORMAT_TOKENS = [
 		desc: "Description (first 200 chars; use {description:N} for custom limit)",
 		example: "A story about...",
 	},
+];
+
+/**
+ * Human-readable token reference for epub filename templates.
+ * Subset of COPY_FORMAT_TOKENS — only tokens safe/useful in filenames.
+ */
+export const EPUB_FILENAME_TOKENS = [
+	{
+		token: "{titleSafe}",
+		desc: "Title, filesystem-safe (recommended)",
+		example: "Partners",
+	},
+	{
+		token: "{authorSafe}",
+		desc: "Author, filesystem-safe (recommended)",
+		example: "ReluctantSidekick",
+	},
+	{
+		token: "{title}",
+		desc: "Title (raw, may contain special chars)",
+		example: "Partners?",
+	},
+	{ token: "{author}", desc: "Author (raw)", example: "ReluctantSidekick" },
+	{ token: "{site}", desc: "Source site ID", example: "ao3" },
+	{ token: "{chapters}", desc: "Total chapter count", example: "102" },
+	{ token: "{id}", desc: "Library novel ID", example: "ao3-1234567" },
 ];
 
 /**
@@ -98,10 +161,15 @@ export function formatNovelInfo(novel, template) {
 		0;
 	const wordCountStr = rawWordCount > 0 ? String(rawWordCount) : "";
 
+	const rawTitle = novel.title || "Unknown";
+	const rawAuthor = novel.author || "Unknown";
+
 	/** @type {Record<string, string>} */
 	const replacements = {
-		title: novel.title || "Unknown",
-		author: novel.author || "Unknown",
+		title: rawTitle,
+		author: rawAuthor,
+		titleSafe: toFilenameSafe(rawTitle),
+		authorSafe: toFilenameSafe(rawAuthor),
 		wordCount: wordCountStr,
 		words: wordCountStr, // alias
 		chapters:
@@ -134,11 +202,11 @@ export function formatNovelInfo(novel, template) {
 }
 
 /**
- * Resolve which template to use for a novel, respecting site overrides.
+ * Resolve which copy-info template to use for a novel, respecting site overrides.
  *
  * @param {Object} novelCopyFormats - The `novelCopyFormats` settings object.
  * @param {string|null} shelfId     - The novel's shelf/site ID.
- * @returns {string} Resolved template string.
+ * @returns {string|null} Resolved template string, or null if feature is disabled.
  */
 export function resolveTemplate(novelCopyFormats, shelfId) {
 	if (!novelCopyFormats?.enabled) return null;
@@ -146,4 +214,18 @@ export function resolveTemplate(novelCopyFormats, shelfId) {
 		return novelCopyFormats.siteOverrides[shelfId].trim();
 	}
 	return novelCopyFormats.globalTemplate?.trim() || DEFAULT_COPY_TEMPLATE;
+}
+
+/**
+ * Resolve which epub filename template to use for a novel, respecting site overrides.
+ *
+ * @param {Object} novelCopyFormats - The `novelCopyFormats` settings object.
+ * @param {string|null} shelfId     - The novel's shelf/site ID.
+ * @returns {string} Resolved epub template string.
+ */
+export function resolveEpubTemplate(novelCopyFormats, shelfId) {
+	if (shelfId && novelCopyFormats?.epubSiteOverrides?.[shelfId]?.trim()) {
+		return novelCopyFormats.epubSiteOverrides[shelfId].trim();
+	}
+	return novelCopyFormats?.epubTemplate?.trim() || DEFAULT_EPUB_TEMPLATE;
 }

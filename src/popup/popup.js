@@ -7,6 +7,7 @@ import {
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_DRIVE_CLIENT_ID,
 	DEFAULT_DEBUG_MODE,
+	DEFAULT_MODEL_ID,
 } from "../utils/constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
@@ -933,6 +934,7 @@ async function initializePopup() {
 						: 100,
 					defaultPrompt: promptTemplate?.value || "",
 					summaryPrompt: summaryPrompt?.value || "",
+					shortSummaryPrompt: shortSummaryPrompt?.value || "",
 					permanentPrompt: permanentPrompt?.value || "",
 					customEndpoint: customEndpointInput?.value?.trim() || "",
 				};
@@ -1017,6 +1019,9 @@ async function initializePopup() {
 	}
 	if (summaryPrompt) {
 		summaryPrompt.addEventListener("input", autosaveSettings);
+	}
+	if (shortSummaryPrompt) {
+		shortSummaryPrompt.addEventListener("input", autosaveSettings);
 	}
 	if (permanentPrompt) {
 		permanentPrompt.addEventListener("input", autosaveSettings);
@@ -1148,8 +1153,8 @@ async function initializePopup() {
 				option.value = model.id;
 				option.textContent = model.displayName;
 
-				// If there's no selection yet, prefer gemini-2.0-flash as default
-				if (!selectedModelId && model.id === "gemini-2.0-flash") {
+				// If there's no selection yet, prefer the default model
+				if (!selectedModelId && model.id === DEFAULT_MODEL_ID) {
 					selectedModelId = model.id;
 				}
 
@@ -1195,7 +1200,7 @@ async function initializePopup() {
 		} catch (error) {
 			debugError("Error updating model selector:", error);
 			modelSelect.innerHTML =
-				'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
+				'<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option><option value="gemini-2.0-flash">Gemini 2.0 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
 		} finally {
 			modelSelect.disabled = false;
 		}
@@ -1248,8 +1253,8 @@ async function initializePopup() {
 		} else {
 			// No API key, use static default options
 			modelSelect.innerHTML = `
-				<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-				<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
+				<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+				<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
 				<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 			`;
 		}
@@ -1285,12 +1290,12 @@ async function initializePopup() {
 			} else if (data.modelEndpoint.includes("gemini-2.5-flash")) {
 				modelSelect.value = "gemini-2.5-flash";
 			} else {
-				// Default to gemini-2.0-flash if endpoint doesn't match any known model
-				modelSelect.value = "gemini-2.0-flash";
+				// Default to DEFAULT_MODEL_ID if endpoint doesn't match any known model
+				modelSelect.value = DEFAULT_MODEL_ID;
 			}
 		} else {
-			// Default to gemini-2.0-flash if no endpoint is specified
-			modelSelect.value = "gemini-2.0-flash";
+			// Default to DEFAULT_MODEL_ID if no endpoint is specified
+			modelSelect.value = DEFAULT_MODEL_ID;
 		}
 
 		// Chunking controls

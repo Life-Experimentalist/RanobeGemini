@@ -93,15 +93,10 @@ export const DEFAULT_PERMANENT_PROMPT =
 	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 // Default model ID
-export const DEFAULT_MODEL_ID = "gemini-3-flash";
+export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
 
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
-
-// Default chunk size for large chapters (characters per segment)
-// DEPRECATED: Use CHUNK_SIZE_WORDS instead for word-based chunking
-// Content larger than this will be split into chunks of this size
-export const DEFAULT_CHUNK_SIZE = 20000;
 
 // New word-based chunking configuration
 // Default chunk size in words (3200 words ≈ 15-20k characters)

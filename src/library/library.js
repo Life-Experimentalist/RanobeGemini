@@ -86,6 +86,7 @@ import {
 import {
 	formatNovelInfo,
 	resolveTemplate,
+	resolveEpubTemplate,
 } from "../utils/novel-copy-format.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
@@ -275,7 +276,6 @@ const elements = {
 	modalSourceBtn: document.getElementById("modal-source-btn"),
 	modalRefreshBtn: document.getElementById("modal-refresh-btn"),
 	modalEditBtn: document.getElementById("modal-edit-btn"),
-	modalCopyInfoBtn: document.getElementById("modal-copy-info-btn"),
 	modalRemoveBtn: document.getElementById("modal-remove-btn"),
 
 	// Modal Metadata Sections
@@ -574,6 +574,20 @@ const elements = {
 	libraryClearAllNotifications: document.getElementById(
 		"library-clear-all-notifications",
 	),
+
+	// PWA Install Banner
+	pwaInstallBanner: document.getElementById("pwa-install-banner"),
+	pwaInstallBtn: document.getElementById("pwa-install-btn"),
+	pwaInstallDismiss: document.getElementById("pwa-install-dismiss"),
+
+	// PWA Install Header Button + Modal
+	pwaHeaderBtn: document.getElementById("pwa-header-btn"),
+	pwaInstallModal: document.getElementById("pwa-install-modal"),
+	pwaModalClose: document.getElementById("pwa-modal-close"),
+	pwaModalInstallBtn: document.getElementById("pwa-modal-install-btn"),
+	pwaModalCancelBtn: document.getElementById("pwa-modal-cancel-btn"),
+	pwaModalStatus: document.getElementById("pwa-modal-status"),
+	pwaModalInstalledNote: document.getElementById("pwa-modal-installed-note"),
 };
 
 async function applyLibraryTheme() {
@@ -629,6 +643,38 @@ let carouselState = {
 
 // Detect if running in sidebar (set via manifest URL parameter)
 const isSidebar = window.location.search.includes("sidebar=true");
+
+// ─── PWA Install Prompt ───────────────────────────────────────────────────────
+// We capture the browser's install prompt event so we can show our own
+// non-intrusive banner instead of the default browser prompt.
+let deferredInstallPrompt = null;
+const PWA_DISMISS_KEY = "rg_pwa_banner_dismissed";
+
+window.addEventListener("beforeinstallprompt", (e) => {
+	e.preventDefault();
+	deferredInstallPrompt = e;
+	// Only show if the user hasn't already dismissed
+	if (!localStorage.getItem(PWA_DISMISS_KEY)) {
+		showPwaInstallBanner();
+	}
+});
+
+// Hide banner once app is installed
+window.addEventListener("appinstalled", () => {
+	hidePwaInstallBanner();
+	deferredInstallPrompt = null;
+});
+
+function showPwaInstallBanner() {
+	const banner = document.getElementById("pwa-install-banner");
+	if (banner) banner.classList.remove("hidden");
+}
+
+function hidePwaInstallBanner() {
+	const banner = document.getElementById("pwa-install-banner");
+	if (banner) banner.classList.add("hidden");
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Apply sidebar class early to minimize layout flash
 if (isSidebar) {
@@ -1097,6 +1143,161 @@ async function init() {
 
 	// Check for first run telemetry consent
 	await checkFirstRunConsent();
+
+	// Wire up the non-intrusive PWA install banner buttons
+	initPwaInstallBanner();
+}
+
+/**
+ * Wire up the PWA install banner and the header standalone-window button.
+ *
+ * Note: this library page runs from an extension URL (chrome-extension:// /
+ * moz-extension://) so the standard `beforeinstallprompt` / PWA install API
+ * is never available.  The banner is therefore only shown when explicitly
+ * triggered; the header button opens the standalone-window modal instead.
+ */
+function initPwaInstallBanner() {
+	const banner = elements.pwaInstallBanner;
+	const installBtn = elements.pwaInstallBtn;
+	const dismissBtn = elements.pwaInstallDismiss;
+
+	const isStandalone =
+		window.matchMedia("(display-mode: standalone)").matches ||
+		window.navigator.standalone === true ||
+		new URLSearchParams(window.location.search).get("standalone") === "1";
+
+	// ── Header install button ──────────────────────────────────────────────────
+	const headerBtn = elements.pwaHeaderBtn;
+	if (headerBtn) {
+		if (isStandalone) {
+			// Already running as a standalone popup window — hide the button
+			headerBtn.classList.add("hidden");
+		} else {
+			headerBtn.addEventListener("click", () => openPwaModal());
+		}
+	}
+
+	// ── Banner buttons ─────────────────────────────────────────────────────────
+	if (banner) {
+		// Wire Install button — open modal (consistent UX)
+		if (installBtn) {
+			installBtn.addEventListener("click", () => {
+				hidePwaInstallBanner();
+				openPwaModal();
+			});
+		}
+
+		// Wire Dismiss button — remember for current session
+		if (dismissBtn) {
+			dismissBtn.addEventListener("click", () => {
+				hidePwaInstallBanner();
+				localStorage.setItem(PWA_DISMISS_KEY, Date.now().toString());
+			});
+		}
+	}
+	// Note: the banner is NOT auto-shown here.  Extension pages cannot receive
+	// `beforeinstallprompt`, so an auto-shown "install" prompt would be
+	// misleading and non-functional.  The header 📲 button is always available
+	// to open the standalone-window modal on demand.
+}
+
+/**
+ * Open the standalone-window / app-mode modal.
+ *
+ * The library runs as an extension page (chrome-extension:// / moz-extension://)
+ * so the browser's standard `beforeinstallprompt` PWA API is never fired.
+ * Instead we offer a real alternative that actually works:
+ *   • "Open Standalone Window" — opens the library in a borderless popup window
+ *     via browser.windows.create, giving a true app-like experience.
+ *   • A tip about pinning the extension icon for one-click access.
+ */
+function openPwaModal() {
+	const modal = elements.pwaInstallModal;
+	if (!modal) return;
+
+	const isStandalone =
+		window.matchMedia("(display-mode: standalone)").matches ||
+		window.navigator.standalone === true ||
+		new URLSearchParams(window.location.search).get("standalone") === "1";
+
+	const installBtn = elements.pwaModalInstallBtn;
+	const statusEl = elements.pwaModalStatus;
+	const installedNote = elements.pwaModalInstalledNote;
+
+	if (isStandalone) {
+		// Already running as a standalone popup window
+		if (installBtn) installBtn.classList.add("hidden");
+		if (installedNote) installedNote.classList.remove("hidden");
+		if (statusEl) statusEl.classList.add("hidden");
+	} else {
+		// Offer the standalone-window action
+		if (installBtn) {
+			installBtn.classList.remove("hidden");
+			installBtn.textContent = "🪟 Open Standalone Window";
+		}
+		if (installedNote) installedNote.classList.add("hidden");
+		if (statusEl) {
+			const isMobile = /Android|iPhone|iPad|iPod/.test(
+				navigator.userAgent,
+			);
+			const tip = isMobile
+				? "💡 On mobile, pin the Ranobe Gemini extension to your home screen for one-tap access."
+				: "💡 Tip: Pin the Ranobe Gemini extension icon to your toolbar for one-click access.";
+			statusEl.textContent = tip;
+			statusEl.classList.remove("hidden");
+		}
+	}
+
+	// Wire the standalone-window button (one-time, reset on re-open)
+	if (installBtn && !installBtn.dataset.wired) {
+		installBtn.dataset.wired = "1";
+		installBtn.addEventListener("click", async () => {
+			closePwaModal();
+			if (isStandalone) return; // already standalone, nothing to do
+			try {
+				const libraryUrl = browser.runtime.getURL(
+					"library/library.html?standalone=1",
+				);
+				await browser.windows.create({
+					url: libraryUrl,
+					type: "popup",
+					width: 1100,
+					height: 800,
+					focused: true,
+				});
+			} catch (err) {
+				debugLog("Failed to open standalone window:", err);
+			}
+		});
+	}
+
+	// Wire close/cancel buttons (one-time)
+	const closeBtn = elements.pwaModalClose;
+	const cancelBtn = elements.pwaModalCancelBtn;
+	if (closeBtn && !closeBtn.dataset.wired) {
+		closeBtn.dataset.wired = "1";
+		closeBtn.addEventListener("click", closePwaModal);
+	}
+	if (cancelBtn && !cancelBtn.dataset.wired) {
+		cancelBtn.dataset.wired = "1";
+		cancelBtn.addEventListener("click", closePwaModal);
+	}
+	// Click backdrop to close
+	if (!modal.dataset.overlayWired) {
+		modal.dataset.overlayWired = "1";
+		modal.addEventListener("click", (e) => {
+			if (e.target === modal) closePwaModal();
+		});
+	}
+
+	modal.classList.remove("hidden");
+	document.body.style.overflow = "hidden";
+}
+
+function closePwaModal() {
+	const modal = elements.pwaInstallModal;
+	if (modal) modal.classList.add("hidden");
+	document.body.style.overflow = "";
 }
 
 /**
@@ -3821,9 +4022,18 @@ function populateContinueReadingHero(novels) {
 		return;
 	}
 
-	// Candidates: novels with a source URL, sorted by lastAccessed desc
+	// Candidates: actively reading novels with a source URL, sorted by lastAccessed desc.
+	// Exclude completed and up-to-date novels — the hero is for novels currently in progress.
 	const candidates = novels
-		.filter((n) => n.lastReadUrl || n.sourceUrl)
+		.filter((n) => {
+			if (!n.lastReadUrl && !n.sourceUrl) return false;
+			if (
+				n.readingStatus === READING_STATUS.COMPLETED ||
+				n.readingStatus === READING_STATUS.UP_TO_DATE
+			)
+				return false;
+			return true;
+		})
 		.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
 
 	if (candidates.length === 0) {
@@ -5016,6 +5226,29 @@ async function openDefaultNovelDetail(novel) {
 					const text = formatNovelInfo(novel, template);
 					await navigator.clipboard.writeText(text);
 					showNotification("📋 Copied to clipboard!");
+				} catch (err) {
+					showNotification("Failed to copy: " + err.message, "error");
+				}
+			};
+		}
+	}
+
+	// Wire epub copy button
+	if (elements.modalEpubCopyBtn) {
+		const fmt = librarySettings?.novelCopyFormats || {};
+		const copyEnabled = fmt.enabled !== false;
+		elements.modalEpubCopyBtn.classList.toggle("hidden", !copyEnabled);
+		if (copyEnabled) {
+			elements.modalEpubCopyBtn.onclick = async () => {
+				try {
+					const currentSettings = await novelLibrary.getSettings();
+					const template = resolveEpubTemplate(
+						currentSettings.novelCopyFormats,
+						novel.shelfId,
+					);
+					const text = formatNovelInfo(novel, template);
+					await navigator.clipboard.writeText(text);
+					showNotification("📚 .epub filename copied!");
 				} catch (err) {
 					showNotification("Failed to copy: " + err.message, "error");
 				}

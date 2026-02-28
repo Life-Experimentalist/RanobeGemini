@@ -500,6 +500,18 @@
 									style="color:#4285F4;font-size:11px;font-weight:500;">📖 Detailed Setup Guide →</a>
 							</div>
 
+							<!-- Redirect URI display — users must add this to Google Console -->
+							<div id="drive-redirect-uri-box"
+								style="margin-top:10px;padding:10px;background:rgba(66,133,244,0.08);border-radius:6px;border:1px solid rgba(66,133,244,0.25);">
+								<p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#4285F4;">📌 Your Redirect
+									URIs (add these in Google Console)</p>
+								<p style="margin:0 0 6px;font-size:10px;color:var(--text-secondary);">Go to your OAuth
+									Client → Authorised redirect URIs and add <strong>both</strong> of these:</p>
+								<div id="drive-redirect-uri-list" style="display:flex;flex-direction:column;gap:4px;">
+									<div style="font-size:10px;color:var(--text-muted);">Loading…</div>
+								</div>
+							</div>
+
 							<div style="margin-top:14px;display:grid;gap:12px;">
 								<!-- Method 1: JSON paste -->
 								<div
@@ -651,24 +663,24 @@
 						<p class="ls-panel-description">Customise the AI prompt templates used for chapter enhancement.
 						</p>
 					</div>
-
 					<div class="ls-section" data-accent="green">
-						<div class="ls-section-title">✍️ Prompt Templates</div>
-
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-prompt-main">Main Enhancement Prompt</label>
+							<div class="ls-section-title">Main Enhancement Prompt</div>
+							<label class="ls-label" for="library-prompt-main"></label>
 							<textarea id="library-prompt-main" class="ls-textarea" rows="5"></textarea>
 							<button id="library-reset-prompt-main" class="ls-btn ls-btn-secondary ls-btn-sm"
 								style="margin-top:6px;">↺ Reset to Default</button>
 						</div>
-
+					</div>
+					<div class="ls-section" data-accent="yellow">
 						<div class="ls-form-group">
 							<label class="ls-label" for="library-prompt-summary">Summary Prompt</label>
 							<textarea id="library-prompt-summary" class="ls-textarea" rows="4"></textarea>
 							<button id="library-reset-prompt-summary" class="ls-btn ls-btn-secondary ls-btn-sm"
 								style="margin-top:6px;">↺ Reset to Default</button>
 						</div>
-
+					</div>
+					<div class="ls-section" data-accent="blue">
 						<div class="ls-form-group" style="margin-top:12px;">
 							<label class="ls-label" for="library-prompt-short-summary">Short Summary Prompt</label>
 							<textarea id="library-prompt-short-summary" class="ls-textarea" rows="3"></textarea>
@@ -676,7 +688,8 @@
 								style="margin-top:6px;">↺ Reset to
 								Default</button>
 						</div>
-
+					</div>
+					<div class="ls-section" data-accent="orange">
 						<div class="ls-form-group">
 							<label class="ls-label" for="library-prompt-permanent">Permanent Context Prompt</label>
 							<textarea id="library-prompt-permanent" class="ls-textarea" rows="4"></textarea>
@@ -938,9 +951,9 @@
 
 					<!-- Global template -->
 					<div class="ls-section" data-accent="blue">
-						<div class="ls-section-title">📝 Global Template</div>
-						<div class="ls-section-desc">Default format used for all sites. Use <code>{token}</code>
-							placeholders from the list below. You can set per-site overrides in the section below.
+						<div class="ls-section-title">📝 Global "Copy Info" Template</div>
+						<div class="ls-section-desc">Copied when you click <strong>Copy Info</strong> on a novel.
+							Use <code>{token}</code> placeholders. Per-site overrides available below.
 						</div>
 						<div class="ls-form-group">
 							<label class="ls-label" for="copy-global-template">Template</label>
@@ -957,10 +970,39 @@
 						</div>
 					</div>
 
-					<!-- Available tokens reference -->
+					<!-- Epub filename template -->
 					<div class="ls-section" data-accent="teal">
-						<div class="ls-section-title">🔣 Available Tokens</div>
-						<div class="ls-section-desc">Click a token to insert it at the cursor position in the
+						<div class="ls-section-title">📚 Epub Filename Template</div>
+						<div class="ls-section-desc">Copied when you click <strong>Copy .epub Filename</strong>.
+							Use <code>{titleSafe}</code> and <code>{authorSafe}</code> for filesystem-safe names.
+							The <code>.epub</code> suffix can be anything — include it or change it in the template.
+						</div>
+						<div class="ls-form-group">
+							<label class="ls-label" for="copy-epub-template">Epub filename template</label>
+							<input type="text" id="copy-epub-template" class="ls-input"
+								placeholder="{titleSafe} - {authorSafe}.epub" />
+						</div>
+						<div class="ls-form-group">
+							<label class="ls-label">Preview</label>
+							<div id="copy-epub-preview"
+								style="font-family:monospace;font-size:13px;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);word-break:break-all;min-height:2.5em;">
+								—
+							</div>
+						</div>
+						<!-- Epub token chips -->
+						<div class="ls-form-group">
+							<label class="ls-label">Epub tokens <span class="ls-hint"
+									style="display:inline;margin-left:4px;">(click to insert)</span></label>
+							<div id="copy-epub-tokens-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+								<!-- Populated by library-settings.js -->
+							</div>
+						</div>
+					</div>
+
+					<!-- Available tokens reference -->
+					<div class="ls-section" data-accent="indigo">
+						<div class="ls-section-title">🔣 All Available Tokens</div>
+						<div class="ls-section-desc">Click a token to insert it into the <strong>Copy Info</strong>
 							template field.</div>
 						<div id="copy-format-tokens-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
 							<!-- Populated by library-settings.js -->
@@ -969,10 +1011,18 @@
 
 					<!-- Per-site overrides -->
 					<div class="ls-section" data-accent="orange">
-						<div class="ls-section-title">🌐 Per-Site Overrides</div>
-						<div class="ls-section-desc">Leave a site's field blank to inherit the global template.
-						</div>
+						<div class="ls-section-title">🌐 Per-Site "Copy Info" Overrides</div>
+						<div class="ls-section-desc">Leave blank to inherit the global Copy Info template.</div>
 						<div id="copy-site-overrides-list">
+							<!-- Populated by library-settings.js from SHELVES -->
+						</div>
+					</div>
+
+					<!-- Per-site epub overrides -->
+					<div class="ls-section" data-accent="purple">
+						<div class="ls-section-title">📚 Per-Site Epub Filename Overrides</div>
+						<div class="ls-section-desc">Leave blank to inherit the global epub template.</div>
+						<div id="copy-epub-site-overrides-list">
 							<!-- Populated by library-settings.js from SHELVES -->
 						</div>
 					</div>

@@ -1196,3 +1196,116 @@ textarea {
 	flex-shrink: 0;
 	margin-top: 2px;
 }
+
+/* Section separator inside handler field list */
+.ls-handler-field-section {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 0 2px;
+	margin-top: 4px;
+}
+
+.ls-handler-field-section::before,
+.ls-handler-field-section::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--border-color, #2f3644);
+}
+
+.ls-handler-field-section-label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-secondary, #9ca3af);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* Text input field */
+.ls-handler-field--text {
+	flex-wrap: wrap;
+	align-items: flex-start;
+}
+
+.ls-handler-field-text-input {
+	width: 100%;
+	margin-top: 6px;
+	font-family: monospace;
+	font-size: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   COPY FORMAT — PER-SITE OVERRIDES
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.ls-copy-site-override {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 14px;
+	padding: 12px 14px;
+	background: var(--bg-tertiary, #1f2937);
+	border: 1px solid var(--border-color, #2f3644);
+	border-radius: 8px;
+	transition: border-color 0.15s;
+}
+
+.ls-copy-site-override:focus-within {
+	border-color: var(--primary-color, #4b5563);
+}
+
+.ls-copy-site-override .ls-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 0;
+}
+
+.ls-copy-site-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
+.ls-copy-site-badge-custom,
+.ls-copy-site-badge-global {
+	font-size: 10px;
+	padding: 1px 5px;
+	border-radius: 4px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	margin-left: auto;
+}
+
+.ls-copy-site-badge-custom {
+	background: rgba(99, 102, 241, 0.2);
+	color: #818cf8;
+	border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.ls-copy-site-badge-global {
+	background: var(--bg-secondary, #111827);
+	color: var(--text-muted, #6b7280);
+	border: 1px solid var(--border-color, #2f3644);
+}
+
+.ls-copy-site-preview {
+	font-family: monospace;
+	font-size: 12px;
+	padding: 6px 10px;
+	background: var(--bg-secondary, #111827);
+	border: 1px solid var(--border-color, #2f3644);
+	border-radius: 5px;
+	color: var(--text-secondary, #9ca3af);
+	word-break: break-all;
+	min-height: 1.9em;
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+.ls-copy-site-preview em {
+	opacity: 0.5;
+}

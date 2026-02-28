@@ -1,24 +1,62 @@
 {
-    "name": "Ranobe Gemini Library",
-    "short_name": "RG Library",
-    "description": "Your Novel Library powered by Ranobe Gemini",
-    "start_url": "library.html",
-    "display": "standalone",
-    "background_color": "#0f1419",
-    "theme_color": "#e94560",
-    "orientation": "portrait-primary",
-    "icons": [
-        {
-            "src": "../icons/icon.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "categories": [
-        "books",
-        "entertainment",
-        "productivity"
-    ],
-    "screenshots": []
+	"id": "ranobe-gemini-library",
+	"name": "Ranobe Gemini Library",
+	"short_name": "RG Library",
+	"description": "Your Novel Library powered by Ranobe Gemini",
+	"start_url": "library.html",
+	"scope": "./",
+	"display": "standalone",
+	"display_override": [
+		"standalone",
+		"minimal-ui",
+		"browser"
+	],
+	"background_color": "#0f1419",
+	"theme_color": "#e94560",
+	"orientation": "portrait-primary",
+	"lang": "en",
+	"icons": [
+		{
+			"src": "../icons/icon.png",
+			"sizes": "48x48",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "../icons/icon.png",
+			"sizes": "96x96",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "../icons/icon.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "../icons/icon.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	],
+	"categories": [
+		"books",
+		"entertainment",
+		"productivity"
+	],
+	"shortcuts": [
+		{
+			"name": "Open Library",
+			"url": "library.html",
+			"description": "Open your novel library"
+		},
+		{
+			"name": "Library Settings",
+			"url": "library-settings.html",
+			"description": "Configure library settings"
+		}
+	],
+	"screenshots": []
 }

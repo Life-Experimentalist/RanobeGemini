@@ -986,3 +986,55 @@ html[data-darkreader-mode] .section-divider {
 		gap: 8px !important;
 	}
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   CHAPTER PAGE NOVEL CONTROLS — Mobile & touch improvements
+   Targets: #rg-chapter-novel-controls (compact bar injected on
+   chapter pages) and #rg-novel-controls (novel index page bar).
+   ───────────────────────────────────────────────────────────────── */
+
+/* Chapter compact controls -- better touch targets */
+#rg-chapter-novel-controls {
+	-webkit-overflow-scrolling: touch;
+}
+
+@media screen and (max-width: 768px) {
+
+	/* Chapter compact bar: full-width flex column layout */
+	#rg-chapter-novel-controls {
+		flex-direction: column !important;
+		align-items: stretch !important;
+		gap: 6px !important;
+		padding: 10px !important;
+	}
+
+	/* Every direct child button/select in compact bar gets full-width + comfortable height */
+	#rg-chapter-novel-controls>button,
+	#rg-chapter-novel-controls>select {
+		width: 100% !important;
+		min-height: 44px !important;
+		font-size: 14px !important;
+		padding: 10px 12px !important;
+		box-sizing: border-box !important;
+		text-align: center !important;
+		justify-content: center !important;
+	}
+
+	/* Status badge (span) takes full width too */
+	#rg-chapter-novel-controls>span {
+		text-align: center !important;
+		width: 100% !important;
+		padding: 6px 8px !important;
+		font-size: 12px !important;
+	}
+}
+
+@media screen and (max-width: 480px) {
+
+	/* Ultra-compact: even bigger tap targets */
+	#rg-chapter-novel-controls>button,
+	#rg-chapter-novel-controls>select {
+		min-height: 48px !important;
+		font-size: 15px !important;
+	}
+}

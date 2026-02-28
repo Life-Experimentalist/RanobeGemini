@@ -6,6 +6,11 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { SITE_SETTINGS_KEY } from "../site-settings.js";
+import {
+	formatNovelInfo,
+	DEFAULT_EPUB_TEMPLATE,
+} from "../novel-copy-format.js";
 
 export class AO3Handler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -52,6 +57,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
+			// ── Enhancement ────────────────────────────────────────────────
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -59,6 +66,37 @@ export class AO3Handler extends BaseWebsiteHandler {
 				defaultValue: false,
 				description:
 					"Automatically run Enhance when an AO3 chapter loads.",
+			},
+			// ── Download & Export ───────────────────────────────────────
+			{
+				key: "_download",
+				type: "section",
+				label: "⬇️ Download & Export",
+			},
+			{
+				key: "downloadEnabled",
+				label: "Show download button",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Show a FichHub download button in chapter controls.",
+			},
+			{
+				key: "copyEpubOnDownload",
+				label: "Copy .epub filename on download",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Automatically copy the epub filename to clipboard when Download is clicked.",
+			},
+			{
+				key: "epubTemplate",
+				label: "Epub filename template",
+				type: "text",
+				defaultValue: "",
+				placeholder: "{titleSafe} - {authorSafe}.epub",
+				description:
+					"Filename template for this site. Available tokens: {titleSafe}, {authorSafe}, {title}, {author}, {id}. Leave blank to use the global epub template.",
 			},
 		],
 	};
@@ -236,75 +274,62 @@ When enhancing, improve readability while respecting the author's original style
 	}
 
 	/**
-	 * Get custom chapter page control buttons for AO3
-	 * Adds a download button for FichHub integration
-	 * Opens in new tab and optionally copies metadata to clipboard
-	 * @returns {Array} Array of button specifications
+	 * Get chapter control buttons: FichHub download.
+	 * Reads site settings asynchronously so configuration reflects user prefs.
+	 * @returns {Promise<Array>} Resolves to array of button specs
 	 */
-	getCustomChapterButtons() {
+	async getCustomChapterButtons() {
+		if (!this.isChapterPage()) return [];
+
+		let siteConf = {};
+		try {
+			const result = await browser.storage.local.get(SITE_SETTINGS_KEY);
+			siteConf = result?.[SITE_SETTINGS_KEY]?.ao3 || {};
+		} catch (_) {
+			// Use defaults
+		}
+
+		// Button hidden when explicitly disabled
+		if (siteConf.downloadEnabled === false) return [];
+
+		const template = siteConf.epubTemplate?.trim() || DEFAULT_EPUB_TEMPLATE;
+		const copyEnabled = siteConf.copyEpubOnDownload !== false;
+
 		return [
 			{
-				text: "Download",
+				text: "FichHub",
 				emoji: "⬇️",
 				color: "#ff6b6b",
-				onClick: () => {
-					// Get library settings to check if clipboard copy is enabled
-					try {
-						const settingsJson = localStorage.getItem(
-							"rg_library_settings",
-						);
-						const settings = settingsJson
-							? JSON.parse(settingsJson)
-							: {};
-						const enableClipboard =
-							settings.enableClipboardCopyOnDownload !== false;
-
-						if (enableClipboard) {
-							const clipboardText = this.generateClipboardText();
-							if (clipboardText) {
-								navigator.clipboard
-									.writeText(clipboardText)
-									.catch(() => {
-										console.log(
-											"Could not copy to clipboard",
-										);
-									});
-							}
+				onClick: async () => {
+					if (copyEnabled) {
+						try {
+							const title = this.extractTitle();
+							const author = this.extractAuthor();
+							const workId =
+								window.location.href.match(
+									/works\/(\d+)/,
+								)?.[1] || "";
+							const text = formatNovelInfo(
+								{
+									title,
+									author,
+									shelfId: "ao3",
+									id: `ao3-${workId}`,
+								},
+								template,
+							);
+							if (text) await navigator.clipboard.writeText(text);
+						} catch (_) {
+							// clipboard copy not critical
 						}
-					} catch (error) {
-						console.warn(
-							"Error checking clipboard setting:",
-							error,
-						);
 					}
-
-					// FichHub download bookmarklet - open in new tab
-					const url = `https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`;
-					window.open(url, "_blank");
+					window.open(
+						`https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`,
+						"_blank",
+					);
 				},
 			},
 		];
-	}
-
-	/**
-	 * Generate clipboard text in format: "Title" by Author WorkId.epub
-	 * @returns {string|null} Formatted text or null if unable to generate
-	 */
-	generateClipboardText() {
-		try {
-			const title = this.extractTitle();
-			const author = this.extractAuthor();
-			const workId = window.location.href.match(/works\/(\d+)/)?.[1];
-
-			if (!title || !author || !workId) {
-				return null;
-			}
-
-			return `"${title}" by ${author} ${workId}.epub`;
-		} catch (error) {
-			console.error("Error generating clipboard text:", error);
-			return null;
-		}
 	}
 
 	/**

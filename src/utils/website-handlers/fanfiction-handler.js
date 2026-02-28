@@ -8,6 +8,10 @@
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
 import { SITE_SETTINGS_KEY } from "../site-settings.js";
+import {
+	formatNovelInfo,
+	DEFAULT_EPUB_TEMPLATE,
+} from "../novel-copy-format.js";
 
 export class FanfictionHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -55,13 +59,15 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
+			// ── Navigation ────────────────────────────────────────────────────
+			{ key: "_nav", type: "section", label: "🔀 Navigation" },
 			{
 				key: "domainPreference",
 				label: "Domain Preference",
 				type: "select",
 				defaultValue: "auto",
 				description:
-					"Choose how to handle bare domain (fanfiction.net) visits.",
+					"How to handle bare domain (fanfiction.net) visits.",
 				options: [
 					{ value: "auto", label: "Auto (device-based)" },
 					{ value: "www", label: "Desktop (www)" },
@@ -73,13 +79,22 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				label: "Preferred TLD",
 				type: "select",
 				defaultValue: "net",
-				description:
-					"Default TLD to use when visiting FanFiction URLs.",
+				description: "TLD to use when opening FanFiction URLs.",
 				options: [
 					{ value: "net", label: "fanfiction.net (default)" },
 					{ value: "ws", label: "fanfiction.ws" },
 				],
 			},
+			{
+				key: "showVersionSwitcher",
+				label: "Show Mobile ⇔ Desktop switcher",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Show a quick-switch button in chapter controls to jump between mobile and desktop views.",
+			},
+			// ── Enhancement ────────────────────────────────────────────────
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -87,6 +102,37 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				defaultValue: false,
 				description:
 					"Automatically run Enhance when a FanFiction.net chapter loads.",
+			},
+			// ── Download & Export ────────────────────────────────────────
+			{
+				key: "_download",
+				type: "section",
+				label: "⬇️ Download & Export",
+			},
+			{
+				key: "downloadEnabled",
+				label: "Show download button",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Show a FichHub download button in chapter controls.",
+			},
+			{
+				key: "copyEpubOnDownload",
+				label: "Copy .epub filename on download",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Automatically copy the formatted epub filename to clipboard when Download is clicked.",
+			},
+			{
+				key: "epubTemplate",
+				label: "Epub filename template",
+				type: "text",
+				defaultValue: "",
+				placeholder: "{titleSafe} - {authorSafe}.epub",
+				description:
+					"Filename template for this site. Available tokens: {titleSafe}, {authorSafe}, {title}, {author}, {id}. Leave blank to use the global epub template.",
 			},
 		],
 	};
@@ -331,80 +377,105 @@ When enhancing, improve readability while respecting the author's creative voice
 	}
 
 	/**
-	 * Get site-specific enhancement buttons for FanFiction.net
-	 * These buttons are injected into the control panel alongside enhance/summarize
-	 * @returns {Array<HTMLElement>} Array of button elements
+	 * Get chapter control buttons: version switcher + FichHub download.
+	 * Both buttons are controlled by site settings; async to read preferences.
+	 * @returns {Promise<Array>} Resolves to array of button spec objects
+	 */
+	async getCustomChapterButtons() {
+		if (!this.isChapterPage()) return [];
+
+		const hostname = window.location.hostname;
+		const isMobile =
+			hostname === "m.fanfiction.net" || hostname === "m.fanfiction.ws";
+		const isFFSite =
+			hostname.includes("fanfiction.net") ||
+			hostname.includes("fanfiction.ws");
+		if (!isFFSite) return [];
+
+		// Read site settings once at button-creation time
+		let siteConf = {};
+		try {
+			const result = await browser.storage.local.get(SITE_SETTINGS_KEY);
+			siteConf = result?.[SITE_SETTINGS_KEY]?.fanfiction || {};
+		} catch (_) {
+			// Use defaults (all features on)
+		}
+
+		const buttons = [];
+
+		// ── Version switcher (on by default) ──────────────────────────────────
+		if (siteConf.showVersionSwitcher !== false) {
+			buttons.push({
+				text: isMobile ? "Desktop" : "Mobile",
+				emoji: isMobile ? "🖥️" : "📱",
+				color: "#5a9fd4",
+				onClick: () => {
+					const url = window.location.href;
+					if (isMobile) {
+						window.location.href = url.replace(
+							"m.fanfiction",
+							"www.fanfiction",
+						);
+					} else {
+						window.location.href = url.replace(
+							/(?:www\.)?fanfiction\.net/,
+							"m.fanfiction.net",
+						);
+					}
+				},
+			});
+		}
+
+		// ── FichHub download (on by default) ────────────────────────────────
+		if (siteConf.downloadEnabled !== false) {
+			const template =
+				siteConf.epubTemplate?.trim() || DEFAULT_EPUB_TEMPLATE;
+			const copyEnabled = siteConf.copyEpubOnDownload !== false;
+
+			buttons.push({
+				text: "FichHub",
+				emoji: "⬇️",
+				color: "#ff6b6b",
+				onClick: async () => {
+					if (copyEnabled) {
+						try {
+							const title = this.extractTitle();
+							const author = this.extractAuthor();
+							const storyId =
+								window.location.href.match(/\/s\/(\d+)/)?.[1] ||
+								"";
+							const text = formatNovelInfo(
+								{
+									title,
+									author,
+									shelfId: "fanfiction",
+									id: `fanfiction-${storyId}`,
+								},
+								template,
+							);
+							if (text) await navigator.clipboard.writeText(text);
+						} catch (_) {
+							// clipboard copy not critical
+						}
+					}
+					window.open(
+						`https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`,
+						"_blank",
+					);
+				},
+			});
+		}
+
+		return buttons;
+	}
+
+	/**
+	 * Version switcher is now in getCustomChapterButtons(), so this method
+	 * intentionally returns an empty array.
+	 * @returns {Array}
 	 */
 	getSiteSpecificEnhancements() {
-		const hostname = window.location.hostname;
-		const isMobile = hostname === "m.fanfiction.net";
-		const isDesktop =
-			hostname === "www.fanfiction.net" || hostname === "fanfiction.net";
-
-		// Only show switcher on chapter pages of FanFiction.net sites
-		if (!isMobile && !isDesktop) {
-			return [];
-		}
-
-		// Only show on chapter pages
-		if (!this.isChapterPage()) {
-			return [];
-		}
-
-		const button = document.createElement("button");
-		button.id = "fanfiction-version-switcher";
-		button.textContent = isMobile ? "🖥️ Desktop" : "📱 Mobile";
-		button.title = isMobile
-			? "Switch to desktop version"
-			: "Switch to mobile version";
-
-		// Match the same styling as enhance/summarize buttons but compact
-		button.style.cssText = `
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			padding: 8px 12px;
-			margin: 0;
-			background-color: #222;
-			color: #bab9a0;
-			border: 1px solid #ffffff21;
-			box-shadow: inset 0 0 0 1px #5a5a5a4d;
-			border-radius: 4px;
-			cursor: pointer;
-			font-weight: bold;
-			font-size: 12px;
-			z-index: 1000;
-		`;
-
-		button.addEventListener("click", () => {
-			const currentUrl = window.location.href;
-			let newUrl;
-
-			if (isMobile) {
-				// Switch to desktop: m.fanfiction.net → www.fanfiction.net
-				newUrl = currentUrl.replace(
-					"m.fanfiction.net",
-					"www.fanfiction.net",
-				);
-			} else {
-				// Switch to mobile: www.fanfiction.net → m.fanfiction.net
-				newUrl = currentUrl.replace(
-					/(?:www\.)?fanfiction\.net/,
-					"m.fanfiction.net",
-				);
-			}
-
-			window.location.href = newUrl;
-		});
-
-		button.addEventListener("mouseover", () => {
-			button.style.backgroundColor = "#333";
-		});
-		button.addEventListener("mouseout", () => {
-			button.style.backgroundColor = "#222";
-		});
-
-		return [button];
+		return [];
 	}
 
 	// Find the content area on Fanfiction.net

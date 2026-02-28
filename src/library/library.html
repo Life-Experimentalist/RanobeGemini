@@ -45,6 +45,10 @@
 							🔔
 							<span id="notification-bell-badge" class="hidden">0</span>
 						</button>
+						<button class="btn btn-icon" id="pwa-header-btn" title="Open as Standalone Window"
+							aria-label="Open as standalone window">
+							🪟
+						</button>
 						<button class="btn btn-icon" id="settings-btn" title="Library Settings">
 							⚙️
 						</button>
@@ -80,6 +84,18 @@
 					<button id="telemetry-banner-keep" class="btn btn-primary">
 						Keep Enabled
 					</button>
+				</div>
+			</div>
+			<!-- Standalone-window banner — shown via JS when triggered -->
+			<div id="pwa-install-banner" class="pwa-install-banner hidden">
+				<span class="pwa-install-icon">🪟</span>
+				<div class="pwa-install-text">
+					<strong>Open as Standalone Window</strong>
+					<span>Launch the library in a clean, distraction-free window.</span>
+				</div>
+				<div class="pwa-install-actions">
+					<button id="pwa-install-btn" class="btn btn-primary">Open</button>
+					<button id="pwa-install-dismiss" class="btn btn-secondary">Not now</button>
 				</div>
 			</div>
 			<!-- Continue Reading Hero -->
@@ -349,10 +365,6 @@
 								<button id="modal-edit-btn" class="btn btn-secondary">
 									✏️ Edit Details
 								</button>
-								<button id="modal-copy-info-btn" class="btn btn-secondary"
-									title="Copy novel info to clipboard">
-									📋 Copy Info
-								</button>
 								<button id="modal-remove-btn" class="btn btn-danger">
 									Remove from Library
 								</button>
@@ -429,14 +441,47 @@
 			<!-- Inline edit modal container (used by edit-modal.js) -->
 			<div id="shelf-edit-modal"></div>
 
+			<!-- PWA Install Modal -->
+			<div id="pwa-install-modal" class="pwa-modal-overlay hidden" role="dialog" aria-modal="true"
+				aria-label="Install App">
+				<div class="pwa-modal-card">
+					<button class="pwa-modal-close" id="pwa-modal-close" aria-label="Close">&times;</button>
+					<div class="pwa-modal-header">
+						<img src="../icons/icon.png" alt="Ranobe Gemini" class="pwa-modal-icon" />
+						<div>
+							<h2 class="pwa-modal-title">Open as Standalone App</h2>
+							<p class="pwa-modal-subtitle">Ranobe Gemini Library</p>
+						</div>
+					</div>
+					<p class="pwa-modal-desc">Open the library in a clean standalone window — no address bar, no
+						browser tabs, just your novels.</p>
+					<ul class="pwa-modal-features">
+						<li>⚡ Dedicated window, distraction-free</li>
+						<li>🗂️ All library features, same data</li>
+						<li>📌 Pin the extension icon for one-click access</li>
+					</ul>
+					<div id="pwa-modal-status" class="pwa-modal-status hidden"></div>
+					<div class="pwa-modal-actions">
+						<button id="pwa-modal-install-btn" class="btn btn-primary pwa-modal-main-btn">🪟
+							Open Standalone Window</button>
+						<button id="pwa-modal-cancel-btn" class="btn btn-secondary">Not now</button>
+					</div>
+					<p id="pwa-modal-installed-note" class="pwa-modal-installed-note hidden">✅ Already running in
+						standalone mode.</p>
+				</div>
+			</div>
+
 			<!-- Browser API polyfill for Chrome/Edge compatibility -->
 			<script src="../lib/browser-polyfill.min.js"></script>
 
-			<!-- Service Worker registration (PWA offline support) -->
+			<!-- Service Worker registration (PWA offline support) — skipped for extension pages -->
 			<script>
-				if ('serviceWorker' in navigator) {
-					navigator.serviceWorker.register('sw.js').catch(() => { });
-				}
+				(function () {
+					var proto = window.location.protocol;
+					if ('serviceWorker' in navigator && proto !== 'chrome-extension:' && proto !== 'moz-extension:') {
+						navigator.serviceWorker.register('sw.js').catch(function () { });
+					}
+				})();
 			</script>
 
 			<script type="module" src="library.js"></script>

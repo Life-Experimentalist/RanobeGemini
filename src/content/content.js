@@ -876,10 +876,10 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Dedicated toggle function for Show/Hide button in chapter novel controls
-	 * Works independently without updating the old toggle button
-	 * ONLY hides enhancement banners, NEVER hides the controls container itself
+	 * ONLY hides enhancement banners, NEVER hides the controls container itself.
+	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
 	 */
-	function handleChapterControlsToggleBanners() {
+	function handleChapterControlsToggleBanners(callerBtn = null) {
 		// Guard: don't toggle while enhancement or summarization is in progress
 		const wipBanner = document.querySelector(".gemini-wip-banner");
 		if (wipBanner) {
@@ -916,6 +916,25 @@ if (window.__RGInitDone) {
 				banner.style.display = "none";
 			}
 		});
+
+		// Update chapter controls toggle button text
+		const toggleBtn =
+			callerBtn || document.querySelector(".gemini-chapter-toggle-btn");
+		if (toggleBtn) {
+			toggleBtn.innerHTML = isHidden
+				? "⚡ Hide Gemini UI"
+				: "⚡ Show Gemini UI";
+		}
+
+		// Sync the main standalone toggle button if present
+		const mainToggleBtn = document.querySelector(
+			".gemini-toggle-banners-btn",
+		);
+		if (mainToggleBtn) {
+			mainToggleBtn.innerHTML = isHidden
+				? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
+				: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+		}
 
 		showStatusMessage(
 			isHidden
@@ -1394,6 +1413,18 @@ if (window.__RGInitDone) {
 						contentArea.firstChild,
 					);
 				}
+
+				// Update the main summary text container's data-group-end to match the
+				// real total so summarizeChunkRange can find it by index range matching.
+				const mainSummaryText = document.querySelector(
+					".gemini-main-summary-text",
+				);
+				if (mainSummaryText) {
+					mainSummaryText.setAttribute(
+						"data-group-end",
+						String(totalChunks - 1),
+					);
+				}
 			}
 		}
 	}
@@ -1486,9 +1517,26 @@ if (window.__RGInitDone) {
 		const statusDiv = document.getElementById("gemini-status");
 		const summaryType = isShort ? "Short" : "Long";
 
-		// Find the matching summary group's text container based on chunk indices
-		const startIdx = Math.min(...chunkIndices);
-		const endIdx = Math.max(...chunkIndices);
+		// Resolve chunk indices dynamically: if the caller passed [0] as a placeholder,
+		// check if there are actually more chunks in the DOM and use all of them.
+		const domChunks = Array.from(
+			document.querySelectorAll(
+				".gemini-chunk-content[data-chunk-index]",
+			),
+		);
+		const resolvedIndices =
+			domChunks.length > 0
+				? domChunks
+						.map((el) =>
+							parseInt(el.getAttribute("data-chunk-index"), 10),
+						)
+						.filter((n) => !isNaN(n))
+						.sort((a, b) => a - b)
+				: chunkIndices;
+
+		// Find the matching summary group's text container based on resolved chunk range
+		const startIdx = Math.min(...resolvedIndices);
+		const endIdx = Math.max(...resolvedIndices);
 		let summaryTextContainer = null;
 
 		// Look for the summary text container matching this chunk range
@@ -1509,8 +1557,18 @@ if (window.__RGInitDone) {
 				break;
 			}
 		}
+		// Fallback: use the main summary text container when the full chapter is requested
+		// (handles placeholder where data-group-end="0" but actual endIdx > 0)
+		if (!summaryTextContainer) {
+			summaryTextContainer =
+				document.querySelector(".gemini-main-summary-text") ||
+				document.querySelector(
+					".gemini-summary-text-container[data-group-start='0']",
+				) ||
+				null;
+		}
 
-		const combinedText = (chunkIndices || [])
+		let combinedText = resolvedIndices
 			.map((index) => {
 				const chunkContent = document.querySelector(
 					`.gemini-chunk-content[data-chunk-index="${index}"]`,
@@ -1528,12 +1586,27 @@ if (window.__RGInitDone) {
 			.join("\n\n");
 
 		if (!combinedText) {
-			showStatusMessage(
-				"No content available for summary.",
-				"warning",
-				2000,
-			);
-			return;
+			// Try the stored original text attribute set during cache restore / enhancement start.
+			// This is the safest fallback when the content area has been replaced with chunk elements.
+			const contentArea = findContentArea();
+			const storedOriginal = contentArea
+				?.getAttribute("data-original-text")
+				?.trim();
+			if (storedOriginal) {
+				combinedText = storedOriginal;
+			} else {
+				// Final fallback: live extraction from the current page DOM
+				const extracted = extractContent();
+				if (!extracted || !extracted.text?.trim()) {
+					showStatusMessage(
+						"No content available for summary. Try enhancing the chapter first.",
+						"warning",
+						3000,
+					);
+					return;
+				}
+				combinedText = extracted.text.trim();
+			}
 		}
 
 		try {
@@ -1678,6 +1751,10 @@ if (window.__RGInitDone) {
 			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 			color: #e5e7eb;
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			box-sizing: border-box;
+			width: 100%;
+			max-width: 100%;
+			overflow: hidden;
 		`;
 
 		banner.innerHTML = `
@@ -1696,7 +1773,7 @@ if (window.__RGInitDone) {
 				isComplete
 					? ""
 					: `
-				<button class="gemini-cancel-btn" style="margin-top: 10px; padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.2s; font-weight: 600;">
+				<button class="gemini-cancel-btn" style="margin-top: 10px; padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.2s; font-weight: 600; min-height: 40px; max-width: 100%;">
 					Cancel Enhancement
 				</button>
 			`
@@ -2913,6 +2990,12 @@ if (window.__RGInitDone) {
 				chunking?.config?.DEFAULT_CHUNK_SUMMARY_COUNT ||
 				2;
 
+			// Remove any existing placeholder mainSummaryGroup (created upfront in
+			// createChapterPageNovelControls with totalChunks=1 before chunk count was known).
+			document
+				.querySelectorAll(".gemini-main-summary-group")
+				.forEach((el) => el.remove());
+
 			const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
 				totalChunks,
 				(indices) => summarizeChunkRange(indices, false),
@@ -4095,9 +4178,7 @@ if (window.__RGInitDone) {
 		];
 
 		for (const field of fieldsToCheck) {
-			const oldKey = Array.isArray(field.old) ? field.old[0] : field.old;
 			const oldPath = Array.isArray(field.old) ? field.old : [field.old];
-			const newKey = Array.isArray(field.new) ? field.new[0] : field.new;
 			const newPath = Array.isArray(field.new) ? field.new : [field.new];
 
 			// Get old and new values
@@ -4826,16 +4907,22 @@ if (window.__RGInitDone) {
 			buttonRow.appendChild(deleteBtn);
 		}
 
-		// Open Library button
+		// Open Library button — pass novel ID so the library auto-opens the modal
 		const libraryBtn = createButton("Open Library", "📚", "#7b1fa2", () => {
-			const libraryUrl = browser.runtime.getURL("library/library.html");
+			const base = browser.runtime.getURL("library/library.html");
+			const novelId = existingNovel?.id ?? null;
+			const libraryUrl = novelId
+				? `${base}?novel=${encodeURIComponent(novelId)}`
+				: base;
 			window.open(libraryUrl, "_blank");
 		});
 		buttonRow.appendChild(libraryBtn);
 
 		// Handler-supplied extra buttons (after defaults)
 		if (typeof currentHandler?.getCustomChapterButtons === "function") {
-			const extraBtns = currentHandler.getCustomChapterButtons();
+			const extraBtns = await Promise.resolve(
+				currentHandler.getCustomChapterButtons(),
+			);
 			if (Array.isArray(extraBtns)) {
 				extraBtns.forEach((spec) => {
 					if (spec?.text && typeof spec.onClick === "function") {
@@ -5081,6 +5168,7 @@ if (window.__RGInitDone) {
 	/**
 	 * Handle delete button click
 	 */
+	// eslint-disable-next-line no-unused-vars
 	async function handleNovelDelete() {
 		if (!novelLibrary) return;
 
@@ -5114,6 +5202,7 @@ if (window.__RGInitDone) {
 	 * This prevents the novel from being automatically re-added on reload
 	 * @param {string} novelId - The novel ID to remove and blocklist
 	 */
+	// eslint-disable-next-line no-unused-vars
 	async function handleRemoveNovelWithBlocklist(novelId) {
 		if (!novelLibrary || !novelId) return;
 
@@ -5196,6 +5285,7 @@ if (window.__RGInitDone) {
 	 * This is called when visiting a novel page after a failed metadata update
 	 * @param {string} novelId - The novel ID to potentially collect metadata for
 	 */
+	// eslint-disable-next-line no-unused-vars
 	async function autoCollectMetadataOnPageIfPending(novelId) {
 		if (!novelId || !novelLibrary || !currentHandler) return;
 
@@ -5642,15 +5732,17 @@ if (window.__RGInitDone) {
 				controlsContainer.appendChild(removeBtn);
 			}
 
-			// Open Library button
+			// Open Library button — pass novel ID so the library auto-opens the modal
 			const libraryBtn = createCompactButton(
 				"Library",
 				"📚",
 				"#7b1fa2",
 				() => {
-					const libraryUrl = browser.runtime.getURL(
-						"library/library.html",
-					);
+					const base = browser.runtime.getURL("library/library.html");
+					const novelId = existingNovel?.id ?? null;
+					const libraryUrl = novelId
+						? `${base}?novel=${encodeURIComponent(novelId)}`
+						: base;
 					window.open(libraryUrl, "_blank");
 				},
 			);
@@ -5659,14 +5751,18 @@ if (window.__RGInitDone) {
 			// Add toggle banners button (except for dedicated_page handler types)
 			// which don't need to hide/show enhancement banners
 			if (handlerType !== HANDLER_TYPES.DEDICATED_PAGE) {
+				const toggleBannersBtnLabel = shouldBannersBeHidden()
+					? "Show Gemini UI"
+					: "Hide Gemini UI";
 				const toggleBannersBtn = createCompactButton(
-					"Show/Hide",
+					toggleBannersBtnLabel,
 					"⚡",
 					"#ff9800",
 					() => {
-						handleChapterControlsToggleBanners();
+						handleChapterControlsToggleBanners(toggleBannersBtn);
 					},
 				);
+				toggleBannersBtn.className += " gemini-chapter-toggle-btn";
 				controlsContainer.appendChild(toggleBannersBtn);
 			}
 
@@ -5675,7 +5771,9 @@ if (window.__RGInitDone) {
 				currentHandler &&
 				typeof currentHandler.getCustomChapterButtons === "function"
 			) {
-				const customButtons = currentHandler.getCustomChapterButtons();
+				const customButtons = await Promise.resolve(
+					currentHandler.getCustomChapterButtons(),
+				);
 				if (customButtons && Array.isArray(customButtons)) {
 					customButtons.forEach((btnSpec) => {
 						if (
@@ -6761,16 +6859,29 @@ if (window.__RGInitDone) {
 							),
 						);
 						if (chunking?.summaryUI) {
-							// The main summary group was created in injectUI() - just ensure visibility
-							const existingSummaryGroup = document.querySelector(
-								".gemini-main-summary-group",
-							);
-							if (
-								existingSummaryGroup &&
-								shouldBannersBeHidden()
-							) {
-								existingSummaryGroup.style.display = "none";
+							// The placeholder summary group (totalChunks=1) was already removed above.
+							// Remove any remaining stale copies then create a fresh one with the
+							// correct chunk count so summary buttons work immediately.
+							document
+								.querySelectorAll(".gemini-main-summary-group")
+								.forEach((el) => el.remove());
+
+							const newMainSummaryGroup =
+								chunking.summaryUI.createMainSummaryGroup(
+									chunks.length,
+									(indices) =>
+										summarizeChunkRange(indices, false),
+									(indices) =>
+										summarizeChunkRange(indices, true),
+									() => handleEnhanceClick(),
+								);
+							if (shouldBannersBeHidden()) {
+								newMainSummaryGroup.style.display = "none";
 							}
+							contentArea.insertBefore(
+								newMainSummaryGroup,
+								chunkedContentContainer,
+							);
 
 							// Only insert per-chunk summary groups if we have multiple chunks
 							if (chunks.length > 1) {

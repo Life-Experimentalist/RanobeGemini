@@ -1157,6 +1157,32 @@ if (typeof browser === "undefined") {
 			return true;
 		}
 
+		if (message.action === "restoreFromDrive") {
+			(async () => {
+				try {
+					const backupData = await downloadDriveBackup(
+						message.fileId,
+					);
+					if (!backupData?.library || !backupData?.version) {
+						sendResponse({
+							success: false,
+							error: "Invalid or empty backup data",
+						});
+						return;
+					}
+					const shouldMerge = (message.mode || "merge") !== "replace";
+					const importResult = await novelLibrary.importLibrary(
+						backupData,
+						shouldMerge,
+					);
+					sendResponse({ success: true, result: importResult });
+				} catch (err) {
+					sendResponse({ success: false, error: err.message });
+				}
+			})();
+			return true;
+		}
+
 		if (message.action === "syncAutoBackups") {
 			scheduleAutoBackup()
 				.then((scheduled) => {
@@ -2773,8 +2799,7 @@ if (typeof browser === "undefined") {
 
 			// Get model endpoint from settings - use the selected model endpoint or fall back to default
 			const modelEndpoint =
-				currentConfig.modelEndpoint ||
-				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+				currentConfig.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
 
 			debugLog(`Using model endpoint: ${modelEndpoint}`);
 
@@ -3099,8 +3124,7 @@ if (typeof browser === "undefined") {
 			}
 
 			const modelEndpoint =
-				currentConfig.modelEndpoint ||
-				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+				currentConfig.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
 
 			// Use the appropriate summary prompt based on isShort flag
 			let summarizationBasePrompt;
@@ -3229,8 +3253,7 @@ if (typeof browser === "undefined") {
 			);
 
 			const modelEndpoint =
-				currentConfig.modelEndpoint ||
-				"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+				currentConfig.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
 
 			// Use the summary prompt from settings
 			const combinationBasePrompt =

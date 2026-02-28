@@ -30,14 +30,18 @@ export function createSummaryButtonGroup(
 	groupContainer.setAttribute("data-end-index", endIndex);
 	groupContainer.style.cssText = `
 		display: flex;
-		gap: 12px;
-		padding: 16px;
+		gap: 10px;
+		padding: 12px 16px;
 		background: ${colors.surfaceVariant};
 		border: 1px solid ${colors.outline};
 		border-radius: 4px;
-		margin: 20px 0;
+		margin: 16px 0;
 		justify-content: center;
 		flex-wrap: wrap;
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
+		overflow: hidden;
 	`;
 
 	const rangeLabel = document.createElement("div");
@@ -46,8 +50,8 @@ export function createSummaryButtonGroup(
 		text-align: center;
 		color: ${colors.onSurface};
 		font-weight: 600;
-		font-size: 14px;
-		margin-bottom: 8px;
+		font-size: 13px;
+		margin-bottom: 6px;
 	`;
 	rangeLabel.textContent = `Summary for Chunks ${startIndex + 1}-${
 		endIndex + 1
@@ -58,7 +62,7 @@ export function createSummaryButtonGroup(
 	const longSummaryBtn = document.createElement("button");
 	longSummaryBtn.className = "gemini-chunk-long-summary-btn";
 	longSummaryBtn.style.cssText = `
-		padding: 10px 20px;
+		padding: 10px 16px;
 		background: ${colors.primary};
 		color: #ffffff;
 		border: 1px solid ${colors.outline};
@@ -68,6 +72,9 @@ export function createSummaryButtonGroup(
 		font-weight: 600;
 		transition: box-shadow 0.2s;
 		font-family: inherit;
+		flex: 1 1 120px;
+		min-height: 44px;
+		max-width: 100%;
 	`;
 	longSummaryBtn.textContent = "📝 Long Summary";
 	longSummaryBtn.addEventListener("mouseenter", () => {
@@ -87,7 +94,7 @@ export function createSummaryButtonGroup(
 	const shortSummaryBtn = document.createElement("button");
 	shortSummaryBtn.className = "gemini-chunk-short-summary-btn";
 	shortSummaryBtn.style.cssText = `
-		padding: 10px 20px;
+		padding: 10px 16px;
 		background: ${colors.surface};
 		color: ${colors.primary};
 		border: 1px solid ${colors.outline};
@@ -97,6 +104,9 @@ export function createSummaryButtonGroup(
 		font-weight: 600;
 		transition: box-shadow 0.2s;
 		font-family: inherit;
+		flex: 1 1 120px;
+		min-height: 44px;
+		max-width: 100%;
 	`;
 	shortSummaryBtn.textContent = "✨ Short Summary";
 	shortSummaryBtn.addEventListener("mouseenter", () => {
@@ -119,10 +129,15 @@ export function createSummaryButtonGroup(
 	summaryTextContainer.setAttribute("data-group-end", endIndex);
 	summaryTextContainer.style.cssText = `
 		display: none;
+		flex: 0 0 100%;
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
 		background: transparent;
 		border: none;
-		margin: 16px 0;
-		padding: 0;
+		margin: 8px 0 0 0;
+		padding: 12px 4px 4px;
+		border-top: 1px solid ${colors.outline};
 		font-family: inherit;
 		font-size: inherit;
 		line-height: inherit;
@@ -255,15 +270,19 @@ export function createMainSummaryGroup(
 	groupContainer.className = "gemini-main-summary-group";
 	groupContainer.style.cssText = `
 		display: flex;
-		gap: 12px;
-		padding: 16px;
+		gap: 10px;
+		padding: 12px 16px;
 		background: ${colors.surfaceVariant};
 		border: 1px solid ${colors.outline};
 		border-radius: 4px;
-		margin: 20px 0;
+		margin: 16px 0;
 		justify-content: center;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: stretch;
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
+		overflow: visible;
 	`;
 
 	const label = document.createElement("div");
@@ -272,8 +291,8 @@ export function createMainSummaryGroup(
 		text-align: center;
 		color: ${colors.onSurface};
 		font-weight: 600;
-		font-size: 16px;
-		margin-bottom: 8px;
+		font-size: 15px;
+		margin-bottom: 6px;
 	`;
 	label.textContent = "Full Chapter Summary";
 	groupContainer.appendChild(label);
@@ -283,25 +302,26 @@ export function createMainSummaryGroup(
 		const btn = document.createElement("button");
 		btn.className = className;
 		btn.style.cssText = `
-			padding: 12px 16px;
+			padding: 10px 14px;
 			background: ${bgColor};
 			color: ${textColor};
 			border: none;
 			border-radius: 6px;
 			cursor: pointer;
-			font-size: 14px;
+			font-size: 13px;
 			font-weight: 600;
 			transition: all 0.2s ease;
 			font-family: inherit;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 			white-space: nowrap;
-			min-height: 42px;
+			min-height: 40px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			flex: 1 1 auto;
-			min-width: 100px;
-			max-width: 180px;
+			flex: 1 1 110px;
+			min-width: 90px;
+			max-width: 200px;
+			box-sizing: border-box;
 		`;
 		btn.textContent = text;
 		btn.addEventListener("mouseenter", () => {
@@ -371,10 +391,15 @@ export function createMainSummaryGroup(
 	);
 	summaryTextContainer.style.cssText = `
 		display: none;
+		flex: 0 0 100%;
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
 		background: transparent;
 		border: none;
-		margin: 16px 0;
-		padding: 0;
+		margin: 8px 0 0 0;
+		padding: 12px 4px 4px;
+		border-top: 1px solid ${colors.outline};
 		font-family: inherit;
 		font-size: inherit;
 		line-height: inherit;

@@ -212,9 +212,12 @@ export function createChunkBanner(
 			margin: 16px 0;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 			color: ${colors.onSurface};
+			box-sizing: border-box;
+			width: 100%;
+			max-width: 100%;
 		">
-			<div style="display: flex; align-items: center; justify-content: space-between;">
-				<div style="display: flex; align-items: center; gap: 12px;">
+			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+				<div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
 					<span style="font-size: 18px;">${statusIcon}</span>
 					<span style="
 						font-weight: 500;
@@ -228,10 +231,11 @@ export function createChunkBanner(
 						font-size: 12px;
 						font-weight: 600;
 						color: ${colors.onSurfaceVariant};
+						white-space: nowrap;
 					">Chunk ${chunkIndex + 1}/${totalChunks}</span>
 				</div>
-				<div style="display: flex; gap: 8px;" class="chunk-controls">
-					<div class="chunk-navigation" style="display: flex; gap: 4px; margin-right: 8px; border-right: 1px solid ${colors.outline}; padding-right: 8px;">
+				<div style="display: flex; gap: 8px; flex-wrap: wrap;" class="chunk-controls">
+					<div class="chunk-navigation" style="display: flex; gap: 4px; margin-right: 8px; border-right: 1px solid ${colors.outline}; padding-right: 8px; flex-shrink: 0;">
 						<!-- Navigation buttons will be added here -->
 					</div>
 					<!-- Action buttons will be added here -->
@@ -287,6 +291,8 @@ export function createChunkBanner(
 			font-weight: 500;
 			transition: background 0.2s, box-shadow 0.2s;
 			font-family: inherit;
+			min-height: 36px;
+			white-space: nowrap;
 		`;
 		btn.textContent = text;
 
@@ -604,16 +610,19 @@ export function createMasterBanner(
 		border-radius: 4px;
 		margin: 20px 0;
 		color: ${colors.onSurface};
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
 	`;
 
 	banner.innerHTML = `
 		<div style="display: flex; flex-direction: column; gap: 12px;">
-			<div style="display: flex; align-items: center; justify-content: space-between;">
-				<div style="display: flex; align-items: center; gap: 12px;">
-					<span style="font-size: 20px;">✨</span>
-					<span style="font-weight: 600; font-size: 16px;">${modelDisplay}</span>
+			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+				<div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 200px;">
+					<span style="font-size: 20px; flex-shrink: 0;">✨</span>
+					<span style="font-weight: 600; font-size: 15px; overflow-wrap: break-word; word-break: break-word;">${modelDisplay}</span>
 				</div>
-				<div style="display: flex; gap: 8px;" class="master-controls">
+				<div style="display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0;" class="master-controls">
 					<button class="gemini-master-toggle-all-btn" style="
 						padding: 6px 12px;
 						background: ${colors.overlay};
@@ -624,6 +633,8 @@ export function createMasterBanner(
 						font-size: 13px;
 						font-weight: 500;
 						font-family: inherit;
+						min-height: 36px;
+						white-space: nowrap;
 					">👁 Show All Original</button>
 					<button class="gemini-master-delete-all-btn" style="
 						padding: 6px 12px;
@@ -635,26 +646,28 @@ export function createMasterBanner(
 						font-size: 13px;
 						font-weight: 500;
 						font-family: inherit;
+						min-height: 36px;
+						white-space: nowrap;
 					">🗑 Delete All</button>
 				</div>
 			</div>
-			<div style="display: flex; gap: 24px; font-size: 14px; color: ${colors.onSurfaceVariant};">
+			<div style="display: flex; gap: 16px; font-size: 13px; color: ${colors.onSurfaceVariant}; flex-wrap: wrap;">
 				<div>
-					<span style="font-weight: 500;">Total Chunks:</span>
+					<span style="font-weight: 500;">Chunks:</span>
 					<span style="font-weight: 600; color: ${colors.onSurface};">${totalChunks}</span>
 				</div>
 				<div>
 					<span style="font-weight: 500;">Original:</span>
-					<span style="font-weight: 600; color: ${colors.onSurface};">${originalWordCount.toLocaleString()} words</span>
+					<span style="font-weight: 600; color: ${colors.onSurface};">${originalWordCount.toLocaleString()} w</span>
 				</div>
 				<div>
 					<span style="font-weight: 500;">Enhanced:</span>
-					<span style="font-weight: 600; color: ${colors.onSurface};">${enhancedWordCount.toLocaleString()} words</span>
+					<span style="font-weight: 600; color: ${colors.onSurface};">${enhancedWordCount.toLocaleString()} w</span>
 				</div>
 				<div>
 					<span style="font-weight: 500;">Change:</span>
 					<span style="font-weight: 600; color: ${changeColor};">
-						${changeIcon} ${Math.abs(wordDiff).toLocaleString()} words (${percentChange}%)
+						${changeIcon} ${Math.abs(wordDiff).toLocaleString()} w (${percentChange}%)
 					</span>
 				</div>
 			</div>
