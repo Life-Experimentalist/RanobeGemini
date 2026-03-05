@@ -388,16 +388,15 @@ async function initializePopup() {
 	const totalNotifsSpan = document.getElementById("totalNotifs");
 	const unreadNotifsSpan = document.getElementById("unreadNotifs");
 
-	// Theme defaults
-	const defaultTheme = {
-		mode: "dark",
-		accentPrimary: "#4b5563",
-		accentSecondary: "#6b7280",
-		bgColor: "#111827",
-		textColor: "#e5e7eb",
-	};
+	// Theme Management — uses centralized theme-config
+	const {
+		DEFAULT_THEME: defaultTheme,
+		setThemeVariables,
+		applyThemeFromStorage,
+		setupThemeListener,
+		getPresetList,
+	} = await import("../utils/theme-config.js");
 
-	// Theme Management Functions
 	async function loadTheme() {
 		try {
 			const result = await browser.storage.local.get("themeSettings");
@@ -408,63 +407,31 @@ async function initializePopup() {
 				themeModeSelect.value = theme.mode || "dark";
 			}
 
-			// Color pickers are in library settings, not popup
-			// Just apply the theme to UI
-			applyTheme(theme);
+			// Apply preset selector if present
+			const presetSelect = document.getElementById("themePreset");
+			if (presetSelect) {
+				presetSelect.value = theme.preset || "material-dark";
+			}
+
+			setThemeVariables(theme);
 		} catch (error) {
 			debugError("Error loading theme:", error);
-			applyTheme(defaultTheme);
+			setThemeVariables(defaultTheme);
 		}
-	}
-
-	function applyTheme(theme) {
-		const root = document.documentElement;
-
-		const toRGBA = (hex, alpha = 0.8) => {
-			if (!/^#([0-9A-Fa-f]{6})$/.test(hex || "")) return null;
-			const r = parseInt(hex.slice(1, 3), 16);
-			const g = parseInt(hex.slice(3, 5), 16);
-			const b = parseInt(hex.slice(5, 7), 16);
-			return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-		};
-
-		// Apply theme mode
-		if (theme.mode === "light") {
-			root.setAttribute("data-theme", "light");
-		} else if (theme.mode === "auto") {
-			// Use system preference
-			const prefersDark = window.matchMedia(
-				"(prefers-color-scheme: dark)",
-			).matches;
-			root.setAttribute("data-theme", prefersDark ? "dark" : "light");
-		} else {
-			root.removeAttribute("data-theme"); // Default to dark
-		}
-
-		const primaryText = theme.textColor || defaultTheme.textColor;
-		const secondaryText = toRGBA(primaryText, 0.78) || primaryText;
-
-		// Apply custom colors
-		root.style.setProperty("--accent-primary", theme.accentPrimary);
-		root.style.setProperty("--accent-secondary", theme.accentSecondary);
-		root.style.setProperty("--container-bg", theme.bgColor);
-		root.style.setProperty("--text-primary", primaryText);
-		root.style.setProperty("--text-secondary", secondaryText);
-		root.style.setProperty("--text-muted", secondaryText);
 	}
 
 	async function saveTheme() {
 		try {
+			// Read current settings first so we don't overwrite preset/colors
+			const result = await browser.storage.local.get("themeSettings");
+			const current = result.themeSettings || { ...defaultTheme };
 			const theme = {
+				...current,
 				mode: themeModeSelect?.value || "dark",
-				accentPrimary: defaultTheme.accentPrimary,
-				accentSecondary: defaultTheme.accentSecondary,
-				bgColor: defaultTheme.bgColor,
-				textColor: defaultTheme.textColor,
 			};
 
 			await browser.storage.local.set({ themeSettings: theme });
-			applyTheme(theme);
+			setThemeVariables(theme);
 			showStatus("Theme mode saved successfully!", "success");
 		} catch (error) {
 			debugError("Error saving theme:", error);
@@ -476,11 +443,11 @@ async function initializePopup() {
 		try {
 			await browser.storage.local.set({ themeSettings: defaultTheme });
 
-			// Reset UI controls
 			if (themeModeSelect) themeModeSelect.value = defaultTheme.mode;
-			// Color pickers are in library settings, not popup
+			const presetSelect = document.getElementById("themePreset");
+			if (presetSelect) presetSelect.value = defaultTheme.preset;
 
-			applyTheme(defaultTheme);
+			setThemeVariables(defaultTheme);
 			showStatus("Theme reset to default", "success");
 		} catch (error) {
 			debugError("Error resetting theme:", error);
@@ -488,37 +455,37 @@ async function initializePopup() {
 		}
 	}
 
-	// Sync color picker and text input
-	function syncColorInputs(picker, text) {
-		if (picker && text) {
-			picker.addEventListener("input", () => {
-				text.value = picker.value;
-			});
-			text.addEventListener("input", () => {
-				if (/^#[0-9A-Fa-f]{6}$/.test(text.value)) {
-					picker.value = text.value;
-				}
-			});
-		}
-	}
-
-	// Initialize theme controls (color pickers removed from popup HTML - managed in library settings)
-	// syncColorInputs calls removed - accentColorPicker etc. no longer exist in popup
-
 	// Theme mode select (still in popup HTML)
 	const themeModeSelect = document.getElementById("themeMode");
 	if (themeModeSelect) {
-		themeModeSelect.addEventListener("change", () => {
-			const theme = {
-				mode: themeModeSelect.value,
-				accentPrimary: defaultTheme.accentPrimary,
-				accentSecondary: defaultTheme.accentSecondary,
-				bgColor: defaultTheme.bgColor,
-				textColor: defaultTheme.textColor,
-			};
-			applyTheme(theme);
+		themeModeSelect.addEventListener("change", async () => {
+			const result = await browser.storage.local.get("themeSettings");
+			const current = result.themeSettings || { ...defaultTheme };
+			const theme = { ...current, mode: themeModeSelect.value };
+			setThemeVariables(theme);
 		});
 	}
+
+	// Theme preset selector (if present in popup HTML)
+	const themePresetSelect = document.getElementById("themePreset");
+	if (themePresetSelect) {
+		// Populate preset options
+		const presets = getPresetList();
+		themePresetSelect.innerHTML = presets
+			.map((p) => `<option value="${p.id}">${p.emoji} ${p.name}</option>`)
+			.join("");
+
+		themePresetSelect.addEventListener("change", async () => {
+			const result = await browser.storage.local.get("themeSettings");
+			const current = result.themeSettings || { ...defaultTheme };
+			const theme = { ...current, preset: themePresetSelect.value };
+			await browser.storage.local.set({ themeSettings: theme });
+			setThemeVariables(theme);
+		});
+	}
+
+	// Listen for cross-page theme changes
+	setupThemeListener();
 
 	// Load theme on startup
 	loadTheme();

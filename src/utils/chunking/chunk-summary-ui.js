@@ -2,19 +2,146 @@
  * Chunk Summary UI - Material Design
  * Creates summary button groups that repeat every N chunks
  * Theme-aware styling
+ *
+ * Structure used for BOTH main and per-chunk groups:
+ *
+ *   .gemini-*-summary-group   (display:block  — outer card)
+ *     ├── .rg-summary-label   (plain text label)
+ *     ├── .rg-summary-buttons (display:grid   — equal-width button grid)
+ *     │     ├── button
+ *     │     └── button ...
+ *     └── .gemini-summary-text-container  (display:none → block on reveal)
+ *
+ * Keeping label / buttons / text in separate divs prevents the
+ * flex-child sizing issues that arose with a flat single-flex layout.
  */
 
 import { DEFAULT_CHUNK_SUMMARY_COUNT } from "./chunk-config.js";
+// eslint-disable-next-line no-unused-vars
 import { isDarkMode, getThemeColors } from "./chunk-ui.js";
+
+/* ─────────────────────────────────────────────────────────────
+   Internal helpers
+───────────────────────────────────────────────────────────── */
+
+function buildCard(className, colors) {
+	const card = document.createElement("div");
+	card.className = className;
+	card.style.cssText = `
+		box-sizing: border-box;
+		width: 100%;
+		background: ${colors.surfaceVariant};
+		border: 1px solid ${colors.outline};
+		border-radius: 6px;
+		padding: 12px 14px;
+		margin: 14px 0;
+	`;
+	return card;
+}
+
+function buildLabel(text, colors, fontSize = "13px") {
+	const label = document.createElement("div");
+	label.className = "rg-summary-label";
+	label.textContent = text;
+	label.style.cssText = `
+		font-weight: 600;
+		font-size: ${fontSize};
+		color: ${colors.onSurface};
+		text-align: center;
+		margin-bottom: 10px;
+	`;
+	return label;
+}
+
+function buildButtonRow() {
+	const row = document.createElement("div");
+	row.className = "rg-summary-buttons";
+	row.style.cssText = `
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	`;
+	return row;
+}
+
+function buildButton(
+	text,
+	className,
+	bgColor,
+	textColor,
+	colors,
+	outline = false,
+) {
+	const btn = document.createElement("button");
+	btn.className = className;
+	btn.style.cssText = `
+		flex: 1 1 140px;
+		box-sizing: border-box;
+		padding: 9px 12px;
+		margin: 15px 0;
+		background: ${bgColor};
+		color: ${textColor};
+		border: ${outline ? `1px solid ${colors.outline}` : "none"};
+		border-radius: 5px;
+		cursor: pointer;
+		font-size: 13px;
+		font-weight: 600;
+		font-family: inherit;
+		white-space: nowrap;
+		min-height: 38px;
+		transition: filter 0.15s, box-shadow 0.15s;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+		text-align: center;
+		display: inline-flex;
+		justify-content: center;
+		align-items: center;
+	`;
+	btn.textContent = text;
+	btn.addEventListener("mouseenter", () => {
+		btn.style.filter = "brightness(1.12)";
+		btn.style.boxShadow = "0 2px 6px rgba(0,0,0,0.35)";
+	});
+	btn.addEventListener("mouseleave", () => {
+		btn.style.filter = "";
+		btn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.25)";
+	});
+	return btn;
+}
+
+function buildTextContainer(groupStart, groupEnd, colors, extraClass = "") {
+	const div = document.createElement("div");
+	div.className =
+		"gemini-summary-text-container" + (extraClass ? " " + extraClass : "");
+	div.setAttribute("data-group-start", String(groupStart));
+	div.setAttribute("data-group-end", String(groupEnd));
+	div.style.cssText = `
+		display: none;
+		box-sizing: border-box;
+		width: 100%;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid ${colors.outline};
+		font-family: inherit;
+		font-size: inherit;
+		line-height: 1.7;
+		color: ${colors.onSurface};
+		word-break: break-word;
+	`;
+	return div;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Exported: per-chunk summary group (appears between N chunks)
+───────────────────────────────────────────────────────────── */
 
 /**
  * Create a summary button group for a range of chunks
- * @param {number} startIndex - Starting chunk index (inclusive)
- * @param {number} endIndex - Ending chunk index (inclusive)
- * @param {Array<number>} chunkIndices - Array of chunk indices in this group
- * @param {Function} onLongSummary - Callback for long summary (receives chunkIndices)
- * @param {Function} onShortSummary - Callback for short summary (receives chunkIndices)
- * @returns {HTMLElement} The summary button group element
+ * @param {number}   startIndex
+ * @param {number}   endIndex
+ * @param {number[]} chunkIndices
+ * @param {Function} onLongSummary
+ * @param {Function} onShortSummary
+ * @returns {HTMLElement}
  */
 export function createSummaryButtonGroup(
 	startIndex,
@@ -22,240 +149,81 @@ export function createSummaryButtonGroup(
 	chunkIndices,
 	onLongSummary,
 	onShortSummary,
+	onEnhance = null,
 ) {
 	const colors = getThemeColors();
-	const groupContainer = document.createElement("div");
-	groupContainer.className = "gemini-chunk-summary-group";
-	groupContainer.setAttribute("data-start-index", startIndex);
-	groupContainer.setAttribute("data-end-index", endIndex);
-	groupContainer.style.cssText = `
-		display: flex;
-		gap: 10px;
-		padding: 12px 16px;
-		background: ${colors.surfaceVariant};
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		margin: 16px 0;
-		justify-content: center;
-		flex-wrap: wrap;
-		box-sizing: border-box;
-		width: 100%;
-		max-width: 100%;
-		overflow: hidden;
-	`;
+	const card = buildCard("gemini-chunk-summary-group", colors);
+	card.setAttribute("data-start-index", startIndex);
+	card.setAttribute("data-end-index", endIndex);
 
-	const rangeLabel = document.createElement("div");
-	rangeLabel.style.cssText = `
-		flex: 0 0 100%;
-		text-align: center;
-		color: ${colors.onSurface};
-		font-weight: 600;
-		font-size: 13px;
-		margin-bottom: 6px;
-	`;
-	rangeLabel.textContent = `Summary for Chunks ${startIndex + 1}-${
-		endIndex + 1
-	}`;
-	groupContainer.appendChild(rangeLabel);
-
-	// Long summary button
-	const longSummaryBtn = document.createElement("button");
-	longSummaryBtn.className = "gemini-chunk-long-summary-btn";
-	longSummaryBtn.style.cssText = `
-		padding: 10px 16px;
-		background: ${colors.primary};
-		color: #ffffff;
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 600;
-		transition: box-shadow 0.2s;
-		font-family: inherit;
-		flex: 1 1 120px;
-		min-height: 44px;
-		max-width: 100%;
-	`;
-	longSummaryBtn.textContent = "📝 Long Summary";
-	longSummaryBtn.addEventListener("mouseenter", () => {
-		longSummaryBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-	});
-	longSummaryBtn.addEventListener("mouseleave", () => {
-		longSummaryBtn.style.boxShadow = "none";
-	});
-	longSummaryBtn.addEventListener("click", () => {
-		if (onLongSummary) {
-			onLongSummary(chunkIndices);
-		}
-	});
-	groupContainer.appendChild(longSummaryBtn);
-
-	// Short summary button
-	const shortSummaryBtn = document.createElement("button");
-	shortSummaryBtn.className = "gemini-chunk-short-summary-btn";
-	shortSummaryBtn.style.cssText = `
-		padding: 10px 16px;
-		background: ${colors.surface};
-		color: ${colors.primary};
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		font-weight: 600;
-		transition: box-shadow 0.2s;
-		font-family: inherit;
-		flex: 1 1 120px;
-		min-height: 44px;
-		max-width: 100%;
-	`;
-	shortSummaryBtn.textContent = "✨ Short Summary";
-	shortSummaryBtn.addEventListener("mouseenter", () => {
-		shortSummaryBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-	});
-	shortSummaryBtn.addEventListener("mouseleave", () => {
-		shortSummaryBtn.style.boxShadow = "none";
-	});
-	shortSummaryBtn.addEventListener("click", () => {
-		if (onShortSummary) {
-			onShortSummary(chunkIndices);
-		}
-	});
-	groupContainer.appendChild(shortSummaryBtn);
-
-	// Add summary text container (initially hidden)
-	const summaryTextContainer = document.createElement("div");
-	summaryTextContainer.className = "gemini-summary-text-container";
-	summaryTextContainer.setAttribute("data-group-start", startIndex);
-	summaryTextContainer.setAttribute("data-group-end", endIndex);
-	summaryTextContainer.style.cssText = `
-		display: none;
-		flex: 0 0 100%;
-		width: 100%;
-		max-width: 100%;
-		box-sizing: border-box;
-		background: transparent;
-		border: none;
-		margin: 8px 0 0 0;
-		padding: 12px 4px 4px;
-		border-top: 1px solid ${colors.outline};
-		font-family: inherit;
-		font-size: inherit;
-		line-height: inherit;
-		color: inherit;
-	`;
-	groupContainer.appendChild(summaryTextContainer);
-
-	return groupContainer;
-}
-
-/**
- * Calculate where to insert summary button groups
- * Returns an array of chunk index ranges where summary buttons should appear
- *
- * @param {number} totalChunks - Total number of chunks
- * @param {number} chunkSummaryCount - Number of chunks per summary group (default: 2)
- * @returns {Array<{startIndex: number, endIndex: number, indices: Array<number>}>}
- */
-export function calculateSummaryPositions(
-	totalChunks,
-	chunkSummaryCount = DEFAULT_CHUNK_SUMMARY_COUNT,
-) {
-	if (totalChunks <= 0) return [];
-
-	const summaryPositions = [];
-	let currentIndex = 0;
-
-	while (currentIndex < totalChunks) {
-		const startIndex = currentIndex;
-		const endIndex = Math.min(
-			currentIndex + chunkSummaryCount - 1,
-			totalChunks - 1,
-		);
-
-		const indices = [];
-		for (let i = startIndex; i <= endIndex; i++) {
-			indices.push(i);
-		}
-
-		summaryPositions.push({
-			startIndex,
-			endIndex,
-			indices,
-		});
-
-		currentIndex += chunkSummaryCount;
-	}
-
-	console.log(
-		`[ChunkSummaryUI] Calculated ${summaryPositions.length} summary groups for ${totalChunks} chunks (every ${chunkSummaryCount} chunks)`,
+	card.appendChild(
+		buildLabel(
+			`Summary · Chunks ${startIndex + 1}–${endIndex + 1}`,
+			colors,
+		),
 	);
 
-	return summaryPositions;
-}
+	const row = buildButtonRow();
 
-/**
- * Insert summary button groups into a container at appropriate positions
- * @param {HTMLElement} container - Container element to insert summary groups into
- * @param {Array<HTMLElement>} chunkElements - Array of chunk content elements (in order)
- * @param {number} chunkSummaryCount - Number of chunks per summary group
- * @param {Function} onLongSummary - Callback for long summary
- * @param {Function} onShortSummary - Callback for short summary
- */
-export function insertSummaryGroups(
-	container,
-	chunkElements,
-	chunkSummaryCount,
-	onLongSummary,
-	onShortSummary,
-) {
-	if (!container || !chunkElements || chunkElements.length === 0) {
-		console.warn(
-			"[ChunkSummaryUI] Invalid parameters for insertSummaryGroups",
+	// Add enhance button if callback provided
+	if (onEnhance) {
+		const enhanceBtn = buildButton(
+			"⚡ Enhance",
+			"gemini-chunk-enhance-btn",
+			colors.tertiary || colors.primary,
+			colors.onTertiary || colors.onPrimary,
+			colors,
 		);
-		return;
+		enhanceBtn.setAttribute("data-chunk-start", startIndex);
+		enhanceBtn.setAttribute("data-chunk-end", endIndex);
+		enhanceBtn.addEventListener("click", () =>
+			onEnhance?.(chunkIndices, startIndex, endIndex),
+		);
+		row.appendChild(enhanceBtn);
 	}
 
-	const totalChunks = chunkElements.length;
-	const summaryPositions = calculateSummaryPositions(
-		totalChunks,
-		chunkSummaryCount,
+	const longBtn = buildButton(
+		"📝 Long Summary",
+		"gemini-chunk-long-summary-btn",
+		colors.primary,
+		colors.onPrimary,
+		colors,
 	);
+	longBtn.addEventListener("click", () =>
+		onLongSummary?.(chunkIndices, startIndex),
+	);
+	row.appendChild(longBtn);
 
-	// Insert summary groups BEFORE each group of chunks
-	summaryPositions.forEach((position, groupIndex) => {
-		const { startIndex, endIndex, indices } = position;
+	const shortBtn = buildButton(
+		"✨ Short Summary",
+		"gemini-chunk-short-summary-btn",
+		colors.surface,
+		colors.primary,
+		colors,
+		true,
+	);
+	shortBtn.addEventListener("click", () =>
+		onShortSummary?.(chunkIndices, startIndex),
+	);
+	row.appendChild(shortBtn);
 
-		// Find the first chunk element of this group
-		// Insert summary banner BEFORE the first chunk
-		const firstChunkElement = chunkElements[startIndex];
-		if (firstChunkElement && firstChunkElement.parentNode === container) {
-			const summaryGroup = createSummaryButtonGroup(
-				startIndex,
-				endIndex,
-				indices,
-				onLongSummary,
-				onShortSummary,
-			);
+	card.appendChild(row);
+	card.appendChild(buildTextContainer(startIndex, endIndex, colors));
 
-			// Insert before the first chunk in the group
-			container.insertBefore(summaryGroup, firstChunkElement);
-
-			console.log(
-				`[ChunkSummaryUI] Inserted summary group ${
-					groupIndex + 1
-				} before chunk ${startIndex}`,
-			);
-		}
-	});
+	return card;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Exported: main summary group (full chapter, shown at top)
+───────────────────────────────────────────────────────────── */
+
 /**
- * Create a main summary button group (for the entire content at top)
- * @param {number} totalChunks - Total number of chunks
- * @param {Function} onLongSummary - Callback for long summary (receives all chunk indices)
- * @param {Function} onShortSummary - Callback for short summary (receives all chunk indices)
- * @param {Function|null} onEnhance - Callback for enhance/re-enhance button
- * @returns {HTMLElement} The main summary button group
+ * Create the full-chapter summary button group shown above the content.
+ * @param {number}        totalChunks
+ * @param {Function}      onLongSummary
+ * @param {Function}      onShortSummary
+ * @param {Function|null} onEnhance
+ * @returns {HTMLElement}
  */
 export function createMainSummaryGroup(
 	totalChunks,
@@ -266,148 +234,135 @@ export function createMainSummaryGroup(
 	const colors = getThemeColors();
 	const allIndices = Array.from({ length: totalChunks }, (_, i) => i);
 
-	const groupContainer = document.createElement("div");
-	groupContainer.className = "gemini-main-summary-group";
-	groupContainer.style.cssText = `
-		display: flex;
-		gap: 10px;
-		padding: 12px 16px;
-		background: ${colors.surfaceVariant};
-		border: 1px solid ${colors.outline};
-		border-radius: 4px;
-		margin: 16px 0;
-		justify-content: center;
-		flex-wrap: wrap;
-		align-items: stretch;
-		box-sizing: border-box;
-		width: 100%;
-		max-width: 100%;
-		overflow: visible;
-	`;
+	const card = buildCard("gemini-main-summary-group", colors);
 
-	const label = document.createElement("div");
-	label.style.cssText = `
-		flex: 0 0 100%;
-		text-align: center;
-		color: ${colors.onSurface};
-		font-weight: 600;
-		font-size: 15px;
-		margin-bottom: 6px;
-	`;
-	label.textContent = "Full Chapter Summary";
-	groupContainer.appendChild(label);
+	card.appendChild(buildLabel("Full Chapter Summary", colors, "14px"));
 
-	// Helper function to create consistently styled buttons
-	const createButton = (text, className, bgColor, textColor) => {
-		const btn = document.createElement("button");
-		btn.className = className;
-		btn.style.cssText = `
-			padding: 10px 14px;
-			background: ${bgColor};
-			color: ${textColor};
-			border: none;
-			border-radius: 6px;
-			cursor: pointer;
-			font-size: 13px;
-			font-weight: 600;
-			transition: all 0.2s ease;
-			font-family: inherit;
-			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-			white-space: nowrap;
-			min-height: 40px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex: 1 1 110px;
-			min-width: 90px;
-			max-width: 200px;
-			box-sizing: border-box;
-		`;
-		btn.textContent = text;
-		btn.addEventListener("mouseenter", () => {
-			btn.style.boxShadow = "0 4px 8px rgba(0,0,0,0.3)";
-			btn.style.transform = "translateY(-1px)";
-		});
-		btn.addEventListener("mouseleave", () => {
-			btn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-			btn.style.transform = "translateY(0)";
-		});
-		btn.addEventListener("active", () => {
-			btn.style.transform = "translateY(0)";
-		});
-		return btn;
-	};
+	const row = buildButtonRow();
 
-	// Add enhance/re-enhance button if callback provided
 	if (onEnhance) {
-		const enhanceBtn = createButton(
+		// Keep class "gemini-enhance-btn" — this is the ONE enhance button in the page.
+		// content.js uses querySelector(".gemini-enhance-btn") in many places to update
+		// its text/disabled state during and after enhancement.
+		const enhanceBtn = buildButton(
 			"⚡ Enhance Chapter",
 			"gemini-enhance-btn",
 			colors.primary,
-			"#ffffff",
+			colors.onPrimary,
+			colors,
 		);
-		enhanceBtn.addEventListener("click", () => {
-			onEnhance();
-		});
-		groupContainer.appendChild(enhanceBtn);
+		enhanceBtn.addEventListener("click", () => onEnhance());
+		row.appendChild(enhanceBtn);
 	}
 
-	// Long summary button
-	const longSummaryBtn = createButton(
+	const longBtn = buildButton(
 		"📝 Long Summary",
 		"gemini-main-long-summary-btn",
 		colors.primary,
-		"#ffffff",
+		colors.onPrimary,
+		colors,
 	);
-	longSummaryBtn.addEventListener("click", () => {
-		if (onLongSummary) {
-			onLongSummary(allIndices);
-		}
-	});
-	groupContainer.appendChild(longSummaryBtn);
+	longBtn.addEventListener("click", () => onLongSummary?.(allIndices));
+	row.appendChild(longBtn);
 
-	// Short summary button
-	const shortSummaryBtn = createButton(
+	const shortBtn = buildButton(
 		"✨ Short Summary",
 		"gemini-main-short-summary-btn",
 		colors.surface,
 		colors.primary,
+		colors,
+		true,
 	);
-	shortSummaryBtn.addEventListener("click", () => {
-		if (onShortSummary) {
-			onShortSummary(allIndices);
+	shortBtn.addEventListener("click", () => onShortSummary?.(allIndices));
+	row.appendChild(shortBtn);
+
+	card.appendChild(row);
+	card.appendChild(
+		buildTextContainer(
+			0,
+			totalChunks - 1,
+			colors,
+			"gemini-main-summary-text",
+		),
+	);
+
+	return card;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Exported: position calculation + insertion helpers
+───────────────────────────────────────────────────────────── */
+
+/**
+ * Calculate where to insert per-chunk summary groups.
+ * @param {number} totalChunks
+ * @param {number} chunkSummaryCount
+ * @returns {Array<{startIndex:number, endIndex:number, indices:number[]}>}
+ */
+export function calculateSummaryPositions(
+	totalChunks,
+	chunkSummaryCount = DEFAULT_CHUNK_SUMMARY_COUNT,
+) {
+	if (totalChunks <= 0) return [];
+
+	const positions = [];
+	let i = 0;
+
+	while (i < totalChunks) {
+		const start = i;
+		const end = Math.min(i + chunkSummaryCount - 1, totalChunks - 1);
+		const indices = [];
+		for (let j = start; j <= end; j++) indices.push(j);
+		positions.push({ startIndex: start, endIndex: end, indices });
+		i += chunkSummaryCount;
+	}
+
+	console.log(
+		`[ChunkSummaryUI] ${positions.length} summary group(s) for ${totalChunks} chunks`,
+	);
+	return positions;
+}
+
+/**
+ * Insert per-chunk summary groups into a container before each group's
+ * first chunk wrapper element.
+ */
+export function insertSummaryGroups(
+	container,
+	chunkElements,
+	chunkSummaryCount,
+	onLongSummary,
+	onShortSummary,
+	onEnhance = null,
+) {
+	if (!container || !chunkElements?.length) {
+		console.warn("[ChunkSummaryUI] insertSummaryGroups: invalid params");
+		return;
+	}
+
+	const positions = calculateSummaryPositions(
+		chunkElements.length,
+		chunkSummaryCount,
+	);
+
+	positions.forEach((pos, idx) => {
+		const { startIndex, endIndex, indices } = pos;
+		const firstEl = chunkElements[startIndex];
+		if (firstEl && firstEl.parentNode === container) {
+			const group = createSummaryButtonGroup(
+				startIndex,
+				endIndex,
+				indices,
+				onLongSummary,
+				onShortSummary,
+				onEnhance,
+			);
+			container.insertBefore(group, firstEl);
+			console.log(
+				`[ChunkSummaryUI] Inserted summary group ${idx + 1} before chunk ${startIndex}`,
+			);
 		}
 	});
-	groupContainer.appendChild(shortSummaryBtn);
-
-	// Add summary text container (initially hidden)
-	const summaryTextContainer = document.createElement("div");
-	summaryTextContainer.className =
-		"gemini-summary-text-container gemini-main-summary-text";
-	summaryTextContainer.setAttribute("data-group-start", "0");
-	summaryTextContainer.setAttribute(
-		"data-group-end",
-		String(totalChunks - 1),
-	);
-	summaryTextContainer.style.cssText = `
-		display: none;
-		flex: 0 0 100%;
-		width: 100%;
-		max-width: 100%;
-		box-sizing: border-box;
-		background: transparent;
-		border: none;
-		margin: 8px 0 0 0;
-		padding: 12px 4px 4px;
-		border-top: 1px solid ${colors.outline};
-		font-family: inherit;
-		font-size: inherit;
-		line-height: inherit;
-		color: inherit;
-	`;
-	groupContainer.appendChild(summaryTextContainer);
-
-	return groupContainer;
 }
 
 export default {

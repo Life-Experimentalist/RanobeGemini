@@ -19,10 +19,54 @@ import {
 	NOVEL_PERIODIC_UPDATE_INTERVAL_MINUTES,
 	NOVEL_PERIODIC_UPDATE_STALENESS_MINUTES,
 	NOVEL_CHAPTER_CHECK_ALARM_NAME,
+	DEFAULT_NOVEL_UPDATE_INTERVAL_DAYS,
 } from "../utils/constants.js";
 import { NovelLibrary, READING_STATUS } from "../utils/novel-library.js";
 
 const novelLibrary = new NovelLibrary();
+
+// ---------------------------------------------------------------------------
+// Storage helpers — read user-configurable settings
+// ---------------------------------------------------------------------------
+
+const browserAPI =
+	typeof browser !== "undefined"
+		? browser
+		: typeof chrome !== "undefined"
+			? chrome
+			: null;
+
+/**
+ * Read the user's periodic-update preferences from storage.
+ * Falls back to constants when not yet configured.
+ * @returns {Promise<{enabled: boolean, intervalDays: number}>}
+ */
+async function getUserUpdateSettings() {
+	try {
+		const data = await browserAPI?.storage?.local?.get?.([
+			"novelUpdateEnabled",
+			"novelUpdateIntervalDays",
+		]);
+		return {
+			enabled:
+				data?.novelUpdateEnabled !== undefined
+					? Boolean(data.novelUpdateEnabled)
+					: NOVEL_PERIODIC_UPDATE_ENABLED,
+			intervalDays:
+				data?.novelUpdateIntervalDays !== undefined
+					? Math.max(
+							1,
+							Math.min(30, Number(data.novelUpdateIntervalDays)),
+						)
+					: DEFAULT_NOVEL_UPDATE_INTERVAL_DAYS,
+		};
+	} catch {
+		return {
+			enabled: NOVEL_PERIODIC_UPDATE_ENABLED,
+			intervalDays: DEFAULT_NOVEL_UPDATE_INTERVAL_DAYS,
+		};
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Alarm Management
@@ -36,8 +80,10 @@ const novelLibrary = new NovelLibrary();
  * @param {Object} alarmApi - browser.alarms or chrome.alarms
  */
 export async function setupNovelUpdateAlarm(alarmApi) {
-	if (!NOVEL_PERIODIC_UPDATE_ENABLED) {
-		debugLog("[NovelUpdater] Periodic updates disabled via constants.");
+	const { enabled } = await getUserUpdateSettings();
+
+	if (!enabled) {
+		debugLog("[NovelUpdater] Periodic updates disabled by user/constants.");
 		// Clear any leftover alarm from a previous enabled state
 		try {
 			await alarmApi?.clear?.(NOVEL_CHAPTER_CHECK_ALARM_NAME);
@@ -86,7 +132,8 @@ export async function setupNovelUpdateAlarm(alarmApi) {
  * @returns {Promise<void>}
  */
 export async function handleNovelUpdateAlarm() {
-	if (!NOVEL_PERIODIC_UPDATE_ENABLED) return;
+	const { enabled } = await getUserUpdateSettings();
+	if (!enabled) return;
 
 	debugLog("[NovelUpdater] Running periodic chapter-count check…");
 
@@ -106,10 +153,14 @@ export async function handleNovelUpdateAlarm() {
  * haven't been checked within the staleness window.
  */
 async function checkUpToDateNovels() {
+	const { intervalDays } = await getUserUpdateSettings();
 	const library = await novelLibrary.getLibrary();
 	const novels = Object.values(library.novels || {});
 	const upToDate = novels.filter(
-		(n) => n?.readingStatus === READING_STATUS.UP_TO_DATE && n?.sourceUrl,
+		(n) =>
+			n?.readingStatus === READING_STATUS.UP_TO_DATE &&
+			n?.sourceUrl &&
+			!n?.metadata?.periodicUpdateDisabled, // per-novel opt-out
 	);
 
 	if (upToDate.length === 0) {
@@ -119,7 +170,7 @@ async function checkUpToDateNovels() {
 
 	debugLog(`[NovelUpdater] Checking ${upToDate.length} UP_TO_DATE novel(s)…`);
 
-	const stalenessMs = NOVEL_PERIODIC_UPDATE_STALENESS_MINUTES * 60 * 1000;
+	const stalenessMs = intervalDays * 24 * 60 * 60 * 1000; // user-configured interval in days
 	const now = Date.now();
 	let updatedCount = 0;
 

@@ -63,7 +63,17 @@ if (window.__RGInitDone) {
 	};
 	let keepAliveConfig = { ...keepAliveConfigDefaults };
 
-	// Load shared constants for keep-alive tuning when available
+	// Banner duration + UI config defaults (loaded from constants.js)
+	const bannerConfigDefaults = {
+		defaultMs: 3000,
+		quickMs: 2000,
+		updateNotifyMs: 8000,
+		persistent: 0,
+		mobileBreakpointPx: 600,
+	};
+	let bannerConfig = { ...bannerConfigDefaults };
+
+	// Load shared constants for keep-alive tuning and banner durations when available
 	(async () => {
 		try {
 			if (typeof browser !== "undefined" && browser.runtime?.getURL) {
@@ -84,6 +94,24 @@ if (window.__RGInitDone) {
 					maxRetries:
 						mod.KEEP_ALIVE_MAX_PORT_RETRIES ||
 						keepAliveConfigDefaults.maxRetries,
+				};
+				bannerConfig = {
+					...bannerConfigDefaults,
+					defaultMs:
+						mod.BANNER_DURATION_DEFAULT_MS ||
+						bannerConfigDefaults.defaultMs,
+					quickMs:
+						mod.BANNER_DURATION_QUICK_MS ||
+						bannerConfigDefaults.quickMs,
+					updateNotifyMs:
+						mod.BANNER_DURATION_UPDATE_NOTIFY_MS ||
+						bannerConfigDefaults.updateNotifyMs,
+					persistent:
+						mod.BANNER_DURATION_PERSISTENT ??
+						bannerConfigDefaults.persistent,
+					mobileBreakpointPx:
+						mod.UI_MOBILE_BREAKPOINT_PX ||
+						bannerConfigDefaults.mobileBreakpointPx,
 				};
 				if (keepAliveHeartbeat) restartKeepAlive();
 			}
@@ -839,32 +867,52 @@ if (window.__RGInitDone) {
 		}
 
 		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group",
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
 		);
 		if (banners.length === 0) {
 			showStatusMessage("No enhancement banners to show/hide.", "info");
 			return;
 		}
 
-		// Check current visibility state
-		const isHidden = banners[0].style.display === "none";
+		// Track state with a body attribute so it survives multiple calls
+		const isHidden =
+			document.body.getAttribute("data-rg-ui-hidden") === "true";
 
-		// Toggle all banners — summary groups need display:flex restored
+		// Toggle all banners using save/restore pattern
 		banners.forEach((banner) => {
 			if (isHidden) {
-				const isSummaryGroup =
-					banner.classList.contains("gemini-main-summary-group") ||
-					banner.classList.contains("gemini-chunk-summary-group");
-				banner.style.display = isSummaryGroup ? "flex" : "";
+				// Restore saved display value (or clear inline style)
+				const saved = banner.dataset.rgSavedDisplay;
+				banner.style.display = saved !== undefined ? saved : "";
+				delete banner.dataset.rgSavedDisplay;
 			} else {
+				// Save current inline display then hide
+				banner.dataset.rgSavedDisplay = banner.style.display;
 				banner.style.display = "none";
 			}
 		});
+
+		if (isHidden) {
+			document.body.removeAttribute("data-rg-ui-hidden");
+		} else {
+			document.body.setAttribute("data-rg-ui-hidden", "true");
+		}
 
 		// Update button text
 		toggleBtn.innerHTML = isHidden
 			? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
 			: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+
+		// Sync the chapter controls toggle button if present
+		const chapterToggleBtn = document.querySelector(
+			".gemini-chapter-toggle-btn",
+		);
+		if (chapterToggleBtn) {
+			chapterToggleBtn.innerHTML = isHidden
+				? "⚡ Hide Gemini UI"
+				: "⚡ Show Gemini UI";
+		}
+
 		showStatusMessage(
 			isHidden
 				? "Showing Ranobe Gemini UI..."
@@ -893,29 +941,36 @@ if (window.__RGInitDone) {
 
 		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container
 		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group",
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
 		);
 		if (banners.length === 0) {
 			showStatusMessage("No enhancement banners to show/hide.", "info");
 			return;
 		}
 
-		// Check current visibility state of first banner
-		const isHidden = banners[0].style.display === "none";
+		// Track state with a body attribute so it survives multiple calls
+		const isHidden =
+			document.body.getAttribute("data-rg-ui-hidden") === "true";
 
 		// Toggle all enhancement banners
 		banners.forEach((banner) => {
 			if (isHidden) {
-				const isSummaryGroup =
-					banner.classList.contains("gemini-main-summary-group") ||
-					banner.classList.contains("gemini-chunk-summary-group");
-				// Restore to flex for summary groups, normal display for others
-				banner.style.display = isSummaryGroup ? "flex" : "";
+				// Restore saved display value (or clear inline style)
+				const saved = banner.dataset.rgSavedDisplay;
+				banner.style.display = saved !== undefined ? saved : "";
+				delete banner.dataset.rgSavedDisplay;
 			} else {
-				// Hide the banner
+				// Save current inline display then hide
+				banner.dataset.rgSavedDisplay = banner.style.display;
 				banner.style.display = "none";
 			}
 		});
+
+		if (isHidden) {
+			document.body.removeAttribute("data-rg-ui-hidden");
+		} else {
+			document.body.setAttribute("data-rg-ui-hidden", "true");
+		}
 
 		// Update chapter controls toggle button text
 		const toggleBtn =
@@ -969,6 +1024,129 @@ if (window.__RGInitDone) {
 			wordCounts,
 			threshold,
 		);
+	}
+
+	async function initializeChunkedViewForSummaries(contentArea, chunking) {
+		if (!contentArea || !chunking?.core || !chunking?.summaryUI) {
+			return 1;
+		}
+
+		const existingChunkedContainer = contentArea.querySelector(
+			"#gemini-chunked-content",
+		);
+		if (existingChunkedContainer) {
+			const existingTotal = parseInt(
+				contentArea.getAttribute("data-total-chunks") || "0",
+				10,
+			);
+			return existingTotal > 0 ? existingTotal : 1;
+		}
+
+		const extracted = extractContent();
+		if (!extracted?.text?.trim()) {
+			return 1;
+		}
+
+		let chunks = [];
+		let chunkSummaryCount = 2;
+		let chunkSizeWords = chunking?.config?.DEFAULT_CHUNK_SIZE_WORDS || 2000;
+
+		try {
+			const chunkConfig = await chunking.config.getChunkConfig();
+			chunkSizeWords = chunkConfig.chunkSizeWords;
+			chunkSummaryCount = chunkConfig.chunkSummaryCount;
+
+			const sourceHtml =
+				contentArea.getAttribute("data-original-html") ||
+				getCleanContentHTML(contentArea);
+			chunks = chunking.core.splitContentByWords(
+				sourceHtml,
+				chunkSizeWords,
+			);
+		} catch (error) {
+			debugError("Failed to pre-initialize chunked view:", error);
+			return 1;
+		}
+
+		if (!chunks || chunks.length === 0) {
+			return 1;
+		}
+
+		const sourceHtml =
+			contentArea.getAttribute("data-original-html") ||
+			getCleanContentHTML(contentArea);
+		contentArea.setAttribute("data-original-html", sourceHtml);
+		contentArea.setAttribute("data-original-text", extracted.text || "");
+		contentArea.setAttribute("data-total-chunks", String(chunks.length));
+
+		const chunkedContentContainer = document.createElement("div");
+		chunkedContentContainer.id = "gemini-chunked-content";
+		chunkedContentContainer.style.width = "100%";
+
+		for (let i = 0; i < chunks.length; i++) {
+			const chunkWrapper = document.createElement("div");
+			chunkWrapper.className = "gemini-chunk-wrapper";
+			chunkWrapper.setAttribute("data-chunk-index", i);
+
+			const banner = buildChunkBanner(
+				chunking,
+				i,
+				chunks.length,
+				"pending",
+			);
+			chunkWrapper.appendChild(banner);
+
+			const chunkContent = document.createElement("div");
+			chunkContent.className = "gemini-chunk-content";
+			chunkContent.setAttribute("data-chunk-index", i);
+			chunkContent.setAttribute(
+				"data-original-chunk-html",
+				chunks[i].content,
+			);
+			chunkContent.setAttribute(
+				"data-original-chunk-content",
+				stripHtmlTags(chunks[i].content),
+			);
+			chunkContent.innerHTML = chunks[i].content;
+			chunkWrapper.appendChild(chunkContent);
+
+			chunkedContentContainer.appendChild(chunkWrapper);
+		}
+
+		contentArea.innerHTML = "";
+		contentArea.appendChild(chunkedContentContainer);
+
+		const chunkWrappers = Array.from(
+			chunkedContentContainer.querySelectorAll(".gemini-chunk-wrapper"),
+		);
+		if (chunks.length > 1) {
+			chunking.summaryUI.insertSummaryGroups(
+				chunkedContentContainer,
+				chunkWrappers,
+				chunkSummaryCount,
+				(indices) => summarizeChunkRange(indices, false),
+				(indices) => summarizeChunkRange(indices, true),
+				(indices, startIdx, endIdx) =>
+					handleEnhanceChunkRange(indices, startIdx, endIdx),
+			);
+
+			// Chunk summary groups are always visible for easy access to summaries
+		}
+
+		if (shouldBannersBeHidden()) {
+			const chunkBanners = chunkedContentContainer.querySelectorAll(
+				".gemini-chunk-banner",
+			);
+			chunkBanners.forEach((banner) => {
+				banner.style.display = "none";
+			});
+		}
+
+		debugLog(
+			`Initialized pre-enhancement chunk view with ${chunks.length} chunks (${chunkSizeWords} words target)`,
+		);
+
+		return chunks.length;
 	}
 
 	async function handleChunkToggle(chunkIndex) {
@@ -1189,6 +1367,24 @@ if (window.__RGInitDone) {
 				"error",
 			);
 		}
+	}
+
+	/**
+	 * Enhance a specific chunk range (for per-chunk summary group enhance buttons)
+	 */
+	async function handleEnhanceChunkRange(chunkIndices, startIndex, endIndex) {
+		debugLog(`Enhancing chunk range ${startIndex}-${endIndex}...`);
+
+		// Enhance each chunk one by one
+		for (const chunkIndex of chunkIndices) {
+			await handleReenhanceChunk(chunkIndex);
+		}
+
+		showStatusMessage(
+			`Chunks ${startIndex + 1}–${endIndex + 1} enhanced successfully`,
+			"success",
+			3000,
+		);
 	}
 
 	async function handleChunkProcessed(message) {
@@ -1466,210 +1662,250 @@ if (window.__RGInitDone) {
 		);
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	function renderSummaryOutput(container, summary, summaryType) {
-		if (!container) return;
-
-		// Show the container and clear existing content
-		container.style.display = "block";
-		while (container.firstChild) {
-			container.removeChild(container.firstChild);
+		// Delegate to unified summary service (backward-compat wrapper)
+		if (!summaryServiceModule) {
+			// Inline fallback if service hasn't loaded yet
+			if (!container) return;
+			container.style.display = "block";
+			while (container.firstChild)
+				container.removeChild(container.firstChild);
+			const h = document.createElement("h4");
+			h.textContent = `${summaryType} Summary:`;
+			h.style.cssText =
+				"margin:0 0 12px 0;font-size:14px;font-weight:600;";
+			container.appendChild(h);
+			const d = document.createElement("div");
+			d.className = "summary-text-content";
+			d.style.lineHeight = "1.6";
+			d.textContent = stripHtmlTags(summary);
+			container.appendChild(d);
+			return;
 		}
-
-		// Add summary type header
-		const summaryHeader = document.createElement("h4");
-		summaryHeader.textContent = `${summaryType} Summary:`;
-		summaryHeader.style.cssText = `
-			margin: 0 0 12px 0;
-			font-size: 14px;
-			font-weight: 600;
-		`;
-		container.appendChild(summaryHeader);
-
-		// Create container for summary text
-		const summaryContentContainer = document.createElement("div");
-		summaryContentContainer.className = "summary-text-content";
-		summaryContentContainer.style.cssText = `
-			line-height: 1.6;
-		`;
-
-		const paragraphs = extractParagraphsFromHtml(summary);
-		if (paragraphs.length > 0) {
-			paragraphs.forEach((paragraphText) => {
-				const p = document.createElement("p");
-				p.textContent = paragraphText;
-				p.style.marginBottom = "1em";
-				p.style.lineHeight = "1.6";
-				summaryContentContainer.appendChild(p);
-			});
-		} else {
-			const cleanSummary = stripHtmlTags(summary);
-			summaryContentContainer.textContent = cleanSummary;
-		}
-
-		if (currentFontSize && currentFontSize !== 100) {
-			summaryContentContainer.style.fontSize = `${currentFontSize}%`;
-		}
-
-		container.appendChild(summaryContentContainer);
+		summaryServiceModule.renderSummaryInContainer(
+			container,
+			summary,
+			summaryType,
+		);
 	}
 
-	async function summarizeChunkRange(chunkIndices, isShort) {
-		const statusDiv = document.getElementById("gemini-status");
+	async function summarizeChunkRange(
+		chunkIndices,
+		isShort,
+		groupStartIndex = null,
+	) {
+		// Try the dedicated summary-service module first
+		try {
+			const svc = await loadSummaryService();
+			if (svc) {
+				debugLog(
+					`Summary service loaded — delegating ${isShort ? "short" : "long"} summary for chunks`,
+					chunkIndices,
+				);
+				return await svc.summarize(chunkIndices, isShort);
+			}
+		} catch (svcErr) {
+			debugError("Summary service threw during summarize:", svcErr);
+		}
+
+		// ── Inline fallback — runs when the ES-module import fails ──
+		debugLog(
+			"Summary service unavailable — using inline fallback for",
+			isShort ? "short" : "long",
+			"summary",
+		);
+
 		const summaryType = isShort ? "Short" : "Long";
+		const statusDiv = document.getElementById("gemini-status");
 
-		// Resolve chunk indices dynamically: if the caller passed [0] as a placeholder,
-		// check if there are actually more chunks in the DOM and use all of them.
-		const domChunks = Array.from(
-			document.querySelectorAll(
-				".gemini-chunk-content[data-chunk-index]",
-			),
-		);
-		const resolvedIndices =
-			domChunks.length > 0
-				? domChunks
-						.map((el) =>
-							parseInt(el.getAttribute("data-chunk-index"), 10),
-						)
-						.filter((n) => !isNaN(n))
-						.sort((a, b) => a - b)
-				: chunkIndices;
+		// Determine if this is main (full chapter) or per-chunk summary
+		const isMainSummary =
+			groupStartIndex === null ||
+			(groupStartIndex === 0 && chunkIndices.length > 1);
 
-		// Find the matching summary group's text container based on resolved chunk range
-		const startIdx = Math.min(...resolvedIndices);
-		const endIdx = Math.max(...resolvedIndices);
-		let summaryTextContainer = null;
-
-		// Look for the summary text container matching this chunk range
-		const allContainers = document.querySelectorAll(
-			".gemini-summary-text-container",
-		);
-		for (const container of allContainers) {
-			const groupStart = parseInt(
-				container.getAttribute("data-group-start"),
-				10,
+		// Locate button to give feedback
+		let btn = null;
+		if (isMainSummary) {
+			const btnClass = isShort
+				? ".gemini-main-short-summary-btn"
+				: ".gemini-main-long-summary-btn";
+			btn = document.querySelector(btnClass);
+		} else {
+			// Find the per-chunk summary button within the correct group
+			const group = document.querySelector(
+				`.gemini-chunk-summary-group[data-start-index="${groupStartIndex}"]`,
 			);
-			const groupEnd = parseInt(
-				container.getAttribute("data-group-end"),
-				10,
-			);
-			if (groupStart === startIdx && groupEnd === endIdx) {
-				summaryTextContainer = container;
-				break;
+			if (group) {
+				const btnClass = isShort
+					? ".gemini-chunk-short-summary-btn"
+					: ".gemini-chunk-long-summary-btn";
+				btn = group.querySelector(btnClass);
 			}
 		}
-		// Fallback: use the main summary text container when the full chapter is requested
-		// (handles placeholder where data-group-end="0" but actual endIdx > 0)
-		if (!summaryTextContainer) {
+		const originalBtnText = btn?.textContent || "";
+
+		// Locate or create summary text container
+		let summaryTextContainer;
+		if (isMainSummary) {
 			summaryTextContainer =
 				document.querySelector(".gemini-main-summary-text") ||
 				document.querySelector(
 					".gemini-summary-text-container[data-group-start='0']",
-				) ||
-				null;
-		}
-
-		let combinedText = resolvedIndices
-			.map((index) => {
-				const chunkContent = document.querySelector(
-					`.gemini-chunk-content[data-chunk-index="${index}"]`,
 				);
-				if (!chunkContent) return "";
-				const isEnhanced =
-					chunkContent.getAttribute("data-chunk-enhanced") === "true";
-				const html = isEnhanced
-					? chunkContent.innerHTML
-					: chunkContent.getAttribute("data-original-chunk-html") ||
-						chunkContent.innerHTML;
-				return stripHtmlTags(html || "");
-			})
-			.filter((text) => text && text.trim().length > 0)
-			.join("\n\n");
-
-		if (!combinedText) {
-			// Try the stored original text attribute set during cache restore / enhancement start.
-			// This is the safest fallback when the content area has been replaced with chunk elements.
-			const contentArea = findContentArea();
-			const storedOriginal = contentArea
-				?.getAttribute("data-original-text")
-				?.trim();
-			if (storedOriginal) {
-				combinedText = storedOriginal;
-			} else {
-				// Final fallback: live extraction from the current page DOM
-				const extracted = extractContent();
-				if (!extracted || !extracted.text?.trim()) {
-					showStatusMessage(
-						"No content available for summary. Try enhancing the chapter first.",
-						"warning",
-						3000,
-					);
-					return;
-				}
-				combinedText = extracted.text.trim();
-			}
+		} else {
+			// Find container within the correct per-chunk group
+			summaryTextContainer = document.querySelector(
+				`.gemini-summary-text-container[data-group-start="${groupStartIndex}"]`,
+			);
 		}
 
 		try {
+			// 1. Wake up background
+			if (btn) {
+				btn.disabled = true;
+				btn.textContent = "Waking up AI…";
+			}
+			if (statusDiv) statusDiv.textContent = "Waking up AI service…";
+
+			const isReady = await wakeUpBackgroundWorker();
+			if (!isReady) {
+				throw new Error(
+					"Background service is not responding. Please try again.",
+				);
+			}
+
+			// 2. Collect content (three-tier fallback)
+			if (btn) btn.textContent = "Extracting content…";
+			if (statusDiv) statusDiv.textContent = "Extracting content…";
+			if (summaryTextContainer) {
+				summaryTextContainer.style.display = "block";
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
+			}
+
+			let contentText = null;
+			let contentSource = "none";
+
+			// 2a. Chunk DOM elements
+			const chunkTexts = chunkIndices
+				.map((index) => {
+					const el = document.querySelector(
+						`.gemini-chunk-content[data-chunk-index="${index}"]`,
+					);
+					if (!el) return "";
+					const isEnhanced =
+						el.getAttribute("data-chunk-enhanced") === "true";
+					const html = isEnhanced
+						? el.innerHTML
+						: el.getAttribute("data-original-chunk-html") ||
+							el.innerHTML;
+					return stripHtmlTags(html || "");
+				})
+				.filter((t) => t?.trim().length > 0);
+
+			if (chunkTexts.length > 0) {
+				contentText = chunkTexts.join("\n\n");
+				contentSource = "chunks";
+			}
+
+			// 2b. Stored original text
+			if (!contentText) {
+				const contentArea = findContentArea();
+				const storedOriginal = contentArea
+					?.getAttribute("data-original-text")
+					?.trim();
+				if (storedOriginal) {
+					contentText = storedOriginal;
+					contentSource = "data-original-text";
+				}
+			}
+
+			// 2c. Live extraction
+			if (!contentText) {
+				const extracted = extractContent();
+				if (extracted && extracted.text?.trim()) {
+					contentText = extracted.text.trim();
+					contentSource = "live-extraction";
+				}
+			}
+
+			if (!contentText) {
+				const msg =
+					"No content found on this page. Make sure a chapter page is loaded.";
+				showStatusMessage(msg, "warning", 5000);
+				if (summaryTextContainer) {
+					summaryTextContainer.style.display = "block";
+					summaryTextContainer.textContent = msg;
+				}
+				return;
+			}
+
+			debugLog(
+				`Inline fallback collected ${contentText.length} chars from ${contentSource}`,
+			);
+
+			// 3. Send to background for summarisation
+			if (btn) btn.textContent = "Summarising…";
 			if (statusDiv) {
-				statusDiv.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
+				statusDiv.textContent = `Sending to Gemini for ${summaryType.toLowerCase()} summary…`;
+			}
+
+			const action = isShort
+				? "shortSummarizeWithGemini"
+				: "summarizeWithGemini";
+			const response = await sendMessageWithRetry({
+				action,
+				title: document.title,
+				content: contentText,
+			});
+
+			if (!response?.success || !response.summary) {
+				const errMsg = response?.error || "Failed to generate summary.";
+				if (errMsg.includes("API key is missing")) {
+					showStatusMessage(
+						"API key is missing. Opening settings page…",
+						"error",
+					);
+					browser.runtime.sendMessage({ action: "openPopup" });
+				}
+				throw new Error(errMsg);
+			}
+
+			// 4. Render result
+			renderSummaryOutput(
+				summaryTextContainer,
+				response.summary,
+				summaryType,
+			);
+			if (statusDiv) {
+				statusDiv.textContent = "Summary generated successfully!";
+			}
+			showStatusMessage(
+				`${summaryType} summary generated!`,
+				"success",
+				3000,
+			);
+		} catch (error) {
+			debugError("Inline summary fallback error:", error);
+			if (statusDiv) {
+				statusDiv.textContent = error.message.includes("API key")
+					? "API key is missing. Please check the settings."
+					: `Error: ${error.message}`;
 			}
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
-			}
-
-			const modelInfoResponse = await sendMessageWithRetry({
-				action: "getModelInfo",
-			});
-
-			const maxContextSize = modelInfoResponse.maxContextSize || 16000;
-			const estimatedTokenCount = Math.ceil(combinedText.length / 4);
-			const contextThreshold = isShort
-				? maxContextSize * 0.8
-				: maxContextSize * 0.6;
-
-			let summary = "";
-			if (estimatedTokenCount > contextThreshold) {
-				summary = await summarizeLargeContentInParts(
-					document.title,
-					combinedText,
-					maxContextSize,
-					statusDiv,
-					isShort,
-				);
-			} else {
-				const action = isShort
-					? "shortSummarizeWithGemini"
-					: "summarizeWithGemini";
-				const response = await sendMessageWithRetry({
-					action,
-					title: document.title,
-					content: combinedText,
-				});
-
-				if (response && response.success && response.summary) {
-					summary = response.summary;
-				} else {
-					throw new Error(
-						response?.error || "Failed to generate summary.",
-					);
-				}
-			}
-
-			if (summary) {
-				renderSummaryOutput(summaryTextContainer, summary, summaryType);
-				if (statusDiv) {
-					statusDiv.textContent = "Summary generated successfully!";
-				}
-			}
-		} catch (error) {
-			debugError("Error generating chunk summary:", error);
-			if (statusDiv) {
-				statusDiv.textContent = `Failed to generate summary: ${error.message}`;
-			}
-			if (summaryTextContainer) {
 				summaryTextContainer.textContent = `Failed to generate summary: ${error.message}`;
 			}
+		} finally {
+			if (btn) {
+				btn.disabled = false;
+				btn.textContent = originalBtnText;
+			}
+			setTimeout(() => {
+				if (statusDiv?.textContent?.includes("Summary generated")) {
+					statusDiv.textContent = "";
+				}
+			}, 5000);
 		}
 	}
 
@@ -2642,6 +2878,48 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// ── Summary service (unified summary pipeline) ──────────────
+	let summaryServiceModule = null;
+
+	async function loadSummaryService() {
+		if (summaryServiceModule) return summaryServiceModule;
+		try {
+			const url = browser.runtime.getURL("utils/summary-service.js");
+			debugLog("Loading summary service from:", url);
+			const mod = await import(url);
+			if (!mod || !mod.default) {
+				debugError(
+					"Summary service module loaded but has no default export",
+				);
+				return null;
+			}
+			summaryServiceModule = mod.default;
+			summaryServiceModule.init({
+				sendMessageWithRetry,
+				wakeUpBackgroundWorker,
+				extractContent,
+				findContentArea,
+				stripHtmlTags,
+				extractParagraphsFromHtml,
+				showStatusMessage,
+				logNotification,
+				resolveNovelDataForNotification,
+				loadChunkingSystem,
+				debugLog,
+				debugError,
+				getCurrentFontSize: () => currentFontSize,
+			});
+			debugLog("Summary service loaded and initialised successfully");
+			return summaryServiceModule;
+		} catch (error) {
+			debugError(
+				"Error loading summary service module (will use inline fallback):",
+				error,
+			);
+			return null;
+		}
+	}
+
 	// Clear old chunk cache format once per page load
 	(async function initChunkCacheMigration() {
 		try {
@@ -3017,18 +3295,11 @@ if (window.__RGInitDone) {
 					chunkSummaryCount,
 					(indices) => summarizeChunkRange(indices, false),
 					(indices) => summarizeChunkRange(indices, true),
+					(indices, startIdx, endIdx) =>
+						handleEnhanceChunkRange(indices, startIdx, endIdx),
 				);
 
-				// Apply current visibility state to chunk summary groups
-				if (shouldBannersBeHidden()) {
-					const chunkSummaryGroups =
-						chunkedContentContainer.querySelectorAll(
-							".gemini-chunk-summary-group",
-						);
-					chunkSummaryGroups.forEach((group) => {
-						group.style.display = "none";
-					});
-				}
+				// Chunk summary groups are always visible for easy access to summaries
 			}
 		}
 
@@ -3428,16 +3699,21 @@ if (window.__RGInitDone) {
 	 * Create and show a timed notification banner
 	 * @param {string} message - Message to display
 	 * @param {string} type - Banner type: 'info', 'success', 'warning', 'action'
-	 * @param {number} duration - How long to show (ms), 0 = until dismissed
+	 * @param {number|null} duration - How long to show (ms), 0 = until dismissed, null = default
 	 * @param {Object} options - Additional options (actionButton, etc.)
 	 * @returns {HTMLElement} The banner element
 	 */
 	function showTimedBanner(
 		message,
 		type = "info",
-		duration = 3000,
+		duration = null,
 		options = {},
 	) {
+		// Resolve duration from config if not specified
+		if (duration === null) {
+			duration = bannerConfig.defaultMs;
+		}
+
 		// Remove any existing banner
 		const existingBanner = document.getElementById(
 			"rg-notification-banner",
@@ -3503,6 +3779,52 @@ if (window.__RGInitDone) {
 				}
 				.rg-banner-updating .rg-banner-icon {
 					animation: rg-spin 1s linear infinite;
+				}
+
+				/* Mobile responsive styles */
+				@media (max-width: ${bannerConfig.mobileBreakpointPx}px) {
+					#rg-notification-banner {
+						top: 10px !important;
+						right: 10px !important;
+						left: 10px !important;
+						max-width: none !important;
+						font-size: 13px !important;
+					}
+					#rg-chapter-novel-controls {
+						flex-direction: column !important;
+						align-items: stretch !important;
+						gap: 6px !important;
+						padding: 8px !important;
+					}
+					#rg-chapter-novel-controls button,
+					#rg-chapter-novel-controls select {
+						min-height: 44px !important;
+						width: 100% !important;
+						font-size: 14px !important;
+						padding: 10px 12px !important;
+					}
+					#rg-chapter-novel-controls > span:first-child {
+						text-align: center !important;
+						margin-bottom: 4px !important;
+					}
+					.gemini-main-summary-group {
+						flex-direction: column !important;
+						align-items: stretch !important;
+						gap: 8px !important;
+					}
+					.gemini-main-summary-group button {
+						min-height: 44px !important;
+						font-size: 14px !important;
+					}
+					.gemini-chunk-banner {
+						flex-wrap: wrap !important;
+						gap: 6px !important;
+						padding: 8px !important;
+					}
+					.gemini-chunk-banner button {
+						min-height: 40px !important;
+						flex: 1 1 calc(50% - 4px) !important;
+					}
 				}
 			`;
 			document.head.appendChild(styleSheet);
@@ -3649,6 +3971,7 @@ if (window.__RGInitDone) {
 		return null;
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	async function showProgressUpdatePrompt({
 		novelId,
 		currentChapter,
@@ -3769,11 +4092,15 @@ if (window.__RGInitDone) {
 				showTimedBanner(
 					`Progress updated to Chapter ${currentChapter}`,
 					"success",
-					2000,
+					bannerConfig.quickMs,
 				);
 			} catch (err) {
 				debugError("Failed to update progress", err);
-				showTimedBanner("Failed to update progress", "warning", 2000);
+				showTimedBanner(
+					"Failed to update progress",
+					"warning",
+					bannerConfig.quickMs,
+				);
 			} finally {
 				banner.remove();
 			}
@@ -3789,6 +4116,179 @@ if (window.__RGInitDone) {
 
 		document.body.appendChild(banner);
 
+		setTimeout(() => {
+			if (banner.parentElement) banner.remove();
+		}, PROGRESS_PROMPT_TIMEOUT_MS);
+	}
+
+	/**
+	 * Show a re-reading detection banner when the user visits an earlier chapter.
+	 * Offers: "Continue to Ch. X" (jump to last-read) or "Start re-reading" (set overlay flag).
+	 */
+	async function showRereadingBanner({
+		novelId,
+		currentChapter,
+		lastReadChapter,
+		lastReadUrl,
+		novelTitle,
+	}) {
+		if (!shouldShowProgressPrompt(novelId)) return;
+		progressPromptState.set(novelId, Date.now());
+
+		const existing = document.getElementById("rg-progress-banner");
+		if (existing) existing.remove();
+
+		const banner = document.createElement("div");
+		banner.id = "rg-progress-banner";
+		banner.style.cssText = `
+			position: fixed;
+			bottom: 24px;
+			right: 24px;
+			background: #1a0a2e;
+			border: 1px solid #7c3aed;
+			border-left: 4px solid #9c27b0;
+			border-radius: 10px;
+			padding: 14px 16px;
+			color: #e2e8f0;
+			font-family: system-ui, -apple-system, sans-serif;
+			font-size: 13px;
+			z-index: 999999;
+			box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+			max-width: 380px;
+			min-width: 280px;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			animation: rg-slide-in 0.25s ease;
+		`;
+
+		// Inject keyframe animation once (shared with progress banner)
+		if (!document.getElementById("rg-banner-style")) {
+			const style = document.createElement("style");
+			style.id = "rg-banner-style";
+			style.textContent = `
+				@keyframes rg-slide-in {
+					from { opacity: 0; transform: translateY(12px); }
+					to   { opacity: 1; transform: translateY(0); }
+				}
+			`;
+			document.head.appendChild(style);
+		}
+
+		// Header row
+		const header = document.createElement("div");
+		header.style.cssText =
+			"display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
+
+		const titleEl = document.createElement("div");
+		titleEl.style.cssText =
+			"font-weight:700;font-size:13px;color:#c084fc;flex:1;";
+		titleEl.textContent = "🔁 Re-reading Detected";
+
+		const closeBtn = document.createElement("button");
+		closeBtn.textContent = "×";
+		closeBtn.style.cssText =
+			"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+		closeBtn.addEventListener("click", () => banner.remove());
+
+		header.appendChild(titleEl);
+		header.appendChild(closeBtn);
+		banner.appendChild(header);
+
+		// Novel title
+		if (novelTitle) {
+			const nTitle = document.createElement("div");
+			nTitle.style.cssText =
+				"font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
+			nTitle.textContent = novelTitle;
+			banner.appendChild(nTitle);
+		}
+
+		// Message
+		const message = document.createElement("div");
+		message.style.cssText = "font-size:13px;color:#cbd5e1;line-height:1.5;";
+		message.textContent = `You're on Chapter ${currentChapter}, but your last read was Chapter ${lastReadChapter}. Are you re-reading?`;
+		banner.appendChild(message);
+
+		// Action buttons
+		const actions = document.createElement("div");
+		actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
+
+		// "Start Re-reading" button — sets overlay flag
+		const rereadBtn = document.createElement("button");
+		rereadBtn.textContent = "🔁 Start Re-reading";
+		rereadBtn.style.cssText =
+			"background:#9c27b0;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
+		rereadBtn.addEventListener("mouseover", () => {
+			rereadBtn.style.background = "#7b1fa2";
+		});
+		rereadBtn.addEventListener("mouseout", () => {
+			rereadBtn.style.background = "#9c27b0";
+		});
+		rereadBtn.addEventListener("click", async () => {
+			try {
+				// Set re-reading overlay via novelLibrary
+				await novelLibrary.updateReadingStatus(
+					novelId,
+					READING_STATUS.RE_READING,
+					true, // isRereadingOverlay
+				);
+				showTimedBanner(
+					"📖 Re-reading mode started",
+					"success",
+					bannerConfig.quickMs,
+				);
+			} catch (err) {
+				debugError("Failed to set re-reading overlay", err);
+				showTimedBanner(
+					"Failed to start re-reading",
+					"warning",
+					bannerConfig.quickMs,
+				);
+			} finally {
+				banner.remove();
+			}
+		});
+
+		// "Continue to Ch. X" button — navigate to last-read URL
+		const continueBtn = document.createElement("button");
+		continueBtn.textContent = `Continue to Ch. ${lastReadChapter}`;
+		continueBtn.style.cssText =
+			"background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
+		continueBtn.addEventListener("mouseover", () => {
+			continueBtn.style.background = "#4f46e5";
+		});
+		continueBtn.addEventListener("mouseout", () => {
+			continueBtn.style.background = "#6366f1";
+		});
+		continueBtn.addEventListener("click", () => {
+			banner.remove();
+			if (lastReadUrl) {
+				window.location.href = lastReadUrl;
+			} else {
+				showTimedBanner(
+					"No saved URL for that chapter",
+					"warning",
+					2000,
+				);
+			}
+		});
+
+		// Dismiss button
+		const dismissBtn = document.createElement("button");
+		dismissBtn.textContent = "Dismiss";
+		dismissBtn.style.cssText =
+			"background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;";
+		dismissBtn.addEventListener("click", () => banner.remove());
+
+		actions.appendChild(rereadBtn);
+		actions.appendChild(continueBtn);
+		actions.appendChild(dismissBtn);
+		banner.appendChild(actions);
+
+		document.body.appendChild(banner);
+
+		// Auto-dismiss after timeout
 		setTimeout(() => {
 			if (banner.parentElement) banner.remove();
 		}, PROGRESS_PROMPT_TIMEOUT_MS);
@@ -4067,18 +4567,19 @@ if (window.__RGInitDone) {
 	}
 
 	/**
-	 * Show "Check for Updates" banner for existing novels
+	 * Show "Check for Updates" banner for existing novels.
+	 * Auto-dismisses after updateNotifyMs — user does NOT need to interact.
+	 * The "Update" button in the chapter controls handles manual updates.
 	 */
 	function showUpdateAvailableBanner(existingNovel, currentMetadata) {
-		// Use showTimedBanner with action button for manual update
 		showTimedBanner(
-			`Check for updates for "${existingNovel.title}"?`,
-			"action",
-			0, // 0 = no auto-dismiss
+			`🔗 Updates may be available for "${existingNovel.title}"`,
+			"info",
+			bannerConfig.updateNotifyMs || 8000,
 			{
 				title: "Novel Update Available",
 				actionButton: {
-					text: "🔄 Check Updates",
+					text: "🔄 Update Now",
 					onClick: () => {
 						manuallyCheckAndUpdateNovel(
 							existingNovel,
@@ -5153,11 +5654,13 @@ if (window.__RGInitDone) {
 				novel.lastReadChapter &&
 				chapterNav.currentChapter < novel.lastReadChapter
 			) {
-				await showProgressUpdatePrompt({
+				// User is reading an earlier chapter — offer re-reading prompt
+				await showRereadingBanner({
 					novelId,
 					currentChapter: chapterNav.currentChapter,
-					storedChapter: novel.lastReadChapter,
-					totalChapters: novel.totalChapters,
+					lastReadChapter: novel.lastReadChapter,
+					lastReadUrl: novel.lastReadUrl,
+					novelTitle: novel.title,
 				});
 			}
 		} catch (error) {
@@ -5246,17 +5749,11 @@ if (window.__RGInitDone) {
 			);
 
 			// Refresh the controls – remove first so the DOM guard allows re-creation.
-			const controls = document.getElementById(
-				"rg-chapter-novel-controls",
-			);
-			if (controls) {
-				controls.remove();
-				const config = currentHandler?.getNovelControlsConfig?.() || {};
-				const newControls =
-					await createChapterPageNovelControls(config);
-				if (newControls) {
-					placeChapterNovelControls(newControls, config);
-				}
+			removeChapterNovelControlsFromDOM();
+			const config = currentHandler?.getNovelControlsConfig?.() || {};
+			const newControls = await createChapterPageNovelControls(config);
+			if (newControls) {
+				placeChapterNovelControls(newControls, config);
 			}
 		} catch (error) {
 			debugError("Error removing novel with blocklist:", error);
@@ -5387,6 +5884,27 @@ if (window.__RGInitDone) {
 		}
 
 		return { element: targetElement, position };
+	}
+
+	/**
+	 * Remove the chapter novel controls container AND its DT/DD wrapper from the DOM.
+	 * Calling .remove() on just #rg-chapter-novel-controls leaves orphaned
+	 * dt.rg-gemini-controls-label + dd.rg-gemini-controls shells in the page,
+	 * causing duplicate label/wrapper pairs each time the controls are refreshed.
+	 */
+	function removeChapterNovelControlsFromDOM() {
+		const existing = document.getElementById("rg-chapter-novel-controls");
+		if (!existing) return;
+		const wrapper = existing.closest(".rg-gemini-controls");
+		if (wrapper) {
+			const maybeLabel = wrapper.previousElementSibling;
+			if (maybeLabel?.classList.contains("rg-gemini-controls-label")) {
+				maybeLabel.remove();
+			}
+			wrapper.remove();
+		} else {
+			existing.remove();
+		}
 	}
 
 	function placeChapterNovelControls(novelControls, controlsConfig = {}) {
@@ -5535,14 +6053,9 @@ if (window.__RGInitDone) {
 					debugLog(`📖 Reading status changed to: ${newStatus}`);
 
 					// Always refresh controls – remove-then-recreate pattern.
-					// Don't gate recreation on whether the old element is in the
-					// DOM; it may be briefly absent during the async storage round-
-					// trip. The DOM guard inside createChapterPageNovelControls
-					// prevents duplicates once the old node is removed.
-					const oldControls = document.getElementById(
-						"rg-chapter-novel-controls",
-					);
-					if (oldControls) oldControls.remove();
+					// removeChapterNovelControlsFromDOM also cleans up the DT/DD
+					// wrapper so no orphaned shells are left in the page.
+					removeChapterNovelControlsFromDOM();
 					const newControls =
 						await createChapterPageNovelControls(controlsConfig);
 					if (newControls) {
@@ -5565,13 +6078,8 @@ if (window.__RGInitDone) {
 						3000,
 					);
 
-					// Refresh controls
-					const oldControls = document.getElementById(
-						"rg-chapter-novel-controls",
-					);
-					if (oldControls) {
-						oldControls.remove();
-					}
+					// Refresh controls – also strips the DT/DD wrapper to prevent orphaned shells.
+					removeChapterNovelControlsFromDOM();
 				} catch (error) {
 					debugError("Error removing novel:", error);
 					showTimedBanner("Failed to remove novel", "warning", 3000);
@@ -5664,11 +6172,8 @@ if (window.__RGInitDone) {
 				existingNovel ? "#00695c" : "#1976d2",
 				async () => {
 					await handleNovelAddUpdate();
-					// Always refresh: remove first so the DOM guard allows re-creation.
-					const oldControls = document.getElementById(
-						"rg-chapter-novel-controls",
-					);
-					if (oldControls) oldControls.remove();
+					// Refresh: also strip the DT/DD wrapper to prevent orphaned shells.
+					removeChapterNovelControlsFromDOM();
 					const newControls =
 						await createChapterPageNovelControls(controlsConfig);
 					if (newControls) {
@@ -5783,13 +6288,40 @@ if (window.__RGInitDone) {
 							btnSpec.color &&
 							btnSpec.onClick
 						) {
-							const customBtn = createCompactButton(
-								btnSpec.text,
-								btnSpec.emoji,
-								btnSpec.color,
-								btnSpec.onClick,
-							);
-							controlsContainer.appendChild(customBtn);
+							if (btnSpec.badgeStyle) {
+								// Render as a badge (like the "In Library" status indicator)
+								const badge = document.createElement("span");
+								badge.innerHTML = `${btnSpec.emoji} ${btnSpec.text}`;
+								badge.style.cssText = `
+									padding: 4px 8px;
+									background: ${btnSpec.color};
+									color: white;
+									border-radius: 4px;
+									font-size: 11px;
+									font-weight: 600;
+									cursor: pointer;
+									white-space: nowrap;
+									flex: 0 0 auto;
+									user-select: none;
+								`;
+								const origText = badge.innerHTML;
+								badge.addEventListener("click", async () => {
+									await btnSpec.onClick();
+									badge.innerHTML = "✅ Copied!";
+									setTimeout(() => {
+										badge.innerHTML = origText;
+									}, 2000);
+								});
+								controlsContainer.appendChild(badge);
+							} else {
+								const customBtn = createCompactButton(
+									btnSpec.text,
+									btnSpec.emoji,
+									btnSpec.color,
+									btnSpec.onClick,
+								);
+								controlsContainer.appendChild(customBtn);
+							}
 						}
 					});
 				}
@@ -5860,12 +6392,18 @@ if (window.__RGInitDone) {
 		controlsContainer.appendChild(toggleBannersButton);
 		controlsContainer.appendChild(cancelEnhanceButton);
 
-		// Create main summary group upfront so users can access summary/enhance buttons immediately
+		// Create summary/chunk controls upfront so users can summarize/select chunks before enhancement
 		const chunking = await loadChunkingSystem();
 		let mainSummaryGroup = null;
+		let totalSummaryChunks = 1;
 		if (chunking?.summaryUI) {
+			totalSummaryChunks = await initializeChunkedViewForSummaries(
+				contentArea,
+				chunking,
+			);
+
 			mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
-				1, // Placeholder: 1 chunk (will be updated after enhancement)
+				totalSummaryChunks,
 				(indices) => summarizeChunkRange(indices, false),
 				(indices) => summarizeChunkRange(indices, true),
 				() => handleEnhanceClick(),
@@ -6182,358 +6720,11 @@ if (window.__RGInitDone) {
 	}
 
 	// Handle click event for Summarize button (used by message handler for non-chunked content)
+	// Delegates to the unified summary service which handles both chunked and non-chunked pages.
 	async function handleSummarizeClick(isShort = false) {
-		const statusDiv = document.getElementById("gemini-status");
-		if (!statusDiv) return;
-
-		const summaryType = isShort ? "Short" : "Long";
-
-		// Find the summary button in the main summary group
-		const summarizeButton = isShort
-			? document.querySelector(".gemini-main-short-summary-btn")
-			: document.querySelector(".gemini-main-long-summary-btn");
-
-		// Find the main summary text container
-		let summaryTextContainer = document.querySelector(
-			".gemini-main-summary-text",
-		);
-
-		const originalButtonText = summarizeButton
-			? summarizeButton.textContent
-			: "";
-
-		try {
-			// Wake up background worker first
-			if (summarizeButton) {
-				summarizeButton.disabled = true;
-				summarizeButton.textContent = "Waking up AI...";
-			}
-			statusDiv.textContent = "Waking up AI service...";
-
-			const isReady = await wakeUpBackgroundWorker();
-			if (!isReady) {
-				throw new Error(
-					"Background service is not responding. Please try summarizing again.",
-				);
-			}
-
-			// Now proceed with summarization
-			if (summarizeButton) {
-				summarizeButton.textContent = "Summarizing...";
-			}
-			statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary...`;
-			if (summaryTextContainer) {
-				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary...`;
-			}
-			const extractedContent = extractContent();
-			const { title, text: content } = extractedContent;
-
-			if (!content || !content.trim()) {
-				const noContentMsg = extractedContent.reason
-					? `No content available for summary: ${extractedContent.reason}`
-					: "No content available for summary.";
-				if (summaryTextContainer) {
-					summaryTextContainer.style.display = "block";
-					summaryTextContainer.textContent = noContentMsg;
-				}
-				statusDiv.textContent = noContentMsg;
-				if (summarizeButton) {
-					summarizeButton.disabled = false;
-					summarizeButton.textContent = originalButtonText;
-				}
-				return;
-			}
-
-			debugLog(
-				`Extracted ${
-					content.length
-				} characters for ${summaryType.toLowerCase()} summarization`,
-			);
-			statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summarization...`;
-
-			// Get model info to determine if we need to split the content
-			// Using sendMessageWithRetry to handle service worker sleep issues
-			const modelInfoResponse = await sendMessageWithRetry({
-				action: "getModelInfo",
-			});
-
-			const maxContextSize = modelInfoResponse.maxContextSize || 16000; // Default if not available
-			debugLog(
-				`Model max context size for summarization: ${maxContextSize}`,
-			);
-
-			// Get approximate token count (rough estimate: 4 chars per token)
-			const estimatedTokenCount = Math.ceil(content.length / 4);
-			debugLog(
-				`Estimated token count for summarization: ${estimatedTokenCount}`,
-			);
-
-			let summary = "";
-
-			// For short summaries, we can process larger content as a single request
-			// because the output is much smaller
-			const contextThreshold = isShort
-				? maxContextSize * 0.8
-				: maxContextSize * 0.6;
-
-			// Check if content exceeds the threshold
-			if (estimatedTokenCount > contextThreshold) {
-				// Process large content in parts
-				summary = await summarizeLargeContentInParts(
-					title,
-					content,
-					maxContextSize,
-					statusDiv,
-					isShort,
-				);
-			} else {
-				// Process as a single chunk - use appropriate action
-				const action = isShort
-					? "shortSummarizeWithGemini"
-					: "summarizeWithGemini";
-				// Using sendMessageWithRetry to handle service worker sleep issues
-				const response = await sendMessageWithRetry({
-					action: action,
-					title: title,
-					content: content,
-				});
-
-				if (response && response.success && response.summary) {
-					summary = response.summary;
-				} else {
-					// Check for API key missing error
-					const errorMessage =
-						response?.error || "Failed to generate summary.";
-					if (errorMessage.includes("API key is missing")) {
-						showStatusMessage(
-							"API key is missing. Opening settings page...",
-							"error",
-						);
-						// Open popup for API key input
-						browser.runtime.sendMessage({ action: "openPopup" });
-
-						// Show appropriate message in the target display
-						if (summaryTextContainer) {
-							summaryTextContainer.textContent =
-								"API key is missing. Please add your Gemini API key in the settings.";
-						}
-						throw new Error("API key is missing");
-					} else {
-						throw new Error(errorMessage);
-					}
-				}
-			}
-
-			// Display the summary
-			if (summary) {
-				renderSummaryOutput(summaryTextContainer, summary, summaryType);
-				statusDiv.textContent = "Summary generated successfully!";
-				logNotification({
-					type: "success",
-					message: `${summaryType} summary generated`,
-					title: `${summaryType} summary`,
-					novelData: await resolveNovelDataForNotification(),
-					metadata: {
-						summaryType,
-						isShort,
-						length: summary.length,
-					},
-				});
-			} else {
-				throw new Error("Failed to generate summary.");
-			}
-		} catch (error) {
-			debugError("Error in handleSummarizeClick:", error);
-
-			// Special handling for API key missing error - already handled above
-			if (error.message && error.message.includes("API key is missing")) {
-				statusDiv.textContent =
-					"API key is missing. Please check the settings.";
-			} else {
-				// For other errors, display the error message
-				statusDiv.textContent = `Error: ${error.message}`;
-				if (summaryTextContainer) {
-					summaryTextContainer.textContent =
-						"Failed to generate summary.";
-					summaryTextContainer.style.display = "block";
-				}
-			}
-			logNotification({
-				type: "error",
-				message: `${summaryType} summary failed: ${error.message}`,
-				title: `${summaryType} summary failed`,
-				novelData: await resolveNovelDataForNotification(),
-				metadata: {
-					summaryType,
-					isShort,
-				},
-			});
-		} finally {
-			if (summarizeButton) {
-				summarizeButton.disabled = false;
-				summarizeButton.textContent = originalButtonText;
-			}
-			// Optionally hide status message after a delay (except for API key missing)
-			setTimeout(() => {
-				if (
-					statusDiv.textContent.includes("Summary generated") &&
-					!statusDiv.textContent.includes("API key is missing")
-				) {
-					statusDiv.textContent = "";
-				}
-			}, 5000);
-		}
-	}
-
-	// Process large content by splitting into parts
-	async function summarizeLargeContentInParts(
-		title,
-		content,
-		maxContextSize,
-		statusDiv,
-		isShort = false,
-	) {
-		const summaryType = isShort ? "short" : "long";
-		debugLog(
-			`Content is large, creating ${summaryType} summary in multiple parts...`,
-		);
-		if (statusDiv) {
-			statusDiv.textContent =
-				"Content is large, summarizing in multiple parts...";
-		}
-
-		// Approximately how many characters per part (rough estimate: 4 chars per token, using 60% of context size)
-		const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
-		const wordsPerPart = Math.floor(charsPerPart / 7); // Rough conversion: 7 chars per word
-
-		// Use shared content splitting helper (new modular system)
-		const chunking = await loadChunkingSystem();
-		if (!chunking) {
-			console.warn(
-				"Chunking system unavailable, summarizing content without splitting.",
-			);
-		}
-
-		let parts = [content];
-		if (chunking) {
-			const chunks = chunking.core.splitContentByWords(
-				content,
-				wordsPerPart,
-			);
-			parts = chunks.map((chunk) => chunk.content);
-		}
-		debugLog(
-			`Split content into ${parts.length} parts for ${summaryType} summarization`,
-		);
-
-		// Use the appropriate action based on isShort
-		const action = isShort
-			? "shortSummarizeWithGemini"
-			: "summarizeWithGemini";
-
-		// Process each part sequentially
-		let allPartSummaries = [];
-		let currentPartNum = 1;
-
-		for (const part of parts) {
-			// Update status
-			if (statusDiv) {
-				statusDiv.textContent = `Summarizing part ${currentPartNum} of ${parts.length}...`;
-			}
-
-			debugLog(
-				`Creating ${summaryType} summary for part ${currentPartNum}/${parts.length} (${part.length} characters)`,
-			);
-
-			// Create a part-specific title
-			const partTitle = `${title} (Part ${currentPartNum}/${parts.length})`;
-
-			try {
-				// Process this part using sendMessageWithRetry for service worker resilience
-				const response = await sendMessageWithRetry({
-					action: action,
-					title: partTitle,
-					content: part,
-					isPart: true,
-					partInfo: {
-						current: currentPartNum,
-						total: parts.length,
-					},
-				});
-
-				if (response && response.success && response.summary) {
-					debugLog(
-						`Successfully summarized part ${currentPartNum}/${parts.length}`,
-					);
-					allPartSummaries.push(response.summary);
-				} else {
-					debugError(
-						`Error summarizing part ${currentPartNum}:`,
-						response?.error || "Unknown error",
-					);
-					// Continue with other parts even if one fails
-				}
-			} catch (error) {
-				debugError(`Error summarizing part ${currentPartNum}:`, error);
-				// Continue with other parts even if one fails
-			}
-
-			currentPartNum++;
-		}
-
-		// If we have multiple part summaries, combine them
-		if (allPartSummaries.length > 1) {
-			// Try to combine the summaries with an additional API call
-			try {
-				if (statusDiv) {
-					statusDiv.textContent = "Combining part summaries...";
-				}
-
-				// Join the part summaries with clear separators
-				const combinedPartSummaries = allPartSummaries
-					.map((summary, index) => {
-						return `Part ${index + 1} summary:\n${summary}`;
-					})
-					.join("\n\n");
-
-				// Make a final API call to combine the summaries using retry wrapper
-				const finalResponse = await sendMessageWithRetry({
-					action: "combinePartialSummaries",
-					title: title,
-					partSummaries: combinedPartSummaries,
-					partCount: parts.length,
-					isShort: isShort,
-				});
-
-				if (
-					finalResponse &&
-					finalResponse.success &&
-					finalResponse.combinedSummary
-				) {
-					return finalResponse.combinedSummary;
-				} else {
-					// If the combination failed, just join the summaries with separators
-					debugLog("Using fallback approach to combine summaries");
-					return (
-						`Complete summary of "${title}":\n\n` +
-						allPartSummaries.join("\n\n")
-					);
-				}
-			} catch (error) {
-				// If there's an error combining, just join them
-				debugError("Error combining summaries:", error);
-				return (
-					`Complete summary of "${title}":\n\n` +
-					allPartSummaries.join("\n\n")
-				);
-			}
-		} else if (allPartSummaries.length === 1) {
-			// Just return the single summary if there's only one part
-			return allPartSummaries[0];
-		} else {
-			throw new Error("Failed to generate any part summaries");
-		}
+		// Use [0] as a single-chunk placeholder — the summary service's collectContent()
+		// correctly falls through to live extraction when no chunk DOM elements exist.
+		return summarizeChunkRange([0], isShort);
 	}
 
 	// Helper: Get content area HTML without any Gemini UI elements
@@ -6747,7 +6938,9 @@ if (window.__RGInitDone) {
 					chunkSummaryCount = chunkConfig.chunkSummaryCount;
 
 					// Get clean HTML without Gemini UI elements for accurate chunking
-					const originalHTML = getCleanContentHTML(contentArea);
+					const originalHTML =
+						contentArea.getAttribute("data-original-html") ||
+						getCleanContentHTML(contentArea);
 					contentToSend = originalHTML; // Use HTML for chunking to match background
 					chunks = chunking.core.splitContentByWords(
 						originalHTML,
@@ -6797,8 +6990,13 @@ if (window.__RGInitDone) {
 					if (existingPlaceholderGroup)
 						existingPlaceholderGroup.remove();
 
-					// Get clean HTML without any Gemini UI elements
-					const originalHTML = getCleanContentHTML(contentArea);
+					// Preserve original source content when pre-chunk view already exists
+					const originalHTML =
+						contentArea.getAttribute("data-original-html") ||
+						getCleanContentHTML(contentArea);
+					const originalText =
+						contentArea.getAttribute("data-original-text") ||
+						extractedContent.text;
 					try {
 						contentArea.setAttribute(
 							"data-original-html",
@@ -6806,7 +7004,7 @@ if (window.__RGInitDone) {
 						);
 						contentArea.setAttribute(
 							"data-original-text",
-							extractedContent.text,
+							originalText,
 						);
 						contentArea.setAttribute(
 							"data-total-chunks",
@@ -6893,18 +7091,15 @@ if (window.__RGInitDone) {
 										summarizeChunkRange(indices, false),
 									(indices) =>
 										summarizeChunkRange(indices, true),
+									(indices, startIdx, endIdx) =>
+										handleEnhanceChunkRange(
+											indices,
+											startIdx,
+											endIdx,
+										),
 								);
 
-								// Apply current visibility state to chunk summary groups
-								if (shouldBannersBeHidden()) {
-									const chunkSummaryGroups =
-										chunkedContentContainer.querySelectorAll(
-											".gemini-chunk-summary-group",
-										);
-									chunkSummaryGroups.forEach((group) => {
-										group.style.display = "none";
-									});
-								}
+								// Chunk summary groups are always visible for easy access to summaries
 							}
 						}
 

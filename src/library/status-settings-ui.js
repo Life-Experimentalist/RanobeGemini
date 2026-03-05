@@ -115,6 +115,158 @@ export function renderStatusSettingsTab(container, getSettings, saveSettings) {
 	const allStatusIds = statuses.map((s) => s.id);
 
 	container.innerHTML = `
+		<style>
+		/* Base inputs */
+		.status-settings-root input[type="text"],
+		.status-settings-root input[type="number"],
+		.status-settings-root select {
+			transition: border-color 0.2s, box-shadow 0.2s;
+		}
+		.status-settings-root input[type="text"]:focus,
+		.status-settings-root input[type="number"]:focus,
+		.status-settings-root select:focus {
+			outline: none;
+			border-color: #a855f7 !important;
+			box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
+		}
+		/* Sections */
+		.status-settings-root .ssu-section {
+			transition: box-shadow 0.2s;
+		}
+		.status-settings-root .ssu-section:hover {
+			box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+		}
+		/* Rule rows */
+		.status-settings-root .ssu-rule-row {
+			transition: border-color 0.2s, box-shadow 0.2s;
+		}
+		.status-settings-root .ssu-rule-row:hover {
+			border-color: #a855f7 !important;
+			box-shadow: 0 1px 6px rgba(168, 85, 247, 0.15);
+		}
+		/* Checkboxes */
+		.status-settings-root input[type="checkbox"] {
+			cursor: pointer;
+			transition: transform 0.15s;
+		}
+		.status-settings-root input[type="checkbox"]:hover {
+			transform: scale(1.15);
+		}
+		/* Buttons */
+		.status-settings-root .btn {
+			transition: transform 0.1s, box-shadow 0.2s;
+		}
+		.status-settings-root .btn:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+		}
+		.status-settings-root .btn:active {
+			transform: translateY(0);
+		}
+		/* Styled card rows with CSS Grid */
+		.rg-status-row {
+			display: grid;
+			grid-template-columns: auto auto 1fr auto auto;
+			align-items: center;
+			gap: 10px;
+			padding: 10px;
+			background: var(--bg-tertiary, #1f2937);
+			border-radius: 6px;
+			margin-bottom: 6px;
+			border: 1px solid var(--border-color, #374151);
+			transition: border-color 0.2s, box-shadow 0.2s;
+		}
+		.rg-status-row:hover {
+			border-color: #a855f7;
+			box-shadow: 0 1px 6px rgba(168, 85, 247, 0.15);
+		}
+		.rg-preview-badge {
+			display: inline-block;
+			padding: 4px 12px;
+			border-radius: 12px;
+			font-size: 11px;
+			font-weight: 600;
+			white-space: nowrap;
+			min-width: 100px;
+			text-align: center;
+		}
+		.rg-count-badge {
+			display: inline-block;
+			min-width: 28px;
+			padding: 3px 8px;
+			border-radius: 10px;
+			font-size: 10px;
+			font-weight: 600;
+			text-align: center;
+			background: var(--bg-secondary, #1e293b);
+			color: var(--text-secondary, #9ca3af);
+			border: 1px solid var(--border-color, #374151);
+		}
+		.rg-input {
+			padding: 6px 10px;
+			border-radius: 4px;
+			border: 1px solid var(--border-color, #374151);
+			background: var(--bg-secondary, #1e293b);
+			color: var(--text-primary, #e5e7eb);
+			font-size: 12px;
+		}
+		.rg-color-group {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+		.rg-color-swatch {
+			width: 32px;
+			height: 28px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			background: none;
+		}
+		.rg-color-text {
+			width: 72px;
+			padding: 5px 6px;
+			border-radius: 4px;
+			border: 1px solid var(--border-color, #374151);
+			background: var(--bg-secondary, #1e293b);
+			color: var(--text-primary, #e5e7eb);
+			font-size: 11px;
+		}
+		.rg-action-btn {
+			font-size: 11px;
+			padding: 5px 10px;
+			border-radius: 4px;
+			border: 1px solid var(--border-color, #374151);
+			background: var(--bg-secondary, #1e293b);
+			cursor: pointer;
+			transition: background 0.15s;
+		}
+		.rg-action-btn:hover {
+			background: var(--bg-tertiary, #1f2937);
+		}
+		.rg-action-btn.danger {
+			color: #f87171;
+		}
+		.rg-toggle {
+			width: 16px;
+			height: 16px;
+			accent-color: #a855f7;
+			cursor: pointer;
+		}
+		/* Mobile responsive */
+		@media (max-width: 600px) {
+			.rg-status-row {
+				grid-template-columns: 1fr;
+				gap: 8px;
+			}
+			.rg-status-row .rg-preview-badge,
+			.rg-status-row .rg-input {
+				width: 100%;
+				min-height: 40px;
+			}
+			.rg-color-group { justify-content: flex-start; }
+		}
+		</style>
 		<div class="status-settings-root" style="display:flex;flex-direction:column;gap:18px;">
 		<div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px;">
 		<button id="ssu-save-all-btn" class="btn btn-primary" style="font-size:13px;padding:7px 18px;">
@@ -141,39 +293,27 @@ function _renderAppearanceSection(statuses) {
 		.filter((s) => !s.isRereadingOverlay)
 		.map(
 			(s) => `
-		<div class="ssu-status-row" data-status-id="${s.id}"
-			style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color,#2d3748);">
-			<span class="ssu-preview-badge" data-preview="${s.id}"
-				style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;
-					white-space:nowrap;min-width:110px;text-align:center;
-					background:${s.color}22;color:${s.color};border:1px solid ${s.color}55;"
+		<div class="rg-status-row" data-status-id="${s.id}">
+			<span class="rg-preview-badge ssu-preview-badge" data-preview="${s.id}"
+				style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}55;"
 			>${s.label}</span>
-			<span class="ssu-count-badge" data-count-id="${s.id}"
-				title="Novels with this status"
-				style="display:inline-block;min-width:26px;padding:2px 7px;border-radius:10px;font-size:10px;
-					font-weight:600;text-align:center;background:var(--bg-tertiary,#1f2937);
-					color:var(--text-secondary,#9ca3af);border:1px solid var(--border-color,#374151);"
-			>…</span>
-			<input type="text" class="ssu-label-input" data-sid="${s.id}"
-				value="${_esc(s.label)}"
-				style="flex:1;padding:5px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:12px;"
+			<span class="rg-count-badge ssu-count-badge" data-count-id="${s.id}"
+				title="Novels with this status">…</span>
+			<input type="text" class="rg-input ssu-label-input" data-sid="${s.id}"
+				value="${_esc(s.label)}" placeholder="Status label"
 			/>
-			<div style="display:flex;align-items:center;gap:4px;">
-				<input type="color" class="ssu-color-picker" data-sid="${s.id}" value="${s.color}"
-					style="width:34px;height:28px;border:none;border-radius:4px;cursor:pointer;background:none;"
+			<div class="rg-color-group">
+				<input type="color" class="rg-color-swatch ssu-color-picker" data-sid="${s.id}" value="${s.color}"
 				/>
-				<input type="text" class="ssu-color-text" data-sid="${s.id}" value="${s.color}" maxlength="7"
-					style="width:76px;padding:5px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-						background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:11px;"
+				<input type="text" class="rg-color-text ssu-color-text" data-sid="${s.id}" value="${s.color}" maxlength="7"
 				/>
 			</div>
 			${
 				!s.builtIn
-					? `<button class="ssu-delete-status-btn btn btn-secondary" data-sid="${s.id}"
-					title="Delete custom status" style="font-size:11px;padding:4px 8px;flex-shrink:0;color:#f87171;">✕</button>`
-					: `<button class="ssu-reset-btn btn btn-secondary" data-sid="${s.id}"
-					title="Reset to default" style="font-size:11px;padding:4px 8px;flex-shrink:0;">↩</button>`
+					? `<button class="rg-action-btn danger ssu-delete-status-btn" data-sid="${s.id}"
+					title="Delete custom status">✕</button>`
+					: `<button class="rg-action-btn ssu-reset-btn" data-sid="${s.id}"
+					title="Reset to default">↩</button>`
 			}
 		</div>`,
 		)
@@ -196,15 +336,12 @@ function _renderCustomStatusSection(customStatuses) {
 			: customStatuses
 					.map(
 						(cs) => `
-			<div class="ssu-custom-row" data-csid="${cs.id}"
-				style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-color,#2d3748);">
-				<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;
-					background:${cs.color}22;color:${cs.color};border:1px solid ${cs.color}55;min-width:90px;text-align:center;"
+			<div class="rg-status-row ssu-custom-row" data-csid="${cs.id}">
+				<span class="rg-preview-badge" style="background:${cs.color}22;color:${cs.color};border:1px solid ${cs.color}55;"
 				>${_esc(cs.label)}</span>
-				<span style="flex:1;font-size:12px;color:var(--text-secondary);">${_esc(cs.id)}</span>
-				<button class="ssu-delete-custom-btn btn btn-secondary" data-csid="${cs.id}"
-					title="Delete this custom status"
-					style="font-size:11px;padding:4px 10px;color:#f87171;">✕ Delete</button>
+				<span style="flex:1;font-size:12px;color:var(--text-secondary);grid-column:span 2;">${_esc(cs.id)}</span>
+				<button class="rg-action-btn danger ssu-delete-custom-btn" data-csid="${cs.id}"
+					title="Delete this custom status">✕ Delete</button>
 			</div>`,
 					)
 					.join("");
@@ -217,13 +354,10 @@ function _renderCustomStatusSection(customStatuses) {
 			used in transition rules. Deleting a custom status keeps the novels' data intact.
 		</p>
 		<div id="ssu-custom-list" style="display:flex;flex-direction:column;gap:4px;">${list}</div>
-		<div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color,#374151);">
-			<input type="text" id="ssu-new-status-label" placeholder="Label, e.g. Stalled"
-				style="flex:1;padding:6px 10px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:12px;"
+		<div class="rg-status-row" style="margin-top:12px;grid-template-columns: 1fr auto auto;">
+			<input type="text" id="ssu-new-status-label" class="rg-input" placeholder="Label, e.g. Stalled"
 			/>
-			<input type="color" id="ssu-new-status-color" value="#60a5fa"
-				style="width:36px;height:32px;border:none;border-radius:4px;cursor:pointer;"
+			<input type="color" id="ssu-new-status-color" class="rg-color-swatch" value="#60a5fa"
 			/>
 			<button id="ssu-add-custom-btn" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">
 				+ Add Status
@@ -250,34 +384,28 @@ function _renderRereadingOverlaySection(overlay, statuses) {
 		</p>
 		<div style="display:flex;flex-direction:column;gap:10px;">
 			<label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
-				<input type="checkbox" id="ssu-rereading-enabled" ${overlay.enabled ? "checked" : ""}
-					style="width:16px;height:16px;accent-color:#9c27b0;"
+				<input type="checkbox" id="ssu-rereading-enabled" class="rg-toggle" ${overlay.enabled ? "checked" : ""}
 				/>
 				Enable Re-reading overlay feature
 			</label>
-			<div style="display:flex;align-items:center;gap:10px;">
-				<span style="font-size:12px;color:var(--text-secondary);min-width:60px;">Label</span>
-				<input type="text" id="ssu-rereading-label" value="${_esc(overlay.label)}"
-					style="flex:1;padding:5px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
-						background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:12px;"
+			<div class="rg-status-row" style="grid-template-columns: 70px 1fr;">
+				<span style="font-size:12px;color:var(--text-secondary);">Label</span>
+				<input type="text" id="ssu-rereading-label" class="rg-input" value="${_esc(overlay.label)}"
 				/>
 			</div>
-			<div style="display:flex;align-items:center;gap:10px;">
-				<span style="font-size:12px;color:var(--text-secondary);min-width:60px;">Colour</span>
-				<input type="color" id="ssu-rereading-color" value="${overlay.color}"
-					style="width:36px;height:28px;border:none;border-radius:4px;cursor:pointer;"
+			<div class="rg-status-row" style="grid-template-columns: 70px auto auto 1fr;">
+				<span style="font-size:12px;color:var(--text-secondary);">Colour</span>
+				<input type="color" id="ssu-rereading-color" class="rg-color-swatch" value="${overlay.color}"
 				/>
-				<input type="text" id="ssu-rereading-color-text" value="${overlay.color}" maxlength="7"
-					style="width:80px;padding:5px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-						background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:11px;"
+				<input type="text" id="ssu-rereading-color-text" class="rg-color-text" value="${overlay.color}" maxlength="7"
 				/>
+				<span></span>
 			</div>
 			<div style="display:flex;align-items:flex-start;gap:10px;">
 				<span style="font-size:12px;color:var(--text-secondary);min-width:60px;padding-top:4px;">Auto-clear on</span>
 				<div style="flex:1;">
-					<select id="ssu-rereading-autoclear" multiple size="4"
-						style="width:100%;padding:4px;border-radius:4px;border:1px solid var(--border-color,#374151);
-							background:var(--bg-tertiary,#1f2937);color:var(--text-primary,#e5e7eb);font-size:12px;">
+					<select id="ssu-rereading-autoclear" class="rg-input" multiple size="4"
+						style="width:100%;padding:4px;">
 						${autoClearOptions}
 					</select>
 					<p style="font-size:10px;color:var(--text-secondary);margin:4px 0 0;">
@@ -310,7 +438,8 @@ function _renderRulesSection(rules, allStatusIds) {
 }
 
 function _renderRuleRow(rule, allStatusIds) {
-	const conditions = _renderConditions(rule);
+	const isBuiltIn = !!rule.builtIn;
+	const conditions = _renderConditions(rule, isBuiltIn);
 	const fromOptions = allStatusIds
 		.concat(["*"])
 		.map(
@@ -327,47 +456,63 @@ function _renderRuleRow(rule, allStatusIds) {
 		)
 		.join("");
 
-	return `
-	<div class="ssu-rule-row" data-rule-id="${rule.id}"
-		style="background:var(--bg-tertiary,#1f2937);border-radius:6px;padding:10px;
-			border:1px solid var(--border-color,#374151);margin-bottom:8px;">
-		<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-			<input type="checkbox" class="ssu-rule-enabled" data-rule-id="${rule.id}" ${rule.enabled ? "checked" : ""}
-				style="width:15px;height:15px;accent-color:#a855f7;flex-shrink:0;" title="Enable/disable rule"
-			/>
-			<input type="text" class="ssu-rule-name" data-rule-id="${rule.id}" value="${_esc(rule.name)}"
+	// Built-in rules: name is read-only, trigger/from/to are disabled, only enable and priority editable
+	const nameField = isBuiltIn
+		? `<span style="flex:1;min-width:120px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text-primary,#e5e7eb);"
+				title="Built-in rule — name cannot be changed">${_esc(rule.name)}</span>`
+		: `<input type="text" class="ssu-rule-name" data-rule-id="${rule.id}" value="${_esc(rule.name)}"
 				style="flex:1;min-width:120px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:13px;font-weight:600;"
-			/>
-			<select class="ssu-rule-trigger" data-rule-id="${rule.id}"
+			/>`;
+
+	const triggerField = isBuiltIn
+		? `<span style="padding:4px 8px;font-size:12px;color:var(--text-secondary,#9ca3af);background:var(--bg-secondary,#1e293b);
+				border-radius:4px;border:1px solid var(--border-color,#374151);">${rule.trigger === "chapterRead" ? "Chapter Read" : "Inactivity"}</span>`
+		: `<select class="ssu-rule-trigger" data-rule-id="${rule.id}"
 				style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;">
 				<option value="chapterRead" ${rule.trigger === "chapterRead" ? "selected" : ""}>Chapter Read</option>
 				<option value="inactivity" ${rule.trigger === "inactivity" ? "selected" : ""}>Inactivity</option>
-			</select>
+			</select>`;
+
+	const disabledAttr = isBuiltIn ? "disabled" : "";
+
+	return `
+	<div class="ssu-rule-row" data-rule-id="${rule.id}" ${isBuiltIn ? 'data-built-in="true"' : ""}
+		style="background:var(--bg-tertiary,#1f2937);border-radius:6px;padding:10px;
+			border:1px solid ${isBuiltIn ? "var(--border-color,#374151)" : "var(--border-color,#374151)"};margin-bottom:8px;
+			${isBuiltIn ? "opacity:0.92;" : ""}">
+		<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+			<input type="checkbox" class="ssu-rule-enabled" data-rule-id="${rule.id}" ${rule.enabled ? "checked" : ""}
+				style="width:15px;height:15px;accent-color:#a855f7;flex-shrink:0;" title="Enable/disable rule"
+			/>
+			${nameField}
+			${triggerField}
 			<input type="number" class="ssu-rule-priority" data-rule-id="${rule.id}" value="${rule.priority || 10}" min="1" max="1000"
 				title="Priority (higher = first)"
 				style="width:60px;padding:4px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;"
 			/>
 			${
-				rule.builtIn
-					? `<span title="Built-in — cannot be deleted" style="font-size:18px;color:#9ca3af;">🔒</span>`
+				isBuiltIn
+					? `<span title="Built-in — cannot be edited or deleted" style="font-size:18px;color:#9ca3af;">🔒</span>`
 					: `<button class="ssu-delete-rule-btn btn btn-secondary" data-rule-id="${rule.id}"
 						style="font-size:11px;padding:4px 8px;color:#f87171;flex-shrink:0;">✕</button>`
 			}
 		</div>
 		<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;">
 			<span style="color:var(--text-secondary);">From:</span>
-			<select class="ssu-rule-from" data-rule-id="${rule.id}" multiple size="3"
+			<select class="ssu-rule-from" data-rule-id="${rule.id}" multiple size="3" ${disabledAttr}
 				style="min-width:130px;padding:3px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;">
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;
+					${isBuiltIn ? "pointer-events:none;opacity:0.7;" : ""}">
 				${fromOptions}
 			</select>
 			<span style="color:var(--text-secondary);">→ To:</span>
-			<select class="ssu-rule-to" data-rule-id="${rule.id}"
+			<select class="ssu-rule-to" data-rule-id="${rule.id}" ${disabledAttr}
 				style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;">
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;
+					${isBuiltIn ? "pointer-events:none;opacity:0.7;" : ""}">
 				${toOptions}
 			</select>
 		</div>
@@ -377,29 +522,32 @@ function _renderRuleRow(rule, allStatusIds) {
 	</div>`;
 }
 
-function _renderConditions(rule) {
+function _renderConditions(rule, isBuiltIn = false) {
+	const ro = isBuiltIn ? "disabled" : "";
+	const roStyle = isBuiltIn ? "pointer-events:none;opacity:0.7;" : "";
+
 	if (rule.trigger === "inactivity") {
 		const c = rule.conditions || {};
 		return `
 		<label style="display:flex;align-items:center;gap:6px;">
 			Inactive ≥ <input type="number" class="ssu-cond-inactivityDays" data-rule-id="${rule.id}"
-				value="${c.inactivityDays ?? 7}" min="1" max="365"
+				value="${c.inactivityDays ?? 7}" min="1" max="365" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;"
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
 			/> days
 		</label>
 		<label style="display:flex;align-items:center;gap:6px;">
 			Chapters read ≥ <input type="number" class="ssu-cond-chaptersReadMin" data-rule-id="${rule.id}"
-				value="${c.chaptersReadMin ?? ""}" min="0" placeholder="any"
+				value="${c.chaptersReadMin ?? ""}" min="0" placeholder="any" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;"
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
 			/>
 		</label>
 		<label style="display:flex;align-items:center;gap:6px;">
 			Chapters read ≤ <input type="number" class="ssu-cond-chaptersReadMax" data-rule-id="${rule.id}"
-				value="${c.chaptersReadMax ?? ""}" min="0" placeholder="any"
+				value="${c.chaptersReadMax ?? ""}" min="0" placeholder="any" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;"
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
 			/>
 		</label>`;
 	}
@@ -421,9 +569,9 @@ function _renderConditions(rule) {
 		return `
 		<label style="display:flex;align-items:center;gap:6px;">
 			Latest chapter:
-			<select class="ssu-cond-requireLatestChapter" data-rule-id="${rule.id}"
+			<select class="ssu-cond-requireLatestChapter" data-rule-id="${rule.id}" ${ro}
 				style="padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;">
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}">
 				<option value="any" ${latestVal === "any" ? "selected" : ""}>Any</option>
 				<option value="true" ${latestVal === "true" ? "selected" : ""}>Yes (at latest)</option>
 				<option value="false" ${latestVal === "false" ? "selected" : ""}>No (not at latest)</option>
@@ -431,9 +579,9 @@ function _renderConditions(rule) {
 		</label>
 		<label style="display:flex;align-items:center;gap:6px;">
 			Story complete:
-			<select class="ssu-cond-requireStoryComplete" data-rule-id="${rule.id}"
+			<select class="ssu-cond-requireStoryComplete" data-rule-id="${rule.id}" ${ro}
 				style="padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
-					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;">
+					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}">
 				<option value="any" ${completeVal === "any" ? "selected" : ""}>Any</option>
 				<option value="true" ${completeVal === "true" ? "selected" : ""}>Yes (author done)</option>
 				<option value="false" ${completeVal === "false" ? "selected" : ""}>No (ongoing)</option>
@@ -657,59 +805,63 @@ async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 		const stateMachineRules = [];
 		container.querySelectorAll(".ssu-rule-row").forEach((row) => {
 			const ruleId = row.dataset.ruleId;
-			const isBuiltIn = builtInIds.has(ruleId);
+			const isBuiltIn =
+				builtInIds.has(ruleId) || row.dataset.builtIn === "true";
 			const enabled =
 				row.querySelector(".ssu-rule-enabled")?.checked ?? true;
-			const name =
-				row.querySelector(".ssu-rule-name")?.value?.trim() || ruleId;
-			const trigger =
-				row.querySelector(".ssu-rule-trigger")?.value || "chapterRead";
 			const priority =
 				parseInt(row.querySelector(".ssu-rule-priority")?.value, 10) ||
 				10;
-			const fromSel = row.querySelector(".ssu-rule-from");
-			const fromStatuses = fromSel
-				? Array.from(fromSel.selectedOptions).map((o) => o.value)
-				: ["*"];
-			const toStatus =
-				row.querySelector(".ssu-rule-to")?.value || "reading";
-
-			const conditions = {};
-			if (trigger === "inactivity") {
-				const days = row.querySelector(".ssu-cond-inactivityDays");
-				const min = row.querySelector(".ssu-cond-chaptersReadMin");
-				const max = row.querySelector(".ssu-cond-chaptersReadMax");
-				if (days)
-					conditions.inactivityDays = parseInt(days.value, 10) || 7;
-				conditions.chaptersReadMin =
-					min?.value !== "" ? parseInt(min.value, 10) : null;
-				conditions.chaptersReadMax =
-					max?.value !== "" ? parseInt(max.value, 10) : null;
-			} else {
-				const latestSel = row.querySelector(
-					".ssu-cond-requireLatestChapter",
-				);
-				const completeSel = row.querySelector(
-					".ssu-cond-requireStoryComplete",
-				);
-				const lv = latestSel?.value || "any";
-				const cv = completeSel?.value || "any";
-				conditions.requireLatestChapter =
-					lv === "any" ? null : lv === "true";
-				conditions.requireStoryComplete =
-					cv === "any" ? null : cv === "true";
-			}
 
 			if (isBuiltIn) {
+				// Built-in rules: only save enabled & priority — everything else comes from defaults
 				stateMachineRules.push({
 					id: ruleId,
 					enabled,
-					name,
 					priority,
-					conditions,
 					builtIn: true,
 				});
 			} else {
+				const name =
+					row.querySelector(".ssu-rule-name")?.value?.trim() ||
+					ruleId;
+				const trigger =
+					row.querySelector(".ssu-rule-trigger")?.value ||
+					"chapterRead";
+				const fromSel = row.querySelector(".ssu-rule-from");
+				const fromStatuses = fromSel
+					? Array.from(fromSel.selectedOptions).map((o) => o.value)
+					: ["*"];
+				const toStatus =
+					row.querySelector(".ssu-rule-to")?.value || "reading";
+
+				const conditions = {};
+				if (trigger === "inactivity") {
+					const days = row.querySelector(".ssu-cond-inactivityDays");
+					const min = row.querySelector(".ssu-cond-chaptersReadMin");
+					const max = row.querySelector(".ssu-cond-chaptersReadMax");
+					if (days)
+						conditions.inactivityDays =
+							parseInt(days.value, 10) || 7;
+					conditions.chaptersReadMin =
+						min?.value !== "" ? parseInt(min.value, 10) : null;
+					conditions.chaptersReadMax =
+						max?.value !== "" ? parseInt(max.value, 10) : null;
+				} else {
+					const latestSel = row.querySelector(
+						".ssu-cond-requireLatestChapter",
+					);
+					const completeSel = row.querySelector(
+						".ssu-cond-requireStoryComplete",
+					);
+					const lv = latestSel?.value || "any";
+					const cv = completeSel?.value || "any";
+					conditions.requireLatestChapter =
+						lv === "any" ? null : lv === "true";
+					conditions.requireStoryComplete =
+						cv === "any" ? null : cv === "true";
+				}
+
 				const orig = (settings.stateMachineRules || []).find(
 					(r) => r.id === ruleId,
 				);

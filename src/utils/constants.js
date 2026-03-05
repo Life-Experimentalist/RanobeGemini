@@ -9,6 +9,30 @@ export const DEFAULT_DEBUG_TRUNCATE_OUTPUT = true; // Truncate console output by
 export const DEFAULT_DEBUG_TRUNCATE_LENGTH = 500; // Max characters per log entry when truncated
 export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
 
+// Font size configuration (percent)
+export const FONT_SIZE_DEFAULT = 100;
+export const FONT_SIZE_MIN = 80;
+export const FONT_SIZE_MAX = 150;
+export const FONT_SIZE_STEP = 5;
+
+// Notification banner durations (milliseconds)
+export const BANNER_DURATION_DEFAULT_MS = 3000; // Standard notifications
+export const BANNER_DURATION_QUICK_MS = 2000; // Quick confirmations
+export const BANNER_DURATION_UPDATE_NOTIFY_MS = 8000; // "Check for updates" banner
+export const BANNER_DURATION_PERSISTENT = 0; // No auto-dismiss
+
+// Mobile responsive UI breakpoint (px)
+export const UI_MOBILE_BREAKPOINT_PX = 600;
+
+// Copy/export format configuration
+export const COPY_EXPORT_EXTENSIONS = ["txt", "epub", "html"];
+export const COPY_EXPORT_DEFAULT_EXTENSION = "txt";
+/** Default copy template. Uses {lastRead}/{chapters} for reading progress,
+ *  falling back gracefully when those fields are empty. */
+export const DEFAULT_COPY_TEMPLATE =
+	"{title} by {author} | Ch.{lastRead}/{chapters}";
+export const DEFAULT_EXPORT_FILENAME_TEMPLATE = "{titleSafe} - {authorSafe}";
+
 // Carousel Configuration
 export const CAROUSEL_ACTIVE_SITE_BONUS = 5; // Add this many novels per active website
 export const CAROUSEL_MIN_COUNT = 10; // Minimum number of novels to show in carousel
@@ -154,12 +178,13 @@ export const DRIVE_CONTINUOUS_BACKUP_BASENAME =
 export const DEFAULT_AUTO_HOLD_ENABLED = true;
 export const DEFAULT_AUTO_HOLD_DAYS = 7;
 
-// Periodic novel chapter-count check (disabled by default - enable for testing)
-// Only checks novels with status "up-to-date" to detect new chapters
-export const NOVEL_PERIODIC_UPDATE_ENABLED = false;
-export const NOVEL_PERIODIC_UPDATE_INTERVAL_MINUTES = 60; // How often to run the check alarm
+// Periodic novel chapter-count check
+// Checks novels with status "up-to-date" to detect new chapters
+export const NOVEL_PERIODIC_UPDATE_ENABLED = true;
+export const NOVEL_PERIODIC_UPDATE_INTERVAL_MINUTES = 60; // How often to run the check alarm (internal)
 export const NOVEL_PERIODIC_UPDATE_STALENESS_MINUTES = 30; // Min time since last check before re-checking a novel
 export const NOVEL_CHAPTER_CHECK_ALARM_NAME = "rg-novel-chapter-check";
+export const DEFAULT_NOVEL_UPDATE_INTERVAL_DAYS = 3; // User-configurable: check novels every N days (1-30)
 
 // Telemetry settings (opt-in only)
 export const TELEMETRY_ENDPOINT = ""; // User must configure if they want telemetry
@@ -215,6 +240,8 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"backupRetention", // Backup retention
 	"backupIntervalDays", // Auto backup interval
 	"rg_domain_settings", // Per-domain toggle settings
+	"novelUpdateEnabled", // Periodic novel update enabled
+	"novelUpdateIntervalDays", // Periodic novel update interval (days)
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators

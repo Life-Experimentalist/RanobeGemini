@@ -72,6 +72,10 @@ export const BUILTIN_RULE_IDS = {
 	CHAPTER_COMPLETE: "builtin-chapter-complete",
 	CHAPTER_UPTODATE: "builtin-chapter-uptodate",
 	CHAPTER_FROM_UTD: "builtin-chapter-from-utd",
+	RESUME_FROM_HOLD: "builtin-resume-from-hold",
+	RESUME_FROM_DROPPED: "builtin-resume-from-dropped",
+	START_READING: "builtin-start-reading",
+	UTD_COMPLETE: "builtin-utd-complete",
 };
 
 /** The six primary built-in status keys (RE_READING is overlay-only). */
@@ -188,6 +192,77 @@ export function getBuiltInRules() {
 				requireStoryComplete: null,
 			},
 		},
+
+		// ── Resume / start rules ──────────────────────────────────────
+		{
+			id: BUILTIN_RULE_IDS.RESUME_FROM_HOLD,
+			name: "Resume Reading from On Hold",
+			description:
+				"Move from On Hold back to Reading when the user reads any chapter, indicating they have resumed the novel.",
+			builtIn: true,
+			enabled: true,
+			trigger: "chapterRead",
+			fromStatuses: [RS.ON_HOLD],
+			excludeStatuses: [],
+			toStatus: RS.READING,
+			priority: 25,
+			conditions: {
+				requireLatestChapter: null,
+				requireStoryComplete: null,
+			},
+		},
+		{
+			id: BUILTIN_RULE_IDS.RESUME_FROM_DROPPED,
+			name: "Resume Reading from Dropped",
+			description:
+				"Move from Dropped back to Reading when the user reads any chapter, indicating they have picked the novel back up.",
+			builtIn: true,
+			enabled: true,
+			trigger: "chapterRead",
+			fromStatuses: [RS.DROPPED],
+			excludeStatuses: [],
+			toStatus: RS.READING,
+			priority: 25,
+			conditions: {
+				requireLatestChapter: null,
+				requireStoryComplete: null,
+			},
+		},
+		{
+			id: BUILTIN_RULE_IDS.START_READING,
+			name: "Start Reading After First Chapters",
+			description:
+				"Move from Plan to Read to Reading once a second chapter is read, indicating the user has started the novel.",
+			builtIn: true,
+			enabled: true,
+			trigger: "chapterRead",
+			fromStatuses: [RS.PLAN_TO_READ],
+			excludeStatuses: [],
+			toStatus: RS.READING,
+			priority: 15,
+			conditions: {
+				requireLatestChapter: null,
+				requireStoryComplete: null,
+				chaptersReadMin: 2,
+			},
+		},
+		{
+			id: BUILTIN_RULE_IDS.UTD_COMPLETE,
+			name: "Complete When Up-to-Date Story Finishes",
+			description:
+				"Mark Completed when an Up to Date novel's story is marked as finished by the author.",
+			builtIn: true,
+			enabled: true,
+			trigger: "chapterRead",
+			fromStatuses: [RS.UP_TO_DATE],
+			excludeStatuses: [RS.COMPLETED],
+			toStatus: RS.COMPLETED,
+			priority: 30,
+			conditions: {
+				requireLatestChapter: true,
+				requireStoryComplete: true,
+			},
+		},
 	];
 }
 
@@ -248,13 +323,7 @@ export function mergeRules(savedRules, settings = {}) {
 	});
 
 	const saved = Array.isArray(savedRules) ? savedRules : [];
-	const OVERRIDEABLE = [
-		"enabled",
-		"name",
-		"description",
-		"priority",
-		"conditions",
-	];
+	const OVERRIDEABLE = ["enabled", "priority"];
 
 	// Apply saved overrides to built-ins
 	const merged = builtIns.map((builtIn) => {
@@ -353,12 +422,17 @@ function matchesFromStatus(currentStatus, fromStatuses, excludeStatuses = []) {
  * Evaluate conditions for a "chapterRead" trigger.
  *
  * @param {Object} conditions
- * @param {{ isLatestChapter: boolean, isStoryComplete: boolean }} context
+ * @param {{ isLatestChapter: boolean, isStoryComplete: boolean, chaptersRead?: number }} context
  */
 function matchesChapterReadConditions(conditions, context) {
 	if (!conditions) return true;
-	const { requireLatestChapter, requireStoryComplete } = conditions;
-	const { isLatestChapter, isStoryComplete } = context;
+	const {
+		requireLatestChapter,
+		requireStoryComplete,
+		chaptersReadMin,
+		chaptersReadMax,
+	} = conditions;
+	const { isLatestChapter, isStoryComplete, chaptersRead } = context;
 
 	if (requireLatestChapter !== null && requireLatestChapter !== undefined) {
 		if (Boolean(isLatestChapter) !== Boolean(requireLatestChapter))
@@ -367,6 +441,19 @@ function matchesChapterReadConditions(conditions, context) {
 	if (requireStoryComplete !== null && requireStoryComplete !== undefined) {
 		if (Boolean(isStoryComplete) !== Boolean(requireStoryComplete))
 			return false;
+	}
+	// Optional chapter-count gates (used by START_READING rule)
+	if (
+		typeof chaptersReadMin === "number" &&
+		typeof chaptersRead === "number"
+	) {
+		if (chaptersRead < chaptersReadMin) return false;
+	}
+	if (
+		typeof chaptersReadMax === "number" &&
+		typeof chaptersRead === "number"
+	) {
+		if (chaptersRead > chaptersReadMax) return false;
 	}
 	return true;
 }

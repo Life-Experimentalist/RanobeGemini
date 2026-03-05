@@ -1309,3 +1309,370 @@ textarea {
 .ls-copy-site-preview em {
 	opacity: 0.5;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   18. Google Drive Section
+───────────────────────────────────────────────────────────────────────── */
+
+.ls-section[data-accent="blue"] {
+	border-left: 3px solid #4285f4;
+}
+
+/* Status badges */
+.ls-badge-muted {
+	color: var(--text-muted, #6b7280);
+	border-color: var(--border-color, #2f3644);
+	background: var(--bg-secondary, #111827);
+}
+
+.ls-badge-accent {
+	color: var(--accent-primary, #6366f1);
+	border-color: var(--accent-primary, #6366f1);
+	background: rgba(99, 102, 241, 0.12);
+}
+
+/* Drive connect box */
+.ls-drive-connect-box {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	background: rgba(66, 133, 244, 0.07);
+	border: 1px solid rgba(66, 133, 244, 0.2);
+	border-radius: 8px;
+	margin-top: 12px;
+}
+
+.ls-drive-connect-info {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.ls-drive-icon {
+	font-size: 26px;
+	flex-shrink: 0;
+	line-height: 1;
+}
+
+.ls-drive-connect-title {
+	margin: 0 0 4px;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-primary);
+}
+
+/* Alert / inline warning */
+.ls-alert {
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 12px;
+}
+
+.ls-alert-warn {
+	background: rgba(245, 158, 11, 0.12);
+	color: #f59e0b;
+	border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Callout blocks */
+.ls-callout {
+	padding: 10px 12px;
+	border-radius: 6px;
+	margin-bottom: 12px;
+}
+
+.ls-callout-blue {
+	background: rgba(66, 133, 244, 0.08);
+	border-left: 3px solid #4285f4;
+}
+
+.ls-callout-yellow {
+	background: rgba(245, 158, 11, 0.08);
+	border-left: 3px solid #f59e0b;
+}
+
+.ls-callout-title {
+	font-weight: 600;
+	font-size: 12px;
+	margin: 0 0 6px;
+	color: var(--text-primary);
+}
+
+/* Retention policy grid */
+.ls-retention-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 6px;
+	font-size: 11px;
+	color: var(--text-secondary);
+}
+
+.ls-retention-row {
+	display: flex;
+	gap: 8px;
+}
+
+.ls-retention-row strong {
+	flex-shrink: 0;
+}
+
+/* Three-column grid */
+.ls-grid-3 {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+
+@media (max-width: 680px) {
+	.ls-grid-3 {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Backup mode cards */
+.backup-mode-card {
+	display: flex;
+	flex-direction: column;
+	cursor: pointer;
+	border: 2px solid var(--border-color);
+	border-radius: 8px;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	position: relative;
+	overflow: hidden;
+}
+
+.backup-mode-card input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.backup-mode-card input[type="radio"]:checked~.backup-mode-card-body {
+	background: rgba(66, 133, 244, 0.12);
+	border-color: #4285f4;
+}
+
+.backup-mode-card:has(input:checked) {
+	border-color: #4285f4;
+	box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.25);
+}
+
+.backup-mode-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 12px;
+	background: var(--bg-tertiary);
+	border-radius: 6px;
+	flex: 1;
+}
+
+.backup-mode-icon {
+	font-size: 18px;
+}
+
+.backup-mode-name {
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--text-primary);
+}
+
+.backup-mode-desc {
+	margin: 0;
+	font-size: 10px;
+	color: var(--text-secondary);
+	line-height: 1.4;
+}
+
+/* Drive action buttons */
+.ls-drive-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+@media (max-width: 500px) {
+	.ls-drive-actions {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Details / accordion */
+.ls-details {
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.ls-details-summary {
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-primary);
+	padding: 10px 14px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	list-style: none;
+	user-select: none;
+	background: var(--bg-secondary);
+}
+
+.ls-details-summary::-webkit-details-marker {
+	display: none;
+}
+
+.ls-details-summary::after {
+	content: "▾";
+	margin-left: auto;
+	font-size: 11px;
+	color: var(--text-muted);
+	transition: transform 0.2s;
+}
+
+.ls-details[open] .ls-details-summary::after {
+	transform: rotate(-180deg);
+}
+
+.ls-details-hint {
+	font-size: 11px;
+	font-weight: normal;
+	color: var(--text-muted);
+}
+
+.ls-details-body {
+	padding: 14px;
+	border-top: 1px solid var(--border-color);
+}
+
+/* Method cards (OAuth) */
+.ls-method-card {
+	padding: 12px;
+	background: rgba(66, 133, 244, 0.05);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+/* URI list */
+.ls-uri-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* Inline link */
+.ls-link {
+	color: #4285f4;
+	font-size: 12px;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.ls-link:hover {
+	text-decoration: underline;
+}
+
+/* ── Mode pill buttons ──────────────────────────────────────────────────────── */
+.ls-mode-pills {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 4px;
+}
+
+.ls-mode-pill {
+	padding: 6px 14px;
+	border-radius: 20px;
+	border: 1.5px solid var(--border-color);
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+	cursor: pointer;
+	font-size: 13px;
+	transition:
+		background 0.2s,
+		border-color 0.2s,
+		color 0.2s;
+	white-space: nowrap;
+	line-height: 1.4;
+}
+
+.ls-mode-pill.active {
+	border-color: var(--primary-color);
+	background: var(--primary-color);
+	color: #fff;
+	font-weight: 600;
+}
+
+.ls-mode-pill:hover:not(.active) {
+	border-color: var(--primary-color);
+	background: var(--bg-tertiary);
+}
+
+/* ── Theme preset row ────────────────────────────────────────────────────────  */
+.ls-preset-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.ls-preset-row select {
+	flex: 1;
+}
+
+/* delete-preset button hidden by default; shown only for custom presets */
+#library-delete-custom-preset {
+	flex-shrink: 0;
+}
+
+/* ── Theme preview strip ──────────────────────────────────────────────────────*/
+.ls-theme-preview {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	padding: 8px 12px;
+	border-radius: 8px;
+	margin: 10px 0 4px;
+	background: var(--bg-tertiary);
+	border: 1px solid var(--border-color);
+	font-size: 13px;
+}
+
+.ls-preview-title {
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.ls-preview-accent {
+	color: var(--primary-color);
+	font-weight: 600;
+}
+
+.ls-preview-surface {
+	background: var(--bg-secondary);
+	color: var(--text-secondary);
+	padding: 2px 10px;
+	border-radius: 4px;
+	border: 1px solid var(--border-color);
+}
+
+.ls-preview-text {
+	color: var(--text-secondary);
+	font-style: italic;
+}
+
+/* ── Advanced theme section ───────────────────────────────────────────────────*/
+.ls-theme-advanced>summary {
+	font-size: 12px;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 0;
+}
+
+.ls-theme-advanced[open]>summary {
+	color: var(--primary-color);
+}

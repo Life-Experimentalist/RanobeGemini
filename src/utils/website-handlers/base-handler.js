@@ -3,7 +3,14 @@
  * The abstract class that all website-specific handlers should extend
  */
 import { debugLog, debugError } from "../logger.js";
-import { DEFAULT_BANNERS_VISIBLE } from "../constants.js";
+import {
+	DEFAULT_BANNERS_VISIBLE,
+	UI_MOBILE_BREAKPOINT_PX,
+} from "../constants.js";
+
+/** Re-export for handlers to use */
+export { UI_MOBILE_BREAKPOINT_PX };
+
 export class BaseWebsiteHandler {
 	// Default banner visibility on page load
 	// Set to false to hide enhancement banners by default
@@ -57,8 +64,63 @@ export class BaseWebsiteHandler {
 	}
 
 	/**
+	 * Unified chapter UI configuration.
+	 * Returns all UI element configuration from a single method.
+	 * Handlers should override this to customize the chapter controls bar.
+	 *
+	 * @returns {Object} Chapter UI config:
+	 *   - insertion: { selector: string|null, position: 'before'|'after'|'prepend'|'append' }
+	 *   - showStatusBadge: boolean
+	 *   - showReadingStatusSelect: boolean
+	 *   - showRemoveButton: boolean
+	 *   - showOpenLibraryButton: boolean
+	 *   - showToggleGeminiButton: boolean
+	 *   - customButtons: Array<{ id, label, emoji, title, bgColor, textColor, onClick }>
+	 *   - mobileStackThreshold: number (px width to stack vertically)
+	 *   - containerStyles: string|null (additional inline CSS)
+	 */
+	async getChapterUIConfig() {
+		// Merge with legacy methods for backwards compatibility
+		const legacyInsertion = this.getNovelPageUIInsertionPoint();
+		// getCustomChapterButtons may be sync or async depending on handler
+		let legacyButtons = this.getCustomChapterButtons();
+		if (legacyButtons instanceof Promise) {
+			legacyButtons = await legacyButtons;
+		}
+		if (!Array.isArray(legacyButtons)) {
+			legacyButtons = [];
+		}
+
+		return {
+			insertion: {
+				selector: legacyInsertion?.element
+					? null // element reference not serializable, use selector
+					: null,
+				position: legacyInsertion?.position || "before",
+			},
+			showStatusBadge: true,
+			showReadingStatusSelect: true,
+			showRemoveButton: true,
+			showOpenLibraryButton: true,
+			showToggleGeminiButton: true,
+			customButtons: legacyButtons.map((btn, idx) => ({
+				id: `custom-${idx}`,
+				label: btn.text || "",
+				emoji: btn.emoji || "",
+				title: btn.text || "",
+				bgColor: btn.color || null,
+				textColor: null,
+				onClick: btn.onClick || null,
+			})),
+			mobileStackThreshold: UI_MOBILE_BREAKPOINT_PX,
+			containerStyles: null,
+		};
+	}
+
+	/**
 	 * Get custom chapter page control buttons for this handler
 	 * Handlers can override this to add site-specific buttons (e.g., download buttons)
+	 * @deprecated Use getChapterUIConfig().customButtons instead
 	 * @returns {Array} Array of button specifications { text, emoji, color, onClick }
 	 */
 	getCustomChapterButtons() {

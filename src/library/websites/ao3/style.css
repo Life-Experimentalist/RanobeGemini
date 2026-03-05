@@ -134,19 +134,24 @@ body {
 }
 
 .back-link {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	color: var(--primary-color);
+	color: #fff;
 	text-decoration: none;
-	padding: var(--spacing-sm) var(--spacing-md);
+	padding: 8px 18px;
 	border-radius: var(--radius-md);
+	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+	font-weight: 600;
+	font-size: 0.9rem;
 	transition: all var(--transition-fast);
 }
 
 .back-link:hover {
-	background: var(--bg-tertiary);
-	color: var(--primary-hover);
+	background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
 }
 
 /* Filters Section */
@@ -219,7 +224,8 @@ body {
 	right: 0;
 	bottom: 0;
 	z-index: 1000;
-	display: none; /* Toggled by JS */
+	display: none;
+	/* Toggled by JS */
 	align-items: center;
 	justify-content: center;
 	padding: 20px;
@@ -463,14 +469,17 @@ body {
 	background: var(--success-color);
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: var(--warning-color);
 	color: #000;
 }
+
 .rating-m {
 	background: var(--error-color);
 	color: #fff;
@@ -646,11 +655,9 @@ body {
 	width: 80px;
 	height: 110px;
 	border-radius: var(--radius-sm);
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -734,14 +741,17 @@ body {
 	background: #4caf50;
 	color: white;
 }
+
 .rating-k\+ {
 	background: #8bc34a;
 	color: white;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: white;
 }
+
 .rating-m {
 	background: #f44336;
 	color: white;
@@ -1260,6 +1270,7 @@ body {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
@@ -1415,14 +1426,17 @@ body {
 	background: #4caf50;
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: #fff;
 }
+
 .rating-m {
 	background: #f44336;
 	color: #fff;
@@ -1585,11 +1599,9 @@ body {
 }
 
 .ao3-modal-header {
-	background: linear-gradient(
-		135deg,
-		rgba(153, 0, 0, 0.1) 0%,
-		rgba(102, 0, 0, 0.05) 100%
-	);
+	background: linear-gradient(135deg,
+			rgba(153, 0, 0, 0.1) 0%,
+			rgba(102, 0, 0, 0.05) 100%);
 	border-bottom: 1px solid rgba(153, 0, 0, 0.2);
 }
 
@@ -1616,11 +1628,9 @@ body {
 .ao3-modal-placeholder-pattern {
 	position: absolute;
 	inset: 0;
-	background-image: linear-gradient(
-			45deg,
+	background-image: linear-gradient(45deg,
 			rgba(255, 255, 255, 0.05) 25%,
-			transparent 25%
-		),
+			transparent 25%),
 		linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
 		linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
 		linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
@@ -1854,11 +1864,9 @@ body {
 /* Light mode adjustments for AO3 */
 @media (prefers-color-scheme: light) {
 	.ao3-modal-header {
-		background: linear-gradient(
-			135deg,
-			rgba(153, 0, 0, 0.08) 0%,
-			rgba(102, 0, 0, 0.03) 100%
-		);
+		background: linear-gradient(135deg,
+				rgba(153, 0, 0, 0.08) 0%,
+				rgba(102, 0, 0, 0.03) 100%);
 	}
 
 	.ao3-modal-row.primary-meta {
@@ -2077,6 +2085,7 @@ body {
 	font-size: 0.7rem;
 	color: var(--text-secondary);
 }
+
 .ao3-card-status {
 	display: flex;
 	justify-content: space-between;

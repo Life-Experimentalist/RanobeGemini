@@ -21,50 +21,21 @@ import {
 } from "../site-settings-ui.js";
 import { debugLog, debugError } from "../../utils/logger.js";
 
-// Theme defaults shared with popup/library
-const defaultTheme = {
-	mode: "dark",
-	accentPrimary: "#4b5563",
-	accentSecondary: "#6b7280",
-	bgColor: "#0f172a",
-	textColor: "#e5e7eb",
-};
-
-const themePalettes = {
-	dark: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"bg-primary": "#0f172a",
-		"bg-secondary": "#111827",
-		"bg-tertiary": "#1f2937",
-		"bg-card": "#1f2937",
-		"bg-card-hover": "#2b3544",
-		"text-primary": "#e5e7eb",
-		"text-secondary": "#9ca3af",
-		"text-muted": "#6b7280",
-		"border-color": "#2f3644",
-	},
-	light: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"bg-primary": "#f3f4f6",
-		"bg-secondary": "#ffffff",
-		"bg-tertiary": "#e5e7eb",
-		"bg-card": "#ffffff",
-		"bg-card-hover": "#f3f4f6",
-		"text-primary": "#111827",
-		"text-secondary": "#374151",
-		"text-muted": "#6b7280",
-		"border-color": "#e5e7eb",
-	},
-};
+// Theme — centralized
+import {
+	DEFAULT_THEME as defaultTheme,
+	setThemeVariables,
+	applyThemeFromStorage,
+	setupThemeListener as setupThemeListener_,
+} from "../../utils/theme-config.js";
+import "../../utils/bg-animation.js";
 
 // Helper to get just the label from READING_STATUS_INFO
 const READING_STATUS_LABELS = Object.fromEntries(
 	Object.entries(READING_STATUS_INFO).map(([key, value]) => [
 		key,
 		value.label,
-	])
+	]),
 );
 
 // State variables
@@ -88,55 +59,15 @@ let customFilterCallbacks = [];
 
 async function applyShelfTheme() {
 	try {
-		const result =
-			typeof browser !== "undefined" && browser.storage?.local
-				? await browser.storage.local.get("themeSettings")
-				: {};
-		const theme = result.themeSettings || defaultTheme;
-		setThemeVariables(theme);
+		await applyThemeFromStorage();
 	} catch (error) {
 		debugError("Failed to apply shelf theme:", error);
 		setThemeVariables(defaultTheme);
 	}
 }
 
-function setThemeVariables(theme) {
-	const root = document.documentElement;
-	const mode = theme.mode || "dark";
-	const palette = themePalettes[mode === "light" ? "light" : "dark"];
-
-	if (mode === "light") {
-		root.setAttribute("data-theme", "light");
-	} else if (mode === "auto") {
-		const prefersDark = window.matchMedia(
-			"(prefers-color-scheme: dark)"
-		).matches;
-		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
-	} else {
-		root.removeAttribute("data-theme");
-	}
-
-	Object.entries(palette).forEach(([key, value]) => {
-		root.style.setProperty(`--${key}`, value);
-	});
-
-	// Respect custom overrides
-	if (theme.accentPrimary)
-		root.style.setProperty("--primary-color", theme.accentPrimary);
-	if (theme.accentSecondary)
-		root.style.setProperty("--primary-hover", theme.accentSecondary);
-	if (theme.bgColor) root.style.setProperty("--bg-primary", theme.bgColor);
-	if (theme.textColor)
-		root.style.setProperty("--text-primary", theme.textColor);
-}
-
 function setupThemeListener() {
-	if (typeof browser === "undefined" || !browser.storage?.onChanged) return;
-
-	browser.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || !changes.themeSettings) return;
-		applyShelfTheme();
-	});
+	setupThemeListener_();
 }
 
 /**
@@ -483,7 +414,7 @@ async function loadShelfNovels() {
 	try {
 		const library = await getNovelLibrary();
 		allNovels = Object.values(library).filter(
-			(novel) => novel.shelfId === currentShelf
+			(novel) => novel.shelfId === currentShelf,
 		);
 
 		// Extract available tags
@@ -521,7 +452,7 @@ function populateTagsList() {
 	if (!tagsList) return;
 
 	const sortedTags = [...availableTags].sort((a, b) =>
-		a.toLowerCase().localeCompare(b.toLowerCase())
+		a.toLowerCase().localeCompare(b.toLowerCase()),
 	);
 
 	if (sortedTags.length === 0) {
@@ -539,7 +470,7 @@ function populateTagsList() {
             <span class="tag-name">${escapeHtml(tag)}</span>
             <span class="tag-count">${countNovelsWithTag(tag)}</span>
         </label>
-    `
+    `,
 		)
 		.join("");
 
@@ -553,7 +484,7 @@ function populateTagsList() {
 				}
 			} else {
 				currentFilters.tags = currentFilters.tags.filter(
-					(t) => t !== tag
+					(t) => t !== tag,
 				);
 			}
 			updateTagsUI();
@@ -602,7 +533,7 @@ function updateTagsUI() {
 
 	// Update checkboxes
 	const checkboxes = document.querySelectorAll(
-		'#tags-list input[type="checkbox"]'
+		'#tags-list input[type="checkbox"]',
 	);
 	checkboxes.forEach((checkbox) => {
 		checkbox.checked = currentFilters.tags.includes(checkbox.value);
@@ -654,7 +585,7 @@ function updateActiveFilters() {
             ${escapeHtml(filter.label)}
             <button type="button" class="remove-filter" aria-label="Remove filter">×</button>
         </span>
-    `
+    `,
 			)
 			.join("") +
 		`
@@ -673,7 +604,7 @@ function updateActiveFilters() {
 				document.getElementById("status-filter").value = "all";
 			} else if (type === "tag") {
 				currentFilters.tags = currentFilters.tags.filter(
-					(t) => t !== value
+					(t) => t !== value,
 				);
 				updateTagsUI();
 			}
@@ -720,14 +651,14 @@ function applyFiltersAndSort() {
 				(novel.description &&
 					novel.description
 						.toLowerCase()
-						.includes(currentFilters.search))
+						.includes(currentFilters.search)),
 		);
 	}
 
 	// Apply reading status filter
 	if (currentFilters.readingStatus !== "all") {
 		filteredNovels = filteredNovels.filter(
-			(novel) => novel.readingStatus === currentFilters.readingStatus
+			(novel) => novel.readingStatus === currentFilters.readingStatus,
 		);
 	}
 
@@ -736,7 +667,7 @@ function applyFiltersAndSort() {
 		filteredNovels = filteredNovels.filter(
 			(novel) =>
 				novel.tags &&
-				currentFilters.tags.every((tag) => novel.tags.includes(tag))
+				currentFilters.tags.every((tag) => novel.tags.includes(tag)),
 		);
 	}
 
@@ -842,9 +773,9 @@ function createNovelCard(novel) {
 			? Math.min(
 					100,
 					Math.round(
-						(novel.currentChapter / novel.totalChapters) * 100
-					)
-			  )
+						(novel.currentChapter / novel.totalChapters) * 100,
+					),
+				)
 			: 0;
 
 	const lastRead = novel.lastAccessedAt
@@ -876,25 +807,25 @@ function createNovelCard(novel) {
                 ${
 					novel.coverImage
 						? `<img src="${escapeHtml(
-								novel.coverImage
-						  )}" alt="${escapeHtml(novel.title)}" loading="lazy">`
+								novel.coverImage,
+							)}" alt="${escapeHtml(novel.title)}" loading="lazy">`
 						: `<div class="novel-cover-placeholder">${escapeHtml(
-								novel.title.charAt(0)
-						  )}</div>`
+								novel.title.charAt(0),
+							)}</div>`
 				}
                 <div class="novel-status-badge status-${statusClass}">${statusLabel}</div>
             </div>
 
             <div class="novel-info">
                 <h3 class="novel-title" title="${escapeHtml(
-					novel.title
+					novel.title,
 				)}">${escapeHtml(novel.title)}</h3>
 
                 ${
 					novel.author
 						? `<p class="novel-author">by ${escapeHtml(
-								novel.author
-						  )}</p>`
+								novel.author,
+							)}</p>`
 						: ""
 				}
 
@@ -904,8 +835,10 @@ function createNovelCard(novel) {
                     </div>
                     <span class="progress-text">
                         Ch. ${novel.currentChapter || 0}${
-		novel.totalChapters ? ` / ${novel.totalChapters}` : ""
-	}
+							novel.totalChapters
+								? ` / ${novel.totalChapters}`
+								: ""
+						}
                     </span>
                 </div>
 
@@ -917,29 +850,27 @@ function createNovelCard(novel) {
 
                 <div class="novel-actions">
                     <select class="status-select" data-novel-id="${escapeHtml(
-						novel.id
+						novel.id,
 					)}">
                         ${Object.entries(READING_STATUS_LABELS)
 							.map(
 								([value, label]) => `
                             <option value="${value}" ${
-									novel.readingStatus === value
-										? "selected"
-										: ""
-								}>${label}</option>
-                        `
+								novel.readingStatus === value ? "selected" : ""
+							}>${label}</option>
+                        `,
 							)
 							.join("")}
                     </select>
 
                     <button class="btn-continue" data-url="${escapeHtml(
-						novel.lastChapterUrl || novel.sourceUrl
+						novel.lastChapterUrl || novel.sourceUrl,
 					)}" title="Continue reading">
                         📖 Continue
                     </button>
 
                     <button class="btn-novel-menu" data-novel-id="${escapeHtml(
-						novel.id
+						novel.id,
 					)}" title="More options">
                         ⋮
                     </button>
@@ -978,7 +909,7 @@ function setupCardEventListeners() {
 				}
 
 				showToast(
-					`Status updated to ${READING_STATUS_LABELS[newStatus]}`
+					`Status updated to ${READING_STATUS_LABELS[newStatus]}`,
 				);
 			} catch (error) {
 				debugError("Error updating status:", error);
@@ -1075,7 +1006,7 @@ function showNovelMenu(novelId, anchor) {
 					window.dispatchEvent(
 						new CustomEvent("refreshNovelMetadata", {
 							detail: { novelId },
-						})
+						}),
 					);
 					break;
 				case "remove":
@@ -1104,7 +1035,7 @@ function showNovelMenu(novelId, anchor) {
 function openNovelDetails(novelId) {
 	// Dispatch event for main library to handle
 	window.dispatchEvent(
-		new CustomEvent("openNovelModal", { detail: { novelId } })
+		new CustomEvent("openNovelModal", { detail: { novelId } }),
 	);
 }
 

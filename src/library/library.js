@@ -86,7 +86,6 @@ import {
 import {
 	formatNovelInfo,
 	resolveTemplate,
-	resolveEpubTemplate,
 } from "../utils/novel-copy-format.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
@@ -125,51 +124,14 @@ let librarySettings = {
 };
 let libraryBackupApiKeys = [];
 
-// Shared theme defaults (mirrors popup defaults)
-const defaultTheme = {
-	mode: "auto",
-	accentPrimary: "#4b5563",
-	accentSecondary: "#6b7280",
-	bgColor: "#0f172a",
-	textColor: "#e5e7eb",
-};
-
-const themePalettes = {
-	dark: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"secondary-color": "#9ca3af",
-		"danger-color": "#ef4444",
-		"success-color": "#22c55e",
-		"bg-primary": "#0f172a",
-		"bg-secondary": "#111827",
-		"bg-tertiary": "#1f2937",
-		"bg-card": "#1f2937",
-		"bg-card-hover": "#2b3544",
-		"text-primary": "#e5e7eb",
-		"text-secondary": "#9ca3af",
-		"text-muted": "#6b7280",
-		"border-color": "#2f3644",
-		"border-light": "#3b4454",
-	},
-	light: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"secondary-color": "#6b7280",
-		"danger-color": "#ef4444",
-		"success-color": "#22c55e",
-		"bg-primary": "#f3f4f6",
-		"bg-secondary": "#ffffff",
-		"bg-tertiary": "#e5e7eb",
-		"bg-card": "#ffffff",
-		"bg-card-hover": "#f3f4f6",
-		"text-primary": "#111827",
-		"text-secondary": "#374151",
-		"text-muted": "#6b7280",
-		"border-color": "#e5e7eb",
-		"border-light": "#d1d5db",
-	},
-};
+import {
+	DEFAULT_THEME as defaultTheme,
+	setThemeVariables,
+	applyThemeFromStorage,
+	setupThemeListener,
+	getPresetList,
+} from "../utils/theme-config.js";
+import "../utils/bg-animation.js";
 
 // Track metadata refresh snapshots to show before/after banners
 // eslint-disable-next-line no-unused-vars
@@ -255,6 +217,7 @@ const elements = {
 	viewButtons: document.querySelectorAll(".view-btn"),
 	refreshBtn: document.getElementById("refresh-btn"),
 	settingsBtn: document.getElementById("settings-btn"),
+	openPopupBtn: document.getElementById("open-popup-btn"),
 	siteAutoAddList: document.getElementById("site-autoadd-list"),
 
 	// Novel Modal
@@ -274,6 +237,8 @@ const elements = {
 	modalGenres: document.getElementById("modal-genres"),
 	modalContinueBtn: document.getElementById("modal-continue-btn"),
 	modalSourceBtn: document.getElementById("modal-source-btn"),
+	modalCopyInfoBtn: document.getElementById("modal-copy-info-btn"),
+	modalEpubCopyBtn: document.getElementById("modal-epub-copy-btn"),
 	modalRefreshBtn: document.getElementById("modal-refresh-btn"),
 	modalEditBtn: document.getElementById("modal-edit-btn"),
 	modalRemoveBtn: document.getElementById("modal-remove-btn"),
@@ -592,43 +557,11 @@ const elements = {
 
 async function applyLibraryTheme() {
 	try {
-		const result = await browser.storage.local.get("themeSettings");
-		const theme = result.themeSettings || defaultTheme;
-		setThemeVariables(theme);
+		await applyThemeFromStorage();
 	} catch (error) {
 		debugError("Failed to apply theme settings:", error);
 		setThemeVariables(defaultTheme);
 	}
-}
-
-function setThemeVariables(theme) {
-	const root = document.documentElement;
-	const mode = theme.mode || "dark";
-	const palette = themePalettes[mode === "light" ? "light" : "dark"];
-
-	if (mode === "light") {
-		root.setAttribute("data-theme", "light");
-	} else if (mode === "auto") {
-		const prefersDark = window.matchMedia(
-			"(prefers-color-scheme: dark)",
-		).matches;
-		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
-	} else {
-		root.removeAttribute("data-theme");
-	}
-
-	Object.entries(palette).forEach(([key, value]) => {
-		root.style.setProperty(`--${key}`, value);
-	});
-
-	// Respect custom colors when provided
-	if (theme.accentPrimary)
-		root.style.setProperty("--primary-color", theme.accentPrimary);
-	if (theme.accentSecondary)
-		root.style.setProperty("--primary-hover", theme.accentSecondary);
-	if (theme.bgColor) root.style.setProperty("--bg-primary", theme.bgColor);
-	if (theme.textColor)
-		root.style.setProperty("--text-primary", theme.textColor);
 }
 
 // Carousel State
@@ -1084,6 +1017,7 @@ async function init() {
 	}
 
 	await applyLibraryTheme();
+	setupThemeListener();
 	await loadSiteToggleSettings();
 
 	// Populate supported sites list dynamically from SHELVES
@@ -2689,12 +2623,42 @@ function setupEventListeners() {
 		});
 	}
 
-	// Settings — opens the dedicated settings page in a new tab
-	elements.settingsBtn.addEventListener("click", () =>
-		browser.tabs.create({
-			url: browser.runtime.getURL("library/library-settings.html"),
-		}),
-	);
+	// Settings — standalone: navigate in same window; regular: open new tab
+	const isStandaloneWindow =
+		new URLSearchParams(window.location.search).get("standalone") === "1";
+
+	elements.settingsBtn.addEventListener("click", () => {
+		const settingsUrl = browser.runtime.getURL(
+			"library/library-settings.html",
+		);
+		if (isStandaloneWindow) {
+			// Stay in the same window for standalone mode
+			window.location.href = settingsUrl + "?standalone=1";
+		} else {
+			browser.tabs.create({ url: settingsUrl });
+		}
+	});
+
+	// Popup button — visible only in standalone mode
+	if (elements.openPopupBtn) {
+		if (isStandaloneWindow) {
+			elements.openPopupBtn.style.display = "";
+			elements.openPopupBtn.addEventListener("click", async () => {
+				try {
+					const popupUrl = browser.runtime.getURL("popup/popup.html");
+					await browser.windows.create({
+						url: popupUrl,
+						type: "popup",
+						width: 420,
+						height: 600,
+						focused: true,
+					});
+				} catch (err) {
+					debugLog("Failed to open popup window:", err);
+				}
+			});
+		}
+	}
 
 	if (elements.urlImportBtn && elements.urlImportText) {
 		elements.urlImportBtn.addEventListener("click", async () => {
@@ -5233,27 +5197,9 @@ async function openDefaultNovelDetail(novel) {
 		}
 	}
 
-	// Wire epub copy button
+	// epub copy button is deprecated — hide it
 	if (elements.modalEpubCopyBtn) {
-		const fmt = librarySettings?.novelCopyFormats || {};
-		const copyEnabled = fmt.enabled !== false;
-		elements.modalEpubCopyBtn.classList.toggle("hidden", !copyEnabled);
-		if (copyEnabled) {
-			elements.modalEpubCopyBtn.onclick = async () => {
-				try {
-					const currentSettings = await novelLibrary.getSettings();
-					const template = resolveEpubTemplate(
-						currentSettings.novelCopyFormats,
-						novel.shelfId,
-					);
-					const text = formatNovelInfo(novel, template);
-					await navigator.clipboard.writeText(text);
-					showNotification("📚 .epub filename copied!");
-				} catch (err) {
-					showNotification("Failed to copy: " + err.message, "error");
-				}
-			};
-		}
+		elements.modalEpubCopyBtn.classList.add("hidden");
 	}
 
 	openModal(elements.novelModal);
@@ -5803,6 +5749,11 @@ function renderStatusFilterButtons() {
  */
 function handleSearch(e) {
 	searchQuery = e.target.value;
+	// Hide carousel when searching to reduce visual clutter
+	const carousel = document.getElementById("carousel-section");
+	if (carousel) {
+		carousel.style.display = searchQuery.trim() ? "none" : "";
+	}
 	renderCurrentView();
 }
 

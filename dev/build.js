@@ -62,7 +62,7 @@ function generateHandlerRegistry() {
 			.readdirSync(HANDLERS_DIR)
 			.filter(
 				(file) =>
-					file.endsWith("-handler.js") && file !== "base-handler.js"
+					file.endsWith("-handler.js") && file !== "base-handler.js",
 			)
 			.sort();
 
@@ -76,7 +76,7 @@ ${handlerFiles.map((f) => `	"${f}",`).join("\n")}
 
 		fs.writeFileSync(registryPath, registryContent, "utf8");
 		console.log(
-			`✅ Handler registry updated: ${handlerFiles.length} handler(s) registered.`
+			`✅ Handler registry updated: ${handlerFiles.length} handler(s) registered.`,
 		);
 	} catch (error) {
 		console.error("❌ Failed to generate handler registry:", error.message);
@@ -90,7 +90,7 @@ function updateDomains() {
 		// We run the script directly to ensure it uses its own logic
 		execSync(
 			`node "${path.join(__dirname, "generate-manifest-domains.js")}"`,
-			{ stdio: "inherit" }
+			{ stdio: "inherit" },
 		);
 		console.log("✅ Domains updated successfully.");
 	} catch (error) {
@@ -123,14 +123,14 @@ function build(platform) {
 
 	// Load and update manifest
 	const packageJson = JSON.parse(
-		fs.readFileSync(path.join(ROOT_DIR, "package.json"), "utf8")
+		fs.readFileSync(path.join(ROOT_DIR, "package.json"), "utf8"),
 	);
 	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 	manifest.version = packageJson.version;
 
 	fs.writeFileSync(
 		path.join(platformDist, "manifest.json"),
-		JSON.stringify(manifest, null, "\t")
+		JSON.stringify(manifest, null, "\t"),
 	);
 	console.log("✅ Generated manifest.json");
 
@@ -177,14 +177,22 @@ function syncSourceManifests(version) {
 		if (fs.existsSync(firefoxPath)) {
 			const m = JSON.parse(fs.readFileSync(firefoxPath, "utf8"));
 			m.version = version;
-			fs.writeFileSync(firefoxPath, JSON.stringify(m, null, "\t"), "utf8");
+			fs.writeFileSync(
+				firefoxPath,
+				JSON.stringify(m, null, "\t"),
+				"utf8",
+			);
 			console.log("✅ Updated src/manifest-firefox.json");
 		}
 
 		if (fs.existsSync(chromiumPath)) {
 			const m = JSON.parse(fs.readFileSync(chromiumPath, "utf8"));
 			m.version = version;
-			fs.writeFileSync(chromiumPath, JSON.stringify(m, null, "\t"), "utf8");
+			fs.writeFileSync(
+				chromiumPath,
+				JSON.stringify(m, null, "\t"),
+				"utf8",
+			);
 			console.log("✅ Updated src/manifest-chromium.json");
 		}
 	} catch (err) {
@@ -210,7 +218,7 @@ async function main() {
 
 	if (options.clean) clean();
 
-	// Always generate registry, but only update domains if explicitly requested or during packaging
+	// Always generate handler registry, but only update domains if explicitly requested or during packaging
 	generateHandlerRegistry();
 	if (options.update || options.package) updateDomains();
 

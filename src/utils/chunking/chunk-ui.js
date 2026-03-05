@@ -3,6 +3,8 @@
  * Creates and manages UI elements for individual chunks
  */
 
+import { getContentThemeColors, resolveMode } from "../theme-config.js";
+
 /**
  * Detect if dark mode is active
  * Checks handler's site-specific theme detection first, then falls back to extension theme
@@ -30,38 +32,54 @@ export function isDarkMode() {
 }
 
 /**
- * Get theme-aware colors (Material Design palette)
- * @returns {Object} Color palette object
+ * Get theme-aware colors using centralized theme config.
+ * Reads the active preset from the DOM's data-theme-preset attribute,
+ * falling back to Material Dark as default.
+ * @returns {Object} Color palette object for content-script UI
  */
 export function getThemeColors() {
-	const dark = isDarkMode();
-	return dark
-		? {
-				primary: "#bb86fc",
-				onSurface: "#e1e1e1",
-				onSurfaceVariant: "#b3b3b3",
-				surface: "#121212",
-				surfaceVariant: "#1e1e1e",
-				outline: "#3a3a3a",
-				outlineVariant: "#4a4a4a",
-				overlay: "rgba(255, 255, 255, 0.08)",
-				overlayHover: "rgba(255, 255, 255, 0.12)",
-				error: "#cf6679",
-				success: "#81c784",
-			}
-		: {
-				primary: "#6200ee",
-				onSurface: "#1c1c1c",
-				onSurfaceVariant: "#5f5f5f",
-				surface: "#ffffff",
-				surfaceVariant: "#f5f5f5",
-				outline: "#d0d0d0",
-				outlineVariant: "#e0e0e0",
-				overlay: "rgba(0, 0, 0, 0.05)",
-				overlayHover: "rgba(0, 0, 0, 0.08)",
-				error: "#b00020",
-				success: "#4caf50",
-			};
+	// Try to read the active preset + mode from the DOM (set by setThemeVariables)
+	const root = document.documentElement;
+	const presetId = root.getAttribute("data-theme-preset") || "material-dark";
+	const dataTheme = root.getAttribute("data-theme");
+	const mode =
+		dataTheme === "light" ? "light" : isDarkMode() ? "dark" : "light";
+
+	try {
+		return getContentThemeColors({ preset: presetId, mode });
+	} catch (_err) {
+		// Fallback to hardcoded Material Dark palette if import fails
+		const dark = mode !== "light";
+		return dark
+			? {
+					primary: "#bb86fc",
+					onPrimary: "#ffffff",
+					onSurface: "#e1e1e1",
+					onSurfaceVariant: "#b3b3b3",
+					surface: "#121212",
+					surfaceVariant: "#1e1e1e",
+					outline: "#3a3a3a",
+					outlineVariant: "#4a4a4a",
+					overlay: "rgba(255, 255, 255, 0.08)",
+					overlayHover: "rgba(255, 255, 255, 0.12)",
+					error: "#cf6679",
+					success: "#81c784",
+				}
+			: {
+					primary: "#6200ee",
+					onPrimary: "#ffffff",
+					onSurface: "#1c1c1c",
+					onSurfaceVariant: "#5f5f5f",
+					surface: "#ffffff",
+					surfaceVariant: "#f5f5f5",
+					outline: "#d0d0d0",
+					outlineVariant: "#e0e0e0",
+					overlay: "rgba(0, 0, 0, 0.05)",
+					overlayHover: "rgba(0, 0, 0, 0.08)",
+					error: "#b00020",
+					success: "#4caf50",
+				};
+	}
 }
 
 /**

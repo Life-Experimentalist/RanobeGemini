@@ -11,8 +11,18 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 	updateNovelInLibrary,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import {
+	formatNovelInfo,
+	resolveTemplate,
+} from "../../../utils/novel-copy-format.js";
+import {
+	applyThemeFromStorage,
+	setupThemeListener,
+} from "../../../utils/theme-config.js";
+import "../../../utils/bg-animation.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -660,6 +670,24 @@ function showNovelModal(novel) {
 		}
 	}
 
+	// Download button (FicHub)
+	const downloadBtn = document.getElementById("modal-download-btn");
+	if (downloadBtn) {
+		const downloadTemplate =
+			FanfictionHandler.SHELF_METADATA?.downloadUrlTemplate;
+		const sourceUrl = novel.sourceUrl || novel.url;
+		if (downloadTemplate && sourceUrl) {
+			downloadBtn.href = downloadTemplate.replace(
+				"{url}",
+				encodeURIComponent(sourceUrl),
+			);
+			downloadBtn.rel = "noreferrer";
+			downloadBtn.style.display = "inline-flex";
+		} else {
+			downloadBtn.style.display = "none";
+		}
+	}
+
 	// Refresh button
 	const refreshBtn = document.getElementById("modal-refresh-btn");
 	if (refreshBtn) {
@@ -737,6 +765,32 @@ function showNovelModal(novel) {
 			});
 		};
 	});
+
+	// Copy novel name button
+	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
+	if (copyInfoBtn) {
+		copyInfoBtn.onclick = async () => {
+			try {
+				const settings = await novelLibrary.getSettings();
+				const template =
+					resolveTemplate(
+						settings?.novelCopyFormats,
+						novel.shelfId,
+					) || "{title} by {author}";
+				const text = formatNovelInfo(novel, template);
+				await navigator.clipboard.writeText(text);
+				copyInfoBtn.textContent = "✅ Copied!";
+				setTimeout(() => {
+					copyInfoBtn.textContent = "📋 Copy Name";
+				}, 2000);
+			} catch (err) {
+				copyInfoBtn.textContent = "❌ Failed";
+				setTimeout(() => {
+					copyInfoBtn.textContent = "📋 Copy Name";
+				}, 2000);
+			}
+		};
+	}
 
 	// CSS is now handled in shelf-page.css
 
@@ -1806,6 +1860,9 @@ function ensureRandomSelectButton() {
 }
 
 async function initializeFanFictionShelf() {
+	await applyThemeFromStorage();
+	setupThemeListener();
+
 	const loadingState = document.getElementById("loading-state");
 	const emptyState = document.getElementById("empty-state");
 	const novelGrid = document.getElementById("novel-grid");

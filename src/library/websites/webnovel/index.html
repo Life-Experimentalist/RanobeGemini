@@ -1,28 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>WebNovel - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="../../../icons/icon.png"
-		/>
+		<link rel="stylesheet" href="../bg-animations.css" />
+		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
 	</head>
+
 	<body>
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span
-						class="shelf-page-color-bar"
-						id="color-bar"
-						style="background: #ff6600"
-					></span>
-					<span class="shelf-page-icon" id="page-icon">📖</span>
+					<span class="shelf-page-color-bar" id="color-bar" style="background: #ff6600"></span>
+					<a href="https://www.webnovel.com" target="_blank" rel="noopener" title="Visit WebNovel"
+						style="text-decoration:none;">
+						<span class="shelf-page-icon" id="page-icon">📖</span>
+					</a>
 					<h1 id="page-title">WebNovel</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -69,11 +66,7 @@
 				</div>
 				<div class="filter-group search-input">
 					<label for="search-input">Search:</label>
-					<input
-						type="text"
-						id="search-input"
-						placeholder="Search by title or author..."
-					/>
+					<input type="text" id="search-input" placeholder="Search by title or author..." />
 				</div>
 			</div>
 
@@ -89,9 +82,7 @@
 				<h2>No novels from WebNovel yet!</h2>
 				<p>
 					Visit a chapter on
-					<a href="https://www.webnovel.com" target="_blank"
-						>webnovel.com</a
-					>
+					<a href="https://www.webnovel.com" target="_blank">webnovel.com</a>
 					to add novels to your library
 				</p>
 			</div>
@@ -115,4 +106,5 @@
 			});
 		</script>
 	</body>
+
 </html>

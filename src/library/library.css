@@ -947,16 +947,23 @@ body {
 }
 
 .shelf-view-all-link {
-	color: var(--primary-color);
+	color: #fff;
 	text-decoration: none;
-	font-size: 0.95rem;
-	font-weight: 500;
-	transition: color var(--transition-fast);
+	font-size: 0.9rem;
+	font-weight: 600;
+	padding: 8px 18px;
+	border-radius: var(--radius-md);
+	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+	transition: all var(--transition-fast);
+	white-space: nowrap;
 }
 
 .shelf-view-all-link:hover {
-	color: var(--primary-hover);
-	text-decoration: underline;
+	text-decoration: none;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
+	filter: brightness(1.1);
 }
 
 .shelf-show-more {
@@ -1503,6 +1510,8 @@ body {
 
 .novel-info {
 	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .novel-info h2 {
@@ -1582,6 +1591,7 @@ body {
 }
 
 .novel-description p {
+	font-size: 1rem;
 	color: var(--text-secondary);
 	line-height: 1.7;
 }

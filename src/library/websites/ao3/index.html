@@ -6,6 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Archive of Our Own - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
+		<link rel="stylesheet" href="../bg-animations.css" />
 		<link rel="stylesheet" href="./style.css" />
 		<link rel="stylesheet" href="../../edit-modal.css" />
 		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
@@ -17,8 +18,11 @@
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
 					<span class="shelf-page-color-bar" id="color-bar" style="background: #990000"></span>
-					<img src="https://archiveofourown.org/images/ao3_logos/logo_42.png" alt="Archive of Our Own"
-						class="shelf-page-icon-img" id="page-icon-img" />
+					<a href="https://archiveofourown.org" target="_blank" rel="noopener"
+						title="Visit Archive of Our Own" style="display:inline-flex;">
+						<img src="https://archiveofourown.org/images/ao3_logos/logo_42.png" alt="Archive of Our Own"
+							class="shelf-page-icon-img" id="page-icon-img" />
+					</a>
 					<span class="shelf-page-icon" id="page-icon" style="display: none">🏛️</span>
 					<h1 id="page-title">Archive of Our Own</h1>
 					<span class="novel-count" id="novel-count">(0 works)</span>
@@ -325,7 +329,8 @@
 						</div>
 						<div class="modal-header-text">
 							<h2 id="modal-title"></h2>
-							by <p id="modal-author"></p>
+							by
+							<p id="modal-author"></p>
 							<p id="modal-description" class="modal-description"></p>
 						</div>
 					</div>
@@ -352,10 +357,15 @@
 					<div class="modal-actions-primary">
 						<a id="modal-continue-btn" class="btn btn-primary ao3-read-btn" target="_blank">Continue
 							Reading</a>
+						<a id="modal-download-btn" class="btn btn-secondary" target="_blank"
+							title="Download via FicHub">⬇️ Download</a>
 						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on AO3</a>
 					</div>
-					<div class="modal-actions-secondary">
-						<button id="modal-refresh-btn" class="btn btn-icon" title="Refresh metadata from source">
+					<div class="modal-actions-secondary"> <button id="modal-copy-info-btn" class="btn btn-icon"
+							title="Copy novel name to clipboard">
+							📋 Copy Name
+						</button> <button id="modal-refresh-btn" class="btn btn-icon"
+							title="Refresh metadata from source">
 							🔄 Update
 						</button>
 						<button id="modal-edit-btn" class="btn btn-icon" title="Edit novel details">

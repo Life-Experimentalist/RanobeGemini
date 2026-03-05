@@ -804,7 +804,15 @@ export class NovelLibrary {
 				// path is hot but not called in a tight loop)
 				const settings = await this.getSettings();
 				const rules = mergeRules(settings.stateMachineRules, settings);
-				const context = { isLatestChapter, isStoryComplete };
+				const chaptersRead = Math.max(
+					chapterNumber,
+					novel.lastReadChapter || 0,
+				);
+				const context = {
+					isLatestChapter,
+					isStoryComplete,
+					chaptersRead,
+				};
 				nextStatus = evaluateChapterReadTransitions(
 					novel,
 					context,

@@ -134,19 +134,24 @@ body {
 }
 
 .back-link {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	color: var(--primary-color);
+	color: #fff;
 	text-decoration: none;
-	padding: var(--spacing-sm) var(--spacing-md);
+	padding: 8px 18px;
 	border-radius: var(--radius-md);
+	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+	font-weight: 600;
+	font-size: 0.9rem;
 	transition: all var(--transition-fast);
 }
 
 .back-link:hover {
-	background: var(--bg-tertiary);
-	color: var(--primary-hover);
+	background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
 }
 
 /* Filters Section */
@@ -219,7 +224,8 @@ body {
 	right: 0;
 	bottom: 0;
 	z-index: 1000;
-	display: none; /* Toggled by JS */
+	display: none;
+	/* Toggled by JS */
 	align-items: center;
 	justify-content: center;
 	padding: 20px;
@@ -445,14 +451,17 @@ body {
 	background: var(--success-color);
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: var(--warning-color);
 	color: #000;
 }
+
 .rating-m {
 	background: var(--error-color);
 	color: #fff;
@@ -685,11 +694,9 @@ body {
 }
 
 .chip-crossover {
-	background: linear-gradient(
-		135deg,
-		rgba(102, 126, 234, 0.2),
-		rgba(118, 75, 162, 0.2)
-	);
+	background: linear-gradient(135deg,
+			rgba(102, 126, 234, 0.2),
+			rgba(118, 75, 162, 0.2));
 	color: #a5b3ff;
 	border: 1px solid rgba(118, 75, 162, 0.3);
 }
@@ -782,16 +789,19 @@ body {
 	color: #fff;
 	border-color: var(--success-color);
 }
+
 .chip.rating-kp {
 	background: #8bc34a;
 	color: #fff;
 	border-color: #8bc34a;
 }
+
 .chip.rating-t {
 	background: var(--warning-color);
 	color: #000;
 	border-color: var(--warning-color);
 }
+
 .chip.rating-m {
 	background: var(--error-color);
 	color: #fff;
@@ -840,11 +850,9 @@ body {
 	width: 80px;
 	height: 110px;
 	border-radius: var(--radius-sm);
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -928,14 +936,17 @@ body {
 	background: #4caf50;
 	color: white;
 }
+
 .rating-k\+ {
 	background: #8bc34a;
 	color: white;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: white;
 }
+
 .rating-m {
 	background: #f44336;
 	color: white;
@@ -1352,11 +1363,9 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	font-size: 3rem;
 	color: var(--text-muted);
 }
@@ -1403,6 +1412,8 @@ body {
 	flex-direction: column;
 	gap: var(--spacing-sm);
 	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .novel-header-row {
@@ -1519,7 +1530,7 @@ body {
 }
 
 /* Background blur image (separate from cover) */
-.ranobes-card-horizontal > .ranobes-bg-blur {
+.ranobes-card-horizontal>.ranobes-bg-blur {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -1560,11 +1571,9 @@ body {
 	align-items: center;
 	justify-content: center;
 	font-size: 40px;
-	background: linear-gradient(
-		135deg,
-		var(--bg-tertiary) 0%,
-		var(--bg-secondary) 100%
-	);
+	background: linear-gradient(135deg,
+			var(--bg-tertiary) 0%,
+			var(--bg-secondary) 100%);
 	color: var(--text-muted);
 }
 
@@ -1649,11 +1658,9 @@ body {
 
 .progress-fill {
 	height: 100%;
-	background: linear-gradient(
-		90deg,
-		var(--primary-color) 0%,
-		var(--primary-hover) 100%
-	);
+	background: linear-gradient(90deg,
+			var(--primary-color) 0%,
+			var(--primary-hover) 100%);
 	border-radius: 3px;
 }
 
@@ -2190,6 +2197,7 @@ body {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	to {
 		opacity: 1;
 		transform: translateY(0);
@@ -2334,14 +2342,17 @@ body {
 	background: #4caf50;
 	color: #fff;
 }
+
 .rating-kp {
 	background: #8bc34a;
 	color: #fff;
 }
+
 .rating-t {
 	background: #ff9800;
 	color: #fff;
 }
+
 .rating-m {
 	background: #f44336;
 	color: #fff;

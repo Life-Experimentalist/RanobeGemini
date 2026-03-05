@@ -59,13 +59,17 @@ import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import { getTelemetryConfig, saveTelemetryConfig } from "../utils/telemetry.js";
 import {
 	formatNovelInfo,
+	formatExportFilename,
 	resolveTemplate,
-	resolveEpubTemplate,
+	resolveExportTemplate,
+	resolveExportExtension,
 	COPY_FORMAT_TOKENS,
-	EPUB_FILENAME_TOKENS,
+	EXPORT_TOKENS,
 	PREVIEW_NOVEL,
 	DEFAULT_COPY_TEMPLATE,
-	DEFAULT_EPUB_TEMPLATE,
+	DEFAULT_EXPORT_TEMPLATE,
+	COPY_EXPORT_EXTENSIONS,
+	COPY_EXPORT_DEFAULT_EXTENSION,
 } from "../utils/novel-copy-format.js";
 
 // ── Navigation tabs definition ────────────────────────────────────────────────
@@ -100,51 +104,17 @@ const SETTINGS_TABS = [
 	},
 ];
 
-// ── Theme defaults ────────────────────────────────────────────────────────────
-const defaultTheme = {
-	mode: "auto",
-	accentPrimary: "#4b5563",
-	accentSecondary: "#6b7280",
-	bgColor: "#0f172a",
-	textColor: "#e5e7eb",
-};
-
-const themePalettes = {
-	dark: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"secondary-color": "#9ca3af",
-		"danger-color": "#ef4444",
-		"success-color": "#22c55e",
-		"bg-primary": "#0f172a",
-		"bg-secondary": "#111827",
-		"bg-tertiary": "#1f2937",
-		"bg-card": "#1f2937",
-		"bg-card-hover": "#2b3544",
-		"text-primary": "#e5e7eb",
-		"text-secondary": "#9ca3af",
-		"text-muted": "#6b7280",
-		"border-color": "#2f3644",
-		"border-light": "#3b4454",
-	},
-	light: {
-		"primary-color": "#4b5563",
-		"primary-hover": "#6b7280",
-		"secondary-color": "#6b7280",
-		"danger-color": "#ef4444",
-		"success-color": "#22c55e",
-		"bg-primary": "#f3f4f6",
-		"bg-secondary": "#ffffff",
-		"bg-tertiary": "#e5e7eb",
-		"bg-card": "#ffffff",
-		"bg-card-hover": "#f3f4f6",
-		"text-primary": "#111827",
-		"text-secondary": "#374151",
-		"text-muted": "#6b7280",
-		"border-color": "#e5e7eb",
-		"border-light": "#d1d5db",
-	},
-};
+// ── Theme — centralized ───────────────────────────────────────────────────────
+import {
+	DEFAULT_THEME as defaultTheme,
+	THEME_PRESETS,
+	setThemeVariables,
+	applyThemeFromStorage,
+	setupThemeListener,
+	getPresetList,
+	resolveMode,
+} from "../utils/theme-config.js";
+import "../utils/bg-animation.js";
 
 // ── Page state ────────────────────────────────────────────────────────────────
 let librarySettings = { autoHoldEnabled: true, autoHoldDays: 7 };
@@ -169,40 +139,9 @@ function showToast(message, type = "info") {
 	}, 3500);
 }
 
-function setThemeVariables(theme) {
-	const root = document.documentElement;
-	const mode = theme.mode || "dark";
-	const palette = themePalettes[mode === "light" ? "light" : "dark"];
-
-	if (mode === "light") {
-		root.setAttribute("data-theme", "light");
-	} else if (mode === "auto") {
-		const prefersDark = window.matchMedia(
-			"(prefers-color-scheme: dark)",
-		).matches;
-		root.setAttribute("data-theme", prefersDark ? "dark" : "light");
-	} else {
-		root.removeAttribute("data-theme");
-	}
-
-	Object.entries(palette).forEach(([key, value]) => {
-		root.style.setProperty(`--${key}`, value);
-	});
-
-	if (theme.accentPrimary)
-		root.style.setProperty("--primary-color", theme.accentPrimary);
-	if (theme.accentSecondary)
-		root.style.setProperty("--primary-hover", theme.accentSecondary);
-	if (theme.bgColor) root.style.setProperty("--bg-primary", theme.bgColor);
-	if (theme.textColor)
-		root.style.setProperty("--text-primary", theme.textColor);
-}
-
 async function applyTheme() {
 	try {
-		const result = await browser.storage.local.get("themeSettings");
-		const theme = result.themeSettings || defaultTheme;
-		setThemeVariables(theme);
+		await applyThemeFromStorage();
 	} catch (err) {
 		debugError("Failed to apply theme:", err);
 		setThemeVariables(defaultTheme);
@@ -299,14 +238,70 @@ function updateVersion() {
 	}
 }
 
+// ── Theme UI helpers (module-level — used by both loadLibraryThemeControls
+//    and setupEventListeners) ─────────────────────────────────────────────────
+
+/**
+ * Set the active class on the mode pill buttons.
+ * @param {string} mode - "dark" | "light" | "auto"
+ */
+function syncModePills(mode) {
+	document.querySelectorAll(".ls-mode-pill").forEach((btn) => {
+		const active = btn.dataset.mode === mode;
+		btn.classList.toggle("active", active);
+		btn.setAttribute("aria-pressed", active ? "true" : "false");
+	});
+}
+
+/**
+ * Show or hide the delete-preset button based on whether the current
+ * selection is a custom preset.
+ * @param {string} selectedId
+ * @param {Object} customPresets
+ */
+function updateDeletePresetBtn(selectedId, customPresets) {
+	const btn = $("library-delete-custom-preset");
+	if (!btn) return;
+	const isCustom = !!(customPresets || {})[selectedId];
+	btn.style.display = isCustom ? "" : "none";
+}
+
 // ── Load: Theme Controls ──────────────────────────────────────────────────────
 async function loadLibraryThemeControls() {
 	try {
 		const result = await browser.storage.local.get("themeSettings");
 		const theme = result.themeSettings || defaultTheme;
 
+		// ── Mode: sync hidden select + pill buttons ────────────────────────────
 		const themeMode = $("library-theme-mode");
-		if (themeMode) themeMode.value = theme.mode || "dark";
+		const currentMode = theme.mode || "dark";
+		if (themeMode) themeMode.value = currentMode;
+		syncModePills(currentMode);
+
+		// ── Preset skin dropdown ───────────────────────────────────────────────
+		const presetSelect = $("library-theme-preset");
+		if (presetSelect) {
+			const presets = getPresetList(theme.customPresets || {});
+			const grouped = {};
+			presets.forEach((p) => {
+				if (!grouped[p.group]) grouped[p.group] = [];
+				grouped[p.group].push(p);
+			});
+			presetSelect.innerHTML = Object.entries(grouped)
+				.map(([group, items]) => {
+					const label =
+						group === "custom"
+							? "Custom Presets"
+							: group === "default"
+								? "Built-in Presets"
+								: group;
+					return `<optgroup label="${label}">${items.map((p) => `<option value="${p.id}">${p.emoji} ${p.name}</option>`).join("")}</optgroup>`;
+				})
+				.join("");
+			// theme.preset stores the selected value (can be a custom ID)
+			presetSelect.value = theme.preset || "material-dark";
+			updateDeletePresetBtn(theme.preset, theme.customPresets || {});
+		}
 
 		const apPicker = $("library-accentColorPicker");
 		const apText = $("library-accentColorText");
@@ -331,11 +326,35 @@ async function loadLibraryThemeControls() {
 			bgText.value = theme.bgColor || defaultTheme.bgColor;
 		}
 
+		const bgsPicker = $("library-bgSecondaryPicker");
+		const bgsText = $("library-bgSecondaryText");
+		if (bgsPicker && bgsText) {
+			const val =
+				theme.bgSecondary || theme.bgColor || defaultTheme.bgColor;
+			bgsPicker.value = val;
+			bgsText.value = val;
+		}
+
+		const bgtPicker = $("library-bgTertiaryPicker");
+		const bgtText = $("library-bgTertiaryText");
+		if (bgtPicker && bgtText) {
+			const val =
+				theme.bgTertiary || theme.bgColor || defaultTheme.bgColor;
+			bgtPicker.value = val;
+			bgtText.value = val;
+		}
+
 		const txPicker = $("library-textColorPicker");
 		const txText = $("library-textColorText");
 		if (txPicker && txText) {
 			txPicker.value = theme.textColor || defaultTheme.textColor;
 			txText.value = theme.textColor || defaultTheme.textColor;
+		}
+
+		// Background animation selector
+		const bgAnimation = $("library-bg-animation");
+		if (bgAnimation) {
+			bgAnimation.value = theme.bgAnimation || "none";
 		}
 
 		// Font size
@@ -745,6 +764,28 @@ async function loadLibrarySettings_() {
 			librarySettings.autoHoldDays || librarySettings.autoHoldDays === 0
 				? librarySettings.autoHoldDays
 				: 7;
+	}
+
+	// Periodic chapter check
+	try {
+		const ucResult = await browser.storage.local.get([
+			"novelUpdateEnabled",
+			"novelUpdateIntervalDays",
+		]);
+		const updateTog = $("novel-update-toggle");
+		if (updateTog)
+			updateTog.checked =
+				ucResult.novelUpdateEnabled !== undefined
+					? !!ucResult.novelUpdateEnabled
+					: true; // matches constant default
+		const updateInt = $("novel-update-interval");
+		if (updateInt)
+			updateInt.value =
+				ucResult.novelUpdateIntervalDays !== undefined
+					? ucResult.novelUpdateIntervalDays
+					: 3;
+	} catch (err) {
+		debugError("Failed to load novel update settings:", err);
 	}
 
 	// Carousel
@@ -1460,8 +1501,10 @@ async function initCopyFormatTab() {
 	const enabled = fmt.enabled !== false;
 	const globalTemplate = fmt.globalTemplate || DEFAULT_COPY_TEMPLATE;
 	const siteOverrides = fmt.siteOverrides || {};
-	const epubTemplate = fmt.epubTemplate || DEFAULT_EPUB_TEMPLATE;
-	const epubSiteOverrides = fmt.epubSiteOverrides || {};
+	// Unified export format
+	const exportTemplate = fmt.exportTemplate || DEFAULT_EXPORT_TEMPLATE;
+	const exportExtension =
+		fmt.exportExtension || COPY_EXPORT_DEFAULT_EXTENSION;
 
 	// ── Load real library novels for live preview ──────────────────────────────
 	let previewNovel = PREVIEW_NOVEL; // fallback if library is empty
@@ -1470,31 +1513,23 @@ async function initCopyFormatTab() {
 	try {
 		const allNovels = await novelLibrary.getNovels();
 		if (allNovels.length > 0) {
-			// Sort by most recently read date
+			// Sort by most recently accessed (lastAccessedAt is the canonical field)
 			const sorted = [...allNovels].sort((a, b) => {
-				const da = new Date(
-					a.lastReadDate || a.lastReadTime || a.updatedAt || 0,
-				).getTime();
-				const db = new Date(
-					b.lastReadDate || b.lastReadTime || b.updatedAt || 0,
-				).getTime();
+				const da = a.lastAccessedAt || a.addedAt || 0;
+				const db = b.lastAccessedAt || b.addedAt || 0;
 				return db - da;
 			});
 			previewNovel = sorted[0];
 
-			// Map each site to its most recently read novel
+			// Map each site to its most recently accessed novel
 			allNovels.forEach((n) => {
 				if (!n.shelfId) return;
 				const ex = novelBySite[n.shelfId];
 				if (!ex) {
 					novelBySite[n.shelfId] = n;
 				} else {
-					const da = new Date(
-						n.lastReadDate || n.lastReadTime || n.updatedAt || 0,
-					).getTime();
-					const db = new Date(
-						ex.lastReadDate || ex.lastReadTime || ex.updatedAt || 0,
-					).getTime();
+					const da = n.lastAccessedAt || n.addedAt || 0;
+					const db = ex.lastAccessedAt || ex.addedAt || 0;
 					if (da > db) novelBySite[n.shelfId] = n;
 				}
 			});
@@ -1554,124 +1589,71 @@ async function initCopyFormatTab() {
 		updateCopyPreview();
 	}
 
-	// ── Epub template ─────────────────────────────────────────────────────────
-	const epubTplInput = $("copy-epub-template");
-	if (epubTplInput) epubTplInput.value = epubTemplate;
+	// ── Unified Export template ───────────────────────────────────────────────
+	const exportTplInput = $("copy-export-template");
+	const exportExtSelect = $("copy-export-extension");
 
-	function updateEpubPreview() {
-		const previewEl = $("copy-epub-preview");
-		if (!previewEl) return;
-		const template = epubTplInput?.value?.trim() || DEFAULT_EPUB_TEMPLATE;
-		previewEl.textContent = formatNovelInfo(previewNovel, template);
+	// Populate export template input
+	if (exportTplInput) exportTplInput.value = exportTemplate;
+
+	// Populate extension dropdown
+	if (exportExtSelect) {
+		exportExtSelect.innerHTML = COPY_EXPORT_EXTENSIONS.map(
+			(ext) =>
+				`<option value="${ext}" ${ext === exportExtension ? "selected" : ""}>.${ext}</option>`,
+		).join("");
 	}
 
-	// Epub token chips
-	const epubTokensGrid = $("copy-epub-tokens-grid");
-	if (epubTokensGrid) {
-		epubTokensGrid.innerHTML = EPUB_FILENAME_TOKENS.map(
+	function updateExportPreview() {
+		const previewEl = $("copy-export-preview");
+		if (!previewEl) return;
+		const template =
+			exportTplInput?.value?.trim() || DEFAULT_EXPORT_TEMPLATE;
+		const ext = exportExtSelect?.value || COPY_EXPORT_DEFAULT_EXTENSION;
+		previewEl.textContent = formatExportFilename(
+			previewNovel,
+			template,
+			ext,
+		);
+	}
+
+	// Export token chips
+	const exportTokensGrid = $("copy-export-tokens-grid");
+	if (exportTokensGrid) {
+		exportTokensGrid.innerHTML = EXPORT_TOKENS.map(
 			(t) =>
-				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary" data-epub-token="${escHtml(t.token)}" title="${escHtml(t.desc)} — e.g. ${escHtml(t.example)}" style="font-family:monospace;">${escHtml(t.token)}</button>`,
+				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary${t.recommended ? " ls-btn-accent" : ""}" data-export-token="${escHtml(t.token)}" title="${escHtml(t.desc)} — e.g. ${escHtml(t.example)}" style="font-family:monospace;">${escHtml(t.token)}</button>`,
 		).join("");
-		epubTokensGrid
-			.querySelectorAll("button[data-epub-token]")
+		exportTokensGrid
+			.querySelectorAll("button[data-export-token]")
 			.forEach((btn) => {
 				btn.addEventListener("click", () => {
-					if (!epubTplInput) return;
-					const token = btn.dataset.epubToken;
+					if (!exportTplInput) return;
+					const token = btn.dataset.exportToken;
 					const start =
-						epubTplInput.selectionStart ??
-						epubTplInput.value.length;
+						exportTplInput.selectionStart ??
+						exportTplInput.value.length;
 					const end =
-						epubTplInput.selectionEnd ?? epubTplInput.value.length;
-					epubTplInput.value =
-						epubTplInput.value.slice(0, start) +
+						exportTplInput.selectionEnd ??
+						exportTplInput.value.length;
+					exportTplInput.value =
+						exportTplInput.value.slice(0, start) +
 						token +
-						epubTplInput.value.slice(end);
-					epubTplInput.focus();
-					epubTplInput.selectionStart = epubTplInput.selectionEnd =
-						start + token.length;
-					updateEpubPreview();
+						exportTplInput.value.slice(end);
+					exportTplInput.focus();
+					exportTplInput.selectionStart =
+						exportTplInput.selectionEnd = start + token.length;
+					updateExportPreview();
 				});
 			});
 	}
 
-	if (epubTplInput) {
-		epubTplInput.addEventListener("input", () => {
-			updateEpubPreview();
-			updateAllEpubSitePreviews();
-		});
-		updateEpubPreview();
+	if (exportTplInput) {
+		exportTplInput.addEventListener("input", updateExportPreview);
+		updateExportPreview();
 	}
-
-	// ── Per-site epub overrides ────────────────────────────────────────────────
-	const epubOverridesList = $("copy-epub-site-overrides-list");
-	if (epubOverridesList) {
-		epubOverridesList.innerHTML = Object.values(SHELVES)
-			.map((shelf) => {
-				const val = epubSiteOverrides[shelf.id] || "";
-				const siteNovel = novelBySite[shelf.id] || previewNovel;
-				const resolvedTpl = val.trim() || epubTemplate;
-				const previewText = escHtml(
-					formatNovelInfo(siteNovel, resolvedTpl),
-				);
-				const siteIcon = shelf.emoji
-					? shelf.emoji
-					: shelf.icon
-						? `<img src="${escHtml(shelf.icon)}" style="width:14px;height:14px;vertical-align:middle;" />`
-						: "🌐";
-				return `
-			<div class="ls-copy-site-override" data-shelf-id="${shelf.id}">
-				<label class="ls-label" for="epub-override-${shelf.id}">
-					<span class="ls-copy-site-icon">${siteIcon}</span>
-					${escHtml(shelf.name)}
-					${val.trim() ? '<span class="ls-copy-site-badge-custom">custom</span>' : '<span class="ls-copy-site-badge-global">global</span>'}
-				</label>
-				<input type="text" id="epub-override-${shelf.id}" class="ls-input epub-override-input"
-					data-shelf-id="${shelf.id}"
-					placeholder="(uses global epub template)"
-					value="${val.replace(/"/g, "&quot;")}" />
-				<div class="ls-copy-site-preview" id="epub-site-preview-${shelf.id}">
-					${previewText || "<em>\u2014</em>"}
-				</div>
-			</div>`;
-			})
-			.join("");
-
-		epubOverridesList
-			.querySelectorAll(".epub-override-input")
-			.forEach((inp) => {
-				inp.addEventListener("input", () => {
-					updateEpubSitePreview(inp.dataset.shelfId);
-					const container = inp.closest(".ls-copy-site-override");
-					const badge = container?.querySelector(
-						".ls-copy-site-badge-custom, .ls-copy-site-badge-global",
-					);
-					if (badge) {
-						const hasCustom = inp.value.trim() !== "";
-						badge.className = hasCustom
-							? "ls-copy-site-badge-custom"
-							: "ls-copy-site-badge-global";
-						badge.textContent = hasCustom ? "custom" : "global";
-					}
-				});
-			});
-	}
-
-	function updateEpubSitePreview(shelfId) {
-		const inp = document.getElementById(`epub-override-${shelfId}`);
-		const previewEl = $(`epub-site-preview-${shelfId}`);
-		if (!inp || !previewEl) return;
-		const template =
-			inp.value.trim() || epubTplInput?.value?.trim() || epubTemplate;
-		const siteNovel = novelBySite[shelfId] || previewNovel;
-		previewEl.textContent = formatNovelInfo(siteNovel, template) || "—";
-	}
-
-	function updateAllEpubSitePreviews() {
-		Object.values(SHELVES).forEach((shelf) => {
-			const inp = document.getElementById(`epub-override-${shelf.id}`);
-			if (inp && !inp.value.trim()) updateEpubSitePreview(shelf.id);
-		});
+	if (exportExtSelect) {
+		exportExtSelect.addEventListener("change", updateExportPreview);
 	}
 
 	// ── Per-site overrides with per-site per-novel live preview ────────────────
@@ -1766,24 +1748,19 @@ async function initCopyFormatTab() {
 						if (shelfId && v) newOverrides[shelfId] = v;
 					});
 				const current = await novelLibrary.getSettings();
-				const newEpubTemplate =
-					epubTplInput?.value?.trim() || DEFAULT_EPUB_TEMPLATE;
-				const newEpubOverrides = {};
-				document
-					.querySelectorAll(".epub-override-input")
-					.forEach((inp) => {
-						const shelfId = inp.dataset.shelfId;
-						const v = inp.value.trim();
-						if (shelfId && v) newEpubOverrides[shelfId] = v;
-					});
+				// Unified export settings
+				const newExportTemplate =
+					exportTplInput?.value?.trim() || DEFAULT_EXPORT_TEMPLATE;
+				const newExportExtension =
+					exportExtSelect?.value || COPY_EXPORT_DEFAULT_EXTENSION;
 				await novelLibrary.saveSettings({
 					...current,
 					novelCopyFormats: {
 						enabled: newEnabled,
 						globalTemplate: newTemplate,
 						siteOverrides: newOverrides,
-						epubTemplate: newEpubTemplate,
-						epubSiteOverrides: newEpubOverrides,
+						exportTemplate: newExportTemplate,
+						exportExtension: newExportExtension,
 					},
 				});
 				showToast("✅ Copy format saved!", "success");
@@ -1803,6 +1780,8 @@ function setupEventListeners() {
 		["library-accentColorPicker", "library-accentColorText"],
 		["library-accentSecondaryPicker", "library-accentSecondaryText"],
 		["library-backgroundColorPicker", "library-backgroundColorText"],
+		["library-bgSecondaryPicker", "library-bgSecondaryText"],
+		["library-bgTertiaryPicker", "library-bgTertiaryText"],
 		["library-textColorPicker", "library-textColorText"],
 	].forEach(([pickId, textId]) => {
 		const pick = $(pickId);
@@ -1810,31 +1789,89 @@ function setupEventListeners() {
 		if (!pick || !text) return;
 		pick.addEventListener("input", () => {
 			text.value = pick.value;
+			setThemeVariables(readCurrentThemeFromUI());
 		});
 		text.addEventListener("input", () => {
-			if (/^#[0-9a-fA-F]{6}$/.test(text.value)) pick.value = text.value;
+			if (/^#[0-9a-fA-F]{6}$/.test(text.value)) {
+				pick.value = text.value;
+				setThemeVariables(readCurrentThemeFromUI());
+			}
 		});
 	});
+
+	// Background animation selector
+	const bgAnimSelect = $("library-bg-animation");
+	if (bgAnimSelect) {
+		bgAnimSelect.addEventListener("change", () => {
+			setThemeVariables(readCurrentThemeFromUI());
+		});
+	}
+
+	// Mode pill buttons — update hidden select, sync pills, auto-adjust text color
+	document.querySelectorAll(".ls-mode-pill").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const mode = btn.dataset.mode;
+			const modeSelect = $("library-theme-mode");
+			if (modeSelect) modeSelect.value = mode;
+			syncModePills(mode);
+			// Auto-adjust text color to the preset's default for this mode
+			const effectiveMode = resolveMode(mode);
+			const basePresetId =
+				$("library-theme-preset")?.dataset?.basePreset ||
+				$("library-theme-preset")?.value ||
+				"material-dark";
+			const builtIn =
+				THEME_PRESETS[basePresetId] || THEME_PRESETS["material-dark"];
+			const newTextColor =
+				builtIn[effectiveMode]?.["text-primary"] ||
+				(effectiveMode === "light" ? "#111827" : "#e5e7eb");
+			const txPicker = $("library-textColorPicker");
+			const txText = $("library-textColorText");
+			if (txPicker) txPicker.value = newTextColor;
+			if (txText) txText.value = newTextColor;
+			setThemeVariables(readCurrentThemeFromUI());
+		});
+	});
+
+	function readCurrentThemeFromUI() {
+		const bgPrimary =
+			$("library-backgroundColorPicker")?.value || defaultTheme.bgColor;
+		const bgSecondaryVal = $("library-bgSecondaryPicker")?.value || "";
+		const bgTertiaryVal = $("library-bgTertiaryPicker")?.value || "";
+		const selectedPreset =
+			$("library-theme-preset")?.value || "material-dark";
+		// basePreset is tagged on the <select> element when a custom preset is
+		// loaded, so palette lookups always resolve to a real THEME_PRESETS key.
+		const basePreset = $("library-theme-preset")?.dataset?.basePreset || "";
+		return {
+			mode: $("library-theme-mode")?.value || "dark",
+			preset: selectedPreset,
+			basePreset,
+			accentPrimary:
+				$("library-accentColorPicker")?.value ||
+				defaultTheme.accentPrimary,
+			accentSecondary:
+				$("library-accentSecondaryPicker")?.value ||
+				defaultTheme.accentSecondary,
+			bgColor: bgPrimary,
+			bgSecondary: bgSecondaryVal !== bgPrimary ? bgSecondaryVal : "",
+			bgTertiary: bgTertiaryVal !== bgPrimary ? bgTertiaryVal : "",
+			textColor:
+				$("library-textColorPicker")?.value || defaultTheme.textColor,
+			bgAnimation: $("library-bg-animation")?.value || "none",
+		};
+	}
 
 	// Save Theme button
 	const saveThemeBtn = $("library-save-theme");
 	if (saveThemeBtn) {
 		saveThemeBtn.addEventListener("click", async () => {
 			try {
+				const result = await browser.storage.local.get("themeSettings");
+				const current = result.themeSettings || { ...defaultTheme };
 				const themeSettings = {
-					mode: $("library-theme-mode")?.value || "dark",
-					accentPrimary:
-						$("library-accentColorPicker")?.value ||
-						defaultTheme.accentPrimary,
-					accentSecondary:
-						$("library-accentSecondaryPicker")?.value ||
-						defaultTheme.accentSecondary,
-					bgColor:
-						$("library-backgroundColorPicker")?.value ||
-						defaultTheme.bgColor,
-					textColor:
-						$("library-textColorPicker")?.value ||
-						defaultTheme.textColor,
+					...readCurrentThemeFromUI(),
+					customPresets: current.customPresets || {},
 				};
 				await browser.storage.local.set({ themeSettings });
 				setThemeVariables(themeSettings);
@@ -1845,15 +1882,135 @@ function setupEventListeners() {
 		});
 	}
 
-	// Reset Theme button
+	// Background secondary/tertiary reset buttons (reset to auto-derive)
+	$("library-bgSecondaryReset")?.addEventListener("click", () => {
+		const primary =
+			$("library-backgroundColorPicker")?.value || defaultTheme.bgColor;
+		const picker = $("library-bgSecondaryPicker");
+		const text = $("library-bgSecondaryText");
+		if (picker) picker.value = primary;
+		if (text) text.value = primary;
+		setThemeVariables(readCurrentThemeFromUI());
+	});
+	$("library-bgTertiaryReset")?.addEventListener("click", () => {
+		const primary =
+			$("library-backgroundColorPicker")?.value || defaultTheme.bgColor;
+		const picker = $("library-bgTertiaryPicker");
+		const text = $("library-bgTertiaryText");
+		if (picker) picker.value = primary;
+		if (text) text.value = primary;
+		setThemeVariables(readCurrentThemeFromUI());
+	});
+
+	// Save Custom Preset button
+	const saveCustomPresetBtn = $("library-save-custom-preset");
+	if (saveCustomPresetBtn) {
+		saveCustomPresetBtn.addEventListener("click", async () => {
+			try {
+				const nameInput = $("library-custom-preset-name");
+				const name = nameInput?.value?.trim();
+				if (!name) {
+					showToast(
+						"⚠️ Enter a name for the custom preset",
+						"warning",
+					);
+					nameInput?.focus();
+					return;
+				}
+				const presetId =
+					"custom-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+				const result = await browser.storage.local.get("themeSettings");
+				const current = result.themeSettings || { ...defaultTheme };
+				const uiTheme = readCurrentThemeFromUI();
+				// basePreset must always be a real THEME_PRESETS key, never custom-* id
+				const basePreset =
+					uiTheme.basePreset || uiTheme.preset || "material-dark";
+				const newPreset = {
+					name,
+					emoji: "🎨",
+					accentPrimary: uiTheme.accentPrimary,
+					accentSecondary: uiTheme.accentSecondary,
+					bgColor: uiTheme.bgColor,
+					bgSecondary: uiTheme.bgSecondary,
+					bgTertiary: uiTheme.bgTertiary,
+					textColor: uiTheme.textColor,
+					bgAnimation: uiTheme.bgAnimation || "none",
+					basePreset,
+					mode: uiTheme.mode,
+				};
+				const updatedSettings = {
+					...current,
+					preset: presetId,
+					basePreset,
+					customPresets: {
+						...(current.customPresets || {}),
+						[presetId]: newPreset,
+					},
+				};
+				await browser.storage.local.set({
+					themeSettings: updatedSettings,
+				});
+				if (nameInput) nameInput.value = "";
+				// Reload controls — dropdown now shows the new preset selected
+				await loadLibraryThemeControls();
+				showToast(`✅ Custom preset “${name}” saved!`, "success");
+			} catch (err) {
+				showToast("❌ Failed to save preset: " + err.message, "error");
+			}
+		});
+	}
+
+	// Delete Custom Preset button
+	const deletePresetBtn = $("library-delete-custom-preset");
+	if (deletePresetBtn) {
+		deletePresetBtn.addEventListener("click", async () => {
+			try {
+				const result = await browser.storage.local.get("themeSettings");
+				const current = result.themeSettings || { ...defaultTheme };
+				const selectedId = $("library-theme-preset")?.value;
+				if (!selectedId || !(current.customPresets || {})[selectedId]) {
+					showToast("⚠️ Select a custom preset to delete", "warning");
+					return;
+				}
+				const presetName =
+					current.customPresets[selectedId]?.name || selectedId;
+				if (!confirm(`Delete custom preset "${presetName}"?`)) return;
+				const { [selectedId]: _removed, ...remaining } =
+					current.customPresets;
+				const updated = {
+					...current,
+					preset: "material-dark",
+					basePreset: "",
+					customPresets: remaining,
+				};
+				await browser.storage.local.set({ themeSettings: updated });
+				await loadLibraryThemeControls();
+				showToast(`Preset "${presetName}" deleted`, "info");
+			} catch (err) {
+				showToast(
+					"❌ Failed to delete preset: " + err.message,
+					"error",
+				);
+			}
+		});
+	}
+
+	// Reset Theme button — resets colours+mode but keeps custom presets
 	const resetThemeBtn = $("library-reset-theme");
 	if (resetThemeBtn) {
 		resetThemeBtn.addEventListener("click", async () => {
-			if (!confirm("Reset theme to defaults?")) return;
-			await browser.storage.local.remove("themeSettings");
+			if (!confirm("Reset theme to defaults? Custom presets are kept."))
+				return;
+			const result = await browser.storage.local.get("themeSettings");
+			const current = result.themeSettings || {};
+			const reset = {
+				...defaultTheme,
+				customPresets: current.customPresets || {},
+			};
+			await browser.storage.local.set({ themeSettings: reset });
 			await loadLibraryThemeControls();
-			setThemeVariables(defaultTheme);
-			showToast("Theme reset to defaults", "info");
+			setThemeVariables(reset);
+			showToast("Theme reset to defaults (custom presets kept)", "info");
 		});
 	}
 
@@ -1869,36 +2026,93 @@ function setupEventListeners() {
 		});
 	}
 
-	// Theme mode change
+	// Hidden mode <select> change — kept for backward compat; pills also fire this
 	const themeMode = $("library-theme-mode");
 	if (themeMode) {
 		themeMode.addEventListener("change", () => {
-			const stored = {};
-			[
-				"library-accentColorPicker",
-				"library-accentSecondaryPicker",
-				"library-backgroundColorPicker",
-				"library-textColorPicker",
-			].forEach((id, i) => {
-				// just preview
-			});
-			// live-apply mode change preview
-			const current = {
-				mode: themeMode.value,
-				accentPrimary:
-					$("library-accentColorPicker")?.value ||
-					defaultTheme.accentPrimary,
-				accentSecondary:
-					$("library-accentSecondaryPicker")?.value ||
-					defaultTheme.accentSecondary,
-				bgColor:
-					$("library-backgroundColorPicker")?.value ||
-					defaultTheme.bgColor,
-				textColor:
-					$("library-textColorPicker")?.value ||
-					defaultTheme.textColor,
-			};
-			setThemeVariables(current);
+			syncModePills(themeMode.value);
+			setThemeVariables(readCurrentThemeFromUI());
+		});
+	}
+
+	// Theme preset skin change — live-preview + auto-save
+	const presetSelect = $("library-theme-preset");
+	if (presetSelect) {
+		presetSelect.addEventListener("change", async () => {
+			try {
+				const result = await browser.storage.local.get("themeSettings");
+				const current = result.themeSettings || { ...defaultTheme };
+				const selectedId = presetSelect.value;
+				const customPresets = current.customPresets || {};
+
+				let newSettings;
+				if (customPresets[selectedId]) {
+					// Custom preset: keep selectedId as preset so the dropdown
+					// stays correct after reload; store basePreset separately.
+					const cp = customPresets[selectedId];
+					newSettings = {
+						...current,
+						preset: selectedId,
+						basePreset: cp.basePreset || "material-dark",
+						mode: cp.mode || current.mode,
+						accentPrimary:
+							cp.accentPrimary || current.accentPrimary,
+						accentSecondary:
+							cp.accentSecondary || current.accentSecondary,
+						bgColor: cp.bgColor || current.bgColor,
+						bgSecondary: cp.bgSecondary || "",
+						bgTertiary: cp.bgTertiary || "",
+						textColor: cp.textColor || current.textColor,
+						bgAnimation: cp.bgAnimation || "none",
+					};
+					// Tag the select element so readCurrentThemeFromUI picks up basePreset
+					const ps = $("library-theme-preset");
+					if (ps) ps.dataset.basePreset = newSettings.basePreset;
+				} else {
+					// Built-in preset: load preset's default colors into settings
+					const builtInPreset = THEME_PRESETS[selectedId];
+					const effectiveMode = resolveMode(current.mode || "dark");
+					const palette =
+						builtInPreset?.[effectiveMode] ||
+						builtInPreset?.dark ||
+						{};
+					const animation = builtInPreset?.meta?.animation || "none";
+					newSettings = {
+						...current,
+						preset: selectedId,
+						basePreset: "",
+						// Load preset colors so pickers show the actual values
+						accentPrimary:
+							palette["primary-color"] ||
+							defaultTheme.accentPrimary,
+						accentSecondary:
+							palette["primary-hover"] ||
+							defaultTheme.accentSecondary,
+						bgColor: palette["bg-primary"] || defaultTheme.bgColor,
+						bgSecondary: "", // Clear overrides — let preset defaults apply
+						bgTertiary: "",
+						textColor:
+							palette["text-primary"] || defaultTheme.textColor,
+						bgAnimation: animation,
+					};
+					const ps = $("library-theme-preset");
+					if (ps) ps.dataset.basePreset = "";
+				}
+				await browser.storage.local.set({ themeSettings: newSettings });
+				setThemeVariables(newSettings);
+				// Reload pickers so colors reflect the chosen preset
+				await loadLibraryThemeControls();
+				updateDeletePresetBtn(
+					selectedId,
+					newSettings.customPresets || {},
+				);
+				showToast(
+					`Theme changed to ${presetSelect.selectedOptions[0]?.text || selectedId}`,
+					"success",
+				);
+			} catch (err) {
+				debugError("Failed to change theme preset:", err);
+			}
 		});
 	}
 
@@ -2450,6 +2664,36 @@ function setupEventListeners() {
 		});
 	}
 
+	// ── Periodic Chapter Check ─────────────────────────────────────────────────
+
+	const novelUpdateTog = $("novel-update-toggle");
+	if (novelUpdateTog) {
+		novelUpdateTog.addEventListener("change", async (e) => {
+			await browser.storage.local.set({
+				novelUpdateEnabled: e.target.checked,
+			});
+			showToast(
+				e.target.checked
+					? "Chapter checking enabled"
+					: "Chapter checking disabled",
+				"success",
+			);
+		});
+	}
+
+	const novelUpdateInt = $("novel-update-interval");
+	if (novelUpdateInt) {
+		novelUpdateInt.addEventListener("change", async (e) => {
+			const days = Math.max(
+				1,
+				Math.min(30, parseInt(e.target.value, 10) || 3),
+			);
+			e.target.value = days;
+			await browser.storage.local.set({ novelUpdateIntervalDays: days });
+			showToast(`Novel check interval: every ${days} day(s)`, "success");
+		});
+	}
+
 	// ── Prompts ────────────────────────────────────────────────────────────────
 
 	const promptResets = [
@@ -2778,6 +3022,7 @@ async function init() {
 
 	// Apply theme ASAP to prevent flash
 	await applyTheme();
+	setupThemeListener();
 
 	// Version badge
 	updateVersion();

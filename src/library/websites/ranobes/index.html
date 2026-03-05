@@ -6,6 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Ranobes - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
+		<link rel="stylesheet" href="../bg-animations.css" />
 		<link rel="stylesheet" href="./style.css" />
 		<link rel="stylesheet" href="../../edit-modal.css" />
 		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
@@ -17,8 +18,11 @@
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
 					<span class="shelf-page-color-bar" id="color-bar" style="background: #4a7c4e"></span>
-					<img src="https://ranobes.top/templates/Dark/images/favicon.ico?v=2" alt="Ranobes"
-						class="shelf-page-icon-img" id="page-icon-img" />
+					<a href="https://ranobes.top" target="_blank" rel="noopener" title="Visit Ranobes"
+						style="display:inline-flex;">
+						<img src="https://ranobes.top/templates/Dark/images/favicon.ico?v=2" alt="Ranobes"
+							class="shelf-page-icon-img" id="page-icon-img" />
+					</a>
 					<span class="shelf-page-icon" id="page-icon" style="display: none">🍃</span>
 					<h1 id="page-title">Ranobes</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
@@ -328,8 +332,11 @@
 						<a id="modal-continue-btn" class="btn btn-primary" target="_blank">Continue Reading</a>
 						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on Ranobes</a>
 					</div>
-					<div class="modal-actions-secondary">
-						<button id="modal-refresh-btn" class="btn btn-icon" title="Refresh metadata from source">
+					<div class="modal-actions-secondary"> <button id="modal-copy-info-btn" class="btn btn-icon"
+							title="Copy novel name to clipboard">
+							📋 Copy Name
+						</button> <button id="modal-refresh-btn" class="btn btn-icon"
+							title="Refresh metadata from source">
 							🔄 Update
 						</button>
 						<button id="modal-edit-btn" class="btn btn-icon" title="Edit novel details">

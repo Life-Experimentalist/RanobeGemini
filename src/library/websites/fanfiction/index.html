@@ -6,6 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>FanFiction.net - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
+		<link rel="stylesheet" href="../bg-animations.css" />
 		<link rel="stylesheet" href="./style.css" />
 		<link rel="stylesheet" href="../../edit-modal.css" />
 		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
@@ -17,8 +18,11 @@
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
 					<span class="shelf-page-color-bar" id="color-bar" style="background: #2a4b8d"></span>
-					<img src="https://www.fanfiction.net/static/icons3/ff-icon-192.png" alt="FanFiction.net"
-						class="shelf-page-icon-img" id="page-icon-img" />
+					<a href="https://www.fanfiction.net" target="_blank" rel="noopener" title="Visit FanFiction.net"
+						style="display:inline-flex;">
+						<img src="https://www.fanfiction.net/static/icons3/ff-icon-192.png" alt="FanFiction.net"
+							class="shelf-page-icon-img" id="page-icon-img" />
+					</a>
 					<span class="shelf-page-icon" id="page-icon" style="display: none">✍️</span>
 					<h1 id="page-title">FanFiction.net</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
@@ -364,6 +368,10 @@
 					<div class="modal-actions-divider"></div>
 					<div class="modal-actions-primary">
 						<a id="modal-continue-btn" class="btn btn-primary" target="_blank">Continue Reading</a>
+						<button id="modal-copy-info-btn" class="btn btn-secondary"
+							title="Copy novel name to clipboard">📋 Copy Name</button>
+						<a id="modal-download-btn" class="btn btn-secondary" target="_blank"
+							title="Download via FicHub">⬇️ Download</a>
 						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on FanFiction.net</a>
 					</div>
 					<div class="modal-actions-secondary">

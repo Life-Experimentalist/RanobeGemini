@@ -136,19 +136,24 @@ body {
 }
 
 .back-link {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	color: var(--primary-color);
+	color: #fff;
 	text-decoration: none;
-	padding: var(--spacing-sm) var(--spacing-md);
+	padding: 8px 18px;
 	border-radius: var(--radius-md);
+	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+	font-weight: 600;
+	font-size: 0.9rem;
 	transition: all var(--transition-fast);
 }
 
 .back-link:hover {
-	background: var(--bg-tertiary);
-	color: var(--primary-hover);
+	background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
 }
 
 /* Filters Section */
@@ -1409,6 +1414,8 @@ body {
 	flex-direction: column;
 	gap: var(--spacing-sm);
 	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .novel-header-row {

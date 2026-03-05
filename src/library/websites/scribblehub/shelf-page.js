@@ -11,22 +11,20 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 	updateNovelInLibrary,
+	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import {
+	formatNovelInfo,
+	resolveTemplate,
+} from "../../../utils/novel-copy-format.js";
+import {
+	applyThemeFromStorage,
+	setupThemeListener,
+} from "../../../utils/theme-config.js";
+import "../../../utils/bg-animation.js";
 
 const CANONICAL_LABELS = new Map();
-
-const DOMAIN_TYPES = [
-	"Anime",
-	"Books",
-	"Cartoons",
-	"Comics",
-	"Games",
-	"Misc",
-	"Plays",
-	"Movies",
-	"TV",
-];
 
 const CATEGORY_LOOKUP = {
 	genres: new Set(),
@@ -89,14 +87,6 @@ function registerLabel(label, category) {
 
 function canonicalizeLabel(label, category) {
 	return registerLabel(label, category);
-}
-
-function isDomainLabel(label) {
-	if (!label) return false;
-	return DOMAIN_TYPES.some(
-		(domain) =>
-			domain.toLowerCase() === label.toString().trim().toLowerCase(),
-	);
 }
 
 function categorizeLabel(label) {
@@ -446,11 +436,15 @@ function buildFilterOptionsFromNovels(novels) {
 		if (metadata.language) languages.add(metadata.language);
 
 		const buckets = categorizeNovelAttributes(novel);
-		buckets.fandoms.forEach((fandom) => fandoms.add(fandom));
-		buckets.genres.forEach((genre) => genres.add(genre));
-		buckets.characters.forEach((character) => characters.add(character));
-		buckets.contentTypes.forEach((type) => contentTypes.add(type));
-		buckets.tags.forEach((tag) => tags.add(tag));
+		(buckets.fandoms || new Set()).forEach((fandom) => fandoms.add(fandom));
+		(buckets.genres || new Set()).forEach((genre) => genres.add(genre));
+		(buckets.characters || new Set()).forEach((character) =>
+			characters.add(character),
+		);
+		(buckets.contentTypes || new Set()).forEach((type) =>
+			contentTypes.add(type),
+		);
+		(buckets.tags || new Set()).forEach((tag) => tags.add(tag));
 	});
 
 	const miscTags = new Set(
@@ -700,6 +694,32 @@ function showNovelModal(novel) {
 		};
 	});
 
+	// Copy novel name button
+	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
+	if (copyInfoBtn) {
+		copyInfoBtn.onclick = async () => {
+			try {
+				const settings = await novelLibrary.getSettings();
+				const template =
+					resolveTemplate(
+						settings?.novelCopyFormats,
+						novel.shelfId,
+					) || "{title} by {author}";
+				const text = formatNovelInfo(novel, template);
+				await navigator.clipboard.writeText(text);
+				copyInfoBtn.textContent = "✅ Copied!";
+				setTimeout(() => {
+					copyInfoBtn.textContent = "📋 Copy Name";
+				}, 2000);
+			} catch (err) {
+				copyInfoBtn.textContent = "❌ Failed";
+				setTimeout(() => {
+					copyInfoBtn.textContent = "📋 Copy Name";
+				}, 2000);
+			}
+		};
+	}
+
 	// CSS is now handled in shelf-page.css
 
 	modal.style.display = "flex";
@@ -929,50 +949,33 @@ function normalizeRatingClass(rating) {
 function categorizeNovelAttributes(novel) {
 	const metadata = novel.metadata || {};
 	const buckets = {
-		fandoms: new Set(),
 		genres: new Set(),
-		characters: new Set(),
 		tags: new Set(),
-		contentTypes: new Set(),
 	};
 
 	const addValue = (value, forcedCategory) => {
 		if (!value) return;
 		const canonical = canonicalizeLabel(value, forcedCategory);
-		const domainCategory = isDomainLabel(canonical) ? "contentTypes" : null;
-		const category =
-			forcedCategory ||
-			domainCategory ||
-			categorizeLabel(canonical) ||
-			"tags";
-		buckets[category].add(canonical);
+		const category = forcedCategory || categorizeLabel(canonical) || "tags";
+		if (buckets[category]) {
+			buckets[category].add(canonical);
+		} else {
+			buckets.tags.add(canonical);
+		}
 	};
 
 	const addList = (list, forcedCategory) => {
 		(list || []).forEach((item) => addValue(item, forcedCategory));
 	};
 
-	addList(metadata.fandoms, "fandoms");
-	addList(metadata.characters, "characters");
 	addList(metadata.genres, "genres");
 	addList(novel.genres, "genres");
 	addList(metadata.tags, "tags");
 	addList(novel.tags, "tags");
 
-	(metadata.hierarchy || []).forEach((entry) => {
-		if (isDomainLabel(entry?.name)) {
-			addValue(entry.name, "contentTypes");
-		}
-	});
-
 	// Keep tags bucket for misc only (exclude items already categorized elsewhere)
 	[...buckets.tags].forEach((tag) => {
-		if (
-			buckets.fandoms.has(tag) ||
-			buckets.genres.has(tag) ||
-			buckets.characters.has(tag) ||
-			buckets.contentTypes.has(tag)
-		) {
+		if (buckets.genres.has(tag)) {
 			buckets.tags.delete(tag);
 		}
 	});
@@ -982,7 +985,7 @@ function categorizeNovelAttributes(novel) {
 
 function getNovelTags(novel) {
 	const buckets = categorizeNovelAttributes(novel);
-	return [...buckets.tags, ...buckets.contentTypes];
+	return [...buckets.tags];
 }
 
 function getNovelGenres(novel) {
@@ -990,7 +993,9 @@ function getNovelGenres(novel) {
 }
 
 function getNovelCharacters(novel) {
-	return [...categorizeNovelAttributes(novel).characters];
+	// ScribbleHub doesn't have character taxonomy data
+	const metadata = novel.metadata || {};
+	return metadata.characters || novel.characters || [];
 }
 
 function setupFandomNav(novels) {
@@ -1206,7 +1211,8 @@ function updateAnalytics(novels) {
 	// ScribbleHub-specific stats
 	const completedWorks = novels.filter(
 		(n) =>
-			(n.metadata?.status || n.status || "").toLowerCase() === "ongoing",
+			(n.metadata?.status || n.status || "").toLowerCase() ===
+			"completed",
 	).length;
 
 	// Calculate average rating from ScribbleHub novels with rating field
@@ -1391,16 +1397,6 @@ function positionFilterDropdown() {
 	const dropdown = document.getElementById("filter-dropdown");
 	const button = document.getElementById("filter-toggle-btn");
 	if (!dropdown || !button) return;
-
-	// FanFiction page uses an inline, wide filter surface that should scroll with the page
-	if (document.body?.classList.contains("fanfiction-page")) {
-		dropdown.style.position = "relative";
-		dropdown.style.left = "0";
-		dropdown.style.right = "0";
-		dropdown.style.top = "0";
-		dropdown.style.width = "100%";
-		return;
-	}
 
 	const wasHidden =
 		getComputedStyle(dropdown).display === "none" ||
@@ -1647,6 +1643,9 @@ function ensureRandomSelectButton() {
 
 // Initialize the shelf page with async data loading
 (async () => {
+	await applyThemeFromStorage();
+	setupThemeListener();
+
 	const loadingState = document.getElementById("loading-state");
 	const emptyState = document.getElementById("empty-state");
 	const novelGrid = document.getElementById("novel-grid");
@@ -1731,11 +1730,7 @@ function openNovelFromQuery() {
 	}
 }
 
-if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", initializeScribbleHubShelf);
-} else {
-	initializeScribbleHubShelf();
-}
+// Initialization is handled by the IIFE above — no additional DOMContentLoaded hook needed.
 
 // Helper functions for modal action buttons
 function showToast(message, type = "success") {

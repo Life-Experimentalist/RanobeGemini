@@ -10,8 +10,12 @@ import { debugLog, debugError } from "../logger.js";
 import { SITE_SETTINGS_KEY } from "../site-settings.js";
 import {
 	formatNovelInfo,
-	DEFAULT_EPUB_TEMPLATE,
+	DEFAULT_EXPORT_TEMPLATE,
+	resolveExportTemplate,
 } from "../novel-copy-format.js";
+
+/** Storage key for library settings (to read global copy template) */
+const LIBRARY_SETTINGS_KEY = "rg_library_settings";
 
 export class FanfictionHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -39,6 +43,8 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		color: "#2a4b8d",
 		novelIdPattern: /\/s\/(\d+)\//,
 		primaryDomain: "www.fanfiction.net",
+		// Download URL template - {url} is replaced with encoded source URL
+		downloadUrlTemplate: "https://fichub.net/?b=1&q={url}",
 		// Modular taxonomy definition for library filtering
 		taxonomy: [
 			{ id: "fandoms", label: "Fandoms", type: "array" },
@@ -118,21 +124,12 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 					"Show a FichHub download button in chapter controls.",
 			},
 			{
-				key: "copyEpubOnDownload",
-				label: "Copy .epub filename on download",
+				key: "showCopyButton",
+				label: "Show Copy button",
 				type: "toggle",
 				defaultValue: true,
 				description:
-					"Automatically copy the formatted epub filename to clipboard when Download is clicked.",
-			},
-			{
-				key: "epubTemplate",
-				label: "Epub filename template",
-				type: "text",
-				defaultValue: "",
-				placeholder: "{titleSafe} - {authorSafe}.epub",
-				description:
-					"Filename template for this site. Available tokens: {titleSafe}, {authorSafe}, {title}, {author}, {id}. Leave blank to use the global epub template.",
+					"Show a 📋 Copy button that copies the formatted filename using the global export template.",
 			},
 		],
 	};
@@ -401,6 +398,20 @@ When enhancing, improve readability while respecting the author's creative voice
 			// Use defaults (all features on)
 		}
 
+		// Read global copy template from library settings
+		let exportTemplate = DEFAULT_EXPORT_TEMPLATE;
+		try {
+			const libResult =
+				await browser.storage.local.get(LIBRARY_SETTINGS_KEY);
+			const libSettings = libResult?.[LIBRARY_SETTINGS_KEY] || {};
+			exportTemplate = resolveExportTemplate(
+				libSettings.novelCopyFormats,
+				"fanfiction",
+			);
+		} catch {
+			/* intentional: fall back to default template */
+		}
+
 		const buttons = [];
 
 		// ── Version switcher (on by default) ──────────────────────────────────
@@ -409,7 +420,24 @@ When enhancing, improve readability while respecting the author's creative voice
 				text: isMobile ? "Desktop" : "Mobile",
 				emoji: isMobile ? "🖥️" : "📱",
 				color: "#5a9fd4",
-				onClick: () => {
+				onClick: async () => {
+					// Save new preference FIRST so normalizeURL() won't redirect back
+					try {
+						const stored =
+							await browser.storage.local.get(SITE_SETTINGS_KEY);
+						const allSettings = stored?.[SITE_SETTINGS_KEY] || {};
+						const ff = { ...(allSettings.fanfiction || {}) };
+						ff.domainPreference = isMobile ? "www" : "mobile";
+						await browser.storage.local.set({
+							[SITE_SETTINGS_KEY]: {
+								...allSettings,
+								fanfiction: ff,
+							},
+						});
+					} catch {
+						/* intentional: preference save is non-critical */
+					}
+					// Now navigate
 					const url = window.location.href;
 					if (isMobile) {
 						window.location.href = url.replace(
@@ -426,38 +454,42 @@ When enhancing, improve readability while respecting the author's creative voice
 			});
 		}
 
-		// ── FichHub download (on by default) ────────────────────────────────
-		if (siteConf.downloadEnabled !== false) {
-			const template =
-				siteConf.epubTemplate?.trim() || DEFAULT_EPUB_TEMPLATE;
-			const copyEnabled = siteConf.copyEpubOnDownload !== false;
-
+		// ── Copy button (badge style — copies formatted name) ────────────────
+		if (siteConf.showCopyButton !== false) {
+			const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1] || "";
 			buttons.push({
-				text: "FichHub",
+				text: "Copy",
+				emoji: "📋",
+				color: "#10b981",
+				badgeStyle: true,
+				onClick: async () => {
+					try {
+						const title = this.extractTitle();
+						const author = this.extractAuthor();
+						const text = formatNovelInfo(
+							{
+								title,
+								author,
+								shelfId: "fanfiction",
+								id: `fanfiction-${storyId}`,
+							},
+							exportTemplate,
+						);
+						if (text) await navigator.clipboard.writeText(text);
+					} catch {
+						/* intentional: clipboard failure is non-critical */
+					}
+				},
+			});
+		}
+
+		// ── Download button (opens FichHub for epub/mobi/etc) ───────────────
+		if (siteConf.downloadEnabled !== false) {
+			buttons.push({
+				text: "Download",
 				emoji: "⬇️",
 				color: "#ff6b6b",
-				onClick: async () => {
-					if (copyEnabled) {
-						try {
-							const title = this.extractTitle();
-							const author = this.extractAuthor();
-							const storyId =
-								window.location.href.match(/\/s\/(\d+)/)?.[1] ||
-								"";
-							const text = formatNovelInfo(
-								{
-									title,
-									author,
-									shelfId: "fanfiction",
-									id: `fanfiction-${storyId}`,
-								},
-								template,
-							);
-							if (text) await navigator.clipboard.writeText(text);
-						} catch (_) {
-							// clipboard copy not critical
-						}
-					}
+				onClick: () => {
 					window.open(
 						`https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`,
 						"_blank",
@@ -804,57 +836,6 @@ When enhancing, improve readability while respecting the author's creative voice
 			);
 			return null;
 		}
-	}
-
-	/**
-	 * Get custom chapter page control buttons for FanFiction.net
-	 * Adds a download button for FichHub integration
-	 * Opens in new tab and optionally copies metadata to clipboard
-	 * @returns {Array} Array of button specifications
-	 */
-	getCustomChapterButtons() {
-		return [
-			{
-				text: "Download",
-				emoji: "⬇️",
-				color: "#ff6b6b",
-				onClick: () => {
-					// Get library settings to check if clipboard copy is enabled
-					try {
-						const settingsJson = localStorage.getItem(
-							"rg_library_settings",
-						);
-						const settings = settingsJson
-							? JSON.parse(settingsJson)
-							: {};
-						const enableClipboard =
-							settings.enableClipboardCopyOnDownload !== false;
-
-						if (enableClipboard) {
-							const clipboardText = this.generateClipboardText();
-							if (clipboardText) {
-								navigator.clipboard
-									.writeText(clipboardText)
-									.catch(() => {
-										console.log(
-											"Could not copy to clipboard",
-										);
-									});
-							}
-						}
-					} catch (error) {
-						console.warn(
-							"Error checking clipboard setting:",
-							error,
-						);
-					}
-
-					// FichHub download bookmarklet - open in new tab
-					const url = `https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`;
-					window.open(url, "_blank");
-				},
-			},
-		];
 	}
 
 	/**
