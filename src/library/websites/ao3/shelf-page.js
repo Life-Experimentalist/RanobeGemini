@@ -15,14 +15,13 @@ import {
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
 import {
-	formatNovelInfo,
-	resolveTemplate,
+	resolveExportTemplate,
+	formatExportFilename,
 } from "../../../utils/novel-copy-format.js";
 import {
 	applyThemeFromStorage,
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
-import "../../../utils/bg-animation.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -760,30 +759,54 @@ function showNovelModal(novel) {
 		};
 	});
 
-	// Copy novel name button
+	// Copy novel filename button
 	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
 	if (copyInfoBtn) {
 		copyInfoBtn.onclick = async () => {
 			try {
 				const settings = await novelLibrary.getSettings();
-				const template =
-					resolveTemplate(
-						settings?.novelCopyFormats,
-						novel.shelfId,
-					) || "{title} by {author}";
-				const text = formatNovelInfo(novel, template);
+				const template = resolveExportTemplate(
+					settings?.novelCopyFormats,
+					novel.shelfId,
+				);
+				const text = formatExportFilename(novel, template);
 				await navigator.clipboard.writeText(text);
 				copyInfoBtn.textContent = "✅ Copied!";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy Name";
+					copyInfoBtn.textContent = "📋 Copy";
 				}, 2000);
 			} catch (err) {
 				copyInfoBtn.textContent = "❌ Failed";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy Name";
+					copyInfoBtn.textContent = "📋 Copy";
 				}, 2000);
 			}
 		};
+	}
+
+	// Update reading progress bar
+	{
+		const total = novel.totalChapters || 0;
+		const read = novel.lastReadChapter || 0;
+		const pct =
+			total > 0 ? Math.min(Math.round((read / total) * 100), 100) : 0;
+		const wordCount =
+			novel.stats?.wordCount ??
+			novel.metadata?.wordCount ??
+			novel.metadata?.words ??
+			0;
+		const wordStr =
+			wordCount > 0 ? ` · ~${wordCount.toLocaleString()} words` : "";
+		const fill = document.getElementById("modal-progress-fill");
+		const text = document.getElementById("modal-progress-text");
+		if (fill) fill.style.width = pct + "%";
+		if (text)
+			text.textContent =
+				total > 0
+					? `Ch. ${read} / ${total} (${pct}%)${wordStr}`
+					: wordStr
+						? wordStr.trim()
+						: "";
 	}
 
 	modal.style.display = "flex";

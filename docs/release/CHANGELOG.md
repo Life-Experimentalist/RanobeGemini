@@ -3,11 +3,16 @@
 > **Index:**
 
 - [Changelog](#changelog)
-	- [3.9.0 - 2026-02-10](#390---2026-02-10)
+	- [4.0.0 - 2026-03-06](#400---2026-03-06)
 		- [Highlights](#highlights)
 		- [Added](#added)
 		- [Changed](#changed)
 		- [Fixed](#fixed)
+	- [3.9.0 - 2026-02-10](#390---2026-02-10)
+		- [Highlights](#highlights-1)
+		- [Added](#added-1)
+		- [Changed](#changed-1)
+		- [Fixed](#fixed-1)
 	- [3.7.0 - 2026-01-30](#370---2026-01-30)
 		- [🔧 Google Drive OAuth Enhancements \& UI Improvements](#-google-drive-oauth-enhancements--ui-improvements)
 		- [Added](#added-1)
@@ -104,6 +109,57 @@
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [4.0.0](RELEASE_NOTES_4.0.0.md) - 2026-03-06
+
+### Highlights
+
+- Canvas-based background animations (Particles, Snow, Rain, Falling Leaves, Fireflies) for all library pages, color-synced to the active theme.
+- Library card renderer completely overhauled: async, site-specific designs, novel modals now accessible from the main library homepage.
+- Dedicated Notifications tab in the popup with notification history and clear button.
+- Per-novel auto-enhance toggles directly in the popup history list.
+- Backup Download Manager module for listing, downloading, and restoring backup snapshots.
+
+### Added
+
+- `bg-animation.js` canvas animation engine with 5 canvas types (particles, falling-leaves, snow, rain, fireflies).
+- `bg-animations.css` linked in all five site-specific shelf pages (AO3, FanFiction, ScribbleHub, Ranobes, Webnovel).
+- Library Settings > Background Animation picker grouped into Canvas and CSS animation optgroups.
+- `novel-card-template` HTML element in `library.html` for consistent card structure.
+- Async card renderer loading in `library.js` with site-specific modules and a generic fallback.
+- `novel-card-click` unified event for opening novel detail modals from any library view.
+- Popup Notifications tab: `getNotifications` and `clearNotifications` message round-trips to background.
+- Per-novel `autoEnhance` toggle in the popup, read from `novelLibrary`.
+- "More from this site" grid in the popup history view.
+- Open-Library popup button now auto-closes the popup after navigating.
+- `backup-download.js` module: list, download, restore, and delete backup snapshots.
+- Background message handlers: `logNotification`, `getNotifications`, `clearNotifications` with capped history.
+- Handler manager now tracks handler class references and calls static `initialize()` before sorting by `PRIORITY`.
+- FanFiction bare-domain redirect in desktop and mobile handlers via static `initialize()`.
+- Ranobes metadata extraction: title, author, cover, description, genres, tags, status, chapter counts.
+- Domain-level enable/disable utility functions in `site-settings.js`.
+- ScribbleHub badge in the popup.
+
+### Changed
+
+- Popup recent-novels list sourced from `novelLibrary.getRecentNovels()` instead of raw store reads.
+- FanFiction `/u/` profile URLs excluded from chapter and novel detection.
+- Ranobes `/chapters/{id}` chapter-index URLs excluded from chapter/novel detection.
+- FanFiction card renderer registers correctly; CSP-safe image fallback preserved.
+- AO3 shelf fandom-grid styles consolidated into `style.css`; stray code outside the renderer class removed.
+- `bg-animation.js` imported in `library.js`, `library-settings.js`, shared `shelf-page.js`, and all four site-specific `shelf-page.js` files.
+- Gemini UI toggle (`⚡ Hide Gemini UI`) now targets `.gemini-main-summary-group`, `.gemini-chunk-summary-group`, `.gemini-summary-text-container`, `.gemini-chunk-banner`, and `.gemini-master-banner`; uses `data-rg-saved-display` for correct display restoration.
+- FanFiction chapter toolbar: "Copy Title" button removed; "Copy" rendered as a compact green badge (`badgeStyle: true`).
+
+### Fixed
+
+- Notification bell modal overlay and click-outside-to-close behavior in the popup.
+- AO3 card renderer: duplicate rendering caused by code outside the class body.
+- FanFiction mobile handler no longer throws on pages where the DOM hasn't finished building.
+- Handler deduplication prevents the same handler running twice in overlapping content script contexts.
+- Summary groups and summary containers now all correctly hide and restore together via the Gemini UI toggle.
 
 ---
 

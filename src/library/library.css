@@ -1580,6 +1580,31 @@ body {
 	color: var(--text-muted);
 }
 
+/* Reading progress bar (in novel detail modal) */
+.reading-progress-container {
+	margin: var(--spacing-sm) 0 var(--spacing-md);
+}
+
+.reading-progress-bar {
+	height: 4px;
+	background: var(--border-color);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.reading-progress-fill {
+	height: 100%;
+	background: var(--primary-color);
+	border-radius: 2px;
+	transition: width 0.3s ease;
+}
+
+.reading-progress-text {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
 .novel-detail-body h3 {
 	font-size: 1rem;
 	margin-bottom: var(--spacing-sm);

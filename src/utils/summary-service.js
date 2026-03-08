@@ -173,7 +173,6 @@ function renderSummaryInContainer(container, summary, summaryType) {
 
 	// Content
 	const contentDiv = document.createElement("div");
-	contentDiv.className = "summary-text-content";
 	contentDiv.style.cssText = "line-height: 1.6;";
 
 	const paragraphs = extractParagraphsFromHtml(summary);

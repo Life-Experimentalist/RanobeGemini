@@ -28,7 +28,6 @@ import {
 	applyThemeFromStorage,
 	setupThemeListener as setupThemeListener_,
 } from "../../utils/theme-config.js";
-import "../../utils/bg-animation.js";
 
 // Helper to get just the label from READING_STATUS_INFO
 const READING_STATUS_LABELS = Object.fromEntries(

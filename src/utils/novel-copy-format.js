@@ -137,6 +137,12 @@ export const EXPORT_TOKENS = [
 	{ token: "{id}", desc: "Library novel ID", example: "ao3-1234567" },
 	{ token: "{status}", desc: "Reading status", example: "reading" },
 	{ token: "{lastRead}", desc: "Last read chapter", example: "45" },
+	{
+		token: "{words}",
+		desc: "Word count (alias for {wordCount})",
+		example: "288578",
+		recommended: true,
+	},
 ];
 
 /**
@@ -276,6 +282,6 @@ export function formatExportFilename(novel, template, extension) {
 	const formattedName = formatNovelInfo(novel, template);
 	// Ensure the filename is filesystem-safe
 	const safeName = toFilenameSafe(formattedName);
-	// Add extension
-	return `${safeName}.${extension}`;
+	// Add extension only if provided
+	return extension ? `${safeName}.${extension}` : safeName;
 }

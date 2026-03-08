@@ -90,8 +90,8 @@ if (typeof browser === "undefined") {
 	const DRIVE_SYNC_ALARM_NAME = "ranobe-gemini-drive-sync";
 	const DEFAULT_BACKUP_RETENTION = 3;
 	const DEFAULT_BACKUP_FOLDER = "RanobeGeminiBackups";
-	const CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES = 2;
-	const DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES = 60;
+	const CONTINUOUS_BACKUP_DEBOUNCE_MS = 10_000;
+	const DEFAULT_ROLLING_BACKUP_INTERVAL_MINUTES = 1440;
 	const DEFAULT_DRIVE_SYNC_INTERVAL_MINUTES = 10;
 	const KEEP_ALIVE_PORT_NAME = "rg-keepalive";
 
@@ -542,50 +542,51 @@ if (typeof browser === "undefined") {
 		return { success: true, file: latestFile, result: importResult };
 	}
 
-	let continuousBackupCheckTimer = null;
-	let lastLibraryHash = null;
+	let continuousBackupDebounceTimer = null;
 
-	// Calculate hash of current library state
-	async function getLibraryHash() {
-		try {
-			const library = await novelLibrary.getLibrary();
-			// Create a simple hash by JSON stringifying and counting changes
-			const libraryJson = JSON.stringify(library);
-			// Use a simple hash function for comparison
-			let hash = 0;
-			for (let i = 0; i < libraryJson.length; i++) {
-				const char = libraryJson.charCodeAt(i);
-				hash = (hash << 5) - hash + char;
-				hash = hash & hash; // Convert to 32-bit integer
-			}
-			return hash.toString(16);
-		} catch (err) {
-			debugError("Failed to calculate library hash:", err);
-			return null;
+	/**
+	 * Debounce-based continuous backup trigger.
+	 * Called whenever the library storage changes. Waits CONTINUOUS_BACKUP_DEBOUNCE_MS
+	 * after the last change before actually running a backup, so rapid edits
+	 * only produce one backup upload.
+	 */
+	function triggerContinuousBackupDebounce() {
+		if (continuousBackupDebounceTimer) {
+			clearTimeout(continuousBackupDebounceTimer);
 		}
+		continuousBackupDebounceTimer = setTimeout(async () => {
+			continuousBackupDebounceTimer = null;
+			await performDebouncedBackup();
+		}, CONTINUOUS_BACKUP_DEBOUNCE_MS);
 	}
 
-	// Check if library has changed since last check
-	async function hasLibraryChanged() {
+	async function performDebouncedBackup() {
 		try {
-			const currentHash = await getLibraryHash();
-			if (currentHash === null) return false;
+			const prefs = await browser.storage.local.get([
+				"autoBackupEnabled",
+				"backupMode",
+				"driveFolderId",
+			]);
+			const driveTokens =
+				await browser.storage.local.get("driveAuthTokens");
+			const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
 
-			if (lastLibraryHash === null) {
-				// First run, store the hash
-				lastLibraryHash = currentHash;
-				return false;
-			}
+			const mode = prefs.backupMode || "scheduled";
+			const isContinuousMode = mode === "continuous" || mode === "both";
 
-			const changed = lastLibraryHash !== currentHash;
-			if (changed) {
-				lastLibraryHash = currentHash;
-				debugLog("Library change detected");
+			if (!isContinuousMode) return;
+			if (!prefs.autoBackupEnabled && !driveConnected) return;
+
+			if (driveConnected) {
+				debugLog("Continuous backup: uploading to Drive after change");
+				await uploadLibraryBackupToDriveWithHistory({
+					folderId: prefs.driveFolderId,
+					reason: "continuous-change",
+					variant: "continuous",
+				});
 			}
-			return changed;
 		} catch (err) {
-			debugError("Error checking library changes:", err);
-			return false;
+			debugError("Continuous backup failed:", err);
 		}
 	}
 
@@ -662,61 +663,13 @@ if (typeof browser === "undefined") {
 		}
 	}
 
-	async function scheduleContinuousBackupCheck() {
-		// Clear existing timer
-		if (continuousBackupCheckTimer) {
-			clearInterval(continuousBackupCheckTimer);
-			continuousBackupCheckTimer = null;
-		}
-
-		const prefs = await browser.storage.local.get([
-			"autoBackupEnabled",
-			"backupMode",
-			"continuousBackupCheckIntervalMinutes",
-			"driveFolderId",
-		]);
-		const driveTokens = await browser.storage.local.get("driveAuthTokens");
-		const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
-
-		if (!prefs.autoBackupEnabled && !driveConnected) return;
-		const mode = prefs.backupMode || "scheduled";
-		if (mode !== "continuous" && mode !== "both") return;
-
-		// Get the check interval (how often to check for changes)
-		const checkIntervalMinutes =
-			prefs.continuousBackupCheckIntervalMinutes ||
-			CONTINUOUS_BACKUP_CHECK_DEFAULT_INTERVAL_MINUTES;
-		const checkIntervalMs = Math.max(1, checkIntervalMinutes) * 60 * 1000;
-
-		// Initialize hash on first run
-		if (lastLibraryHash === null) {
-			lastLibraryHash = await getLibraryHash();
-		}
-
-		// Set up polling interval
-		continuousBackupCheckTimer = setInterval(async () => {
-			try {
-				const changed = await hasLibraryChanged();
-				if (changed) {
-					debugLog(
-						`Continuous backup triggered by library change (check interval: ${checkIntervalMinutes}m)`,
-					);
-					// Backup immediately on change detection
-					await uploadLibraryBackupToDriveWithHistory({
-						folderId: prefs.driveFolderId,
-						reason: "continuous-change",
-						variant: "continuous",
-					});
-					debugLog("Continuous backup uploaded to Drive");
-				}
-			} catch (err) {
-				debugError("Continuous backup check failed:", err);
-			}
-		}, checkIntervalMs);
-
-		debugLog(
-			`Continuous backup check scheduled every ${checkIntervalMinutes} minutes`,
-		);
+	/**
+	 * Legacy no-op kept so existing call-sites don't throw.
+	 * Continuous backup is now handled via triggerContinuousBackupDebounce()
+	 * which fires from storage.onChanged when the library changes.
+	 */
+	function scheduleContinuousBackupCheck() {
+		// No-op: debounce approach replaces polling.
 	}
 
 	async function scheduleDriveSync() {
@@ -777,17 +730,15 @@ if (typeof browser === "undefined") {
 		if (area !== "local") return;
 		// Watch both old and new library keys for changes
 		if (changes.novelHistory || changes.rg_novel_library) {
-			scheduleContinuousBackupCheck(); // Fixed: was scheduleContinuousBackup
+			triggerContinuousBackupDebounce();
 		}
 		if (
 			changes.backupMode ||
 			changes.autoBackupEnabled ||
 			changes.backupIntervalDays ||
-			changes.continuousBackupDelayMinutes ||
-			changes.continuousBackupCheckIntervalMinutes
+			changes.continuousBackupDelayMinutes
 		) {
 			scheduleAutoBackup();
-			scheduleContinuousBackupCheck();
 		}
 
 		if (

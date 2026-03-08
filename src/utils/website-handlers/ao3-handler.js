@@ -44,6 +44,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
+		// Default filename template for exported AO3 files (user can override in settings)
+		defaultExportTemplate: "{titleSafe} - {authorSafe}",
 		// Download URL template - {url} is replaced with encoded source URL
 		downloadUrlTemplate: "https://fichub.net/?b=1&q={url}",
 		// Path to custom card renderer (relative to src/library/websites/)

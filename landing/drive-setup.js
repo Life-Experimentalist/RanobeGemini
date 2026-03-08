@@ -1,8 +1,8 @@
 const DRIVE_SETUP_CONFIG = {
 	brandName: "Ranobe Gemini",
 	homepage: "https://ranobe.vkrishna04.me",
-	chromiumExtensionId: "achemoeefcaafoiepmikeiocahcjkjop",
-	firefoxExtensionId: "your-firefox-addon-id",
+	chromiumExtensionId: "agbhdkiciomjlifhlfbjanpnhhokaimn",
+	firefoxExtensionId: "33b0347d-8e94-40d6-a169-249716997cc6",
 };
 
 function buildRedirect(domain, extensionId) {

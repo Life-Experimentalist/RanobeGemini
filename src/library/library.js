@@ -84,8 +84,8 @@ import {
 	trackFeatureUsage,
 } from "../utils/telemetry.js";
 import {
-	formatNovelInfo,
-	resolveTemplate,
+	resolveExportTemplate,
+	formatExportFilename,
 } from "../utils/novel-copy-format.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
@@ -131,7 +131,6 @@ import {
 	setupThemeListener,
 	getPresetList,
 } from "../utils/theme-config.js";
-import "../utils/bg-animation.js";
 
 // Track metadata refresh snapshots to show before/after banners
 // eslint-disable-next-line no-unused-vars
@@ -226,10 +225,6 @@ const elements = {
 	modalCover: document.getElementById("modal-cover"),
 	modalTitle: document.getElementById("modal-title"),
 	modalAuthor: document.getElementById("modal-author"),
-	modalShelf: document.getElementById("modal-shelf"),
-	modalStatus: document.getElementById("modal-status"),
-	modalStatusSelector: document.getElementById("modal-status-selector"),
-	modalRereadingToggle: document.getElementById("modal-rereading-toggle"),
 	modalChapters: document.getElementById("modal-chapters"),
 	modalEnhanced: document.getElementById("modal-enhanced"),
 	modalLastRead: document.getElementById("modal-last-read"),
@@ -238,7 +233,8 @@ const elements = {
 	modalContinueBtn: document.getElementById("modal-continue-btn"),
 	modalSourceBtn: document.getElementById("modal-source-btn"),
 	modalCopyInfoBtn: document.getElementById("modal-copy-info-btn"),
-	modalEpubCopyBtn: document.getElementById("modal-epub-copy-btn"),
+	modalProgressFill: document.getElementById("modal-progress-fill"),
+	modalProgressText: document.getElementById("modal-progress-text"),
 	modalRefreshBtn: document.getElementById("modal-refresh-btn"),
 	modalEditBtn: document.getElementById("modal-edit-btn"),
 	modalRemoveBtn: document.getElementById("modal-remove-btn"),
@@ -993,12 +989,11 @@ async function init() {
 			(isSidebar ? " (Sidebar mode)" : ""),
 	);
 
-	// Register service worker for PWA support on mobile
-	if (
-		"serviceWorker" in navigator &&
-		window.location.protocol !== "moz-extension:" &&
-		window.location.protocol !== "chrome-extension:"
-	) {
+	// Register service worker for asset caching
+	// Note: service workers cannot be registered from extension URLs (chrome-extension:// / moz-extension://)
+	// but we still attempt registration so the SW is ready when the library is opened as a standalone window
+	// or in a regular browser context. The browser silently rejects it from extension URLs.
+	if ("serviceWorker" in navigator) {
 		try {
 			const registration =
 				await navigator.serviceWorker.register("sw.js");
@@ -2704,12 +2699,6 @@ function setupEventListeners() {
 			{ onSaved: () => loadLibrary(), showToast: showNotification },
 		),
 	);
-	if (elements.modalStatusSelector) {
-		elements.modalStatusSelector.addEventListener(
-			"change",
-			handleModalStatusChange,
-		);
-	}
 
 	// Listen for openNovelModal events from shelf pages
 	window.addEventListener("openNovelModal", async (e) => {
@@ -4864,9 +4853,6 @@ async function openNovelDetail(novel) {
 	if (elements.modalRemoveBtn && novel?.id) {
 		elements.modalRemoveBtn.dataset.novelId = novel.id;
 	}
-	if (elements.modalStatus && novel?.id) {
-		elements.modalStatus.dataset.novelId = novel.id;
-	}
 	const shelfId = novel.shelfId;
 	let handled = false;
 
@@ -4970,116 +4956,35 @@ async function openDefaultNovelDetail(novel) {
 	elements.modalTitle.textContent = novel.title;
 	elements.modalAuthor.textContent = novel.author || "Unknown";
 
-	// Render shelf badge with icon (using innerHTML to render HTML)
-	elements.modalShelf.innerHTML = shelf
-		? `${renderShelfIcon(shelf.icon, "site-icon")} ${shelf.name}`
-		: "Unknown";
-	attachIconFallbacks(elements.modalShelf);
-
-	// Set reading status selector with options from getAllStatuses (includes custom)
-	if (elements.modalStatusSelector) {
-		const currentStatus =
-			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
-
-		// Clear existing options
-		elements.modalStatusSelector.innerHTML = "";
-
-		// Populate options from all statuses (built-in + custom)
-		const allStatusesForModal = getAllStatuses(
-			librarySettings || {},
-			READING_STATUS_INFO,
-		);
-		allStatusesForModal
-			.filter((s) => !s.isRereadingOverlay)
-			.forEach((s) => {
-				const option = document.createElement("option");
-				option.value = s.id;
-				option.textContent = s.label;
-				if (s.id === currentStatus) {
-					option.selected = true;
-				}
-				elements.modalStatusSelector.appendChild(option);
-			});
-
-		elements.modalStatusSelector.dataset.novelId = novel.id;
-	}
-
-	// Set status display badge
-	const statusInfo =
-		READING_STATUS_INFO[novel.readingStatus] ||
-		READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
-	elements.modalStatus.textContent = statusInfo.label;
-	elements.modalStatus.style.display = "inline";
-
-	// Store current novel ID for status changes
-	elements.modalStatus.dataset.novelId = novel.id;
-
-	// Wire re-reading overlay toggle in modal
-	if (elements.modalRereadingToggle) {
-		const rereadingCfg = librarySettings?.rereadingOverlay;
-		if (rereadingCfg?.enabled) {
-			const isRereading = novel.rereadingStatus === true;
-			elements.modalRereadingToggle.textContent =
-				rereadingCfg.label || "🔁 Re-reading";
-			elements.modalRereadingToggle.title = isRereading
-				? "Clear re-reading flag"
-				: `Mark as ${rereadingCfg.label || "Re-reading"}`;
-			elements.modalRereadingToggle.style.setProperty(
-				"--rereading-color",
-				rereadingCfg.color || "#9c27b0",
-			);
-			elements.modalRereadingToggle.classList.toggle(
-				"active",
-				isRereading,
-			);
-			elements.modalRereadingToggle.classList.remove("hidden");
-			elements.modalRereadingToggle.dataset.novelId = novel.id;
-
-			// Replace click handler
-			elements.modalRereadingToggle.onclick = async () => {
-				const wasRereading = novel.rereadingStatus === true;
-				const newRereadingState = !wasRereading;
-				try {
-					await novelLibrary.updateNovel(novel.id, {
-						rereadingStatus: newRereadingState,
-					});
-					novel.rereadingStatus = newRereadingState;
-					const novelIndex = allNovels.findIndex(
-						(n) => n.id === novel.id,
-					);
-					if (novelIndex !== -1) {
-						allNovels[novelIndex].rereadingStatus =
-							newRereadingState;
-					}
-					elements.modalRereadingToggle.classList.toggle(
-						"active",
-						newRereadingState,
-					);
-					elements.modalRereadingToggle.title = newRereadingState
-						? "Clear re-reading flag"
-						: `Mark as ${rereadingCfg.label || "Re-reading"}`;
-					showNotification(
-						newRereadingState
-							? `Marked as ${rereadingCfg.label || "Re-reading"}`
-							: "Re-reading flag cleared",
-					);
-				} catch (error) {
-					debugError("Failed to update re-reading status:", error);
-					showNotification(
-						"Failed to update re-reading status",
-						"error",
-					);
-				}
-			};
-		} else {
-			elements.modalRereadingToggle.classList.add("hidden");
-		}
-	}
-
 	// Set stats
 	elements.modalChapters.textContent = novel.totalChapters || "?";
 	elements.modalEnhanced.textContent = novel.enhancedChaptersCount || 0;
 	elements.modalLastRead.textContent = novel.lastReadChapter || 1;
+
+	// Set reading progress bar
+	{
+		const total = novel.totalChapters || 0;
+		const read = novel.lastReadChapter || 0;
+		const pct =
+			total > 0 ? Math.min(Math.round((read / total) * 100), 100) : 0;
+		const wordCount =
+			novel.stats?.wordCount ??
+			novel.metadata?.wordCount ??
+			novel.metadata?.words ??
+			0;
+		const wordStr =
+			wordCount > 0 ? ` · ~${wordCount.toLocaleString()} words` : "";
+		if (elements.modalProgressFill)
+			elements.modalProgressFill.style.width = pct + "%";
+		if (elements.modalProgressText) {
+			elements.modalProgressText.textContent =
+				total > 0
+					? `Ch. ${read} / ${total} (${pct}%)${wordStr}`
+					: wordStr
+						? wordStr.trim()
+						: "";
+		}
+	}
 
 	// Set description
 	elements.modalDescription.textContent =
@@ -5120,17 +5025,6 @@ async function openDefaultNovelDetail(novel) {
 						b.classList.remove("active");
 					}
 				});
-
-				// Update the dropdown selector if present
-				if (elements.modalStatusSelector) {
-					elements.modalStatusSelector.value = status;
-				}
-
-				// Update the status badge
-				const statusInfo = READING_STATUS_INFO[status];
-				if (elements.modalStatus && statusInfo) {
-					elements.modalStatus.textContent = statusInfo.label;
-				}
 
 				// Refresh the library view
 				await loadLibrary();
@@ -5176,25 +5070,20 @@ async function openDefaultNovelDetail(novel) {
 
 	// Wire copy button
 	if (elements.modalCopyInfoBtn) {
-		const fmt = librarySettings?.novelCopyFormats || {};
-		const copyEnabled = fmt.enabled !== false;
-		elements.modalCopyInfoBtn.classList.toggle("hidden", !copyEnabled);
-		if (copyEnabled) {
-			elements.modalCopyInfoBtn.onclick = async () => {
-				try {
-					const currentSettings = await novelLibrary.getSettings();
-					const template = resolveTemplate(
-						currentSettings.novelCopyFormats,
-						novel.shelfId,
-					);
-					const text = formatNovelInfo(novel, template);
-					await navigator.clipboard.writeText(text);
-					showNotification("📋 Copied to clipboard!");
-				} catch (err) {
-					showNotification("Failed to copy: " + err.message, "error");
-				}
-			};
-		}
+		elements.modalCopyInfoBtn.onclick = async () => {
+			try {
+				const currentSettings = await novelLibrary.getSettings();
+				const template = resolveExportTemplate(
+					currentSettings.novelCopyFormats,
+					novel.shelfId,
+				);
+				const text = formatExportFilename(novel, template);
+				await navigator.clipboard.writeText(text);
+				showNotification("📋 Copied to clipboard!");
+			} catch (err) {
+				showNotification("Failed to copy: " + err.message, "error");
+			}
+		};
 	}
 
 	// epub copy button is deprecated — hide it
@@ -5418,37 +5307,6 @@ function formatNumber(num) {
 		return (num / 1000).toFixed(1) + "K";
 	}
 	return num.toString();
-}
-
-/**
- * Handle status change from modal dropdown
- */
-// eslint-disable-next-line no-unused-vars
-async function handleModalStatusChange(e) {
-	const novelId = e.target.dataset.novelId;
-	const newStatus = e.target.value;
-
-	if (!novelId) return;
-
-	try {
-		// Update the novel reading status
-		await novelLibrary.updateNovel(novelId, {
-			readingStatus: newStatus,
-		});
-
-		// Update the display badge
-		const statusInfo = READING_STATUS_INFO[newStatus];
-		elements.modalStatus.textContent = statusInfo?.label || newStatus;
-		elements.modalStatus.style.display = "inline";
-
-		// Refresh the view to show updated status
-		await loadLibrary();
-
-		showNotification("Status updated successfully!");
-	} catch (error) {
-		debugError("Error updating status:", error);
-		showNotification("Failed to update status");
-	}
 }
 
 /**

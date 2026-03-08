@@ -16,7 +16,6 @@
 
 		<link rel="stylesheet" href="library.css" />
 		<link rel="stylesheet" href="edit-modal.css" />
-		<link rel="stylesheet" href="websites/bg-animations.css" />
 		<link rel="icon" type="image/png" sizes="32x32" href="../icons/icon.png" />
 		<link rel="apple-touch-icon" href="../icons/icon.png" />
 	</head>
@@ -279,19 +278,6 @@
 								<p class="novel-author">
 									by <span id="modal-author"></span>
 								</p>
-								<!-- <div class="novel-meta"> -->
-								<!-- <span class="meta-badge" id="modal-shelf"></span> -->
-								<!-- <span class="meta-badge" id="modal-status"></span> -->
-								<!-- Options populated by JavaScript from getAllStatuses() -->
-								<!-- <select id="modal-status-selector" class="status-selector"
-										title="Change Reading Status">
-									</select> -->
-								<!-- Re-reading overlay toggle — shown/hidden by JS based on settings -->
-								<!-- Label set by JS -->
-								<!-- <button id="modal-rereading-toggle" class="rereading-toggle hidden"
-										title="Toggle re-reading flag">
-									</button> -->
-								<!-- </div> -->
 								<div class="novel-stats">
 									<div class="stat">
 										<span class="stat-num" id="modal-chapters">0</span>
@@ -305,6 +291,12 @@
 										<span class="stat-num" id="modal-last-read">0</span>
 										<span class="stat-text">Last Read</span>
 									</div>
+								</div>
+								<div class="reading-progress-container" id="modal-reading-progress">
+									<div class="reading-progress-bar">
+										<div class="reading-progress-fill" id="modal-progress-fill"></div>
+									</div>
+									<div class="reading-progress-text" id="modal-progress-text"></div>
 								</div>
 								<div class="novel-description">
 									<h3>Description</h3>
@@ -369,12 +361,8 @@
 									Reading</a>
 								<a id="modal-source-btn" href="#" target="_blank" class="btn btn-secondary"
 									target="_blank">View on Site</a> <button id="modal-copy-info-btn"
-									class="btn btn-secondary hidden" title="Copy novel info to clipboard">
-									📋 Copy Info
-								</button>
-								<button id="modal-epub-copy-btn" class="btn btn-secondary hidden"
-									title="Copy .epub filename to clipboard">
-									📚 Copy .epub Name
+									class="btn btn-secondary" title="Copy export filename to clipboard">
+									📋 Copy
 								</button> <button id="modal-refresh-btn" class="btn btn-secondary"
 									title="Reset manual edits and refresh metadata from source">
 									🔄 Refresh Metadata
@@ -490,16 +478,6 @@
 
 			<!-- Browser API polyfill for Chrome/Edge compatibility -->
 			<script src="../lib/browser-polyfill.min.js"></script>
-
-			<!-- Service Worker registration (PWA offline support) — skipped for extension pages -->
-			<script>
-				(function () {
-					var proto = window.location.protocol;
-					if ('serviceWorker' in navigator && proto !== 'chrome-extension:' && proto !== 'moz-extension:') {
-						navigator.serviceWorker.register('sw.js').catch(function () { });
-					}
-				})();
-			</script>
 
 			<script type="module" src="library.js"></script>
 	</body>

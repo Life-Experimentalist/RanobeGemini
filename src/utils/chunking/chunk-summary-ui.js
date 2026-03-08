@@ -165,23 +165,6 @@ export function createSummaryButtonGroup(
 
 	const row = buildButtonRow();
 
-	// Add enhance button if callback provided
-	if (onEnhance) {
-		const enhanceBtn = buildButton(
-			"⚡ Enhance",
-			"gemini-chunk-enhance-btn",
-			colors.tertiary || colors.primary,
-			colors.onTertiary || colors.onPrimary,
-			colors,
-		);
-		enhanceBtn.setAttribute("data-chunk-start", startIndex);
-		enhanceBtn.setAttribute("data-chunk-end", endIndex);
-		enhanceBtn.addEventListener("click", () =>
-			onEnhance?.(chunkIndices, startIndex, endIndex),
-		);
-		row.appendChild(enhanceBtn);
-	}
-
 	const longBtn = buildButton(
 		"📝 Long Summary",
 		"gemini-chunk-long-summary-btn",
@@ -241,9 +224,6 @@ export function createMainSummaryGroup(
 	const row = buildButtonRow();
 
 	if (onEnhance) {
-		// Keep class "gemini-enhance-btn" — this is the ONE enhance button in the page.
-		// content.js uses querySelector(".gemini-enhance-btn") in many places to update
-		// its text/disabled state during and after enhancement.
 		const enhanceBtn = buildButton(
 			"⚡ Enhance Chapter",
 			"gemini-enhance-btn",
@@ -251,7 +231,7 @@ export function createMainSummaryGroup(
 			colors.onPrimary,
 			colors,
 		);
-		enhanceBtn.addEventListener("click", () => onEnhance());
+		enhanceBtn.addEventListener("click", () => onEnhance?.());
 		row.appendChild(enhanceBtn);
 	}
 

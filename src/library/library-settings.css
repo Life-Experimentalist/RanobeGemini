@@ -36,10 +36,10 @@
 	--accent-primary: var(--accent-primary, #4b5563);
 
 	--ls-sidebar-width: 260px;
-	--ls-sidebar-bg: #111827;
+	--ls-sidebar-bg: var(--bg-secondary, #111827);
 	--ls-header-height: 64px;
-	--ls-nav-hover: rgba(255, 255, 255, 0.07);
-	--ls-nav-active: rgba(255, 255, 255, 0.12);
+	--ls-nav-hover: rgba(128, 128, 128, 0.12);
+	--ls-nav-active: rgba(128, 128, 128, 0.20);
 	--ls-section-radius: 10px;
 	--ls-input-radius: 7px;
 	--ls-focus-ring: 0 0 0 2px rgba(99, 102, 241, 0.5);

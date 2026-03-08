@@ -8,7 +8,6 @@
 		<link rel="stylesheet" href="library.css" />
 		<link rel="stylesheet" href="library-settings.css" />
 		<link rel="stylesheet" href="edit-modal.css" />
-		<link rel="stylesheet" href="websites/bg-animations.css" />
 	</head>
 
 	<body>
@@ -182,27 +181,6 @@
 							</div>
 						</details>
 
-						<!-- ── Background animation ────────────────────────────── -->
-						<div class="ls-form-group" style="margin-top:12px;">
-							<label class="ls-label" for="library-bg-animation">Background Animation</label>
-							<select id="library-bg-animation" class="ls-select" style="max-width:220px;">
-								<option value="none">None</option>
-								<optgroup label="Canvas Animations">
-									<option value="particles">✨ Particles</option>
-									<option value="falling-leaves">🍂 Falling Leaves</option>
-									<option value="snow">❄️ Snow</option>
-									<option value="rain">🌧️ Rain</option>
-									<option value="fireflies">🟡 Fireflies</option>
-								</optgroup>
-								<optgroup label="CSS Animations">
-									<option value="waves">🌊 Waves (Ocean)</option>
-									<option value="leaves">🍃 Leaves (Forest)</option>
-									<option value="shimmer">✨ Shimmer (Sunset)</option>
-								</optgroup>
-							</select>
-							<span class="ls-hint">Ambient background animation. Canvas options (Particles, Falling Leaves, Snow, Rain, Fireflies) are JS-drawn and color-sync with your accent. CSS options use lightweight gradient overlays. Respects reduced-motion preference.</span>
-						</div>
-
 						<!-- ── Save as custom preset ───────────────────────────── -->
 						<div class="ls-callout ls-callout-blue" style="margin-top:12px;">
 							<div class="ls-label" style="margin-bottom:6px;">💾 Save Current Colors as Preset</div>
@@ -334,28 +312,6 @@
 						<div class="ls-section-desc">Create and manage backups stored in your browser.</div>
 					</div>
 
-					<!-- Data Management (legacy) -->
-					<div class="ls-section" data-accent="indigo">
-						<div class="ls-section-title">💾 Data Management</div>
-						<div class="ls-section-desc" style="color:#f59e0b;">⚠️ Deprecated — legacy support only. Will be
-							removed soon.</div>
-						<div class="ls-grid-2">
-							<div class="ls-form-group">
-								<button id="export-btn" class="ls-btn ls-btn-secondary ls-btn-full">📤 Export</button>
-								<span class="ls-hint">Download library data as JSON.</span>
-							</div>
-							<div class="ls-form-group">
-								<button id="import-btn" class="ls-btn ls-btn-secondary ls-btn-full">📥 Import</button>
-								<input type="file" id="import-file" accept=".json" class="ls-hidden" />
-								<span class="ls-hint">Restore from a JSON backup.</span>
-							</div>
-							<div class="ls-form-group">
-								<button id="clear-btn" class="ls-btn ls-btn-danger ls-btn-full">🗑️ Clear All</button>
-								<span class="ls-hint">Remove all novels from the library.</span>
-							</div>
-						</div>
-					</div>
-
 					<!-- Comprehensive Backup -->
 					<div class="ls-section" data-accent="green">
 						<div class="ls-section-title">📦 Comprehensive Backup (Recommended)</div>
@@ -394,11 +350,11 @@
 
 						<div class="ls-form-group">
 							<label class="ls-label">
-								Frequency: <span id="rollingBackupIntervalDisplay" style="color:#34a853;">60</span>
+								Frequency: <span id="rollingBackupIntervalDisplay" style="color:#34a853;">1440</span>
 								minutes
 							</label>
 							<div id="carousel-manual-container" class="ls-hidden">
-								<input type="number" id="rollingBackupInterval" class="ls-input" min="5" value="360"
+								<input type="number" id="rollingBackupInterval" class="ls-input" min="5" value="1440"
 									style="width:120px;" />
 								<span class="ls-hint">How often a rolling backup is created automatically.</span>
 							</div>
@@ -522,15 +478,11 @@
 								</div>
 							</div>
 
-							<!-- Continuous check interval -->
+							<!-- Continuous backup info -->
 							<div class="ls-callout ls-callout-blue" id="continuousBackupCheckContainer">
-								<label class="ls-label">
-									🔄 Check for changes every
-									<strong id="continuousCheckIntervalDisplay" style="color:#4285F4;">2</strong> min
-								</label>
-								<input type="range" id="continuousBackupCheckInterval" class="ls-range" min="1" max="60"
-									value="2" />
-								<span class="ls-hint">Lower = more frequent checks. Higher = less CPU usage.</span>
+								<p class="ls-callout-title">🔄 Continuous Backup</p>
+								<p class="ls-hint">When changes are detected in your library, a backup is automatically
+									uploaded to Drive after a short delay. No manual action needed.</p>
 							</div>
 
 							<!-- Retention policy -->
@@ -647,17 +599,20 @@
 						</details>
 					</div>
 
-					<!-- Drive Backups Modal container (populated by library.js when needed) -->
-					<div id="drive-backups-modal" class="modal hidden">
-						<div class="modal-backdrop"></div>
-						<div class="modal-content" style="max-width:800px;max-height:80vh;overflow-y:auto;">
-							<button class="modal-close" id="drive-backups-close">&times;</button>
-							<h2 style="margin-bottom:8px;">☁️ Google Drive Backups</h2>
-							<p style="margin:0 0 24px 0;font-size:13px;color:var(--text-secondary);">Manage and restore
-								your cloud backups.</p>
-							<div id="drive-backups-list"></div>
+					<!-- Drive Backups Inline Collapsible -->
+					<details id="drive-backups-section" class="ls-details" style="margin-top:12px;">
+						<summary class="ls-details-summary">
+							<span>☁️ Drive Backup History</span>
+							<span class="ls-details-hint" id="drive-backups-count"></span>
+						</summary>
+						<div class="ls-details-body" style="padding:12px 0 0;">
+							<div id="drive-backups-list">
+								<div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;">
+									Click the header above to load your Drive backups.
+								</div>
+							</div>
 						</div>
-					</div>
+					</details>
 				</section>
 
 				<!-- ════════════════════════════════════════════════
@@ -1047,68 +1002,27 @@
 					<div class="ls-panel-header">
 						<div class="ls-panel-header-content">
 							<h1 class="ls-panel-title">📋 Copy / Export Format</h1>
-							<p class="ls-panel-description">Configure templates for the "Copy Info" button and file
-								export filenames.</p>
+							<p class="ls-panel-description">Configure the filename template used when copying novel
+								filenames from modals.</p>
 						</div>
 						<div class="ls-panel-header-actions">
 							<button id="copy-format-save-btn" class="ls-btn ls-btn-primary ls-btn-sm">💾 Save</button>
 						</div>
 					</div>
 
-					<!-- Enable toggle -->
-					<div class="ls-section" data-accent="purple">
-						<div class="ls-section-title">✅ Enable Copy Info Button</div>
-						<div class="ls-section-desc">When enabled, a "Copy Info" button appears in novel detail
-							modals.</div>
-						<div class="ls-form-group">
-							<label class="ls-toggle-label">
-								<input type="checkbox" id="copy-format-enabled" class="ls-toggle-checkbox" checked />
-								<span class="ls-toggle-slider"></span>
-								<span class="ls-toggle-text">Show Copy Info button in novel details</span>
-							</label>
-						</div>
-					</div>
-
-					<!-- Global template -->
-					<div class="ls-section" data-accent="blue">
-						<div class="ls-section-title">📝 Clipboard "Copy Info" Template</div>
-						<div class="ls-section-desc">Copied when you click <strong>Copy Info</strong> on a novel.
-							Use <code>{token}</code> placeholders. Per-site overrides available below.
-						</div>
-						<div class="ls-form-group">
-							<label class="ls-label" for="copy-global-template">Template</label>
-							<input type="text" id="copy-global-template" class="ls-input"
-								placeholder="{title} by {author} {wordCount}" />
-						</div>
-						<!-- Live preview -->
-						<div class="ls-form-group">
-							<label class="ls-label">Preview</label>
-							<div id="copy-format-preview"
-								style="font-family:monospace;font-size:13px;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);word-break:break-all;min-height:2.5em;">
-								—
-							</div>
-						</div>
-					</div>
-
-					<!-- Export filename template (unified) -->
+					<!-- Export filename template -->
 					<div class="ls-section" data-accent="teal">
-						<div class="ls-section-title">📚 Export Filename Template</div>
+						<div class="ls-section-title">📚 Copy Filename Template</div>
 						<div class="ls-section-desc">
-							Used for file downloads (e.g., FichHub). Use <code>{titleSafe}</code> and
-							<code>{authorSafe}</code> for filesystem-safe names.
+							Used when you click <strong>📋 Copy</strong> on a novel. The filename is
+							copied to your clipboard. Use <code>{titleSafe}</code> and <code>{authorSafe}</code> for
+							filesystem-safe names. Add an extension directly in the template if you want one
+							(e.g. <code>{titleSafe}.epub</code>).
 						</div>
-						<div class="ls-form-group" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-							<div style="flex:1;min-width:200px;">
-								<label class="ls-label" for="copy-export-template">Filename template</label>
-								<input type="text" id="copy-export-template" class="ls-input"
-									placeholder="{titleSafe} - {authorSafe}" />
-							</div>
-							<div style="flex:0 0 auto;min-width:100px;">
-								<label class="ls-label" for="copy-export-extension">Extension</label>
-								<select id="copy-export-extension" class="ls-select">
-									<!-- Populated by JS from COPY_EXPORT_EXTENSIONS -->
-								</select>
-							</div>
+						<div class="ls-form-group">
+							<label class="ls-label" for="copy-export-template">Filename template</label>
+							<input type="text" id="copy-export-template" class="ls-input"
+								placeholder="{titleSafe} - {authorSafe}" />
 						</div>
 						<div class="ls-form-group">
 							<label class="ls-label">Preview</label>
@@ -1127,24 +1041,15 @@
 							</div>
 						</div>
 					</div>
-
-					<!-- Available tokens reference -->
-					<div class="ls-section" data-accent="indigo">
-						<div class="ls-section-title">🔣 All Available Tokens</div>
-						<div class="ls-section-desc">Click a token to insert it into the <strong>Copy Info</strong>
-							template field.</div>
-						<div id="copy-format-tokens-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-							<!-- Populated by library-settings.js -->
-						</div>
-					</div>
-
-					<!-- Per-site overrides -->
-					<div class="ls-section" data-accent="orange">
-						<div class="ls-section-title">🌐 Per-Site Overrides</div>
-						<div class="ls-section-desc">Customize templates per site. Leave blank to use global templates.
+					<!-- Per-site filename template overrides -->
+					<div class="ls-section" data-accent="orange" id="copy-site-overrides-section" style="display:none;">
+						<div class="ls-section-title">🌐 Per-Site Filename Templates</div>
+						<div class="ls-section-desc">
+							Override the filename template for specific sites. Leave blank to
+							use the global template above.
 						</div>
 						<div id="copy-site-overrides-list">
-							<!-- Populated by library-settings.js from SHELVES -->
+							<!-- Populated by library-settings.js -->
 						</div>
 					</div>
 				</section>

@@ -105,6 +105,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 				primaryDomain: shelfMeta.primaryDomain,
 				handlerType: HandlerClass.HANDLER_TYPE || "chapter_embedded",
 				enabledByDefault,
+				defaultExportTemplate: shelfMeta.defaultExportTemplate || null,
 			};
 		} else {
 			// Merge domains into existing shelf (for mobile/desktop variants)

@@ -784,12 +784,11 @@ if (window.__RGInitDone) {
 			cancelEnhanceButton.style.display = "none";
 		}
 
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (button) {
-			button.textContent = "⚡ Enhance Chapter";
-			button.disabled = false;
-			button.classList.remove("loading");
-		}
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "⚡ Enhance Chapter";
+			btn.disabled = false;
+			btn.classList.remove("loading");
+		});
 
 		// Update WIP banner to paused state
 		const chunkedContainer = document.getElementById(
@@ -1009,6 +1008,7 @@ if (window.__RGInitDone) {
 		cacheInfo = null,
 		wordCounts = null,
 		threshold = 25,
+		onEnhance = null,
 	) {
 		return chunking.ui.createChunkBanner(
 			chunkIndex,
@@ -1019,6 +1019,7 @@ if (window.__RGInitDone) {
 				onRegenerate: handleReenhanceChunk,
 				onToggle: handleChunkToggle,
 				onDelete: handleChunkDelete,
+				onEnhance,
 			},
 			cacheInfo,
 			wordCounts,
@@ -1093,6 +1094,11 @@ if (window.__RGInitDone) {
 				i,
 				chunks.length,
 				"pending",
+				null,
+				null,
+				null,
+				25,
+				((idx) => () => handleReenhanceChunk(idx))(i),
 			);
 			chunkWrapper.appendChild(banner);
 
@@ -1126,8 +1132,6 @@ if (window.__RGInitDone) {
 				chunkSummaryCount,
 				(indices) => summarizeChunkRange(indices, false),
 				(indices) => summarizeChunkRange(indices, true),
-				(indices, startIdx, endIdx) =>
-					handleEnhanceChunkRange(indices, startIdx, endIdx),
 			);
 
 			// Chunk summary groups are always visible for easy access to summaries
@@ -1538,13 +1542,11 @@ if (window.__RGInitDone) {
 				cancelEnhanceButton.style.display = "none";
 			}
 
-			const contentArea = findContentArea();
-			const button = document.querySelector(".gemini-enhance-btn");
-			if (button) {
-				button.textContent = "🔄 Re-enhance with Gemini";
-				button.disabled = false;
-				button.classList.remove("loading");
-			}
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "🔄 Re-enhance with Gemini";
+				btn.disabled = false;
+				btn.classList.remove("loading");
+			});
 
 			if (contentArea && chunking?.ui) {
 				const existingMaster = document.querySelector(
@@ -1677,7 +1679,6 @@ if (window.__RGInitDone) {
 				"margin:0 0 12px 0;font-size:14px;font-weight:600;";
 			container.appendChild(h);
 			const d = document.createElement("div");
-			d.className = "summary-text-content";
 			d.style.lineHeight = "1.6";
 			d.textContent = stripHtmlTags(summary);
 			container.appendChild(d);
@@ -1885,6 +1886,24 @@ if (window.__RGInitDone) {
 				"success",
 				3000,
 			);
+			// Track chapter as summarized in the library
+			try {
+				const novelId = lastKnownNovelData?.id;
+				const chapterNumber = lastKnownNovelData?.currentChapter;
+				if (novelId && chapterNumber != null) {
+					if (!novelLibrary) await loadNovelLibrary();
+					if (novelLibrary) {
+						await novelLibrary.updateChapter(novelId, {
+							chapterNumber,
+							url: window.location.href,
+							isSummarized: true,
+							summarizedAt: Date.now(),
+						});
+					}
+				}
+			} catch (_e) {
+				/* silent */
+			}
 		} catch (error) {
 			debugError("Inline summary fallback error:", error);
 			if (statusDiv) {
@@ -2362,11 +2381,10 @@ if (window.__RGInitDone) {
 		);
 
 		// Reset enhance button
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (button) {
-			button.textContent = "✨ Enhance with Gemini";
-			button.disabled = false;
-		}
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "✨ Enhance with Gemini";
+			btn.disabled = false;
+		});
 	}
 
 	// Handler for all chunks processed notification
@@ -2375,12 +2393,11 @@ if (window.__RGInitDone) {
 			`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`,
 		);
 
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (button) {
-			button.textContent = "🔄 Re-enhance with Gemini";
-			button.disabled = false;
-			button.classList.remove("loading");
-		}
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "🔄 Re-enhance with Gemini";
+			btn.disabled = false;
+			btn.classList.remove("loading");
+		});
 
 		if (message.failedChunks && message.failedChunks.length > 0) {
 			const successPercentage = Math.round(
@@ -3278,7 +3295,6 @@ if (window.__RGInitDone) {
 				totalChunks,
 				(indices) => summarizeChunkRange(indices, false),
 				(indices) => summarizeChunkRange(indices, true),
-				() => handleEnhanceClick(),
 			);
 
 			// Apply current visibility state
@@ -3295,8 +3311,6 @@ if (window.__RGInitDone) {
 					chunkSummaryCount,
 					(indices) => summarizeChunkRange(indices, false),
 					(indices) => summarizeChunkRange(indices, true),
-					(indices, startIdx, endIdx) =>
-						handleEnhanceChunkRange(indices, startIdx, endIdx),
 				);
 
 				// Chunk summary groups are always visible for easy access to summaries
@@ -3360,12 +3374,11 @@ if (window.__RGInitDone) {
 		const wipBanner = document.querySelector(".gemini-wip-banner");
 		if (wipBanner) wipBanner.remove();
 
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (button) {
-			button.textContent = "♻ Regenerate with Gemini";
-			button.disabled = false;
-			button.classList.remove("loading");
-		}
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "♻ Regenerate with Gemini";
+			btn.disabled = false;
+			btn.classList.remove("loading");
+		});
 
 		showStatusMessage("Loaded cached enhanced content.", "success", 3000);
 
@@ -5109,6 +5122,37 @@ if (window.__RGInitDone) {
 		return cancelButton;
 	}
 
+	function createEnhanceButton() {
+		const btn = document.createElement("button");
+		btn.className = "gemini-enhance-btn";
+		btn.innerHTML =
+			'<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Enhance with Gemini</span>';
+		btn.title = "Enhance chapter text with Gemini AI";
+		btn.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px;
+        margin: 15px 0;
+        background-color: #1a73e8;
+        color: #ffffff;
+        border: 1px solid #1557b0;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 13px;
+        z-index: 1000;
+    `;
+		btn.addEventListener("click", handleEnhanceClick);
+		btn.addEventListener("mouseover", () => {
+			btn.style.backgroundColor = "#1557b0";
+		});
+		btn.addEventListener("mouseout", () => {
+			btn.style.backgroundColor = "#1a73e8";
+		});
+		return btn;
+	}
+
 	// Function to add initial word count display below the buttons
 	function addInitialWordCountDisplay(contentArea) {
 		if (!contentArea) return;
@@ -6382,14 +6426,16 @@ if (window.__RGInitDone) {
 		}
 
 		const toggleBannersButton = createToggleBannersButton();
+		const enhanceButton = createEnhanceButton();
 		cancelEnhanceButton = createCancelEnhanceButton();
 
 		const statusDiv = document.createElement("div");
 		statusDiv.id = "gemini-status";
 		statusDiv.style.marginTop = "5px";
 
-		// Only add toggle banners button and cancel button to controls
+		// Only add toggle banners button, enhance button, and cancel button to controls
 		controlsContainer.appendChild(toggleBannersButton);
+		controlsContainer.appendChild(enhanceButton);
 		controlsContainer.appendChild(cancelEnhanceButton);
 
 		// Create summary/chunk controls upfront so users can summarize/select chunks before enhancement
@@ -6406,7 +6452,7 @@ if (window.__RGInitDone) {
 				totalSummaryChunks,
 				(indices) => summarizeChunkRange(indices, false),
 				(indices) => summarizeChunkRange(indices, true),
-				() => handleEnhanceClick(),
+				handleEnhanceClick,
 			);
 
 			// Apply handler-level default visibility setting
@@ -6750,10 +6796,8 @@ if (window.__RGInitDone) {
 		enhancementCancelRequested = false;
 		// Check cache first
 		if (storageManager && (isCachedContent || hasCachedContent)) {
-			const button = document.querySelector(".gemini-enhance-btn");
-			if (!button) return;
-			const originalText = button.textContent;
-			if (!originalText) return;
+			const enhanceBtns = document.querySelectorAll(".gemini-enhance-btn");
+			const originalText = enhanceBtns[0]?.textContent ?? "";
 
 			if (isCachedContent && originalText.includes("Regenerate")) {
 				// Clear ALL caches before regeneration but continue to process
@@ -6770,7 +6814,7 @@ if (window.__RGInitDone) {
 				isCachedContent = false;
 				hasCachedContent = false;
 				// Update button text immediately
-				button.textContent = "✨ Enhance with Gemini";
+				enhanceBtns.forEach((b) => (b.textContent = "✨ Enhance with Gemini"));
 				const contentArea = findContentArea();
 				if (contentArea) {
 					// Remove ALL Gemini UI elements before regenerating
@@ -6866,14 +6910,12 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		const button = document.querySelector(".gemini-enhance-btn");
-		if (!button) return;
-		// eslint-disable-next-line no-unused-vars
-		const originalButtonText = button.textContent;
 		try {
 			// Disable UI and show status
-			button.textContent = "Waking up AI...";
-			button.disabled = true;
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "Waking up AI...";
+				btn.disabled = true;
+			});
 			if (cancelEnhanceButton) {
 				cancelEnhanceButton.style.display = "inline-flex";
 			}
@@ -6887,7 +6929,9 @@ if (window.__RGInitDone) {
 				);
 			}
 
-			button.textContent = "Processing...";
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "Processing...";
+			});
 			showStatusMessage("Processing content with Gemini AI...", "info");
 
 			// Load config values from storage to match chunking configuration
@@ -7071,7 +7115,6 @@ if (window.__RGInitDone) {
 										summarizeChunkRange(indices, false),
 									(indices) =>
 										summarizeChunkRange(indices, true),
-									() => handleEnhanceClick(),
 								);
 							if (shouldBannersBeHidden()) {
 								newMainSummaryGroup.style.display = "none";
@@ -7091,12 +7134,6 @@ if (window.__RGInitDone) {
 										summarizeChunkRange(indices, false),
 									(indices) =>
 										summarizeChunkRange(indices, true),
-									(indices, startIdx, endIdx) =>
-										handleEnhanceChunkRange(
-											indices,
-											startIdx,
-											endIdx,
-										),
 								);
 
 								// Chunk summary groups are always visible for easy access to summaries
@@ -7310,13 +7347,11 @@ if (window.__RGInitDone) {
 			if (isFromCache) {
 				isCachedContent = true;
 				hasCachedContent = true;
-				const button = document.querySelector(".gemini-enhance-btn");
-				if (button) {
-					button.textContent = "♻ Regenerate with Gemini";
-				}
-			}
-
-			// For fresh enhancements, always use contentArea.innerHTML to preserve HTML structure
+					document
+						.querySelectorAll(".gemini-enhance-btn")
+						.forEach((btn) => {
+							btn.textContent = "♻ Regenerate with Gemini";
+						});
 			// For cached content, use the stored originalContent (which was saved with HTML)
 			const originalContent = isFromCache
 				? enhancedContent.originalContent
@@ -8435,12 +8470,11 @@ if (window.__RGInitDone) {
 			}
 
 			// Reset UI state
-			const button = document.querySelector(".gemini-enhance-btn");
-			if (button) {
-				button.textContent = "✨ Enhance with Gemini";
-				button.disabled = false;
-				button.classList.remove("loading");
-			}
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "✨ Enhance with Gemini";
+				btn.disabled = false;
+				btn.classList.remove("loading");
+			});
 
 			sendResponse({ success: true });
 			return true;
@@ -8486,12 +8520,11 @@ if (window.__RGInitDone) {
 			}
 
 			// Reset button state
-			const button = document.querySelector(".gemini-enhance-btn");
-			if (button) {
-				button.textContent = "🔄 Continue Enhancement";
-				button.disabled = false;
-				button.classList.remove("loading");
-			}
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "🔄 Continue Enhancement";
+				btn.disabled = false;
+				btn.classList.remove("loading");
+			});
 
 			sendResponse({ success: true });
 			return true;

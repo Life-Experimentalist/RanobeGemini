@@ -2,8 +2,9 @@
 	"id": "ranobe-gemini-library",
 	"name": "Ranobe Gemini Library",
 	"short_name": "RG Library",
-	"description": "Your Novel Library powered by Ranobe Gemini",
-	"start_url": "library.html",
+	"description": "Your Novel Library powered by Ranobe Gemini — track, enhance, and organise your web novels with AI.",
+	"version": "4.1.0",
+	"start_url": "library.html?standalone=1",
 	"scope": "./",
 	"display": "standalone",
 	"display_override": [
@@ -11,32 +12,45 @@
 		"minimal-ui",
 		"browser"
 	],
-	"background_color": "#0f1419",
-	"theme_color": "#e94560",
-	"orientation": "portrait-primary",
+	"background_color": "#0f172a",
+	"theme_color": "#bb86fc",
+	"orientation": "any",
 	"lang": "en",
+	"prefer_related_applications": false,
 	"icons": [
 		{
-			"src": "../icons/icon.png",
+			"src": "../icons/logo-48.png",
 			"sizes": "48x48",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "../icons/icon.png",
+			"src": "../icons/logo-96.png",
 			"sizes": "96x96",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "../icons/icon.png",
-			"sizes": "192x192",
+			"src": "../icons/logo-128.png",
+			"sizes": "128x128",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "../icons/icon.png",
+			"src": "../icons/logo-256.png",
+			"sizes": "256x256",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "../icons/logo-512.png",
 			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "../icons/logo-1024.png",
+			"sizes": "1024x1024",
 			"type": "image/png",
 			"purpose": "any maskable"
 		}
@@ -49,14 +63,41 @@
 	"shortcuts": [
 		{
 			"name": "Open Library",
-			"url": "library.html",
+			"url": "library.html?standalone=1",
+			"icons": [
+				{
+					"src": "../icons/logo-96.png",
+					"sizes": "96x96"
+				}
+			],
 			"description": "Open your novel library"
 		},
 		{
 			"name": "Library Settings",
 			"url": "library-settings.html",
+			"icons": [
+				{
+					"src": "../icons/logo-96.png",
+					"sizes": "96x96"
+				}
+			],
 			"description": "Configure library settings"
 		}
 	],
-	"screenshots": []
+	"screenshots": [
+		{
+			"src": "../icons/library.png",
+			"sizes": "1280x720",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Novel Library — your reading list at a glance"
+		},
+		{
+			"src": "../icons/library-popup.png",
+			"sizes": "440x280",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Quick access popup"
+		}
+	]
 }

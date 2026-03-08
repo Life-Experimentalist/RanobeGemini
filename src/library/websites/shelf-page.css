@@ -495,6 +495,32 @@ body {
 	padding: var(--spacing-lg);
 }
 
+/* Reading progress bar in site-specific modals */
+.reading-progress-container {
+	padding: var(--spacing-sm) var(--spacing-lg);
+	border-top: 1px solid var(--border-color);
+}
+
+.reading-progress-bar {
+	height: 4px;
+	background: var(--border-color);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.reading-progress-fill {
+	height: 100%;
+	background: var(--primary-color);
+	border-radius: 2px;
+	transition: width 0.3s ease;
+}
+
+.reading-progress-text {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
 .modal-metadata-section {
 	margin-bottom: var(--spacing-lg);
 	padding-bottom: var(--spacing-md);

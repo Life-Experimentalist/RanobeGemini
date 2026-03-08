@@ -26,7 +26,10 @@ import {
 	CAROUSEL_DEFAULT_MANUAL_COUNT,
 	DEFAULT_MODEL_ID,
 } from "../utils/constants.js";
-import { isSupportedDomain } from "../utils/domain-constants.js";
+import {
+	isSupportedDomain,
+	SHELF_REGISTRY,
+} from "../utils/domain-constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
 import {
 	filterEnabledShelves,
@@ -58,18 +61,10 @@ import {
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import { getTelemetryConfig, saveTelemetryConfig } from "../utils/telemetry.js";
 import {
-	formatNovelInfo,
 	formatExportFilename,
-	resolveTemplate,
-	resolveExportTemplate,
-	resolveExportExtension,
-	COPY_FORMAT_TOKENS,
 	EXPORT_TOKENS,
 	PREVIEW_NOVEL,
-	DEFAULT_COPY_TEMPLATE,
 	DEFAULT_EXPORT_TEMPLATE,
-	COPY_EXPORT_EXTENSIONS,
-	COPY_EXPORT_DEFAULT_EXTENSION,
 } from "../utils/novel-copy-format.js";
 
 // ── Navigation tabs definition ────────────────────────────────────────────────
@@ -114,7 +109,6 @@ import {
 	getPresetList,
 	resolveMode,
 } from "../utils/theme-config.js";
-import "../utils/bg-animation.js";
 
 // ── Page state ────────────────────────────────────────────────────────────────
 let librarySettings = { autoHoldEnabled: true, autoHoldDays: 7 };
@@ -349,12 +343,6 @@ async function loadLibraryThemeControls() {
 		if (txPicker && txText) {
 			txPicker.value = theme.textColor || defaultTheme.textColor;
 			txText.value = theme.textColor || defaultTheme.textColor;
-		}
-
-		// Background animation selector
-		const bgAnimation = $("library-bg-animation");
-		if (bgAnimation) {
-			bgAnimation.value = theme.bgAnimation || "none";
 		}
 
 		// Font size
@@ -1036,7 +1024,7 @@ async function loadBackupCheckboxSettings() {
 		if (autoBackup)
 			autoBackup.checked = data.rg_rolling_backup_enabled ?? true;
 
-		const interval = data.rollingBackupIntervalMinutes ?? 60;
+		const interval = data.rollingBackupIntervalMinutes ?? 1440;
 		const intervalEl = $("rollingBackupInterval");
 		if (intervalEl) intervalEl.value = String(interval);
 		const intervalDisp = $("rollingBackupIntervalDisplay");
@@ -1128,7 +1116,8 @@ async function initializeRollingBackupStatus() {
 	]);
 
 	const isEnabled = stored.rg_rolling_backup_enabled ?? true;
-	const intervalMinutes = parseInt(stored.rollingBackupIntervalMinutes) || 60;
+	const intervalMinutes =
+		parseInt(stored.rollingBackupIntervalMinutes) || 1440;
 	const backupList = Array.isArray(stored.rg_rolling_backup_meta)
 		? stored.rg_rolling_backup_meta
 		: [];
@@ -1249,7 +1238,6 @@ async function updateDriveUI() {
 			"driveAuthError",
 			"backupMode",
 			"driveAutoRestoreEnabled",
-			"continuousBackupCheckIntervalMinutes",
 			"driveBackupRetention",
 			"driveClientId",
 			"driveClientSecret",
@@ -1279,12 +1267,6 @@ async function updateDriveUI() {
 		const autoRestore = $("driveAutoRestoreEnabled");
 		if (autoRestore)
 			autoRestore.checked = tokens.driveAutoRestoreEnabled === true;
-
-		const interval = tokens.continuousBackupCheckIntervalMinutes || 2;
-		const contInt = $("continuousBackupCheckInterval");
-		if (contInt) contInt.value = interval;
-		const contIntDisp = $("continuousCheckIntervalDisplay");
-		if (contIntDisp) contIntDisp.textContent = interval;
 
 		if (hasToken) {
 			driveNotConn.style.display = "none";
@@ -1498,123 +1480,38 @@ async function initCopyFormatTab() {
 	// Load current settings
 	const settings = await novelLibrary.getSettings();
 	const fmt = settings.novelCopyFormats || {};
-	const enabled = fmt.enabled !== false;
-	const globalTemplate = fmt.globalTemplate || DEFAULT_COPY_TEMPLATE;
-	const siteOverrides = fmt.siteOverrides || {};
 	// Unified export format
 	const exportTemplate = fmt.exportTemplate || DEFAULT_EXPORT_TEMPLATE;
-	const exportExtension =
-		fmt.exportExtension || COPY_EXPORT_DEFAULT_EXTENSION;
 
 	// ── Load real library novels for live preview ──────────────────────────────
 	let previewNovel = PREVIEW_NOVEL; // fallback if library is empty
-	const novelBySite = {}; // shelfId → most recently read novel
 
 	try {
 		const allNovels = await novelLibrary.getNovels();
 		if (allNovels.length > 0) {
-			// Sort by most recently accessed (lastAccessedAt is the canonical field)
 			const sorted = [...allNovels].sort((a, b) => {
 				const da = a.lastAccessedAt || a.addedAt || 0;
 				const db = b.lastAccessedAt || b.addedAt || 0;
 				return db - da;
 			});
 			previewNovel = sorted[0];
-
-			// Map each site to its most recently accessed novel
-			allNovels.forEach((n) => {
-				if (!n.shelfId) return;
-				const ex = novelBySite[n.shelfId];
-				if (!ex) {
-					novelBySite[n.shelfId] = n;
-				} else {
-					const da = n.lastAccessedAt || n.addedAt || 0;
-					const db = ex.lastAccessedAt || ex.addedAt || 0;
-					if (da > db) novelBySite[n.shelfId] = n;
-				}
-			});
 		}
 	} catch (_err) {
 		// silently fall back to PREVIEW_NOVEL
 	}
 
-	// Populate enabled toggle
-	const enabledCb = $("copy-format-enabled");
-	if (enabledCb) enabledCb.checked = enabled;
-
-	// Populate global template input
-	const tplInput = $("copy-global-template");
-	if (tplInput) tplInput.value = globalTemplate;
-
-	// ── Token chips ────────────────────────────────────────────────────────────
-	// COPY_FORMAT_TOKENS already uses {token} with braces — do NOT add extra braces
-	const tokensGrid = $("copy-format-tokens-grid");
-	if (tokensGrid) {
-		tokensGrid.innerHTML = COPY_FORMAT_TOKENS.map(
-			(t) =>
-				`<button type="button" class="ls-btn ls-btn-sm ls-btn-secondary" data-token="${escHtml(t.token)}" title="${escHtml(t.desc)} — e.g. ${escHtml(t.example)}" style="font-family:monospace;">${escHtml(t.token)}</button>`,
-		).join("");
-		tokensGrid.querySelectorAll("button[data-token]").forEach((btn) => {
-			btn.addEventListener("click", () => {
-				if (!tplInput) return;
-				const token = btn.dataset.token;
-				const start = tplInput.selectionStart ?? tplInput.value.length;
-				const end = tplInput.selectionEnd ?? tplInput.value.length;
-				tplInput.value =
-					tplInput.value.slice(0, start) +
-					token +
-					tplInput.value.slice(end);
-				tplInput.focus();
-				tplInput.selectionStart = tplInput.selectionEnd =
-					start + token.length;
-				updateCopyPreview();
-			});
-		});
-	}
-
-	// ── Global live preview ────────────────────────────────────────────────────
-	function updateCopyPreview() {
-		const previewEl = $("copy-format-preview");
-		if (!previewEl) return;
-		const template = tplInput?.value?.trim() || DEFAULT_COPY_TEMPLATE;
-		previewEl.textContent = formatNovelInfo(previewNovel, template);
-	}
-
-	if (tplInput) {
-		tplInput.addEventListener("input", () => {
-			updateCopyPreview();
-			// Also refresh per-site previews that are still showing global template
-			updateAllSitePreviews();
-		});
-		updateCopyPreview();
-	}
-
 	// ── Unified Export template ───────────────────────────────────────────────
 	const exportTplInput = $("copy-export-template");
-	const exportExtSelect = $("copy-export-extension");
 
 	// Populate export template input
 	if (exportTplInput) exportTplInput.value = exportTemplate;
-
-	// Populate extension dropdown
-	if (exportExtSelect) {
-		exportExtSelect.innerHTML = COPY_EXPORT_EXTENSIONS.map(
-			(ext) =>
-				`<option value="${ext}" ${ext === exportExtension ? "selected" : ""}>.${ext}</option>`,
-		).join("");
-	}
 
 	function updateExportPreview() {
 		const previewEl = $("copy-export-preview");
 		if (!previewEl) return;
 		const template =
 			exportTplInput?.value?.trim() || DEFAULT_EXPORT_TEMPLATE;
-		const ext = exportExtSelect?.value || COPY_EXPORT_DEFAULT_EXTENSION;
-		previewEl.textContent = formatExportFilename(
-			previewNovel,
-			template,
-			ext,
-		);
+		previewEl.textContent = formatExportFilename(previewNovel, template);
 	}
 
 	// Export token chips
@@ -1652,115 +1549,32 @@ async function initCopyFormatTab() {
 		exportTplInput.addEventListener("input", updateExportPreview);
 		updateExportPreview();
 	}
-	if (exportExtSelect) {
-		exportExtSelect.addEventListener("change", updateExportPreview);
-	}
-
-	// ── Per-site overrides with per-site per-novel live preview ────────────────
-	const overridesList = $("copy-site-overrides-list");
-	if (overridesList) {
-		overridesList.innerHTML = Object.values(SHELVES)
-			.map((shelf) => {
-				const val = siteOverrides[shelf.id] || "";
-				const siteNovel = novelBySite[shelf.id] || previewNovel;
-				const resolvedTpl = val.trim() || globalTemplate;
-				const previewText = escHtml(
-					formatNovelInfo(siteNovel, resolvedTpl),
-				);
-				const siteIcon = shelf.emoji
-					? shelf.emoji
-					: shelf.icon
-						? `<img src="${escHtml(shelf.icon)}" style="width:14px;height:14px;vertical-align:middle;" />`
-						: "🌐";
-				return `
-			<div class="ls-copy-site-override" data-shelf-id="${shelf.id}">
-				<label class="ls-label" for="copy-override-${shelf.id}">
-					<span class="ls-copy-site-icon">${siteIcon}</span>
-					${escHtml(shelf.name)}
-					${val.trim() ? '<span class="ls-copy-site-badge-custom">custom</span>' : '<span class="ls-copy-site-badge-global">global</span>'}
-				</label>
-				<input type="text" id="copy-override-${shelf.id}" class="ls-input copy-override-input"
-					data-shelf-id="${shelf.id}"
-					placeholder="(uses global template)"
-					value="${val.replace(/"/g, "&quot;")}" />
-				<div class="ls-copy-site-preview" id="copy-site-preview-${shelf.id}">
-					${previewText || "<em>—</em>"}
-				</div>
-			</div>`;
-			})
-			.join("");
-
-		// Wire live preview for each per-site input
-		overridesList
-			.querySelectorAll(".copy-override-input")
-			.forEach((inp) => {
-				inp.addEventListener("input", () => {
-					updateSitePreview(inp.dataset.shelfId);
-					// Update the badge label
-					const container = inp.closest(".ls-copy-site-override");
-					const badge = container?.querySelector(
-						".ls-copy-site-badge-custom, .ls-copy-site-badge-global",
-					);
-					if (badge) {
-						const hasCustom = inp.value.trim() !== "";
-						badge.className = hasCustom
-							? "ls-copy-site-badge-custom"
-							: "ls-copy-site-badge-global";
-						badge.textContent = hasCustom ? "custom" : "global";
-					}
-				});
-			});
-	}
-
-	function updateSitePreview(shelfId) {
-		const inp = document.getElementById(`copy-override-${shelfId}`);
-		const previewEl = $(`copy-site-preview-${shelfId}`);
-		if (!inp || !previewEl) return;
-		const template =
-			inp.value.trim() || tplInput?.value?.trim() || globalTemplate;
-		const siteNovel = novelBySite[shelfId] || previewNovel;
-		const text = formatNovelInfo(siteNovel, template);
-		previewEl.textContent = text || "—";
-	}
-
-	function updateAllSitePreviews() {
-		Object.values(SHELVES).forEach((shelf) => {
-			const inp = document.getElementById(`copy-override-${shelf.id}`);
-			// Only refresh sites that are falling back to global (no custom override)
-			if (inp && !inp.value.trim()) updateSitePreview(shelf.id);
-		});
-	}
 
 	// Save button
 	const saveBtn = $("copy-format-save-btn");
 	if (saveBtn) {
 		saveBtn.addEventListener("click", async () => {
 			try {
-				const newEnabled = enabledCb?.checked !== false;
-				const newTemplate =
-					tplInput?.value?.trim() || DEFAULT_COPY_TEMPLATE;
-				const newOverrides = {};
-				document
-					.querySelectorAll(".copy-override-input")
-					.forEach((inp) => {
-						const shelfId = inp.dataset.shelfId;
-						const v = inp.value.trim();
-						if (shelfId && v) newOverrides[shelfId] = v;
-					});
 				const current = await novelLibrary.getSettings();
-				// Unified export settings
 				const newExportTemplate =
 					exportTplInput?.value?.trim() || DEFAULT_EXPORT_TEMPLATE;
-				const newExportExtension =
-					exportExtSelect?.value || COPY_EXPORT_DEFAULT_EXTENSION;
+
+				// Collect per-site overrides from the dynamic inputs
+				const newSiteOverrides = {};
+				document
+					.querySelectorAll("[data-site-tpl-shelf]")
+					.forEach((input) => {
+						const shelfId = input.dataset.siteTplShelf;
+						const val = input.value.trim();
+						if (val) newSiteOverrides[shelfId] = val;
+					});
+
 				await novelLibrary.saveSettings({
 					...current,
 					novelCopyFormats: {
-						enabled: newEnabled,
-						globalTemplate: newTemplate,
-						siteOverrides: newOverrides,
+						...(current.novelCopyFormats || {}),
 						exportTemplate: newExportTemplate,
-						exportExtension: newExportExtension,
+						exportSiteOverrides: newSiteOverrides,
 					},
 				});
 				showToast("✅ Copy format saved!", "success");
@@ -1768,6 +1582,39 @@ async function initCopyFormatTab() {
 				showToast("❌ Failed to save: " + err.message, "error");
 			}
 		});
+	}
+
+	// ── Per-site overrides section ────────────────────────────────────────────
+	const siteOverridesSection = $("copy-site-overrides-section");
+	const siteOverridesList = $("copy-site-overrides-list");
+	if (siteOverridesSection && siteOverridesList) {
+		const enabledShelves = filterEnabledShelves(siteSettings);
+		if (enabledShelves.length > 0) {
+			siteOverridesSection.style.display = "";
+			const currentOverrides = fmt.exportSiteOverrides || {};
+
+			siteOverridesList.innerHTML = enabledShelves
+				.map((shelf) => {
+					const savedVal = currentOverrides[shelf.id] || "";
+					const siteDefault =
+						shelf.defaultExportTemplate || DEFAULT_EXPORT_TEMPLATE;
+					const placeholder = `Leave blank to use global template (site default: ${siteDefault})`;
+					return `<div class="ls-form-group" style="margin-bottom:14px;">
+						<label class="ls-label" style="display:flex;align-items:center;gap:6px;">
+							<span>${shelf.emoji || "🌐"}</span>
+							<span>${escHtml(shelf.name)}</span>
+						</label>
+						<input
+							type="text"
+							class="ls-input"
+							data-site-tpl-shelf="${escHtml(shelf.id)}"
+							value="${escHtml(savedVal)}"
+							placeholder="${escHtml(placeholder)}"
+						/>
+					</div>`;
+				})
+				.join("");
+		}
 	}
 }
 
@@ -1798,14 +1645,6 @@ function setupEventListeners() {
 			}
 		});
 	});
-
-	// Background animation selector
-	const bgAnimSelect = $("library-bg-animation");
-	if (bgAnimSelect) {
-		bgAnimSelect.addEventListener("change", () => {
-			setThemeVariables(readCurrentThemeFromUI());
-		});
-	}
 
 	// Mode pill buttons — update hidden select, sync pills, auto-adjust text color
 	document.querySelectorAll(".ls-mode-pill").forEach((btn) => {
@@ -1858,7 +1697,6 @@ function setupEventListeners() {
 			bgTertiary: bgTertiaryVal !== bgPrimary ? bgTertiaryVal : "",
 			textColor:
 				$("library-textColorPicker")?.value || defaultTheme.textColor,
-			bgAnimation: $("library-bg-animation")?.value || "none",
 		};
 	}
 
@@ -2395,7 +2233,7 @@ function setupEventListeners() {
 			try {
 				createRollingBtn.disabled = true;
 				createRollingBtn.textContent = "⏳ Creating…";
-				await createRollingBackup({ reason: "manual" });
+				await createRollingBackup("manual");
 				await loadRollingBackups();
 				await initializeRollingBackupStatus();
 				showToast("✅ Rolling backup created!", "success");
@@ -2412,7 +2250,7 @@ function setupEventListeners() {
 	const rollingIntervalDisp = $("rollingBackupIntervalDisplay");
 	if (rollingIntervalEl) {
 		rollingIntervalEl.addEventListener("change", async () => {
-			const val = parseInt(rollingIntervalEl.value, 10) || 60;
+			const val = parseInt(rollingIntervalEl.value, 10) || 1440;
 			if (rollingIntervalDisp)
 				rollingIntervalDisp.textContent = String(val);
 			await browser.storage.local.set({
@@ -2521,22 +2359,21 @@ function setupEventListeners() {
 		});
 	}
 
-	// View Drive backups (open modal or new tab)
+	// View Drive backups — toggle the inline <details> collapsible
 	const viewBackupsBtn = $("library-view-backups-btn");
 	if (viewBackupsBtn) {
 		viewBackupsBtn.addEventListener("click", () => {
-			const modal = $("drive-backups-modal");
-			if (modal) {
-				modal.classList.remove("hidden");
-				loadDriveBackupsList();
+			const section = $("drive-backups-section");
+			if (section) {
+				section.open = !section.open;
+				if (section.open) {
+					loadDriveBackupsList();
+					section.scrollIntoView({
+						behavior: "smooth",
+						block: "nearest",
+					});
+				}
 			}
-		});
-	}
-
-	const driveBackupsClose = $("drive-backups-close");
-	if (driveBackupsClose) {
-		driveBackupsClose.addEventListener("click", () => {
-			$("drive-backups-modal")?.classList.add("hidden");
 		});
 	}
 
@@ -2928,7 +2765,6 @@ function setupEventListeners() {
 			changes.driveAuthError ||
 			changes.backupMode ||
 			changes.driveAutoRestoreEnabled ||
-			changes.continuousBackupCheckIntervalMinutes ||
 			changes.driveClientId ||
 			changes.driveClientSecret
 		) {
@@ -2967,19 +2803,22 @@ async function loadDriveBackupsList() {
 			return;
 		}
 		listEl.innerHTML = response.backups
-			.map(
-				(b) => `
+			.map((b) => {
+				const modifiedDisplay = b.modifiedTime
+					? new Date(b.modifiedTime).toLocaleString()
+					: "";
+				return `
 			<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;
 				border:1px solid var(--border-color);border-radius:8px;margin-bottom:8px;
 				background:var(--bg-secondary);">
 				<div>
 					<div style="font-weight:500;font-size:13px;">${b.name}</div>
-					<div style="font-size:11px;color:var(--text-secondary);">${b.modifiedTime || ""}</div>
+					<div style="font-size:11px;color:var(--text-secondary);">${modifiedDisplay}</div>
 				</div>
 				<button class="drive-restore-btn ls-btn ls-btn-secondary ls-btn-sm" data-id="${b.id}">Restore</button>
 			</div>
-		`,
-			)
+		`;
+			})
 			.join("");
 
 		listEl.querySelectorAll(".drive-restore-btn").forEach((btn) => {
@@ -2995,7 +2834,8 @@ async function loadDriveBackupsList() {
 					});
 					if (res?.success) {
 						showToast("✅ Drive backup restored!", "success");
-						$("drive-backups-modal")?.classList.add("hidden");
+						const section = $("drive-backups-section");
+						if (section) section.open = false;
 					} else {
 						throw new Error(res?.error || "Restore failed");
 					}

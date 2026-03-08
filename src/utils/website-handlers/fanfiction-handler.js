@@ -43,6 +43,8 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		color: "#2a4b8d",
 		novelIdPattern: /\/s\/(\d+)\//,
 		primaryDomain: "www.fanfiction.net",
+		// Default filename template for exported FanFiction files (user can override in settings)
+		defaultExportTemplate: "{titleSafe} - {authorSafe}",
 		// Download URL template - {url} is replaced with encoded source URL
 		downloadUrlTemplate: "https://fichub.net/?b=1&q={url}",
 		// Modular taxonomy definition for library filtering

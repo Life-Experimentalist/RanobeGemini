@@ -148,8 +148,15 @@ export function createChunkBanner(
 			statusColor = "#0f9d58";
 			break;
 		default:
-			statusIcon = "⏳";
-			statusText = "Pending";
+			// Show "Not Enhanced" with an enhance action when a callback is available
+			// (pre-enhancement state). Fall back to "Pending" when queued during processing.
+			if (callbacks?.onEnhance) {
+				statusIcon = "📄";
+				statusText = "Not Enhanced";
+			} else {
+				statusIcon = "⏳";
+				statusText = "Pending";
+			}
 			statusColor = "#666";
 	}
 
@@ -388,6 +395,23 @@ export function createChunkBanner(
 		}
 	});
 	navigationContainer.appendChild(nextBtn);
+
+	// For pre-enhancement pending state, add an Enhance button directly in the banner
+	if (status === "pending" && callbacks.onEnhance) {
+		const enhanceBtn = createMaterialButton(
+			"⚡ Enhance Chunk",
+			"gemini-chunk-enhance-btn",
+			"Enhance only this chunk with Gemini AI",
+			"primary",
+		);
+		enhanceBtn.style.fontWeight = "600";
+		enhanceBtn.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			callbacks.onEnhance();
+		});
+		controlsContainer.appendChild(enhanceBtn);
+	}
 
 	// Add regenerate button if completed or error
 	if (status === "completed" || status === "error" || status === "cached") {

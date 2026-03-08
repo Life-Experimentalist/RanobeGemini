@@ -26,12 +26,13 @@ export const UI_MOBILE_BREAKPOINT_PX = 600;
 
 // Copy/export format configuration
 export const COPY_EXPORT_EXTENSIONS = ["txt", "epub", "html"];
-export const COPY_EXPORT_DEFAULT_EXTENSION = "txt";
+export const COPY_EXPORT_DEFAULT_EXTENSION = "epub";
 /** Default copy template. Uses {lastRead}/{chapters} for reading progress,
  *  falling back gracefully when those fields are empty. */
 export const DEFAULT_COPY_TEMPLATE =
 	"{title} by {author} | Ch.{lastRead}/{chapters}";
-export const DEFAULT_EXPORT_FILENAME_TEMPLATE = "{titleSafe} - {authorSafe}";
+export const DEFAULT_EXPORT_FILENAME_TEMPLATE =
+	"{titleSafe} by {authorSafe} {words}";
 
 // Carousel Configuration
 export const CAROUSEL_ACTIVE_SITE_BONUS = 5; // Add this many novels per active website

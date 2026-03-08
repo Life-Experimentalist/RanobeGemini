@@ -111,6 +111,8 @@ export const SHELVES = SHELF_REGISTRY;
  * @property {string} url - Chapter URL
  * @property {boolean} isEnhanced - Whether this chapter has been enhanced
  * @property {number} enhancedAt - Timestamp when enhanced
+ * @property {boolean} isSummarized - Whether this chapter has been summarized
+ * @property {number} summarizedAt - Timestamp when summarized
  * @property {number} readAt - Timestamp when last read
  */
 
@@ -138,6 +140,8 @@ export class NovelLibrary {
 				enabled: true,
 				globalTemplate: "{title} by {author} {wordCount}",
 				siteOverrides: {}, // map of shelfId → template string
+				exportTemplate: "{titleSafe} by {authorSafe} {words}",
+				exportExtension: "epub",
 			},
 		};
 
@@ -1376,9 +1380,9 @@ export class NovelLibrary {
 				[chaptersKey]: chapters,
 			});
 
-			// Update enhanced chapters count in novel
+			// Update enhanced chapters count in novel (counts enhanced OR summarized chapters)
 			const enhancedCount = Object.values(chapters.chapters).filter(
-				(ch) => ch.isEnhanced,
+				(ch) => ch.isEnhanced || ch.isSummarized,
 			).length;
 
 			const library = await this.getLibrary();

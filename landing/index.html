@@ -1,50 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Ranobe Gemini | AI-powered reading companion</title>
-		<meta
-			name="description"
-			content="Ranobe Gemini enhances web novels with Gemini API-powered summaries, clean reading UI, and seamless import/export. Built for Edge and Firefox, more browsers coming soon."
-		/>
-		<meta
-			name="keywords"
-			content="Ranobe Gemini, web novel, Gemini API, AI summary, Edge extension, Firefox extension, library import export"
-		/>
+		<meta name="description"
+			content="Ranobe Gemini enhances web novels with Gemini API-powered summaries, clean reading UI, and seamless import/export. Built for Edge and Firefox, more browsers coming soon." />
+		<meta name="keywords"
+			content="Ranobe Gemini, web novel, Gemini API, AI summary, Edge extension, Firefox extension, library import export" />
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/" />
 		<meta name="theme-color" content="#0b1628" />
-		<meta
-			property="og:title"
-			content="Ranobe Gemini | AI-powered reading companion"
-		/>
-		<meta
-			property="og:description"
-			content="Enhance, summarize, and manage your web novels with Gemini AI. Edge and Firefox supported; more browsers coming soon."
-		/>
+		<meta property="og:title" content="Ranobe Gemini | AI-powered reading companion" />
+		<meta property="og:description"
+			content="Enhance, summarize, and manage your web novels with Gemini AI. Edge and Firefox supported; more browsers coming soon." />
 		<meta property="og:url" content="https://ranobe.vkrishna04.me/" />
 		<meta property="og:type" content="website" />
-		<meta
-			property="og:image"
-			content="https://ranobe.vkrishna04.me/assets/og-card.svg"
-		/>
+		<meta property="og:image" content="https://ranobe.vkrishna04.me/assets/og-card.svg" />
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content="Ranobe Gemini" />
-		<meta
-			name="twitter:description"
-			content="AI-powered web novel companion for Edge and Firefox."
-		/>
-		<link
-			rel="icon"
+		<meta name="twitter:description" content="AI-powered web novel companion for Edge and Firefox." />
+		<link rel="icon"
 			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
-			sizes="32x32"
-		/>
+			sizes="32x32" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet"
-		/>
+		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet" />
 		<link rel="stylesheet" href="./styles.css" />
 		<script type="application/ld+json">
 			{
@@ -65,16 +47,15 @@
 			}
 		</script>
 	</head>
+
 	<body>
 		<div class="bg-glow"></div>
 		<div class="bg-dots"></div>
 		<header class="topbar">
 			<div class="brand">
-				<img
-					class="logo-img"
+				<img class="logo-img"
 					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
-					alt="Ranobe Gemini"
-				/>
+					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong>Ranobe Gemini</strong>
 					<span>AI reading companion</span>
@@ -85,14 +66,10 @@
 				<a href="#how">How it works</a>
 				<a href="#browsers">Browsers</a>
 				<a href="./drive-setup.html">Drive setup</a>
+				<a href="./novel-status.html">Novel status</a>
 				<a href="#faq">FAQ</a>
-				<a
-					class="ghost"
-					href="https://github.com/Life-Experimentalist/RanobeGemini"
-					target="_blank"
-					rel="noreferrer"
-					>GitHub</a
-				>
+				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
 			</nav>
 		</header>
 
@@ -108,26 +85,13 @@
 						ScribbleHub, and more.
 					</p>
 					<div class="cta-row">
-						<a
-							class="btn primary"
-							href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
-							target="_blank"
-							rel="noreferrer"
-							>Get it for Firefox</a
-						>
-						<a
-							class="btn primarysecondary"
+						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank" rel="noreferrer">Get it for Firefox</a>
+						<a class="btn primarysecondary"
 							href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/releases"
-							target="_blank"
-							rel="noreferrer"
-							>Get it for Edge</a
-						>
+							target="_blank" rel="noreferrer">Get it for Edge</a>
 						<a class="btn ghost" href="#browsers">Other browsers</a>
-						<button
-							class="btn ghost hidden"
-							id="library-btn"
-							type="button"
-						>
+						<button class="btn ghost hidden" id="library-btn" type="button">
 							Open Library (if installed)
 						</button>
 					</div>
@@ -343,7 +307,8 @@
 					<article>
 						<h3>🔑 Do I need an API key?</h3>
 						<p>
-							Yes. Add your free Gemini API key from <a href="https://ai.google.dev/" target="_blank" rel="noreferrer">Google AI Studio</a> in the popup Settings
+							Yes. Add your free Gemini API key from <a href="https://ai.google.dev/" target="_blank"
+								rel="noreferrer">Google AI Studio</a> in the popup Settings
 							tab. Backup keys and rotation are supported for rate
 							limits. The free tier is generous and suitable for most users.
 						</p>
@@ -426,7 +391,8 @@
 						<p>
 							Yes! The extension is open-source and free. You only pay for
 							Gemini API usage (free tier is generous). Check
-							<a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noreferrer">Google AI pricing</a>
+							<a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank"
+								rel="noreferrer">Google AI pricing</a>
 							for rate limits.
 						</p>
 					</article>
@@ -449,32 +415,14 @@
 						start enhancing chapters in seconds.
 					</p>
 					<div class="cta-row">
-						<a
-							class="btn primary"
-							href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
-							target="_blank"
-							rel="noreferrer"
-							>Get for Firefox</a
-						>
-						<a
-							class="btn primary"
+						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank" rel="noreferrer">Get for Firefox</a>
+						<a class="btn primary"
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
-							target="_blank"
-							rel="noreferrer"
-							>Get for Edge</a
-						>
-						<button
-							class="btn ghost"
-							id="cta-library-btn"
-							type="button"
-							style="display: none;"
-							>Open Library</button
-						>
-						<a
-							class="btn ghost"
-							href="https://ranobe.vkrishna04.me/#faq"
-							>View FAQ</a
-						>
+							target="_blank" rel="noreferrer">Get for Edge</a>
+						<button class="btn ghost" id="cta-library-btn" type="button" style="display: none;">Open
+							Library</button>
+						<a class="btn ghost" href="https://ranobe.vkrishna04.me/#faq">View FAQ</a>
 					</div>
 				</div>
 			</section>
@@ -485,16 +433,13 @@
 			<div class="footer-links">
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a
-					href="https://github.com/Life-Experimentalist/RanobeGemini"
-					target="_blank"
-					rel="noreferrer"
-					>GitHub</a
-				>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
 			</div>
 			<p class="footnote">Built by Life-Experimentalist</p>
 		</footer>
 
 		<script src="./script.js"></script>
 	</body>
+
 </html>
