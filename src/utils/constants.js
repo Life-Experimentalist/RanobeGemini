@@ -53,29 +53,30 @@ Please enhance this novel chapter translation with the following improvements:
 7. Streamline overly verbose sections while preserving important details
 8. Ensure proper transitioning between scenes and ideas
 9. Add bold section headings at scene changes, POV shifts, or topic transitions. If the original text already has section headings, incorporate them seamlessly and consistently. Make sure that the section headings are not too long, and do not use any special characters or symbols in the headings. Use only standard English letters and numbers.
-10. **IMPORTANT:** Format game-like status windows, character stats, skill lists, or RPG system information into styled HTML boxes. Use a div with class="game-stats-box" to contain the exact text. For example, a status window like:
-    Player: Mike
-    Level: 0
-    Equipment: None
-    Skills: None
-    Class: Unspecialized
-    Experience: 0
-    Overall Combat Power: 5
+10. **IMPORTANT — Structured Content Boxes:** Use these specific HTML classes to mark different types of special content. Do NOT use markdown for any of these:
 
-    Should be formatted as:
+    **a) Full Stat Sheets** → \`<div class="game-stats-box">\`: Multi-line character status windows, player sheets, inventory lists, attribute tables, or any block of tabular RPG data (≥3 lines, mostly name:value pairs). Preserve all line breaks exactly. Example:
     <div class="game-stats-box">
-		Player: Mike
-		Level: 0
-		Equipment: None
-		Skills: None
-		Class: Unspecialized
-		Experience: 0
-		Overall Combat Power: 5
-	</div>
+    Player: Mike
+    Level: 5 → Warrior
+    HP: 120/120  MP: 60/60
+    Skills: [Iron Skin] [War Cry]
+    </div>
 
-    Preserve all line breaks, formatting, and exact data within these status windows. if there are any text in [ square brackets ] please pay attention to if they sound like system announcements or game-like status windows, and format them accordingly. If there are any consecutive [ square boxes ] then combine then into a single div. Be especially attentive to identifying stat blocks, status screens, system messages, skill descriptions, or any RPG-game-like information that should be formatted this way.
+    **b) System Notifications** → \`<div class="rg-system-msg">\`: Short in-world pop-ups, level-up banners, quest notifications, achievement unlocks, skill acquisition announcements, and other brief "System:" or "[…]" style messages (typically 1–5 lines). These read like UI toasts, not full stat sheets. Example:
+    <div class="rg-system-msg">[Achievement Unlocked: First Kill!]
+    +500 EXP · Title acquired: Rookie Hunter</div>
+
+    **c) Skill / Ability Cards** → \`<div class="rg-skill-box">\`: Individual skill, spell, technique, or ability descriptions that have a name and a block of descriptive text. Use when a single named ability is being described in detail rather than a full stat list. Example:
+    <div class="rg-skill-box">【Fireball — Rank C】
+    Launches a compressed sphere of fire. Deals 80 fire damage on impact.
+    Cooldown: 8 s  ·  MP Cost: 30</div>
+
+    For \`[ square bracket ]\` system text: classify as stat-sheet (→ \`game-stats-box\`), short notification (→ \`rg-system-msg\`), or skill card (→ \`rg-skill-box\`) based on length and structure. Merge consecutive same-type blocks into one div.
 11. Remove any advertising code snippets or irrelevant promotional content
-12. **Author Notes Handling:** Identify author notes, translator notes, or any meta-content not part of the story. Format them inside a styled HTML box using <div class="game-stats-box">. Insert a visible horizontal divider line using <hr class="section-divider"> before and after author notes to clearly separate them from the main story content. Summarize lengthy author notes by keeping only plot-relevant explanations (e.g., world-building clarifications, character context) while removing disclaimers, credits, update schedules, Patreon links, and other non-story content.
+12. **Author Notes / Translator Notes / Editor Notes:** Identify A/N:, AN:, T/N:, TN:, E/N:, "Author's Note", "Translator's Note", or any meta-commentary not part of the story. Format them using \`<div class="rg-author-note">\`. Insert \`<hr class="section-divider">\` before AND after the box to visually separate it from the story. Summarize lengthy notes: keep only plot-relevant context (world-building, character clarifications) and strip disclaimers, Patreon plugs, update schedules, and social-media links.
+13. **Poetry, Song Lyrics & Epigraphs:** Wrap any in-text poem, song lyric, incantation, chapter-opening quote, or verse in \`<div class="rg-quote-box">\`. Preserve all original line breaks exactly. Do not alter the wording. Example: a stanza at the top of the chapter → \`<div class="rg-quote-box">Verse line 1\nVerse line 2</div>\`.
+14. **Flashback & Memory Scenes:** When a clearly marked flashback or memory scene spans one or more paragraphs — identified by markers like "— Flashback —", "Memory:", "Three Years Ago", italicised past-tense inserts within a present-tense narrative, or explicit scene breaks introducing a recalled event — wrap the entire flashback block in \`<div class="rg-flashback">\` so it is visually distinct from the main narrative.
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.
 
@@ -115,7 +116,7 @@ Keep the summary brief but informative. Focus only on the most essential plot po
 
 // Default permanent prompt
 export const DEFAULT_PERMANENT_PROMPT =
-	"Ensure the output is formatted using only HTML paragraph tags (<p>) for each paragraph. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
+	"Ensure body text is wrapped in HTML paragraph tags (<p>) for each paragraph. For special content (stat blocks, system notifications, skill cards, author notes, quotes, flashbacks) use the designated div classes as specified in the main prompt — do NOT wrap those in <p> tags. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 // Default model ID
 export const DEFAULT_MODEL_ID = "gemini-2.5-flash";

@@ -689,6 +689,182 @@ html[data-darkreader-mode] .section-divider {
 	}
 }
 
+/* ============================================================
+   SPECIAL CONTENT BOX TYPES
+   Used by Gemini to mark distinct content regions
+   ============================================================ */
+
+/* Author Notes / Translator Notes box */
+.rg-author-note {
+	font-family: inherit;
+	background-color: rgba(45, 35, 10, 0.92);
+	border: 1px solid rgba(200, 155, 50, 0.55);
+	border-left: 3px solid rgba(220, 175, 70, 0.85);
+	border-radius: 6px;
+	padding: 12px 16px 12px 18px;
+	margin: 20px 0;
+	font-style: italic;
+	font-size: 13.5px;
+	color: #d4b87a;
+	line-height: 1.7;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.rg-author-note::before {
+	content: "📝 Author's Note";
+	display: block;
+	font-style: normal;
+	font-weight: 700;
+	font-size: 11px;
+	letter-spacing: 0.9px;
+	text-transform: uppercase;
+	color: rgba(220, 175, 70, 0.8);
+	margin-bottom: 8px;
+}
+
+/* System Notification / Pop-up / Announcement box */
+.rg-system-msg {
+	font-family: 'Courier New', Courier, monospace;
+	background-color: rgba(5, 12, 30, 0.97);
+	border: 1px solid rgba(55, 135, 255, 0.45);
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin: 16px 0;
+	color: #9ecfff;
+	white-space: pre-wrap;
+	font-size: 13.5px;
+	line-height: 1.6;
+	box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
+	box-sizing: border-box;
+	width: 100%;
+}
+
+/* Quote / Poetry / Song Lyrics / Epigraph box */
+.rg-quote-box {
+	font-family: Georgia, 'Times New Roman', Times, serif;
+	background: transparent;
+	border: none;
+	border-left: 3px solid rgba(160, 155, 145, 0.55);
+	padding: 6px 18px;
+	margin: 18px 0 18px 10px;
+	font-style: italic;
+	color: rgba(205, 200, 185, 0.88);
+	font-size: 14px;
+	line-height: 1.85;
+	box-sizing: border-box;
+	width: calc(100% - 10px);
+	white-space: pre-wrap;
+}
+
+/* Skill / Spell / Ability description card */
+.rg-skill-box {
+	font-family: inherit;
+	background-color: rgba(12, 25, 14, 0.95);
+	border: 1px solid rgba(55, 160, 75, 0.45);
+	border-top: 2px solid rgba(65, 200, 90, 0.65);
+	border-radius: 5px;
+	padding: 10px 14px;
+	margin: 14px 0;
+	color: #9de8a8;
+	font-size: 13px;
+	line-height: 1.6;
+	box-sizing: border-box;
+	width: 100%;
+	white-space: pre-wrap;
+}
+
+/* Flashback / Memory scene wrapper */
+.rg-flashback {
+	font-family: inherit;
+	background-color: rgba(32, 26, 18, 0.88);
+	border: 1px dashed rgba(145, 115, 65, 0.5);
+	border-radius: 4px;
+	padding: 14px 18px;
+	margin: 22px 0;
+	font-style: italic;
+	color: rgba(215, 198, 165, 0.82);
+	font-size: inherit;
+	line-height: 1.78;
+	box-sizing: border-box;
+	width: 100%;
+	opacity: 0.92;
+}
+
+/* ── Light-mode variants ── */
+@media (prefers-color-scheme: light) {
+	.rg-author-note {
+		background-color: rgba(255, 248, 225, 0.95);
+		border-left-color: rgba(200, 145, 20, 0.9);
+		border-color: rgba(200, 170, 80, 0.5);
+		color: #7a5c18;
+	}
+
+	.rg-author-note::before {
+		color: rgba(180, 130, 20, 0.9);
+	}
+
+	.rg-system-msg {
+		background-color: rgba(235, 242, 255, 0.97);
+		border-color: rgba(55, 110, 220, 0.45);
+		color: #1a4a9a;
+		box-shadow: 0 0 8px rgba(55, 110, 220, 0.06);
+	}
+
+	.rg-quote-box {
+		border-left-color: rgba(100, 95, 85, 0.55);
+		color: rgba(80, 75, 65, 0.9);
+	}
+
+	.rg-skill-box {
+		background-color: rgba(235, 255, 238, 0.95);
+		border-color: rgba(45, 140, 60, 0.45);
+		border-top-color: rgba(45, 165, 65, 0.65);
+		color: #1e6b30;
+	}
+
+	.rg-flashback {
+		background-color: rgba(250, 245, 235, 0.9);
+		border-color: rgba(155, 125, 70, 0.45);
+		color: rgba(90, 75, 50, 0.88);
+	}
+}
+
+/* ── Dark-reader / explicit dark-mode overrides ── */
+html[data-darkreader-mode] .rg-author-note,
+[data-theme="dark"] .rg-author-note,
+.dark-mode .rg-author-note {
+	background-color: rgba(45, 35, 10, 0.92);
+	border-left-color: rgba(220, 175, 70, 0.85);
+	color: #d4b87a;
+}
+
+html[data-darkreader-mode] .rg-system-msg,
+[data-theme="dark"] .rg-system-msg,
+.dark-mode .rg-system-msg {
+	background-color: rgba(5, 12, 30, 0.97);
+	border-color: rgba(55, 135, 255, 0.45);
+	color: #9ecfff;
+}
+
+/* ── Responsive tweaks ── */
+@media screen and (max-width: 768px) {
+
+	.rg-author-note,
+	.rg-system-msg,
+	.rg-skill-box,
+	.rg-flashback {
+		font-size: 13px;
+		padding: 10px 12px;
+	}
+
+	.rg-quote-box {
+		margin-left: 4px;
+		padding-left: 12px;
+		width: calc(100% - 4px);
+	}
+}
+
 /* Mobile and responsive design adjustments */
 @media screen and (max-width: 768px) {
 

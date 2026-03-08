@@ -43,11 +43,16 @@ Please maintain:
 - Proper paragraph breaks and formatting
 - Character personalities and relationships from the original work
 - Fandom-specific terminology and references
-- Author's notes markers (if present)
-- Scene breaks and dividers
-- Any special formatting for emphasis
-- Preserve the narrative flow and pacing
-When enhancing, improve readability while respecting the author's creative voice and the source material.`;
+- Scene breaks and dividers (preserve *** / --- / horizontal rules exactly)
+- Original narrative flow, pacing, and the author's creative voice
+
+**FanFiction-Specific Formatting Rules:**
+- **Author Notes** (A/N:, AN:, T/N:, E/N:, "Author's Note", "Translator's Note"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Keep only plot-relevant context; remove disclaimers, Patreon prompts, update notices, and social-media links.
+- **Chapter Epigraphs, Quotes & Lyrics**: Wrap any opening/closing poem, song lyric, or chapter quote in \`<div class="rg-quote-box">\`, preserving all line breaks exactly.
+- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows → \`<div class="game-stats-box">\`; brief level-up/quest pop-ups → \`<div class="rg-system-msg">\`; individual skill/ability cards → \`<div class="rg-skill-box">\`.
+- **Flashback Scenes**: When a flashback is clearly marked ("— Flashback —", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
+
+When enhancing, improve readability while fully respecting the author's creative voice and the source material's original intent.`;
 
 	constructor() {
 		super();
@@ -453,6 +458,145 @@ When enhancing, improve readability while respecting the author's creative voice
 			const titleArea = contentDiv.querySelector("div[align='center']");
 			if (titleArea) {
 				return { element: titleArea, position: "after" };
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Override UIInsertionPoint to also fire the summary banner injection.
+	 * Controls are placed before #storycontent;  the summary banner is placed
+	 * between #content (title/metadata) and div[role='main'] (story body).
+	 * @param {HTMLElement} contentArea
+	 * @returns {{ element: HTMLElement, position: string }}
+	 */
+	getUIInsertionPoint(contentArea) {
+		// Fire-and-forget — non-critical, never blocks rendering
+		this._injectSummaryBanner().catch(() => {});
+
+		const storyContent =
+			document.getElementById("storycontent") || contentArea;
+		return { element: storyContent, position: "before" };
+	}
+
+	/**
+	 * Fetch and inject a description banner between the #content metadata block
+	 * and the story body on mobile FanFiction.net chapter pages.
+	 *
+	 * Priority:
+	 *   1. Description already saved in rg_novel_library (instant)
+	 *   2. Fetch the desktop chapter page and parse #profile_top (slow path)
+	 *
+	 * The banner is inserted once; subsequent calls are no-ops.
+	 */
+	async _injectSummaryBanner() {
+		if (document.getElementById("rg-ff-mobile-summary")) return;
+		if (!this.isChapterPage()) return;
+
+		// Insertion point: before div[role="main"] (which wraps #storycontent)
+		const storyMainDiv = document.querySelector('div[role="main"]');
+		if (!storyMainDiv) return;
+
+		const summaryEl = document.createElement("div");
+		summaryEl.id = "rg-ff-mobile-summary";
+		summaryEl.style.cssText = [
+			"margin: 4px 0.5em 6px",
+			"padding: 9px 12px",
+			"border-left: 3px solid #5F99C9",
+			"background: rgba(95,153,201,0.08)",
+			"border-radius: 0 4px 4px 0",
+			"font-size: 0.9em",
+			"line-height: 1.55",
+		].join(";");
+
+		// Insert placeholder before we await anything so layout doesn't jump later
+		storyMainDiv.parentNode.insertBefore(summaryEl, storyMainDiv);
+
+		const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1];
+		if (!storyId) {
+			summaryEl.remove();
+			return;
+		}
+
+		let description = null;
+
+		// 1. Fast path — library storage
+		try {
+			const stored = await browser.storage.local.get("rg_novel_library");
+			const novels = stored?.rg_novel_library?.novels ?? {};
+			description = novels[`fanfiction-${storyId}`]?.description ?? null;
+		} catch (_) {
+			/* non-critical */
+		}
+
+		// 2. Slow path — fetch desktop page
+		if (!description) {
+			try {
+				const resp = await fetch(
+					`https://www.fanfiction.net/s/${storyId}/1/`,
+					{ cache: "default" },
+				);
+				if (resp.ok) {
+					const doc = new DOMParser().parseFromString(
+						await resp.text(),
+						"text/html",
+					);
+					description = this._extractDescriptionFromDesktopDoc(doc);
+				}
+			} catch (_) {
+				/* non-critical */
+			}
+		}
+
+		if (!description) {
+			summaryEl.remove();
+			return;
+		}
+
+		// Render — use textContent for the body to prevent XSS
+		const label = document.createElement("strong");
+		label.style.cssText =
+			"display:block;margin-bottom:4px;color:#5F99C9;font-size:0.82em;text-transform:uppercase;letter-spacing:0.04em";
+		label.textContent = "📖 Summary";
+
+		const body = document.createElement("span");
+		body.textContent = description;
+
+		summaryEl.append(label, body);
+		debugLog("[Mobile] Injected summary banner");
+	}
+
+	/**
+	 * Parse the description from a DOMParser-produced desktop-page document.
+	 * Mirrors the logic in the parent class's extractDescription() but operates
+	 * on an arbitrary Document rather than the live window.document.
+	 * @param {Document} doc
+	 * @returns {string|null}
+	 */
+	_extractDescriptionFromDesktopDoc(doc) {
+		const profileTop = doc.getElementById("profile_top");
+		if (!profileTop) return null;
+
+		for (const div of profileTop.querySelectorAll("div.xcontrast_txt")) {
+			const text = div.textContent.trim();
+			if (
+				text.length > 20 &&
+				!text.includes("Rated:") &&
+				!text.includes("Words:")
+			) {
+				return text;
+			}
+		}
+
+		// Fallback: look for margin-top-styled divs (original extractDescription logic)
+		for (const div of profileTop.querySelectorAll("div")) {
+			if (
+				(div.getAttribute("style") || "").includes("margin-top") &&
+				div.classList.contains("xcontrast_txt")
+			) {
+				const text = div.textContent.trim();
+				if (text.length > 20) return text;
 			}
 		}
 

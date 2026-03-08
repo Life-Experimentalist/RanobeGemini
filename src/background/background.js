@@ -670,6 +670,7 @@ if (typeof browser === "undefined") {
 	 */
 	function scheduleContinuousBackupCheck() {
 		// No-op: debounce approach replaces polling.
+		return Promise.resolve();
 	}
 
 	async function scheduleDriveSync() {
@@ -2699,7 +2700,7 @@ if (typeof browser === "undefined") {
 			// Extract and preserve HTML tags like images and game stats boxes before sending to Gemini
 			const preservedElements = [];
 			const contentWithPlaceholders = content.replace(
-				/<img[^>]+>|<iframe[^>]+>|<video[^>]+>|<audio[^>]+>|<source[^>]+>|<div class="game-stats-box">[\s\S]*?<\/div>/gi,
+				/<img[^>]+>|<iframe[^>]+>|<video[^>]+>|<audio[^>]+>|<source[^>]+>|<div class="(?:game-stats-box|rg-author-note|rg-system-msg|rg-quote-box|rg-skill-box|rg-flashback)">[\s\S]*?<\/div>/gi,
 				(match) => {
 					const placeholder = `[PRESERVED_ELEMENT_${preservedElements.length}]`;
 					preservedElements.push(match);
@@ -2708,19 +2709,30 @@ if (typeof browser === "undefined") {
 			);
 
 			debugLog(
-				`Preserved ${preservedElements.length} HTML elements (images and game stats boxes)`,
+				`Preserved ${preservedElements.length} HTML elements (images and styled content boxes)`,
 			);
 
-			// Debug log if any game stats boxes were found
+			// Debug log preserved box types
 			if (preservedElements.length > 0) {
-				const gameBoxCount = preservedElements.filter((el) =>
-					el.includes('class="game-stats-box"'),
-				).length;
-				if (gameBoxCount > 0) {
-					debugLog(
-						`Found ${gameBoxCount} game stats boxes to preserve`,
-					);
-				}
+				const boxClasses = [
+					"game-stats-box",
+					"rg-author-note",
+					"rg-system-msg",
+					"rg-quote-box",
+					"rg-skill-box",
+					"rg-flashback",
+				];
+				const counts = boxClasses
+					.map((cls) => ({
+						cls,
+						n: preservedElements.filter((el) =>
+							el.includes(`class="${cls}"`),
+						).length,
+					}))
+					.filter(({ n }) => n > 0)
+					.map(({ cls, n }) => `${n}×${cls}`)
+					.join(", ");
+				if (counts) debugLog(`Preserved boxes: ${counts}`);
 			}
 
 			// Load latest config directly from storage for most up-to-date settings
@@ -3010,13 +3022,15 @@ if (typeof browser === "undefined") {
 							);
 						});
 
-						// Log restoration of game stats boxes if any were present
-						const gameBoxCount = preservedElements.filter((el) =>
-							el.includes('class="game-stats-box"'),
+						// Log restoration of styled content boxes if any were present
+						const restoredBoxCount = preservedElements.filter(
+							(el) =>
+								el.includes('class="game-stats-box"') ||
+								el.includes('class="rg-'),
 						).length;
-						if (gameBoxCount > 0) {
+						if (restoredBoxCount > 0) {
 							debugLog(
-								`Restored ${gameBoxCount} game stats boxes in processed text`,
+								`Restored ${restoredBoxCount} styled content boxes in processed text`,
 							);
 						}
 					}

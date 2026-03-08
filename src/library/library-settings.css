@@ -1431,6 +1431,178 @@ textarea {
 	}
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   19. Auto-Mode Behavior Panel
+───────────────────────────────────────────────────────────────────────── */
+
+.ls-auto-panel {
+	margin-top: 4px;
+	margin-bottom: 6px;
+	animation: lsFadeIn 0.18s ease;
+}
+
+.ls-auto-panel-inner {
+	background: var(--bg-tertiary, #1f2937);
+	border: 1px solid var(--border-color, #374151);
+	border-radius: var(--ls-input-radius, 7px);
+	padding: 14px 16px;
+}
+
+.ls-auto-radios {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.ls-radio-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--text-primary, #e5e7eb);
+	cursor: pointer;
+	line-height: 1.4;
+}
+
+.ls-radio-label input[type="radio"] {
+	margin-top: 2px;
+	accent-color: var(--accent-primary, #6366f1);
+	flex-shrink: 0;
+}
+
+.ls-hint-inline {
+	font-size: 11px;
+	color: var(--text-secondary, #9ca3af);
+}
+
+.ls-schedule-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.ls-input-time {
+	width: 110px;
+	padding: 5px 8px;
+	font-size: 13px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   20. Light Mode Overrides
+───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+:root[data-theme="light"] .ls-btn-secondary {
+	background: #f3f4f6;
+	color: #111827;
+	border-color: #d1d5db;
+}
+
+:root[data-theme="light"] .ls-btn-secondary:hover {
+	background: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="light"] .ls-btn-danger {
+	color: #dc2626;
+	border-color: #dc2626;
+}
+
+:root[data-theme="light"] .ls-btn-danger:hover {
+	background: rgba(220, 38, 38, 0.08);
+}
+
+/* Info rows */
+:root[data-theme="light"] .ls-info-row {
+	border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Section cards */
+:root[data-theme="light"] .ls-section {
+	background: var(--bg-secondary, #ffffff);
+	border-color: var(--border-color, #e5e7eb);
+}
+
+/* Toggle track */
+:root[data-theme="light"] .ls-toggle-track {
+	background: #d1d5db;
+}
+
+/* Checkboxes */
+:root[data-theme="light"] .ls-checkbox-label input[type="checkbox"] {
+	background: #ffffff;
+	border-color: #d1d5db;
+}
+
+/* Handler panels */
+:root[data-theme="light"] .ls-handler-panel {
+	background: #ffffff;
+	border-color: #e5e7eb;
+}
+
+:root[data-theme="light"] .ls-handler-panel-summary:hover {
+	background: rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme="light"] .ls-handler-panel[open] .ls-handler-panel-summary {
+	border-bottom-color: #e5e7eb;
+}
+
+/* Auto-mode panel */
+:root[data-theme="light"] .ls-auto-panel-inner {
+	background: #f9fafb;
+	border-color: #e5e7eb;
+}
+
+/* Toast */
+:root[data-theme="light"] #ls-toast {
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Feedback messages */
+:root[data-theme="light"] .ls-feedback.success {
+	color: #16a34a;
+}
+
+:root[data-theme="light"] .ls-feedback.error {
+	color: #dc2626;
+}
+
+:root[data-theme="light"] .ls-feedback.info {
+	color: #2563eb;
+}
+
+/* Color text inputs */
+:root[data-theme="light"] .ls-color-text {
+	background: #ffffff;
+	border-color: #d1d5db;
+	color: #111827;
+}
+
+/* Copy-site badges & preview */
+:root[data-theme="light"] .ls-copy-site-badge-global,
+:root[data-theme="light"] .ls-copy-site-preview {
+	background: #f9fafb;
+	border-color: #e5e7eb;
+	color: #374151;
+}
+
+/* Drive connect box */
+:root[data-theme="light"] .ls-drive-connect-box {
+	background: rgba(66, 133, 244, 0.05);
+	border-color: rgba(66, 133, 244, 0.25);
+}
+
+/* Multi-select option highlight */
+:root[data-theme="light"] .ls-multi-select option:checked {
+	background: rgba(99, 102, 241, 0.12);
+}
+
+/* Handler-panel icon: don't invert in light mode (already handled by :not selector) */
+:root[data-theme="light"] .ls-handler-panel-icon[data-invert="true"],
+:root[data-theme="light"] .ls-site-icon-img[data-invert="true"] {
+	filter: none;
+}
+
 /* Backup mode cards */
 .backup-mode-card {
 	display: flex;

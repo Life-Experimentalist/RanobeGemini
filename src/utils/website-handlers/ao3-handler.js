@@ -83,11 +83,18 @@ export class AO3Handler extends BaseWebsiteHandler {
 	static DEFAULT_SITE_PROMPT = `This content is from Archive of Our Own (AO3), a popular fanfiction archive.
 Please maintain:
 - Proper paragraph breaks and formatting
-- Author's notes markers (if present) put them in a box
-- Scene breaks and dividers
-- Any special formatting like italics or bold for emphasis
-- Preserve the narrative flow and pacing
-When enhancing, improve readability while respecting the author's original style and voice.`;
+- Scene breaks and dividers (preserve *** / --- / horizontal rules and AO3 skin separators)
+- Original narrative flow, pacing, and tone
+- Any special formatting like italics, bold, or strikethrough for emphasis
+- The author's unique style and voice
+
+**AO3-Specific Formatting Rules:**
+- **Author Notes / End Notes** ("Author's Note", "A/N:", AO3 sub-headings labelled "Notes" or "End Notes"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Summarise if lengthy; keep only plot-relevant context.
+- **Epigraphs, Poems & Song Lyrics**: Wrap any chapter-opening or closing verse, poem, or quoted lyric in \`<div class="rg-quote-box">\`, preserving line breaks exactly.
+- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "— x years earlier —", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
+- **Game / System Content** (crossover fics with game mechanics): Full stat windows → \`<div class="game-stats-box">\`; short system messages → \`<div class="rg-system-msg">\`; individual skill cards → \`<div class="rg-skill-box">\`.
+
+When enhancing, improve readability while fully respecting the author's original style and the work's creative intent.`;
 
 	constructor() {
 		super();

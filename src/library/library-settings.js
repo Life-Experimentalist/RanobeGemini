@@ -220,16 +220,52 @@ function activateTabFromUrl() {
 }
 
 // ── Version badge ─────────────────────────────────────────────────────────────
+import { BUILD_VERSION } from "../config/build-version.js";
+
 function updateVersion() {
+	const badge = $("ls-version-badge");
+	if (!badge) return;
+	// BUILD_VERSION is stamped by dev/build.js on every build — always up-to-date
+	if (BUILD_VERSION) {
+		badge.textContent = `v${BUILD_VERSION}`;
+		return;
+	}
+	// Fallback: runtime manifest (reflects installed extension version)
 	try {
-		const manifest = browser.runtime.getManifest();
-		const badge = $("ls-version-badge");
-		if (badge && manifest.version) {
-			badge.textContent = `v${manifest.version}`;
-		}
+		const v = browser.runtime.getManifest()?.version;
+		if (v) badge.textContent = `v${v}`;
 	} catch (_e) {
 		/* ignore */
 	}
+}
+
+/**
+ * Show or hide the auto-behavior panel and populate its radios/inputs.
+ * @param {string} mode - current mode value ("dark"|"light"|"auto")
+ * @param {Object} [theme] - current stored themeSettings (to restore saved values)
+ */
+function syncAutoPanel(mode, theme = {}) {
+	const panel = $("ls-auto-behavior-panel");
+	if (!panel) return;
+	if (mode !== "auto") {
+		panel.style.display = "none";
+		return;
+	}
+	panel.style.display = "";
+	// Restore saved behavior
+	const behavior = theme.autoBehavior || "system";
+	const radio = panel.querySelector(
+		`input[name="ls-auto-behavior"][value="${behavior}"]`,
+	);
+	if (radio) radio.checked = true;
+	// Restore time inputs
+	const startEl = $("ls-auto-time-start");
+	const endEl = $("ls-auto-time-end");
+	if (startEl) startEl.value = theme.timeCustomStart || "06:00";
+	if (endEl) endEl.value = theme.timeCustomEnd || "18:00";
+	// Show/hide schedule grid
+	const grid = $("ls-schedule-inputs");
+	if (grid) grid.style.display = behavior === "schedule" ? "" : "none";
 }
 
 // ── Theme UI helpers (module-level — used by both loadLibraryThemeControls
@@ -288,7 +324,11 @@ async function loadLibraryThemeControls() {
 							? "Custom Presets"
 							: group === "default"
 								? "Built-in Presets"
-								: group;
+								: group === "creative"
+									? "Creative Themes"
+									: group === "skin"
+										? "Themed Skins"
+										: group;
 					return `<optgroup label="${label}">${items.map((p) => `<option value="${p.id}">${p.emoji} ${p.name}</option>`).join("")}</optgroup>`;
 				})
 				.join("");
@@ -357,6 +397,9 @@ async function loadLibraryThemeControls() {
 		}
 
 		setThemeVariables(theme);
+
+		// ── Auto-behavior panel ────────────────────────────────────────────────
+		syncAutoPanel(theme.mode || "dark", theme);
 	} catch (err) {
 		debugError("Failed to load theme controls:", err);
 	}
@@ -1646,14 +1689,15 @@ function setupEventListeners() {
 		});
 	});
 
-	// Mode pill buttons — update hidden select, sync pills, auto-adjust text color
+	// Mode pill buttons — update hidden select, sync pills, auto-adjust colors
 	document.querySelectorAll(".ls-mode-pill").forEach((btn) => {
 		btn.addEventListener("click", () => {
 			const mode = btn.dataset.mode;
 			const modeSelect = $("library-theme-mode");
 			if (modeSelect) modeSelect.value = mode;
 			syncModePills(mode);
-			// Auto-adjust text color to the preset's default for this mode
+			syncAutoPanel(mode);
+			// Auto-adjust all color pickers to the preset values for this mode
 			const effectiveMode = resolveMode(mode);
 			const basePresetId =
 				$("library-theme-preset")?.dataset?.basePreset ||
@@ -1661,8 +1705,38 @@ function setupEventListeners() {
 				"material-dark";
 			const builtIn =
 				THEME_PRESETS[basePresetId] || THEME_PRESETS["material-dark"];
+			const palette = builtIn[effectiveMode] || builtIn.dark || {};
+			// Background
+			const newBg = palette["bg-primary"] || defaultTheme.bgColor;
+			const bgPicker = $("library-backgroundColorPicker");
+			const bgText = $("library-backgroundColorText");
+			if (bgPicker) bgPicker.value = newBg;
+			if (bgText) bgText.value = newBg;
+			// Reset secondary/tertiary to auto-derive
+			const bgsPicker = $("library-bgSecondaryPicker");
+			const bgsText = $("library-bgSecondaryText");
+			if (bgsPicker) bgsPicker.value = newBg;
+			if (bgsText) bgsText.value = newBg;
+			const bgtPicker = $("library-bgTertiaryPicker");
+			const bgtText = $("library-bgTertiaryText");
+			if (bgtPicker) bgtPicker.value = newBg;
+			if (bgtText) bgtText.value = newBg;
+			// Accent
+			const newAccent =
+				palette["primary-color"] || defaultTheme.accentPrimary;
+			const apPicker = $("library-accentColorPicker");
+			const apText = $("library-accentColorText");
+			if (apPicker) apPicker.value = newAccent;
+			if (apText) apText.value = newAccent;
+			const newAccent2 =
+				palette["primary-hover"] || defaultTheme.accentSecondary;
+			const asPicker = $("library-accentSecondaryPicker");
+			const asText = $("library-accentSecondaryText");
+			if (asPicker) asPicker.value = newAccent2;
+			if (asText) asText.value = newAccent2;
+			// Text
 			const newTextColor =
-				builtIn[effectiveMode]?.["text-primary"] ||
+				palette["text-primary"] ||
 				(effectiveMode === "light" ? "#111827" : "#e5e7eb");
 			const txPicker = $("library-textColorPicker");
 			const txText = $("library-textColorText");
@@ -1682,6 +1756,10 @@ function setupEventListeners() {
 		// basePreset is tagged on the <select> element when a custom preset is
 		// loaded, so palette lookups always resolve to a real THEME_PRESETS key.
 		const basePreset = $("library-theme-preset")?.dataset?.basePreset || "";
+		// Auto-behavior
+		const autoBehaviorEl = document.querySelector(
+			'input[name="ls-auto-behavior"]:checked',
+		);
 		return {
 			mode: $("library-theme-mode")?.value || "dark",
 			preset: selectedPreset,
@@ -1697,8 +1775,99 @@ function setupEventListeners() {
 			bgTertiary: bgTertiaryVal !== bgPrimary ? bgTertiaryVal : "",
 			textColor:
 				$("library-textColorPicker")?.value || defaultTheme.textColor,
+			autoBehavior: autoBehaviorEl?.value || "system",
+			timeCustomStart: $("ls-auto-time-start")?.value || "06:00",
+			timeCustomEnd: $("ls-auto-time-end")?.value || "18:00",
 		};
 	}
+
+	// Auto-behavior radio buttons
+	document
+		.querySelectorAll('input[name="ls-auto-behavior"]')
+		.forEach((radio) => {
+			radio.addEventListener("change", () => {
+				const grid = $("ls-schedule-inputs");
+				if (grid)
+					grid.style.display =
+						radio.value === "schedule" ? "" : "none";
+				// For sun/schedule: sync all color pickers to the effective
+				// mode's palette so dark-mode picker values don't override
+				// the resolved light palette.
+				if (radio.value === "sun" || radio.value === "schedule") {
+					const partialTheme = readCurrentThemeFromUI();
+					partialTheme.autoBehavior = radio.value;
+					const effectiveMode = resolveMode("auto", partialTheme);
+					const bpId =
+						partialTheme.basePreset ||
+						partialTheme.preset ||
+						"material-dark";
+					const pal =
+						(THEME_PRESETS[bpId] || THEME_PRESETS["material-dark"])[
+							effectiveMode
+						] || THEME_PRESETS["material-dark"].dark;
+					const newBg = pal["bg-primary"] || defaultTheme.bgColor;
+					// Bg
+					[
+						"library-backgroundColorPicker",
+						"library-backgroundColorText",
+					].forEach((id) => {
+						const el = $(id);
+						if (el) el.value = newBg;
+					});
+					// Reset secondary/tertiary to auto-derive
+					[
+						"library-bgSecondaryPicker",
+						"library-bgSecondaryText",
+						"library-bgTertiaryPicker",
+						"library-bgTertiaryText",
+					].forEach((id) => {
+						const el = $(id);
+						if (el) el.value = newBg;
+					});
+					// Accent
+					const newAcc =
+						pal["primary-color"] || defaultTheme.accentPrimary;
+					[
+						"library-accentColorPicker",
+						"library-accentColorText",
+					].forEach((id) => {
+						const el = $(id);
+						if (el) el.value = newAcc;
+					});
+					const newAcc2 =
+						pal["primary-hover"] || defaultTheme.accentSecondary;
+					[
+						"library-accentSecondaryPicker",
+						"library-accentSecondaryText",
+					].forEach((id) => {
+						const el = $(id);
+						if (el) el.value = newAcc2;
+					});
+					// Text
+					const newTx =
+						pal["text-primary"] ||
+						(effectiveMode === "light" ? "#111827" : "#e5e7eb");
+					[
+						"library-textColorPicker",
+						"library-textColorText",
+					].forEach((id) => {
+						const el = $(id);
+						if (el) el.value = newTx;
+					});
+				}
+				setThemeVariables(readCurrentThemeFromUI());
+			});
+		});
+
+	// Auto schedule time inputs — use both change and input for responsiveness
+	[$("ls-auto-time-start"), $("ls-auto-time-end")].forEach((el) => {
+		el?.addEventListener("change", () =>
+			setThemeVariables(readCurrentThemeFromUI()),
+		);
+		el?.addEventListener("input", () =>
+			setThemeVariables(readCurrentThemeFromUI()),
+		);
+	});
 
 	// Save Theme button
 	const saveThemeBtn = $("library-save-theme");
@@ -1907,9 +2076,19 @@ function setupEventListeners() {
 					const ps = $("library-theme-preset");
 					if (ps) ps.dataset.basePreset = newSettings.basePreset;
 				} else {
-					// Built-in preset: load preset's default colors into settings
+					// Built-in preset: load preset's default colors into settings.
+					// If the preset declares a preferred mode (defaultMode), honour it.
 					const builtInPreset = THEME_PRESETS[selectedId];
-					const effectiveMode = resolveMode(current.mode || "dark");
+					const declaredMode = builtInPreset?.meta?.defaultMode;
+					const modeToUse = declaredMode || current.mode || "dark";
+					if (declaredMode && declaredMode !== current.mode) {
+						// Silently switch mode so light presets feel correct
+						const modeSelect = $("library-theme-mode");
+						if (modeSelect) modeSelect.value = declaredMode;
+						syncModePills(declaredMode);
+						syncAutoPanel(declaredMode, current);
+					}
+					const effectiveMode = resolveMode(modeToUse);
 					const palette =
 						builtInPreset?.[effectiveMode] ||
 						builtInPreset?.dark ||
@@ -1919,6 +2098,7 @@ function setupEventListeners() {
 						...current,
 						preset: selectedId,
 						basePreset: "",
+						mode: declaredMode || current.mode || "dark",
 						// Load preset colors so pickers show the actual values
 						accentPrimary:
 							palette["primary-color"] ||

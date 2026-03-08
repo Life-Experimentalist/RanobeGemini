@@ -141,11 +141,16 @@ Please maintain:
 - Proper paragraph breaks and formatting
 - Character personalities and relationships from the original work
 - Fandom-specific terminology and references
-- Author's notes markers (if present)
-- Scene breaks and dividers
-- Any special formatting for emphasis
-- Preserve the narrative flow and pacing
-When enhancing, improve readability while respecting the author's creative voice and the source material.`;
+- Scene breaks and dividers (preserve *** / --- / horizontal rules exactly)
+- Original narrative flow, pacing, and the author's creative voice
+
+**FanFiction-Specific Formatting Rules:**
+- **Author Notes** (A/N:, AN:, T/N:, E/N:, "Author's Note", "Translator's Note"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Keep only plot-relevant context; remove disclaimers, Patreon prompts, update notices, and social-media links.
+- **Chapter Epigraphs, Quotes & Lyrics**: Wrap any opening/closing poem, song lyric, or chapter quote in \`<div class="rg-quote-box">\`, preserving all line breaks exactly.
+- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows → \`<div class="game-stats-box">\`; brief level-up/quest pop-ups → \`<div class="rg-system-msg">\`; individual skill/ability cards → \`<div class="rg-skill-box">\`.
+- **Flashback Scenes**: When a flashback is clearly marked ("— Flashback —", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
+
+When enhancing, improve readability while fully respecting the author's creative voice and the source material's original intent.`;
 
 	/**
 	 * Normalize FanFiction.net URL - redirect bare domain to preferred subdomain

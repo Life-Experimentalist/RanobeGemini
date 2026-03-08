@@ -40,6 +40,16 @@ export const DEFAULT_THEME = {
 	textColor: "#e5e7eb",
 	/** User-saved custom theme presets: { id: { name, emoji, accentPrimary, ... } } */
 	customPresets: {},
+	/**
+	 * How Auto mode determines light vs dark:
+	 * "system" = follow OS preference, "sun" = timezone-based sunrise/sunset,
+	 * "schedule" = fixed daily window
+	 */
+	autoBehavior: "system",
+	/** Start of "light" window for schedule/sun modes (HH:MM, 24h) */
+	timeCustomStart: "06:00",
+	/** End of "light" window for schedule/sun modes (HH:MM, 24h) */
+	timeCustomEnd: "18:00",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -133,6 +143,7 @@ export const THEME_PRESETS = {
 			emoji: "☀️",
 			group: "default",
 			animation: "none",
+			defaultMode: "light",
 		},
 		dark: {
 			"primary-color": "#7c4dff",
@@ -992,6 +1003,526 @@ export const THEME_PRESETS = {
 			},
 		},
 	},
+
+	// ── Creative Themes ──────────────────────────────────────
+
+	"tokyo-night": {
+		meta: {
+			name: "Tokyo Night",
+			emoji: "🗼",
+			group: "creative",
+			animation: "none",
+			defaultMode: "dark",
+		},
+		dark: {
+			"primary-color": "#7aa2f7",
+			"primary-hover": "#2ac3de",
+			"secondary-color": "#9aa5ce",
+			"danger-color": "#f7768e",
+			"success-color": "#9ece6a",
+			"bg-primary": "#1a1b26",
+			"bg-secondary": "#24283b",
+			"bg-tertiary": "#292e42",
+			"bg-card": "#292e42",
+			"bg-card-hover": "#414868",
+			"text-primary": "#c0caf5",
+			"text-secondary": "#9aa5ce",
+			"text-muted": "#565f89",
+			"border-color": "#292e42",
+			"border-light": "#414868",
+		},
+		light: {
+			"primary-color": "#2e7de9",
+			"primary-hover": "#188092",
+			"secondary-color": "#8990b3",
+			"danger-color": "#8c4351",
+			"success-color": "#485e30",
+			"bg-primary": "#d5d6db",
+			"bg-secondary": "#e1e2e7",
+			"bg-tertiary": "#cbccd1",
+			"bg-card": "#e1e2e7",
+			"bg-card-hover": "#d5d6db",
+			"text-primary": "#343b58",
+			"text-secondary": "#565f89",
+			"text-muted": "#8990b3",
+			"border-color": "#cbccd1",
+			"border-light": "#e1e2e7",
+		},
+		content: {
+			dark: {
+				primary: "#7aa2f7",
+				onPrimary: "#1a1b26",
+				onSurface: "#c0caf5",
+				onSurfaceVariant: "#9aa5ce",
+				surface: "#1a1b26",
+				surfaceVariant: "#24283b",
+				outline: "#292e42",
+				outlineVariant: "#414868",
+				overlay: "rgba(122, 162, 247, 0.08)",
+				overlayHover: "rgba(122, 162, 247, 0.14)",
+				error: "#f7768e",
+				success: "#9ece6a",
+			},
+			light: {
+				primary: "#2e7de9",
+				onPrimary: "#ffffff",
+				onSurface: "#343b58",
+				onSurfaceVariant: "#565f89",
+				surface: "#d5d6db",
+				surfaceVariant: "#e1e2e7",
+				outline: "#cbccd1",
+				outlineVariant: "#e1e2e7",
+				overlay: "rgba(46, 125, 233, 0.08)",
+				overlayHover: "rgba(46, 125, 233, 0.14)",
+				error: "#8c4351",
+				success: "#485e30",
+			},
+		},
+	},
+
+	"catppuccin-mocha": {
+		meta: {
+			name: "Catppuccin Mocha",
+			emoji: "🌙",
+			group: "creative",
+			animation: "none",
+			defaultMode: "dark",
+		},
+		dark: {
+			"primary-color": "#cba6f7",
+			"primary-hover": "#f5c2e7",
+			"secondary-color": "#89b4fa",
+			"danger-color": "#f38ba8",
+			"success-color": "#a6e3a1",
+			"bg-primary": "#1e1e2e",
+			"bg-secondary": "#181825",
+			"bg-tertiary": "#313244",
+			"bg-card": "#313244",
+			"bg-card-hover": "#45475a",
+			"text-primary": "#cdd6f4",
+			"text-secondary": "#a6adc8",
+			"text-muted": "#6c7086",
+			"border-color": "#313244",
+			"border-light": "#45475a",
+		},
+		light: {
+			"primary-color": "#7c3aed",
+			"primary-hover": "#6d28d9",
+			"secondary-color": "#1e66f5",
+			"danger-color": "#dc2626",
+			"success-color": "#16a34a",
+			"bg-primary": "#eff1f5",
+			"bg-secondary": "#e6e9ef",
+			"bg-tertiary": "#dce0e8",
+			"bg-card": "#e6e9ef",
+			"bg-card-hover": "#dce0e8",
+			"text-primary": "#4c4f69",
+			"text-secondary": "#5c5f77",
+			"text-muted": "#9ca0b0",
+			"border-color": "#bcc0cc",
+			"border-light": "#ccd0da",
+		},
+		content: {
+			dark: {
+				primary: "#cba6f7",
+				onPrimary: "#1e1e2e",
+				onSurface: "#cdd6f4",
+				onSurfaceVariant: "#a6adc8",
+				surface: "#1e1e2e",
+				surfaceVariant: "#313244",
+				outline: "#313244",
+				outlineVariant: "#45475a",
+				overlay: "rgba(203, 166, 247, 0.08)",
+				overlayHover: "rgba(203, 166, 247, 0.14)",
+				error: "#f38ba8",
+				success: "#a6e3a1",
+			},
+			light: {
+				primary: "#7c3aed",
+				onPrimary: "#ffffff",
+				onSurface: "#4c4f69",
+				onSurfaceVariant: "#5c5f77",
+				surface: "#eff1f5",
+				surfaceVariant: "#e6e9ef",
+				outline: "#bcc0cc",
+				outlineVariant: "#ccd0da",
+				overlay: "rgba(124, 58, 237, 0.06)",
+				overlayHover: "rgba(124, 58, 237, 0.12)",
+				error: "#dc2626",
+				success: "#16a34a",
+			},
+		},
+	},
+
+	"catppuccin-latte": {
+		meta: {
+			name: "Catppuccin Latte",
+			emoji: "☕",
+			group: "creative",
+			animation: "none",
+			defaultMode: "light",
+		},
+		dark: {
+			"primary-color": "#cba6f7",
+			"primary-hover": "#f5c2e7",
+			"secondary-color": "#89b4fa",
+			"danger-color": "#f38ba8",
+			"success-color": "#a6e3a1",
+			"bg-primary": "#1e1e2e",
+			"bg-secondary": "#181825",
+			"bg-tertiary": "#313244",
+			"bg-card": "#313244",
+			"bg-card-hover": "#45475a",
+			"text-primary": "#cdd6f4",
+			"text-secondary": "#a6adc8",
+			"text-muted": "#6c7086",
+			"border-color": "#313244",
+			"border-light": "#45475a",
+		},
+		light: {
+			"primary-color": "#7c3aed",
+			"primary-hover": "#6d28d9",
+			"secondary-color": "#1e66f5",
+			"danger-color": "#dc2626",
+			"success-color": "#16a34a",
+			"bg-primary": "#eff1f5",
+			"bg-secondary": "#e6e9ef",
+			"bg-tertiary": "#dce0e8",
+			"bg-card": "#e6e9ef",
+			"bg-card-hover": "#dce0e8",
+			"text-primary": "#4c4f69",
+			"text-secondary": "#5c5f77",
+			"text-muted": "#9ca0b0",
+			"border-color": "#bcc0cc",
+			"border-light": "#ccd0da",
+		},
+		content: {
+			dark: {
+				primary: "#cba6f7",
+				onPrimary: "#1e1e2e",
+				onSurface: "#cdd6f4",
+				onSurfaceVariant: "#a6adc8",
+				surface: "#1e1e2e",
+				surfaceVariant: "#313244",
+				outline: "#313244",
+				outlineVariant: "#45475a",
+				overlay: "rgba(203, 166, 247, 0.08)",
+				overlayHover: "rgba(203, 166, 247, 0.14)",
+				error: "#f38ba8",
+				success: "#a6e3a1",
+			},
+			light: {
+				primary: "#7c3aed",
+				onPrimary: "#ffffff",
+				onSurface: "#4c4f69",
+				onSurfaceVariant: "#5c5f77",
+				surface: "#eff1f5",
+				surfaceVariant: "#e6e9ef",
+				outline: "#bcc0cc",
+				outlineVariant: "#ccd0da",
+				overlay: "rgba(124, 58, 237, 0.06)",
+				overlayHover: "rgba(124, 58, 237, 0.12)",
+				error: "#dc2626",
+				success: "#16a34a",
+			},
+		},
+	},
+
+	synthwave: {
+		meta: {
+			name: "Synthwave",
+			emoji: "🌆",
+			group: "creative",
+			animation: "none",
+			defaultMode: "dark",
+		},
+		dark: {
+			"primary-color": "#f92aad",
+			"primary-hover": "#ff7efb",
+			"secondary-color": "#79dded",
+			"danger-color": "#ff5555",
+			"success-color": "#50fa7b",
+			"bg-primary": "#241734",
+			"bg-secondary": "#2d1b4e",
+			"bg-tertiary": "#1a0e2e",
+			"bg-card": "#2d1b4e",
+			"bg-card-hover": "#3d2570",
+			"text-primary": "#f8f8f2",
+			"text-secondary": "#e2c5f9",
+			"text-muted": "#a991bc",
+			"border-color": "#4a2671",
+			"border-light": "#6a3691",
+		},
+		light: {
+			"primary-color": "#c02a84",
+			"primary-hover": "#9d0a64",
+			"secondary-color": "#0e8fa6",
+			"danger-color": "#dc2626",
+			"success-color": "#16a34a",
+			"bg-primary": "#f5f0ff",
+			"bg-secondary": "#ede6ff",
+			"bg-tertiary": "#ddd5f5",
+			"bg-card": "#ede6ff",
+			"bg-card-hover": "#ddd5f5",
+			"text-primary": "#2d1b69",
+			"text-secondary": "#4a2671",
+			"text-muted": "#7c5cbf",
+			"border-color": "#c4b5e8",
+			"border-light": "#ddd5f5",
+		},
+		content: {
+			dark: {
+				primary: "#f92aad",
+				onPrimary: "#ffffff",
+				onSurface: "#f8f8f2",
+				onSurfaceVariant: "#e2c5f9",
+				surface: "#241734",
+				surfaceVariant: "#2d1b4e",
+				outline: "#4a2671",
+				outlineVariant: "#6a3691",
+				overlay: "rgba(249, 42, 173, 0.08)",
+				overlayHover: "rgba(249, 42, 173, 0.16)",
+				error: "#ff5555",
+				success: "#50fa7b",
+			},
+			light: {
+				primary: "#c02a84",
+				onPrimary: "#ffffff",
+				onSurface: "#2d1b69",
+				onSurfaceVariant: "#4a2671",
+				surface: "#f5f0ff",
+				surfaceVariant: "#ede6ff",
+				outline: "#c4b5e8",
+				outlineVariant: "#ddd5f5",
+				overlay: "rgba(192, 42, 132, 0.06)",
+				overlayHover: "rgba(192, 42, 132, 0.12)",
+				error: "#dc2626",
+				success: "#16a34a",
+			},
+		},
+	},
+
+	gruvbox: {
+		meta: {
+			name: "Gruvbox",
+			emoji: "🪵",
+			group: "creative",
+			animation: "none",
+			defaultMode: "dark",
+		},
+		dark: {
+			"primary-color": "#fe8019",
+			"primary-hover": "#fabd2f",
+			"secondary-color": "#83a598",
+			"danger-color": "#fb4934",
+			"success-color": "#b8bb26",
+			"bg-primary": "#282828",
+			"bg-secondary": "#3c3836",
+			"bg-tertiary": "#504945",
+			"bg-card": "#3c3836",
+			"bg-card-hover": "#504945",
+			"text-primary": "#ebdbb2",
+			"text-secondary": "#d5c4a1",
+			"text-muted": "#928374",
+			"border-color": "#504945",
+			"border-light": "#665c54",
+		},
+		light: {
+			"primary-color": "#af3a03",
+			"primary-hover": "#b57614",
+			"secondary-color": "#427b58",
+			"danger-color": "#9d0006",
+			"success-color": "#79740e",
+			"bg-primary": "#fbf1c7",
+			"bg-secondary": "#f9f5d7",
+			"bg-tertiary": "#f2e5bc",
+			"bg-card": "#f9f5d7",
+			"bg-card-hover": "#ebdbb2",
+			"text-primary": "#3c3836",
+			"text-secondary": "#504945",
+			"text-muted": "#7c6f64",
+			"border-color": "#d5c4a1",
+			"border-light": "#ebdbb2",
+		},
+		content: {
+			dark: {
+				primary: "#fe8019",
+				onPrimary: "#282828",
+				onSurface: "#ebdbb2",
+				onSurfaceVariant: "#d5c4a1",
+				surface: "#282828",
+				surfaceVariant: "#3c3836",
+				outline: "#504945",
+				outlineVariant: "#665c54",
+				overlay: "rgba(254, 128, 25, 0.08)",
+				overlayHover: "rgba(254, 128, 25, 0.14)",
+				error: "#fb4934",
+				success: "#b8bb26",
+			},
+			light: {
+				primary: "#af3a03",
+				onPrimary: "#ffffff",
+				onSurface: "#3c3836",
+				onSurfaceVariant: "#504945",
+				surface: "#fbf1c7",
+				surfaceVariant: "#f2e5bc",
+				outline: "#d5c4a1",
+				outlineVariant: "#ebdbb2",
+				overlay: "rgba(175, 58, 3, 0.06)",
+				overlayHover: "rgba(175, 58, 3, 0.12)",
+				error: "#9d0006",
+				success: "#79740e",
+			},
+		},
+	},
+
+	"nord-snow": {
+		meta: {
+			name: "Nord Snow",
+			emoji: "🏔️",
+			group: "creative",
+			animation: "none",
+			defaultMode: "light",
+		},
+		dark: {
+			"primary-color": "#88c0d0",
+			"primary-hover": "#81a1c1",
+			"secondary-color": "#5e81ac",
+			"danger-color": "#bf616a",
+			"success-color": "#a3be8c",
+			"bg-primary": "#2e3440",
+			"bg-secondary": "#3b4252",
+			"bg-tertiary": "#434c5e",
+			"bg-card": "#434c5e",
+			"bg-card-hover": "#4c566a",
+			"text-primary": "#eceff4",
+			"text-secondary": "#d8dee9",
+			"text-muted": "#8d98aa",
+			"border-color": "#434c5e",
+			"border-light": "#4c566a",
+		},
+		light: {
+			"primary-color": "#5e81ac",
+			"primary-hover": "#4c6f96",
+			"secondary-color": "#88c0d0",
+			"danger-color": "#bf616a",
+			"success-color": "#a3be8c",
+			"bg-primary": "#eceff4",
+			"bg-secondary": "#e5e9f0",
+			"bg-tertiary": "#d8dee9",
+			"bg-card": "#e5e9f0",
+			"bg-card-hover": "#d8dee9",
+			"text-primary": "#2e3440",
+			"text-secondary": "#3b4252",
+			"text-muted": "#4c566a",
+			"border-color": "#d8dee9",
+			"border-light": "#e5e9f0",
+		},
+		content: {
+			dark: {
+				primary: "#88c0d0",
+				onPrimary: "#2e3440",
+				onSurface: "#eceff4",
+				onSurfaceVariant: "#d8dee9",
+				surface: "#2e3440",
+				surfaceVariant: "#3b4252",
+				outline: "#434c5e",
+				outlineVariant: "#4c566a",
+				overlay: "rgba(136, 192, 208, 0.08)",
+				overlayHover: "rgba(136, 192, 208, 0.14)",
+				error: "#bf616a",
+				success: "#a3be8c",
+			},
+			light: {
+				primary: "#5e81ac",
+				onPrimary: "#ffffff",
+				onSurface: "#2e3440",
+				onSurfaceVariant: "#3b4252",
+				surface: "#eceff4",
+				surfaceVariant: "#e5e9f0",
+				outline: "#d8dee9",
+				outlineVariant: "#e5e9f0",
+				overlay: "rgba(94, 129, 172, 0.06)",
+				overlayHover: "rgba(94, 129, 172, 0.12)",
+				error: "#bf616a",
+				success: "#a3be8c",
+			},
+		},
+	},
+
+	"github-light": {
+		meta: {
+			name: "GitHub",
+			emoji: "🐙",
+			group: "creative",
+			animation: "none",
+			defaultMode: "light",
+		},
+		dark: {
+			"primary-color": "#2f81f7",
+			"primary-hover": "#388bfd",
+			"secondary-color": "#58a6ff",
+			"danger-color": "#f85149",
+			"success-color": "#3fb950",
+			"bg-primary": "#0d1117",
+			"bg-secondary": "#161b22",
+			"bg-tertiary": "#21262d",
+			"bg-card": "#21262d",
+			"bg-card-hover": "#292f37",
+			"text-primary": "#e6edf3",
+			"text-secondary": "#8b949e",
+			"text-muted": "#484f58",
+			"border-color": "#30363d",
+			"border-light": "#21262d",
+		},
+		light: {
+			"primary-color": "#0969da",
+			"primary-hover": "#0550ae",
+			"secondary-color": "#1a7f37",
+			"danger-color": "#d1242f",
+			"success-color": "#1a7f37",
+			"bg-primary": "#ffffff",
+			"bg-secondary": "#f6f8fa",
+			"bg-tertiary": "#eaeef2",
+			"bg-card": "#ffffff",
+			"bg-card-hover": "#f6f8fa",
+			"text-primary": "#1f2328",
+			"text-secondary": "#636c76",
+			"text-muted": "#9198a1",
+			"border-color": "#d0d7de",
+			"border-light": "#d8dee4",
+		},
+		content: {
+			dark: {
+				primary: "#2f81f7",
+				onPrimary: "#ffffff",
+				onSurface: "#e6edf3",
+				onSurfaceVariant: "#8b949e",
+				surface: "#0d1117",
+				surfaceVariant: "#161b22",
+				outline: "#30363d",
+				outlineVariant: "#21262d",
+				overlay: "rgba(47, 129, 247, 0.08)",
+				overlayHover: "rgba(47, 129, 247, 0.14)",
+				error: "#f85149",
+				success: "#3fb950",
+			},
+			light: {
+				primary: "#0969da",
+				onPrimary: "#ffffff",
+				onSurface: "#1f2328",
+				onSurfaceVariant: "#636c76",
+				surface: "#ffffff",
+				surfaceVariant: "#f6f8fa",
+				outline: "#d0d7de",
+				outlineVariant: "#d8dee4",
+				overlay: "rgba(9, 105, 218, 0.06)",
+				overlayHover: "rgba(9, 105, 218, 0.12)",
+				error: "#d1242f",
+				success: "#1a7f37",
+			},
+		},
+	},
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -1029,13 +1560,84 @@ function hexToRgba(hex, alpha = 0.8) {
 }
 
 /**
+ * Returns true if current local time is within a HH:MM..HH:MM window.
+ * @param {string} start - "HH:MM" 24h
+ * @param {string} end   - "HH:MM" 24h
+ */
+function _inSchedule(start, end) {
+	try {
+		const now = new Date();
+		const toMins = (s) => {
+			const [h, m] = s.split(":").map(Number);
+			return h * 60 + (m || 0);
+		};
+		const cur = now.getHours() * 60 + now.getMinutes();
+		const s = toMins(start || "06:00");
+		const e = toMins(end || "18:00");
+		return s <= e ? cur >= s && cur < e : cur >= s || cur < e;
+	} catch (_) {
+		return false;
+	}
+}
+
+/**
+ * Estimate [sunriseHour, sunsetHour] for the user's timezone using
+ * Intl.DateTimeFormat — no geolocation permission required.
+ * Returns crude mid-latitude estimates: ~4.5h–6h rise, ~18h–20h set.
+ * @returns {[number, number]}
+ */
+function _getSunriseSunsetHours() {
+	try {
+		const tz =
+			typeof Intl !== "undefined" && Intl.DateTimeFormat
+				? Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+				: "";
+		// Rough southern-hemisphere detection
+		const southern =
+			/^(America\/(Sao_Paulo|Recife|Fortaleza|Manaus|Belem|Cuiaba|Campo_Grande|Porto_Velho|Boa_Vista|Argentina|Lima|Bogota|Santiago|Asuncion|Guyana|Paramaribo|Cayenne|Montevideo|La_Paz)|Australia|Pacific\/(Auckland|Fiji|Noumea|Port_Moresby)|Africa\/(Johannesburg|Harare|Gaborone|Maputo|Lusaka|Maseru|Mbabane|Nairobi))/i.test(
+				tz,
+			);
+		// Month of year (0=Jan..11=Dec)
+		const month = new Date().getMonth();
+		// For northern summer = index 5 (Jun); flip for southern
+		const summerMonth = southern ? 11 : 5;
+		const monthDiff = Math.abs(((month - summerMonth + 18) % 12) - 6) / 6; // 0=summer, 1=winter
+		const seasonFactor = 1 - monthDiff;
+		const rise = 6 - 1.5 * seasonFactor; // 4.5h (summer) – 6h (winter)
+		const set = 18 + 2 * seasonFactor; // 18h (winter) – 20h (summer)
+		return [rise, set];
+	} catch (_) {
+		return [6, 18];
+	}
+}
+
+/**
  * Resolve the effective mode ("dark" or "light") taking "auto" into account.
+ * Supports optional second argument with full theme settings for
+ * schedule/sun behaviors.
+ *
  * @param {string} mode - "dark", "light", or "auto"
+ * @param {Object} [themeSettings] - full stored themeSettings object
  * @returns {"dark"|"light"}
  */
-export function resolveMode(mode) {
+export function resolveMode(mode, themeSettings = {}) {
 	if (mode === "light") return "light";
 	if (mode === "auto") {
+		const behavior = themeSettings?.autoBehavior || "system";
+		if (behavior === "schedule") {
+			return _inSchedule(
+				themeSettings?.timeCustomStart || "06:00",
+				themeSettings?.timeCustomEnd || "18:00",
+			)
+				? "light"
+				: "dark";
+		}
+		if (behavior === "sun") {
+			const [rise, set] = _getSunriseSunsetHours();
+			const nowH = new Date().getHours() + new Date().getMinutes() / 60;
+			return nowH >= rise && nowH < set ? "light" : "dark";
+		}
+		// "system" (default)
 		if (typeof window !== "undefined" && window.matchMedia) {
 			return window.matchMedia("(prefers-color-scheme: dark)").matches
 				? "dark"
@@ -1058,33 +1660,48 @@ export function getThemePalette(theme) {
 	// to a real THEME_PRESETS entry for the palette base.
 	const builtInKey = theme?.basePreset || theme?.preset || "material-dark";
 	const preset = THEME_PRESETS[builtInKey] || THEME_PRESETS["material-dark"];
-	const effectiveMode = resolveMode(theme?.mode || "dark");
+	const effectiveMode = resolveMode(theme?.mode || "dark", theme);
 	const palette = { ...(preset[effectiveMode] || preset.dark) };
 
-	// Apply user overrides on top of preset
-	if (theme?.accentPrimary) palette["primary-color"] = theme.accentPrimary;
-	if (theme?.accentSecondary)
-		palette["primary-hover"] = theme.accentSecondary;
-	if (theme?.bgColor) {
-		palette["bg-primary"] = theme.bgColor;
-		// Auto-derive secondary/tertiary from bgColor if not explicitly set
-		if (!theme?.bgSecondary) {
-			palette["bg-secondary"] = adjustHexBrightness(theme.bgColor, 10);
-			palette["bg-card"] = adjustHexBrightness(theme.bgColor, 20);
+	// For time-based auto modes (sun/schedule) user color overrides stored in
+	// the theme object may belong to the opposite mode. Skip them so the
+	// preset palette for the resolved mode is used as-is.  The color pickers
+	// are synced to the correct palette when the behavior is selected, so
+	// deliberate customisations survive via a subsequent "Save Theme".
+	const skipOverrides =
+		theme?.mode === "auto" &&
+		(theme?.autoBehavior === "sun" || theme?.autoBehavior === "schedule");
+
+	if (!skipOverrides) {
+		// Apply user overrides on top of preset
+		if (theme?.accentPrimary)
+			palette["primary-color"] = theme.accentPrimary;
+		if (theme?.accentSecondary)
+			palette["primary-hover"] = theme.accentSecondary;
+		if (theme?.bgColor) {
+			palette["bg-primary"] = theme.bgColor;
+			// Auto-derive secondary/tertiary from bgColor if not explicitly set
+			if (!theme?.bgSecondary) {
+				palette["bg-secondary"] = adjustHexBrightness(
+					theme.bgColor,
+					10,
+				);
+				palette["bg-card"] = adjustHexBrightness(theme.bgColor, 20);
+			}
+			if (!theme?.bgTertiary) {
+				palette["bg-tertiary"] = adjustHexBrightness(theme.bgColor, 20);
+			}
 		}
-		if (!theme?.bgTertiary) {
-			palette["bg-tertiary"] = adjustHexBrightness(theme.bgColor, 20);
+		if (theme?.bgSecondary) {
+			palette["bg-secondary"] = theme.bgSecondary;
+			palette["bg-card"] = theme.bgSecondary;
 		}
+		if (theme?.bgTertiary) {
+			palette["bg-tertiary"] = theme.bgTertiary;
+			palette["bg-card"] = theme.bgTertiary;
+		}
+		if (theme?.textColor) palette["text-primary"] = theme.textColor;
 	}
-	if (theme?.bgSecondary) {
-		palette["bg-secondary"] = theme.bgSecondary;
-		palette["bg-card"] = theme.bgSecondary;
-	}
-	if (theme?.bgTertiary) {
-		palette["bg-tertiary"] = theme.bgTertiary;
-		palette["bg-card"] = theme.bgTertiary;
-	}
-	if (theme?.textColor) palette["text-primary"] = theme.textColor;
 
 	return palette;
 }
@@ -1099,7 +1716,7 @@ export function getThemePalette(theme) {
 export function getContentThemeColors(theme) {
 	const preset =
 		THEME_PRESETS[theme?.preset] || THEME_PRESETS["material-dark"];
-	const effectiveMode = resolveMode(theme?.mode || "dark");
+	const effectiveMode = resolveMode(theme?.mode || "dark", theme);
 	return {
 		...(preset.content?.[effectiveMode] ||
 			preset.content?.dark ||
@@ -1121,7 +1738,7 @@ export function getContentThemeColors(theme) {
  */
 export function setThemeVariables(theme) {
 	const root = document.documentElement;
-	const effectiveMode = resolveMode(theme?.mode || "dark");
+	const effectiveMode = resolveMode(theme?.mode || "dark", theme);
 	const palette = getThemePalette(theme);
 
 	// Set data-theme for CSS selectors
@@ -1129,6 +1746,44 @@ export function setThemeVariables(theme) {
 		root.setAttribute("data-theme", "light");
 	} else {
 		root.removeAttribute("data-theme");
+	}
+
+	// Manage live OS listener for auto+system mode
+	if (typeof window !== "undefined" && window.matchMedia) {
+		const mq = window.matchMedia("(prefers-color-scheme: dark)");
+		if (window.__rgOSThemeFn) {
+			try {
+				mq.removeEventListener("change", window.__rgOSThemeFn);
+			} catch (_) {}
+			window.__rgOSThemeFn = null;
+		}
+		if (
+			theme?.mode === "auto" &&
+			(!theme?.autoBehavior || theme?.autoBehavior === "system")
+		) {
+			window.__rgOSThemeFn = () => applyThemeFromStorage();
+			mq.addEventListener("change", window.__rgOSThemeFn);
+		}
+	}
+
+	// Manage periodic tick for sun/schedule auto modes
+	if (typeof window !== "undefined") {
+		if (window.__rgTimerHandle) {
+			clearInterval(window.__rgTimerHandle);
+			window.__rgTimerHandle = null;
+		}
+		if (
+			theme?.mode === "auto" &&
+			(theme?.autoBehavior === "sun" ||
+				theme?.autoBehavior === "schedule")
+		) {
+			// Re-evaluate every minute so dawn/dusk or schedule boundary is
+			// respected without requiring user interaction.
+			window.__rgTimerHandle = setInterval(
+				() => applyThemeFromStorage(),
+				60000,
+			);
+		}
 	}
 
 	// Set data-theme-preset for CSS selectors if needed

@@ -68,7 +68,7 @@
 							<div class="ls-mode-pills" role="group" aria-label="Theme mode">
 								<button type="button" class="ls-mode-pill" data-mode="dark">🌙 Dark</button>
 								<button type="button" class="ls-mode-pill" data-mode="light">☀️ Light</button>
-								<button type="button" class="ls-mode-pill" data-mode="auto">🔄 Auto (System)</button>
+								<button type="button" class="ls-mode-pill" data-mode="auto">🔄 Auto</button>
 							</div>
 							<!-- Hidden select keeps JS compatibility -->
 							<select id="library-theme-mode" style="display:none" aria-hidden="true">
@@ -76,6 +76,46 @@
 								<option value="light">Light</option>
 								<option value="auto">Auto</option>
 							</select>
+						</div>
+
+						<!-- ── Auto-mode behavior panel ────────────────────────── -->
+						<div id="ls-auto-behavior-panel" class="ls-auto-panel" style="display:none;">
+							<div class="ls-auto-panel-inner">
+								<label class="ls-label"
+									style="margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;">Auto
+									Mode Behavior</label>
+								<div class="ls-auto-radios">
+									<label class="ls-radio-label">
+										<input type="radio" name="ls-auto-behavior" id="ls-ab-system" value="system">
+										<span>🖥️ Follow OS (system dark / light setting)</span>
+									</label>
+									<label class="ls-radio-label">
+										<input type="radio" name="ls-auto-behavior" id="ls-ab-sun" value="sun">
+										<span>🌅 Sunrise / Sunset <span class="ls-hint-inline">(estimated from your
+												timezone — no location needed)</span></span>
+									</label>
+									<label class="ls-radio-label">
+										<input type="radio" name="ls-auto-behavior" id="ls-ab-schedule"
+											value="schedule">
+										<span>🕐 Custom daily schedule</span>
+									</label>
+								</div>
+								<div id="ls-schedule-inputs" class="ls-schedule-grid"
+									style="display:none;margin-top:10px;">
+									<div class="ls-form-group" style="margin-bottom:0;">
+										<label class="ls-label" for="ls-auto-time-start" style="font-size:11px;">Light
+											from</label>
+										<input type="time" id="ls-auto-time-start" class="ls-input ls-input-time"
+											value="06:00" />
+									</div>
+									<div class="ls-form-group" style="margin-bottom:0;">
+										<label class="ls-label" for="ls-auto-time-end" style="font-size:11px;">Dark
+											from</label>
+										<input type="time" id="ls-auto-time-end" class="ls-input ls-input-time"
+											value="18:00" />
+									</div>
+								</div>
+							</div>
 						</div>
 
 						<!-- ── Preset skin ─────────────────────────────────────── -->
