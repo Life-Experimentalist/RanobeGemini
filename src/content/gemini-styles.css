@@ -10,6 +10,7 @@
     line-height: 1.5;
     color: #333;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: left !important;
 }
 
 /* Dark mode styling for game stats box */
@@ -23,7 +24,12 @@
 }
 
 /* Heading styles for enhanced content - Bold and centered */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-weight: bold !important;
     text-align: center !important;
     margin: 20px 0 15px 0 !important;

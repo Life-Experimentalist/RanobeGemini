@@ -456,7 +456,7 @@ html[data-darkreader-mode] #summary-display-short h3 {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	user-select: none;
+	/* user-select: none; */
 }
 
 .ranobes-gemini-header h2 {
@@ -599,7 +599,7 @@ button.ranobes-gemini-btn:disabled {
 	box-sizing: border-box;
 	color: #e8e8e8;
 	overflow-x: auto;
-	text-align: left;
+	text-align: left !important;
 }
 
 /* Light mode variant for game stats box */
@@ -709,6 +709,7 @@ html[data-darkreader-mode] .section-divider {
 	line-height: 1.7;
 	box-sizing: border-box;
 	width: 100%;
+	text-align: left !important;
 }
 
 .rg-author-note::before {
@@ -738,6 +739,7 @@ html[data-darkreader-mode] .section-divider {
 	box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
 	box-sizing: border-box;
 	width: 100%;
+	text-align: left !important;
 }
 
 /* Quote / Poetry / Song Lyrics / Epigraph box */
@@ -755,6 +757,7 @@ html[data-darkreader-mode] .section-divider {
 	box-sizing: border-box;
 	width: calc(100% - 10px);
 	white-space: pre-wrap;
+	text-align: left !important;
 }
 
 /* Skill / Spell / Ability description card */
@@ -772,6 +775,7 @@ html[data-darkreader-mode] .section-divider {
 	box-sizing: border-box;
 	width: 100%;
 	white-space: pre-wrap;
+	text-align: left !important;
 }
 
 /* Flashback / Memory scene wrapper */
@@ -789,6 +793,7 @@ html[data-darkreader-mode] .section-divider {
 	box-sizing: border-box;
 	width: 100%;
 	opacity: 0.92;
+	text-align: left !important;
 }
 
 /* ── Light-mode variants ── */
@@ -1034,41 +1039,63 @@ html[data-darkreader-mode] .rg-system-msg,
 	.gemini-wip-banner .progress-text {
 		font-size: 13px !important;
 	}
+}
 
-	/* Chunk banners - vertical layout */
-	.gemini-chunk-banner {
-		flex-direction: column !important;
-		gap: 8px !important;
-		padding: 12px !important;
-	}
+/* ── Copy fix: always allow text selection inside enhanced content ── */
+/* Target the container AND all descendants so site-level "p { user-select: none }" rules
+   (which override inherited values) don't block selection in AI-enhanced text. */
+.gemini-chunk-content,
+.gemini-chunk-content *,
+[data-showing-enhanced="true"],
+[data-showing-enhanced="true"] *,
+[data-rg-copy-enabled="true"],
+[data-rg-copy-enabled="true"] * {
+	user-select: text !important;
+	-webkit-user-select: text !important;
+}
 
-	.gemini-chunk-banner button {
-		width: 100% !important;
-		margin: 4px 0 !important;
-	}
+/* Restore non-selectable UX on Gemini UI controls inside enhanced areas */
+.gemini-chunk-banner button,
+.gemini-enhanced-banner button,
+.gemini-master-banner button,
+.gemini-wip-banner button {
+	user-select: none;
+	-webkit-user-select: none;
+}
 
-	/* Progress bar enhancements for mobile */
-	.gemini-wip-banner>div:nth-child(2) {
-		height: 12px !important;
-		border-radius: 6px !important;
-		margin: 12px 0 !important;
-	}
+/* Chunk banners - vertical layout */
+.gemini-chunk-banner {
+	flex-direction: column !important;
+	gap: 8px !important;
+	padding: 12px !important;
+}
 
-	/* Novel page UI controls (#rg-novel-controls) - mobile layout */
-	#rg-novel-controls {
-		flex-direction: column !important;
-		gap: 8px !important;
-		padding: 12px !important;
-	}
+.gemini-chunk-banner button {
+	width: 100% !important;
+	margin: 4px 0 !important;
+}
 
-	#rg-novel-controls button,
-	#rg-novel-controls select {
-		width: 100% !important;
-		min-height: 44px !important;
-		font-size: 15px !important;
-		padding: 12px 10px !important;
-		box-sizing: border-box !important;
-	}
+/* Progress bar enhancements for mobile */
+.gemini-wip-banner>div:nth-child(2) {
+	height: 12px !important;
+	border-radius: 6px !important;
+	margin: 12px 0 !important;
+}
+
+/* Novel page UI controls (#rg-novel-controls) - mobile layout */
+#rg-novel-controls {
+	flex-direction: column !important;
+	gap: 8px !important;
+	padding: 12px !important;
+}
+
+#rg-novel-controls button,
+#rg-novel-controls select {
+	width: 100% !important;
+	min-height: 44px !important;
+	font-size: 15px !important;
+	padding: 12px 10px !important;
+	box-sizing: border-box !important;
 }
 
 /* Styling for enhanced banner toggle button */

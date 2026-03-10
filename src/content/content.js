@@ -494,7 +494,85 @@ if (window.__RGInitDone) {
 		return textOnly;
 	}
 
-	// Add a verification function to check background script connection
+	/**
+	 * Remove copy-blocking applied by sites (e.g. .nocopy class on FF.net).
+	 * Idempotent — safe to call multiple times.
+	 * @param {Element} contentArea
+	 */
+	function enableCopyOnContentArea(contentArea) {
+		if (!contentArea) return;
+		// Always re-apply — site scripts may have re-added blocking handlers since last call
+		// (e.g. after innerHTML replacement or toggle back to enhanced view).
+		contentArea.dataset.rgCopyEnabled = "true";
+		// Walk up ancestors to remove inline copy-blocking handlers, nocopy class,
+		// and any user-select:none — unconditionally force text on every ancestor
+		// (FanFiction sets user-select:none inline on the #storytext parent; checking
+		// only === "none" is unreliable across browsers due to vendor-prefix normalisation)
+		let el = contentArea;
+		for (
+			let i = 0;
+			i < 10 && el && el !== document.documentElement;
+			i++, el = el.parentElement
+		) {
+			el.classList.remove("nocopy");
+			el.oncopy = null;
+			el.removeAttribute("oncopy");
+			el.onselectstart = null;
+			el.removeAttribute("onselectstart");
+			// Always force user-select:text on every ancestor so any inline or
+			// stylesheet user-select:none above us cannot suppress selection.
+			if (el.style) {
+				el.style.setProperty("user-select", "text", "important");
+				el.style.setProperty(
+					"-webkit-user-select",
+					"text",
+					"important",
+				);
+			}
+		}
+		// Clear document/window level inline handlers — the most common anti-copy pattern
+		document.onselectstart = null;
+		document.oncopy = null;
+		window.onselectstart = null;
+		window.oncopy = null;
+		// Force text selection with !important on the container itself
+		contentArea.style.setProperty("user-select", "text", "important");
+		contentArea.style.setProperty(
+			"-webkit-user-select",
+			"text",
+			"important",
+		);
+		// Also apply user-select:text directly to every child element so that site rules
+		// like "p { user-select: none }" (explicit, not inherited) don't block selection.
+		contentArea
+			.querySelectorAll(
+				"p, span, div, h1, h2, h3, h4, h5, h6, li, td, blockquote, em, strong, i, b, a",
+			)
+			.forEach((child) => {
+				// Skip Gemini UI elements (banners, buttons)
+				if (
+					child.closest(
+						".gemini-chunk-banner, .gemini-enhanced-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-chunk-summary-group, .gemini-main-summary-group",
+					)
+				)
+					return;
+				child.style.setProperty("user-select", "text", "important");
+				child.style.setProperty(
+					"-webkit-user-select",
+					"text",
+					"important",
+				);
+			});
+		// Register bubble-phase listeners only once (stored on element to prevent stacking)
+		if (!contentArea._rgCopyListeners) {
+			const stopCopy = (e) => e.stopImmediatePropagation();
+			const stopSelect = (e) => e.stopImmediatePropagation();
+			contentArea.addEventListener("copy", stopCopy, false);
+			contentArea.addEventListener("selectstart", stopSelect, false);
+			contentArea._rgCopyListeners = true;
+		}
+	}
+
 	async function verifyBackgroundConnection() {
 		try {
 			const response = await browser.runtime.sendMessage({
@@ -854,9 +932,9 @@ if (window.__RGInitDone) {
 		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
 		if (!toggleBtn) return;
 
-		// Guard: don't toggle while enhancement or summarization is in progress
+		// Guard: only block while enhancement is actively processing (cancel button present)
 		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) {
+		if (wipBanner && wipBanner.querySelector(".gemini-cancel-btn")) {
 			showStatusMessage(
 				"Enhancement is still in progress. Wait until it finishes.",
 				"warning",
@@ -866,7 +944,7 @@ if (window.__RGInitDone) {
 		}
 
 		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
 		);
 		if (banners.length === 0) {
 			showStatusMessage("No enhancement banners to show/hide.", "info");
@@ -927,9 +1005,9 @@ if (window.__RGInitDone) {
 	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
 	 */
 	function handleChapterControlsToggleBanners(callerBtn = null) {
-		// Guard: don't toggle while enhancement or summarization is in progress
+		// Guard: only block while enhancement is actively processing (cancel button present)
 		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) {
+		if (wipBanner && wipBanner.querySelector(".gemini-cancel-btn")) {
 			showStatusMessage(
 				"Enhancement is still in progress. Wait until it finishes.",
 				"warning",
@@ -938,9 +1016,9 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container
+		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container or content boxes
 		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
+			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
 		);
 		if (banners.length === 0) {
 			showStatusMessage("No enhancement banners to show/hide.", "info");
@@ -1153,6 +1231,7 @@ if (window.__RGInitDone) {
 			`Initialized pre-enhancement chunk view with ${chunks.length} chunks (${chunkSizeWords} words target)`,
 		);
 
+		enableCopyOnContentArea(contentArea);
 		return chunks.length;
 	}
 
@@ -1178,8 +1257,8 @@ if (window.__RGInitDone) {
 		const originalContent = chunkContent.getAttribute(
 			"data-original-chunk-content",
 		);
-		// eslint-disable-next-line no-unused-vars
-		chunkContent.getAttribute("data-enhanced-chunk-content") ||
+		const enhancedContent =
+			chunkContent.getAttribute("data-enhanced-chunk-content") ||
 			chunkContent.innerHTML;
 
 		if (isShowingEnhanced) {
@@ -1198,6 +1277,9 @@ if (window.__RGInitDone) {
 			chunkContent.innerHTML = enhancedContent;
 			toggleBtn.textContent = "👁 Show Original";
 			toggleBtn.setAttribute("data-showing", "enhanced");
+			// Re-enable text selection after switching to enhanced view
+			const caForToggle = findContentArea();
+			if (caForToggle) enableCopyOnContentArea(caForToggle);
 		}
 	}
 
@@ -1253,6 +1335,11 @@ if (window.__RGInitDone) {
 				chunkIndex,
 				totalChunks,
 				"pending",
+				null,
+				null,
+				null,
+				25,
+				() => handleReenhanceChunk(chunkIndex),
 			);
 			banner.replaceWith(newBanner);
 		}
@@ -1273,11 +1360,17 @@ if (window.__RGInitDone) {
 		const chunkContent = document.querySelector(
 			`.gemini-chunk-content[data-chunk-index="${chunkIndex}"]`,
 		);
-		const originalContent = chunkContent?.getAttribute(
-			"data-original-chunk-content",
-		);
 
-		if (!originalContent) {
+		// Prefer the original HTML (preserves formatting); fall back to plain text
+		const contentForEnhancement =
+			chunkContent?.getAttribute("data-original-chunk-html") ||
+			chunkContent?.getAttribute("data-original-chunk-content");
+		// Plain text used only for word counting
+		const originalText =
+			chunkContent?.getAttribute("data-original-chunk-content") ||
+			stripHtmlTags(contentForEnhancement || "");
+
+		if (!contentForEnhancement) {
 			debugError("No original content found for chunk", chunkIndex);
 			showStatusMessage(
 				`Cannot re-enhance chunk ${
@@ -1286,6 +1379,22 @@ if (window.__RGInitDone) {
 				"error",
 			);
 			return;
+		}
+
+		// Immediately show processing state so the user gets visual feedback
+		const nTotalChunksNow =
+			document.querySelectorAll(".gemini-chunk-banner").length || 1;
+		const processingBanner = buildChunkBanner(
+			chunking,
+			chunkIndex,
+			nTotalChunksNow,
+			"processing",
+		);
+		const existingBannerPre = document.querySelector(
+			`.chunk-banner-${chunkIndex}`,
+		);
+		if (existingBannerPre) {
+			existingBannerPre.replaceWith(processingBanner);
 		}
 
 		try {
@@ -1303,14 +1412,12 @@ if (window.__RGInitDone) {
 			formattingOptions.centerSceneHeadings =
 				settings.centerSceneHeadings !== false;
 
-			const combinedPrompt = currentHandler
-				? currentHandler.getSiteSpecificPrompt()
-				: "";
+			const combinedPrompt = await buildCombinedPrompt();
 
 			const response = await sendMessageWithRetry({
 				action: "reenhanceChunk",
 				chunkIndex: chunkIndex,
-				content: originalContent,
+				content: contentForEnhancement,
 				title: document.title,
 				siteSpecificPrompt: combinedPrompt,
 				useEmoji: useEmoji,
@@ -1327,23 +1434,224 @@ if (window.__RGInitDone) {
 					);
 					chunkContent.innerHTML = sanitizedContent;
 					chunkContent.setAttribute("data-chunk-enhanced", "true");
+					// Store enhanced content so toggle can restore it later
+					chunkContent.setAttribute(
+						"data-enhanced-chunk-content",
+						sanitizedContent,
+					);
+
+					// Update the banner to "completed" state
+					const existingBanner = document.querySelector(
+						`.chunk-banner-${chunkIndex}`,
+					);
+					if (existingBanner) {
+						const nTotalChunks = document.querySelectorAll(
+							".gemini-chunk-banner",
+						).length;
+						const settingsData = await browser.storage.local.get([
+							"wordCountThreshold",
+						]);
+						const wct =
+							settingsData.wordCountThreshold !== undefined
+								? settingsData.wordCountThreshold
+								: 25;
+						const origWords = chunking.core.countWords(
+							originalText || "",
+						);
+						const enhWords =
+							chunking.core.countWords(sanitizedContent);
+						const completedBanner = buildChunkBanner(
+							chunking,
+							chunkIndex,
+							nTotalChunks,
+							"completed",
+							null,
+							null,
+							{ original: origWords, enhanced: enhWords },
+							wct,
+						);
+						existingBanner.replaceWith(completedBanner);
+					}
 				}
 
-				totalChunks = document.querySelectorAll(
+				const nWrappers = document.querySelectorAll(
 					".gemini-chunk-wrapper",
 				).length;
+				// Re-declare to avoid shadowing issues with the outer totalChunks var
+				totalChunks = nWrappers;
 				await chunking.cache.saveChunkToCache(
 					window.location.href,
 					chunkIndex,
 					{
-						originalContent: originalContent,
+						originalContent: originalText,
 						enhancedContent: response.result.enhancedContent,
 						wordCount: response.result.wordCount || 0,
 						timestamp: Date.now(),
-						totalChunks: totalChunks || undefined,
+						totalChunks: nWrappers || undefined,
 						modelInfo: modelInfo,
 					},
 				);
+
+				// ── Update overall chapter UI state ──────────────────────────────────────
+				const allChunkEls = document.querySelectorAll(
+					".gemini-chunk-content",
+				);
+				const doneEls = document.querySelectorAll(
+					'.gemini-chunk-content[data-chunk-enhanced="true"]',
+				);
+				const allDoneNow =
+					doneEls.length === allChunkEls.length &&
+					allChunkEls.length > 0;
+
+				// Recalculate word counts across all chunks
+				const chunkWordCounts = chunking.core?.countWords
+					? {
+							original: Array.from(allChunkEls).reduce(
+								(s, c) =>
+									s +
+									chunking.core.countWords(
+										c.getAttribute(
+											"data-original-chunk-content",
+										) || "",
+									),
+								0,
+							),
+							enhanced: Array.from(doneEls).reduce(
+								(s, c) =>
+									s + chunking.core.countWords(c.innerHTML),
+								0,
+							),
+						}
+					: null;
+
+				// Update the WIP banner to reflect current completion
+				showWorkInProgressBanner(
+					doneEls.length,
+					allChunkEls.length,
+					allDoneNow ? "complete" : "paused",
+					chunkWordCounts,
+				);
+
+				// Mark the chapter as having cached content so the top button is sensible
+				hasCachedContent = true;
+
+				if (allDoneNow) {
+					// All chunks are now enhanced — update the top Enhance Chapter button
+					document
+						.querySelectorAll(".gemini-enhance-btn")
+						.forEach((btn) => {
+							btn.textContent = "🔄 Re-enhance with Gemini";
+							btn.disabled = false;
+							btn.classList.remove("loading");
+						});
+					if (cancelEnhanceButton)
+						cancelEnhanceButton.style.display = "none";
+
+					// Add master banner if not already present (individual chunk enhance path)
+					const contentAreaForMaster = findContentArea();
+					if (contentAreaForMaster && chunking?.ui) {
+						const existingMasterBanner = document.querySelector(
+							".gemini-master-banner",
+						);
+						if (!existingMasterBanner) {
+							const allChunkEls2 = document.querySelectorAll(
+								".gemini-chunk-content",
+							);
+							const masterOrigWords = Array.from(
+								allChunkEls2,
+							).reduce(
+								(s, c) =>
+									s +
+									chunking.core.countWords(
+										c.getAttribute(
+											"data-original-chunk-content",
+										) || "",
+									),
+								0,
+							);
+							const masterEnhWords = Array.from(
+								allChunkEls2,
+							).reduce(
+								(s, c) =>
+									s + chunking.core.countWords(c.innerHTML),
+								0,
+							);
+							const masterBanner2 =
+								chunking.ui.createMasterBanner(
+									masterOrigWords,
+									masterEnhWords,
+									allChunkEls2.length,
+									false,
+									lastChunkModelInfo,
+									null,
+								);
+							const mToggleBtn = masterBanner2.querySelector(
+								".gemini-master-toggle-all-btn",
+							);
+							if (mToggleBtn) {
+								mToggleBtn.setAttribute(
+									"data-showing",
+									"enhanced",
+								);
+								mToggleBtn.addEventListener("click", (e) => {
+									e.preventDefault();
+									handleToggleAllChunks();
+								});
+							}
+							const mDeleteBtn = masterBanner2.querySelector(
+								".gemini-master-delete-all-btn",
+							);
+							if (mDeleteBtn) {
+								mDeleteBtn.addEventListener(
+									"click",
+									async (e) => {
+										e.preventDefault();
+										if (
+											confirm(
+												"Delete all cached enhanced content for this chapter?",
+											)
+										) {
+											await handleDeleteAllChunks();
+										}
+									},
+								);
+							}
+							if (shouldBannersBeHidden()) {
+								masterBanner2.style.display = "none";
+							}
+							contentAreaForMaster.insertBefore(
+								masterBanner2,
+								contentAreaForMaster.firstChild,
+							);
+						}
+					}
+				} else {
+					// Some chunks still unenhanced — reset button so user can enhance remainder
+					document
+						.querySelectorAll(".gemini-enhance-btn")
+						.forEach((btn) => {
+							// Only reset if still showing a loading/processing label
+							if (
+								btn.disabled ||
+								btn.classList.contains("loading")
+							) {
+								btn.textContent = "✨ Enhance with Gemini";
+								btn.disabled = false;
+								btn.classList.remove("loading");
+							}
+						});
+				}
+
+				// Ensure the content area is marked as enhanced and text is selectable
+				const contentAreaForCopy = findContentArea();
+				if (contentAreaForCopy) {
+					contentAreaForCopy.setAttribute(
+						"data-showing-enhanced",
+						"true",
+					);
+					enableCopyOnContentArea(contentAreaForCopy);
+				}
+				// ─────────────────────────────────────────────────────────────────────────
 			} else {
 				const errorMsg = response?.error || "Unknown error";
 				const existingBanner = document.querySelector(
@@ -1368,6 +1676,23 @@ if (window.__RGInitDone) {
 				);
 			}
 		} catch (error) {
+			// Restore banner to error state so the user can retry
+			const existingBanner = document.querySelector(
+				`.chunk-banner-${chunkIndex}`,
+			);
+			if (existingBanner) {
+				const totalChunks = document.querySelectorAll(
+					".gemini-chunk-banner",
+				).length;
+				const errorBanner = buildChunkBanner(
+					chunking,
+					chunkIndex,
+					totalChunks,
+					"error",
+					error.message || "Unknown error",
+				);
+				existingBanner.replaceWith(errorBanner);
+			}
 			debugError("Error re-enhancing chunk:", error);
 			showStatusMessage(
 				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
@@ -1444,6 +1769,11 @@ if (window.__RGInitDone) {
 				);
 				chunkContent.innerHTML = sanitizedContent;
 				chunkContent.setAttribute("data-chunk-enhanced", "true");
+				// Store enhanced content so toggle can restore it later
+				chunkContent.setAttribute(
+					"data-enhanced-chunk-content",
+					sanitizedContent,
+				);
 			}
 
 			await chunking.cache.saveChunkToCache(
@@ -1470,12 +1800,8 @@ if (window.__RGInitDone) {
 					chunkContent?.getAttribute("data-original-chunk-content") ||
 					"";
 				const enhancedContent = chunkContent?.innerHTML || "";
-				const originalWords = stripHtmlTags(originalContent)
-					.split(/\s+/)
-					.filter((w) => w).length;
-				const enhancedWords = stripHtmlTags(enhancedContent)
-					.split(/\s+/)
-					.filter((w) => w).length;
+				const originalWords = chunking.core.countWords(originalContent);
+				const enhancedWords = chunking.core.countWords(enhancedContent);
 				const wordCounts = {
 					original: originalWords,
 					enhanced: enhancedWords,
@@ -1556,10 +1882,18 @@ if (window.__RGInitDone) {
 					".gemini-master-banner",
 				);
 				if (!existingMaster) {
-					const originalText =
-						contentArea.getAttribute("data-original-text") || "";
-					const originalWords =
-						chunking.core.countWords(originalText);
+					const originalWords = Array.from(
+						document.querySelectorAll(".gemini-chunk-content"),
+					).reduce((sum, chunk) => {
+						return (
+							sum +
+							chunking.core.countWords(
+								chunk.getAttribute(
+									"data-original-chunk-content",
+								) || "",
+							)
+						);
+					}, 0);
 					const enhancedWords = Array.from(
 						document.querySelectorAll(".gemini-chunk-content"),
 					).reduce((sum, chunkContent) => {
@@ -1628,6 +1962,9 @@ if (window.__RGInitDone) {
 				}
 			}
 		}
+
+		// Re-enable text selection after each chunk update (batch enhancement path)
+		if (contentArea) enableCopyOnContentArea(contentArea);
 	}
 
 	async function handleChunkError(message) {
@@ -1951,10 +2288,12 @@ if (window.__RGInitDone) {
 		const isPaused = state === "paused";
 
 		const titleText = isComplete
-			? "✅ Enhancement Complete"
+			? "Enhancement Complete"
 			: isPaused
-				? "⏸️ Enhancement Paused"
-				: "⏳ Enhancing Content";
+				? "Enhancement Paused"
+				: "Enhancing Content";
+		// ? "⏸️ Enhancement Paused"
+		// : "⏳ Enhancing Content";
 
 		const statusLine = isComplete
 			? `All ${safeTotal} chunk${safeTotal > 1 ? "s" : ""} completed.`
@@ -2863,6 +3202,84 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// ── Custom box type CSS injection ──────────────────────────────────────────
+	let customBoxTypesModule = null;
+
+	async function loadCustomBoxTypesModule() {
+		if (customBoxTypesModule) return customBoxTypesModule;
+		try {
+			const url = browser.runtime.getURL("utils/custom-box-types.js");
+			customBoxTypesModule = await import(url);
+			return customBoxTypesModule;
+		} catch (_err) {
+			return null;
+		}
+	}
+
+	/**
+	 * Inject (or refresh) a <style> tag for user-defined custom content box types.
+	 * Idempotent — updates the existing tag on subsequent calls.
+	 */
+	async function injectCustomBoxCSS() {
+		try {
+			const mod = await loadCustomBoxTypesModule();
+			if (!mod) return;
+			const boxTypes = await mod.getCustomBoxTypes();
+			const css = mod.generateCSSForBoxTypes(boxTypes);
+			const styleId = "rg-custom-box-styles";
+			let tag = document.getElementById(styleId);
+			if (!tag) {
+				tag = document.createElement("style");
+				tag.id = styleId;
+				document.head.appendChild(tag);
+			}
+			tag.textContent = css;
+		} catch (_err) {
+			// non-critical
+		}
+	}
+
+	// Refresh custom box CSS whenever the user changes settings
+	try {
+		browser.storage.onChanged.addListener((changes, area) => {
+			if (area === "local" && changes.rg_custom_box_types) {
+				injectCustomBoxCSS();
+			}
+		});
+	} catch (_err) {
+		// non-critical
+	}
+
+	/**
+	 * Build the combined prompt for a Gemini request:
+	 * site-specific + optional novel-custom + custom box types appendix.
+	 * @param {string} [novelCustomPrompt]
+	 * @returns {Promise<string>}
+	 */
+	async function buildCombinedPrompt(novelCustomPrompt) {
+		let prompt = currentHandler
+			? currentHandler.getSiteSpecificPrompt()
+			: "";
+		if (novelCustomPrompt) {
+			prompt = prompt
+				? `${prompt}\n\n${novelCustomPrompt}`
+				: novelCustomPrompt;
+		}
+		try {
+			const mod = await loadCustomBoxTypesModule();
+			if (mod) {
+				const boxTypes = await mod.getCustomBoxTypes();
+				const appendix = mod.buildCustomBoxPromptAppendix(boxTypes);
+				if (appendix) {
+					prompt = prompt ? `${prompt}\n\n${appendix}` : appendix;
+				}
+			}
+		} catch (_err) {
+			// non-critical — fall back to prompt without custom boxes
+		}
+		return prompt;
+	}
+
 	// Load novel library for tracking novels
 	async function loadNovelLibrary() {
 		try {
@@ -3383,6 +3800,9 @@ if (window.__RGInitDone) {
 			btn.classList.remove("loading");
 		});
 
+		// Re-enable text selection on restored cached content
+		enableCopyOnContentArea(contentArea);
+
 		showStatusMessage("Loaded cached enhanced content.", "success", 3000);
 
 		return true;
@@ -3568,6 +3988,8 @@ if (window.__RGInitDone) {
 
 		// Inject custom CSS from handler settings (if any)
 		await injectHandlerCustomCSS();
+		// Inject user-defined custom content box type CSS
+		await injectCustomBoxCSS();
 
 		// Now that handler is loaded, attempt to restore cached content
 		let cacheRestored = false;
@@ -6902,6 +7324,104 @@ if (window.__RGInitDone) {
 	// Handle click event for Enhance button
 	async function handleEnhanceClick() {
 		enhancementCancelRequested = false;
+
+		// Check if there's a chunked container with individually-enhanced chunks that
+		// has NOT gone through the normal "Regenerate" path (hasCachedContent=true but
+		// isCachedContent=false means chunk-level cache only, not whole-page cache).
+		// Treat this the same as the Regenerate path: clear chunk caches and re-enhance.
+		const existingChunkedOnClick = document.getElementById(
+			"gemini-chunked-content",
+		);
+		if (existingChunkedOnClick && !isCachedContent) {
+			const allChunkEls = existingChunkedOnClick.querySelectorAll(
+				".gemini-chunk-content",
+			);
+			const enhancedChunkEls = existingChunkedOnClick.querySelectorAll(
+				'.gemini-chunk-content[data-chunk-enhanced="true"]',
+			);
+
+			// If SOME but not ALL chunks are enhanced, continue with remaining
+			if (
+				allChunkEls.length > 0 &&
+				enhancedChunkEls.length > 0 &&
+				enhancedChunkEls.length < allChunkEls.length
+			) {
+				const remainingIndices = Array.from(allChunkEls)
+					.filter(
+						(el) =>
+							el.getAttribute("data-chunk-enhanced") !== "true",
+					)
+					.map((el) =>
+						parseInt(el.getAttribute("data-chunk-index"), 10),
+					)
+					.filter((idx) => !isNaN(idx));
+
+				document
+					.querySelectorAll(".gemini-enhance-btn")
+					.forEach((btn) => {
+						btn.textContent = "Processing...";
+						btn.disabled = true;
+						btn.classList.add("loading");
+					});
+				if (cancelEnhanceButton)
+					cancelEnhanceButton.style.display = "inline-flex";
+
+				showStatusMessage(
+					`Continuing enhancement: ${remainingIndices.length} chunk(s) remaining...`,
+					"info",
+					3000,
+				);
+				showWorkInProgressBanner(
+					enhancedChunkEls.length,
+					allChunkEls.length,
+					"processing",
+				);
+
+				for (const chunkIndex of remainingIndices) {
+					if (enhancementCancelRequested) break;
+					await handleReenhanceChunk(chunkIndex);
+				}
+
+				if (cancelEnhanceButton)
+					cancelEnhanceButton.style.display = "none";
+				// Ensure button is reset if still loading (e.g. after cancel or chunk error)
+				document
+					.querySelectorAll(".gemini-enhance-btn")
+					.forEach((btn) => {
+						if (btn.disabled || btn.classList.contains("loading")) {
+							const allNow =
+								existingChunkedOnClick.querySelectorAll(
+									".gemini-chunk-content",
+								);
+							const doneNow =
+								existingChunkedOnClick.querySelectorAll(
+									'.gemini-chunk-content[data-chunk-enhanced="true"]',
+								);
+							const allCompleted =
+								doneNow.length === allNow.length &&
+								allNow.length > 0;
+							btn.textContent = allCompleted
+								? "🔄 Re-enhance with Gemini"
+								: "✨ Enhance with Gemini";
+							btn.disabled = false;
+							btn.classList.remove("loading");
+						}
+					});
+				return;
+			}
+
+			// All chunks enhanced (re-enhance from scratch) or nothing enhanced yet (fresh start)
+			const chunkingForCleanup = await loadChunkingSystem();
+			if (chunkingForCleanup?.cache?.deleteAllChunksForUrl) {
+				await chunkingForCleanup.cache
+					.deleteAllChunksForUrl(window.location.href)
+					.catch(() => {});
+			}
+			hasCachedContent = false;
+			isCachedContent = false;
+			// Fall through to fresh enhancement below
+		}
+
 		// Check cache first
 		if (storageManager && (isCachedContent || hasCachedContent)) {
 			const enhanceBtns = document.querySelectorAll(
@@ -7267,6 +7787,8 @@ if (window.__RGInitDone) {
 							`Prepared ${chunks.length} chunks for inline replacement with preserved HTML`,
 						);
 						showWorkInProgressBanner(0, chunks.length);
+						// Enable text selection on the freshly created chunk content
+						enableCopyOnContentArea(contentArea);
 					} catch (prepError) {
 						debugError(
 							"Failed to prepare chunked view:",
@@ -7303,15 +7825,10 @@ if (window.__RGInitDone) {
 				}
 			}
 
-			// Combine site-specific and novel-specific prompts
-			let combinedPrompt = currentHandler
-				? currentHandler.getSiteSpecificPrompt()
-				: "";
-			if (novelCustomPrompt) {
-				combinedPrompt = combinedPrompt
-					? `${combinedPrompt}\n\n${novelCustomPrompt}`
-					: novelCustomPrompt;
-			}
+			// Combine site-specific, novel-specific, and custom box type prompts
+			const combinedPrompt = await buildCombinedPrompt(
+				novelCustomPrompt || undefined,
+			);
 
 			// Send content to background for processing (background will stream chunkProcessed messages)
 			// Using sendMessageWithRetry to handle service worker sleep issues
@@ -7419,10 +7936,13 @@ if (window.__RGInitDone) {
 		} catch (error) {
 			debugError("Error in handleEnhanceClick:", error);
 			showStatusMessage(`Error: ${error.message}`, "error");
-			if (button) {
-				button.textContent = "✨ Enhance with Gemini";
-				button.disabled = false;
-			}
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				if (btn.disabled || btn.classList.contains("loading")) {
+					btn.textContent = "✨ Enhance with Gemini";
+					btn.disabled = false;
+					btn.classList.remove("loading");
+				}
+			});
 			if (cancelEnhanceButton) {
 				cancelEnhanceButton.style.display = "none";
 			}
@@ -7729,6 +8249,8 @@ if (window.__RGInitDone) {
 									} else {
 										applyDefaultFormatting(contentArea);
 									}
+									// Re-enable copy on the freshly set content
+									enableCopyOnContentArea(contentArea);
 									debugLog("Switched to enhanced content");
 								} else {
 									debugError(
@@ -7788,6 +8310,9 @@ if (window.__RGInitDone) {
 						newBanner.parentNode ? newBanner.parentNode.id : "null",
 					);
 				};
+
+				// Ensure text can be selected/copied from enhanced content
+				enableCopyOnContentArea(contentArea);
 
 				// Initial banner setup
 				setupToggleBanner(true);
@@ -7978,6 +8503,8 @@ if (window.__RGInitDone) {
 						} else {
 							applyDefaultFormatting(contentArea);
 						}
+						// Re-enable copy after innerHTML switch
+						enableCopyOnContentArea(contentArea);
 						// Re-create banner for enhanced view
 						newBanner = createEnhancedBanner(
 							originalContent,
@@ -8019,6 +8546,9 @@ if (window.__RGInitDone) {
 			} else {
 				contentArea.appendChild(banner);
 			}
+
+			// Ensure text can be selected/copied from enhanced content
+			enableCopyOnContentArea(contentArea);
 
 			// Restore scroll position
 			window.scrollTo(0, scrollPosition);

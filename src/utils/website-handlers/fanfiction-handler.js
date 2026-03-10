@@ -1651,9 +1651,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	}
 
 	// Format content after enhancement - DO NOT MODIFY STYLING
-	formatAfterEnhancement(contentArea) {
-		contentArea;
-		pass;
+	formatAfterEnhancement(_contentArea) {
 		// Leave all styling as-is from original content
 		// No modifications to preserve original formatting
 	}

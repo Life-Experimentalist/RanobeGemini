@@ -1094,6 +1094,39 @@
 					</div>
 				</section>
 
+				<!-- ════════════════════════════════════════════════
+		     PANEL: Custom Content Boxes
+		     ════════════════════════════════════════════════ -->
+				<section class="ls-panel" id="panel-content-boxes">
+					<div class="ls-panel-header">
+						<div class="ls-panel-header-content">
+							<h1 class="ls-panel-title">🎨 Content Boxes</h1>
+							<p class="ls-panel-description">Define custom CSS classes for content regions. Gemini will
+								be instructed to wrap matching content with your class names.</p>
+						</div>
+						<div class="ls-panel-header-actions">
+							<button id="content-boxes-add-btn" class="ls-btn ls-btn-primary ls-btn-sm">+ Add Box
+								Type</button>
+						</div>
+					</div>
+
+					<div class="ls-section" data-accent="blue">
+						<div class="ls-section-title">ℹ️ How it works</div>
+						<div class="ls-section-desc">
+							Each box type defines a CSS class (e.g. <code>rg-my-box</code>) and a hint for Gemini (e.g.
+							"stat windows, pop-ups"). When you enhance a chapter, Gemini will wrap matching content in
+							<code>&lt;div class="rg-my-box"&gt;…&lt;/div&gt;</code>. The CSS is automatically injected
+							into every page you visit. See the
+							<a href="../../landing/content-styles.html" target="_blank"
+								style="color:var(--accent-color);">Content Styles Showcase</a>
+							for a live preview of all built-in and custom box types.
+						</div>
+					</div>
+
+					<!-- Box type cards — rendered by library-settings.js -->
+					<div id="content-boxes-list" style="padding: 0 4px;"></div>
+				</section>
+
 			</main>
 		</div>
 

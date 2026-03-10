@@ -66,6 +66,13 @@ import {
 	PREVIEW_NOVEL,
 	DEFAULT_EXPORT_TEMPLATE,
 } from "../utils/novel-copy-format.js";
+import {
+	CUSTOM_BOX_TYPES_KEY,
+	getCustomBoxTypes,
+	saveCustomBoxTypes,
+	createBoxType,
+	generateCSSForBoxTypes,
+} from "../utils/custom-box-types.js";
 
 // ── Navigation tabs definition ────────────────────────────────────────────────
 const SETTINGS_TABS = [
@@ -96,6 +103,12 @@ const SETTINGS_TABS = [
 		icon: "📋",
 		label: "Copy Format",
 		panelId: "panel-copy",
+	},
+	{
+		id: "content-boxes",
+		icon: "🎨",
+		label: "Content Boxes",
+		panelId: "panel-content-boxes",
 	},
 ];
 
@@ -3032,6 +3045,251 @@ async function loadDriveBackupsList() {
 	}
 }
 
+// ── Custom Content Boxes tab ──────────────────────────────────────────────────
+async function initContentBoxesTab() {
+	const container = document.getElementById("content-boxes-list");
+	if (!container) return;
+
+	function escHtml(str) {
+		return String(str ?? "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;");
+	}
+
+	let boxTypes = await getCustomBoxTypes();
+
+	function saveAndRender() {
+		saveCustomBoxTypes(boxTypes);
+		render();
+	}
+
+	function updatePreview(previewEl, box) {
+		if (!previewEl) return;
+		const css = generateCSSForBoxTypes([box]);
+		let styleTag = previewEl.querySelector("style");
+		if (!styleTag) {
+			styleTag = document.createElement("style");
+			previewEl.appendChild(styleTag);
+		}
+		styleTag.textContent = css;
+		const boxEl = previewEl.querySelector(`.preview-box`);
+		if (boxEl) {
+			boxEl.className = `preview-box ${box.className || ""}`;
+		}
+	}
+
+	function render() {
+		container.innerHTML = "";
+		if (boxTypes.length === 0) {
+			container.innerHTML = `<p class="ls-hint" style="padding:16px 0;">No custom box types yet. Click "+ Add Box Type" to create one.</p>`;
+		}
+		boxTypes.forEach((box, idx) => {
+			const card = document.createElement("div");
+			card.className = "ls-section";
+			card.style.cssText = "margin-bottom:16px;";
+			card.setAttribute("data-box-id", box.id);
+			card.innerHTML = `
+				<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+					<span style="font-size:20px;">${escHtml(box.emoji || "📦")}</span>
+					<strong style="flex:1;">${escHtml(box.name)}</strong>
+					<code style="font-size:11px;background:rgba(0,0,0,0.2);padding:2px 6px;border-radius:4px;">.${escHtml(box.className)}</code>
+					<button class="ls-btn ls-btn-danger ls-btn-sm cb-delete-btn" data-idx="${idx}" title="Delete">🗑️</button>
+				</div>
+				<div class="ls-form-group">
+					<label class="ls-label">Display Name</label>
+					<input type="text" class="ls-input cb-name" data-idx="${idx}" value="${escHtml(box.name)}" placeholder="Author Note" />
+				</div>
+				<div class="ls-form-group" style="margin-top:8px;">
+					<label class="ls-label">CSS Class Name <span class="ls-hint">(no dot — Gemini will use this)</span></label>
+					<input type="text" class="ls-input cb-classname" data-idx="${idx}" value="${escHtml(box.className)}" placeholder="rg-my-box" />
+				</div>
+				<div class="ls-form-group" style="margin-top:8px;">
+					<label class="ls-label">Emoji</label>
+					<input type="text" class="ls-input" style="width:80px;" value="${escHtml(box.emoji || "")}" data-idx="${idx}" class="cb-emoji" placeholder="📦" />
+				</div>
+				<div class="ls-form-group" style="margin-top:8px;">
+					<label class="ls-label">AI Prompt Hint <span class="ls-hint">(tell Gemini when to apply this class)</span></label>
+					<input type="text" class="ls-input cb-prompt-hint" data-idx="${idx}" value="${escHtml(box.promptHint || "")}" placeholder="stat windows, system pop-ups" />
+				</div>
+				<details style="margin-top:10px;">
+					<summary class="ls-label" style="cursor:pointer;">🎨 Appearance</summary>
+					<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+						<div class="ls-form-group">
+							<label class="ls-label">Background</label>
+							<input type="color" class="cb-bg-color" data-idx="${idx}" value="${escHtml(rgbToHex(box.backgroundColor))}" style="width:100%;height:36px;border:none;border-radius:4px;cursor:pointer;" />
+						</div>
+						<div class="ls-form-group">
+							<label class="ls-label">Border / Text</label>
+							<input type="color" class="cb-border-color" data-idx="${idx}" value="${escHtml(rgbToHex(box.borderColor))}" style="width:100%;height:36px;border:none;border-radius:4px;cursor:pointer;" />
+						</div>
+						<div class="ls-form-group">
+							<label class="ls-label">Text Color</label>
+							<input type="color" class="cb-text-color" data-idx="${idx}" value="${escHtml(rgbToHex(box.textColor))}" style="width:100%;height:36px;border:none;border-radius:4px;cursor:pointer;" />
+						</div>
+					</div>
+					<div class="ls-form-group" style="margin-top:10px;">
+						<label class="ls-label">Raw CSS Override <span class="ls-hint">(leave blank to use appearance above)</span></label>
+						<textarea class="ls-textarea cb-css-override" data-idx="${idx}" rows="4" placeholder=".my-class {\n  background: #1a2535;\n  border-left: 3px solid #4a90e2;\n}">${escHtml(box.cssOverride || "")}</textarea>
+					</div>
+				</details>
+				<div class="cb-preview" style="margin-top:12px;border-radius:4px;overflow:hidden;">
+					<div class="ls-hint" style="margin-bottom:6px;">Live preview:</div>
+					<div class="preview-box ${escHtml(box.className || "")}" style="padding:10px 14px;border-radius:4px;">
+						This is a sample paragraph showing how the <strong>${escHtml(box.name || "custom box")}</strong> will look when Gemini applies it to content.
+					</div>
+				</div>`;
+			container.appendChild(card);
+
+			// Inject preview CSS
+			const previewEl = card.querySelector(".cb-preview");
+			updatePreview(previewEl, box);
+		});
+
+		// Bind change events
+		container.querySelectorAll(".cb-name").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].name = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+				// update card heading live
+				const card_ = e.target.closest("[data-box-id]");
+				if (card_) {
+					const strong = card_.querySelector("strong");
+					if (strong) strong.textContent = e.target.value;
+				}
+			});
+		});
+		container.querySelectorAll(".cb-classname").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].className = e.target.value
+					.replace(/\./g, "")
+					.replace(/\s+/g, "-");
+				e.target.value = boxTypes[i].className;
+				saveCustomBoxTypes(boxTypes);
+				const card_ = e.target.closest("[data-box-id]");
+				if (card_) {
+					const code = card_.querySelector("code");
+					if (code) code.textContent = `.${boxTypes[i].className}`;
+					const pb = card_.querySelector(".preview-box");
+					if (pb)
+						pb.className = `preview-box ${boxTypes[i].className}`;
+					updatePreview(
+						card_.querySelector(".cb-preview"),
+						boxTypes[i],
+					);
+				}
+			});
+		});
+		container.querySelectorAll(".cb-prompt-hint").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].promptHint = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+			});
+		});
+		container.querySelectorAll(".cb-bg-color").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].backgroundColor = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+				updatePreview(
+					e.target
+						.closest("[data-box-id]")
+						?.querySelector(".cb-preview"),
+					boxTypes[i],
+				);
+			});
+		});
+		container.querySelectorAll(".cb-border-color").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].borderColor = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+				updatePreview(
+					e.target
+						.closest("[data-box-id]")
+						?.querySelector(".cb-preview"),
+					boxTypes[i],
+				);
+			});
+		});
+		container.querySelectorAll(".cb-text-color").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].textColor = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+				updatePreview(
+					e.target
+						.closest("[data-box-id]")
+						?.querySelector(".cb-preview"),
+					boxTypes[i],
+				);
+			});
+		});
+		container.querySelectorAll(".cb-css-override").forEach((el) => {
+			el.addEventListener("input", (e) => {
+				const i = +e.target.dataset.idx;
+				boxTypes[i].cssOverride = e.target.value;
+				saveCustomBoxTypes(boxTypes);
+				updatePreview(
+					e.target
+						.closest("[data-box-id]")
+						?.querySelector(".cb-preview"),
+					boxTypes[i],
+				);
+			});
+		});
+		container.querySelectorAll(".cb-delete-btn").forEach((el) => {
+			el.addEventListener("click", (e) => {
+				const i =
+					+e.target.closest("[data-idx]")?.dataset.idx ??
+					+e.target.dataset.idx;
+				if (confirm(`Delete "${boxTypes[i]?.name}"?`)) {
+					boxTypes.splice(i, 1);
+					saveAndRender();
+				}
+			});
+		});
+	}
+
+	// Helper: try to parse any CSS color to a 6-char hex; fall back to #808080
+	function rgbToHex(color) {
+		// Already hex?
+		if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+		if (/^#[0-9a-f]{3}$/i.test(color)) {
+			const [, r, g, b] = color.match(/^#(.)(.)(.)$/);
+			return `#${r}${r}${g}${g}${b}${b}`;
+		}
+		// rgba / rgb — use canvas to convert
+		try {
+			const canvas = document.createElement("canvas");
+			canvas.width = canvas.height = 1;
+			const ctx = canvas.getContext("2d");
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, 1, 1);
+			const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+			return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+		} catch {
+			return "#808080";
+		}
+	}
+
+	render();
+
+	// + Add button
+	const addBtn = document.getElementById("content-boxes-add-btn");
+	if (addBtn) {
+		addBtn.addEventListener("click", () => {
+			const newBox = createBoxType({ id: `rg-box-${Date.now()}` });
+			boxTypes.push(newBox);
+			saveAndRender();
+		});
+	}
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
 	debugLog("⚙️ Library Settings page initialising…");
@@ -3083,6 +3341,9 @@ async function init() {
 
 	// Copy Format tab
 	await initCopyFormatTab();
+
+	// Custom Content Boxes tab
+	await initContentBoxesTab();
 
 	// Wire up all event listeners
 	setupEventListeners();
