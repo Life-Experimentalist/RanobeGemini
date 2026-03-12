@@ -304,11 +304,6 @@ body {
 	color: var(--text-muted);
 	line-height: 1.5;
 	margin-top: var(--spacing-xs);
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	line-clamp: 4;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
 }
 
 .modal-close {

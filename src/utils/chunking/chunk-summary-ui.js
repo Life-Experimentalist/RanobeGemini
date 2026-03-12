@@ -27,6 +27,8 @@ import { isDarkMode, getThemeColors } from "./chunk-ui.js";
 function buildCard(className, colors) {
 	const card = document.createElement("div");
 	card.className = className;
+	// Hide from screen readers / Read Aloud — these are UI controls, not content
+	card.setAttribute("aria-hidden", "true");
 	card.style.cssText = `
 		box-sizing: border-box;
 		width: 100%;

@@ -305,11 +305,6 @@ body {
 	color: var(--text-muted);
 	line-height: 1.5;
 	margin-top: var(--spacing-xs);
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	line-clamp: 4;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
 }
 
 .modal-close {
@@ -783,7 +778,7 @@ body {
 
 .fanfic-modal-three-columns {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 	gap: var(--spacing-lg);
 	margin-bottom: var(--spacing-lg);
 }

@@ -180,6 +180,13 @@ export const DRIVE_CONTINUOUS_BACKUP_BASENAME =
 export const DEFAULT_AUTO_HOLD_ENABLED = true;
 export const DEFAULT_AUTO_HOLD_DAYS = 7;
 
+// Chunk banner word-count-difference percentage threshold (default value when not set in storage)
+export const DEFAULT_WORD_COUNT_THRESHOLD = 25;
+
+// Delay (ms) before retrying tryRestoreChunkedCache when the DOM content area
+// is not yet available on first load (e.g. slow-rendering pages).
+export const CACHE_RESTORE_RETRY_MS = 600;
+
 // Periodic novel chapter-count check
 // Checks novels with status "up-to-date" to detect new chapters
 export const NOVEL_PERIODIC_UPDATE_ENABLED = true;

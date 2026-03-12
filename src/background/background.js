@@ -6,6 +6,7 @@ import {
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_SUMMARY_PROMPT,
 	DEFAULT_SHORT_SUMMARY_PROMPT,
+	DEFAULT_CHUNK_SIZE_WORDS,
 	KEEP_ALIVE_ALARM_INTERVAL_MINUTES,
 	NOVEL_CHAPTER_CHECK_ALARM_NAME,
 } from "../utils/constants.js";
@@ -788,7 +789,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: data.chunkingEnabled !== false,
 				chunkSize: data.chunkSize || 20000, // Used for both threshold AND chunk size
 				chunkThreshold: data.chunkSize || 20000, // Same as chunkSize (simplified)
-				chunkSizeWords: data.chunkSizeWords || 3200, // Word-based chunk size — must match content script
+				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — must match content script
 				useEmoji: data.useEmoji || false,
 				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 			};
@@ -813,7 +814,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: true,
 				chunkSize: 20000,
 				chunkThreshold: 20000,
-				chunkSizeWords: 3200, // Word-based chunk size — fallback default
+				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — fallback default
 				useEmoji: false,
 				fontSize: 100,
 			};
@@ -2551,8 +2552,8 @@ if (typeof browser === "undefined") {
 
 							// Increment retry count and try again
 							retryCount++;
-						} else if (retryCount < 2) {
-							// For non-rate limit errors, retry with exponential backoff
+						} else if (!error._nonRetryable && retryCount < 2) {
+							// For non-rate limit, retryable errors — retry with exponential backoff
 							const backoffTime = Math.pow(2, retryCount) * 3000;
 							debugLog(
 								`Error processing chunk. Retrying in ${
@@ -2583,7 +2584,7 @@ if (typeof browser === "undefined") {
 							);
 							retryCount++;
 						} else {
-							// If we've exhausted retries, mark as failed and move on
+							// Retries exhausted, or error is non-retryable (e.g. RECITATION/SAFETY)
 							failedChunks.push({
 								originalContent: contentChunks[i],
 								chunkIndex: i,
@@ -2802,7 +2803,7 @@ if (typeof browser === "undefined") {
 			// Add emoji instructions if enabled
 			if (shouldUseEmoji) {
 				promptPrefix +=
-					'\n\nAdditional instruction: Add appropriate emojis next to dialogues to enhance emotional expressions. Place the emoji immediately after the quotation marks that end the dialogue. For example: "I\'m so happy!" 😊 she said. Or "This is terrible." 😠 he growled. Choose emojis that fit the emotion being expressed in the dialogue.';
+					"\n\nWhere the tone genuinely calls for it — a tense standoff, a burst of laughter, a moment of wonder, a crushing defeat — weave in a single emoji naturally within the prose. It can sit inside a paragraph, at the end of a line of dialogue or narration, or anywhere it feels organic. There is no fixed rule about placement: let the mood of the moment guide it. Use them sparingly — only the most vivid or emotionally charged beats deserve one. A whole chapter may have just two or three, and that is perfectly fine.";
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
@@ -2963,22 +2964,62 @@ if (typeof browser === "undefined") {
 				throw new Error(errorMessage);
 			}
 
+			// Handle prompt-level block (no candidates returned at all)
+			if (responseData.promptFeedback?.blockReason) {
+				const reason = responseData.promptFeedback.blockReason;
+				debugError("Prompt blocked by Gemini:", reason);
+				const err = new Error(
+					`Gemini blocked the prompt (${reason}). Try adjusting your content or the system prompt in settings.`,
+				);
+				err._nonRetryable = true;
+				throw err;
+			}
+
 			// Check for content safety blocks
 			if (responseData.candidates && responseData.candidates.length > 0) {
 				const candidate = responseData.candidates[0];
+				const finishReason = candidate.finishReason;
 
 				// Check if content was blocked by safety filters
 				if (
-					candidate.finishReason === "SAFETY" ||
-					candidate.finishReason === "BLOCKED_REASON_UNSPECIFIED"
+					finishReason === "SAFETY" ||
+					finishReason === "BLOCKED_REASON_UNSPECIFIED"
 				) {
 					debugError(
 						"Content blocked by safety filters:",
 						candidate.safetyRatings,
 					);
-					throw new Error(
+					const err = new Error(
 						"Content was blocked by Gemini's safety filters. The content may contain sensitive themes. Try adjusting your content or prompt.",
 					);
+					err._nonRetryable = true;
+					throw err;
+				}
+
+				// Content detected as copyrighted — retrying won't help
+				if (finishReason === "RECITATION") {
+					debugError("Gemini RECITATION block:", candidate);
+					const err = new Error(
+						"Gemini detected this content as potentially copyrighted and refused to process it. " +
+							'Try adding a custom instruction like "paraphrase and rewrite" in your prompt settings, ' +
+							"or switch to a different Gemini model.",
+					);
+					err._nonRetryable = true;
+					throw err;
+				}
+
+				// Output cut off — suggest increasing maxOutputTokens
+				if (
+					finishReason === "MAX_TOKENS" ||
+					finishReason === "LENGTH"
+				) {
+					debugError("Response cut off at token limit:", candidate);
+					const err = new Error(
+						"The enhanced response was cut off because it exceeded the max output token limit. " +
+							"Try increasing Max Output Tokens in settings, or lower the words-per-chunk value.",
+					);
+					err._nonRetryable = true;
+					throw err;
 				}
 
 				// Check if content is missing
@@ -2987,9 +3028,12 @@ if (typeof browser === "undefined") {
 					!candidate.content.parts ||
 					candidate.content.parts.length === 0
 				) {
-					debugError("No content parts in response:", candidate);
+					debugError(
+						`No content parts in response (finishReason: ${finishReason}):`,
+						candidate,
+					);
 					throw new Error(
-						"Gemini returned no content. This may be due to safety filters or an API issue.",
+						`Gemini returned no content (finishReason: ${finishReason || "unknown"}). This may be due to safety filters or an API issue.`,
 					);
 				}
 			}

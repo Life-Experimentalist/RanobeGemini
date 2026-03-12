@@ -1418,7 +1418,10 @@ When enhancing, improve readability while fully respecting the author's creative
 							// Handles both:
 							//   "Genre - Char1, Char2 - Chapters:"
 							//   "Genre - Char1, Char2 - Complete - Chapters:"  (Complete between chars & stats)
-							if (!charSection) {
+							if (
+								!charSection ||
+								!charSection.replace(/^[\s-]+$/, "")
+							) {
 								const genreCharMatch = infoText.match(
 									/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Complete|Status|Chapters|Words)/i,
 								);

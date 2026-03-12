@@ -307,6 +307,15 @@ body {
 	margin-top: var(--spacing-sm);
 }
 
+.hero-eyebrow {
+	font-size: 1.25rem;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	padding: var(--spacing-xs) var(--spacing-md);
+	padding-left: 20px;
+}
+
 @media (max-width: 640px) {
 	.hero-card {
 		flex-direction: column;

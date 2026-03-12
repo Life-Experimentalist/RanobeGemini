@@ -40,6 +40,8 @@ let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
+const pausedChunks = new Set(); // Chunks where user pressed Pause (hold result, don't auto-apply)
+const skippedChunks = new Set(); // Chunks where user pressed Skip (discard result, reset to pending)
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
 const PROGRESS_PROMPT_TIMEOUT_MS = 30000; // 30 s — user needs time to decide
@@ -72,6 +74,13 @@ if (window.__RGInitDone) {
 		mobileBreakpointPx: 600,
 	};
 	let bannerConfig = { ...bannerConfigDefaults };
+
+	// Chunk-processing behaviour defaults (keep in sync with utils/constants.js)
+	const chunkBehaviorDefaults = {
+		wordCountThreshold: 25, // DEFAULT_WORD_COUNT_THRESHOLD
+		cacheRestoreRetryMs: 600, // CACHE_RESTORE_RETRY_MS
+	};
+	let chunkBehaviorConfig = { ...chunkBehaviorDefaults };
 
 	// Load shared constants for keep-alive tuning and banner durations when available
 	(async () => {
@@ -112,6 +121,15 @@ if (window.__RGInitDone) {
 					mobileBreakpointPx:
 						mod.UI_MOBILE_BREAKPOINT_PX ||
 						bannerConfigDefaults.mobileBreakpointPx,
+				};
+				chunkBehaviorConfig = {
+					...chunkBehaviorDefaults,
+					wordCountThreshold:
+						mod.DEFAULT_WORD_COUNT_THRESHOLD ??
+						chunkBehaviorDefaults.wordCountThreshold,
+					cacheRestoreRetryMs:
+						mod.CACHE_RESTORE_RETRY_MS ||
+						chunkBehaviorDefaults.cacheRestoreRetryMs,
 				};
 				if (keepAliveHeartbeat) restartKeepAlive();
 			}
@@ -548,27 +566,6 @@ if (window.__RGInitDone) {
 			"text",
 			"important",
 		);
-		// Also apply user-select:text directly to every child element so that site rules
-		// like "p { user-select: none }" (explicit, not inherited) don't block selection.
-		contentArea
-			.querySelectorAll(
-				"p, span, div, h1, h2, h3, h4, h5, h6, li, td, blockquote, em, strong, i, b, a",
-			)
-			.forEach((child) => {
-				// Skip Gemini UI elements (banners, buttons)
-				if (
-					child.closest(
-						".gemini-chunk-banner, .gemini-enhanced-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-chunk-summary-group, .gemini-main-summary-group",
-					)
-				)
-					return;
-				child.style.setProperty("user-select", "text", "important");
-				child.style.setProperty(
-					"-webkit-user-select",
-					"text",
-					"important",
-				);
-			});
 		// Inject a persistent stylesheet rule (once per page-load) so site scripts
 		// that re-apply user-select:none via MutationObserver or setInterval cannot
 		// suppress text selection within the enhanced area after our inline-style
@@ -788,6 +785,7 @@ if (window.__RGInitDone) {
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-enhanced-banner";
+		banner.setAttribute("aria-hidden", "true");
 
 		// Base styling
 		let bannerBg = "#f7f7f7";
@@ -959,17 +957,6 @@ if (window.__RGInitDone) {
 		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
 		if (!toggleBtn) return;
 
-		// Guard: only block while enhancement is actively processing (cancel button present)
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner && wipBanner.querySelector(".gemini-cancel-btn")) {
-			showStatusMessage(
-				"Enhancement is still in progress. Wait until it finishes.",
-				"warning",
-				2000,
-			);
-			return;
-		}
-
 		const banners = document.querySelectorAll(
 			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
 		);
@@ -1032,17 +1019,6 @@ if (window.__RGInitDone) {
 	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
 	 */
 	function handleChapterControlsToggleBanners(callerBtn = null) {
-		// Guard: only block while enhancement is actively processing (cancel button present)
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner && wipBanner.querySelector(".gemini-cancel-btn")) {
-			showStatusMessage(
-				"Enhancement is still in progress. Wait until it finishes.",
-				"warning",
-				2000,
-			);
-			return;
-		}
-
 		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container or content boxes
 		const banners = document.querySelectorAll(
 			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
@@ -1112,8 +1088,9 @@ if (window.__RGInitDone) {
 		errorMessage = null,
 		cacheInfo = null,
 		wordCounts = null,
-		threshold = 25,
+		threshold = chunkBehaviorConfig.wordCountThreshold,
 		onEnhance = null,
+		isBatchMode = false,
 	) {
 		return chunking.ui.createChunkBanner(
 			chunkIndex,
@@ -1125,6 +1102,11 @@ if (window.__RGInitDone) {
 				onToggle: handleChunkToggle,
 				onDelete: handleChunkDelete,
 				onEnhance,
+				isBatchMode,
+				onSkip: (idx) => handleSkipChunk(idx),
+				onPause: (idx) => handlePauseChunk(idx),
+				onShowEnhanced: (idx) => handleShowEnhancedChunk(idx),
+				onDiscardPaused: (idx) => handleDiscardPausedChunk(idx),
 			},
 			cacheInfo,
 			wordCounts,
@@ -1202,7 +1184,7 @@ if (window.__RGInitDone) {
 				null,
 				null,
 				null,
-				25,
+				chunkBehaviorConfig.wordCountThreshold,
 				(
 					(idx) => () =>
 						handleReenhanceChunk(idx)
@@ -1365,7 +1347,7 @@ if (window.__RGInitDone) {
 				null,
 				null,
 				null,
-				25,
+				chunkBehaviorConfig.wordCountThreshold,
 				() => handleReenhanceChunk(chunkIndex),
 			);
 			banner.replaceWith(newBanner);
@@ -1377,6 +1359,159 @@ if (window.__RGInitDone) {
 			2000,
 		);
 	}
+
+	// ── Skip / Pause helpers ────────────────────────────────────────────────────
+
+	function handleSkipChunk(chunkIndex) {
+		skippedChunks.add(chunkIndex);
+		debugLog(
+			`Chunk ${chunkIndex} marked for skip — will discard result on arrival.`,
+		);
+	}
+
+	function handlePauseChunk(chunkIndex) {
+		pausedChunks.add(chunkIndex);
+		debugLog(
+			`Chunk ${chunkIndex} marked for pause — will store result without applying.`,
+		);
+	}
+
+	async function handleShowEnhancedChunk(chunkIndex) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
+		if (!chunkContent) return;
+
+		const enhancedContent = chunkContent.getAttribute(
+			"data-enhanced-chunk-content",
+		);
+		if (!enhancedContent) {
+			showStatusMessage(
+				`No pending enhanced content for chunk ${chunkIndex + 1}.`,
+				"error",
+			);
+			return;
+		}
+
+		// Apply the held-back enhanced content
+		chunkContent.innerHTML = enhancedContent;
+		chunkContent.setAttribute("data-chunk-enhanced", "true");
+		pausedChunks.delete(chunkIndex);
+
+		// Build a completed banner with word counts
+		const nTotalChunks = document.querySelectorAll(
+			".gemini-chunk-banner",
+		).length;
+		const settingsData = await browser.storage.local.get([
+			"wordCountThreshold",
+		]);
+		const wct =
+			settingsData.wordCountThreshold !== undefined
+				? settingsData.wordCountThreshold
+				: chunkBehaviorConfig.wordCountThreshold;
+		const originalText =
+			chunkContent.getAttribute("data-original-chunk-content") || "";
+		const origWords = chunking.core.countWords(originalText);
+		const enhWords = chunking.core.countWords(enhancedContent);
+		const completedBanner = buildChunkBanner(
+			chunking,
+			chunkIndex,
+			nTotalChunks,
+			"completed",
+			null,
+			null,
+			{ original: origWords, enhanced: enhWords },
+			wct,
+		);
+		const freshBanner = document.querySelector(
+			`.chunk-banner-${chunkIndex}`,
+		);
+		if (freshBanner) freshBanner.replaceWith(completedBanner);
+
+		// Check if all chunks are now done
+		const allChunkEls = document.querySelectorAll(".gemini-chunk-content");
+		const doneEls = document.querySelectorAll(
+			'.gemini-chunk-content[data-chunk-enhanced="true"]',
+		);
+		const allDone =
+			doneEls.length === allChunkEls.length && allChunkEls.length > 0;
+
+		if (allDone) {
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.textContent = "🔄 Re-enhance with Gemini";
+				btn.disabled = false;
+				btn.classList.remove("loading");
+			});
+			if (cancelEnhanceButton) cancelEnhanceButton.style.display = "none";
+		}
+
+		const contentAreaForCopy = findContentArea();
+		if (contentAreaForCopy) {
+			contentAreaForCopy.setAttribute("data-showing-enhanced", "true");
+			enableCopyOnContentArea(contentAreaForCopy);
+		}
+
+		showStatusMessage(
+			`Chunk ${chunkIndex + 1} enhancement applied! ✨`,
+			"success",
+			2000,
+		);
+	}
+
+	async function handleDiscardPausedChunk(chunkIndex) {
+		const chunking = await loadChunkingSystem();
+		if (!chunking) return;
+
+		const chunkWrapper = document.querySelector(
+			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
+		);
+		if (!chunkWrapper) return;
+
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
+		if (!chunkContent) return;
+
+		// Clear the stored (but un-applied) enhanced content
+		chunkContent.removeAttribute("data-enhanced-chunk-content");
+		pausedChunks.delete(chunkIndex);
+
+		// Reset banner back to pending so the user can re-enhance later
+		const nTotalChunks = document.querySelectorAll(
+			".gemini-chunk-banner",
+		).length;
+		const pendingBanner = buildChunkBanner(
+			chunking,
+			chunkIndex,
+			nTotalChunks,
+			"pending",
+			null,
+			null,
+			null,
+			chunkBehaviorConfig.wordCountThreshold,
+			() => handleReenhanceChunk(chunkIndex),
+		);
+		const freshBanner = document.querySelector(
+			`.chunk-banner-${chunkIndex}`,
+		);
+		if (freshBanner) freshBanner.replaceWith(pendingBanner);
+
+		showStatusMessage(
+			`Chunk ${chunkIndex + 1} enhancement discarded.`,
+			"info",
+			2000,
+		);
+	}
+
+	// ───────────────────────────────────────────────────────────────────────────
 
 	async function handleReenhanceChunk(chunkIndex) {
 		const chunking = await loadChunkingSystem();
@@ -1411,11 +1546,26 @@ if (window.__RGInitDone) {
 		// Immediately show processing state so the user gets visual feedback
 		const nTotalChunksNow =
 			document.querySelectorAll(".gemini-chunk-banner").length || 1;
+
+		// Detect whether the Enhance Chapter button was already locked by an outer batch loop.
+		// When called standalone (⚡ Enhance Chunk click), we own the button and must release it;
+		// when called from the continue-loop in handleEnhanceClick, we must leave it alone.
+		// Must be calculated BEFORE we build the banner so isBatchMode is available.
+		const wasBtnAlreadyDisabled = Array.from(
+			document.querySelectorAll(".gemini-enhance-btn"),
+		).some((btn) => btn.disabled);
+
 		const processingBanner = buildChunkBanner(
 			chunking,
 			chunkIndex,
 			nTotalChunksNow,
 			"processing",
+			null,
+			null,
+			null,
+			chunkBehaviorConfig.wordCountThreshold,
+			null,
+			wasBtnAlreadyDisabled, // isBatchMode — shows Skip in batch, Pause in single mode
 		);
 		const existingBannerPre = document.querySelector(
 			`.chunk-banner-${chunkIndex}`,
@@ -1423,13 +1573,6 @@ if (window.__RGInitDone) {
 		if (existingBannerPre) {
 			existingBannerPre.replaceWith(processingBanner);
 		}
-
-		// Detect whether the Enhance Chapter button was already locked by an outer batch loop.
-		// When called standalone (⚡ Enhance Chunk click), we own the button and must release it;
-		// when called from the continue-loop in handleEnhanceClick, we must leave it alone.
-		const wasBtnAlreadyDisabled = Array.from(
-			document.querySelectorAll(".gemini-enhance-btn"),
-		).some((btn) => btn.disabled);
 
 		if (!wasBtnAlreadyDisabled) {
 			// Standalone individual enhance — lock the top button so the user can't
@@ -1480,10 +1623,119 @@ if (window.__RGInitDone) {
 				if (modelInfo) {
 					lastChunkModelInfo = modelInfo;
 				}
+
+				// Check if user pressed Skip while this chunk was processing
+				if (skippedChunks.has(chunkIndex)) {
+					skippedChunks.delete(chunkIndex);
+					debugLog(
+						`Chunk ${chunkIndex} was skipped — discarding result.`,
+					);
+					// Reset banner to pending so user can enhance it later
+					const nTotalForSkip = document.querySelectorAll(
+						".gemini-chunk-banner",
+					).length;
+					const pendingBanner = buildChunkBanner(
+						chunking,
+						chunkIndex,
+						nTotalForSkip,
+						"pending",
+						null,
+						null,
+						null,
+						chunkBehaviorConfig.wordCountThreshold,
+						() => handleReenhanceChunk(chunkIndex),
+					);
+					const skippedBannerEl = document.querySelector(
+						`.chunk-banner-${chunkIndex}`,
+					);
+					if (skippedBannerEl)
+						skippedBannerEl.replaceWith(pendingBanner);
+					// Update WIP banner and release button if standalone
+					const allForSkip =
+						document.querySelectorAll(".gemini-chunk-content")
+							.length || nTotalForSkip;
+					const doneForSkip = document.querySelectorAll(
+						'.gemini-chunk-content[data-chunk-enhanced="true"]',
+					).length;
+					showWorkInProgressBanner(
+						doneForSkip,
+						allForSkip,
+						"paused",
+						null,
+					);
+					if (!wasBtnAlreadyDisabled) {
+						document
+							.querySelectorAll(".gemini-enhance-btn")
+							.forEach((btn) => {
+								btn.textContent = "✨ Enhance with Gemini";
+								btn.disabled = false;
+								btn.classList.remove("loading");
+							});
+					}
+					showStatusMessage(
+						`Chunk ${chunkIndex + 1} skipped.`,
+						"info",
+						2000,
+					);
+					return;
+				}
+
 				if (chunkContent) {
 					const sanitizedContent = sanitizeHTML(
 						response.result.enhancedContent,
 					);
+
+					// Check if user pressed Pause while this chunk was processing
+					if (pausedChunks.has(chunkIndex)) {
+						// Store enhanced content but don't apply it — user uses "Show Enhanced"
+						chunkContent.setAttribute(
+							"data-enhanced-chunk-content",
+							sanitizedContent,
+						);
+						const nTotalForPause = document.querySelectorAll(
+							".gemini-chunk-banner",
+						).length;
+						const pausedBanner = buildChunkBanner(
+							chunking,
+							chunkIndex,
+							nTotalForPause,
+							"paused",
+						);
+						const pausedBannerEl = document.querySelector(
+							`.chunk-banner-${chunkIndex}`,
+						);
+						if (pausedBannerEl)
+							pausedBannerEl.replaceWith(pausedBanner);
+						// Update WIP banner (chunk not yet fully applied)
+						const allForPause =
+							document.querySelectorAll(".gemini-chunk-content")
+								.length || nTotalForPause;
+						const doneForPause = document.querySelectorAll(
+							'.gemini-chunk-content[data-chunk-enhanced="true"]',
+						).length;
+						showWorkInProgressBanner(
+							doneForPause,
+							allForPause,
+							"paused",
+							null,
+						);
+						if (!wasBtnAlreadyDisabled) {
+							document
+								.querySelectorAll(".gemini-enhance-btn")
+								.forEach((btn) => {
+									btn.textContent = "✨ Enhance with Gemini";
+									btn.disabled = false;
+									btn.classList.remove("loading");
+								});
+						}
+						showStatusMessage(
+							`Chunk ${chunkIndex + 1} enhancement ready — click "✨ Show Enhanced" to apply.`,
+							"info",
+							4000,
+						);
+						return;
+					}
+
 					chunkContent.innerHTML = sanitizedContent;
 					chunkContent.setAttribute("data-chunk-enhanced", "true");
 					// Store enhanced content so toggle can restore it later
@@ -1492,37 +1744,40 @@ if (window.__RGInitDone) {
 						sanitizedContent,
 					);
 
-					// Update the banner to "completed" state
-					const existingBanner = document.querySelector(
+					// Update the banner to "completed" state.
+					// The await below yields execution, so we query the banner
+					// AFTER the await (fresh reference) to avoid a stale-node
+					// situation where the banner was replaced during the yield.
+					const nTotalChunks = document.querySelectorAll(
+						".gemini-chunk-banner",
+					).length;
+					const settingsData = await browser.storage.local.get([
+						"wordCountThreshold",
+					]);
+					const wct =
+						settingsData.wordCountThreshold !== undefined
+							? settingsData.wordCountThreshold
+							: chunkBehaviorConfig.wordCountThreshold;
+					const origWords = chunking.core.countWords(
+						originalText || "",
+					);
+					const enhWords = chunking.core.countWords(sanitizedContent);
+					const completedBanner = buildChunkBanner(
+						chunking,
+						chunkIndex,
+						nTotalChunks,
+						"completed",
+						null,
+						null,
+						{ original: origWords, enhanced: enhWords },
+						wct,
+					);
+					// Re-query after the await so we hold a live DOM reference
+					const freshBanner = document.querySelector(
 						`.chunk-banner-${chunkIndex}`,
 					);
-					if (existingBanner) {
-						const nTotalChunks = document.querySelectorAll(
-							".gemini-chunk-banner",
-						).length;
-						const settingsData = await browser.storage.local.get([
-							"wordCountThreshold",
-						]);
-						const wct =
-							settingsData.wordCountThreshold !== undefined
-								? settingsData.wordCountThreshold
-								: 25;
-						const origWords = chunking.core.countWords(
-							originalText || "",
-						);
-						const enhWords =
-							chunking.core.countWords(sanitizedContent);
-						const completedBanner = buildChunkBanner(
-							chunking,
-							chunkIndex,
-							nTotalChunks,
-							"completed",
-							null,
-							null,
-							{ original: origWords, enhanced: enhWords },
-							wct,
-						);
-						existingBanner.replaceWith(completedBanner);
+					if (freshBanner) {
+						freshBanner.replaceWith(completedBanner);
 					}
 				}
 
@@ -1535,7 +1790,7 @@ if (window.__RGInitDone) {
 					window.location.href,
 					chunkIndex,
 					{
-						originalContent: originalText,
+						originalContent: contentForEnhancement,
 						enhancedContent: response.result.enhancedContent,
 						wordCount: response.result.wordCount || 0,
 						timestamp: Date.now(),
@@ -1688,6 +1943,10 @@ if (window.__RGInitDone) {
 							libraryError,
 						);
 					}
+					showStatusMessage(
+						"Content fully enhanced with Gemini! ✨",
+						"success",
+					);
 				} else {
 					// Some chunks still unenhanced.
 					// Only release the Enhance Chapter button if WE acquired it
@@ -1702,6 +1961,10 @@ if (window.__RGInitDone) {
 								btn.classList.remove("loading");
 							});
 					}
+					showStatusMessage(
+						`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
+						"success",
+					);
 				}
 
 				// Ensure the content area is marked as enhanced and text is selectable
@@ -1829,7 +2092,7 @@ if (window.__RGInitDone) {
 		const wordCountThreshold =
 			settingsData.wordCountThreshold !== undefined
 				? settingsData.wordCountThreshold
-				: 25;
+				: chunkBehaviorConfig.wordCountThreshold;
 
 		const chunkIndex = message.chunkIndex;
 		const totalChunks = message.totalChunks;
@@ -2112,6 +2375,20 @@ if (window.__RGInitDone) {
 			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
 		);
 		if (!chunkWrapper) return;
+
+		// Guard: if this chunk has already been successfully enhanced (e.g. a
+		// stale or late-arriving error message from the batch run that arrived
+		// after a manual re-enhance succeeded), do NOT replace the completed
+		// banner with an error banner.
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
+		if (chunkContent?.getAttribute("data-chunk-enhanced") === "true") {
+			debugLog(
+				`[handleChunkError] Chunk ${chunkIndex} is already enhanced — ignoring late error: ${message.error}`,
+			);
+			return;
+		}
 
 		const existingBanner = chunkWrapper.querySelector(
 			".gemini-chunk-banner",
@@ -2473,6 +2750,7 @@ if (window.__RGInitDone) {
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-wip-banner";
+		banner.setAttribute("aria-hidden", "true");
 		banner.style.cssText = `
 			background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
 			border: 1px solid #475569;
@@ -2562,20 +2840,23 @@ if (window.__RGInitDone) {
 		state = "processing",
 		wordCounts = null,
 	) {
-		const contentArea = findContentArea();
-		if (!contentArea) return;
-
 		const newBanner = createWorkInProgressBanner(
 			completedChunks,
 			totalChunks,
 			state,
 			wordCounts,
 		);
+		// Try to swap existing banner in-place first — this works even when
+		// findContentArea() temporarily returns null during content replacement.
 		const existingBanner = document.querySelector(".gemini-wip-banner");
 		if (existingBanner && existingBanner.parentNode) {
 			existingBanner.parentNode.replaceChild(newBanner, existingBanner);
 			return;
 		}
+
+		// Only needed for first-time insertion
+		const contentArea = findContentArea();
+		if (!contentArea) return;
 
 		const chunkedContainer = document.getElementById(
 			"gemini-chunked-content",
@@ -2904,11 +3185,55 @@ if (window.__RGInitDone) {
 		});
 
 		if (message.failedChunks && message.failedChunks.length > 0) {
+			// Race-condition guard: a stale allChunksProcessed message can arrive
+			// after the user has already manually re-enhanced those chunks.
+			// Filter to only the chunks that are *actually* still unenhanced.
+			const actuallyStillFailed = message.failedChunks.filter((i) => {
+				const cc = document.querySelector(
+					`.gemini-chunk-content[data-chunk-index="${i}"]`,
+				);
+				return cc?.getAttribute("data-chunk-enhanced") !== "true";
+			});
+
+			if (actuallyStillFailed.length === 0) {
+				// Every "failed" chunk has since been re-enhanced — check if
+				// the whole chapter is now complete and show that state instead.
+				const allChunkEls = document.querySelectorAll(
+					".gemini-chunk-content",
+				);
+				const doneEls = document.querySelectorAll(
+					'.gemini-chunk-content[data-chunk-enhanced="true"]',
+				);
+				if (
+					doneEls.length === allChunkEls.length &&
+					allChunkEls.length > 0
+				) {
+					showWorkInProgressBanner(
+						doneEls.length,
+						allChunkEls.length,
+						"complete",
+						null,
+					);
+					return;
+				}
+			}
+
+			// Update WIP banner to paused state so it no longer shows "Enhancing..."
+			const completedInDom = document.querySelectorAll(
+				'.gemini-chunk-content[data-chunk-enhanced="true"]',
+			).length;
+			showWorkInProgressBanner(
+				completedInDom,
+				message.totalChunks,
+				"paused",
+				null,
+			);
+			if (cancelEnhanceButton) cancelEnhanceButton.style.display = "none";
 			const successPercentage = Math.round(
 				(message.totalProcessed / message.totalChunks) * 100,
 			);
 			showStatusMessage(
-				`Partially enhanced ${message.totalProcessed} of ${message.totalChunks} chunks (${successPercentage}% complete).`,
+				`Partially enhanced ${message.totalProcessed} of ${message.totalChunks} chunks (${successPercentage}% complete). You can re-enhance failed chunks.`,
 				"warning",
 			);
 			return;
@@ -3766,7 +4091,7 @@ if (window.__RGInitDone) {
 		const wordCountThreshold =
 			settingsData.wordCountThreshold !== undefined
 				? settingsData.wordCountThreshold
-				: 25;
+				: chunkBehaviorConfig.wordCountThreshold;
 
 		const totalChunks = Number.isInteger(metadata?.totalChunks)
 			? metadata.totalChunks
@@ -3981,7 +4306,29 @@ if (window.__RGInitDone) {
 	async function tryRestoreChunkedCache() {
 		const contentArea = findContentArea();
 		if (!contentArea) {
-			debugLog("[Cache Restore] No content area found — skipping.");
+			debugLog(
+				"[Cache Restore] No content area found — scheduling retry.",
+			);
+			// Content area may not be ready yet (DOM still loading).
+			// Schedule one retry so chunked cache is still restored reliably.
+			const chunking0 = await loadChunkingSystem();
+			if (chunking0?.cache?.hasChunksInCache) {
+				const url0 = window.location.href;
+				const has0 = await chunking0.cache.hasChunksInCache(url0);
+				if (has0) {
+					requestAnimationFrame(() => {
+						setTimeout(async () => {
+							if (
+								!document.getElementById(
+									"gemini-chunked-content",
+								)
+							) {
+								await tryRestoreChunkedCache();
+							}
+						}, chunkBehaviorConfig.cacheRestoreRetryMs);
+					});
+				}
+			}
 			return false;
 		}
 		if (document.getElementById("gemini-chunked-content")) {
@@ -5153,14 +5500,13 @@ if (window.__RGInitDone) {
 					}
 				}
 
-				// Handle chapter regression
-				if (
-					isChapter &&
-					currentChapterNum &&
-					existingNovel.lastReadChapter
-				) {
+				// Handle chapter progression / regression
+				if (isChapter && currentChapterNum) {
 					const storedChapter = existingNovel.lastReadChapter || 0;
-					if (currentChapterNum < storedChapter) {
+					if (
+						storedChapter > 0 &&
+						currentChapterNum < storedChapter
+					) {
 						// Chapter went backward - ask if user wants to go back
 						await showChapterRegressionPrompt({
 							novelId,
@@ -5169,8 +5515,11 @@ if (window.__RGInitDone) {
 							storedChapter: storedChapter,
 							totalChapters: totalChapterCount,
 						});
-					} else if (currentChapterNum > storedChapter) {
-						// Chapter progressed - silently update (trusted navigation)
+					} else if (
+						currentChapterNum > storedChapter ||
+						!existingNovel.lastReadUrl
+					) {
+						// Chapter progressed, or URL not yet recorded — update reading progress
 						await novelLibrary.updateReadingProgress(
 							novelId,
 							currentChapterNum,
@@ -7553,6 +7902,11 @@ if (window.__RGInitDone) {
 
 	// Handle click event for Enhance button
 	async function handleEnhanceClick() {
+		// Prevent concurrent invocations (e.g. auto-enhance fires while user
+		// is already manually enhancing, or button clicked twice quickly).
+		const firstBtn = document.querySelector(".gemini-enhance-btn");
+		if (firstBtn?.disabled) return;
+
 		enhancementCancelRequested = false;
 
 		// Check if there's a chunked container with individually-enhanced chunks that
@@ -7569,13 +7923,21 @@ if (window.__RGInitDone) {
 			const enhancedChunkEls = existingChunkedOnClick.querySelectorAll(
 				'.gemini-chunk-content[data-chunk-enhanced="true"]',
 			);
+			// Error chunks: banners whose status attribute is "error" and chunk not enhanced
+			const errorBanners = existingChunkedOnClick.querySelectorAll(
+				'.gemini-chunk-banner[data-chunk-status="error"]',
+			);
+			const hasErrorChunks = errorBanners.length > 0;
 
-			// If SOME but not ALL chunks are enhanced, continue with remaining
-			if (
+			// Continue/re-enhance path:
+			//  (a) SOME but not ALL chunks are enhanced (partial batch), OR
+			//  (b) ANY chunk is in error state (even if nothing else was enhanced)
+			const isPartial =
 				allChunkEls.length > 0 &&
 				enhancedChunkEls.length > 0 &&
-				enhancedChunkEls.length < allChunkEls.length
-			) {
+				enhancedChunkEls.length < allChunkEls.length;
+			if (isPartial || (allChunkEls.length > 0 && hasErrorChunks)) {
+				// Re-enhance all unenhanced chunks (covers both error and pending states)
 				const remainingIndices = Array.from(allChunkEls)
 					.filter(
 						(el) =>
@@ -7596,11 +7958,11 @@ if (window.__RGInitDone) {
 				if (cancelEnhanceButton)
 					cancelEnhanceButton.style.display = "inline-flex";
 
-				showStatusMessage(
-					`Continuing enhancement: ${remainingIndices.length} chunk(s) remaining...`,
-					"info",
-					3000,
-				);
+				const statusMsg =
+					hasErrorChunks && enhancedChunkEls.length === 0
+						? `Re-generating ${errorBanners.length} failed chunk(s)...`
+						: `Continuing enhancement: ${remainingIndices.length} chunk(s) remaining...`;
+				showStatusMessage(statusMsg, "info", 3000);
 				showWorkInProgressBanner(
 					enhancedChunkEls.length,
 					allChunkEls.length,

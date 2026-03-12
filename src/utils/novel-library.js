@@ -349,6 +349,9 @@ export class NovelLibrary {
 			const sourceGenres = Array.isArray(novel.genres)
 				? novel.genres
 				: [];
+			const sourceGenreSet = new Set(
+				sourceGenres.map((g) => cleanName(g).toLowerCase()),
+			);
 			const sourceCharacters = Array.isArray(meta.characters)
 				? meta.characters
 				: [];
@@ -389,6 +392,7 @@ export class NovelLibrary {
 			[...sourceCharacters].forEach((entry) => {
 				const cleaned = cleanName(entry);
 				if (isInvalidToken(cleaned)) return;
+				if (sourceGenreSet.has(cleaned.toLowerCase())) return;
 				addUnique(characterList, cleaned);
 			});
 

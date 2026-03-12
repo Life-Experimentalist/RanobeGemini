@@ -27,7 +27,17 @@ export function processMessage(message, sender, sendResponse) {
 
 	if (handler) {
 		try {
-			return handler.handler(message, sendResponse);
+			const result = handler.handler(message, sendResponse);
+			// Async handlers return a Promise — the browser extension runtime only
+			// keeps the message channel open when the listener returns the boolean
+			// `true` synchronously.  Returning a Promise is truthy but it does NOT
+			// keep the channel open in Firefox (and is unreliable in Chrome MV3).
+			// Detect Promise returns and substitute `true` so that the async
+			// handler's eventual `sendResponse()` call reaches the caller.
+			if (result && typeof result.then === "function") {
+				return true;
+			}
+			return result;
 		} catch (error) {
 			console.error(
 				`Error processing message action "${message.action}":`,

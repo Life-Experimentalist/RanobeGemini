@@ -106,6 +106,8 @@ export function createChunkBanner(
 	banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
 	banner.setAttribute("data-chunk-index", chunkIndex);
 	banner.setAttribute("data-chunk-status", status);
+	// Hide from screen readers / Read Aloud — these are UI controls, not content
+	banner.setAttribute("aria-hidden", "true");
 
 	// Determine if showing cache status
 	const isFromCache = cacheInfo?.fromCache === true || status === "cached";
@@ -147,6 +149,11 @@ export function createChunkBanner(
 			statusText = `Cached${cacheTimeText}`;
 			statusColor = "#0f9d58";
 			break;
+		case "paused":
+			statusIcon = "⏸";
+			statusText = "Enhancement Ready";
+			statusColor = "#ff9800";
+			break;
 		default:
 			// Show "Not Enhanced" with an enhance action when a callback is available
 			// (pre-enhancement state). Fall back to "Pending" when queued during processing.
@@ -174,6 +181,17 @@ export function createChunkBanner(
 		} else {
 			bannerBg = "#f1f8f4"; // Light green tint
 			bannerBorder = "#4caf50"; // Green border
+		}
+	}
+
+	if (status === "paused") {
+		const dark = isDarkMode();
+		if (dark) {
+			bannerBg = "#3a2a1e"; // Dark amber tint
+			bannerBorder = "#e65100"; // Orange border
+		} else {
+			bannerBg = "#fffde7"; // Light amber tint
+			bannerBorder = "#ff9800"; // Orange border
 		}
 	}
 
@@ -259,7 +277,7 @@ export function createChunkBanner(
 						white-space: nowrap;
 					">Chunk ${chunkIndex + 1}/${totalChunks}</span>
 				</div>
-				<div style="display: flex; gap: 8px; flex-wrap: wrap;" class="chunk-controls">
+				<div style="display: flex; gap: 8px; flex-wrap: nowrap;" class="chunk-controls">
 					<div class="chunk-navigation" style="display: flex; gap: 4px; margin-right: 8px; border-right: 1px solid ${colors.outline}; padding-right: 8px; flex-shrink: 0;">
 						<!-- Navigation buttons will be added here -->
 					</div>
@@ -306,6 +324,9 @@ export function createChunkBanner(
 		}
 
 		btn.style.cssText = `
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
 			padding: 6px 12px;
 			background: ${bgColor};
 			color: ${textColor};
@@ -319,6 +340,7 @@ export function createChunkBanner(
 			min-height: 36px;
 			white-space: nowrap;
 		`;
+		btn.style.verticalAlign = "middle";
 		btn.textContent = text;
 
 		btn.addEventListener("mouseenter", () => {
@@ -396,6 +418,43 @@ export function createChunkBanner(
 	});
 	navigationContainer.appendChild(nextBtn);
 
+	// Add Skip or Pause button for processing state
+	if (status === "processing") {
+		if (callbacks.isBatchMode) {
+			const skipBtn = createMaterialButton(
+				"⏭ Skip",
+				"gemini-chunk-skip-btn",
+				"Skip this chunk and continue with the rest",
+				"neutral",
+			);
+			skipBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				skipBtn.disabled = true;
+				skipBtn.style.opacity = "0.5";
+				skipBtn.textContent = "⏭ Skipping...";
+				if (callbacks.onSkip) callbacks.onSkip(chunkIndex);
+			});
+			controlsContainer.appendChild(skipBtn);
+		} else {
+			const pauseBtn = createMaterialButton(
+				"⏸ Pause",
+				"gemini-chunk-pause-btn",
+				"Let enhancement finish but don't auto-apply — you can reveal it with Show Enhanced",
+				"neutral",
+			);
+			pauseBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				pauseBtn.disabled = true;
+				pauseBtn.style.opacity = "0.5";
+				pauseBtn.textContent = "⏸ Paused";
+				if (callbacks.onPause) callbacks.onPause(chunkIndex);
+			});
+			controlsContainer.appendChild(pauseBtn);
+		}
+	}
+
 	// For pre-enhancement pending state, add an Enhance button directly in the banner
 	if (status === "pending" && callbacks.onEnhance) {
 		const enhanceBtn = createMaterialButton(
@@ -466,6 +525,38 @@ export function createChunkBanner(
 			}
 		});
 		controlsContainer.appendChild(deleteBtn);
+	}
+
+	// Paused state: show enhanced content is ready — user can reveal or discard it
+	if (status === "paused") {
+		const showEnhancedBtn = createMaterialButton(
+			"✨ Show Enhanced",
+			"gemini-chunk-toggle-btn",
+			"Apply the completed enhanced content to this chunk",
+			"primary",
+		);
+		showEnhancedBtn.setAttribute("data-showing", "original");
+		showEnhancedBtn.style.fontWeight = "600";
+		showEnhancedBtn.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			if (callbacks.onShowEnhanced) callbacks.onShowEnhanced(chunkIndex);
+		});
+		controlsContainer.appendChild(showEnhancedBtn);
+
+		const discardBtn = createMaterialButton(
+			"🗑 Discard",
+			"gemini-chunk-discard-btn",
+			"Discard the enhanced content and revert to pending",
+			"error",
+		);
+		discardBtn.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			if (callbacks.onDiscardPaused)
+				callbacks.onDiscardPaused(chunkIndex);
+		});
+		controlsContainer.appendChild(discardBtn);
 	}
 
 	return banner;
@@ -561,6 +652,7 @@ export function createWorkInProgressBanner(currentChunk, totalChunks) {
 
 	const banner = document.createElement("div");
 	banner.className = "gemini-wip-banner";
+	banner.setAttribute("aria-hidden", "true");
 	banner.style.cssText = `
 		padding: 16px 20px;
 		background: ${colors.surfaceVariant};
@@ -645,6 +737,7 @@ export function createMasterBanner(
 
 	const banner = document.createElement("div");
 	banner.className = "gemini-master-banner";
+	banner.setAttribute("aria-hidden", "true");
 	banner.style.cssText = `
 		padding: 16px 20px;
 		background: ${colors.surface};

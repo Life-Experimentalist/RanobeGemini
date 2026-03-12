@@ -916,35 +916,38 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 					}
 
 					<!-- Characters Column -->
-					${
-						characters.length > 0 || relationships.length > 0
-							? (() => {
-									const groupMemberSet = new Set(
-										relationships.flat(),
-									);
-									const soloChars = characters.filter(
-										(c) => !groupMemberSet.has(c),
-									);
-									const relHtml = relationships
-										.map(
-											(group) =>
-												`<span class="tag tag-relationship" title="Relationship Group">[${group.map((c) => this.escapeHtml(c)).join(", ")}]</span>`,
-										)
-										.join("");
-									const charHtml = renderTagList(
-										soloChars,
-										"tag-character",
-									);
-									return `
-					<div class="fanfic-modal-column">
-						<h4 class="modal-section-title">Characters</h4>
-						<div class="tags-list">
-							${relHtml}${charHtml}
-						</div>
-					</div>`;
-								})()
-							: ""
-					}
+					${(() => {
+						const groupMemberSet = new Set(relationships.flat());
+						const soloChars = characters.filter(
+							(c) => !groupMemberSet.has(c),
+						);
+						const charCol =
+							soloChars.length > 0
+								? `
+						<div class="fanfic-modal-column">
+							<h4 class="modal-section-title">Characters</h4>
+							<div class="tags-list">
+								${renderTagList(soloChars, "tag-character")}
+							</div>
+						</div>`
+								: "";
+						const relCol =
+							relationships.length > 0
+								? `
+						<div class="fanfic-modal-column">
+							<h4 class="modal-section-title">Relationships</h4>
+							<div class="tags-list">
+								${relationships
+									.map(
+										(group) =>
+											`<span class="tag tag-relationship" title="Relationship Group">[${group.map((c) => this.escapeHtml(c)).join(", ")}]</span>`,
+									)
+									.join("")}
+							</div>
+						</div>`
+								: "";
+						return charCol + relCol;
+					})()}
 
 					<!-- Genres Column -->
 					${

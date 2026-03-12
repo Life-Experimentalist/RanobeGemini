@@ -22,6 +22,7 @@ import {
 	applyThemeFromStorage,
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
+import { getAllStatuses } from "../../status-machine.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -600,9 +601,39 @@ function renderNovels(novels = filteredNovels) {
 	});
 }
 
-function showNovelModal(novel) {
+async function showNovelModal(novel) {
 	const modal = document.getElementById("novel-modal");
 	if (!modal) return;
+
+	// ── Close mechanism — set up first so buttons wired below work, and use
+	// onclick (not addEventListener) to prevent listener accumulation on repeat opens.
+	function closeModal() {
+		modal.style.display = "none";
+		document.body.style.overflow = "";
+		// Remove the Escape listener we registered for THIS open
+		if (modal._escListener) {
+			document.removeEventListener("keydown", modal._escListener);
+			modal._escListener = null;
+		}
+	}
+
+	const closeBtn = document.getElementById("modal-close-btn");
+	const backdrop = document.getElementById("modal-backdrop");
+	if (closeBtn) closeBtn.onclick = closeModal;
+	if (backdrop) backdrop.onclick = closeModal;
+
+	// Remove stale Escape listener from a previous open before registering the new one
+	if (modal._escListener) {
+		document.removeEventListener("keydown", modal._escListener);
+		modal._escListener = null;
+	}
+	const closeOnEscape = (e) => {
+		if (e.key === "Escape") closeModal();
+	};
+	modal._escListener = closeOnEscape;
+	document.addEventListener("keydown", closeOnEscape);
+
+	// ── Synchronous content setup ─────────────────────────────────────────────
 
 	const titleEl = document.getElementById("modal-title");
 	if (titleEl) titleEl.textContent = novel.title || "";
@@ -624,16 +655,16 @@ function showNovelModal(novel) {
 
 	const coverImg = document.getElementById("modal-cover");
 	if (coverImg && novel.coverUrl) {
+		coverImg.onerror = () => {
+			coverImg.style.display = "none";
+		};
 		loadImageWithCache(coverImg, novel.coverUrl).catch(() => {});
 		coverImg.style.display = "block";
-		coverImg.addEventListener("error", () => {
-			coverImg.style.display = "none";
-		});
 	} else if (coverImg) {
 		coverImg.style.display = "none";
 	}
 
-	// Set up action buttons
+	// Action buttons
 	const continueBtn = document.getElementById("modal-continue-btn");
 	if (continueBtn) {
 		const continueUrl =
@@ -720,7 +751,7 @@ function showNovelModal(novel) {
 		};
 	}
 
-	// Wire "All Libraries" button to open main library with this novel selected
+	// "All Libraries" button — opens main library.html with this novel's detail panel
 	const openLibraryBtn = document.getElementById("modal-open-library-btn");
 	if (openLibraryBtn) {
 		openLibraryBtn.onclick = () => {
@@ -731,78 +762,14 @@ function showNovelModal(novel) {
 		};
 	}
 
-	if (FanFictionNovelCard && FanFictionNovelCard.renderModalMetadata) {
-		FanFictionNovelCard.renderModalMetadata(novel);
-	}
-
-	// Setup reading status buttons
-	const statusButtons = document.querySelectorAll(".status-btn");
-	const currentStatus = normalizeModalStatus(novel.readingStatus);
-
-	statusButtons.forEach((btn) => {
-		const status = normalizeModalStatus(btn.getAttribute("data-status"));
-
-		// Set active state
-		if (status === currentStatus) {
-			btn.classList.add("active");
-		} else {
-			btn.classList.remove("active");
-		}
-
-		// Add click handler
-		btn.onclick = async () => {
-			const updatedNovel = { ...novel, readingStatus: status };
-			await updateNovelInLibrary(updatedNovel);
-			const idx = allNovels.findIndex((n) => n.id === novel.id);
-			if (idx >= 0) allNovels[idx] = updatedNovel;
-			const filteredIdx = filteredNovels.findIndex(
-				(n) => n.id === novel.id,
-			);
-			if (filteredIdx >= 0) filteredNovels[filteredIdx] = updatedNovel;
-
-			applyFiltersAndSort();
-
-			// Show status change banner
-			const banner = document.getElementById("status-change-banner");
-			if (banner) {
-				const STATUS_LABELS = {
-					"plan-to-read": "📋 Plan to Read",
-					reading: "📖 Reading",
-					completed: "✅ Completed",
-					"on-hold": "⏸️ On Hold",
-					dropped: "❌ Dropped",
-					rereading: "🔁 Re-reading",
-				};
-				banner.textContent = `Status changed to: ${STATUS_LABELS[status] || status}`;
-				banner.style.display = "block";
-				clearTimeout(banner._statusTimer);
-				banner._statusTimer = setTimeout(() => {
-					banner.style.display = "none";
-				}, 3000);
-			}
-
-			// Update button states
-			statusButtons.forEach((b) => {
-				if (
-					normalizeModalStatus(b.getAttribute("data-status")) ===
-					status
-				) {
-					b.classList.add("active");
-				} else {
-					b.classList.remove("active");
-				}
-			});
-		};
-	});
-
 	// Copy novel filename button
 	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
 	if (copyInfoBtn) {
 		copyInfoBtn.onclick = async () => {
 			try {
-				const settings = await novelLibrary.getSettings();
+				const s = await novelLibrary.getSettings();
 				const template = resolveExportTemplate(
-					settings?.novelCopyFormats,
+					s?.novelCopyFormats,
 					novel.shelfId,
 				);
 				const text = formatExportFilename(novel, template);
@@ -811,7 +778,7 @@ function showNovelModal(novel) {
 				setTimeout(() => {
 					copyInfoBtn.textContent = "📋 Copy";
 				}, 2000);
-			} catch (err) {
+			} catch {
 				copyInfoBtn.textContent = "❌ Failed";
 				setTimeout(() => {
 					copyInfoBtn.textContent = "📋 Copy";
@@ -820,7 +787,7 @@ function showNovelModal(novel) {
 		};
 	}
 
-	// Update reading progress bar
+	// Reading progress bar
 	{
 		const total = novel.totalChapters || 0;
 		const read = novel.lastReadChapter || 0;
@@ -845,28 +812,96 @@ function showNovelModal(novel) {
 						: "";
 	}
 
-	const closeBtn = document.getElementById("modal-close-btn");
-	const backdrop = document.getElementById("modal-backdrop");
-
-	function closeModal() {
-		modal.style.display = "none";
-		document.body.style.overflow = "";
+	// Render site-specific metadata (synchronous)
+	if (FanFictionNovelCard && FanFictionNovelCard.renderModalMetadata) {
+		try {
+			FanFictionNovelCard.renderModalMetadata(novel);
+		} catch (metaErr) {
+			console.warn(
+				"[showNovelModal] renderModalMetadata failed:",
+				metaErr,
+			);
+		}
 	}
 
-	closeBtn.addEventListener("click", closeModal);
-	backdrop.addEventListener("click", closeModal);
-
-	const closeOnEscape = (e) => {
-		if (e.key === "Escape") {
-			closeModal();
-			document.removeEventListener("keydown", closeOnEscape);
-		}
-	};
-	document.addEventListener("keydown", closeOnEscape);
-
-	// Show the modal
+	// ── Show the modal immediately — before any async work ───────────────────
 	modal.style.display = "flex";
 	document.body.style.overflow = "hidden";
+
+	// ── Async: build reading-status buttons (non-blocking; modal already visible)
+	try {
+		const settings = await novelLibrary.getSettings();
+		const allStatuses = getAllStatuses(settings, READING_STATUS_INFO);
+		const currentStatus = normalizeModalStatus(novel.readingStatus);
+		const statusButtonsContainer =
+			document.querySelector(".status-buttons");
+		if (statusButtonsContainer) {
+			statusButtonsContainer.innerHTML = allStatuses
+				.map(
+					(s) =>
+						`<button class="status-btn${
+							normalizeModalStatus(s.id) === currentStatus
+								? " active"
+								: ""
+						}" data-status="${s.id}" title="${s.label}">${s.label}</button>`,
+				)
+				.join("");
+
+			// Wire status-button click handlers
+			statusButtonsContainer
+				.querySelectorAll(".status-btn")
+				.forEach((btn) => {
+					const status = normalizeModalStatus(
+						btn.getAttribute("data-status"),
+					);
+					btn.onclick = async () => {
+						const updatedNovel = {
+							...novel,
+							readingStatus: status,
+						};
+						await updateNovelInLibrary(updatedNovel);
+						const idx = allNovels.findIndex(
+							(n) => n.id === novel.id,
+						);
+						if (idx >= 0) allNovels[idx] = updatedNovel;
+						const fIdx = filteredNovels.findIndex(
+							(n) => n.id === novel.id,
+						);
+						if (fIdx >= 0) filteredNovels[fIdx] = updatedNovel;
+						applyFiltersAndSort();
+
+						// Status change banner
+						const banner = document.getElementById(
+							"status-change-banner",
+						);
+						if (banner) {
+							banner.textContent = `Status changed to: ${
+								READING_STATUS_INFO[status]?.label || status
+							}`;
+							banner.style.display = "block";
+							clearTimeout(banner._statusTimer);
+							banner._statusTimer = setTimeout(() => {
+								banner.style.display = "none";
+							}, 3000);
+						}
+
+						// Highlight active button
+						statusButtonsContainer
+							.querySelectorAll(".status-btn")
+							.forEach((b) => {
+								b.classList.toggle(
+									"active",
+									normalizeModalStatus(
+										b.getAttribute("data-status"),
+									) === status,
+								);
+							});
+					};
+				});
+		}
+	} catch (err) {
+		console.warn("[showNovelModal] Failed to build status buttons:", err);
+	}
 }
 
 function fandomTypeFilter(novels, fandomType = filterState.storyType) {
