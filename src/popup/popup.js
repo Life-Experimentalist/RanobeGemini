@@ -5988,6 +5988,33 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	// Log that the popup is initialized
 	debugLog("RanobeGemini popup initialized");
 
+	// Auto-refresh the novels tab and library section whenever the library
+	// data changes in storage (e.g. after enhancing a chapter in another tab).
+	// Without this listener, the popup would show a stale enhanced-chapter count
+	// until the user closes and reopens it.
+	browser.storage.onChanged.addListener((changes, areaName) => {
+		if (areaName !== "local") return;
+		if (!changes.rg_novel_library) return;
+		// Debounce to avoid rapid re-renders when multiple chunks complete
+		if (window._popupLibraryRefreshTimer) {
+			clearTimeout(window._popupLibraryRefreshTimer);
+		}
+		window._popupLibraryRefreshTimer = setTimeout(async () => {
+			// Only re-render if the novels tab is currently visible
+			const novelsTabContent = document.getElementById("novels");
+			if (
+				novelsTabContent &&
+				novelsTabContent.classList.contains("active")
+			) {
+				await loadNovelsTab();
+			}
+			// Also refresh the home-tab library section (recent novels grid)
+			if (typeof loadLibraryData === "function") {
+				await loadLibraryData();
+			}
+		}, 600);
+	});
+
 	// Load site-specific prompts (only when UI is present)
 	const sitePromptsContainer = document.getElementById(
 		"siteSpecificPromptsContainer",

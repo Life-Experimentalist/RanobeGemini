@@ -674,6 +674,28 @@ body {
 	box-shadow: var(--shadow-md);
 }
 
+.filter-btn {
+	padding: 8px 16px;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border-color);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+}
+
+.filter-btn:hover {
+	background: var(--bg-secondary);
+	border-color: var(--primary-color);
+	color: var(--primary-color);
+}
+
 @media (max-width: 600px) {
 	.modal-content {
 		max-width: 100%;

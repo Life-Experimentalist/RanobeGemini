@@ -252,6 +252,9 @@ function splitByParagraphs(content, chunkSizeWords) {
 						wordCount: currentWords,
 						paragraphCount: currentChunk.length,
 					});
+					// Clear so the post-loop guard below does not push a duplicate chunk
+					currentChunk = [];
+					currentWords = 0;
 				}
 
 				break; // Done processing - no more paragraphs to process

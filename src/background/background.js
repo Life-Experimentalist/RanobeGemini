@@ -788,6 +788,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: data.chunkingEnabled !== false,
 				chunkSize: data.chunkSize || 20000, // Used for both threshold AND chunk size
 				chunkThreshold: data.chunkSize || 20000, // Same as chunkSize (simplified)
+				chunkSizeWords: data.chunkSizeWords || 3200, // Word-based chunk size — must match content script
 				useEmoji: data.useEmoji || false,
 				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 			};
@@ -812,6 +813,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: true,
 				chunkSize: 20000,
 				chunkThreshold: 20000,
+				chunkSizeWords: 3200, // Word-based chunk size — fallback default
 				useEmoji: false,
 				fontSize: 100,
 			};

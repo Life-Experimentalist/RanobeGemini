@@ -519,9 +519,15 @@ if (window.__RGInitDone) {
 			el.removeAttribute("oncopy");
 			el.onselectstart = null;
 			el.removeAttribute("onselectstart");
-			// Always force user-select:text on every ancestor so any inline or
-			// stylesheet user-select:none above us cannot suppress selection.
+			// Patchwork for FF.net (and similar sites): REMOVE the user-select
+			// inline property entirely first so any !important: none can't block
+			// re-application, then set our text !important.  removeProperty()
+			// is the only reliable way to clear an inline !important value
+			// before replacing it.
 			if (el.style) {
+				el.style.removeProperty("user-select");
+				el.style.removeProperty("-webkit-user-select");
+				el.style.removeProperty("-moz-user-select");
 				el.style.setProperty("user-select", "text", "important");
 				el.style.setProperty(
 					"-webkit-user-select",
@@ -563,6 +569,27 @@ if (window.__RGInitDone) {
 					"important",
 				);
 			});
+		// Inject a persistent stylesheet rule (once per page-load) so site scripts
+		// that re-apply user-select:none via MutationObserver or setInterval cannot
+		// suppress text selection within the enhanced area after our inline-style
+		// fixes run.  A stylesheet !important beats a non-!important inline style,
+		// and appending our <style> last wins any same-specificity ties.
+		// We use the element's own ID (e.g. #storytext1 for FF.net) to match the
+		// specificity of any ID-based site rules; fallback to attribute selector.
+		if (!document.getElementById("rg-select-override")) {
+			const s = document.createElement("style");
+			s.id = "rg-select-override";
+			const idSel = contentArea.id
+				? `#${CSS.escape(contentArea.id)}`
+				: "[data-rg-copy-enabled]";
+			s.textContent =
+				`${idSel}, ${idSel} * {` +
+				" user-select: text !important;" +
+				" -webkit-user-select: text !important;" +
+				" -moz-user-select: text !important;" +
+				"}";
+			(document.head || document.documentElement).appendChild(s);
+		}
 		// Register bubble-phase listeners only once (stored on element to prevent stacking)
 		if (!contentArea._rgCopyListeners) {
 			const stopCopy = (e) => e.stopImmediatePropagation();
@@ -1397,6 +1424,31 @@ if (window.__RGInitDone) {
 			existingBannerPre.replaceWith(processingBanner);
 		}
 
+		// Detect whether the Enhance Chapter button was already locked by an outer batch loop.
+		// When called standalone (⚡ Enhance Chunk click), we own the button and must release it;
+		// when called from the continue-loop in handleEnhanceClick, we must leave it alone.
+		const wasBtnAlreadyDisabled = Array.from(
+			document.querySelectorAll(".gemini-enhance-btn"),
+		).some((btn) => btn.disabled);
+
+		if (!wasBtnAlreadyDisabled) {
+			// Standalone individual enhance — lock the top button so the user can't
+			// accidentally fire a concurrent batch enhancement.
+			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+				btn.disabled = true;
+				btn.classList.add("loading");
+			});
+		}
+
+		// Show / update the WIP banner immediately so the user sees live progress.
+		const doneAtStart = document.querySelectorAll(
+			'.gemini-chunk-content[data-chunk-enhanced="true"]',
+		).length;
+		const totalForWip =
+			document.querySelectorAll(".gemini-chunk-content").length ||
+			nTotalChunksNow;
+		showWorkInProgressBanner(doneAtStart, totalForWip, "processing", null);
+
 		try {
 			await wakeUpBackgroundWorker();
 
@@ -1625,21 +1677,31 @@ if (window.__RGInitDone) {
 							);
 						}
 					}
+
+					// Update novel library now that all chunks are individually complete
+					try {
+						const novelContext = extractNovelContext();
+						await addToNovelLibrary(novelContext);
+					} catch (libraryError) {
+						debugError(
+							"Failed to update novel library after all chunks done:",
+							libraryError,
+						);
+					}
 				} else {
-					// Some chunks still unenhanced — reset button so user can enhance remainder
-					document
-						.querySelectorAll(".gemini-enhance-btn")
-						.forEach((btn) => {
-							// Only reset if still showing a loading/processing label
-							if (
-								btn.disabled ||
-								btn.classList.contains("loading")
-							) {
+					// Some chunks still unenhanced.
+					// Only release the Enhance Chapter button if WE acquired it
+					// (standalone individual enhancement). When called from the
+					// batch continue-loop the outer loop owns the button state.
+					if (!wasBtnAlreadyDisabled) {
+						document
+							.querySelectorAll(".gemini-enhance-btn")
+							.forEach((btn) => {
 								btn.textContent = "✨ Enhance with Gemini";
 								btn.disabled = false;
 								btn.classList.remove("loading");
-							}
-						});
+							});
+					}
 				}
 
 				// Ensure the content area is marked as enhanced and text is selectable
@@ -1670,6 +1732,23 @@ if (window.__RGInitDone) {
 					);
 					existingBanner.replaceWith(errorBanner);
 				}
+				// Update WIP banner to show paused state (API returned error)
+				const allChErr =
+					document.querySelectorAll(".gemini-chunk-content").length ||
+					nTotalChunksNow;
+				const doneChErr = document.querySelectorAll(
+					'.gemini-chunk-content[data-chunk-enhanced="true"]',
+				).length;
+				showWorkInProgressBanner(doneChErr, allChErr, "paused", null);
+				if (!wasBtnAlreadyDisabled) {
+					document
+						.querySelectorAll(".gemini-enhance-btn")
+						.forEach((btn) => {
+							btn.textContent = "✨ Enhance with Gemini";
+							btn.disabled = false;
+							btn.classList.remove("loading");
+						});
+				}
 				showStatusMessage(
 					`Failed to re-enhance chunk ${chunkIndex + 1}: ${errorMsg}`,
 					"error",
@@ -1692,6 +1771,23 @@ if (window.__RGInitDone) {
 					error.message || "Unknown error",
 				);
 				existingBanner.replaceWith(errorBanner);
+			}
+			// Update WIP banner to show paused state (exception thrown)
+			const allChCatch =
+				document.querySelectorAll(".gemini-chunk-content").length ||
+				nTotalChunksNow;
+			const doneChCatch = document.querySelectorAll(
+				'.gemini-chunk-content[data-chunk-enhanced="true"]',
+			).length;
+			showWorkInProgressBanner(doneChCatch, allChCatch, "paused", null);
+			if (!wasBtnAlreadyDisabled) {
+				document
+					.querySelectorAll(".gemini-enhance-btn")
+					.forEach((btn) => {
+						btn.textContent = "✨ Enhance with Gemini";
+						btn.disabled = false;
+						btn.classList.remove("loading");
+					});
 			}
 			debugError("Error re-enhancing chunk:", error);
 			showStatusMessage(
@@ -1756,6 +1852,28 @@ if (window.__RGInitDone) {
 				`[handleChunkProcessed] WARNING: No DOM wrapper for chunk ${chunkIndex}/${totalChunks}. ` +
 					"Background may have split into more chunks than content script expected.",
 			);
+			// Even if the wrapper is missing, honour the isComplete signal so the
+			// enhance button is re-enabled and the WIP banner shows "complete".
+			if (message.isComplete) {
+				const completedInDom = document.querySelectorAll(
+					'.gemini-chunk-content[data-chunk-enhanced="true"]',
+				).length;
+				showWorkInProgressBanner(
+					completedInDom,
+					totalChunks,
+					"complete",
+					null,
+				);
+				if (cancelEnhanceButton)
+					cancelEnhanceButton.style.display = "none";
+				document
+					.querySelectorAll(".gemini-enhance-btn")
+					.forEach((btn) => {
+						btn.textContent = "🔄 Re-enhance with Gemini";
+						btn.disabled = false;
+						btn.classList.remove("loading");
+					});
+			}
 			return;
 		}
 
@@ -1960,6 +2078,17 @@ if (window.__RGInitDone) {
 						String(totalChunks - 1),
 					);
 				}
+			}
+
+			// Update novel library when all chunks are complete (batch path)
+			try {
+				const novelContext = extractNovelContext();
+				await addToNovelLibrary(novelContext);
+			} catch (libraryError) {
+				debugError(
+					"Failed to update novel library after batch chunk completion:",
+					libraryError,
+				);
 			}
 		}
 
@@ -2233,10 +2362,15 @@ if (window.__RGInitDone) {
 				if (novelId && chapterNumber != null) {
 					if (!novelLibrary) await loadNovelLibrary();
 					if (novelLibrary) {
+						const totalChunkEls = document.querySelectorAll(
+							".gemini-chunk-content",
+						);
 						await novelLibrary.updateChapter(novelId, {
 							chapterNumber,
 							url: window.location.href,
 							isSummarized: true,
+							summaryType: isShort ? "short" : "long",
+							totalChunksForChapter: totalChunkEls.length || 1,
 							summarizedAt: Date.now(),
 						});
 					}
@@ -2375,6 +2509,15 @@ if (window.__RGInitDone) {
 				</button>
 			`
 			}
+			${
+				isComplete || isPaused
+					? `
+				<button class="gemini-wip-show-original-btn" style="margin-top: 10px; padding: 8px 14px; background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; min-height: 40px; max-width: 100%;">
+					👁 Show Original
+				</button>
+			`
+					: ""
+			}
 		`;
 
 		// Add cancel button handler
@@ -2389,6 +2532,25 @@ if (window.__RGInitDone) {
 					cancelBtn.style.background = "#dc3545";
 				});
 			}
+		}
+
+		// Show Original / Show Enhanced toggle — syncs with the master banner toggle
+		const showOrigBtn = banner.querySelector(
+			".gemini-wip-show-original-btn",
+		);
+		if (showOrigBtn) {
+			showOrigBtn.addEventListener("click", () => {
+				handleToggleAllChunks();
+				// Mirror the master banner's new state so both buttons stay in sync
+				const masterToggle = document.querySelector(
+					".gemini-master-toggle-all-btn",
+				);
+				const isNowOriginal =
+					masterToggle?.getAttribute("data-showing") === "original";
+				showOrigBtn.textContent = isNowOriginal
+					? "✨ Show Enhanced"
+					: "👁 Show Original";
+			});
 		}
 
 		return banner;
@@ -3438,11 +3600,19 @@ if (window.__RGInitDone) {
 			}
 
 			// Update chapter tracking
+			const enhancedChunkEls = document.querySelectorAll(
+				'.gemini-chunk-content[data-chunk-enhanced="true"]',
+			);
+			const totalChunkEls = document.querySelectorAll(
+				".gemini-chunk-content",
+			);
 			await novelLibrary.updateChapter(novelData.id, {
 				chapterNumber: context.chapterNumber || 1,
 				title: context.chapterTitle || document.title,
 				url: window.location.href,
 				isEnhanced: true,
+				enhancedChunkCount: enhancedChunkEls.length || 1,
+				totalChunksForChapter: totalChunkEls.length || 1,
 				enhancedAt: Date.now(),
 				readAt: Date.now(),
 			});
@@ -3839,7 +4009,7 @@ if (window.__RGInitDone) {
 		const metadata = chunking.cache.getChunkMetadata
 			? await chunking.cache.getChunkMetadata(url)
 			: null;
-		const chunks = await chunking.cache.getAllChunksFromCache(url);
+		let chunks = await chunking.cache.getAllChunksFromCache(url);
 		if (!chunks || chunks.length === 0) {
 			debugLog("[Cache Restore] getAllChunksFromCache returned empty.");
 			return false;
@@ -3855,6 +4025,66 @@ if (window.__RGInitDone) {
 				`[Cache Restore] Chunk cache incomplete — have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
 			);
 			return false;
+		}
+
+		// Validate cached chunk count against a fresh split of the current page content.
+		// A stale cache (e.g. from a previous buggy run that produced duplicate chunks)
+		// can have more entries than the corrected splitter would produce — trim them.
+		if (
+			chunking.core?.splitContentByWords &&
+			chunking.config?.getChunkConfig
+		) {
+			try {
+				const chunkConfig = await chunking.config.getChunkConfig();
+				const sourceHtml = getCleanContentHTML(contentArea);
+				const freshChunks = chunking.core.splitContentByWords(
+					sourceHtml,
+					chunkConfig.chunkSizeWords,
+				);
+				if (freshChunks.length < chunks.length) {
+					debugLog(
+						`[Cache Restore] Stale cache detected — cached ${chunks.length} chunks but fresh split gives ${freshChunks.length}. Trimming extras.`,
+					);
+					const extraChunks = chunks.slice(freshChunks.length);
+					for (const extraChunk of extraChunks) {
+						if (typeof extraChunk.chunkIndex === "number") {
+							await chunking.cache.deleteChunkFromCache(
+								url,
+								extraChunk.chunkIndex,
+							);
+						}
+					}
+					chunks = chunks.slice(0, freshChunks.length);
+					if (metadata) metadata.totalChunks = freshChunks.length;
+					if (chunks.length === 0) {
+						debugLog(
+							"[Cache Restore] All chunks trimmed — nothing to restore.",
+						);
+						return false;
+					}
+					// Persist the corrected totalChunks to storage.
+					// deleteChunkFromCache only removes the index from chunkIndices
+					// but never updates totalChunks, so the next page load would
+					// see chunkIndices.length (3) !== totalChunks (4) and refuse to
+					// restore. Re-saving the first remaining chunk causes
+					// saveChunkToCache → updateChunkMetadata("add", {totalChunks: N})
+					// which writes the correct value to storage.
+					const firstChunk = chunks[0];
+					await chunking.cache.saveChunkToCache(
+						url,
+						firstChunk.chunkIndex,
+						{
+							...firstChunk,
+							totalChunks: freshChunks.length,
+						},
+					);
+				}
+			} catch (validateErr) {
+				debugLog(
+					"[Cache Restore] Could not validate chunk count against fresh split:",
+					validateErr,
+				);
+			}
 		}
 
 		const allEnhanced = chunks.every(
@@ -6872,7 +7102,7 @@ if (window.__RGInitDone) {
 									cursor: pointer;
 									white-space: nowrap;
 									flex: 0 0 auto;
-									user-select: none;
+
 								`;
 								const origText = badge.innerHTML;
 								badge.addEventListener("click", async () => {
@@ -7411,6 +7641,17 @@ if (window.__RGInitDone) {
 			}
 
 			// All chunks enhanced (re-enhance from scratch) or nothing enhanced yet (fresh start)
+			if (
+				enhancedChunkEls.length > 0 &&
+				enhancedChunkEls.length === allChunkEls.length
+			) {
+				// All chunks were individually enhanced — user confirmed re-enhance from scratch
+				showStatusMessage(
+					"All chunks already enhanced — re-enhancing from scratch...",
+					"info",
+					3000,
+				);
+			}
 			const chunkingForCleanup = await loadChunkingSystem();
 			if (chunkingForCleanup?.cache?.deleteAllChunksForUrl) {
 				await chunkingForCleanup.cache
@@ -8996,7 +9237,7 @@ if (window.__RGInitDone) {
 							tags: libraryNovel.tags || metadata.tags || [],
 							status: libraryNovel.status || metadata.status,
 							enhancedChapters:
-								libraryNovel.enhancedChapters || 0,
+								libraryNovel.enhancedChaptersCount || 0,
 						}
 					: {
 							genres: metadata.genres || [],

@@ -353,7 +353,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				)}" alt="${this.escapeHtml(
 					novel.title,
 				)}" data-fallback="${fallbackCover}" loading="lazy">`
-			: "<div class=\"novel-cover-placeholder\">📚</div>";
+			: '<div class="novel-cover-placeholder">📚</div>';
 
 		const readingKeyRaw =
 			novel.readingStatus ||
@@ -795,6 +795,9 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const fandoms = getArray("fandoms");
 		const genres = getArray("genres");
 		const characters = getArray("characters");
+		const relationships = Array.isArray(metadata.relationships)
+			? metadata.relationships
+			: [];
 		const contentTypes = getArray("contentTypes"); // or from hierarchy
 
 		// Fallback for tags if not found in standard keys
@@ -914,14 +917,32 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 
 					<!-- Characters Column -->
 					${
-						characters.length > 0
-							? `
+						characters.length > 0 || relationships.length > 0
+							? (() => {
+									const groupMemberSet = new Set(
+										relationships.flat(),
+									);
+									const soloChars = characters.filter(
+										(c) => !groupMemberSet.has(c),
+									);
+									const relHtml = relationships
+										.map(
+											(group) =>
+												`<span class="tag tag-relationship" title="Relationship Group">[${group.map((c) => this.escapeHtml(c)).join(", ")}]</span>`,
+										)
+										.join("");
+									const charHtml = renderTagList(
+										soloChars,
+										"tag-character",
+									);
+									return `
 					<div class="fanfic-modal-column">
 						<h4 class="modal-section-title">Characters</h4>
 						<div class="tags-list">
-							${renderTagList(characters, "tag-character")}
+							${relHtml}${charHtml}
 						</div>
-					</div>`
+					</div>`;
+								})()
 							: ""
 					}
 

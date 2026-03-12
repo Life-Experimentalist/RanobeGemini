@@ -65,7 +65,7 @@ function runBuild() {
 		}
 
 		console.log(
-			`[${getTimestamp()}]	✅ Build completed successfully (${duration}s) `
+			`[${getTimestamp()}]	✅ Build completed successfully (${duration}s) `,
 		);
 		console.log(`[${getTimestamp()}]	🔍 Watching for changes...`);
 		console.log(`___________________________\n`);
@@ -101,7 +101,8 @@ function handleFileChange(filename) {
 		filename.endsWith("docs") ||
 		filename.endsWith("history") ||
 		filename.endsWith(".log") ||
-		filename.endsWith(".swp")
+		filename.endsWith(".swp") ||
+		filename.includes("build-version.js")
 	) {
 		return;
 	}

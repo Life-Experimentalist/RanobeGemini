@@ -5091,6 +5091,22 @@ async function openDefaultNovelDetail(novel) {
 		elements.modalEpubCopyBtn.classList.add("hidden");
 	}
 
+	// Wire Site Shelf button — show only if this site has a shelf page
+	const siteShelfBtn = document.getElementById("modal-site-shelf-btn");
+	if (siteShelfBtn) {
+		if (novel.shelfId) {
+			siteShelfBtn.style.display = "inline-flex";
+			siteShelfBtn.onclick = () => {
+				const shelfUrl = browser.runtime.getURL(
+					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}`,
+				);
+				window.open(shelfUrl, "_blank");
+			};
+		} else {
+			siteShelfBtn.style.display = "none";
+		}
+	}
+
 	openModal(elements.novelModal);
 }
 

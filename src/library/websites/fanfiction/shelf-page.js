@@ -720,6 +720,17 @@ function showNovelModal(novel) {
 		};
 	}
 
+	// Wire "All Libraries" button to open main library with this novel selected
+	const openLibraryBtn = document.getElementById("modal-open-library-btn");
+	if (openLibraryBtn) {
+		openLibraryBtn.onclick = () => {
+			const libraryUrl = browser.runtime.getURL(
+				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+			);
+			window.open(libraryUrl, "_blank");
+		};
+	}
+
 	if (FanFictionNovelCard && FanFictionNovelCard.renderModalMetadata) {
 		FanFictionNovelCard.renderModalMetadata(novel);
 	}
@@ -750,6 +761,25 @@ function showNovelModal(novel) {
 			if (filteredIdx >= 0) filteredNovels[filteredIdx] = updatedNovel;
 
 			applyFiltersAndSort();
+
+			// Show status change banner
+			const banner = document.getElementById("status-change-banner");
+			if (banner) {
+				const STATUS_LABELS = {
+					"plan-to-read": "📋 Plan to Read",
+					reading: "📖 Reading",
+					completed: "✅ Completed",
+					"on-hold": "⏸️ On Hold",
+					dropped: "❌ Dropped",
+					rereading: "🔁 Re-reading",
+				};
+				banner.textContent = `Status changed to: ${STATUS_LABELS[status] || status}`;
+				banner.style.display = "block";
+				clearTimeout(banner._statusTimer);
+				banner._statusTimer = setTimeout(() => {
+					banner.style.display = "none";
+				}, 3000);
+			}
 
 			// Update button states
 			statusButtons.forEach((b) => {
@@ -820,6 +850,7 @@ function showNovelModal(novel) {
 
 	function closeModal() {
 		modal.style.display = "none";
+		document.body.style.overflow = "";
 	}
 
 	closeBtn.addEventListener("click", closeModal);
@@ -832,6 +863,10 @@ function showNovelModal(novel) {
 		}
 	};
 	document.addEventListener("keydown", closeOnEscape);
+
+	// Show the modal
+	modal.style.display = "flex";
+	document.body.style.overflow = "hidden";
 }
 
 function fandomTypeFilter(novels, fandomType = filterState.storyType) {

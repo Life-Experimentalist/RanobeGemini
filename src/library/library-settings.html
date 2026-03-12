@@ -1004,6 +1004,32 @@
 						</div>
 					</div>
 
+					<!-- Database Fixes -->
+					<div class="ls-section" data-accent="amber">
+						<div class="ls-section-title">🔧 Database Fixes</div>
+						<p class="ls-section-description"
+							style="margin:0 0 12px;font-size:12px;color:var(--text-secondary);">
+							Apply data corrections to your library. These operations re-process existing novel data
+							without deleting anything.
+						</p>
+
+						<div class="ls-form-group">
+							<div class="ls-row ls-row-between">
+								<div>
+									<span class="ls-label">Fix FanFiction.net Character Data</span>
+									<span class="ls-hint">Re-runs character/relationship normalization on all FF.net
+										novels. Removes genres from character lists and properly groups romantic
+										relationships like [A, B, C].</span>
+								</div>
+								<button id="fix-ffnet-characters-btn" class="ls-btn ls-btn-secondary ls-btn-sm">
+									🔄 Run Fix
+								</button>
+							</div>
+							<div id="fix-ffnet-characters-result"
+								style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px;"></div>
+						</div>
+					</div>
+
 					<!-- Factory Reset -->
 					<div class="ls-section" style="background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(220,38,38,0.12));
 				border:2px solid #ef4444;border-left:4px solid #dc2626;">

@@ -2924,6 +2924,73 @@ function setupEventListeners() {
 		});
 	}
 
+	// ── Database Fixes ─────────────────────────────────────────────────────────
+
+	const fixFFNetCharactersBtn = $("fix-ffnet-characters-btn");
+	const fixFFNetCharactersResult = $("fix-ffnet-characters-result");
+	if (fixFFNetCharactersBtn) {
+		fixFFNetCharactersBtn.addEventListener("click", async () => {
+			fixFFNetCharactersBtn.disabled = true;
+			fixFFNetCharactersBtn.textContent = "⏳ Running…";
+			try {
+				const library = await novelLibrary.getLibrary();
+				const ffNovels = Object.values(library.novels || {}).filter(
+					(n) => (n.shelfId || "").toLowerCase() === "fanfiction",
+				);
+				// Force re-normalization: clear existing normalized data so the
+				// normalizeFanfictionMetadata function sees it as "changed"
+				for (const novel of ffNovels) {
+					if (novel.metadata) {
+						delete novel.metadata.relationships;
+						// Keep characters array so normalization re-derives it cleanly
+					}
+				}
+				// Save the cleared state then re-load (getLibrary runs normalization)
+				await browser.storage.local.set({
+					[novelLibrary.LIBRARY_KEY]: library,
+				});
+				// getLibrary runs normalizeFanfictionMetadata automatically
+				const reloaded = await novelLibrary.getLibrary();
+				const fixedCount = Object.values(reloaded.novels || {}).filter(
+					(n) =>
+						(n.shelfId || "").toLowerCase() === "fanfiction" &&
+						(n.metadata?.relationships?.length > 0 ||
+							n.metadata?.characters?.length > 0),
+				).length;
+
+				if (fixFFNetCharactersResult) {
+					fixFFNetCharactersResult.style.display = "block";
+					fixFFNetCharactersResult.style.background =
+						"rgba(34,197,94,0.1)";
+					fixFFNetCharactersResult.style.border =
+						"1px solid rgba(34,197,94,0.3)";
+					fixFFNetCharactersResult.style.color =
+						"var(--success-color)";
+					fixFFNetCharactersResult.textContent = `✅ Fix applied to ${ffNovels.length} FF.net novel(s). ${fixedCount} have character/relationship data.`;
+				}
+				showToast(
+					`✅ Character data fixed for ${ffNovels.length} FF.net novels`,
+					"success",
+				);
+			} catch (err) {
+				debugError("Fix FFNet characters failed:", err);
+				if (fixFFNetCharactersResult) {
+					fixFFNetCharactersResult.style.display = "block";
+					fixFFNetCharactersResult.style.background =
+						"rgba(239,68,68,0.1)";
+					fixFFNetCharactersResult.style.border =
+						"1px solid rgba(239,68,68,0.3)";
+					fixFFNetCharactersResult.style.color = "#ef4444";
+					fixFFNetCharactersResult.textContent = `❌ Fix failed: ${err.message}`;
+				}
+				showToast(`❌ Fix failed: ${err.message}`, "error");
+			} finally {
+				fixFFNetCharactersBtn.disabled = false;
+				fixFFNetCharactersBtn.textContent = "🔄 Run Fix";
+			}
+		});
+	}
+
 	// ── Factory Reset ──────────────────────────────────────────────────────────
 
 	const factoryResetBtn = $("library-factory-reset-btn");

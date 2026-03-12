@@ -385,13 +385,12 @@ export class NovelLibrary {
 			});
 
 			const characterList = [];
-			[...sourceCharacters, ...sourceTags, ...sourceGenres].forEach(
-				(entry) => {
-					const cleaned = cleanName(entry);
-					if (isInvalidToken(cleaned)) return;
-					addUnique(characterList, cleaned);
-				},
-			);
+			// Only use actual character sources — NOT tags or genres
+			[...sourceCharacters].forEach((entry) => {
+				const cleaned = cleanName(entry);
+				if (isInvalidToken(cleaned)) return;
+				addUnique(characterList, cleaned);
+			});
 
 			relationships.forEach((group) => {
 				group.forEach((c) => addUnique(characterList, c));
@@ -1376,14 +1375,43 @@ export class NovelLibrary {
 				lastUpdated: Date.now(),
 			};
 
+			// Persist extra derived fields from incoming data
+			const saved = chapters.chapters[chapterId];
+			if (chapterData.summaryType === "long") saved.hasLongSummary = true;
+			if (chapterData.summaryType === "short")
+				saved.hasShortSummary = true;
+			if (chapterData.totalChunksForChapter)
+				saved.totalChunksForChapter = chapterData.totalChunksForChapter;
+			if (chapterData.enhancedChunkCount)
+				saved.enhancedChunkCount = chapterData.enhancedChunkCount;
+
 			await browser.storage.local.set({
 				[chaptersKey]: chapters,
 			});
 
-			// Update enhanced chapters count in novel (counts enhanced OR summarized chapters)
-			const enhancedCount = Object.values(chapters.chapters).filter(
-				(ch) => ch.isEnhanced || ch.isSummarized,
-			).length;
+			// Compute enhanced score using per-chunk tracking
+			// Rules: enhanced chunk = +1 each | long summary = +2 if >1 chunk else +1 | short summary = +1
+			const enhancedCount = Object.values(chapters.chapters).reduce(
+				(total, ch) => {
+					let score = 0;
+					if (ch.enhancedChunkCount > 0) {
+						score += ch.enhancedChunkCount;
+					} else if (ch.isEnhanced) {
+						score += 1; // legacy: count as 1
+					}
+					const isLong =
+						ch.hasLongSummary ||
+						(ch.isSummarized && ch.summaryType !== "short");
+					if (isLong) {
+						score += (ch.totalChunksForChapter || 1) > 1 ? 2 : 1;
+					}
+					if (ch.hasShortSummary || ch.summaryType === "short") {
+						score += 1;
+					}
+					return total + score;
+				},
+				0,
+			);
 
 			const library = await this.getLibrary();
 			if (library.novels[novelId]) {

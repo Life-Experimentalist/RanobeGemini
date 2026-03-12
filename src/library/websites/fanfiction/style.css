@@ -391,6 +391,31 @@ body {
 	font-weight: 600;
 }
 
+.status-change-banner {
+	background: rgba(99, 102, 241, 0.15);
+	border: 1px solid rgba(99, 102, 241, 0.4);
+	border-radius: var(--radius-sm);
+	padding: 6px 12px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--primary-color);
+	margin-top: var(--spacing-sm);
+	text-align: center;
+	animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
 .modal-metadata-section {
 	margin-bottom: var(--spacing-lg);
 	padding-bottom: var(--spacing-md);
@@ -837,6 +862,13 @@ body {
 	background: rgba(252, 196, 25, 0.15);
 	color: #fcc419;
 	border-color: rgba(252, 196, 25, 0.3);
+}
+
+.tag-relationship {
+	background: rgba(240, 100, 180, 0.15);
+	color: #f06ab4;
+	border-color: rgba(240, 100, 180, 0.3);
+	font-style: italic;
 }
 
 .tag-source {
@@ -1855,6 +1887,13 @@ body {
 	background: rgba(245, 158, 11, 0.1);
 	color: #f59e0b;
 	border-color: rgba(245, 158, 11, 0.2);
+}
+
+.tag.tag-relationship {
+	background: rgba(236, 72, 153, 0.1);
+	color: #ec4899;
+	border-color: rgba(236, 72, 153, 0.2);
+	font-style: italic;
 }
 
 /* Footer */
