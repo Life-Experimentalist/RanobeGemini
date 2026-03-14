@@ -762,6 +762,19 @@ async function showNovelModal(novel) {
 		};
 	}
 
+	// Header library button (top-right of modal) — same as "All Libraries"
+	const openLibraryHeaderBtn = document.getElementById(
+		"modal-open-library-header-btn",
+	);
+	if (openLibraryHeaderBtn) {
+		openLibraryHeaderBtn.onclick = () => {
+			const libraryUrl = browser.runtime.getURL(
+				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+			);
+			window.open(libraryUrl, "_blank");
+		};
+	}
+
 	// Copy novel filename button
 	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
 	if (copyInfoBtn) {

@@ -149,7 +149,7 @@ export function getBuiltInRules() {
 			builtIn: true,
 			enabled: true,
 			trigger: "chapterRead",
-			fromStatuses: [RS.READING, RS.UP_TO_DATE],
+			fromStatuses: [RS.READING, RS.UP_TO_DATE, RS.ON_HOLD],
 			excludeStatuses: [RS.COMPLETED, RS.DROPPED],
 			toStatus: RS.COMPLETED,
 			priority: 30,

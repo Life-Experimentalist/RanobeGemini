@@ -269,9 +269,12 @@
 			<div id="novel-modal" class="modal hidden">
 				<div class="modal-backdrop"></div>
 				<div class="modal-content">
-					<button class="modal-close" id="modal-close">
-						&times;
-					</button>
+					<div class="modal-corner-nav">
+						<button class="btn modal-corner-btn" id="modal-site-shelf-corner-btn" title="View in site shelf" style="display:none;">📖</button>
+						<button class="modal-close" id="modal-close">
+							&times;
+						</button>
+					</div>
 
 					<div class="novel-detail">
 						<div class="novel-detail-header">
@@ -283,6 +286,12 @@
 								<p class="novel-author">
 									by <span id="modal-author"></span>
 								</p>
+								<div class="reading-progress-container" id="modal-reading-progress">
+									<div class="reading-progress-bar">
+										<div class="reading-progress-fill" id="modal-progress-fill"></div>
+									</div>
+									<div class="reading-progress-text" id="modal-progress-text"></div>
+								</div>
 								<div class="novel-stats">
 									<div class="stat">
 										<span class="stat-num" id="modal-chapters">0</span>
@@ -296,12 +305,6 @@
 										<span class="stat-num" id="modal-last-read">0</span>
 										<span class="stat-text">Last Read</span>
 									</div>
-								</div>
-								<div class="reading-progress-container" id="modal-reading-progress">
-									<div class="reading-progress-bar">
-										<div class="reading-progress-fill" id="modal-progress-fill"></div>
-									</div>
-									<div class="reading-progress-text" id="modal-progress-text"></div>
 								</div>
 								<div class="novel-description">
 									<h3>Description</h3>

@@ -8,6 +8,7 @@ import {
 	DEFAULT_DRIVE_CLIENT_ID,
 	DEFAULT_DEBUG_MODE,
 	DEFAULT_MODEL_ID,
+	DEFAULT_CONTENT_FILTER_SETTINGS,
 } from "../utils/constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
@@ -138,6 +139,7 @@ async function initializePopup() {
 	const getKeyLink = document.getElementById("getKeyLink");
 	const statusDiv = document.getElementById("status");
 	const modelSelect = document.getElementById("modelSelect");
+	const backupModelSelect = document.getElementById("backupModelSelect");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const resetPromptBtn = document.getElementById("resetPrompt");
 	const summaryPrompt = document.getElementById("summaryPrompt");
@@ -882,6 +884,7 @@ async function initializePopup() {
 					apiKey: apiKey,
 					selectedModelId: selectedModelId,
 					modelEndpoint: modelEndpoint,
+					backupModelId: backupModelSelect?.value || "",
 					debugMode: debugModeCheckbox?.checked ?? false,
 					useEmoji: useEmojiCheckbox
 						? useEmojiCheckbox.checked
@@ -904,6 +907,7 @@ async function initializePopup() {
 					shortSummaryPrompt: shortSummaryPrompt?.value || "",
 					permanentPrompt: permanentPrompt?.value || "",
 					customEndpoint: customEndpointInput?.value?.trim() || "",
+					contentFilterSettings: collectContentFilterSettings(),
 				};
 
 				const chunkingEnabledInput =
@@ -934,6 +938,9 @@ async function initializePopup() {
 	// Attach autosave to all relevant inputs
 	if (modelSelect) {
 		modelSelect.addEventListener("change", autosaveSettings);
+	}
+	if (backupModelSelect) {
+		backupModelSelect.addEventListener("change", autosaveSettings);
 	}
 	if (temperatureSlider) {
 		temperatureSlider.addEventListener("input", autosaveSettings);
@@ -995,6 +1002,47 @@ async function initializePopup() {
 	}
 	if (customEndpointInput) {
 		customEndpointInput.addEventListener("input", autosaveSettings);
+	}
+
+	// Autosave listeners for content filter checkboxes
+	for (const id of [
+		"cf-fight-enabled",
+		"cf-fight-collapsed",
+		"cf-r18-enabled",
+		"cf-r18-collapsed",
+		"cf-author-note-enabled",
+		"cf-author-note-collapsed",
+	]) {
+		const el = document.getElementById(id);
+		if (el) el.addEventListener("change", autosaveSettings);
+	}
+
+	// Wire the custom-type add button
+	const cfCustomAddBtn = document.getElementById("cf-custom-add");
+	if (cfCustomAddBtn) {
+		cfCustomAddBtn.addEventListener("click", () => {
+			const nameInput = document.getElementById("cf-custom-name");
+			const iconInput = document.getElementById("cf-custom-icon");
+			const collapsedInput = document.getElementById(
+				"cf-custom-collapsed",
+			);
+			const name = nameInput?.value?.trim();
+			if (!name) return;
+			const icon = iconInput?.value?.trim() || "📌";
+			const collapsed = collapsedInput?.checked !== false;
+			const cfCustomList = document.getElementById("cf-custom-list");
+			if (cfCustomList) {
+				appendCustomTypeRow(cfCustomList, {
+					name,
+					icon,
+					defaultCollapsed: collapsed,
+				});
+			}
+			if (nameInput) nameInput.value = "";
+			if (iconInput) iconInput.value = "";
+			if (collapsedInput) collapsedInput.checked = true;
+			autosaveSettings();
+		});
 	}
 
 	// ===== END AUTOSAVE FUNCTIONALITY =====
@@ -1100,8 +1148,10 @@ async function initializePopup() {
 			const currentSettings = await browser.storage.local.get([
 				"selectedModelId",
 				"modelEndpoint",
+				"backupModelId",
 			]);
 			let selectedModelId = currentSettings.selectedModelId || "";
+			const storedBackupModelId = currentSettings.backupModelId || "";
 
 			// Sort models with Gemini 2.0 models first, then 1.5, then others
 			models.sort((a, b) => {
@@ -1115,6 +1165,12 @@ async function initializePopup() {
 			// Clear and populate the select
 			modelSelect.innerHTML = "";
 
+			// Also repopulate backup model select with the same list
+			if (backupModelSelect) {
+				backupModelSelect.innerHTML =
+					'<option value="">None (disable fallback)</option>';
+			}
+
 			models.forEach((model) => {
 				const option = document.createElement("option");
 				option.value = model.id;
@@ -1126,6 +1182,12 @@ async function initializePopup() {
 				}
 
 				modelSelect.appendChild(option);
+
+				// Add same model to backup dropdown
+				if (backupModelSelect) {
+					const backupOption = option.cloneNode(true);
+					backupModelSelect.appendChild(backupOption);
+				}
 			});
 
 			// Set selection based on previous setting or default
@@ -1149,6 +1211,11 @@ async function initializePopup() {
 			} else {
 				// Default to first option if no previous selection
 				modelSelect.selectedIndex = 0;
+			}
+
+			// Set backup model selection
+			if (backupModelSelect && storedBackupModelId !== undefined) {
+				backupModelSelect.value = storedBackupModelId;
 			}
 
 			// Save the available models for later use
@@ -1216,6 +1283,7 @@ async function initializePopup() {
 
 		if (apiKeys.length > 0) {
 			// If we have an API key, load available models
+			// updateModelSelector reads selectedModelId from storage and sets the dropdown correctly
 			await updateModelSelector(apiKeys[0]);
 		} else {
 			// No API key, use static default options
@@ -1224,6 +1292,14 @@ async function initializePopup() {
 				<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
 				<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 			`;
+			// Still apply the stored selection in the static list
+			if (data.selectedModelId) {
+				modelSelect.value = data.selectedModelId;
+			}
+			// Apply stored backup model selection
+			if (backupModelSelect && data.backupModelId !== undefined) {
+				backupModelSelect.value = data.backupModelId || "";
+			}
 		}
 
 		// Always set the prompt template - this fixes the empty box issue
@@ -1249,21 +1325,8 @@ async function initializePopup() {
 		}
 
 		// Set model selection based on saved endpoint
-		if (data.modelEndpoint) {
-			if (data.modelEndpoint.includes("gemini-2.0-flash")) {
-				modelSelect.value = "gemini-2.0-flash";
-			} else if (data.modelEndpoint.includes("gemini-2.5-pro")) {
-				modelSelect.value = "gemini-2.5-pro";
-			} else if (data.modelEndpoint.includes("gemini-2.5-flash")) {
-				modelSelect.value = "gemini-2.5-flash";
-			} else {
-				// Default to DEFAULT_MODEL_ID if endpoint doesn't match any known model
-				modelSelect.value = DEFAULT_MODEL_ID;
-			}
-		} else {
-			// Default to DEFAULT_MODEL_ID if no endpoint is specified
-			modelSelect.value = DEFAULT_MODEL_ID;
-		}
+		// NOTE: updateModelSelector (called above) already sets the model from
+		// data.selectedModelId, so no further override is needed here.
 
 		// Chunking controls
 		if (chunkingEnabledInput) {
@@ -1354,6 +1417,33 @@ async function initializePopup() {
 		if (apiKeyRotationSelect) {
 			apiKeyRotationSelect.value = data.apiKeyRotation || "round_robin";
 		}
+
+		// Load content filter settings
+		const cf =
+			data.contentFilterSettings || DEFAULT_CONTENT_FILTER_SETTINGS;
+		const cfFightEnabled = document.getElementById("cf-fight-enabled");
+		const cfFightCollapsed = document.getElementById("cf-fight-collapsed");
+		const cfR18Enabled = document.getElementById("cf-r18-enabled");
+		const cfR18Collapsed = document.getElementById("cf-r18-collapsed");
+		const cfAuthorEnabled = document.getElementById(
+			"cf-author-note-enabled",
+		);
+		const cfAuthorCollapsed = document.getElementById(
+			"cf-author-note-collapsed",
+		);
+		if (cfFightEnabled)
+			cfFightEnabled.checked = cf.fight?.enabled !== false;
+		if (cfFightCollapsed)
+			cfFightCollapsed.checked = cf.fight?.defaultCollapsed !== false;
+		if (cfR18Enabled) cfR18Enabled.checked = cf.r18?.enabled !== false;
+		if (cfR18Collapsed)
+			cfR18Collapsed.checked = cf.r18?.defaultCollapsed !== false;
+		if (cfAuthorEnabled)
+			cfAuthorEnabled.checked = cf.authorNote?.enabled !== false;
+		if (cfAuthorCollapsed)
+			cfAuthorCollapsed.checked =
+				cf.authorNote?.defaultCollapsed !== false;
+		renderCustomTypesList(cf.custom || []);
 
 		// Model endpoint display removed from popup
 	} catch (error) {
@@ -2215,6 +2305,8 @@ async function initializePopup() {
 			novel.lastReadChapter || novel.currentChapter || null;
 		const readingStatus = novel.readingStatus || "Unknown";
 		const sourceUrl = novel.sourceUrl || novel.mainNovelUrl || novel.url;
+		// Prefer the last-read chapter URL; fall back to the novel's main page
+		const continueUrl = novel.lastReadUrl || sourceUrl;
 
 		const chips = [];
 		if (readingStatus)
@@ -2261,7 +2353,7 @@ async function initializePopup() {
 						${
 							sourceUrl
 								? `<a href="${escapeHtml(
-										sourceUrl,
+										continueUrl,
 									)}" target="_blank" class="novel-continue-btn">Continue</a>`
 								: ""
 						}
@@ -3191,6 +3283,83 @@ async function initializePopup() {
 			await persistDriveConfig({ folderId: value });
 			showStatus("Drive folder saved", "success");
 		});
+	}
+
+	/**
+	 * Collect current content-filter settings from the popup UI.
+	 */
+	function collectContentFilterSettings() {
+		return {
+			fight: {
+				enabled:
+					document.getElementById("cf-fight-enabled")?.checked !==
+					false,
+				defaultCollapsed:
+					document.getElementById("cf-fight-collapsed")?.checked !==
+					false,
+			},
+			r18: {
+				enabled:
+					document.getElementById("cf-r18-enabled")?.checked !==
+					false,
+				defaultCollapsed:
+					document.getElementById("cf-r18-collapsed")?.checked !==
+					false,
+			},
+			authorNote: {
+				enabled:
+					document.getElementById("cf-author-note-enabled")
+						?.checked !== false,
+				defaultCollapsed:
+					document.getElementById("cf-author-note-collapsed")
+						?.checked !== false,
+			},
+			custom: readCustomTypeRows(),
+		};
+	}
+
+	/**
+	 * Read custom type entries from the #cf-custom-list DOM.
+	 */
+	function readCustomTypeRows() {
+		const cfCustomList = document.getElementById("cf-custom-list");
+		if (!cfCustomList) return [];
+		return Array.from(cfCustomList.querySelectorAll(".cf-custom-item")).map(
+			(el) => ({
+				name: el.dataset.name || "",
+				icon: el.dataset.icon || "📌",
+				defaultCollapsed: el.dataset.collapsed === "true",
+			}),
+		);
+	}
+
+	/**
+	 * Render the list of custom section types into #cf-custom-list.
+	 */
+	function renderCustomTypesList(custom) {
+		const cfCustomList = document.getElementById("cf-custom-list");
+		if (!cfCustomList) return;
+		cfCustomList.innerHTML = "";
+		(custom || []).forEach((item) =>
+			appendCustomTypeRow(cfCustomList, item),
+		);
+	}
+
+	/**
+	 * Append a single custom-type row to the list container.
+	 */
+	function appendCustomTypeRow(container, item) {
+		const row = document.createElement("div");
+		row.className = "cf-custom-item";
+		row.dataset.name = item.name;
+		row.dataset.icon = item.icon || "📌";
+		row.dataset.collapsed = item.defaultCollapsed ? "true" : "false";
+		row.innerHTML = `<span class="cf-custom-icon">${escapeHtml(item.icon || "📌")}</span><span class="cf-custom-name">${escapeHtml(item.name)}</span><span class="cf-custom-state">${item.defaultCollapsed ? "Collapsed" : "Expanded"}</span><button class="cf-custom-remove btn btn-sm" title="Remove">✕</button>`;
+		row.querySelector(".cf-custom-remove").addEventListener("click", () => {
+			row.remove();
+			autosaveSettings();
+		});
+		container.appendChild(row);
 	}
 
 	/**

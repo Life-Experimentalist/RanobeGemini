@@ -1,7 +1,7 @@
 // Service Worker for PWA support in Ranobe Gemini Library
 // Provides offline caching for the library page so it works as a PWA
 
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const CACHE_NAME = `rg-library-${CACHE_VERSION}`;
 const OFFLINE_URL = "library.html";
 
@@ -15,6 +15,15 @@ const CORE_ASSETS = [
 	"../icons/icon.png",
 	"../lib/browser-polyfill.min.js",
 ];
+
+function isCacheableRequest(request) {
+	try {
+		const url = new URL(request.url);
+		return url.protocol === "http:" || url.protocol === "https:";
+	} catch {
+		return false;
+	}
+}
 
 // Install: pre-cache core assets, activate immediately
 self.addEventListener("install", (event) => {
@@ -67,7 +76,7 @@ self.addEventListener("fetch", (event) => {
 		event.respondWith(
 			fetch(request)
 				.then((response) => {
-					if (response.ok) {
+					if (response.ok && isCacheableRequest(request)) {
 						const clone = response.clone();
 						caches
 							.open(CACHE_NAME)
@@ -88,7 +97,7 @@ self.addEventListener("fetch", (event) => {
 				cache.match(request).then((cached) => {
 					const networkFetch = fetch(request)
 						.then((response) => {
-							if (response.ok) {
+							if (response.ok && isCacheableRequest(request)) {
 								cache.put(request, response.clone());
 							}
 							return response;

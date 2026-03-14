@@ -1284,6 +1284,7 @@ if (window.__RGInitDone) {
 			toggleBtn.setAttribute("data-showing", "original");
 		} else {
 			chunkContent.innerHTML = enhancedContent;
+			applyCollapsibleSections(chunkContent);
 			toggleBtn.textContent = "👁 Show Original";
 			toggleBtn.setAttribute("data-showing", "enhanced");
 			// Re-enable text selection after switching to enhanced view
@@ -1403,6 +1404,7 @@ if (window.__RGInitDone) {
 
 		// Apply the held-back enhanced content
 		chunkContent.innerHTML = enhancedContent;
+		applyCollapsibleSections(chunkContent);
 		chunkContent.setAttribute("data-chunk-enhanced", "true");
 		pausedChunks.delete(chunkIndex);
 
@@ -1737,6 +1739,7 @@ if (window.__RGInitDone) {
 					}
 
 					chunkContent.innerHTML = sanitizedContent;
+					applyCollapsibleSections(chunkContent);
 					chunkContent.setAttribute("data-chunk-enhanced", "true");
 					// Store enhanced content so toggle can restore it later
 					chunkContent.setAttribute(
@@ -2394,10 +2397,15 @@ if (window.__RGInitDone) {
 			".gemini-chunk-banner",
 		);
 		if (existingBanner) {
+			// Use the actual DOM wrapper count so nav arrows reflect reality
+			// (message.totalChunks can be stale/off-by-one when batches overlap)
+			const actualTotalChunks =
+				chunkedContainer.querySelectorAll(".gemini-chunk-wrapper")
+					.length || totalChunks;
 			const errorBanner = buildChunkBanner(
 				chunking,
 				chunkIndex,
-				totalChunks,
+				actualTotalChunks,
 				"error",
 				message.error,
 			);
@@ -3799,6 +3807,51 @@ if (window.__RGInitDone) {
 		} catch (error) {
 			debugError("Error loading chunking system:", error);
 			return null;
+		}
+	}
+
+	// ── Collapsible sections module ──────────────────────────────
+	let collapsibleSectionsModule = null;
+
+	async function loadCollapsibleSectionsModule() {
+		if (collapsibleSectionsModule) return collapsibleSectionsModule;
+		try {
+			const url = browser.runtime.getURL("utils/collapsible-sections.js");
+			collapsibleSectionsModule = await import(url);
+			return collapsibleSectionsModule;
+		} catch (err) {
+			debugError("Error loading collapsible-sections module:", err);
+			return null;
+		}
+	}
+
+	/**
+	 * Post-process an enhanced chunk container: transform any
+	 * rg-collapsible-section / rg-author-note[data-collapse] elements into
+	 * interactive collapse/expand widgets according to the user's settings.
+	 * @param {Element} chunkContent
+	 */
+	async function applyCollapsibleSections(chunkContent) {
+		if (!chunkContent) return;
+		// Quick bail-out if no collapsible sections present
+		if (
+			!chunkContent.querySelector(".rg-collapsible-section") &&
+			!chunkContent.querySelector(".rg-author-note[data-collapse='true']")
+		) {
+			return;
+		}
+		try {
+			const mod = await loadCollapsibleSectionsModule();
+			if (!mod) return;
+			const stored = await browser.storage.local.get([
+				"contentFilterSettings",
+			]);
+			const settings =
+				stored.contentFilterSettings ||
+				mod.DEFAULT_CONTENT_FILTER_SETTINGS;
+			mod.renderCollapsibleSections(chunkContent, settings);
+		} catch (err) {
+			debugError("Error applying collapsible sections:", err);
 		}
 	}
 
@@ -5514,6 +5567,7 @@ if (window.__RGInitDone) {
 							currentChapter: currentChapterNum,
 							storedChapter: storedChapter,
 							totalChapters: totalChapterCount,
+							lastReadUrl: existingNovel.lastReadUrl || null,
 						});
 					} else if (
 						currentChapterNum > storedChapter ||
@@ -5899,6 +5953,7 @@ if (window.__RGInitDone) {
 			currentChapter,
 			storedChapter,
 			totalChapters,
+			lastReadUrl,
 		} = options;
 
 		return new Promise((resolve) => {
@@ -5978,9 +6033,16 @@ if (window.__RGInitDone) {
 				font-weight: bold;
 				transition: all 0.2s;
 			`;
-			keepBtn.addEventListener("click", () => {
+			keepBtn.addEventListener("click", async () => {
 				debugLog(
 					`💾 Keeping chapter ${currentChapter} for ${novelTitle}`,
+				);
+				// User is choosing to read from this (earlier) chapter — update progress to here
+				await novelLibrary.updateReadingProgress(
+					novelId,
+					currentChapter,
+					window.location.href,
+					{ totalChapters },
 				);
 				overlay.remove();
 				resolve({ action: "keep" });
@@ -6012,21 +6074,20 @@ if (window.__RGInitDone) {
 					`↩️ Resuming chapter ${storedChapter} for ${novelTitle}`,
 				);
 
-				// Update the reading progress
-				await novelLibrary.updateReadingProgress(
-					novelId,
-					storedChapter,
-					null,
-					{ totalChapters },
-				);
-
-				showTimedBanner(
-					`📖 Resumed at Chapter ${storedChapter}`,
-					"success",
-					2000,
-				);
-				overlay.remove();
-				resolve({ action: "resume" });
+				if (lastReadUrl) {
+					overlay.remove();
+					resolve({ action: "resume" });
+					// Navigate to the saved chapter URL
+					window.location.href = lastReadUrl;
+				} else {
+					showTimedBanner(
+						"No saved URL for that chapter",
+						"warning",
+						2000,
+					);
+					overlay.remove();
+					resolve({ action: "resume" });
+				}
 			});
 			resumeBtn.addEventListener("mouseenter", () => {
 				resumeBtn.style.background = "#d17566";

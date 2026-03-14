@@ -1320,7 +1320,24 @@ export class NovelLibrary {
 						);
 					}
 				}
-			} // Direct updates (always apply, not auto-updatable)
+			} // Derive isStoryComplete from the publication status field
+			if (novel.status && !editedFields["isStoryComplete"]) {
+				const statusNorm = String(novel.status).toLowerCase().trim();
+				if (
+					["completed", "complete", "finished"].includes(statusNorm)
+				) {
+					if (!novel.isStoryComplete) {
+						novel.isStoryComplete = true;
+						updated = true;
+						debugLog(
+							"📚 Derived isStoryComplete=true from status:",
+							novel.status,
+						);
+					}
+				}
+			}
+
+			// Direct updates (always apply, not auto-updatable)
 			// These are user actions, not site scraping
 			if (newMetadata.readingStatus !== undefined) {
 				novel.readingStatus = newMetadata.readingStatus;

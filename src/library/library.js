@@ -5107,6 +5107,24 @@ async function openDefaultNovelDetail(novel) {
 		}
 	}
 
+	// Wire corner site-shelf button (top-right of modal) — same behaviour
+	const siteShelfCornerBtn = document.getElementById(
+		"modal-site-shelf-corner-btn",
+	);
+	if (siteShelfCornerBtn) {
+		if (novel.shelfId) {
+			siteShelfCornerBtn.style.display = "inline-flex";
+			siteShelfCornerBtn.onclick = () => {
+				const shelfUrl = browser.runtime.getURL(
+					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}`,
+				);
+				window.open(shelfUrl, "_blank");
+			};
+		} else {
+			siteShelfCornerBtn.style.display = "none";
+		}
+	}
+
 	openModal(elements.novelModal);
 }
 

@@ -74,13 +74,18 @@ Please enhance this novel chapter translation with the following improvements:
 
     For \`[ square bracket ]\` system text: classify as stat-sheet (→ \`game-stats-box\`), short notification (→ \`rg-system-msg\`), or skill card (→ \`rg-skill-box\`) based on length and structure. Merge consecutive same-type blocks into one div.
 11. Remove any advertising code snippets or irrelevant promotional content
-12. **Author Notes / Translator Notes / Editor Notes:** Identify A/N:, AN:, T/N:, TN:, E/N:, "Author's Note", "Translator's Note", or any meta-commentary not part of the story. Format them using \`<div class="rg-author-note">\`. Insert \`<hr class="section-divider">\` before AND after the box to visually separate it from the story. Summarize lengthy notes: keep only plot-relevant context (world-building, character clarifications) and strip disclaimers, Patreon plugs, update schedules, and social-media links.
+12. **Author Notes / Translator Notes / Editor Notes:** Identify A/N:, AN:, T/N:, TN:, E/N:, "Author's Note", "Translator's Note", or any meta-commentary not part of the story. Two cases:
+    - **Short notes (≤150 words) that contain plot-relevant info** (world-building clarifications, character name explanations, translation notes about the story) → Format as \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after.
+    - **Long notes (>150 words) OR notes primarily about release schedules, Patreon, social media, personal life, or other off-topic content** → Use \`<div class="rg-author-note" data-collapse="true" data-summary="[1-sentence story-relevant extract, or 'Off-topic author note']">[full note content]</div>\` with \`<hr class="section-divider">\` before and after. Extract any story-relevant parts into data-summary.
 13. **Poetry, Song Lyrics & Epigraphs:** Wrap any in-text poem, song lyric, incantation, chapter-opening quote, or verse in \`<div class="rg-quote-box">\`. Preserve all original line breaks exactly. Do not alter the wording. Example: a stanza at the top of the chapter → \`<div class="rg-quote-box">Verse line 1\nVerse line 2</div>\`.
 14. **Flashback & Memory Scenes:** When a clearly marked flashback or memory scene spans one or more paragraphs — identified by markers like "— Flashback —", "Memory:", "Three Years Ago", italicised past-tense inserts within a present-tense narrative, or explicit scene breaks introducing a recalled event — wrap the entire flashback block in \`<div class="rg-flashback">\` so it is visually distinct from the main narrative.
+15. **Fight / Action Scenes:** When a fight, battle, duel, or extended action sequence spans 3 or more paragraphs, wrap the ENTIRE fight block (from first strike to scene resolution) in: \`<div class="rg-collapsible-section" data-type="fight" data-summary="[1–2 sentences: who fought, key moments, outcome]">[full fight content HTML]</div>\`. The data-summary must be a clear, spoiler-inclusive description. Do NOT split a single fight across multiple wrappers.
+16. **Mature / R-18 Content:** When explicit sexual content or graphic adult material is present, wrap each distinct scene in: \`<div class="rg-collapsible-section" data-type="r18" data-summary="[1 sentence describing the scene without explicit details]">[full scene HTML]</div>\`. Use tasteful, non-graphic language in the summary. Apply this only to explicitly sexual or highly graphic violent scenes — not to romance, mild violence, or suggestive content.
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.
 
-**REMINDER:** Only enhance the text provided below. Do not create or add any new story content.`;
+**REMINDER:** Only enhance the text provided below. Do not create or add any new story content.
+`;
 
 // Default summary prompt
 export const DEFAULT_SUMMARY_PROMPT = `Please generate a comprehensive summary of the provided novel chapter, ensuring the following aspects are covered:
@@ -120,6 +125,9 @@ export const DEFAULT_PERMANENT_PROMPT =
 
 // Default model ID
 export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
+
+// Default backup / fallback model ID ─ used when the primary model is overloaded
+export const DEFAULT_BACKUP_MODEL_ID = "gemini-2.0-flash";
 
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
@@ -199,12 +207,28 @@ export const DEFAULT_NOVEL_UPDATE_INTERVAL_DAYS = 3; // User-configurable: check
 export const TELEMETRY_ENDPOINT = ""; // User must configure if they want telemetry
 export const TELEMETRY_ENABLED_DEFAULT = false;
 
+// Default settings for collapsible content sections (fight scenes, R18, author notes, custom)
+export const DEFAULT_CONTENT_FILTER_SETTINGS = {
+	/** Fight / action scenes: wrap ≥3-paragraph battles in a collapsible block */
+	fight: { enabled: true, defaultCollapsed: true },
+	/** R-18 / explicit adult content: wrap in a collapsible block */
+	r18: { enabled: true, defaultCollapsed: true },
+	/** Long / off-topic author notes: collapse notes >150 words or unrelated to story */
+	authorNote: { enabled: true, defaultCollapsed: true },
+	/**
+	 * User-defined custom section types.
+	 * Each entry: { id: string, name: string, icon: string, enabled: boolean, defaultCollapsed: boolean }
+	 */
+	custom: [],
+};
+
 // Comprehensive backup includes these storage keys
 export const COMPREHENSIVE_BACKUP_KEYS = [
 	"rg_novel_library", // Library data (current)
 	"apiKey", // Gemini API key
 	"backupApiKeys", // Backup API keys
 	"selectedModelId", // Selected model ID
+	"backupModelId", // Fallback model ID (used when primary is overloaded)
 	"customEndpoint", // Custom endpoint
 	"customModelEndpoint", // Custom endpoint (legacy)
 	"promptTemplate", // Main prompt
@@ -251,6 +275,7 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"rg_domain_settings", // Per-domain toggle settings
 	"novelUpdateEnabled", // Periodic novel update enabled
 	"novelUpdateIntervalDays", // Periodic novel update interval (days)
+	"contentFilterSettings", // Collapsible content sections settings
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators

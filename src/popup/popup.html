@@ -84,6 +84,18 @@
 						</div>
 
 						<div class="config-item">
+							<label for="backupModelSelect">Backup Model (fallback on overload)</label>
+							<select id="backupModelSelect" style="width: 100%">
+								<option value="">None (disable fallback)</option>
+								<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+								<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+								<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+							</select>
+							<div class="description" style="margin-top: 4px">Used automatically when the primary model
+								reports high load or is unavailable</div>
+						</div>
+
+						<div class="config-item">
 							<label for="maxOutputTokens">Max Output Length</label>
 							<input type="number" id="maxOutputTokens" min="1000" max="32768" step="512" value="8192"
 								style="width: 100%" />
@@ -288,6 +300,98 @@
 							style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500">
 							⚙️ Library Settings
 						</button>
+					</div>
+				</div>
+
+				<!-- SECTION: Content Sections -->
+				<div class="config-section">
+					<h3 class="config-section-title">📑 Content Sections</h3>
+					<div class="config-section-content">
+						<div class="description" style="margin-bottom:10px;font-size:10px;">
+							Collapsible blocks injected by Gemini into enhanced chapters. Each disabled section shows
+							content inline. Collapsed sections are read as summaries by the TTS/read-aloud feature when
+							available.
+						</div>
+
+						<!-- Fight / Action Scenes -->
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">⚔️ Fight / Action Scenes</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-fight-enabled" />
+									<span>Enable</span>
+								</label>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-fight-collapsed" />
+									<span>Collapsed by default</span>
+								</label>
+							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Identifies combat sequences
+								≥3 paragraphs and wraps them with a summary.</div>
+						</div>
+
+						<!-- R18 / Mature Content -->
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">🔞 Mature Content (R-18)</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-r18-enabled" />
+									<span>Enable</span>
+								</label>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-r18-collapsed" />
+									<span>Collapsed by default</span>
+								</label>
+							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Wraps explicit adult scenes
+								with a tasteful summary.</div>
+						</div>
+
+						<!-- Author Notes -->
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">📝 Author / Translator Notes</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-author-note-enabled" />
+									<span>Auto-collapse long / off-topic notes</span>
+								</label>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-author-note-collapsed" />
+									<span>Collapsed by default</span>
+								</label>
+							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Notes &gt;150 words or about
+								release schedules/personal life are automatically collapsed with a story-relevant
+								summary.</div>
+						</div>
+
+						<!-- Custom Types -->
+						<div class="config-item">
+							<label style="font-size:12px;font-weight:600;">➕ Custom Section Types</label>
+							<div id="cf-custom-list" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+							</div>
+							<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+								<input type="text" id="cf-custom-name" placeholder="Section name…"
+									style="flex:1;min-width:80px;font-size:11px;" />
+								<input type="text" id="cf-custom-icon" placeholder="Icon (emoji)"
+									style="width:52px;font-size:11px;text-align:center;" />
+								<label
+									style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;white-space:nowrap;">
+									<input type="checkbox" id="cf-custom-collapsed" checked />
+									Collapsed
+								</label>
+								<button id="cf-custom-add"
+									style="font-size:11px;padding:4px 10px;background:#4285f4;color:white;border:none;border-radius:4px;cursor:pointer;">
+									+ Add
+								</button>
+							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">
+								Custom types need Gemini instructions. Tell Gemini (via permanent prompt or custom
+								prompt) to wrap content in:
+								<code
+									style="font-size:9px;background:rgba(0,0,0,0.2);padding:1px 3px;border-radius:2px;">&lt;div class="rg-collapsible-section" data-type="YOUR_ID" data-name="Name" data-summary="…"&gt;</code>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

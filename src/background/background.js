@@ -786,6 +786,10 @@ if (typeof browser === "undefined") {
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
 				modelEndpoint: data.modelEndpoint || DEFAULT_MODEL_ENDPOINT,
+				backupModelId: data.backupModelId || "",
+				backupModelEndpoint: data.backupModelId
+					? `https://generativelanguage.googleapis.com/v1beta/models/${data.backupModelId}:generateContent`
+					: "",
 				chunkingEnabled: data.chunkingEnabled !== false,
 				chunkSize: data.chunkSize || 20000, // Used for both threshold AND chunk size
 				chunkThreshold: data.chunkSize || 20000, // Same as chunkSize (simplified)
@@ -967,6 +971,61 @@ if (typeof browser === "undefined") {
 		throw new Error(
 			`All ${allKeys.length} API keys exhausted. Please check your API keys or try again later.`,
 		);
+	}
+
+	/**
+	 * Like makeApiCallWithRotation but retries once with the configured backup
+	 * model when the primary model returns a high-load / 503 / overloaded error.
+	 */
+	async function makeApiCallWithFallback(modelEndpoint, requestBody, config) {
+		const result = await makeApiCallWithRotation(
+			modelEndpoint,
+			requestBody,
+			config,
+		);
+
+		// If the primary call succeeded, return immediately
+		if (result.response.ok) {
+			return result;
+		}
+
+		// Check whether this looks like a temporary overload
+		const errMsg =
+			result.responseData?.error?.message ||
+			`${result.response.status} ${result.response.statusText}`;
+		const isOverloaded =
+			result.response.status === 503 ||
+			errMsg.toLowerCase().includes("overloaded") ||
+			errMsg.toLowerCase().includes("high load") ||
+			errMsg.toLowerCase().includes("currently experiencing") ||
+			errMsg.toLowerCase().includes("unavailable");
+
+		const backupEndpoint = config.backupModelEndpoint;
+		if (
+			isOverloaded &&
+			backupEndpoint &&
+			backupEndpoint !== modelEndpoint
+		) {
+			debugLog(
+				`Primary model overloaded (${result.response.status}). Retrying with backup model: ${config.backupModelId}`,
+			);
+			try {
+				const fallback = await makeApiCallWithRotation(
+					backupEndpoint,
+					requestBody,
+					config,
+				);
+				if (fallback.response.ok) {
+					debugLog("Backup model succeeded.");
+					return { ...fallback, usedBackupModel: true };
+				}
+			} catch (fallbackErr) {
+				debugLog("Backup model also failed:", fallbackErr.message);
+			}
+		}
+
+		// Return original (failed) result so the caller handles the error
+		return result;
 	}
 
 	// Helper function to combine prompts for Gemini
@@ -2924,9 +2983,9 @@ if (typeof browser === "undefined") {
 				});
 			}
 
-			// Make the API call with automatic key rotation
-			const { response, responseData, keyUsed } =
-				await makeApiCallWithRotation(
+			// Make the API call with automatic key rotation + backup-model fallback
+			const { response, responseData, keyUsed, usedBackupModel } =
+				await makeApiCallWithFallback(
 					modelEndpoint,
 					requestBody,
 					currentConfig,
@@ -2937,6 +2996,11 @@ if (typeof browser === "undefined") {
 				debugLog("Gemini API Response:", responseData);
 				if (keyUsed > 0) {
 					debugLog(`Used backup API key ${keyUsed}`);
+				}
+				if (usedBackupModel) {
+					debugLog(
+						`Used backup model: ${currentConfig.backupModelId}`,
+					);
 				}
 			}
 
@@ -3205,9 +3269,9 @@ if (typeof browser === "undefined") {
 				});
 			}
 
-			// Make the API call with automatic key rotation
+			// Make the API call with automatic key rotation + backup-model fallback
 			const { response, responseData, keyUsed } =
-				await makeApiCallWithRotation(
+				await makeApiCallWithFallback(
 					modelEndpoint,
 					requestBody,
 					currentConfig,
@@ -3327,9 +3391,9 @@ if (typeof browser === "undefined") {
 				});
 			}
 
-			// Make the API call with automatic key rotation
+			// Make the API call with automatic key rotation + backup-model fallback
 			const { response, responseData, keyUsed } =
-				await makeApiCallWithRotation(
+				await makeApiCallWithFallback(
 					modelEndpoint,
 					requestBody,
 					currentConfig,

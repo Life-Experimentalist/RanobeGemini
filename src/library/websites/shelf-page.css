@@ -329,6 +329,42 @@ body {
 	color: var(--text-primary);
 }
 
+/* Modal header controls: library button + close button grouped in top-right */
+.modal-header-controls {
+	position: absolute;
+	top: var(--spacing-md);
+	right: var(--spacing-md);
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	z-index: 2;
+}
+
+.modal-header-controls .modal-close {
+	position: static;
+}
+
+.modal-header-library-btn {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border-radius: 50%;
+	font-size: 0.85rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-color);
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.modal-header-library-btn:hover {
+	background: var(--bg-card-hover);
+	color: var(--text-primary);
+}
+
 .settings-modal-content {
 	max-width: 800px;
 	padding: var(--spacing-lg);

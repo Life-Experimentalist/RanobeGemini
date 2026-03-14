@@ -597,10 +597,7 @@ function showNovelModal(novel) {
 	// Set up action buttons
 	const continueBtn = document.getElementById("modal-continue-btn");
 	if (continueBtn) {
-		const lastReadUrl =
-			novel.lastReadChapterUrl ||
-			novel.currentChapterUrl ||
-			novel.sourceUrl;
+		const lastReadUrl = novel.lastReadUrl || novel.sourceUrl;
 		if (lastReadUrl) {
 			continueBtn.href = lastReadUrl;
 			continueBtn.style.display = "inline-flex";
@@ -645,6 +642,30 @@ function showNovelModal(novel) {
 				await removeNovelFromLibrary(novel.id);
 				closeModal();
 			}
+		};
+	}
+
+	// "All Libraries" button — opens main library.html with this novel's detail panel
+	const openLibraryBtn = document.getElementById("modal-open-library-btn");
+	if (openLibraryBtn) {
+		openLibraryBtn.onclick = () => {
+			const libraryUrl = browser.runtime.getURL(
+				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+			);
+			window.open(libraryUrl, "_blank");
+		};
+	}
+
+	// Header library button (top-right of modal) — same as "All Libraries"
+	const openLibraryHeaderBtn = document.getElementById(
+		"modal-open-library-header-btn",
+	);
+	if (openLibraryHeaderBtn) {
+		openLibraryHeaderBtn.onclick = () => {
+			const libraryUrl = browser.runtime.getURL(
+				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+			);
+			window.open(libraryUrl, "_blank");
 		};
 	}
 

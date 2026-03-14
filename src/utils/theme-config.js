@@ -1754,7 +1754,9 @@ export function setThemeVariables(theme) {
 		if (window.__rgOSThemeFn) {
 			try {
 				mq.removeEventListener("change", window.__rgOSThemeFn);
-			} catch (_) {}
+			} catch (_) {
+				// Ignore listener removal failures for older runtimes.
+			}
 			window.__rgOSThemeFn = null;
 		}
 		if (

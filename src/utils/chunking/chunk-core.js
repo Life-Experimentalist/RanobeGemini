@@ -35,18 +35,62 @@ function isHTML(content) {
 }
 
 /**
- * Extract paragraphs from HTML content
- * Respects block-level elements: p, div, h1-h6, li, blockquote
+ * Extract paragraphs from HTML content.
+ * Uses DOMParser as the primary method (accurately handles nested structures)
+ * with a regex fallback for non-browser environments.
+ * Only returns the outermost block elements so that nested blocks (e.g. a
+ * <p> inside a <blockquote>) are not double-counted.
  * @param {string} htmlContent - HTML content to parse
  * @returns {Array<{content: string, wordCount: number}>} Array of paragraph objects
  */
 function extractParagraphs(htmlContent) {
 	if (!htmlContent) return [];
 
-	const paragraphs = [];
+	// ── Primary: DOMParser (browser / extension service-worker context) ───────
+	if (typeof DOMParser !== "undefined") {
+		try {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(
+				`<body>${htmlContent}</body>`,
+				"text/html",
+			);
+			const blockSelector =
+				"p, h1, h2, h3, h4, h5, h6, li, blockquote, pre";
+			const allBlocks = Array.from(
+				doc.body.querySelectorAll(blockSelector),
+			);
 
-	// Match block-level elements and their content
-	// Includes: <p>, <div>, <h1-6>, <li>, <blockquote>, <pre>
+			// Keep only blocks that have no block-element ancestor (avoids
+			// double-counting a <p> that is a child of a matched <blockquote>).
+			const outerBlocks = allBlocks.filter((el) => {
+				let parent = el.parentElement;
+				while (parent && parent !== doc.body) {
+					if (parent.matches(blockSelector)) return false;
+					parent = parent.parentElement;
+				}
+				return true;
+			});
+
+			if (outerBlocks.length > 0) {
+				return outerBlocks
+					.map((block) => ({
+						content: block.outerHTML,
+						wordCount: countWords(block.outerHTML),
+					}))
+					.filter((p) => p.wordCount > 0);
+			}
+		} catch (e) {
+			console.warn(
+				"[ChunkCore] DOMParser extraction failed, falling back to regex:",
+				e,
+			);
+		}
+	}
+
+	// ── Fallback: regex-based extraction ─────────────────────────────────────
+	// NOTE: this regex cannot see through nesting, so a wrapper <div> will
+	// consume all inner <p> tags.  It is kept only as a best-effort fallback.
+	const paragraphs = [];
 	const blockRegex =
 		/<(p|div|h[1-6]|li|blockquote|pre|section|article)\b[^>]*>([\s\S]*?)<\/\1>|<br\s*\/?>/gi;
 
@@ -54,53 +98,32 @@ function extractParagraphs(htmlContent) {
 	let match;
 
 	while ((match = blockRegex.exec(htmlContent)) !== null) {
-		// Capture text before this tag (if any)
 		if (match.index > lastIndex) {
 			const textBefore = htmlContent
 				.substring(lastIndex, match.index)
 				.trim();
-			if (textBefore && textBefore.length > 0) {
+			if (textBefore) {
 				const wordCount = countWords(textBefore);
-				if (wordCount > 0) {
-					paragraphs.push({
-						content: textBefore,
-						wordCount: wordCount,
-					});
-				}
+				if (wordCount > 0)
+					paragraphs.push({ content: textBefore, wordCount });
 			}
 		}
 
-		// Add the matched block element
 		const fullTag = match[0];
-		const tagContent = match[2] || ""; // Content inside the tag (if not <br>)
-
-		if (fullTag.toLowerCase().startsWith("<br")) {
-			// Treat <br> as paragraph separator, don't include it
-			// Already captured surrounding text above
-		} else {
+		if (!fullTag.toLowerCase().startsWith("<br")) {
 			const wordCount = countWords(fullTag);
-			if (wordCount > 0) {
-				paragraphs.push({
-					content: fullTag,
-					wordCount: wordCount,
-				});
-			}
+			if (wordCount > 0) paragraphs.push({ content: fullTag, wordCount });
 		}
 
 		lastIndex = blockRegex.lastIndex;
 	}
 
-	// Capture any remaining text after the last tag
 	if (lastIndex < htmlContent.length) {
 		const textAfter = htmlContent.substring(lastIndex).trim();
-		if (textAfter && textAfter.length > 0) {
+		if (textAfter) {
 			const wordCount = countWords(textAfter);
-			if (wordCount > 0) {
-				paragraphs.push({
-					content: textAfter,
-					wordCount: wordCount,
-				});
-			}
+			if (wordCount > 0)
+				paragraphs.push({ content: textAfter, wordCount });
 		}
 	}
 
@@ -192,11 +215,14 @@ function splitByParagraphs(content, chunkSizeWords) {
 			.slice(i + 1)
 			.reduce((sum, p) => sum + p.wordCount, 0);
 
-		// If adding this paragraph would exceed chunk size AND we have more content
+		// If adding this paragraph would exceed chunk size AND either (a) there
+		// is more content after it, or (b) the paragraph itself is oversized —
+		// in the latter case we must still flush the accumulated content so the
+		// big paragraph can be post-processed into sub-chunks.
 		if (
 			currentWords > 0 &&
 			currentWords + para.wordCount > chunkSizeWords &&
-			remainingWords > 0
+			(remainingWords > 0 || para.wordCount >= chunkSizeWords)
 		) {
 			// Check if remaining content would create balanced last two chunks
 			const totalRemaining = remainingWords + para.wordCount;
@@ -286,7 +312,30 @@ function splitByParagraphs(content, chunkSizeWords) {
 		});
 	}
 
-	return chunks;
+	// Post-process: any chunk that still exceeds the target (e.g. a single
+	// enormous paragraph that can't be split at a block boundary) is split
+	// further using word-based splitting on its plain-text content.
+	const finalChunks = [];
+	for (const chunk of chunks) {
+		if (chunk.wordCount > chunkSizeWords) {
+			const plainText = chunk.content
+				.replace(/<[^>]*>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim();
+			const subChunks = splitPlainTextByWords(plainText, chunkSizeWords);
+			for (const sub of subChunks) {
+				finalChunks.push({
+					index: finalChunks.length,
+					content: sub.content,
+					wordCount: sub.wordCount,
+					paragraphCount: 1,
+				});
+			}
+		} else {
+			finalChunks.push({ ...chunk, index: finalChunks.length });
+		}
+	}
+	return finalChunks;
 }
 
 /**
