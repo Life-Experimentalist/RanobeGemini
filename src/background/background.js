@@ -1028,6 +1028,50 @@ if (typeof browser === "undefined") {
 		return result;
 	}
 
+	// Gemini can return multiple text parts in a single candidate; join all text parts
+	// so we do not accidentally truncate outputs by reading only parts[0].
+	function extractCandidateText(candidate) {
+		const parts = candidate?.content?.parts;
+		if (!Array.isArray(parts) || parts.length === 0) return "";
+
+		return parts
+			.map((part) => (typeof part?.text === "string" ? part.text : ""))
+			.filter((text) => text.trim().length > 0)
+			.join("\n")
+			.trim();
+	}
+
+	// A short summary should be compact, but not a clipped sentence fragment.
+	function isLowQualityShortSummary(summary) {
+		const text = (summary || "").trim();
+		if (!text) return true;
+
+		const wordCount = text.split(/\s+/).filter(Boolean).length;
+		if (wordCount < 45) return true;
+		if (text.length < 180) return true;
+
+		const endsCleanly = /[.!?"')\]]$/.test(text);
+		if (!endsCleanly) return true;
+
+		const sentenceCount =
+			text
+				.split(/[.!?]+/)
+				.map((part) => part.trim())
+				.filter((part) => part.length > 0).length || 0;
+		if (sentenceCount < 2) return true;
+
+		// Detect probable cut-offs ending with a connective word.
+		if (
+			/\b(?:and|or|but|because|when|while|that|which|who|whose|with|to|for|of|in|on|at|from|as|if|than|then|after|before|although|though|so|yet|however|therefore|thus|meanwhile|where|whereas|since)\s*[,:;]?$/i.test(
+				text,
+			)
+		) {
+			return true;
+		}
+
+		return false;
+	}
+
 	// Helper function to combine prompts for Gemini
 	function combinePrompts(
 		mainPrompt,
@@ -3104,8 +3148,9 @@ if (typeof browser === "undefined") {
 
 			// Extract the generated text
 			if (responseData.candidates && responseData.candidates.length > 0) {
-				let generatedText =
-					responseData.candidates[0].content?.parts[0]?.text;
+				let generatedText = extractCandidateText(
+					responseData.candidates[0],
+				);
 
 				// Capture conversation history for future chunks
 				const updatedConversationHistory = [...requestContents];
@@ -3292,8 +3337,116 @@ if (typeof browser === "undefined") {
 			}
 
 			if (responseData.candidates && responseData.candidates.length > 0) {
-				const generatedSummary =
-					responseData.candidates[0].content?.parts[0]?.text;
+				let generatedSummary = extractCandidateText(
+					responseData.candidates[0],
+				);
+
+				// If short summary looks clipped or too tiny, retry once with explicit constraints.
+				if (isShort && isLowQualityShortSummary(generatedSummary)) {
+					debugLog(
+						"Short summary looks incomplete; retrying once with explicit completion guidance.",
+					);
+					const retryPrompt = `${summarizationBasePrompt}\n\nImportant: Return a complete short summary in 2-4 full paragraphs. Do not stop mid-sentence.`;
+					const retryRequestBody = {
+						system_instruction: {
+							parts: [{ text: retryPrompt }],
+						},
+						contents: [
+							{
+								role: "user",
+								parts: [
+									{
+										text: `Title: ${title}\n\nContent:\n${content}`,
+									},
+								],
+							},
+						],
+						generationConfig: {
+							temperature: currentConfig.temperature || 0.7,
+							maxOutputTokens:
+								currentConfig.maxOutputTokens || 8192,
+							topP:
+								currentConfig.topP !== undefined
+									? currentConfig.topP
+									: 0.95,
+							topK:
+								currentConfig.topK !== undefined
+									? currentConfig.topK
+									: 40,
+						},
+					};
+
+					const retryResult = await makeApiCallWithFallback(
+						modelEndpoint,
+						retryRequestBody,
+						currentConfig,
+					);
+					if (
+						retryResult?.response?.ok &&
+						retryResult?.responseData?.candidates?.length > 0
+					) {
+						const retrySummary = extractCandidateText(
+							retryResult.responseData.candidates[0],
+						);
+						generatedSummary = retrySummary || generatedSummary;
+					}
+				}
+
+				// Second pass: if still clipped, ask for a concise complete rewrite with stricter guardrails.
+				if (isShort && isLowQualityShortSummary(generatedSummary)) {
+					debugLog(
+						"Short summary still low quality; running strict completion fallback.",
+					);
+					const strictPrompt = `${summarizationBasePrompt}\n\nCritical output rules for short summary:\n1) Write 2-4 complete paragraphs.\n2) Minimum 4 full sentences total.\n3) End on a full sentence.\n4) Do not trail off or end with connector words.`;
+					const strictRequestBody = {
+						system_instruction: {
+							parts: [{ text: strictPrompt }],
+						},
+						contents: [
+							{
+								role: "user",
+								parts: [
+									{
+										text: `Title: ${title}\n\nContent:\n${content}`,
+									},
+								],
+							},
+						],
+						generationConfig: {
+							temperature: 0.4,
+							maxOutputTokens: Math.min(
+								currentConfig.maxOutputTokens || 8192,
+								1024,
+							),
+							topP:
+								currentConfig.topP !== undefined
+									? currentConfig.topP
+									: 0.95,
+							topK:
+								currentConfig.topK !== undefined
+									? currentConfig.topK
+									: 40,
+						},
+					};
+
+					const strictResult = await makeApiCallWithFallback(
+						modelEndpoint,
+						strictRequestBody,
+						currentConfig,
+					);
+					if (
+						strictResult?.response?.ok &&
+						strictResult?.responseData?.candidates?.length > 0
+					) {
+						const strictSummary = extractCandidateText(
+							strictResult.responseData.candidates[0],
+						);
+						if (!isLowQualityShortSummary(strictSummary)) {
+							generatedSummary = strictSummary;
+						}
+					}
+				}
+
 				if (generatedSummary) {
 					return generatedSummary;
 				}
@@ -3414,8 +3567,9 @@ if (typeof browser === "undefined") {
 			}
 
 			if (responseData.candidates && responseData.candidates.length > 0) {
-				const combinedSummary =
-					responseData.candidates[0].content?.parts[0]?.text;
+				const combinedSummary = extractCandidateText(
+					responseData.candidates[0],
+				);
 				if (combinedSummary) {
 					return combinedSummary;
 				}

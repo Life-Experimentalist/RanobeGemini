@@ -154,6 +154,75 @@ async function initializePopup() {
 	);
 	const debugModeCheckbox = document.getElementById("debugMode");
 
+	// Incognito mode elements
+	const incognitoEnabledCheckbox =
+		document.getElementById("incognitoEnabled");
+	const incognitoDurationSelect =
+		document.getElementById("incognitoDuration");
+	const incognitoStatusBar = document.getElementById("incognito-status-bar");
+	const incognitoStatusText = document.getElementById(
+		"incognito-status-text",
+	);
+	const incognitoDurationRow = document.getElementById(
+		"incognito-duration-row",
+	);
+
+	/** Render the current incognito UI state */
+	function updateIncognitoUI(mode) {
+		if (!incognitoEnabledCheckbox) return;
+		const active = mode?.enabled === true;
+		const expiresAt = mode?.expiresAt ?? null;
+		const expired = expiresAt && Date.now() >= expiresAt;
+		const reallyActive = active && !expired;
+
+		incognitoEnabledCheckbox.checked = reallyActive;
+		if (incognitoDurationRow) {
+			incognitoDurationRow.style.display = reallyActive ? "" : "none";
+		}
+		if (incognitoStatusBar) {
+			incognitoStatusBar.style.display = reallyActive ? "" : "none";
+		}
+		if (incognitoStatusText && reallyActive) {
+			if (expiresAt && !expired) {
+				const remaining = expiresAt - Date.now();
+				const hh = Math.floor(remaining / 3600000);
+				const mm = Math.floor((remaining % 3600000) / 60000);
+				const timeStr = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+				incognitoStatusText.textContent = `Active — expires in ${timeStr} (${new Date(expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
+			} else {
+				incognitoStatusText.textContent = "Active indefinitely";
+			}
+		}
+	}
+
+	/** Persist incognito mode to storage */
+	async function saveIncognitoMode(enabled, durationMinutes) {
+		let expiresAt = null;
+		if (enabled && durationMinutes > 0) {
+			expiresAt = Date.now() + durationMinutes * 60 * 1000;
+		}
+		const mode = { enabled, expiresAt };
+		await browser.storage.local.set({ rg_incognito_mode: mode });
+		updateIncognitoUI(mode);
+	}
+
+	if (incognitoEnabledCheckbox) {
+		incognitoEnabledCheckbox.addEventListener("change", async () => {
+			const enabled = incognitoEnabledCheckbox.checked;
+			const minutes = parseInt(incognitoDurationSelect?.value || "0", 10);
+			await saveIncognitoMode(enabled, enabled ? minutes : 0);
+		});
+	}
+
+	if (incognitoDurationSelect) {
+		incognitoDurationSelect.addEventListener("change", async () => {
+			if (incognitoEnabledCheckbox?.checked) {
+				const minutes = parseInt(incognitoDurationSelect.value, 10);
+				await saveIncognitoMode(true, minutes);
+			}
+		});
+	}
+
 	// Expose the debug toggle globally so shared debugLog can read it synchronously in the popup.
 	try {
 		if (typeof window !== "undefined") {
@@ -1444,6 +1513,11 @@ async function initializePopup() {
 			cfAuthorCollapsed.checked =
 				cf.authorNote?.defaultCollapsed !== false;
 		renderCustomTypesList(cf.custom || []);
+
+		// Load incognito mode
+		updateIncognitoUI(
+			data.rg_incognito_mode || { enabled: false, expiresAt: null },
+		);
 
 		// Model endpoint display removed from popup
 	} catch (error) {

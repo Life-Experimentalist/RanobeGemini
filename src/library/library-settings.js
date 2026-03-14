@@ -810,6 +810,12 @@ async function loadLibrarySettings_() {
 				: 7;
 	}
 
+	const hideGeminiUiReadAloudTog = $("hide-gemini-ui-readaloud-toggle");
+	if (hideGeminiUiReadAloudTog) {
+		hideGeminiUiReadAloudTog.checked =
+			librarySettings.hideGeminiUiFromReadAloud !== false;
+	}
+
 	// Periodic chapter check
 	try {
 		const ucResult = await browser.storage.local.get([
@@ -2690,6 +2696,17 @@ function setupEventListeners() {
 		autoHoldDays.addEventListener("change", async (e) => {
 			const days = parseInt(e.target.value, 10) || 7;
 			const next = { ...librarySettings, autoHoldDays: days };
+			librarySettings = await novelLibrary.saveSettings(next);
+		});
+	}
+
+	const hideGeminiUiReadAloudTog = $("hide-gemini-ui-readaloud-toggle");
+	if (hideGeminiUiReadAloudTog) {
+		hideGeminiUiReadAloudTog.addEventListener("change", async (e) => {
+			const next = {
+				...librarySettings,
+				hideGeminiUiFromReadAloud: e.target.checked,
+			};
 			librarySettings = await novelLibrary.saveSettings(next);
 		});
 	}

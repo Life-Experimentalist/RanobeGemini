@@ -715,6 +715,21 @@
 							<input type="number" id="auto-hold-days" class="ls-input" min="1" max="90" step="1"
 								value="7" style="width:90px;" />
 						</div>
+
+						<div class="ls-form-group" style="margin-top: 14px;">
+							<div class="ls-toggle-row">
+								<div class="ls-toggle-row-label">
+									<span class="ls-label">Hide Gemini UI from Read Aloud / TTS</span>
+									<span class="ls-hint">Keeps Gemini control banners visible, but marked aria-hidden
+										for readers. During click/focus interaction, aria-hidden is temporarily lifted
+										to avoid browser focus warnings.</span>
+								</div>
+								<label class="ls-toggle">
+									<input type="checkbox" id="hide-gemini-ui-readaloud-toggle" />
+									<span class="ls-toggle-track"></span>
+								</label>
+							</div>
+						</div>
 					</div>
 
 					<!-- Periodic Chapter Check -->

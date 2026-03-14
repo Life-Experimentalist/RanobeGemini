@@ -549,7 +549,115 @@ const elements = {
 	pwaModalCancelBtn: document.getElementById("pwa-modal-cancel-btn"),
 	pwaModalStatus: document.getElementById("pwa-modal-status"),
 	pwaModalInstalledNote: document.getElementById("pwa-modal-installed-note"),
+
+	// Incognito Mode
+	incognitoBtn: document.getElementById("incognito-btn"),
+	incognitoActiveDot: document.getElementById("incognito-active-dot"),
+	incognitoBanner: document.getElementById("incognito-banner"),
+	incognitoBannerDetail: document.getElementById("incognito-banner-detail"),
+	incognitoLibraryDuration: document.getElementById(
+		"incognito-library-duration",
+	),
+	incognitoOffBtn: document.getElementById("incognito-off-btn"),
 };
+
+// ─── Incognito Mode ───────────────────────────────────────────────────────────
+
+let currentIncognitoMode = { enabled: false, expiresAt: null };
+
+function isIncognitoActive() {
+	if (!currentIncognitoMode.enabled) return false;
+	if (
+		currentIncognitoMode.expiresAt &&
+		Date.now() >= currentIncognitoMode.expiresAt
+	) {
+		// Timer expired — auto-disable
+		currentIncognitoMode = { enabled: false, expiresAt: null };
+		browser.storage.local
+			.set({ rg_incognito_mode: currentIncognitoMode })
+			.catch(() => {});
+		return false;
+	}
+	return true;
+}
+
+function updateIncognitoLibraryUI() {
+	const active = isIncognitoActive();
+
+	// Header button dot indicator
+	if (elements.incognitoActiveDot) {
+		elements.incognitoActiveDot.style.display = active ? "" : "none";
+	}
+	if (elements.incognitoBtn) {
+		elements.incognitoBtn.title = active
+			? "Incognito Mode ON — click to manage or turn off"
+			: "Incognito Mode — pause library tracking";
+		elements.incognitoBtn.style.background = active
+			? "rgba(255,112,67,0.18)"
+			: "";
+		elements.incognitoBtn.style.borderColor = active ? "#ff7043" : "";
+	}
+
+	// Banner
+	if (elements.incognitoBanner) {
+		elements.incognitoBanner.classList.toggle("hidden", !active);
+	}
+	if (elements.incognitoBannerDetail && active) {
+		const expiresAt = currentIncognitoMode.expiresAt;
+		if (expiresAt) {
+			const remaining = expiresAt - Date.now();
+			const hh = Math.floor(remaining / 3600000);
+			const mm = Math.floor((remaining % 3600000) / 60000);
+			const timeStr = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+			const timeLabel = new Date(expiresAt).toLocaleTimeString([], {
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+			elements.incognitoBannerDetail.textContent = `Library tracking paused — expires in ${timeStr} (at ${timeLabel})`;
+			// Update the duration select to match stored value
+			if (elements.incognitoLibraryDuration) {
+				const stored = elements.incognitoLibraryDuration.value;
+				if (!stored || stored === "0") {
+					// Try to pick closest duration
+					const totalMin = Math.round(remaining / 60000);
+					const opts = [60, 240, 480, 1440];
+					const closest = opts.reduce((a, b) =>
+						Math.abs(b - totalMin) < Math.abs(a - totalMin) ? b : a,
+					);
+					elements.incognitoLibraryDuration.value = String(closest);
+				}
+			}
+		} else {
+			elements.incognitoBannerDetail.textContent =
+				"Library tracking paused indefinitely.";
+		}
+	}
+}
+
+async function setIncognitoMode(enabled, durationMinutes) {
+	let expiresAt = null;
+	if (enabled && durationMinutes > 0) {
+		expiresAt = Date.now() + durationMinutes * 60 * 1000;
+	}
+	currentIncognitoMode = { enabled, expiresAt };
+	await browser.storage.local.set({
+		rg_incognito_mode: currentIncognitoMode,
+	});
+	updateIncognitoLibraryUI();
+}
+
+async function loadIncognitoMode() {
+	try {
+		const result = await browser.storage.local.get("rg_incognito_mode");
+		currentIncognitoMode = result.rg_incognito_mode || {
+			enabled: false,
+			expiresAt: null,
+		};
+		updateIncognitoLibraryUI();
+	} catch (_err) {
+		// ignore
+	}
+}
 
 async function applyLibraryTheme() {
 	try {
@@ -1059,6 +1167,7 @@ async function init() {
 	await loadLibraryDisplaySettings();
 	await loadLibraryAdvancedSettings();
 	setupEventListeners();
+	await loadIncognitoMode();
 	await updateDriveUI();
 	// Set up storage change listener for auto-updates
 	setupStorageListener();
@@ -1287,6 +1396,15 @@ function setupStorageListener() {
 			debugLog("🔐 API Keys changed, reloading settings...");
 			loadLibraryModelSettings();
 			loadLibraryAdvancedSettings();
+		}
+
+		// Sync incognito mode if changed from popup or another tab
+		if (changes.rg_incognito_mode) {
+			currentIncognitoMode = changes.rg_incognito_mode.newValue || {
+				enabled: false,
+				expiresAt: null,
+			};
+			updateIncognitoLibraryUI();
 		}
 	});
 }
@@ -2633,6 +2751,44 @@ function setupEventListeners() {
 			browser.tabs.create({ url: settingsUrl });
 		}
 	});
+
+	// Incognito Mode — header button toggles the banner; on/off is via banner controls
+	if (elements.incognitoBtn) {
+		elements.incognitoBtn.addEventListener("click", async () => {
+			if (isIncognitoActive()) {
+				// Already active — banner is visible; clicking header btn is a shortcut to turn off
+				await setIncognitoMode(false, 0);
+			} else {
+				// Turn on with selected duration (default: indefinite)
+				const minutes = parseInt(
+					elements.incognitoLibraryDuration?.value || "0",
+					10,
+				);
+				await setIncognitoMode(true, minutes);
+			}
+		});
+	}
+
+	if (elements.incognitoOffBtn) {
+		elements.incognitoOffBtn.addEventListener("click", async () => {
+			await setIncognitoMode(false, 0);
+		});
+	}
+
+	if (elements.incognitoLibraryDuration) {
+		elements.incognitoLibraryDuration.addEventListener(
+			"change",
+			async () => {
+				if (isIncognitoActive()) {
+					const minutes = parseInt(
+						elements.incognitoLibraryDuration.value,
+						10,
+					);
+					await setIncognitoMode(true, minutes);
+				}
+			},
+		);
+	}
 
 	// Popup button — visible only in standalone mode
 	if (elements.openPopupBtn) {

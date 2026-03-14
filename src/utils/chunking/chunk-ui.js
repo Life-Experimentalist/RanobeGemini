@@ -106,8 +106,6 @@ export function createChunkBanner(
 	banner.className = `gemini-chunk-banner chunk-banner-${chunkIndex}`;
 	banner.setAttribute("data-chunk-index", chunkIndex);
 	banner.setAttribute("data-chunk-status", status);
-	// Hide from screen readers / Read Aloud — these are UI controls, not content
-	banner.setAttribute("aria-hidden", "true");
 
 	// Determine if showing cache status
 	const isFromCache = cacheInfo?.fromCache === true || status === "cached";
@@ -737,7 +735,6 @@ export function createMasterBanner(
 
 	const banner = document.createElement("div");
 	banner.className = "gemini-master-banner";
-	banner.setAttribute("aria-hidden", "true");
 	banner.style.cssText = `
 		padding: 16px 20px;
 		background: ${colors.surface};

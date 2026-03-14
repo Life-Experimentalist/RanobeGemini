@@ -175,14 +175,14 @@ When enhancing, improve readability while fully respecting the author's creative
 			}
 
 			// Get stored domain preference
-			let preference = "www"; // Default to www
+			let preference = "auto"; // Default to device-based routing
 			let preferredTld = "net"; // Default to .net
 			try {
 				const result =
 					await browser.storage.local.get(SITE_SETTINGS_KEY);
 				const settings = result?.[SITE_SETTINGS_KEY] || {};
 				const fanfictionSettings = settings?.fanfiction || {};
-				preference = fanfictionSettings.domainPreference || "www";
+				preference = fanfictionSettings.domainPreference || "auto";
 				preferredTld = fanfictionSettings.preferredTld
 					? fanfictionSettings.preferredTld
 					: fanfictionSettings.convertWsToNet === false
@@ -778,8 +778,26 @@ When enhancing, improve readability while fully respecting the author's creative
 			if (charactersMeta) {
 				const charsText = charactersMeta.textContent?.trim() || "";
 				// Remove "Characters:" prefix if present
-				cleanChars = charsText.replace(/^Characters:\s*/i, "").trim();
+				let cleanChars = charsText
+					.replace(/^Characters:\s*/i, "")
+					.trim();
 				if (cleanChars) {
+					const isDateLikeToken = (value) => {
+						const token = String(value || "").trim();
+						if (!token) return true;
+						if (/^(?:published|updated)$/i.test(token)) return true;
+						if (/^(?:19|20)\d{2}$/.test(token)) return true;
+						if (/^(?:[01]?\d|2\d|3[01])$/.test(token)) return true;
+						if (
+							/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)(?:uary|ch|il|e|y|ust|tember|ober|ember)?\.?$/i.test(
+								token,
+							)
+						) {
+							return true;
+						}
+						return false;
+					};
+
 					const allCharacters = new Set();
 					const relationships = [];
 
@@ -793,7 +811,9 @@ When enhancing, improve readability while fully respecting the author's creative
 							const charsInBracket = insideBracket
 								.split(",")
 								.map((c) => c.trim())
-								.filter((c) => c.length > 0)
+								.filter(
+									(c) => c.length > 0 && !isDateLikeToken(c),
+								)
 								.slice(0, 4);
 
 							// Store relationship group (with 2+ characters)
@@ -813,7 +833,12 @@ When enhancing, improve readability while fully respecting the author's creative
 					const remainingChars = cleanChars
 						.split(",")
 						.map((c) => c.trim())
-						.filter((c) => c.length > 0 && c !== "-");
+						.filter(
+							(c) =>
+								c.length > 0 &&
+								c !== "-" &&
+								!isDateLikeToken(c),
+						);
 
 					remainingChars.forEach((c) => {
 						if (c) allCharacters.add(c);
@@ -1802,9 +1827,10 @@ When enhancing, improve readability while fully respecting the author's creative
 			domainPreference: {
 				label: "Preferred Domain",
 				type: "select",
-				options: ["www", "m"],
-				default: "www",
-				description: "Use desktop (www) or mobile (m) version",
+				options: ["auto", "www", "m"],
+				default: "auto",
+				description:
+					"Auto chooses by device width/user-agent, or force desktop (www) / mobile (m).",
 			},
 			preferredTld: {
 				label: "Preferred TLD",

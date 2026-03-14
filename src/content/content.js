@@ -82,6 +82,142 @@ if (window.__RGInitDone) {
 	};
 	let chunkBehaviorConfig = { ...chunkBehaviorDefaults };
 
+	const libraryUiA11yDefaults = {
+		hideGeminiUiFromReadAloud: true,
+	};
+	let libraryUiA11yConfig = { ...libraryUiA11yDefaults };
+
+	// Incognito mode — when active, automatic library add/update/progress are suppressed
+	let incognitoMode = { enabled: false, expiresAt: null };
+
+	// eslint-disable-next-line no-inner-declarations
+	function isIncognitoActive() {
+		if (!incognitoMode.enabled) return false;
+		if (incognitoMode.expiresAt && Date.now() >= incognitoMode.expiresAt) {
+			// Timer has expired — auto-disable and persist
+			incognitoMode = { enabled: false, expiresAt: null };
+			browser.storage.local
+				.set({ rg_incognito_mode: incognitoMode })
+				.catch(() => {});
+			return false;
+		}
+		return true;
+	}
+	let readAloudUiObserver = null;
+	const READ_ALOUD_UI_SELECTOR =
+		".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-enhanced-banner";
+
+	// eslint-disable-next-line no-inner-declarations
+	function releaseAriaHiddenForInteraction(container) {
+		if (!container) return;
+		container.removeAttribute("aria-hidden");
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	function restoreAriaHiddenAfterInteraction(container) {
+		if (!container || !libraryUiA11yConfig.hideGeminiUiFromReadAloud) {
+			return;
+		}
+		if (!container.contains(document.activeElement)) {
+			container.setAttribute("aria-hidden", "true");
+		}
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	function applyReadAloudHidingToElement(container) {
+		if (!container || !(container instanceof HTMLElement)) return;
+
+		if (!libraryUiA11yConfig.hideGeminiUiFromReadAloud) {
+			container.removeAttribute("aria-hidden");
+			return;
+		}
+
+		container.setAttribute("aria-hidden", "true");
+
+		if (container.dataset.rgReadAloudBound === "1") {
+			return;
+		}
+		container.dataset.rgReadAloudBound = "1";
+
+		container.addEventListener(
+			"pointerdown",
+			() => releaseAriaHiddenForInteraction(container),
+			true,
+		);
+		container.addEventListener("focusin", () =>
+			releaseAriaHiddenForInteraction(container),
+		);
+		container.addEventListener("focusout", () => {
+			setTimeout(() => {
+				restoreAriaHiddenAfterInteraction(container);
+			}, 0);
+		});
+		container.addEventListener(
+			"click",
+			() => {
+				setTimeout(() => {
+					restoreAriaHiddenAfterInteraction(container);
+				}, 0);
+			},
+			true,
+		);
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	function applyReadAloudHiding(root = document) {
+		if (!root) return;
+
+		if (
+			root instanceof HTMLElement &&
+			root.matches(READ_ALOUD_UI_SELECTOR)
+		) {
+			applyReadAloudHidingToElement(root);
+		}
+
+		if (typeof root.querySelectorAll !== "function") return;
+		root.querySelectorAll(READ_ALOUD_UI_SELECTOR).forEach((el) => {
+			applyReadAloudHidingToElement(el);
+		});
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	async function loadReadAloudUiSetting() {
+		try {
+			const result = await browser.storage.local.get(
+				"rg_library_settings",
+			);
+			const settingValue =
+				result?.rg_library_settings?.hideGeminiUiFromReadAloud;
+			libraryUiA11yConfig.hideGeminiUiFromReadAloud =
+				settingValue !== false;
+		} catch (_err) {
+			libraryUiA11yConfig.hideGeminiUiFromReadAloud = true;
+		}
+
+		applyReadAloudHiding(document);
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	function initReadAloudUiObserver() {
+		if (readAloudUiObserver || !document.documentElement) return;
+
+		readAloudUiObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					if (!(node instanceof HTMLElement)) continue;
+					applyReadAloudHiding(node);
+				}
+			}
+		});
+
+		readAloudUiObserver.observe(document.documentElement, {
+			childList: true,
+			subtree: true,
+		});
+
+		applyReadAloudHiding(document);
+	}
+
 	// Load shared constants for keep-alive tuning and banner durations when available
 	(async () => {
 		try {
@@ -150,7 +286,7 @@ if (window.__RGInitDone) {
 
 	try {
 		browser.storage.local
-			.get("debugMode")
+			.get(["debugMode", "rg_library_settings", "rg_incognito_mode"])
 			.then((data) => {
 				// Only apply if debugMode is explicitly set in storage
 				if (data.debugMode !== undefined) {
@@ -159,11 +295,41 @@ if (window.__RGInitDone) {
 					// Set default value in storage
 					browser.storage.local.set({ debugMode: true });
 				}
+
+				const uiA11ySetting =
+					data?.rg_library_settings?.hideGeminiUiFromReadAloud;
+				libraryUiA11yConfig.hideGeminiUiFromReadAloud =
+					uiA11ySetting !== false;
+				applyReadAloudHiding(document);
+
+				// Load incognito mode
+				if (data.rg_incognito_mode) {
+					incognitoMode = data.rg_incognito_mode;
+				}
 			})
 			.catch(() => {});
+		initReadAloudUiObserver();
+		loadReadAloudUiSetting().catch(() => {});
 		browser.storage.onChanged.addListener((changes, area) => {
-			if (area === "local" && changes.debugMode) {
+			if (area !== "local") return;
+
+			if (changes.debugMode) {
 				applyDebugFlag(changes.debugMode.newValue);
+			}
+
+			if (changes.rg_library_settings) {
+				const next =
+					changes.rg_library_settings.newValue
+						?.hideGeminiUiFromReadAloud;
+				libraryUiA11yConfig.hideGeminiUiFromReadAloud = next !== false;
+				applyReadAloudHiding(document);
+			}
+
+			if (changes.rg_incognito_mode) {
+				incognitoMode = changes.rg_incognito_mode.newValue || {
+					enabled: false,
+					expiresAt: null,
+				};
 			}
 		});
 	} catch (_err) {
@@ -785,7 +951,6 @@ if (window.__RGInitDone) {
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-enhanced-banner";
-		banner.setAttribute("aria-hidden", "true");
 
 		// Base styling
 		let bannerBg = "#f7f7f7";
@@ -2758,7 +2923,6 @@ if (window.__RGInitDone) {
 
 		const banner = document.createElement("div");
 		banner.className = "gemini-wip-banner";
-		banner.setAttribute("aria-hidden", "true");
 		banner.style.cssText = `
 			background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
 			border: 1px solid #475569;
@@ -3939,6 +4103,14 @@ if (window.__RGInitDone) {
 		if (!currentHandler || !currentHandler.isChapterPage?.()) {
 			debugLog(
 				"Skipping library add: Not a chapter page or no valid handler",
+			);
+			return;
+		}
+
+		// Incognito mode — no automatic library registration
+		if (isIncognitoActive()) {
+			debugLog(
+				"📖 Incognito mode active — skipping automatic library registration",
 			);
 			return;
 		}
@@ -5406,6 +5578,14 @@ if (window.__RGInitDone) {
 	async function autoUpdateNovelOnVisit() {
 		if (!currentHandler) return;
 
+		// Incognito mode — suppress all automatic tracking
+		if (isIncognitoActive()) {
+			debugLog(
+				"🕵️ Incognito mode active — skipping autoUpdateNovelOnVisit",
+			);
+			return;
+		}
+
 		// Load novel library if not already loaded
 		if (!novelLibrary) {
 			await loadNovelLibrary();
@@ -6445,7 +6625,26 @@ if (window.__RGInitDone) {
 			existingNovel ? "🔄" : "➕",
 			existingNovel ? "#00695c" : "#1976d2",
 			async () => {
-				await handleNovelAddUpdate();
+				if (existingNovel) {
+					// Same behaviour as "Update Now" in the notification banner:
+					// detect changes, show summary, then persist.
+					const currentMeta =
+						currentHandler?.extractNovelMetadata?.() || {};
+					await manuallyCheckAndUpdateNovel(
+						existingNovel,
+						currentMeta,
+					);
+					// Refresh UI so badges/counts reflect saved state
+					const controls =
+						document.getElementById("rg-novel-controls");
+					if (controls) {
+						controls.remove();
+						hasExtractButton = false;
+						await injectNovelPageUI();
+					}
+				} else {
+					await handleNovelAddUpdate();
+				}
 			},
 		);
 		buttonRow.appendChild(addUpdateBtn);
@@ -6753,6 +6952,14 @@ if (window.__RGInitDone) {
 	 */
 	async function updateChapterProgression() {
 		if (!novelLibrary || !currentHandler) return;
+
+		// Incognito mode — skip automatic progress tracking
+		if (isIncognitoActive()) {
+			debugLog(
+				"🕵️ Incognito mode active — skipping updateChapterProgression",
+			);
+			return;
+		}
 
 		const novelId = getNovelIdFromCurrentPage();
 		if (!novelId) return;
@@ -7317,8 +7524,18 @@ if (window.__RGInitDone) {
 				existingNovel ? "🔄" : "➕",
 				existingNovel ? "#00695c" : "#1976d2",
 				async () => {
-					await handleNovelAddUpdate();
-					// Refresh: also strip the DT/DD wrapper to prevent orphaned shells.
+					if (existingNovel) {
+						// Same behaviour as "Update Now" in the notification banner
+						const currentMeta =
+							currentHandler?.extractNovelMetadata?.() || {};
+						await manuallyCheckAndUpdateNovel(
+							existingNovel,
+							currentMeta,
+						);
+					} else {
+						await handleNovelAddUpdate();
+					}
+					// Refresh controls
 					removeChapterNovelControlsFromDOM();
 					const newControls =
 						await createChapterPageNovelControls(controlsConfig);
@@ -7462,6 +7679,30 @@ if (window.__RGInitDone) {
 				},
 			);
 			controlsContainer.appendChild(libraryBtn);
+
+			// Incognito mode badge — shown when incognito is active
+			if (isIncognitoActive()) {
+				const incogBadge = document.createElement("span");
+				const expiresAt = incognitoMode.expiresAt;
+				const timeLabel = expiresAt
+					? ` until ${new Date(expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+					: " (indefinite)";
+				incogBadge.innerHTML = `🕵️ Incognito${timeLabel}`;
+				incogBadge.title =
+					"Incognito mode is active — library tracking is paused";
+				incogBadge.style.cssText = `
+					padding: 4px 8px;
+					background: #37474f;
+					color: #b0bec5;
+					border-radius: 4px;
+					font-size: 11px;
+					font-weight: 600;
+					white-space: nowrap;
+					flex: 0 0 auto;
+					border: 1px solid #546e7a;
+				`;
+				controlsContainer.appendChild(incogBadge);
+			}
 
 			// Add toggle banners button (except for dedicated_page handler types)
 			// which don't need to hide/show enhancement banners

@@ -37,6 +37,13 @@
 							<input type="text" id="search-input" placeholder="Search novels..." />
 							<span class="search-icon">🔍</span>
 						</div> -->
+						<!-- Incognito mode toggle -->
+						<button class="btn btn-icon" id="incognito-btn" title="Incognito Mode — pause library tracking"
+							style="position:relative; font-size:16px;">
+							🕵️
+							<span id="incognito-active-dot"
+								style="display:none; position:absolute; top:2px; right:2px; width:8px; height:8px; background:#ff7043; border-radius:50%; border:1px solid var(--bg-primary);"></span>
+						</button>
 						<button class="btn btn-icon" id="refresh-btn" title="Refresh Library">
 							🔄
 						</button>
@@ -59,6 +66,33 @@
 					</div>
 				</div>
 			</header>
+
+			<!-- Incognito Mode Banner -->
+			<div id="incognito-banner" class="hidden"
+				style="margin:12px 16px 0; padding:10px 16px; border:1px solid #546e7a; border-radius:8px; background:#263238; color:#b0bec5; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+				<div style="display:flex; gap:10px; align-items:center;">
+					<span style="font-size:18px;">🕵️</span>
+					<div>
+						<strong style="font-size:13px; color:#eceff1;">Incognito Mode Active</strong>
+						<div id="incognito-banner-detail" style="font-size:11px; margin-top:2px;">Library tracking is
+							paused.</div>
+					</div>
+				</div>
+				<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+					<select id="incognito-library-duration"
+						style="font-size:11px; padding:4px 8px; background:#37474f; color:#eceff1; border:1px solid #546e7a; border-radius:4px; cursor:pointer;">
+						<option value="0">Indefinite</option>
+						<option value="60">1 hour</option>
+						<option value="240">4 hours</option>
+						<option value="480">8 hours</option>
+						<option value="1440">24 hours</option>
+					</select>
+					<button id="incognito-off-btn"
+						style="font-size:11px; padding:5px 12px; background:#c62828; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+						Turn Off
+					</button>
+				</div>
+			</div>
 
 			<!-- Telemetry Opt-out Banner -->
 			<div id="telemetry-banner" class="hidden" style="
@@ -270,7 +304,8 @@
 				<div class="modal-backdrop"></div>
 				<div class="modal-content">
 					<div class="modal-corner-nav">
-						<button class="btn modal-corner-btn" id="modal-site-shelf-corner-btn" title="View in site shelf" style="display:none;">📖</button>
+						<button class="btn modal-corner-btn" id="modal-site-shelf-corner-btn" title="View in site shelf"
+							style="display:none;">📖</button>
 						<button class="modal-close" id="modal-close">
 							&times;
 						</button>

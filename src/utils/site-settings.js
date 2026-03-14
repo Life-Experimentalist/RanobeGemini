@@ -19,7 +19,7 @@ function buildDefaultSiteSettings() {
 		fanfiction: {
 			redirectToWww: true,
 			redirectToMobile: false,
-			domainPreference: "www",
+			domainPreference: "auto",
 			preferredTld: "net",
 			convertWsToNet: true, // Backward compatibility for older settings
 			enhancementDisplayMode: "button", // "button" or "direct"

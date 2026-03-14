@@ -131,6 +131,7 @@ export class NovelLibrary {
 		const defaults = {
 			autoHoldEnabled: DEFAULT_AUTO_HOLD_ENABLED,
 			autoHoldDays: DEFAULT_AUTO_HOLD_DAYS,
+			hideGeminiUiFromReadAloud: true,
 			statusConfig: {},
 			customStatuses: [],
 			stateMachineRules: [],
