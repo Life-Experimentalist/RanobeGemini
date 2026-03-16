@@ -258,3 +258,257 @@
 		padding: 16px;
 	}
 }
+
+/* ── Setup Timeline (Info cards at top) ──────────────────────────── */
+.setup-timeline {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 20px;
+	margin: 30px 0 40px;
+}
+
+.timeline-item {
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(102, 126, 234, 0.05));
+	border: 1px solid rgba(102, 126, 234, 0.3);
+	border-radius: 12px;
+	padding: 20px;
+	display: flex;
+	gap: 16px;
+	transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+	border-color: rgba(102, 126, 234, 0.6);
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(102, 126, 234, 0.08));
+	transform: translateY(-2px);
+}
+
+.timeline-marker {
+	font-size: 28px;
+	flex-shrink: 0;
+}
+
+.timeline-text strong {
+	display: block;
+	color: var(--text-primary);
+	margin-bottom: 4px;
+	font-size: 15px;
+}
+
+.timeline-text p {
+	margin: 0;
+	font-size: 13px;
+	color: var(--text-secondary);
+	line-height: 1.5;
+}
+
+/* ── Setup Steps (Card-based layout) ──────────────────────────── */
+.setup-steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 16px;
+	margin: 40px 0;
+}
+
+.step-card {
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+	border: 1px solid rgba(102, 126, 234, 0.3);
+	border-radius: 12px;
+	padding: 24px;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+	overflow: hidden;
+}
+
+.step-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: linear-gradient(90deg, #667ee6, #765ce8);
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.step-card:hover {
+	border-color: rgba(102, 126, 234, 0.6);
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+	transform: translateY(-4px);
+	box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.step-card:hover::before {
+	opacity: 1;
+}
+
+.step-card.final-step {
+	background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(76, 175, 80, 0.03));
+	border-color: rgba(76, 175, 80, 0.3);
+}
+
+.step-card.final-step:hover {
+	border-color: rgba(76, 175, 80, 0.6);
+	box-shadow: 0 8px 24px rgba(76, 175, 80, 0.15);
+}
+
+.step-num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: rgba(102, 126, 234, 0.2);
+	border: 2px solid rgba(102, 126, 234, 0.5);
+	color: #818cf8;
+	font-weight: 700;
+	font-size: 18px;
+	margin-bottom: 12px;
+}
+
+.step-card.final-step .step-num {
+	background: rgba(76, 175, 80, 0.2);
+	border-color: rgba(76, 175, 80, 0.5);
+	color: #86efac;
+}
+
+.step-card h4 {
+	margin: 0 0 10px;
+	font-size: 16px;
+	color: var(--text-primary);
+	font-weight: 600;
+}
+
+.step-card p {
+	margin: 0 0 12px;
+	font-size: 14px;
+	color: var(--text-secondary);
+	line-height: 1.6;
+}
+
+.step-card ul {
+	margin: 8px 0 12px;
+	padding-left: 20px;
+	font-size: 14px;
+	color: var(--text-secondary);
+}
+
+.step-card code {
+	background: rgba(255, 255, 255, 0.08);
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 12px;
+	color: #a5b4fc;
+	font-family: 'Courier New', monospace;
+}
+
+.step-tip {
+	background: rgba(250, 204, 21, 0.08);
+	border-left: 3px solid #facc15;
+	padding: 10px 12px;
+	border-radius: 0 6px 6px 0;
+	font-size: 12px;
+	color: #fef08a;
+	margin-top: 12px;
+}
+
+.step-tip.success {
+	background: rgba(76, 175, 80, 0.08);
+	border-left-color: #4caf50;
+	color: #86efac;
+}
+
+/* ── URI Boxes ────────────────────────────────────────────────── */
+.uri-boxes {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.uri-box {
+	background: rgba(0, 0, 0, 0.25);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 12px;
+	display: flex;
+	gap: 10px;
+}
+
+.uri-icon {
+	font-size: 20px;
+	flex-shrink: 0;
+}
+
+.uri-box strong {
+	display: block;
+	color: var(--text-primary);
+	font-size: 12px;
+	margin-bottom: 4px;
+}
+
+.uri-box code {
+	display: block;
+	word-break: break-all;
+	font-size: 11px;
+	color: #a5b4fc;
+	background: none;
+	padding: 0;
+	font-family: 'Courier New', monospace;
+}
+
+/* ── Method Cards ────────────────────────────────────────────── */
+.method-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.method {
+	background: rgba(102, 126, 234, 0.05);
+	border: 1px solid rgba(102, 126, 234, 0.2);
+	border-radius: 8px;
+	padding: 12px;
+}
+
+.method strong {
+	display: block;
+	color: var(--text-primary);
+	font-size: 13px;
+	margin-bottom: 6px;
+}
+
+.method p {
+	margin: 0;
+	font-size: 12px;
+	color: var(--text-secondary);
+	line-height: 1.5;
+}
+
+/* ── Responsive adjustments ──────────────────────────────────────── */
+@media (max-width: 768px) {
+	.setup-timeline {
+		grid-template-columns: 1fr;
+		gap: 12px;
+		margin: 20px 0 30px;
+	}
+
+	.setup-steps {
+		grid-template-columns: 1fr;
+		gap: 12px;
+		margin: 30px 0;
+	}
+
+	.step-card {
+		padding: 16px;
+	}
+
+	.uri-boxes,
+	.method-cards {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+}

@@ -123,228 +123,125 @@
 			<section id="getting-started" class="section">
 				<div class="section-head">
 					<p class="eyebrow">Step-by-step OAuth setup</p>
-					<h2>Getting Your Google OAuth Credentials</h2>
+					<h2>🚀 Quick Setup Guide (5 minutes)</h2>
 					<p class="lede">
-						This guide creates a free OAuth 2.0 client for your personal use. It takes about 5 minutes and
-						requires a Google account.
+						Create a free OAuth 2.0 client for secure, private Google Drive backups. Your data stays completely private — Ranobe Gemini never accesses your credentials or Drive data.
 					</p>
 				</div>
 
-				<div class="setup-notice">
-					<strong>🔒 Why do I need OAuth credentials?</strong>
-					<p>Google requires each user to create their own OAuth client for apps that access Google Drive.
-						This keeps your data completely private — Ranobe Gemini never has access to your credentials or
-						your Drive data. Everything runs locally in your browser.</p>
+				<div class="setup-timeline">
+					<div class="timeline-item">
+						<div class="timeline-marker">⏱️</div>
+						<div class="timeline-text">
+							<strong>Est. Time: 5 minutes</strong>
+							<p>No special tools or payment required. Just a Google account.</p>
+						</div>
+					</div>
+					<div class="timeline-item">
+						<div class="timeline-marker">🔒</div>
+						<div class="timeline-text">
+							<strong>Data Privacy</strong>
+							<p>Your backups stored only in your Google Drive. Zero access from Ranobe Gemini servers.</p>
+						</div>
+					</div>
+					<div class="timeline-item">
+						<div class="timeline-marker">🎯</div>
+						<div class="timeline-text">
+							<strong>One-Time Setup</strong>
+							<p>Configure once, automatic backups forever. No recurring configuration needed.</p>
+						</div>
+					</div>
 				</div>
 
-				<ol class="steps steps-detailed">
+				<div class="setup-steps">
+					<div class="step-card">
+						<div class="step-num">1</div>
+						<h4>Create a Google Cloud Project</h4>
+						<p>Visit <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer">console.cloud.google.com</a> and sign in with your Google account. Click the <strong>project selector</strong> → <strong>New Project</strong> and create a project named <em>"Ranobe Gemini Backup"</em> (or whatever you prefer).</p>
+						<div class="step-tip">💡 This is your personal project — no one else will use it.</div>
+					</div>
 
-					<!-- Step 1 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">1</span>
-							<h3>Open Google Cloud Console</h3>
-						</div>
-						<div class="step-body">
-							<p>Go to <a href="https://console.cloud.google.com/" target="_blank"
-									rel="noreferrer">console.cloud.google.com</a> and sign in with your Google account.
-							</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-01-cloud-console.png"
-									alt="Google Cloud Console home page" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-						</div>
-					</li>
+					<div class="step-card">
+						<div class="step-num">2</div>
+						<h4>Enable Google Drive API</h4>
+						<p>Go to <strong>APIs & Services → Library</strong> and search for <strong>"Google Drive API"</strong>. Click the result and then click <strong>Enable</strong>.</p>
+						<div class="step-tip">⚠️ Make sure you're in the correct project before enabling.</div>
+					</div>
 
-					<!-- Step 2 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">2</span>
-							<h3>Create a New Project</h3>
-						</div>
-						<div class="step-body">
-							<p>Click the project selector at the top of the page, then click <strong>New
-									Project</strong>.</p>
-							<ul>
-								<li>Give it any name you like, e.g. <code>Ranobe Gemini Backup</code></li>
-								<li>Leave "Organisation" as "No organisation" if prompted</li>
-								<li>Click <strong>Create</strong> and wait a moment for it to be ready</li>
-							</ul>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-02-new-project.png"
-									alt="Creating a new Google Cloud project" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-						</div>
-					</li>
+					<div class="step-card">
+						<div class="step-num">3</div>
+						<h4>Set Up OAuth Consent</h4>
+						<p>Navigate to <strong>APIs & Services → OAuth consent screen</strong>. Select <strong>External</strong> as user type. Fill in:</p>
+						<ul style="margin: 8px 0; padding-left: 20px;">
+							<li><strong>App name:</strong> "Ranobe Gemini Backup"</li>
+							<li><strong>User support email:</strong> Your Gmail address</li>
+							<li><strong>Developer email:</strong> Your Gmail address</li>
+						</ul>
+						<p>Click <strong>Save and Continue</strong> through remaining screens (accept defaults).</p>
+						<div class="step-tip">ℹ️ Your app will be in "Testing" mode — perfect for personal use.</div>
+					</div>
 
-					<!-- Step 3 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">3</span>
-							<h3>Enable the Google Drive API</h3>
-						</div>
-						<div class="step-body">
-							<p>With your new project selected, navigate to <strong>APIs & Services → Library</strong>
-								from the left menu. Search for <strong>Google Drive API</strong> and click
-								<strong>Enable</strong>.
-							</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-03-enable-drive-api.png"
-									alt="Enabling the Google Drive API" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-							<p class="step-tip">💡 Make sure you are in the correct project before enabling APIs.</p>
-						</div>
-					</li>
+					<div class="step-card">
+						<div class="step-num">4</div>
+						<h4>Create OAuth Credentials</h4>
+						<p>Go to <strong>APIs & Services → Credentials</strong>. Click <strong>+ Create Credentials → OAuth client ID</strong>. Select:</p>
+						<ul style="margin: 8px 0; padding-left: 20px;">
+							<li><strong>Application type:</strong> Desktop app</li>
+							<li><strong>Name:</strong> "Ranobe Gemini"</li>
+						</ul>
+						<p>Click <strong>Create</strong>. You'll see a dialog with your Client ID and Secret.</p>
+					</div>
 
-					<!-- Step 4 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">4</span>
-							<h3>Configure the OAuth Consent Screen</h3>
-						</div>
-						<div class="step-body">
-							<p>Go to <strong>APIs & Services → OAuth consent screen</strong>. Choose
-								<strong>External</strong> user type and click <strong>Create</strong>.
-							</p>
-							<ul>
-								<li><strong>App name:</strong> anything, e.g. <code>Ranobe Gemini Backup</code></li>
-								<li><strong>User support email:</strong> your Gmail address</li>
-								<li><strong>Developer contact email:</strong> your Gmail address</li>
-							</ul>
-							<p>Click <strong>Save and Continue</strong> through the Scopes, Test users, and Summary
-								pages without changing anything.</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-04-consent-screen.png"
-									alt="Configuring OAuth consent screen" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-							<p class="step-tip">💡 The app will remain in "Testing" mode, which is fine for personal
-								use — it allows up to 100 test users with no Google review needed.</p>
-						</div>
-					</li>
-
-					<!-- Step 5 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">5</span>
-							<h3>Create OAuth Client Credentials</h3>
-						</div>
-						<div class="step-body">
-							<p>Go to <strong>APIs & Services → Credentials</strong>. Click <strong>+ Create
-									Credentials → OAuth client ID</strong>.</p>
-							<ul>
-								<li><strong>Application type:</strong> <code>Desktop app</code></li>
-								<li><strong>Name:</strong> anything, e.g. <code>Ranobe Gemini Desktop</code></li>
-							</ul>
-							<p>Click <strong>Create</strong>. A dialog shows your Client ID and Client Secret — you can
-								dismiss it and download the JSON file instead.</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-05-create-credentials.png"
-									alt="Creating OAuth client ID" loading="lazy" onerror="this.style.display='none'" />
-							</div>
-						</div>
-					</li>
-
-					<!-- Step 6 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">6</span>
-							<h3>Add Authorised Redirect URIs</h3>
-						</div>
-						<div class="step-body">
-							<p>After creating the credentials, click the pencil ✏️ edit icon next to your new OAuth
-								client. Under <strong>Authorised redirect URIs</strong>, add <strong>both</strong> of
-								these URLs for whichever browser you use:</p>
-
-							<div class="uri-block">
-								<p class="uri-label">🌐 Chrome / Edge (Chromium):</p>
-								<code id="chromiumRedirect">Loading…</code>
-							</div>
-							<div class="uri-block" style="margin-top:10px;">
-								<p class="uri-label">🦊 Firefox:</p>
-								<code id="firefoxRedirect">Loading…</code>
-							</div>
-
-							<p style="margin-top:12px;">Click <strong>Save</strong> after adding the URIs. You can add
-								both even if you only use one browser.</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-06-redirect-uris.png"
-									alt="Adding authorised redirect URIs" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-							<p class="step-tip">💡 If you see "Invalid redirect URI" errors during auth, double-check
-								that these URIs are entered exactly as shown.</p>
-						</div>
-					</li>
-
-					<!-- Step 7 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">7</span>
-							<h3>Download the Credentials JSON</h3>
-						</div>
-						<div class="step-body">
-							<p>On the Credentials page, find your OAuth client and click the ⬇️ download icon on the
-								right side of the row. This downloads a file named
-								<code>client_secret_*.json</code>.
-							</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-07-download-json.png"
-									alt="Downloading credentials JSON file" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-							<p class="step-tip">⚠️ Keep this file safe. Anyone with your Client Secret can make requests
-								on your behalf. Do not share it publicly.</p>
-						</div>
-					</li>
-
-					<!-- Step 8 -->
-					<li class="step-item">
-						<div class="step-header">
-							<span class="step-number">8</span>
-							<h3>Enter Credentials in Ranobe Gemini</h3>
-						</div>
-						<div class="step-body">
-							<p>Open the Ranobe Gemini Library → <strong>Settings → Backup → Google Drive Backups →
-									OAuth Setup</strong>. There are two methods:</p>
-
-							<div class="method-block">
-								<h4>📋 Method A — Paste JSON (Recommended)</h4>
-								<p>Open the downloaded <code>client_secret_*.json</code> file in a text editor, copy
-									all the contents, and paste into the <em>Paste credentials JSON</em> box. Click
-									<strong>Parse JSON</strong> then <strong>Save to Storage</strong>.
-								</p>
-								<div class="step-img-wrap">
-									<img src="assets/screenshots/step-08a-paste-json.png"
-										alt="Pasting credentials JSON in extension settings" loading="lazy"
-										onerror="this.style.display='none'" />
+					<div class="step-card">
+						<div class="step-num">5</div>
+						<h4>Add Redirect URIs</h4>
+						<p>Click the ✏️ edit icon next to your OAuth client. Under <strong>Authorised redirect URIs</strong>, add these URLs for your browser:</p>
+						<div class="uri-boxes">
+							<div class="uri-box">
+								<span class="uri-icon">🌐</span>
+								<div>
+									<strong>Chrome / Edge:</strong>
+									<code id="chromiumRedirect">Loading…</code>
 								</div>
 							</div>
-
-							<div class="method-block" style="margin-top:16px;">
-								<h4>✏️ Method B — Manual Entry</h4>
-								<p>Copy the <code>client_id</code> and <code>client_secret</code> values from your JSON
-									file and paste them individually into the <em>Client ID</em> and <em>Client
-										Secret</em> fields. Click <strong>Save Credentials</strong>.</p>
+							<div class="uri-box">
+								<span class="uri-icon">🦊</span>
+								<div>
+									<strong>Firefox:</strong>
+									<code id="firefoxRedirect">Loading…</code>
+								</div>
 							</div>
-
-							<p style="margin-top:16px;">After saving, click <strong>Connect Google Drive</strong> and
-								follow the browser's OAuth popup to authorise access. You will see "🟢 Connected" once
-								complete.</p>
-							<div class="step-img-wrap">
-								<img src="assets/screenshots/step-08b-connect-drive.png"
-									alt="Connecting Google Drive in extension settings" loading="lazy"
-									onerror="this.style.display='none'" />
-							</div>
-							<p class="step-tip">🎉 Done! Your library will now back up to Google Drive automatically
-								whenever it changes.</p>
 						</div>
-					</li>
+						<p style="margin-top: 12px; font-size: 12px;">You can add both even if you only use one browser.</p>
+					</div>
 
-				</ol>
+					<div class="step-card">
+						<div class="step-num">6</div>
+						<h4>Download Your Credentials</h4>
+						<p>On the Credentials page, find your OAuth client. Click the <strong>⬇️ download</strong> icon to save your <code>client_secret_*.json</code> file. Keep this file safe — don't share it publicly.</p>
+						<div class="step-tip">⚠️ This file contains your Client Secret. Treat it like a password.</div>
+					</div>
+
+					<div class="step-card final-step">
+						<div class="step-num">7</div>
+						<h4>Configure Ranobe Gemini</h4>
+						<p>Open Ranobe Gemini → <strong>Library → Settings → Backup → Google Drive Setup</strong>. Choose one of these methods:</p>
+						<div class="method-cards">
+							<div class="method">
+								<strong>✅ Recommended: Paste JSON</strong>
+								<p>Open your <code>client_secret_*.json</code> file, copy all contents, paste into the <em>"Paste credentials JSON"</em> box, and click <strong>Parse JSON → Save to Storage</strong>.</p>
+							</div>
+							<div class="method">
+								<strong>Manual Entry</strong>
+								<p>Copy your Client ID and Client Secret from the JSON file and paste them into the individual fields, then click <strong>Save Credentials</strong>.</p>
+							</div>
+						</div>
+						<p style="margin-top: 16px; font-weight: 600; color: #fff;">
+							Click <strong>Connect Google Drive</strong>, authorize in the popup, and you're done! 🎉
+						</p>
+						<div class="step-tip success">🟢 Look for "Connected" status when complete.</div>
+					</div>
+				</div>
 			</section>
 
 			<section class="section">

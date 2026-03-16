@@ -586,7 +586,7 @@ button.ranobes-gemini-btn:disabled {
 /* Updated game stats box styling */
 .game-stats-box {
 	font-family: 'Courier New', monospace;
-	white-space: pre-wrap;
+	white-space: pre-line;
 	background-color: rgba(35, 35, 35, 0.95);
 	border: 1px solid rgba(100, 100, 100, 0.8);
 	border-radius: 6px;
@@ -733,7 +733,7 @@ html[data-darkreader-mode] .section-divider {
 	padding: 12px 16px;
 	margin: 16px 0;
 	color: #9ecfff;
-	white-space: pre-wrap;
+	white-space: pre-line;
 	font-size: 13.5px;
 	line-height: 1.6;
 	box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
@@ -756,7 +756,7 @@ html[data-darkreader-mode] .section-divider {
 	line-height: 1.85;
 	box-sizing: border-box;
 	width: calc(100% - 10px);
-	white-space: pre-wrap;
+	white-space: pre-line;
 	text-align: left !important;
 }
 
@@ -774,7 +774,7 @@ html[data-darkreader-mode] .section-divider {
 	line-height: 1.6;
 	box-sizing: border-box;
 	width: 100%;
-	white-space: pre-wrap;
+	white-space: pre-line;
 	text-align: left !important;
 }
 

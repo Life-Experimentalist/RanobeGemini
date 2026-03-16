@@ -60,9 +60,23 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     -   Whenever a Mermaid diagram is added or edited, include a short "Diagram elements" list directly under it describing each major node/state.
     -   If docs diverge from implementation, implementation wins and docs must be corrected before finishing.
 
+-   **Key architectural features** (v4.4.0+):
+
+    -   **Reading Lists**: Users can create custom reading lists (`rereading`, `favourites`, `r18`, etc.). Implemented in `src/utils/novel-library.js` with APIs:
+        * `BUILTIN_READING_LISTS` — predefined list definitions
+        * `toggleNovelReadingList(novelId, listId)` — toggle membership
+        * `setNovelReadingLists(novelId, lists)` — batch update
+        * Primary reading status and reading lists are separate concerns
+    -   **Collapsible Sections**: Content boxes for fight scenes, R18 content, author notes (implemented in `src/utils/collapsible-sections.js`)
+        * Gemini renders via `<div class="rg-collapsible-section" data-type="fight|r18|author-note">` 
+        * User-defined custom types supported via settings
+        * Auto-collapsed by default; toggleable by user
+    -   **Content Styles**: Use `white-space: pre-line;` for game stats, system messages, quotes, and skill boxes (updated in `src/content/content.css`)
+
 -   **Quick examples**:
     -   Add a handler: create `src/utils/website-handlers/my-site-handler.js` exporting the same shape as other handlers; run `npm run build` and verify `src/utils/website-handlers/handler-registry.js` includes it.
     -   Update domains: edit handlers, then run `npm run update-domains` (calls `dev/generate-manifest-domains.js`) before packaging.
+    -   Add a new reading list type: Update `BUILTIN_READING_LISTS` in `novel-library.js` and update `landing/novel-status.html` with new badge examples.
 
 If something here is unclear or you need an expanded rule (e.g., handler API shape or background messaging conventions), tell me which area to expand.
 
