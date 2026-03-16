@@ -39,6 +39,85 @@
 
 let deps = null;
 
+function getSummaryReferenceNode() {
+	if (!deps) return document.body;
+
+	const contentArea = deps.findContentArea?.();
+	if (!contentArea) {
+		return document.querySelector(".gemini-chunk-content") || document.body;
+	}
+
+	return (
+		contentArea.querySelector(
+			"#gemini-enhanced-content p, #gemini-enhanced-content div, p, article p, .gemini-chunk-content p, .gemini-chunk-content div, div, span",
+		) || contentArea
+	);
+}
+
+function getSummaryReferenceStyles() {
+	const node = getSummaryReferenceNode();
+	const computed = window.getComputedStyle(node);
+	return {
+		fontFamily: computed.fontFamily || "inherit",
+		fontSize: computed.fontSize || "inherit",
+		fontWeight: computed.fontWeight || "400",
+		lineHeight: computed.lineHeight || "1.7",
+		color: computed.color || "inherit",
+		textAlign:
+			computed.textAlign && computed.textAlign !== "center"
+				? computed.textAlign
+				: "left",
+		letterSpacing: computed.letterSpacing || "normal",
+		wordSpacing: computed.wordSpacing || "normal",
+		paragraphMarginBottom:
+			computed.marginBottom && computed.marginBottom !== "0px"
+				? computed.marginBottom
+				: "1em",
+	};
+}
+
+function splitOversizedTextParts(parts, maxCharsPerPart) {
+	const normalizedParts = [];
+	for (const part of parts) {
+		if (!part || part.length <= maxCharsPerPart) {
+			normalizedParts.push(part);
+			continue;
+		}
+
+		const paragraphs = part
+			.split(/\n{2,}/)
+			.map((segment) => segment.trim())
+			.filter(Boolean);
+
+		if (paragraphs.length <= 1) {
+			for (let index = 0; index < part.length; index += maxCharsPerPart) {
+				normalizedParts.push(
+					part.slice(index, index + maxCharsPerPart).trim(),
+				);
+			}
+			continue;
+		}
+
+		let currentPart = "";
+		for (const paragraph of paragraphs) {
+			const candidate = currentPart
+				? `${currentPart}\n\n${paragraph}`
+				: paragraph;
+			if (candidate.length > maxCharsPerPart && currentPart) {
+				normalizedParts.push(currentPart.trim());
+				currentPart = paragraph;
+			} else {
+				currentPart = candidate;
+			}
+		}
+		if (currentPart.trim()) {
+			normalizedParts.push(currentPart.trim());
+		}
+	}
+
+	return normalizedParts.filter(Boolean);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────
@@ -160,32 +239,56 @@ function renderSummaryInContainer(container, summary, summaryType) {
 
 	const { extractParagraphsFromHtml, stripHtmlTags, getCurrentFontSize } =
 		deps;
+	const referenceStyles = getSummaryReferenceStyles();
 
 	container.style.display = "block";
+	container.style.textAlign = "left";
 	while (container.firstChild) container.removeChild(container.firstChild);
 
 	// Header
 	const header = document.createElement("h4");
 	header.textContent = `${summaryType} Summary:`;
-	header.style.cssText =
-		"margin: 0 0 12px 0; font-size: 14px; font-weight: 600;";
+	header.style.cssText = `
+		margin: 0 0 12px 0;
+		font-size: 0.98em;
+		font-weight: 700;
+		font-family: ${referenceStyles.fontFamily};
+		line-height: 1.4;
+		color: ${referenceStyles.color};
+		text-align: left;
+	`;
 	container.appendChild(header);
 
 	// Content
 	const contentDiv = document.createElement("div");
-	contentDiv.style.cssText = "line-height: 1.6;";
+	contentDiv.style.cssText = `
+		font-family: ${referenceStyles.fontFamily};
+		font-size: ${referenceStyles.fontSize};
+		font-weight: ${referenceStyles.fontWeight};
+		line-height: ${referenceStyles.lineHeight};
+		color: ${referenceStyles.color};
+		text-align: ${referenceStyles.textAlign};
+		letter-spacing: ${referenceStyles.letterSpacing};
+		word-spacing: ${referenceStyles.wordSpacing};
+	`;
 
 	const paragraphs = extractParagraphsFromHtml(summary);
 	if (paragraphs.length > 0) {
 		paragraphs.forEach((text) => {
 			const p = document.createElement("p");
 			p.textContent = text;
-			p.style.marginBottom = "1em";
-			p.style.lineHeight = "1.6";
+			p.style.margin = `0 0 ${referenceStyles.paragraphMarginBottom} 0`;
+			p.style.lineHeight = referenceStyles.lineHeight;
+			p.style.fontFamily = referenceStyles.fontFamily;
+			p.style.fontSize = referenceStyles.fontSize;
+			p.style.fontWeight = referenceStyles.fontWeight;
+			p.style.color = referenceStyles.color;
+			p.style.textAlign = referenceStyles.textAlign;
 			contentDiv.appendChild(p);
 		});
 	} else {
 		contentDiv.textContent = stripHtmlTags(summary);
+		contentDiv.style.whiteSpace = "pre-wrap";
 	}
 
 	const fontSize = getCurrentFontSize();
@@ -240,6 +343,7 @@ async function summariseLargeContent(
 		const chunks = chunking.core.splitContentByWords(content, wordsPerPart);
 		parts = chunks.map((c) => c.content);
 	}
+	parts = splitOversizedTextParts(parts, charsPerPart);
 
 	debugLog(
 		`Split into ${parts.length} parts for ${summaryType} summarisation`,
@@ -281,14 +385,10 @@ async function summariseLargeContent(
 	try {
 		if (statusDiv) statusDiv.textContent = "Combining part summaries…";
 
-		const combined = partSummaries
-			.map((s, i) => `Part ${i + 1} summary:\n${s}`)
-			.join("\n\n");
-
 		const finalResp = await sendMessageWithRetry({
 			action: "combinePartialSummaries",
 			title,
-			partSummaries: combined,
+			partSummaries,
 			partCount: parts.length,
 			isShort,
 		});

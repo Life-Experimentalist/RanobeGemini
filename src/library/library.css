@@ -3390,13 +3390,13 @@ html.sidebar-mode .novel-detail-cover {
 		flex-shrink: 0;
 	}
 
-	/* View toggle: horizontally scrollable on very small screens */
+	/* View toggle: wrapped chips instead of awkward horizontal scrolling */
 	.view-toggle {
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-		scrollbar-width: none;
-		justify-content: flex-start;
-		padding-bottom: 4px;
+		overflow-x: visible;
+		justify-content: stretch;
+		padding-bottom: 0;
+		flex-wrap: wrap;
+		width: 100%;
 	}
 
 	.view-toggle::-webkit-scrollbar {
@@ -3404,8 +3404,20 @@ html.sidebar-mode .novel-detail-cover {
 	}
 
 	.view-btn {
-		white-space: nowrap;
-		flex-shrink: 0;
+		white-space: normal;
+		flex: 1 1 calc(50% - 4px);
+		min-width: 130px;
+	}
+
+	.reading-status-filter {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+		gap: var(--spacing-sm);
+	}
+
+	.status-filter-btn {
+		width: 100%;
+		text-align: center;
 	}
 
 	/* Stats bar: 3-column grid instead of collapsing to column */

@@ -938,10 +938,18 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 							<h4 class="modal-section-title">Relationships</h4>
 							<div class="tags-list">
 								${relationships
-									.map(
-										(group) =>
-											`<span class="tag tag-relationship" title="Relationship Group">[${group.map((c) => this.escapeHtml(c)).join(", ")}]</span>`,
-									)
+									.map((group) => {
+										const cleanedGroup = Array.isArray(
+											group,
+										)
+											? group.map((c) =>
+													String(c || "")
+														.replace(/[[]\]]/g, "")
+														.trim(),
+												)
+											: [];
+										return `<span class="tag tag-relationship" title="Relationship Group">[${cleanedGroup.map((c) => this.escapeHtml(c)).join(", ")}]</span>`;
+									})
 									.join("")}
 							</div>
 						</div>`

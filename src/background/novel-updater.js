@@ -277,18 +277,16 @@ async function processChapterCountResult(novel, result) {
 		lastChapterCheckAt: now,
 	};
 
+	if (result.raw) {
+		const restMeta = { ...result.raw };
+		delete restMeta.totalChapters;
+		Object.assign(metadataUpdate, restMeta);
+	}
+
 	if (freshChapters > storedChapters) {
 		debugLog(
 			`[NovelUpdater] New chapters for "${novel.title}": ${storedChapters} → ${freshChapters}`,
 		);
-
-		// Merge any other fresh metadata fields (non-destructive)
-		if (result.raw) {
-			// Merge fresh metadata fields (excluding totalChapters which is handled above)
-			const restMeta = { ...result.raw };
-			delete restMeta.totalChapters;
-			Object.assign(metadataUpdate, restMeta);
-		}
 
 		await novelLibrary.addOrUpdateNovel(
 			{

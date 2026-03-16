@@ -622,6 +622,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		try {
 			const isChapterPage = this.isChapterPage();
+			const specItems = Array.from(
+				document.querySelectorAll(".r-fullstory-spec li"),
+			);
 
 			// Extract novel title (clean, without chapter info)
 			if (isChapterPage) {
@@ -796,6 +799,25 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					});
 				}
 
+				if (!metadata.author && specItems.length > 0) {
+					const authorItem = specItems.find((li) =>
+						/author/i.test(li.textContent || ""),
+					);
+					if (authorItem) {
+						const authorLink = authorItem.querySelector("a");
+						if (authorLink?.textContent?.trim()) {
+							metadata.author = authorLink.textContent.trim();
+						} else {
+							const plainText = authorItem.textContent
+								.replace(/author\s*:?/i, "")
+								.trim();
+							if (plainText) {
+								metadata.author = plainText;
+							}
+						}
+					}
+				}
+
 				// Set main novel URL to current page for novel pages
 				metadata.mainNovelUrl = window.location.href;
 
@@ -870,6 +892,10 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						: el.textContent.trim();
 					if (metadata.author) break;
 				}
+			}
+
+			if (/^ranobes(\.top)?$/i.test(metadata.author || "")) {
+				metadata.author = null;
 			}
 
 			// Extract translator
@@ -967,6 +993,10 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						}
 					}
 				}
+			}
+
+			if (!metadata.mainNovelUrl) {
+				metadata.mainNovelUrl = this.getNovelPageUrl();
 			}
 		} catch (error) {
 			debugError("Ranobes: Error extracting metadata:", error);

@@ -125,6 +125,7 @@ function buildTextContainer(groupStart, groupEnd, colors, extraClass = "") {
 		font-size: inherit;
 		line-height: 1.7;
 		color: ${colors.onSurface};
+		text-align: left;
 		word-break: break-word;
 	`;
 	return div;

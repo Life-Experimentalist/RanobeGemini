@@ -16,22 +16,44 @@
 
 <br/>
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues) [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls) [![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/) [![Mozilla Add-on](https://img.shields.io/amo/v/ranobegemini?style=flat&logo=firefox&label=Firefox%20Add-on)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/) [![Mozilla Add-on Downloads](https://img.shields.io/amo/dw/ranobegemini?style=flat&logo=firefox&label=Downloads)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/) [![Mozilla Add-on Rating](https://img.shields.io/amo/rating/ranobegemini?style=flat&logo=firefox&label=Rating)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/) [![GitHub Stars](https://img.shields.io/github/stars/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/stargazers) [![GitHub Forks](https://img.shields.io/github/forks/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/network/members)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Version](https://img.shields.io/badge/version-4.3.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
+[![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls)
+[![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
+[![Mozilla Add-on](https://img.shields.io/amo/v/ranobegemini?style=flat&logo=firefox&label=Firefox%20Add-on)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
+[![Mozilla Add-on Downloads](https://img.shields.io/amo/dw/ranobegemini?style=flat&logo=firefox&label=Downloads)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
+[![Mozilla Add-on Rating](https://img.shields.io/amo/rating/ranobegemini?style=flat&logo=firefox&label=Rating)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
+[![GitHub Stars](https://img.shields.io/github/stars/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/network/members)
+[![MV3](https://img.shields.io/badge/Manifest-V3-orange?style=flat)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-4285F4?style=flat&logo=google)](https://ai.google.dev/)
+[![Edge Add-on](https://img.shields.io/badge/Microsoft%20Edge-Add--on-0078d7?style=flat&logo=microsoftedge)](https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn)
 
 </div>
+
+<!-- GitHub Topics: browser-extension firefox-extension chrome-extension edge-extension gemini-ai web-novel fanfiction ao3 ranobes scribblehub reading-tracker novel-library javascript manifest-v3 google-ai ai-enhancement -->
 
 ## Features
 
 - **AI-Powered Enhancement**: Improves grammar, flow, and readability of translated text using Gemini AI.
-- **Chapter Summarization**: Generates concise summaries of chapters, highlighting key plot points.
-- **Multi-Site Support**: Works on `ranobes.net`, `fanfiction.net`, `archiveofourown.org` (AO3), and `webnovel.com`.
-- **Customizable Prompts**: Tailor the enhancement, summarization, and permanent prompts to control AI output.
-- **Large Chapter Handling**: Automatically splits long chapters to avoid API limits.
-- **Multiple Gemini Models**: Choose the best Gemini model for your needs (e.g., Flash for speed, Pro for quality).
-- **User-Friendly Interface**: Simple popup for settings and an integrated FAQ.
-- **Restore Original**: Easily revert to the original chapter text.
-- **Dark Mode Support**: Adapts to your browser's theme.
-- **Dynamic Domain System**: Automatically handles subdomains and new site variations.
+- **Chapter Summarization**: Generates concise or detailed summaries for long chapters without leaving the page.
+- **Multi-Site Support**: Works on `ranobes.top`, `fanfiction.net` (desktop + mobile), `archiveofourown.org` (AO3), `scribblehub.com`, and more.
+- **Novel Library**: Track novels across all supported sites with shelf-aware metadata, reading status, characters, relationships, genres, and tags.
+- **Collapsible Content Sections**: Fight scenes, R18 content, and author notes can be hidden/shown on demand.
+- **Incognito Mode**: Temporarily pause library tracking without disabling the extension.
+- **Custom Content Box Types**: Define your own CSS classes and styling for special content blocks.
+- **Smart Chunking**: Automatically splits large chapters (10 K+ words) to avoid API timeouts, with pause/skip controls.
+- **Canvas Background Animations**: Five animation types (particles, snow, rain, falling leaves, fireflies) for library pages, color-synced to your theme.
+- **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
+- **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
+- **Google Drive Sync**: Optional OAuth-based backup to Google Drive with configurable retention.
+- **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
+- **Multiple Gemini Models**: Gemini 2.0 Flash (recommended), 2.5 Flash (fastest), 2.5 Pro (highest quality), with backup key rotation.
+- **Export Templates**: Configurable filename templates for novel copy/download operations.
+- **FichHub Integration**: One-click download button for EPUB/MOBI via FichHub.
+- **Restore Original**: Revert to the original chapter text at any time.
+- **Dynamic Domain System**: Automatically handles subdomains and new site variations via build-time manifest generation.
 
 ## Installation (Firefox)
 
@@ -85,7 +107,7 @@ npm install
 npm run package
 ```
 
-**Output**: `releases/RanobeGemini_v2.8.0.zip`
+**Output**: `releases/RanobeGemini_v4.3.0.zip`
 
 ### Build Process Details
 
@@ -140,19 +162,23 @@ Access the extension's settings via the toolbar icon:
 
 ## Supported Websites
 
-- **Ranobes**: ranobes.net, ranobes.com, ranobes.top, ranobes.org, and more
-- **FanFiction.net**: fanfiction.net (including www and mobile versions)
-- **Archive of Our Own (AO3)**: archiveofourown.org, ao3.org
-- **WebNovel**: webnovel.com (with infinite scroll support)
+| Site | Domains | Notes |
+|------|---------|-------|
+| **Ranobes** | ranobes.top, ranobes.net, ranobes.com, ranobes.org, and more | Novel + chapter pages |
+| **FanFiction.net** | www.fanfiction.net, m.fanfiction.net, fanfiction.ws | Desktop + mobile handlers |
+| **Archive of Our Own (AO3)** | archiveofourown.org, ao3.org | Work + chapter pages |
+| **ScribbleHub** | scribblehub.com | Series + chapter pages |
+| **WebNovel** | webnovel.com | Temporarily disabled — infinite scroll refinement in progress |
 
 ## Architecture & Development
 
 For developers extending or contributing to Ranobe Gemini:
 
-- **[Modular Architecture Guide](MODULARIZATION_COMPLETE.md)** - Overview of the modularized background/content scripts
-- **[Architecture Documentation](docs/architecture/MODULAR_SYSTEMS_README.md)** - Detailed system design
-- **[Implementation Guide](docs/implementation/METADATA_AND_SETTINGS_GUIDE.md)** - How to use metadata fetching and handler settings
-- **[Quick Reference](docs/WHATS_WHERE.md)** - Index of all systems and where things are located
+- **[Architecture Documentation](docs/architecture/MODULAR_SYSTEMS_README.md)** — Detailed system design and modular architecture
+- **[Quick Reference](docs/WHATS_WHERE.md)** — Index of all systems and where things are located
+- **[Implementation Guide](docs/implementation/METADATA_AND_SETTINGS_GUIDE.md)** — Metadata fetching and handler settings API
+- **[Build System](docs/build/BUILD_SYSTEM.md)** — Complete build process, scripts, and manifest generation
+- **[Changelog](docs/release/CHANGELOG.md)** — Full version history
 
 ## Adding New Website Support
 
@@ -179,3 +205,11 @@ Copyright 2025 VKrishna04
 ## Acknowledgements
 
 - Powered by the [Google Gemini API](https://ai.google.dev/)
+- EPUB/MOBI downloads via [FichHub](https://fichub.net/)
+- OAuth backup support for [Google Drive](https://drive.google.com/)
+
+---
+
+## Project Topics
+
+`browser-extension` `firefox-extension` `chrome-extension` `edge-extension` `gemini-ai` `web-novel` `fanfiction` `archiveofourown` `ranobes` `scribblehub` `reading-tracker` `novel-library` `javascript` `manifest-v3` `google-ai` `ai-enhancement` `light-novel` `translation`

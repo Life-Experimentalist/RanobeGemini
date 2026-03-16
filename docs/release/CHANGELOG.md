@@ -3,6 +3,9 @@
 > **Index:**
 
 - [Changelog](#changelog)
+	- [4.3.0 - 2026-03-15](#430---2026-03-15)
+	- [4.2.0 - 2026-03-12](#420---2026-03-12)
+	- [4.1.0 - 2026-03-08](#410---2026-03-08)
 	- [4.0.0 - 2026-03-06](#400---2026-03-06)
 		- [Highlights](#highlights)
 		- [Added](#added)
@@ -109,6 +112,108 @@
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [4.3.0](RELEASE_NOTES_4.3.0.md) - 2026-03-15
+
+### Highlights
+
+- Incognito Mode — pause library tracking with configurable auto-expiry duration.
+- Collapsible content sections for fight scenes, R18 content, and author notes.
+- FanFiction redirect fix: Mobile ↔ Desktop switch now writes `domainPreference` to storage so `normalizeURL()` respects the user's explicit choice on every load.
+- Relationship→Characters mirroring fix for all historical malformed data.
+- Summary quality detection and automatic retry (`isLowQualityLongSummary`, `getSummaryOutputBudget`).
+
+### Added
+
+- Incognito Mode with UI controls in popup and Library Settings; configurable auto-expiry.
+- Collapsible sections system for fight scenes, R18 content, and author notes; default visibility is user-configurable.
+- "Hide Gemini UI during Read Aloud" toggle in Library Settings.
+- `isLowQualityLongSummary()` and `getSummaryOutputBudget()` helpers in `background.js`.
+- Backup model selector in popup (used automatically on primary model quota errors).
+- `SITE_SETTINGS_KEY` import added to `fanfiction-mobile-handler.js`.
+
+### Changed
+
+- FanFiction Desktop/Mobile switcher button now saves `domainPreference` to storage instead of appending `?rgffswitch=1`.
+- FanFiction Mobile Desktop button made async; saves `domainPreference = "www"` before navigating.
+- `normalizeURL()` no longer checks for `rgffswitch` token — reads stored preference directly.
+- `addRelationshipGroup` in `novel-library.js` replaces `flatMap` expansion with a targeted single-element repair that only splits when exactly one comma-joined entry is present.
+
+### Fixed
+
+- Malformed relationship data (single comma-joined string in a one-element group) now repaired on first `getLibrary()` call.
+- Theme configuration error on older runtimes (new theme preset keys guarded).
+- `completionStatus` no longer overwrites an explicit user-set status.
+- AO3 metadata selectors broadened with `#workskin` prefix; document title fallback added.
+- Ranobes pseudo-author (`ranobes.top`) filtered out of `metadata.author`.
+- ScribbleHub compact numbers (`1.2k`) and comma-separated rating counts now parsed correctly.
+
+---
+
+## [4.2.0](RELEASE_NOTES_4.2.0.md) - 2026-03-12
+
+### Highlights
+
+- Custom Content Box Types — define your own CSS classes and styling for special content blocks from Library Settings with a live preview.
+- Library homepage hero "Continue Reading" eyebrow section.
+- Character and relationship sections cleanly separated in novel cards.
+- Dynamic reading-status buttons built from `AVAILABLE_STATUSES` in shelf pages.
+- FanFiction character database repair pass for malformed historical data.
+
+### Added
+
+- **Custom Content Boxes** section in Library Settings: user-defined CSS class, display name, and styling with live preview.
+- Hero eyebrow section in `library.html` with "Continue Reading" styling in `library.css`.
+- Pause and Skip buttons in chunking banner; per-chunk Enhance button.
+- `WORD_COUNT_THRESHOLD` and `CACHE_RESTORE_RETRY_DELAY` constants in `constants.js`.
+
+### Changed
+
+- `novel-card.js` character/relationship rendering refactored into separate sections.
+- `shelf-page.js` reading-status buttons now built dynamically from `AVAILABLE_STATUSES`.
+- `extractParagraphsFromHTML()` refined for more accurate paragraph boundary detection.
+- Popup backup model selection uses `DEFAULT_MODEL_ID` as fallback.
+
+### Fixed
+
+- Story completion status now correctly derived from `publicationStatus` when no explicit status is set.
+- Cache restore retry delay correctly wired into chunking retry logic.
+- Content filter settings (fight scenes, R18, author notes) now persist and reload correctly.
+
+---
+
+## [4.1.0](RELEASE_NOTES_4.1.0.md) - 2026-03-08
+
+### Highlights
+
+- Five new creative themes: Tokyo Night, Catppuccin Mocha, Synthwave, and more.
+- Auto theme mode extended with schedule-based and sun-position (sunrise/sunset) switching.
+- Reading progress bar in Ranobes and ScribbleHub novel modals.
+- Chunking UI overhaul with pause/skip controls and per-chunk enhance button.
+- Export template updated: word count included; default extension changed to EPUB.
+
+### Added
+
+- `autoBehavior`, `timeCustomStart`, `timeCustomEnd` fields in `DEFAULT_THEME`.
+- Schedule and sun-based auto mode strategies in `resolveMode()`.
+- New theme presets: `tokyo-night`, `catppuccin-mocha`, `synthwave`, and additional creative themes.
+- Reading progress bar in Ranobes and ScribbleHub novel modals.
+- Chunking banner: Pause, Skip, and per-chunk Enhance buttons.
+- Word count display and threshold warning in chunk UI.
+
+### Changed
+
+- `getThemePalette` and `setThemeVariables` updated to support new auto-mode fields (backward compatible).
+- FanFiction, AO3, and mobile handler default site prompts refined with specific formatting rules.
+- "Copy Title" button removed from FanFiction chapter toolbar; replaced by compact green **Copy** badge.
+- Export filename template includes word count; default extension is now EPUB.
+
+### Fixed
+
+- Background animation import error on pages that don't use animations.
+- Chunking word-count threshold constants correctly applied.
 
 ---
 

@@ -2945,6 +2945,8 @@ function setupEventListeners() {
 
 	const fixFFNetCharactersBtn = $("fix-ffnet-characters-btn");
 	const fixFFNetCharactersResult = $("fix-ffnet-characters-result");
+	const scanFFNetMetadataBtn = $("scan-ffnet-metadata-btn");
+	const scanFFNetMetadataResult = $("scan-ffnet-metadata-result");
 	if (fixFFNetCharactersBtn) {
 		fixFFNetCharactersBtn.addEventListener("click", async () => {
 			fixFFNetCharactersBtn.disabled = true;
@@ -3004,6 +3006,352 @@ function setupEventListeners() {
 			} finally {
 				fixFFNetCharactersBtn.disabled = false;
 				fixFFNetCharactersBtn.textContent = "🔄 Run Fix";
+			}
+		});
+	}
+
+	if (scanFFNetMetadataBtn) {
+		scanFFNetMetadataBtn.addEventListener("click", async () => {
+			scanFFNetMetadataBtn.disabled = true;
+			scanFFNetMetadataBtn.textContent = "⏳ Scanning…";
+
+			const report = {
+				scanned: 0,
+				changedNovels: 0,
+				charactersFixed: 0,
+				relationshipsFixed: 0,
+				statsFixed: 0,
+				datesFixed: 0,
+				categoryFixed: 0,
+				errors: 0,
+			};
+
+			const toNumber = (...values) => {
+				for (const value of values) {
+					if (value === null || value === undefined) continue;
+					const parsed = Number(value);
+					if (Number.isFinite(parsed)) return parsed;
+				}
+				return null;
+			};
+
+			const toTimestampMs = (...values) => {
+				for (const value of values) {
+					if (value === null || value === undefined) continue;
+					if (typeof value === "number" && Number.isFinite(value)) {
+						if (value > 1_000_000_000_000) return value;
+						if (value > 1_000_000_000) return value * 1000;
+					}
+					if (typeof value === "string") {
+						const trimmed = value.trim();
+						if (!trimmed) continue;
+						if (/^\d+$/.test(trimmed)) {
+							const numeric = Number(trimmed);
+							if (numeric > 1_000_000_000_000) return numeric;
+							if (numeric > 1_000_000_000) return numeric * 1000;
+						}
+						const parsed = Date.parse(trimmed);
+						if (Number.isFinite(parsed)) return parsed;
+					}
+				}
+				return null;
+			};
+
+			const cleanName = (value) =>
+				String(value || "")
+					.replace(/[[]\]]/g, "")
+					.replace(/\s+/g, " ")
+					.trim();
+
+			const isDateLikeToken = (value) => {
+				const token = String(value || "").trim();
+				if (!token) return true;
+				if (/^(?:published|updated)$/i.test(token)) return true;
+				if (/^(?:19|20)\d{2}$/.test(token)) return true;
+				if (/^(?:[01]?\d|2\d|3[01])$/.test(token)) return true;
+				if (
+					/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)(?:uary|ch|il|e|y|ust|tember|ober|ember)?\.?$/i.test(
+						token,
+					)
+				) {
+					return true;
+				}
+				if (/^(?:status|id)$/i.test(token)) return true;
+				return false;
+			};
+
+			const inferCategoryFromUrl = (url) => {
+				const match = String(url || "").match(
+					/^\/(book|anime|cartoon|comic|game|misc|play|movie|tv)\//i,
+				);
+				return match ? match[1].toLowerCase() : null;
+			};
+
+			try {
+				const library = await novelLibrary.getLibrary();
+				const ffNovels = Object.values(library.novels || {}).filter(
+					(n) => (n.shelfId || "").toLowerCase() === "fanfiction",
+				);
+
+				report.scanned = ffNovels.length;
+				for (const novel of ffNovels) {
+					try {
+						let novelChanged = false;
+						novel.metadata = novel.metadata || {};
+						const meta = novel.metadata;
+
+						const prevCharacters = JSON.stringify(
+							Array.isArray(meta.characters)
+								? meta.characters
+								: [],
+						);
+						const cleanedCharacters = Array.isArray(meta.characters)
+							? meta.characters
+									.map((value) => cleanName(value))
+									.filter(
+										(value) =>
+											value.length > 0 &&
+											!isDateLikeToken(value) &&
+											!/^(?:complete|ongoing|unknown)$/i.test(
+												value,
+											),
+									)
+							: [];
+						const uniqueCharacters = [
+							...new Set(cleanedCharacters),
+						];
+
+						if (
+							JSON.stringify(uniqueCharacters) !== prevCharacters
+						) {
+							if (uniqueCharacters.length > 0) {
+								meta.characters = uniqueCharacters;
+							} else {
+								delete meta.characters;
+							}
+							novelChanged = true;
+							report.charactersFixed += 1;
+						}
+
+						const prevRelationships = JSON.stringify(
+							Array.isArray(meta.relationships)
+								? meta.relationships
+								: [],
+						);
+						if (Array.isArray(meta.relationships)) {
+							meta.relationships = meta.relationships
+								.map((group) => {
+									if (!Array.isArray(group)) return [];
+									return group
+										.map((value) => cleanName(value))
+										.filter(
+											(value) =>
+												value.length > 0 &&
+												!isDateLikeToken(value),
+										)
+										.slice(0, 4);
+								})
+								.filter((group) => group.length >= 2);
+						}
+
+						if (
+							JSON.stringify(meta.relationships || []) !==
+							prevRelationships
+						) {
+							novelChanged = true;
+							report.relationshipsFixed += 1;
+						}
+
+						const reviewCandidate = toNumber(
+							meta.reviews,
+							meta.reviewCount,
+							meta.stats?.reviews,
+							novel.stats?.reviews,
+						);
+						const favoriteCandidate = toNumber(
+							meta.favorites,
+							meta.favs,
+							meta.favoriteCount,
+							meta.stats?.favorites,
+							novel.stats?.favorites,
+						);
+						const followCandidate = toNumber(
+							meta.follows,
+							meta.followCount,
+							meta.stats?.follows,
+							novel.stats?.follows,
+						);
+
+						const beforeStats = JSON.stringify({
+							reviews: meta.reviews || 0,
+							favorites: meta.favorites || 0,
+							follows: meta.follows || 0,
+						});
+
+						if (
+							(meta.reviews || 0) <= 0 &&
+							(reviewCandidate || 0) > 0
+						) {
+							meta.reviews = reviewCandidate;
+						}
+						if (
+							(meta.favorites || 0) <= 0 &&
+							(favoriteCandidate || 0) > 0
+						) {
+							meta.favorites = favoriteCandidate;
+						}
+						if (
+							(meta.follows || 0) <= 0 &&
+							(followCandidate || 0) > 0
+						) {
+							meta.follows = followCandidate;
+						}
+
+						if (
+							JSON.stringify({
+								reviews: meta.reviews || 0,
+								favorites: meta.favorites || 0,
+								follows: meta.follows || 0,
+							}) !== beforeStats
+						) {
+							novelChanged = true;
+							report.statsFixed += 1;
+						}
+
+						const beforeDates = JSON.stringify({
+							publishedDate: meta.publishedDate || null,
+							updatedDate: meta.updatedDate || null,
+						});
+
+						if (!meta.publishedDate) {
+							const published = toTimestampMs(
+								meta.published,
+								meta.datePublished,
+								novel.publishedDate,
+							);
+							if (published) meta.publishedDate = published;
+						}
+
+						if (!meta.updatedDate) {
+							const updated = toTimestampMs(
+								meta.updated,
+								meta.dateUpdated,
+								novel.updatedDate,
+								novel.lastUpdated,
+							);
+							if (updated) meta.updatedDate = updated;
+						}
+
+						if (
+							JSON.stringify({
+								publishedDate: meta.publishedDate || null,
+								updatedDate: meta.updatedDate || null,
+							}) !== beforeDates
+						) {
+							novelChanged = true;
+							report.datesFixed += 1;
+						}
+
+						const beforeCategory = JSON.stringify({
+							category: meta.category || null,
+							fandomHierarchy: Array.isArray(meta.fandomHierarchy)
+								? meta.fandomHierarchy
+								: [],
+						});
+
+						if (Array.isArray(meta.fandomHierarchy)) {
+							meta.fandomHierarchy = meta.fandomHierarchy.map(
+								(entry) => {
+									if (!entry || typeof entry !== "object") {
+										return entry;
+									}
+									if (entry.category) return entry;
+									const inferred = inferCategoryFromUrl(
+										entry.url,
+									);
+									return inferred
+										? { ...entry, category: inferred }
+										: entry;
+								},
+							);
+						}
+
+						if (!meta.category) {
+							const inferredFromHierarchy = Array.isArray(
+								meta.fandomHierarchy,
+							)
+								? meta.fandomHierarchy.find(
+										(entry) => entry?.category,
+									)?.category || null
+								: null;
+							if (inferredFromHierarchy) {
+								meta.category = inferredFromHierarchy;
+							}
+						}
+
+						if (
+							JSON.stringify({
+								category: meta.category || null,
+								fandomHierarchy: Array.isArray(
+									meta.fandomHierarchy,
+								)
+									? meta.fandomHierarchy
+									: [],
+							}) !== beforeCategory
+						) {
+							novelChanged = true;
+							report.categoryFixed += 1;
+						}
+
+						novel.metadata = meta;
+						if (novelChanged) report.changedNovels += 1;
+					} catch (novelError) {
+						report.errors += 1;
+						debugError(
+							"FF metadata deep scan failed for novel:",
+							novel?.id,
+							novelError,
+						);
+					}
+				}
+
+				// Ensure relationship cleanup rules and promotion are applied consistently.
+				novelLibrary.normalizeFanfictionMetadata(library);
+				await novelLibrary.saveLibrary(library);
+
+				if (scanFFNetMetadataResult) {
+					scanFFNetMetadataResult.style.display = "block";
+					scanFFNetMetadataResult.style.background =
+						"rgba(34,197,94,0.1)";
+					scanFFNetMetadataResult.style.border =
+						"1px solid rgba(34,197,94,0.3)";
+					scanFFNetMetadataResult.style.color =
+						"var(--success-color)";
+					scanFFNetMetadataResult.textContent =
+						`✅ Scan complete. Scanned ${report.scanned} FF.net novel(s), changed ${report.changedNovels}. ` +
+						`Characters: ${report.charactersFixed}, Relationships: ${report.relationshipsFixed}, ` +
+						`Stats: ${report.statsFixed}, Dates: ${report.datesFixed}, Categories: ${report.categoryFixed}, Errors: ${report.errors}.`;
+				}
+
+				showToast(
+					`✅ FF metadata scan complete (${report.changedNovels}/${report.scanned} changed)`,
+					"success",
+				);
+			} catch (err) {
+				debugError("FF metadata deep scan failed:", err);
+				if (scanFFNetMetadataResult) {
+					scanFFNetMetadataResult.style.display = "block";
+					scanFFNetMetadataResult.style.background =
+						"rgba(239,68,68,0.1)";
+					scanFFNetMetadataResult.style.border =
+						"1px solid rgba(239,68,68,0.3)";
+					scanFFNetMetadataResult.style.color = "#ef4444";
+					scanFFNetMetadataResult.textContent = `❌ Scan failed: ${err.message}`;
+				}
+				showToast(`❌ Scan failed: ${err.message}`, "error");
+			} finally {
+				scanFFNetMetadataBtn.disabled = false;
+				scanFFNetMetadataBtn.textContent = "🧪 Scan & Fix";
 			}
 		});
 	}

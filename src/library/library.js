@@ -136,6 +136,7 @@ import {
 // eslint-disable-next-line no-unused-vars
 const REFRESH_PREFIX = "rg-refresh-snapshot-";
 const REFRESH_TAB_TIMEOUT_MS = 18000; // Allow extra time for slower sites before auto-closing refresh tab
+const PENDING_SUMMARY_REVIEW_KEY = "rg_pending_summary_reviews";
 
 /**
  * Get relative time string (e.g., "2 hours ago", "3 days ago")
@@ -523,6 +524,8 @@ const elements = {
 	// Notification Panel
 	notificationBellBtn: document.getElementById("notification-bell-btn"),
 	notificationBellBadge: document.getElementById("notification-bell-badge"),
+	pendingReviewBtn: document.getElementById("pending-review-btn"),
+	pendingReviewBadge: document.getElementById("pending-review-badge"),
 	notificationPanel: document.getElementById("notification-panel"),
 	notificationPanelClose: document.getElementById("notification-panel-close"),
 	notificationPanelBackdrop: document.querySelector(
@@ -721,12 +724,24 @@ if (isSidebar) {
 async function openNovelFromQueryParams() {
 	try {
 		const params = new URLSearchParams(window.location.search);
+		const consumeQuery = params.get("openModal") === "1";
 
 		// Open novel detail panel
 		const novelId = params.get("novel");
 		if (novelId) {
 			const novel = await novelLibrary.getNovel(novelId);
-			if (novel) openNovelDetail(novel);
+			if (novel) {
+				openNovelDetail(novel);
+				if (consumeQuery) {
+					params.delete("openModal");
+					params.delete("novel");
+					history.replaceState(
+						null,
+						"",
+						`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`,
+					);
+				}
+			}
 		}
 
 		// Open inline edit modal directly (e.g. deep-link from old shelf edit button)
@@ -1174,6 +1189,7 @@ async function init() {
 
 	// Initialize notification panel
 	initNotificationPanel();
+	await updatePendingReviewBadge();
 
 	// Load library data
 	await loadLibrary();
@@ -2726,6 +2742,13 @@ function setupEventListeners() {
 	// Refresh
 	elements.refreshBtn.addEventListener("click", loadLibrary);
 
+	if (elements.pendingReviewBtn) {
+		elements.pendingReviewBtn.addEventListener(
+			"click",
+			openPendingReviewModal,
+		);
+	}
+
 	// Random novel
 	if (elements.libraryRandomBtn) {
 		elements.libraryRandomBtn.addEventListener("click", () => {
@@ -4111,6 +4134,7 @@ async function loadLibrary() {
 
 		// Populate "Continue Reading" hero with the most recently read novel
 		populateContinueReadingHero(allNovels);
+		await updatePendingReviewBadge();
 	} catch (error) {
 		debugError("Failed to load library:", error);
 		showEmptyState(true);
@@ -5254,7 +5278,7 @@ async function openDefaultNovelDetail(novel) {
 			siteShelfBtn.style.display = "inline-flex";
 			siteShelfBtn.onclick = () => {
 				const shelfUrl = browser.runtime.getURL(
-					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}`,
+					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
 				);
 				window.open(shelfUrl, "_blank");
 			};
@@ -5272,7 +5296,7 @@ async function openDefaultNovelDetail(novel) {
 			siteShelfCornerBtn.style.display = "inline-flex";
 			siteShelfCornerBtn.onclick = () => {
 				const shelfUrl = browser.runtime.getURL(
-					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}`,
+					`library/websites/${novel.shelfId}/index.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
 				);
 				window.open(shelfUrl, "_blank");
 			};
@@ -7626,6 +7650,152 @@ async function updateLibraryNotificationBadge() {
 	} else {
 		badge.classList.add("hidden");
 	}
+}
+
+async function loadPendingSummaryReviews() {
+	try {
+		const data = await browser.storage.local.get(
+			PENDING_SUMMARY_REVIEW_KEY,
+		);
+		const list = Array.isArray(data?.[PENDING_SUMMARY_REVIEW_KEY])
+			? data[PENDING_SUMMARY_REVIEW_KEY]
+			: [];
+		return list;
+	} catch (_err) {
+		return [];
+	}
+}
+
+async function savePendingSummaryReviews(list) {
+	try {
+		await browser.storage.local.set({
+			[PENDING_SUMMARY_REVIEW_KEY]: Array.isArray(list) ? list : [],
+		});
+	} catch (_err) {
+		// no-op
+	}
+}
+
+async function updatePendingReviewBadge() {
+	const badge = elements.pendingReviewBadge;
+	if (!badge) return;
+
+	const queue = await loadPendingSummaryReviews();
+	const pendingCount = queue.filter(
+		(item) => (item?.status || "pending") === "pending",
+	).length;
+
+	if (pendingCount > 0) {
+		badge.textContent = pendingCount > 999 ? "999+" : `${pendingCount}`;
+		badge.classList.remove("hidden");
+	} else {
+		badge.classList.add("hidden");
+	}
+}
+
+function closePendingReviewModal() {
+	const existing = document.getElementById("pending-review-modal");
+	if (existing) existing.remove();
+}
+
+async function openPendingReviewModal() {
+	const queue = await loadPendingSummaryReviews();
+	const pending = queue.filter(
+		(item) => (item?.status || "pending") === "pending",
+	);
+
+	closePendingReviewModal();
+
+	const modal = document.createElement("div");
+	modal.id = "pending-review-modal";
+	modal.style.cssText =
+		"position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+
+	const itemsHtml = pending.length
+		? pending
+				.map((item) => {
+					const chapterLabel =
+						item?.chapterNumber != null
+							? `Chapter ${item.chapterNumber}`
+							: "Unknown chapter";
+					const summaryType =
+						item?.summaryType === "short" ? "Short" : "Long";
+					const chunks = Number(item?.totalChunks || 0);
+					const level = String(item?.recommendationLevel || "normal");
+					const tone =
+						level === "high"
+							? "#ff8a65"
+							: level === "medium"
+								? "#ffd54f"
+								: "#81c784";
+					return `
+						<div style="border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;background:var(--bg-secondary);margin-bottom:10px;">
+							<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+								<div>
+									<div style="font-weight:700;color:var(--text-primary);">${escapeHtml(item?.title || "Untitled")}</div>
+									<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${escapeHtml(chapterLabel)} • ${escapeHtml(summaryType)} summary • ${chunks} chunks</div>
+								</div>
+								<span style="font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid ${tone};color:${tone};">${escapeHtml(level)}</span>
+							</div>
+							<div style="font-size:12px;color:var(--text-secondary);margin-top:8px;line-height:1.45;">${escapeHtml(item?.reason || "Recommended for review.")}</div>
+							<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+								<button class="btn btn-primary" data-review-id="${escapeHtml(item?.id || "")}" data-review-action="approve">Approve</button>
+								<button class="btn btn-secondary" data-review-id="${escapeHtml(item?.id || "")}" data-review-action="reject">Deny</button>
+							</div>
+						</div>
+					`;
+				})
+				.join("")
+		: `<div style="padding:14px;border:1px dashed var(--border-color);border-radius:10px;color:var(--text-secondary);">No pending summary review items.</div>`;
+
+	modal.innerHTML = `
+		<div style="width:min(880px,100%);max-height:85vh;overflow:auto;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;box-shadow:0 20px 45px rgba(0,0,0,.35);padding:14px;">
+			<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
+				<div>
+					<div style="font-size:18px;font-weight:700;color:var(--text-primary);">🔧 Pending Summary Reviews</div>
+					<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Approve or deny recommendations for large multi-chunk summary runs.</div>
+				</div>
+				<button class="btn btn-icon" id="pending-review-close" title="Close">✕</button>
+			</div>
+			${itemsHtml}
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+
+	modal.addEventListener("click", async (event) => {
+		const target = event.target;
+		if (!(target instanceof HTMLElement)) return;
+
+		if (target.id === "pending-review-close" || target === modal) {
+			closePendingReviewModal();
+			return;
+		}
+
+		const action = target.getAttribute("data-review-action");
+		const reviewId = target.getAttribute("data-review-id");
+		if (!action || !reviewId) return;
+
+		const nextQueue = queue.map((item) => {
+			if (item?.id !== reviewId) return item;
+			return {
+				...item,
+				status: action === "approve" ? "approved" : "rejected",
+				reviewDecision: action,
+				updatedAt: Date.now(),
+			};
+		});
+
+		await savePendingSummaryReviews(nextQueue);
+		await updatePendingReviewBadge();
+		showNotification(
+			action === "approve"
+				? "Summary review approved"
+				: "Summary review denied",
+			"success",
+		);
+		await openPendingReviewModal();
+	});
 }
 
 /**

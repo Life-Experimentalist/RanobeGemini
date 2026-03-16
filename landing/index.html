@@ -6,14 +6,14 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Ranobe Gemini | AI-powered reading companion</title>
 		<meta name="description"
-			content="Ranobe Gemini enhances web novels with Gemini API-powered summaries, clean reading UI, and seamless import/export. Built for Edge and Firefox, more browsers coming soon." />
+			content="Ranobe Gemini enhances web novels with Gemini AI — chapter enhancement, smart summaries, novel library, incognito mode, and collapsible content sections. Firefox, Edge, and Chromium supported." />
 		<meta name="keywords"
-			content="Ranobe Gemini, web novel, Gemini API, AI summary, Edge extension, Firefox extension, library import export" />
+			content="Ranobe Gemini, web novel, light novel, Gemini AI, AI summary, Edge extension, Firefox extension, fanfiction, AO3, archiveofourown, ranobes, scribblehub, novel library, reading tracker, browser extension, MV3, manifest v3" />
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/" />
 		<meta name="theme-color" content="#0b1628" />
 		<meta property="og:title" content="Ranobe Gemini | AI-powered reading companion" />
 		<meta property="og:description"
-			content="Enhance, summarize, and manage your web novels with Gemini AI. Edge and Firefox supported; more browsers coming soon." />
+			content="Enhance, summarize, and manage your web novels with Gemini AI. Incognito mode, custom content boxes, canvas animations, and rolling backups. Firefox, Edge & Chromium supported." />
 		<meta property="og:url" content="https://ranobe.vkrishna04.me/" />
 		<meta property="og:type" content="website" />
 		<meta property="og:image" content="https://ranobe.vkrishna04.me/assets/og-card.svg" />
@@ -80,10 +80,12 @@
 					<p class="eyebrow">Edge + Firefox supported • MV3 ready</p>
 					<h1>Read smarter. Summarize faster. Back up safely.</h1>
 					<p class="lede">
-						Ranobe Gemini cleans up chapters and enhances prose with
-						Gemini API. Import or export your library any time.
-						Built for readers of AO3, FanFiction, Ranobes,
-						ScribbleHub, and more.
+						Ranobe Gemini polishes chapters and enhances prose with
+						Gemini AI. Track novels with a full library, enable
+						Incognito Mode for private reading, collapse fight scenes
+						or R18 sections on demand, and back up your data
+						with rolling snapshots. Built for readers of AO3,
+						FanFiction, Ranobes, ScribbleHub, and more.
 					</p>
 					<div class="cta-row">
 						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
@@ -105,8 +107,11 @@
 						<li>Gemini-powered enhancement</li>
 						<li>One-click summaries</li>
 						<li>Smart chunking</li>
+						<li>Incognito mode</li>
+						<li>Collapsible sections</li>
 						<li>Rolling backups</li>
-						<li>Cache management</li>
+						<li>Canvas animations</li>
+						<li>Custom content boxes</li>
 						<li>Mobile support</li>
 						<li>Library import/export</li>
 					</ul>
@@ -214,11 +219,30 @@
 						</p>
 					</div>
 					<div class="feature">
-						<div class="icon">🔁</div>
-						<h3>Rereading overlay</h3>
+						<div class="icon">�️</div>
+						<h3>Incognito Mode</h3>
 						<p>
-							Visual overlay when revisiting chapters you've already
-							read, perfect for series re-reads.
+							Pause library tracking temporarily with
+							configurable auto-expiry. Read privately
+							without losing your existing history.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">📂</div>
+						<h3>Collapsible Sections</h3>
+						<p>
+							Hide fight scenes, R18 content, or author
+							notes on demand. Set default visibility
+							per content type in settings.
+						</p>
+					</div>
+					<div class="feature">
+						<div class="icon">🎨</div>
+						<h3>Canvas Animations</h3>
+						<p>
+							Five animation types for library pages:
+							Particles, Snow, Rain, Falling Leaves,
+							Fireflies — all color-synced to your theme.
 						</p>
 					</div>
 				</div>
@@ -403,6 +427,27 @@
 							The Library tab tracks all novels you've read, showing
 							current novel details, suggestions, and complete reading history
 							organized by website. Export/import your library as JSON for backups.
+							Each novel stores metadata like characters, relationships, genres,
+							reading status, and progress.
+						</p>
+					</article>
+					<article>
+						<h3>🕵️ What is Incognito Mode?</h3>
+						<p>
+							Incognito Mode pauses library tracking so visiting chapters
+							doesn't update your reading history. Toggle it from the popup
+							or Library Settings with a configurable auto-expiry (30 min,
+							1 hour, 2 hours, or manual). Your existing library data is never affected.
+						</p>
+					</article>
+					<article>
+						<h3>🔗 What are Custom Content Boxes?</h3>
+						<p>
+							Custom Content Boxes let you define your own CSS class names,
+							display names, and styling for special content types (e.g. a custom
+							game-stat box style). Configure them in Library Settings with a
+							live preview. They complement built-in types like
+							<strong>Author Notes</strong>, <strong>Game Stats</strong>, and <strong>Flashbacks</strong>.
 						</p>
 					</article>
 				</div>
@@ -430,15 +475,18 @@
 		</main>
 
 		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini</div>
+			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.3.0</span></div>
 			<div class="footer-links">
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
 				<a href="./content-styles.html">Content Styles</a>
+				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/release/CHANGELOG.md" target="_blank"
+					rel="noreferrer">Changelog</a>
 			</div>
-			<p class="footnote">Built by Life-Experimentalist</p>
+			<p class="footnote">Built by <a href="https://github.com/Life-Experimentalist" target="_blank" rel="noreferrer">Life-Experimentalist</a></p>
 		</footer>
 
 		<script src="./script.js"></script>

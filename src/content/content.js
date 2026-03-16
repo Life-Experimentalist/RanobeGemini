@@ -2589,16 +2589,33 @@ if (window.__RGInitDone) {
 		if (!summaryServiceModule) {
 			// Inline fallback if service hasn't loaded yet
 			if (!container) return;
+			const contentArea = findContentArea();
+			const referenceNode =
+				contentArea?.querySelector(
+					"#gemini-enhanced-content p, #gemini-enhanced-content div, p, article p, div, span",
+				) ||
+				contentArea ||
+				document.body;
+			const refStyles = window.getComputedStyle(referenceNode);
 			container.style.display = "block";
+			container.style.textAlign = "left";
 			while (container.firstChild)
 				container.removeChild(container.firstChild);
 			const h = document.createElement("h4");
 			h.textContent = `${summaryType} Summary:`;
-			h.style.cssText =
-				"margin:0 0 12px 0;font-size:14px;font-weight:600;";
+			h.style.cssText = `margin:0 0 12px 0;font-size:0.98em;font-weight:700;font-family:${refStyles.fontFamily};line-height:1.4;color:${refStyles.color};text-align:left;`;
 			container.appendChild(h);
 			const d = document.createElement("div");
-			d.style.lineHeight = "1.6";
+			d.style.fontFamily = refStyles.fontFamily;
+			d.style.fontSize = refStyles.fontSize;
+			d.style.fontWeight = refStyles.fontWeight;
+			d.style.lineHeight = refStyles.lineHeight;
+			d.style.color = refStyles.color;
+			d.style.textAlign =
+				refStyles.textAlign && refStyles.textAlign !== "center"
+					? refStyles.textAlign
+					: "left";
+			d.style.whiteSpace = "pre-wrap";
 			d.textContent = stripHtmlTags(summary);
 			container.appendChild(d);
 			return;
@@ -2608,6 +2625,89 @@ if (window.__RGInitDone) {
 			summary,
 			summaryType,
 		);
+	}
+
+	const PENDING_SUMMARY_REVIEW_KEY = "rg_pending_summary_reviews";
+
+	async function queueSummaryReviewRecommendation({ isShort, chunkIndices }) {
+		try {
+			const totalChunkElements = document.querySelectorAll(
+				".gemini-chunk-content",
+			).length;
+			const totalChunks = Math.max(
+				totalChunkElements || 0,
+				Array.isArray(chunkIndices) ? chunkIndices.length : 0,
+			);
+			const threshold = isShort ? 8 : 6;
+			if (totalChunks < threshold) return;
+
+			const novelId =
+				lastKnownNovelData?.id ||
+				window.location.pathname ||
+				document.title;
+			const chapterNumber = lastKnownNovelData?.currentChapter ?? null;
+			const summaryType = isShort ? "short" : "long";
+			const recommendationLevel =
+				totalChunks >= 12
+					? "high"
+					: totalChunks >= 9
+						? "medium"
+						: "normal";
+			const reviewId = `${novelId}::${chapterNumber ?? "unknown"}::${summaryType}`;
+
+			const existingData = await browser.storage.local.get(
+				PENDING_SUMMARY_REVIEW_KEY,
+			);
+			const currentQueue = Array.isArray(
+				existingData?.[PENDING_SUMMARY_REVIEW_KEY],
+			)
+				? existingData[PENDING_SUMMARY_REVIEW_KEY]
+				: [];
+
+			let hasPending = false;
+			const nextQueue = currentQueue.map((item) => {
+				if (
+					item?.id === reviewId &&
+					(item?.status || "pending") === "pending"
+				) {
+					hasPending = true;
+					return {
+						...item,
+						totalChunks,
+						recommendationLevel,
+						updatedAt: Date.now(),
+					};
+				}
+				return item;
+			});
+
+			if (!hasPending) {
+				nextQueue.push({
+					id: reviewId,
+					status: "pending",
+					novelId,
+					title: lastKnownNovelData?.title || document.title,
+					chapterNumber,
+					summaryType,
+					totalChunks,
+					recommendationLevel,
+					reason:
+						totalChunks >= 12
+							? "Very large chapter. Queueing for focused review before trusting summary output."
+							: "Large chunk count detected. Review summary quality for possible compression artifacts.",
+					sourceUrl: window.location.href,
+					createdAt: Date.now(),
+					updatedAt: Date.now(),
+				});
+			}
+
+			nextQueue.sort((a, b) => (b?.updatedAt || 0) - (a?.updatedAt || 0));
+			await browser.storage.local.set({
+				[PENDING_SUMMARY_REVIEW_KEY]: nextQueue.slice(0, 200),
+			});
+		} catch (_error) {
+			// Non-blocking: review recommendation queue should never break summary flow.
+		}
 	}
 
 	async function summarizeChunkRange(
@@ -2623,7 +2723,12 @@ if (window.__RGInitDone) {
 					`Summary service loaded — delegating ${isShort ? "short" : "long"} summary for chunks`,
 					chunkIndices,
 				);
-				return await svc.summarize(chunkIndices, isShort);
+				const result = await svc.summarize(chunkIndices, isShort);
+				await queueSummaryReviewRecommendation({
+					isShort,
+					chunkIndices,
+				});
+				return result;
 			}
 		} catch (svcErr) {
 			debugError("Summary service threw during summarize:", svcErr);
@@ -2805,6 +2910,10 @@ if (window.__RGInitDone) {
 				"success",
 				3000,
 			);
+			await queueSummaryReviewRecommendation({
+				isShort,
+				chunkIndices,
+			});
 			// Track chapter as summarized in the library
 			try {
 				const novelId = lastKnownNovelData?.id;
@@ -4784,6 +4893,14 @@ if (window.__RGInitDone) {
 				`Site ${handlerShelfId} disabled in settings; skipping UI injection`,
 			);
 			return;
+		}
+
+		if (handlerShelfId === "fanfiction") {
+			const fanfictionSettings = siteSettings?.fanfiction || {};
+			document.body.dataset.rgBetterfictionSync =
+				fanfictionSettings.betterFictionSyncEnabled === false
+					? "false"
+					: "true";
 		}
 
 		debugLog(`Using handler for ${window.location.hostname}`);
@@ -10119,7 +10236,10 @@ if (window.__RGInitDone) {
 			return true;
 		}
 
-		if (message.action === "processWithGemini") {
+		if (
+			message.action === "processWithGemini" ||
+			message.action === "enhanceChapter"
+		) {
 			handleEnhanceClick()
 				.then(() => {
 					sendResponse({ success: true });
@@ -10141,7 +10261,10 @@ if (window.__RGInitDone) {
 			return true;
 		}
 
-		if (message.action === "summarizeWithGemini") {
+		if (
+			message.action === "summarizeWithGemini" ||
+			message.action === "summarizeChapter"
+		) {
 			handleSummarizeClick()
 				.then(() => {
 					sendResponse({ success: true });

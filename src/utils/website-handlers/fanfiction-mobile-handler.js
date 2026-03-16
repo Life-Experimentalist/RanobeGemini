@@ -14,6 +14,7 @@
  */
 import { FanfictionHandler } from "./fanfiction-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { SITE_SETTINGS_KEY } from "../site-settings.js";
 
 export class FanfictionMobileHandler extends FanfictionHandler {
 	// Static properties for domain management
@@ -284,8 +285,11 @@ When enhancing, improve readability while fully respecting the author's creative
 				metadataIncomplete: true, // Mobile lacks some metadata
 				metadata: {
 					isCrossover: false,
+					category: null,
 					fandoms: [],
+					fandomHierarchy: [],
 					characters: [],
+					relationships: [],
 					rating: null,
 					language: null,
 					words: 0,
@@ -331,64 +335,113 @@ When enhancing, improve readability while fully respecting the author's creative
 				debugLog("[Mobile] Could not extract chapter count:", err);
 			}
 
-			// Extract metadata from text content
-			// Mobile metadata line: "Rated: T, English, Romance & Adventure, Harry P., OC, Words: 17k+, Favs: 12, Follows: 4, Published: 8/25/2011"
+			// Extract metadata from compact mobile header.
 			try {
 				const contentDiv = document.getElementById("content");
 				if (contentDiv) {
-					const fullText = contentDiv.textContent || "";
+					const fullText = (contentDiv.textContent || "")
+						.replace(/\s+/g, " ")
+						.trim();
+					const fullHtml = contentDiv.innerHTML || "";
 
-					// Extract rating (T, M, etc)
-					const ratingMatch =
-						fullText.match(/Rated:\s*Fiction\s*([A-Z])/i) ||
-						fullText.match(/Rated:\s*([A-Z])/i) ||
-						fullText.match(/Fiction\s+([TMK])\s*-/i);
+					const ratingMatch = fullText.match(
+						/Rated:\s*(?:Fiction\s*)?([A-Z](?:\+)?)/i,
+					);
 					if (ratingMatch) {
-						metadata.metadata.rating = ratingMatch[1];
-						metadata.rating = ratingMatch[1];
+						metadata.metadata.rating = ratingMatch[1].toUpperCase();
+						metadata.rating = metadata.metadata.rating;
 					}
 
-					// Extract language (English, Spanish, etc)
-					const langMatch = fullText.match(
-						/(English|Spanish|French|German|Japanese|Chinese|Russian)/i,
+					const compactHeaderMatch = fullText.match(
+						/Rated:\s*(?:Fiction\s*)?[A-Z](?:\+)?\s*,\s*([^,]+)\s*,\s*(.+?)(?=\s*,\s*(?:Words?|Reviews?|Favs?|Follows?|Published|Updated|Status)\s*:)/i,
 					);
-					if (langMatch) {
-						metadata.metadata.language = langMatch[1];
-						metadata.language = langMatch[1];
+					if (compactHeaderMatch) {
+						metadata.metadata.language =
+							compactHeaderMatch[1].trim();
+						metadata.language = metadata.metadata.language;
+
+						const genreAndCharacters = compactHeaderMatch[2].trim();
+						const splitIndex =
+							this.findFirstCommaOutsideBrackets(
+								genreAndCharacters,
+							);
+						const genreText =
+							splitIndex >= 0
+								? genreAndCharacters.slice(0, splitIndex).trim()
+								: genreAndCharacters;
+						const characterText =
+							splitIndex >= 0
+								? genreAndCharacters
+										.slice(splitIndex + 1)
+										.trim()
+								: "";
+
+						metadata.genres = this.parseFanfictionGenres(genreText);
+						const parsedCharacters =
+							this.parseFanfictionCharacterBlock(characterText);
+						metadata.metadata.characters =
+							parsedCharacters.characters;
+						metadata.metadata.relationships =
+							parsedCharacters.relationships;
 					}
 
-					// Extract word count
-					const wordsMatch =
-						fullText.match(/Words?:\s*([\d.]+[kmb]*)/i) ||
-						fullText.match(/([\d,]+)\s*words?/i);
+					const wordsMatch = fullText.match(
+						/Words?:\s*([\d.,]+[kmb]?\+?)/i,
+					);
 					if (wordsMatch) {
-						const wordStr = wordsMatch[1].toLowerCase();
-						let wordCount = parseInt(
-							wordStr.replace(/[,kmb]/g, ""),
-							10,
-						);
-						if (wordStr.includes("k")) wordCount *= 1000;
-						if (wordStr.includes("m")) wordCount *= 1000000;
-						metadata.metadata.words = wordCount;
-						metadata.words = wordCount;
+						metadata.metadata.words =
+							this.parseFanfictionNumericValue(wordsMatch[1]);
+						metadata.words = metadata.metadata.words || 0;
 					}
 
-					// Extract genre/categories
-					const genreMatch = fullText.match(
-						/([A-Za-z]+(?:\s+&\s+[A-Za-z]+)?)\s*-\s*/,
+					const reviewAnchor = contentDiv.querySelector(
+						"span.pull-right a[href^='/r/']",
 					);
-					if (genreMatch) {
-						const genres = genreMatch[1].split(/\s*&\s*/);
-						metadata.genres = genres.map((g) => g.trim());
+					if (reviewAnchor) {
+						metadata.metadata.reviews =
+							this.parseFanfictionNumericValue(
+								reviewAnchor.textContent,
+							);
 					}
 
-					// Extract published date
-					const pubMatch = fullText.match(
-						/Published:\s*<span[^>]*>([^<]+)</,
+					const favoritesMatch = fullText.match(
+						/Favs?:\s*([\d.,]+[kmb]?\+?)/i,
 					);
-					if (pubMatch) {
-						metadata.metadata.publishedDate = pubMatch[1].trim();
-						metadata.publishedDate = pubMatch[1].trim();
+					if (favoritesMatch) {
+						metadata.metadata.favorites =
+							this.parseFanfictionNumericValue(favoritesMatch[1]);
+					}
+
+					const followsMatch = fullText.match(
+						/Follows?:\s*([\d.,]+[kmb]?\+?)/i,
+					);
+					if (followsMatch) {
+						metadata.metadata.follows =
+							this.parseFanfictionNumericValue(followsMatch[1]);
+					}
+
+					const publishedMatch = fullHtml.match(
+						/Published:\s*<span[^>]*data-xutime="(\d+)"[^>]*>/i,
+					);
+					if (publishedMatch) {
+						metadata.metadata.publishedDate =
+							parseInt(publishedMatch[1], 10) * 1000;
+					}
+
+					const updatedMatch = fullHtml.match(
+						/Updated:\s*<span[^>]*data-xutime="(\d+)"[^>]*>/i,
+					);
+					if (updatedMatch) {
+						metadata.metadata.updatedDate =
+							parseInt(updatedMatch[1], 10) * 1000;
+					}
+
+					const statusMatch = fullText.match(/Status:\s*([^,]+)/i);
+					if (statusMatch) {
+						const statusValue = statusMatch[1].trim().toLowerCase();
+						metadata.status = statusValue.includes("complete")
+							? "completed"
+							: "ongoing";
 					}
 
 					debugLog("[Mobile] Extracted metadata from text content");
@@ -402,14 +455,35 @@ When enhancing, improve readability while fully respecting the author's creative
 				const contentDiv = document.getElementById("content");
 				if (contentDiv) {
 					// Look for fandom links like: Books › Harry Potter
-					const breadcrumbs = contentDiv.querySelectorAll(
-						"a[href*='/book/'], a[href*='/anime/'], a[href*='/tv/']",
+					const breadcrumbs = Array.from(
+						contentDiv.querySelectorAll(
+							"a[href*='/book/'], a[href*='/anime/'], a[href*='/tv/']",
+						),
 					);
 					if (breadcrumbs.length > 0) {
-						metadata.metadata.fandoms = Array.from(breadcrumbs)
+						metadata.metadata.fandoms = breadcrumbs
 							.slice(1) // Skip the first 'Books' or 'TV' link
 							.map((a) => a.textContent.trim())
 							.filter((f) => f && f.length > 0);
+						const categoryLink = breadcrumbs[0] || null;
+						const categoryMatch = categoryLink
+							?.getAttribute("href")
+							?.match(
+								/^\/(book|anime|cartoon|comic|game|misc|play|movie|tv)\//i,
+							);
+						metadata.metadata.category = categoryMatch
+							? categoryMatch[1].toLowerCase()
+							: null;
+						metadata.metadata.fandomHierarchy = breadcrumbs.map(
+							(link, index) => ({
+								category:
+									index === 0
+										? metadata.metadata.category
+										: metadata.metadata.category,
+								name: link.textContent.trim(),
+								url: link.getAttribute("href") || "",
+							}),
+						);
 						debugLog(
 							`[Mobile] Extracted fandoms: ${metadata.metadata.fandoms.join(", ")}`,
 						);
@@ -420,16 +494,40 @@ When enhancing, improve readability while fully respecting the author's creative
 			}
 
 			// Surface frequently-used fields to top level
-			metadata.tags = [...metadata.genres, ...metadata.metadata.fandoms];
+			metadata.rating = metadata.metadata.rating || null;
+			metadata.language = metadata.metadata.language || null;
+			metadata.words = metadata.metadata.words || 0;
+			metadata.reviews = metadata.metadata.reviews || 0;
+			metadata.favorites = metadata.metadata.favorites || 0;
+			metadata.follows = metadata.metadata.follows || 0;
+			metadata.publishedDate = metadata.metadata.publishedDate || null;
+			metadata.updatedDate = metadata.metadata.updatedDate || null;
+			metadata.category = metadata.metadata.category || null;
+			metadata.fandoms = Array.isArray(metadata.metadata.fandoms)
+				? [...metadata.metadata.fandoms]
+				: [];
+			metadata.characters = Array.isArray(metadata.metadata.characters)
+				? [...metadata.metadata.characters]
+				: [];
+			metadata.relationships = Array.isArray(
+				metadata.metadata.relationships,
+			)
+				? [...metadata.metadata.relationships]
+				: [];
+			metadata.tags = [
+				...metadata.genres,
+				...metadata.metadata.fandoms,
+				...metadata.metadata.characters,
+			];
 
 			// Create stats object for filtering
 			metadata.stats = {
-				words: metadata.words || 0,
-				reviews: metadata.reviews || 0,
-				favorites: metadata.favorites || 0,
-				follows: metadata.follows || 0,
-				publishedDate: metadata.publishedDate || null,
-				updatedDate: metadata.updatedDate || null,
+				words: metadata.words,
+				reviews: metadata.reviews,
+				favorites: metadata.favorites,
+				follows: metadata.follows,
+				publishedDate: metadata.publishedDate,
+				updatedDate: metadata.updatedDate,
 			};
 
 			debugLog("[Mobile] Extracted metadata successfully", metadata);
@@ -638,13 +736,26 @@ When enhancing, improve readability while fully respecting the author's creative
 			z-index: 1000;
 		`;
 
-		button.addEventListener("click", () => {
-			const currentUrl = window.location.href;
-			const newUrl = currentUrl.replace(
-				"m.fanfiction.net",
-				"www.fanfiction.net",
+		button.addEventListener("click", async () => {
+			// Persist explicit preference so normalizeURL honours the switch
+			try {
+				const stored =
+					await browser.storage.local.get(SITE_SETTINGS_KEY);
+				const settings = stored?.[SITE_SETTINGS_KEY] || {};
+				if (!settings.fanfiction) settings.fanfiction = {};
+				settings.fanfiction.domainPreference = "www";
+				await browser.storage.local.set({
+					[SITE_SETTINGS_KEY]: settings,
+				});
+			} catch (_e) {
+				/* non-critical — navigate anyway */
+			}
+			const href = window.location.href;
+			const tld = href.includes("fanfiction.ws") ? "ws" : "net";
+			window.location.href = href.replace(
+				/m\.fanfiction\.(net|ws)/,
+				`www.fanfiction.${tld}`,
 			);
-			window.location.href = newUrl;
 		});
 
 		button.addEventListener("mouseover", () => {

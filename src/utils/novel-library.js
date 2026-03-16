@@ -361,7 +361,17 @@ export class NovelLibrary {
 			const relationships = [];
 
 			const addRelationshipGroup = (group) => {
-				const cleaned = group
+				// Repair historical malformed data where the entire member list was
+				// stored as a single comma-joined string in a one-element array.
+				const members =
+					group.length === 1 && String(group[0] || "").includes(",")
+						? String(group[0])
+								.split(",")
+								.map((s) => s.trim())
+								.filter(Boolean)
+						: group;
+
+				const cleaned = members
 					.map((c) => cleanName(c))
 					.filter((c) => !isInvalidToken(c))
 					.slice(0, 4);
@@ -375,7 +385,18 @@ export class NovelLibrary {
 			// Existing relationships
 			if (Array.isArray(meta.relationships)) {
 				meta.relationships.forEach((group) => {
-					if (Array.isArray(group)) addRelationshipGroup(group);
+					if (Array.isArray(group)) {
+						addRelationshipGroup(group);
+						return;
+					}
+
+					if (typeof group === "string") {
+						const cleanedGroup = cleanName(group);
+						if (!cleanedGroup) return;
+						addRelationshipGroup(
+							cleanedGroup.split(",").map((part) => part.trim()),
+						);
+					}
 				});
 			}
 

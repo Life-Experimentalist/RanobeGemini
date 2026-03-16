@@ -378,7 +378,7 @@ When enhancing, improve readability while fully respecting the author's original
 
 		// Title
 		const titleEl = document.querySelector(
-			".preface h2.title.heading, .work h2.title",
+			"#workskin .preface h2.title.heading, .preface h2.title.heading, .work h2.title, h2.title.heading",
 		);
 		if (titleEl) {
 			metadata.title = titleEl.textContent.trim();
@@ -386,7 +386,7 @@ When enhancing, improve readability while fully respecting the author's original
 
 		// Author(s)
 		const authorEls = document.querySelectorAll(
-			".preface .byline a[rel='author'], .byline a[rel='author']",
+			"#workskin .preface .byline a[rel='author'], .preface .byline a[rel='author'], .byline a[rel='author'], h3.byline.heading a[rel='author']",
 		);
 		if (authorEls.length > 0) {
 			metadata.author = Array.from(authorEls)
@@ -396,7 +396,7 @@ When enhancing, improve readability while fully respecting the author's original
 
 		// Summary/Description
 		const summaryEl = document.querySelector(
-			".summary .userstuff blockquote, .summary .userstuff",
+			"#workskin .summary blockquote.userstuff, #workskin .summary .userstuff, .summary .userstuff blockquote, .summary .userstuff, blockquote.userstuff",
 		);
 		if (summaryEl) {
 			metadata.description = summaryEl.textContent
@@ -407,7 +407,9 @@ When enhancing, improve readability while fully respecting the author's original
 		// ==========================================
 		// Extract from work meta dl (rating, warnings, etc.)
 		// ==========================================
-		const workMeta = document.querySelector("dl.work.meta");
+		const workMeta = document.querySelector(
+			"dl.work.meta, dl.work.meta.group",
+		);
 		if (workMeta) {
 			// Rating
 			const ratingEl = workMeta.querySelector("dd.rating a.tag");
@@ -480,7 +482,7 @@ When enhancing, improve readability while fully respecting the author's original
 		// ==========================================
 		// Extract stats (chapters, words, kudos, etc.)
 		// ==========================================
-		const statsDl = document.querySelector("dl.stats");
+		const statsDl = document.querySelector("dl.stats, #workskin dl.stats");
 		if (statsDl) {
 			// Published date
 			const publishedEl = statsDl.querySelector("dd.published");
@@ -492,6 +494,12 @@ When enhancing, improve readability while fully respecting the author's original
 				}
 			}
 
+			if (!metadata.title && document.title) {
+				metadata.title = document.title
+					.replace(/\s*-\s*Chapter\s*\d+.*$/i, "")
+					.replace(/\s*\[Archive of Our Own\]\s*$/i, "")
+					.trim();
+			}
 			// Completed/Updated date
 			const statusEl = statsDl.querySelector("dd.status");
 			if (statusEl) {

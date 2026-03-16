@@ -133,6 +133,22 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				description:
 					"Show a 📋 Copy button that copies the formatted filename using the global export template.",
 			},
+			{
+				key: "betterFictionSyncEnabled",
+				label: "BetterFiction status bridge",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"If BetterFiction status UI is present on-page, use it as an optional status signal when extracting metadata.",
+			},
+			{
+				key: "enableClipboardCopyOnDownload",
+				label: "Copy on download",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"When Download is pressed, also copy the same formatted filename used by the Copy button.",
+			},
 		],
 	};
 
@@ -428,35 +444,26 @@ When enhancing, improve readability while fully respecting the author's creative
 				emoji: isMobile ? "🖥️" : "📱",
 				color: "#5a9fd4",
 				onClick: async () => {
-					// Save new preference FIRST so normalizeURL() won't redirect back
+					const url = new URL(window.location.href);
+					const tld = url.hostname.endsWith(".ws") ? "ws" : "net";
+					const targetSubdomain = isMobile ? "www" : "m";
+					url.hostname = `${targetSubdomain}.fanfiction.${tld}`;
+					// Persist explicit preference so normalizeURL honours the switch
 					try {
 						const stored =
 							await browser.storage.local.get(SITE_SETTINGS_KEY);
-						const allSettings = stored?.[SITE_SETTINGS_KEY] || {};
-						const ff = { ...(allSettings.fanfiction || {}) };
-						ff.domainPreference = isMobile ? "www" : "mobile";
+						const settings = stored?.[SITE_SETTINGS_KEY] || {};
+						if (!settings.fanfiction) settings.fanfiction = {};
+						settings.fanfiction.domainPreference = isMobile
+							? "www"
+							: "mobile";
 						await browser.storage.local.set({
-							[SITE_SETTINGS_KEY]: {
-								...allSettings,
-								fanfiction: ff,
-							},
+							[SITE_SETTINGS_KEY]: settings,
 						});
-					} catch {
-						/* intentional: preference save is non-critical */
+					} catch (_e) {
+						/* non-critical — navigate anyway */
 					}
-					// Now navigate
-					const url = window.location.href;
-					if (isMobile) {
-						window.location.href = url.replace(
-							"m.fanfiction",
-							"www.fanfiction",
-						);
-					} else {
-						window.location.href = url.replace(
-							/(?:www\.)?fanfiction\.net/,
-							"m.fanfiction.net",
-						);
-					}
+					window.location.href = url.toString();
 				},
 			});
 		}
@@ -496,7 +503,30 @@ When enhancing, improve readability while fully respecting the author's creative
 				text: "Download",
 				emoji: "⬇️",
 				color: "#ff6b6b",
-				onClick: () => {
+				onClick: async () => {
+					if (siteConf.enableClipboardCopyOnDownload !== false) {
+						try {
+							const title = this.extractTitle();
+							const author = this.extractAuthor();
+							const storyId =
+								window.location.href.match(/\/s\/(\d+)/)?.[1] ||
+								"";
+							const text = formatNovelInfo(
+								{
+									title,
+									author,
+									shelfId: "fanfiction",
+									id: `fanfiction-${storyId}`,
+								},
+								exportTemplate,
+							);
+							if (text) {
+								await navigator.clipboard.writeText(text);
+							}
+						} catch {
+							/* intentional: clipboard failure is non-critical */
+						}
+					}
 					window.open(
 						`https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`,
 						"_blank",
@@ -666,6 +696,210 @@ When enhancing, improve readability while fully respecting the author's creative
 		}
 	}
 
+	parseFanfictionNumericValue(value) {
+		const raw = String(value || "").trim();
+		if (!raw) return null;
+
+		const compact = raw.replace(/,/g, "").replace(/\+/g, "").trim();
+		const shorthand = compact.match(/^(\d+(?:\.\d+)?)([kmb])?$/i);
+		if (shorthand) {
+			let parsed = parseFloat(shorthand[1]);
+			const unit = (shorthand[2] || "").toLowerCase();
+			if (unit === "k") parsed *= 1000;
+			if (unit === "m") parsed *= 1000000;
+			if (unit === "b") parsed *= 1000000000;
+			return Math.round(parsed);
+		}
+
+		const digits = raw.match(/[\d,]+/);
+		if (!digits) return null;
+		const parsed = parseInt(digits[0].replace(/,/g, ""), 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+
+	parseFanfictionGenres(rawGenre) {
+		const value = String(rawGenre || "").trim();
+		if (!value) return [];
+
+		const protectedValue = value.replace(
+			/Hurt\s*\/\s*Comfort/gi,
+			"__HURT_COMFORT__",
+		);
+		return protectedValue
+			.split(/\s*(?:\/|&)\s*/)
+			.map((entry) =>
+				entry.replace(/__HURT_COMFORT__/g, "Hurt/Comfort").trim(),
+			)
+			.filter(Boolean);
+	}
+
+	findFirstCommaOutsideBrackets(text) {
+		const value = String(text || "");
+		let depth = 0;
+		for (let index = 0; index < value.length; index += 1) {
+			const char = value[index];
+			if (char === "[") depth += 1;
+			else if (char === "]") depth = Math.max(depth - 1, 0);
+			else if (char === "," && depth === 0) return index;
+		}
+		return -1;
+	}
+
+	isFanfictionCharacterTokenInvalid(value) {
+		const token = String(value || "").trim();
+		if (!token) return true;
+		if (
+			/^(?:published|updated|status|chapters|words|reviews|favs|favorites|follows|rated|english|language|id)$/i.test(
+				token,
+			)
+		)
+			return true;
+		if (
+			/^(?:complete|completed|ongoing|in-progress|in progress|unknown)$/i.test(
+				token,
+			)
+		)
+			return true;
+		if (/^(?:19|20)\d{2}$/.test(token)) return true;
+		if (/^(?:[01]?\d|2\d|3[01])$/.test(token)) return true;
+		if (
+			/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)(?:uary|ch|il|e|y|ust|tember|ober|ember)?\.?$/i.test(
+				token,
+			)
+		)
+			return true;
+		if (/^\d+$/.test(token)) return true;
+		return false;
+	}
+
+	cleanFanfictionCharacterToken(value) {
+		const cleaned = String(value || "")
+			.replace(/[[]\]]/g, "")
+			.replace(/^[-,:;\s]+|[-,:;\s]+$/g, "")
+			.replace(/\s+/g, " ")
+			.trim();
+		return this.isFanfictionCharacterTokenInvalid(cleaned) ? null : cleaned;
+	}
+
+	parseFanfictionRelationshipToken(token) {
+		const rawToken = String(token || "").trim();
+		if (!rawToken) return null;
+		if (!/[\/&+]|\bx\b/i.test(rawToken)) return null;
+
+		const candidates = rawToken
+			.split(/\s*(?:\/|&|\+|\bx\b)\s*/i)
+			.map((part) => this.cleanFanfictionCharacterToken(part))
+			.filter(Boolean)
+			.slice(0, 4);
+
+		return candidates.length >= 2 ? candidates : null;
+	}
+
+	parseFanfictionCharacterBlock(rawText) {
+		let working = String(rawText || "")
+			.replace(/^Characters:\s*/i, "")
+			.replace(/\s+/g, " ")
+			.trim();
+		if (!working) {
+			return { characters: [], relationships: [] };
+		}
+
+		const characters = [];
+		const relationships = [];
+		const seenCharacters = new Set();
+		const seenRelationships = new Set();
+
+		const addCharacter = (value) => {
+			const cleaned = this.cleanFanfictionCharacterToken(value);
+			if (!cleaned) return;
+			const key = cleaned.toLowerCase();
+			if (seenCharacters.has(key)) return;
+			seenCharacters.add(key);
+			characters.push(cleaned);
+		};
+
+		const addRelationship = (group) => {
+			const cleanedGroup = (Array.isArray(group) ? group : [])
+				.map((entry) => this.cleanFanfictionCharacterToken(entry))
+				.filter(Boolean)
+				.slice(0, 4);
+			if (cleanedGroup.length < 2) return;
+			const key = cleanedGroup.join("|").toLowerCase();
+			if (seenRelationships.has(key)) return;
+			seenRelationships.add(key);
+			relationships.push(cleanedGroup);
+			cleanedGroup.forEach(addCharacter);
+		};
+
+		const bracketMatches = working.match(/\[([^\]]+)\]/g) || [];
+		bracketMatches.forEach((bracket) => {
+			const inside = bracket.replace(/[[]\]]/g, "").trim();
+			if (!inside) return;
+			addRelationship(inside.split(","));
+		});
+
+		working = working.replace(/\[[^\]]+\]/g, " ").trim();
+		const remainingTokens = working
+			.split(/\s*,\s*/)
+			.map((entry) => entry.trim())
+			.filter(Boolean);
+
+		remainingTokens.forEach((token) => {
+			const relationship = this.parseFanfictionRelationshipToken(token);
+			if (relationship) {
+				addRelationship(relationship);
+				return;
+			}
+			addCharacter(token);
+		});
+
+		return { characters, relationships };
+	}
+
+	extractDesktopCharacterText(profileTop, infoText = "", segments = []) {
+		const directCharacterNode =
+			profileTop?.querySelector(
+				"span.xgray.xcontrast_txt > span.charactersmeta, span.xgray > span.charactersmeta",
+			) || null;
+		const directText = directCharacterNode?.textContent?.trim() || "";
+		if (directText) return directText;
+
+		const statPattern =
+			/^(?:chapters|words|reviews|favs|favorites|follows|updated|published|status|id)\s*:/i;
+		const usableSegments = Array.isArray(segments) ? segments : [];
+		const startIndex = (() => {
+			const genreSegment = usableSegments[2] || "";
+			const looksLikeGenre =
+				this.parseFanfictionGenres(genreSegment).length > 0 &&
+				!/\[[^\]]+\]/.test(genreSegment) &&
+				!/[A-Z][a-z]+\s+[A-Z]\./.test(genreSegment);
+			return looksLikeGenre ? 3 : 2;
+		})();
+
+		for (
+			let index = startIndex;
+			index < usableSegments.length;
+			index += 1
+		) {
+			const segment = String(usableSegments[index] || "").trim();
+			if (!segment) continue;
+			if (statPattern.test(segment)) break;
+			if (/^(?:complete|completed|ongoing)$/i.test(segment)) continue;
+			if (
+				/\[[^\]]+\]/.test(segment) ||
+				/[A-Z][a-z]+\s+[A-Z]\./.test(segment)
+			) {
+				return segment;
+			}
+		}
+
+		const infoValue = String(infoText || "").replace(/\s+/g, " ");
+		const match = infoValue.match(
+			/(?:^| - )(?:[^-]+?) - ([^-]*\[[^\]]+\][^-]*|[^-]*[A-Z][a-z]+\s+[A-Z]\.[^-]*)(?= - (?:Chapters|Words|Reviews|Favs|Follows|Updated|Published|Status|id):)/i,
+		);
+		return match?.[1]?.trim() || "";
+	}
+
 	/**
 	 * Extract metadata from enhanced HTML structure (Better Fiction plugin, etc.)
 	 * Enhanced structure uses separate spans: .ratedmeta, .languagemeta, .genremeta, .charactersmeta, .statusmeta
@@ -686,6 +920,34 @@ When enhancing, improve readability while fully respecting the author's creative
 			}
 
 			const enhanced = {};
+
+			const parseCountFromSelector = (...selectors) => {
+				for (const selector of selectors) {
+					const node = profileTop.querySelector(selector);
+					if (!node) continue;
+					const text = node.textContent?.trim() || "";
+					const match = text.match(/([\d,]+)/);
+					if (match) {
+						const parsed = parseInt(match[1].replace(/,/g, ""), 10);
+						if (!Number.isNaN(parsed)) return parsed;
+					}
+				}
+				return null;
+			};
+
+			const parseXutimeFromSelector = (...selectors) => {
+				for (const selector of selectors) {
+					const node = profileTop.querySelector(selector);
+					if (!node) continue;
+					const rawTs = node.getAttribute("data-xutime");
+					if (!rawTs) continue;
+					const parsed = parseInt(rawTs, 10);
+					if (!Number.isNaN(parsed) && parsed > 0) {
+						return parsed * 1000;
+					}
+				}
+				return null;
+			};
 
 			// Extract rating from .ratedmeta
 			const ratedText = ratedMeta.textContent?.trim() || "";
@@ -745,117 +1007,104 @@ When enhancing, improve readability while fully respecting the author's creative
 				debugLog("FanFiction Enhanced: Status:", enhanced.status);
 			}
 
-			// Extract chapters from .chaptersmeta
-			const chaptersMeta = profileTop.querySelector(".chaptersmeta");
-			if (chaptersMeta) {
-				const chaptersText = chaptersMeta.textContent?.trim() || "";
-				const chaptersMatch = chaptersText.match(/(\d+)/);
-				if (chaptersMatch) {
-					enhanced.totalChapters = parseInt(chaptersMatch[1], 10);
+			// Extract chapters and words from enhanced stat nodes
+			const chapters = parseCountFromSelector(
+				".chaptersmeta .chaptersvalue",
+				".chaptersvalue",
+				".chaptersmeta",
+			);
+			if (typeof chapters === "number") {
+				enhanced.totalChapters = chapters;
+				debugLog(
+					"FanFiction Enhanced: Chapters:",
+					enhanced.totalChapters,
+				);
+			}
+
+			const words = parseCountFromSelector(
+				".wordsmeta .wordsvalue",
+				".wordsvalue",
+				".wordsmeta",
+			);
+			if (typeof words === "number") {
+				enhanced.words = words;
+				debugLog("FanFiction Enhanced: Words:", enhanced.words);
+			}
+
+			const reviews = parseCountFromSelector(
+				".reviewsmeta .reviewsvalue",
+				".reviewsvalue",
+				".reviewsmeta",
+			);
+			if (typeof reviews === "number") {
+				enhanced.reviews = reviews;
+				debugLog("FanFiction Enhanced: Reviews:", enhanced.reviews);
+			}
+
+			const favorites = parseCountFromSelector(
+				".favsmeta .favsvalue",
+				".favsvalue",
+				".favsmeta",
+			);
+			if (typeof favorites === "number") {
+				enhanced.favorites = favorites;
+				debugLog("FanFiction Enhanced: Favorites:", enhanced.favorites);
+			}
+
+			const follows = parseCountFromSelector(
+				".followsmeta .followsvalue",
+				".followsvalue",
+				".followsmeta",
+			);
+			if (typeof follows === "number") {
+				enhanced.follows = follows;
+				debugLog("FanFiction Enhanced: Follows:", enhanced.follows);
+			}
+
+			const publishedDate = parseXutimeFromSelector(
+				".publishedmeta .publishedvalue span[data-xutime]",
+				".publishedmeta span[data-xutime]",
+			);
+			if (publishedDate) {
+				enhanced.publishedDate = publishedDate;
+				debugLog(
+					"FanFiction Enhanced: Published date:",
+					enhanced.publishedDate,
+				);
+			}
+
+			const updatedDate = parseXutimeFromSelector(
+				".updatedmeta .updatedvalue span[data-xutime]",
+				".updatedmeta span[data-xutime]",
+			);
+			if (updatedDate) {
+				enhanced.updatedDate = updatedDate;
+				debugLog(
+					"FanFiction Enhanced: Updated date:",
+					enhanced.updatedDate,
+				);
+			}
+
+			const characterText = this.extractDesktopCharacterText(profileTop);
+			if (characterText) {
+				const parsedCharacters =
+					this.parseFanfictionCharacterBlock(characterText);
+				if (parsedCharacters.characters.length > 0) {
+					enhanced.characters = parsedCharacters.characters;
+				}
+				if (parsedCharacters.relationships.length > 0) {
+					enhanced.relationships = parsedCharacters.relationships;
+				}
+				if (
+					parsedCharacters.characters.length > 0 ||
+					parsedCharacters.relationships.length > 0
+				) {
 					debugLog(
-						"FanFiction Enhanced: Chapters:",
-						enhanced.totalChapters,
+						"FanFiction Enhanced: Characters:",
+						parsedCharacters.characters,
+						"relationships:",
+						parsedCharacters.relationships,
 					);
-				}
-			}
-
-			// Extract words from .wordsmeta
-			const wordsMeta = profileTop.querySelector(".wordsmeta");
-			if (wordsMeta) {
-				const wordsText = wordsMeta.textContent?.trim() || "";
-				const wordsMatch = wordsText.match(/([\d,]+)/);
-				if (wordsMatch) {
-					enhanced.words = parseInt(
-						wordsMatch[1].replace(/,/g, ""),
-						10,
-					);
-					debugLog("FanFiction Enhanced: Words:", enhanced.words);
-				}
-			}
-
-			// Extract characters from .charactersmeta
-			const charactersMeta = profileTop.querySelector(".charactersmeta");
-			if (charactersMeta) {
-				const charsText = charactersMeta.textContent?.trim() || "";
-				// Remove "Characters:" prefix if present
-				let cleanChars = charsText
-					.replace(/^Characters:\s*/i, "")
-					.trim();
-				if (cleanChars) {
-					const isDateLikeToken = (value) => {
-						const token = String(value || "").trim();
-						if (!token) return true;
-						if (/^(?:published|updated)$/i.test(token)) return true;
-						if (/^(?:19|20)\d{2}$/.test(token)) return true;
-						if (/^(?:[01]?\d|2\d|3[01])$/.test(token)) return true;
-						if (
-							/^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)(?:uary|ch|il|e|y|ust|tember|ober|ember)?\.?$/i.test(
-								token,
-							)
-						) {
-							return true;
-						}
-						return false;
-					};
-
-					const allCharacters = new Set();
-					const relationships = [];
-
-					// Extract relationship brackets first [Harry P., Hermione G., etc.]
-					const bracketMatches = cleanChars.match(/\[([^\]]+)\]/g);
-					if (bracketMatches) {
-						bracketMatches.forEach((bracket) => {
-							const insideBracket = bracket
-								.replace(/[[\]]/g, "")
-								.trim();
-							const charsInBracket = insideBracket
-								.split(",")
-								.map((c) => c.trim())
-								.filter(
-									(c) => c.length > 0 && !isDateLikeToken(c),
-								)
-								.slice(0, 4);
-
-							// Store relationship group (with 2+ characters)
-							if (charsInBracket.length >= 2) {
-								relationships.push(charsInBracket);
-							}
-
-							// Add individual characters from the bracket
-							charsInBracket.forEach((c) => allCharacters.add(c));
-						});
-
-						// Remove brackets from section to process remaining characters
-						cleanChars = cleanChars.replace(/\[[^\]]+\]/g, "");
-					}
-
-					// Extract remaining non-bracketed characters
-					const remainingChars = cleanChars
-						.split(",")
-						.map((c) => c.trim())
-						.filter(
-							(c) =>
-								c.length > 0 &&
-								c !== "-" &&
-								!isDateLikeToken(c),
-						);
-
-					remainingChars.forEach((c) => {
-						if (c) allCharacters.add(c);
-					});
-
-					if (allCharacters.size > 0) {
-						enhanced.characters = [...allCharacters];
-						if (relationships.length > 0) {
-							enhanced.relationships = relationships;
-						}
-						debugLog(
-							"FanFiction Enhanced: Characters:",
-							[...allCharacters],
-							"relationships:",
-							relationships,
-						);
-					}
 				}
 			}
 
@@ -866,6 +1115,49 @@ When enhancing, improve readability while fully respecting the author's creative
 				"FanFiction: Error extracting enhanced metadata:",
 				error,
 			);
+			return null;
+		}
+	}
+
+	/**
+	 * Read BetterFiction status selector from page DOM if available.
+	 * @returns {string|null} Normalized status or null
+	 */
+	extractBetterFictionStatus() {
+		try {
+			const syncFlag = document.body?.dataset?.rgBetterfictionSync;
+			if (syncFlag === "false") return null;
+
+			const selector = document.querySelector(
+				"#organizer-status-selecter select[aria-label='Change reading status']",
+			);
+			if (!selector) return null;
+
+			const raw =
+				selector.selectedOptions?.[0]?.textContent ||
+				selector.value ||
+				"";
+			const normalized = String(raw).trim().toLowerCase();
+			if (!normalized) return null;
+
+			if (/(complete|completed|finished|done)/.test(normalized)) {
+				return "completed";
+			}
+			if (/(drop|dropped|abandon)/.test(normalized)) {
+				return "dropped";
+			}
+			if (/(hold|paused|hiatus)/.test(normalized)) {
+				return "on-hold";
+			}
+			if (/(plan|to\s*read|want\s*to\s*read|queued?)/.test(normalized)) {
+				return "to-read";
+			}
+			if (/(reading|current|in\s*progress)/.test(normalized)) {
+				return "reading";
+			}
+
+			return null;
+		} catch (_error) {
 			return null;
 		}
 	}
@@ -908,8 +1200,10 @@ When enhancing, improve readability while fully respecting the author's creative
 			metadataIncomplete: false,
 			metadata: {
 				isCrossover: false,
+				category: null,
 				fandoms: [],
 				characters: [],
+				relationships: [],
 				rating: null,
 				language: null,
 				words: 0,
@@ -980,6 +1274,7 @@ When enhancing, improve readability while fully respecting the author's creative
 					const allLinks = lcLeft.querySelectorAll("a");
 					const fandoms = [];
 					const fandomHierarchy = [];
+					let currentCategory = null;
 
 					// Check each link for crossover pattern
 					for (const link of allLinks) {
@@ -1066,8 +1361,9 @@ When enhancing, improve readability while fully respecting the author's creative
 							/^\/(book|anime|cartoon|comic|game|misc|play|movie|tv)\/$/i,
 						);
 						if (categoryMatch) {
+							currentCategory = categoryMatch[1].toLowerCase();
 							fandomHierarchy.push({
-								category: categoryMatch[1].toLowerCase(),
+								category: currentCategory,
 								name: linkText,
 								url: href,
 							});
@@ -1079,7 +1375,7 @@ When enhancing, improve readability while fully respecting the author's creative
 						if (linkText && !categoryMatch) {
 							fandoms.push(linkText);
 							fandomHierarchy.push({
-								category: null,
+								category: currentCategory,
 								name: linkText,
 								url: href,
 							});
@@ -1089,6 +1385,10 @@ When enhancing, improve readability while fully respecting the author's creative
 					metadata.metadata.fandoms = fandoms;
 					metadata.metadata.fandomHierarchy = fandomHierarchy;
 					metadata.metadata.isCrossover = isCrossoverDetected;
+					metadata.metadata.category = isCrossoverDetected
+						? "crossover"
+						: fandomHierarchy.find((entry) => entry?.category)
+								?.category || null;
 
 					debugLog(
 						"FanFiction: Extracted fandoms:",
@@ -1125,6 +1425,23 @@ When enhancing, improve readability while fully respecting the author's creative
 					}
 					if (enhancedData.words) {
 						metadata.metadata.words = enhancedData.words;
+					}
+					if (typeof enhancedData.reviews === "number") {
+						metadata.metadata.reviews = enhancedData.reviews;
+					}
+					if (typeof enhancedData.favorites === "number") {
+						metadata.metadata.favorites = enhancedData.favorites;
+					}
+					if (typeof enhancedData.follows === "number") {
+						metadata.metadata.follows = enhancedData.follows;
+					}
+					if (enhancedData.publishedDate) {
+						metadata.metadata.publishedDate =
+							enhancedData.publishedDate;
+					}
+					if (enhancedData.updatedDate) {
+						metadata.metadata.updatedDate =
+							enhancedData.updatedDate;
 					}
 					if (
 						enhancedData.characters &&
@@ -1424,108 +1741,38 @@ When enhancing, improve readability while fully respecting the author's creative
 							!metadata.metadata.characters ||
 							metadata.metadata.characters.length === 0
 						) {
-							const allCharacters = new Set();
-							const relationships = [];
-
-							// Strategy: Look for character names after the Published date and before "id:"
-							// Format: "Published: <date> <characters>id: <id>"
-							let charSection = "";
-
-							// Try to find characters after Published date
-							const publishedMatch = infoText.match(
-								/Published:\s*[A-Za-z]{3}\s+\d{1,2},?\s*\d{4}\s+(.+?)(?:id:|$)/i,
-							);
-							if (publishedMatch && publishedMatch[1]) {
-								charSection = publishedMatch[1].trim();
-							}
-
-							// Fallback: try between genre section and stats.
-							// Handles both:
-							//   "Genre - Char1, Char2 - Chapters:"
-							//   "Genre - Char1, Char2 - Complete - Chapters:"  (Complete between chars & stats)
-							if (
-								!charSection ||
-								!charSection.replace(/^[\s-]+$/, "")
-							) {
-								const genreCharMatch = infoText.match(
-									/(?:Adventure|Romance|Drama|Humor|Angst|Hurt\/Comfort|Fantasy|Sci-Fi|Mystery|Horror|Tragedy|Family|Friendship|General|Supernatural|Crime|Western|Parody|Poetry|Spiritual)[/\w-]*\s+-\s+([^-]+?)\s+-\s*(?:Complete|Status|Chapters|Words)/i,
+							const characterText =
+								this.extractDesktopCharacterText(
+									profileTop,
+									infoText,
+									segments,
 								);
-								if (genreCharMatch && genreCharMatch[1]) {
-									charSection = genreCharMatch[1].trim();
-								}
-							}
-
-							if (charSection && charSection.length > 0) {
-								// Extract relationship brackets first [Harry P., Hermione G., etc.]
-								// Can have multiple brackets: [Harry P., Hermione G.] [Luna L., Neville L.]
-								const bracketMatches =
-									charSection.match(/\[([^\]]+)\]/g);
-								if (bracketMatches) {
-									bracketMatches.forEach((bracket) => {
-										const insideBracket = bracket
-											.replace(/[[]\]]/g, "")
-											.trim();
-										const charsInBracket = insideBracket
-											.split(",")
-											.map((c) => c.trim())
-											.filter((c) => c.length > 0)
-											.slice(0, 4);
-
-										// Store relationship group (with 2+ characters)
-										if (charsInBracket.length >= 2) {
-											relationships.push(charsInBracket);
-										}
-
-										// Add individual characters from the bracket
-										charsInBracket.forEach((c) =>
-											allCharacters.add(c),
-										);
-									});
-
-									// Remove brackets from section to process remaining characters
-									charSection = charSection.replace(
-										/\[[^\]]+\]/g,
-										"",
+							if (characterText) {
+								const parsedCharacters =
+									this.parseFanfictionCharacterBlock(
+										characterText,
 									);
+								if (parsedCharacters.characters.length > 0) {
+									metadata.metadata.characters =
+										parsedCharacters.characters;
 								}
-
-								// Extract remaining non-bracketed characters
-								// This includes individual characters and group names like "1-A Students"
-								const remainingChars = charSection
-									.split(",")
-									.map((c) => c.trim())
-									.filter(
-										(c) =>
-											c.length > 0 &&
-											c !== "-" &&
-											!c.match(/^\d+$/) &&
-											!c.match(/status\s*:/i) &&
-											!c.match(
-												/^(-\s*)?complete(-\s*)?$/i,
-											),
-									);
-
-								remainingChars.forEach((c) => {
-									if (c) allCharacters.add(c);
-								});
-							}
-
-							if (allCharacters.size > 0) {
-								metadata.metadata.characters = [
-									...allCharacters,
-								];
-								if (relationships.length > 0) {
+								if (parsedCharacters.relationships.length > 0) {
 									metadata.metadata.relationships =
-										relationships;
+										parsedCharacters.relationships;
 								}
-								debugLog(
-									"FanFiction: Extracted characters:",
-									[...allCharacters],
-									"relationships:",
-									relationships,
-								);
+								if (
+									parsedCharacters.characters.length > 0 ||
+									parsedCharacters.relationships.length > 0
+								) {
+									debugLog(
+										"FanFiction: Extracted characters:",
+										parsedCharacters.characters,
+										"relationships:",
+										parsedCharacters.relationships,
+									);
+								}
 							}
-						} // End character extraction block
+						}
 
 						// Extract story ID from info text
 						const idMatch = infoText.match(/id:\s*(\d+)/i);
@@ -1542,6 +1789,76 @@ When enhancing, improve readability while fully respecting the author's creative
 			);
 		}
 
+		const blockedCharacterValues = new Set(
+			(metadata.metadata?.fandoms || []).map((value) =>
+				String(value || "")
+					.trim()
+					.toLowerCase(),
+			),
+		);
+		(metadata.metadata?.fandomHierarchy || []).forEach((entry) => {
+			if (entry?.name) {
+				blockedCharacterValues.add(
+					String(entry.name).trim().toLowerCase(),
+				);
+			}
+		});
+
+		const cleanCharacterName = (value) => {
+			const cleaned = String(value || "")
+				.replace(/[[]\]]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+			if (!cleaned) return null;
+			if (/^\d+$/.test(cleaned)) return null;
+			if (
+				/^(?:published|updated|status|chapters|words|reviews|favs|follows|id)$/i.test(
+					cleaned,
+				)
+			)
+				return null;
+			if (/^(?:complete|completed|ongoing|in-progress)$/i.test(cleaned))
+				return null;
+			if (blockedCharacterValues.has(cleaned.toLowerCase())) return null;
+			return cleaned;
+		};
+
+		const normalizedCharacters = [];
+		const seenCharacters = new Set();
+		(metadata.metadata?.characters || []).forEach((entry) => {
+			const cleaned = cleanCharacterName(entry);
+			if (!cleaned) return;
+			const key = cleaned.toLowerCase();
+			if (seenCharacters.has(key)) return;
+			seenCharacters.add(key);
+			normalizedCharacters.push(cleaned);
+		});
+
+		const normalizedRelationships = [];
+		const seenRelationships = new Set();
+		(metadata.metadata?.relationships || []).forEach((group) => {
+			if (!Array.isArray(group)) return;
+			const cleanedGroup = group
+				.map((entry) => cleanCharacterName(entry))
+				.filter(Boolean)
+				.slice(0, 4);
+			if (cleanedGroup.length < 2) return;
+			const key = cleanedGroup.join("|").toLowerCase();
+			if (seenRelationships.has(key)) return;
+			seenRelationships.add(key);
+			normalizedRelationships.push(cleanedGroup);
+			cleanedGroup.forEach((entry) => {
+				const charKey = entry.toLowerCase();
+				if (!seenCharacters.has(charKey)) {
+					seenCharacters.add(charKey);
+					normalizedCharacters.push(entry);
+				}
+			});
+		});
+
+		metadata.metadata.characters = normalizedCharacters;
+		metadata.metadata.relationships = normalizedRelationships;
+
 		// Promote frequently-used fields to top level so filters/cards stay in sync
 		metadata.rating = metadata.metadata.rating || null;
 		metadata.language = metadata.metadata.language || null;
@@ -1551,6 +1868,17 @@ When enhancing, improve readability while fully respecting the author's creative
 		metadata.follows = metadata.metadata.follows || 0;
 		metadata.publishedDate = metadata.metadata.publishedDate || null;
 		metadata.updatedDate = metadata.metadata.updatedDate || null;
+		metadata.category = metadata.metadata.category || null;
+		metadata.fandoms = Array.isArray(metadata.metadata.fandoms)
+			? [...metadata.metadata.fandoms]
+			: [];
+		metadata.characters = [...normalizedCharacters];
+		metadata.relationships = [...normalizedRelationships];
+
+		const betterFictionStatus = this.extractBetterFictionStatus();
+		if (betterFictionStatus) {
+			metadata.status = betterFictionStatus;
+		}
 
 		// Ensure stats object is populated for filtering
 		metadata.stats = {

@@ -476,6 +476,22 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		try {
 			const isOnChapterPage = this.isChapterPage();
 			const isOnNovelPage = this.isNovelPage();
+			const parseCompactNumber = (valueText) => {
+				if (!valueText) return null;
+				const cleaned = valueText
+					.trim()
+					.replace(/,/g, "")
+					.toLowerCase();
+				const match = cleaned.match(/([\d.]+)\s*([kmb])?/i);
+				if (!match) return null;
+				const base = parseFloat(match[1]);
+				if (Number.isNaN(base)) return null;
+				const suffix = (match[2] || "").toLowerCase();
+				if (suffix === "k") return Math.round(base * 1000);
+				if (suffix === "m") return Math.round(base * 1000000);
+				if (suffix === "b") return Math.round(base * 1000000000);
+				return Math.round(base);
+			};
 
 			debugLog(
 				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`,
@@ -505,6 +521,15 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				);
 				if (authorLink) {
 					metadata.author = authorLink.textContent.trim();
+				}
+
+				if (!metadata.author) {
+					const authorFallback = document.querySelector(
+						".auth_name a[href*='/profile/'], .auth a[href*='/profile/']",
+					);
+					if (authorFallback) {
+						metadata.author = authorFallback.textContent.trim();
+					}
 				}
 
 				const chapterCover = document.querySelector(".s_novel_img img");
@@ -565,19 +590,41 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 						metadata.totalChapters = parseInt(chaptersMatch[1], 10);
 					}
 				}
+
+				if (!metadata.description) {
+					const descMeta = document.querySelector(
+						'meta[name="description"], meta[property="og:description"]',
+					);
+					if (descMeta?.getAttribute("content")) {
+						const desc = descMeta.getAttribute("content").trim();
+						if (desc) {
+							metadata.description =
+								desc.length > 500
+									? `${desc.substring(0, 500)}...`
+									: desc;
+						}
+					}
+				}
 			} else if (isOnNovelPage) {
 				// ===== NOVEL PAGE EXTRACTION =====
-				const titleEl = document.querySelector(".fic_title");
+				const titleEl = document.querySelector(
+					".fic_title, .wi_fic_title, h1.fic_title",
+				);
 				if (titleEl) {
 					metadata.title = titleEl.textContent.trim();
 				}
 
-				const authorLinks = document.querySelectorAll(
-					'a[href*="/profile/"]',
-				);
-				for (const link of authorLinks) {
-					const text = link.textContent.trim();
-					if (text && text.length < 50) {
+				const authorSelectors = [
+					"#authorid a[href*='/profile/']",
+					"#authorid",
+					".auth_name_fic a[href*='/profile/']",
+					".fic_author a[href*='/profile/']",
+					".auth_name a[href*='/profile/']",
+				];
+				for (const selector of authorSelectors) {
+					const authorEl = document.querySelector(selector);
+					const text = authorEl?.textContent?.trim();
+					if (text && text.length < 80) {
 						metadata.author = text;
 						break;
 					}
@@ -608,6 +655,16 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 					}
 				});
 
+				const nestedGenreLinks = document.querySelectorAll(
+					".fic_genre a, .wi_fic_genre a",
+				);
+				nestedGenreLinks.forEach((link) => {
+					const genre = link.textContent.trim();
+					if (genre && !metadata.genres.includes(genre)) {
+						metadata.genres.push(genre);
+					}
+				});
+
 				const fandomLinks = document.querySelectorAll(
 					".wi_fic_genre a.stag[href*='/fandom/']",
 				);
@@ -631,28 +688,19 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const statsItems = document.querySelectorAll(".st_item");
 				statsItems.forEach((item) => {
 					const text = item.textContent.toLowerCase();
-					const numberMatch = item.textContent.match(/([\d,.]+k?)/i);
+					const parsedValue = parseCompactNumber(item.textContent);
 
-					if (numberMatch) {
-						const valueStr = numberMatch[1].replace(/,/g, "");
-						let value;
-
-						if (valueStr.toLowerCase().endsWith("k")) {
-							value = parseFloat(valueStr) * 1000;
-						} else {
-							value = parseFloat(valueStr);
-						}
-
+					if (parsedValue !== null) {
 						if (text.includes("views")) {
-							metadata.views = Math.round(value);
+							metadata.views = parsedValue;
 						} else if (text.includes("favorite")) {
-							metadata.favorites = Math.round(value);
+							metadata.favorites = parsedValue;
 						} else if (text.includes("chapters/week")) {
-							metadata.chaptersPerWeek = value;
+							metadata.chaptersPerWeek = parsedValue;
 						} else if (text.includes("chapter")) {
-							metadata.totalChapters = Math.round(value);
+							metadata.totalChapters = parsedValue;
 						} else if (text.includes("reader")) {
-							metadata.readers = Math.round(value);
+							metadata.readers = parsedValue;
 						}
 					}
 				});
@@ -666,9 +714,12 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const ratingCountEl = document.querySelector(".rate_more");
 				if (ratingCountEl) {
 					const countMatch =
-						ratingCountEl.textContent.match(/(\d+)\s*ratings/i);
+						ratingCountEl.textContent.match(/([\d,]+)\s*ratings/i);
 					if (countMatch) {
-						metadata.ratingCount = parseInt(countMatch[1], 10);
+						metadata.ratingCount = parseInt(
+							countMatch[1].replace(/,/g, ""),
+							10,
+						);
 					}
 				}
 

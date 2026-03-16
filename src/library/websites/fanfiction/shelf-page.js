@@ -756,7 +756,7 @@ async function showNovelModal(novel) {
 	if (openLibraryBtn) {
 		openLibraryBtn.onclick = () => {
 			const libraryUrl = browser.runtime.getURL(
-				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+				`library/library.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
 			);
 			window.open(libraryUrl, "_blank");
 		};
@@ -769,7 +769,7 @@ async function showNovelModal(novel) {
 	if (openLibraryHeaderBtn) {
 		openLibraryHeaderBtn.onclick = () => {
 			const libraryUrl = browser.runtime.getURL(
-				`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+				`library/library.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
 			);
 			window.open(libraryUrl, "_blank");
 		};
@@ -2039,10 +2039,20 @@ function openNovelFromQuery() {
 	try {
 		const params = new URLSearchParams(window.location.search);
 		const novelId = params.get("novel");
+		const consumeQuery = params.get("openModal") === "1";
 		if (!novelId) return;
 		const novel = allNovels.find((n) => n && n.id === novelId);
 		if (novel) {
 			showNovelModal(novel);
+			if (consumeQuery) {
+				params.delete("openModal");
+				params.delete("novel");
+				history.replaceState(
+					null,
+					"",
+					`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`,
+				);
+			}
 		} else {
 			showToast("Novel not found in this shelf", "info");
 		}

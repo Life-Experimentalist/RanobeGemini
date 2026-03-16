@@ -1072,6 +1072,44 @@ if (typeof browser === "undefined") {
 		return false;
 	}
 
+	function endsLikeTruncatedText(text) {
+		const value = (text || "").trim();
+		if (!value) return true;
+		if (!/[.!?"')\]]$/.test(value)) return true;
+		return /\b(?:and|or|but|because|when|while|that|which|who|whose|with|to|for|of|in|on|at|from|as|if|than|then|after|before|although|though|so|yet|however|therefore|thus|meanwhile|where|whereas|since)\s*[,:;]?$/i.test(
+			value,
+		);
+	}
+
+	function isLowQualityLongSummary(summary, sourceContent = "", candidate) {
+		const text = (summary || "").trim();
+		if (!text) return true;
+		if (candidate?.finishReason === "MAX_TOKENS") return true;
+		if (endsLikeTruncatedText(text)) return true;
+
+		const wordCount = text.split(/\s+/).filter(Boolean).length;
+		const sourceLength = String(sourceContent || "").length;
+
+		if (sourceLength > 12000 && wordCount < 120) return true;
+		if (sourceLength > 24000 && wordCount < 200) return true;
+
+		return false;
+	}
+
+	function getSummaryOutputBudget(config, options = {}) {
+		const configured = Math.max(config?.maxOutputTokens || 8192, 256);
+		if (options.isShort) {
+			return Math.min(Math.max(configured, 1024), 2048);
+		}
+		if (options.isCombine) {
+			return Math.min(Math.max(configured, 4096), 12288);
+		}
+		if (options.isPart) {
+			return Math.min(Math.max(configured, 3072), 8192);
+		}
+		return Math.min(Math.max(configured, 4096), 12288);
+	}
+
 	// Helper function to combine prompts for Gemini
 	function combinePrompts(
 		mainPrompt,
@@ -2045,6 +2083,7 @@ if (typeof browser === "undefined") {
 				message.title,
 				message.partSummaries,
 				message.partCount,
+				{ isShort: Boolean(message.isShort) },
 			)
 				.then((summary) => {
 					sendResponse({
@@ -3281,8 +3320,10 @@ if (typeof browser === "undefined") {
 				},
 			];
 
-			// Use smaller output tokens for short summaries
-			const maxOutputTokens = isShort ? 512 : 2048;
+			const maxOutputTokens = getSummaryOutputBudget(currentConfig, {
+				isShort,
+				isPart,
+			});
 
 			const requestBody = {
 				system_instruction: {
@@ -3337,9 +3378,8 @@ if (typeof browser === "undefined") {
 			}
 
 			if (responseData.candidates && responseData.candidates.length > 0) {
-				let generatedSummary = extractCandidateText(
-					responseData.candidates[0],
-				);
+				const initialCandidate = responseData.candidates[0];
+				let generatedSummary = extractCandidateText(initialCandidate);
 
 				// If short summary looks clipped or too tiny, retry once with explicit constraints.
 				if (isShort && isLowQualityShortSummary(generatedSummary)) {
@@ -3447,6 +3487,69 @@ if (typeof browser === "undefined") {
 					}
 				}
 
+				if (
+					!isShort &&
+					isLowQualityLongSummary(
+						generatedSummary,
+						content,
+						initialCandidate,
+					)
+				) {
+					debugLog(
+						"Long summary looks clipped; retrying once with stronger completion guidance.",
+					);
+					const retryPrompt = `${summarizationBasePrompt}\n\nImportant: Return a complete long-form summary with fully finished paragraphs. Cover the major developments through the end of the provided content. Do not stop mid-sentence or omit the ending developments.`;
+					const retryRequestBody = {
+						system_instruction: {
+							parts: [{ text: retryPrompt }],
+						},
+						contents: [
+							{
+								role: "user",
+								parts: [
+									{
+										text: `Title: ${title}\n\nContent:\n${content}`,
+									},
+								],
+							},
+						],
+						generationConfig: {
+							temperature: 0.4,
+							maxOutputTokens: getSummaryOutputBudget(
+								currentConfig,
+								{
+									isPart,
+								},
+							),
+							topP:
+								currentConfig.topP !== undefined
+									? currentConfig.topP
+									: 0.95,
+							topK:
+								currentConfig.topK !== undefined
+									? currentConfig.topK
+									: 40,
+						},
+					};
+
+					const retryResult = await makeApiCallWithFallback(
+						modelEndpoint,
+						retryRequestBody,
+						currentConfig,
+					);
+					if (
+						retryResult?.response?.ok &&
+						retryResult?.responseData?.candidates?.length > 0
+					) {
+						const retrySummary = extractCandidateText(
+							retryResult.responseData.candidates[0],
+						);
+						if (retrySummary) {
+							generatedSummary = retrySummary;
+						}
+					}
+				}
+
 				if (generatedSummary) {
 					return generatedSummary;
 				}
@@ -3460,8 +3563,57 @@ if (typeof browser === "undefined") {
 	}
 
 	// Combine partial summaries into a single summary
-	async function combinePartialSummaries(title, partSummaries, partCount) {
+	async function combinePartialSummaries(
+		title,
+		partSummaries,
+		partCount,
+		options = {},
+	) {
 		try {
+			const normalizedSummaries = Array.isArray(partSummaries)
+				? partSummaries
+						.map((summary) => String(summary || "").trim())
+						.filter(Boolean)
+				: String(partSummaries || "")
+						.split(/\n\s*\n+/)
+						.map((summary) => summary.trim())
+						.filter(Boolean);
+
+			if (normalizedSummaries.length === 0) {
+				throw new Error(
+					"No partial summaries provided for combination",
+				);
+			}
+
+			if (normalizedSummaries.length === 1) {
+				return normalizedSummaries[0];
+			}
+
+			if (normalizedSummaries.length > 6) {
+				const combinedBatches = [];
+				for (
+					let index = 0;
+					index < normalizedSummaries.length;
+					index += 4
+				) {
+					const batch = normalizedSummaries.slice(index, index + 4);
+					const batchSummary = await combinePartialSummaries(
+						title,
+						batch,
+						batch.length,
+						options,
+					);
+					combinedBatches.push(batchSummary);
+				}
+
+				return combinePartialSummaries(
+					title,
+					combinedBatches,
+					combinedBatches.length,
+					options,
+				);
+			}
+
 			// Load latest config
 			currentConfig = await initConfig();
 
@@ -3477,7 +3629,7 @@ if (typeof browser === "undefined") {
 			}
 
 			debugLog(
-				`Combining ${partCount} partial summaries for "${title}" with Gemini`,
+				`Combining ${normalizedSummaries.length} partial summaries for "${title}" with Gemini`,
 			);
 
 			const modelEndpoint =
@@ -3495,10 +3647,10 @@ if (typeof browser === "undefined") {
 			);
 
 			// Create full content with all part summaries
-			const allPartSummaries = partSummaries
+			const allPartSummaries = normalizedSummaries
 				.map(
 					(summary, index) =>
-						`Part ${index + 1}/${partCount}:\n${summary}`,
+						`Part ${index + 1}/${normalizedSummaries.length}:\n${summary}`,
 				)
 				.join("\n\n");
 
@@ -3525,7 +3677,10 @@ if (typeof browser === "undefined") {
 				contents: requestContents,
 				generationConfig: {
 					temperature: 0.5, // Lower temperature for more focused summary
-					maxOutputTokens: 512, // Limit summary length
+					maxOutputTokens: getSummaryOutputBudget(currentConfig, {
+						isShort: Boolean(options.isShort),
+						isCombine: true,
+					}),
 					topP:
 						currentConfig.topP !== undefined
 							? currentConfig.topP
@@ -3567,10 +3722,44 @@ if (typeof browser === "undefined") {
 			}
 
 			if (responseData.candidates && responseData.candidates.length > 0) {
-				const combinedSummary = extractCandidateText(
-					responseData.candidates[0],
-				);
+				const candidate = responseData.candidates[0];
+				const combinedSummary = extractCandidateText(candidate);
 				if (combinedSummary) {
+					if (
+						!options.isShort &&
+						isLowQualityLongSummary(
+							combinedSummary,
+							allPartSummaries,
+							candidate,
+						)
+					) {
+						debugLog(
+							"Combined summary looks truncated, retrying with progressive merge fallback",
+						);
+						if (normalizedSummaries.length > 2) {
+							const midpoint = Math.ceil(
+								normalizedSummaries.length / 2,
+							);
+							const left = await combinePartialSummaries(
+								title,
+								normalizedSummaries.slice(0, midpoint),
+								midpoint,
+								options,
+							);
+							const right = await combinePartialSummaries(
+								title,
+								normalizedSummaries.slice(midpoint),
+								normalizedSummaries.length - midpoint,
+								options,
+							);
+							return combinePartialSummaries(
+								title,
+								[left, right],
+								2,
+								options,
+							);
+						}
+					}
 					return combinedSummary;
 				}
 			}
@@ -3631,7 +3820,7 @@ if (typeof browser === "undefined") {
 					});
 					if (activeTab) {
 						browser.tabs.sendMessage(activeTab.id, {
-							action: "enhanceChapter",
+							action: "processWithGemini",
 						});
 					}
 				} catch (error) {
@@ -3648,7 +3837,7 @@ if (typeof browser === "undefined") {
 					});
 					if (activeTab) {
 						browser.tabs.sendMessage(activeTab.id, {
-							action: "summarizeChapter",
+							action: "summarizeWithGemini",
 						});
 					}
 				} catch (error) {
