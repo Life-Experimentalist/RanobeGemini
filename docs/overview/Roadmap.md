@@ -1,33 +1,100 @@
 ## Roadmap
 
-1. Convert the Library and the popup into react to make it better for reuse and maintainability.
+> Last updated: 2025-07-01 — Current version: **4.3.0**
 
-2. Overhaul the enhance system by making the chapter into chunks by default dependent on user configurable Chunk_Size set to default at 3000 words
-   1. If the chapter size < Chunk_Size then it is a single chunk
-   2. If the chapter size < 2 * Chunk_Size then the remaining words will be split roughly equally into 2 chunks
-   3. If the chapter size > Chunk_Size then it is split into multiple chunks of Chunk_Size words except the last two chunks like in point `4.2`
-   4. Each chunk will have it's own regenerate, caching system, show original and such buttons
-   5. The other buttons of long and short summary will stay at the top but will also be repeated for user configurable number of chunks (Chunk_Summary_Count default 2) this will make the summary buttons repeat for every 2 chunks or so and will get the summary only for those 2 chunks and will have to be repeated this is to not lose any data when the chapters are too long
+---
 
-3. I want modularity in the following:
-   1. Websites using handlers in ../src/utils/website-handlers
-   2. In the library Websites pages using handlers in ../src/library/websites
-   3. In future for the AI service like OpenAI, Deepseek, etc. using handlers in ../src/utils/model-handlers (Far in future)
-   4. Expand the library to also have the option to download their novels in ebook forms like epub and such while keeping all the necessary meta data from the library about the story (simply to integrate next major version only cloudflare cache bypass issue)
-   5. Make the backup system better and more modular to allow for future backup services like Dropbox, OneDrive, etc. (future)
-   6. Make a common platform like service for dealing with readers like fbreader and directly sync the novels with them. (far in future)
+### 🗺️ Version Timeline
 
-4. Enhance the library to be better done with more comprehensive settings
+```mermaid
+graph TD
+    v1["v1.x — Foundation\nGemini API, basic translation"]
+    v2["v2.x — Content Extraction\nMulti-site handlers, chunking"]
+    v3["v3.x — Library & Backup\nEPUB export, Google Drive"]
+    v40["v4.0 — Cross-browser MV3\nFirefox + Chromium, PKCE"]
+    v41["v4.1 — Themes & Progress\n5 themes, reading progress bar"]
+    v42["v4.2 — Library UX\nCustom content boxes, status buttons"]
+    v43["✅ v4.3 — Privacy & Collapse  ← CURRENT\nIncognito Mode, collapsible sections"]
+    v44["🚀 v4.4 — UX Polish  ← ACTIVE SPRINT\nTypography, mobile nav, shortcuts"]
+    v45["🔮 v4.5 — Advanced AI Controls\nPrompt presets, enhancement styles"]
+    v50["🔮 v5.0 — Platform Expansion\nPlugin system, React migration"]
 
-5. Make the extension more accessible by adding keyboard shortcuts for more actions and better screen reader support (future)
+    v1 --> v2 --> v3 --> v40 --> v41 --> v42 --> v43 --> v44 --> v45 --> v50
 
-6. Make the popup better designed and more user friendly
+    style v43 fill:#1a3a2a,stroke:#4caf50,stroke-width:3px,color:#e8eef7
+    style v44 fill:#3a2a0a,stroke:#f4a261,stroke-width:3px,color:#e8eef7
+    style v45 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
+    style v50 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
+```
 
-7. Make the notification system better by adding a notification center page in the library and popup with better notification grouping and handling
+**Diagram elements:**
 
-8. Make the AI model settings better by adding presets for different use cases like creative writing, technical writing, etc. (future)
+- `v1` Foundation baseline (Gemini + initial enhancement workflow)
+- `v2` Content extraction and chunking stabilization
+- `v3` Library/export/backup maturation
+- `v4.0` MV3 cross-browser architecture
+- `v4.1` Theme and reading-progress UX improvements
+- `v4.2` Library UX and metadata quality improvements
+- `v4.3` Privacy/collapsible milestone currently released
+- `v4.4` Active sprint for UX polish and reading-list model cleanup
+- `v4.5` Planned advanced AI controls
+- `v5.0` Planned platform expansion and plugin foundation
 
-9. Make the theme system better by adding more themes and allowing users to create their own themes (future)
+---
+
+### ✅ Completed
+
+1. **Chunking system** — chapters auto-split by configurable `Chunk_Size`; each chunk has its own regenerate, cache, show-original, and per-chunk enhance buttons. Summary buttons repeat every `Chunk_Summary_Count` chunks.
+
+2. **Modularity**
+   - Website handlers: `src/utils/website-handlers/`  (`*-handler.js`, auto-registered)
+   - Library website pages: `src/library/websites/`
+   - AI model adapters placeholder: `src/utils/model-handlers/` (future)
+   - Build pipeline auto-generates `handler-registry.js` and manifest domain lists
+
+3. **Library & export** — EPUB export with per-novel metadata; word-count column in export template; novel completion status; character / relationship section separation.
+
+4. **Backup system** — Google Drive OAuth PKCE; rolling 3-backup retention; backup model selector; continuous backup scheduling.
+
+5. **Cross-browser (MV3)** — Firefox + Chromium (Edge) via unified service-worker background. Dynamic build separates manifests.
+
+6. **Theme system** — 5 new themes (v4.1.0); auto schedule by time-of-day and sunrise / sunset.
+
+7. **Incognito Mode** (v4.3.0) — auto-expiry no-trace reading sessions.
+
+8. **Collapsible sections** (v4.3.0) — fight scenes, R18, author notes.
+
+9. **Canvas animations** — particle / ember system on popup load.
+
+10. **FichHub integration** — novel search and metadata import.
+
+---
+
+### 🚀 Active (v4.4.0)
+
+- Fix summary typography parity (inherit page font across all sites)
+- Harden summary truncation flow (`isLowQualityLongSummary` + `getSummaryOutputBudget`)
+- Fix summarize keyboard shortcut wiring end-to-end
+- Redesign mobile nav UX (bottom bar, larger tap targets)
+- BetterFiction toggle bridge end-to-end verification
+- Reading-list model (`rereading` as list/state badge, not primary status)
+
+---
+
+### 🔮 Future
+
+1. **React migration** — Popup and library converted to React for better reuse.
+2. **v5.0.0 Plugin system** — Custom handler plugins; REST API for third-party integrations.
+3. **Cross-device sync** — Firefox Sync integration; conflict resolution.
+4. **More reading services** — FBReader sync, Dropbox / OneDrive backup adapters.
+5. **New handlers** — Wattpad, Royal Road.
+6. **Notification centre** — Grouped notifications page in library + popup.
+7. **AI preset library** — Genre-based enhancement style presets.
+8. **Accessibility pass** — Full keyboard navigation; ARIA labels; screen-reader support.
+
+---
+
+**Navigation:** [Main Docs](../README.md) | [TODO.md](../development/TODO.md) | [CHANGELOG](../release/CHANGELOG.md)
 
 10. Improve the performance of the extension by optimizing the code and reducing the memory usage (ongoing)
 

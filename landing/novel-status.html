@@ -18,6 +18,24 @@
 			rel="stylesheet" />
 		<link rel="stylesheet" href="./styles.css" />
 		<link rel="stylesheet" href="./styles-status.css" />
+		<!-- Mermaid diagram renderer -->
+		<script type="module">
+			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'dark',
+				themeVariables: {
+					primaryColor: '#1a2a3a',
+					primaryTextColor: '#e8eef7',
+					primaryBorderColor: '#f4a261',
+					lineColor: '#9fb3c8',
+					secondaryColor: '#0b1628',
+					tertiaryColor: '#0f1a2a',
+					edgeLabelBackground: '#0b1628',
+					fontFamily: '"Space Grotesk", system-ui, sans-serif'
+				}
+			});
+		</script>
 	</head>
 
 	<body>
@@ -33,15 +51,22 @@
 					<span>Novel status guide</span>
 				</div>
 			</div>
-			<nav class="nav">
-				<a href="./index.html">Home</a>
-				<a href="./drive-setup.html">Drive setup</a>
-				<a href="./content-styles.html">Content Styles</a>
-				<a href="#status-overview">Statuses</a>
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<!-- Section anchors on this page -->
+				<a href="#status-overview">Status Types</a>
 				<a href="#status-transitions">Transitions</a>
 				<a href="#examples">Examples</a>
+				<span class="nav-sep" aria-hidden="true"></span>
+				<!-- Cross-page links -->
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html" aria-current="page">Novel Status</a>
+				<a href="./content-styles.html">Styles</a>
+				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
-					rel="noreferrer">GitHub</a>
+					rel="noreferrer">GitHub ↗</a>
 			</nav>
 		</header>
 
@@ -62,7 +87,7 @@
 					writing it.
 				</p>
 
-				<h2>Available Statuses</h2>
+				<h2>Primary Statuses</h2>
 
 				<div class="status-card">
 					<div class="status-label reading">📖 Reading</div>
@@ -162,57 +187,108 @@
 				</div>
 
 				<div class="status-card">
-					<div class="status-label rereading">
-						🔁 Re-reading
-					</div>
-					<h3>Re-reading</h3>
+					<div class="status-label rereading">🏷️ Reading Lists</div>
+					<h3>Reading Lists (Badges, not statuses)</h3>
 					<p>
-						You're reading through a novel you've already completed.
+						Reading lists are parallel labels that can be applied to any
+						novel regardless of its primary status.
 					</p>
-					<p>
-						<strong>Manual status:</strong> Perfect for novels you
-						want to revisit.
-					</p>
+					<ul style="margin-left: 20px; margin-top: 10px">
+						<li><strong>🔁 Rereading</strong> (predefined)</li>
+						<li><strong>⭐ Favourites</strong> (predefined)</li>
+						<li><strong>Custom lists</strong> (for example: R18)</li>
+					</ul>
 				</div>
 
 				<div class="section-head" style="margin-top: 40px;">
 					<p class="eyebrow">Feature highlight</p>
-					<h2>🔁 Rereading Overlay</h2>
+					<h2>🏷️ Reading-List Badges</h2>
 					<p class="lede">
-						Visual indicator when revisiting chapters you've already read.
+						Rereading and favourites are shown as RG control badges and can
+						be toggled without changing the novel's primary status.
 					</p>
 				</div>
 
 				<div class="overlay-demo">
 					<p style="margin: 0 0 12px 0;">
-						When you set a novel's status to <span class="status-label rereading"
-							style="display: inline-block; padding: 4px 10px; font-size: 12px; margin: 0 4px;">🔁
-							Re-reading</span>,
-						the extension displays a subtle overlay on chapters you've already read.
+						A novel can stay <span class="status-label reading"
+							style="display:inline-block;padding:4px 10px;font-size:12px;margin:0 4px;">📖 Reading</span>
+						while also having <span class="status-label rereading"
+							style="display:inline-block;padding:4px 10px;font-size:12px;margin:0 4px;">🔁 Rereading</span>
+						and <span class="status-label completed"
+							style="display:inline-block;padding:4px 10px;font-size:12px;margin:0 4px;">⭐ Favourites</span> badges.
 					</p>
 					<p style="margin: 0 0 12px 0;">
 						<strong>How it works:</strong>
 					</p>
 					<ul style="margin: 0 0 12px 0; padding-left: 20px;">
-						<li>Overlay appears automatically on revisited chapters</li>
-						<li>Shows rereading badge and status message</li>
-						<li>Doesn't interfere with reading experience</li>
-						<li>Helps you track which chapters you're revisiting</li>
+						<li>Badges are independent from reading statuses</li>
+						<li>Both predefined lists are available in RG controls</li>
+						<li>Users can add custom list names in settings data</li>
+						<li>Useful for thematic grouping (for example: R18)</li>
 					</ul>
 					<p style="margin: 0;">
-						<strong>Perfect for:</strong> Series re-reads, catching details you missed,
-						refreshing your memory before new releases.
+						<strong>Perfect for:</strong> Re-read campaigns, favourites curation,
+						and custom shelf-like personal groupings.
+					</p>
 				</div>
 			</section>
 
 			<section id="status-transitions">
 				<h2>Automatic Status Transitions</h2>
+				<p>
+					The diagram below shows every possible state and how the extension
+					moves between them — automatically (dashed) or by your action (solid).
+				</p>
+
+				<!-- Mermaid state diagram ──────────────────────────────────────── -->
+				<div class="mermaid"
+					style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px 16px;margin:24px 0;overflow:auto;">
+					stateDiagram-v2
+					direction TB
+
+					[*] --> Reading : Add novel / start reading
+					[*] --> PlanToRead : Add to plan list
+
+					PlanToRead --> Reading : Begin reading (manual)
+
+					Reading --> UpToDate : Reach latest chapter (auto)
+					UpToDate --> Reading : New chapter released — ongoing novel (auto)
+					UpToDate --> Completed : Mark done — finished novel only (manual)
+					Completed --> Reading : Author publishes new chapters (auto, rare)
+
+					Reading --> OnHold : Pause reading (manual)
+					OnHold --> Reading : Resume (manual)
+
+					Reading --> Dropped : Stop tracking (manual)
+					Dropped --> Reading : Restart (manual)
+
+					note right of UpToDate
+					Ongoing novels wait here
+					until the author updates.
+					Completed novels stay here
+					until you manually mark done.
+					end note
+
+					note right of OnHold
+					No automatic transitions.
+					Returns to Reading only
+					when you manually resume.
+					end note
+				</div>
+				<!-- ─────────────────────────────────────────────────────────────── -->
+
+				<h3>Diagram Elements</h3>
+				<ul style="margin-left: 20px; margin-top: 10px">
+					<li><strong>Reading:</strong> Active reading in progress.</li>
+					<li><strong>Up to Date:</strong> Caught up with latest published chapter.</li>
+					<li><strong>Completed:</strong> Finished by reader, usually for finished series.</li>
+					<li><strong>Plan to Read:</strong> Tracked but not started.</li>
+					<li><strong>On Hold:</strong> Temporarily paused.</li>
+					<li><strong>Dropped:</strong> Intentionally stopped.</li>
+				</ul>
 
 				<h3>🎯 For Completed Novels (Author Finished)</h3>
-				<div class="flow-diagram">
-					Reading → Up to Date (reached latest) → Completed (you mark
-					as done)
-				</div>
 				<p>
 					When you read the final chapter of a completed novel, the
 					status automatically changes to
@@ -221,23 +297,14 @@
 				</p>
 
 				<h3>🚀 For Ongoing Novels (Author Still Writing)</h3>
-				<div class="flow-diagram">
-					Reading → Up to Date (caught up with latest) ↑ ↓ ← ← ← (new
-					chapter!) ← ← ←
-				</div>
 				<p>
 					When you reach the latest chapter of an ongoing novel, it
-					becomes
-					<span class="highlight">Up to Date</span>. If the author
-					releases new chapters later, it automatically reverts to
-					<span class="highlight">Reading</span>.
+					becomes <span class="highlight">Up to Date</span>. If the
+					author releases new chapters later, it automatically reverts
+					to <span class="highlight">Reading</span>.
 				</p>
 
 				<h3>📝 For One-shots (Single Chapter)</h3>
-				<div class="flow-diagram">
-					Reading → (user marks status manually) Status stays as set -
-					no automatic transitions
-				</div>
 				<p>
 					One-shot stories remain under your manual control. The
 					extension doesn't automatically change status since there's
@@ -258,10 +325,6 @@
 					<li>
 						<strong>Dropped:</strong> Permanent until manually
 						changed
-					</li>
-					<li>
-						<strong>Re-reading:</strong> Manual status, no
-						auto-transitions
 					</li>
 				</ul>
 			</section>
@@ -466,10 +529,10 @@
 							</td>
 						</tr>
 						<tr>
-							<td style="padding: 12px">🔁 Re-reading</td>
-							<td style="padding: 12px">❌ No</td>
+							<td style="padding: 12px">🏷️ Reading Lists (badge layer)</td>
+							<td style="padding: 12px">N/A</td>
 							<td style="padding: 12px">
-								Re-reading a finished novel
+								Parallel tags like 🔁 Rereading / ⭐ Favourites / custom labels
 							</td>
 						</tr>
 					</tbody>
@@ -512,6 +575,7 @@
 			</div>
 			<p class="footnote">Built by Life-Experimentalist</p>
 		</footer>
+		<script src="./nav.js" defer></script>
 	</body>
 
 </html>

@@ -698,6 +698,158 @@ h3 {
 	margin-top: 24px;
 }
 
+/* ===============================================================
+   NAV LINK VISUAL DIFFERENTIATION
+   =============================================================== */
+
+/* Intra-page section / anchor links — muted colour + hash prefix */
+.nav a[href^="#"] {
+	color: var(--muted);
+}
+
+.nav a[href^="#"]::before {
+	content: "#";
+	font-size: 0.58em;
+	font-weight: 700;
+	opacity: 0.4;
+	margin-right: 1px;
+	vertical-align: 1px;
+	display: inline-block;
+}
+
+.nav a[href^="#"]:hover {
+	color: var(--accent-strong);
+}
+
+/* Current / active page — non-interactive, visually distinct */
+.nav a[aria-current="page"] {
+	color: var(--accent-strong);
+	font-weight: 600;
+	cursor: default;
+	pointer-events: none;
+	border-bottom: 2px solid var(--accent);
+	padding-bottom: 1px;
+}
+
+/* Visual separator between link groups */
+.nav-sep {
+	display: inline-flex;
+	align-self: center;
+	width: 1px;
+	height: 18px;
+	background: var(--border);
+	flex-shrink: 0;
+	opacity: 0.8;
+}
+
+/* ===============================================================
+   HAMBURGER BUTTON (hidden on desktop, shown on mobile)
+   =============================================================== */
+
+.nav-toggle {
+	display: none;
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--text);
+	padding: 7px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	flex-shrink: 0;
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.nav-toggle:hover {
+	background: var(--panel-strong);
+}
+
+.nav-toggle[aria-expanded="true"] {
+	background: var(--panel-strong);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+/* ===============================================================
+   MOBILE NAV — overrides the generic responsive nav rules above
+   =============================================================== */
+
+@media (max-width: 768px) {
+	.topbar {
+		flex-direction: row;
+		flex-wrap: wrap;
+		padding: 12px 18px;
+		row-gap: 0;
+		align-items: center;
+	}
+
+	.brand {
+		flex: 1;
+	}
+
+	.nav-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* Collapse the nav until hamburger is toggled */
+	.nav {
+		display: none;
+		width: 100%;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		align-items: flex-start;
+		justify-content: flex-start;
+		gap: 0;
+		padding: 10px 0 8px;
+		border-top: 1px solid var(--border);
+		margin-top: 10px;
+	}
+
+	.nav.open {
+		display: flex;
+	}
+
+	/* Expanded tap targets */
+	.nav a {
+		display: block;
+		width: 100%;
+		padding: 10px 8px;
+		border-radius: 6px;
+		font-size: 15px;
+	}
+
+	.nav a:hover {
+		background: var(--panel);
+	}
+
+	/* Ghost / external stays compact */
+	.nav .ghost {
+		width: fit-content;
+		margin-top: 4px;
+	}
+
+	/* Separator becomes a full-width horizontal rule */
+	.nav-sep {
+		width: 100%;
+		height: 1px;
+		margin: 6px 0;
+	}
+
+	/* Current page: left border instead of bottom border on mobile */
+	.nav a[aria-current="page"] {
+		border-bottom: none;
+		border-left: 3px solid var(--accent);
+		padding-left: 10px;
+	}
+
+	/* Anchor links get extra left indent so the # aligns nicely */
+	.nav a[href^="#"] {
+		padding-left: 12px;
+	}
+}
+
 .faq-box,
 .issue-box,
 .version-card,

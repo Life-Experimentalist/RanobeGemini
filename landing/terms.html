@@ -34,11 +34,18 @@
 					<span class="version-display"></span>
 				</div>
 			</div>
-			<nav class="nav">
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<!-- Cross-page links (no anchor sections on this page) -->
 				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Styles</a>
 				<a href="./privacy.html">Privacy</a>
-				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
-					rel="noreferrer">GitHub</a>
+				<a href="./terms.html" aria-current="page">Terms</a>
+				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub ↗</a>
 			</nav>
 		</header>
 
@@ -156,6 +163,7 @@
 			</div>
 			<p class="footnote">Open-source, no warranty. Use responsibly.</p>
 		</footer>
+		<script src="./nav.js" defer></script>
 		<script src="./script.js"></script>
 	</body>
 

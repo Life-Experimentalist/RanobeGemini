@@ -1,194 +1,221 @@
 # Development Roadmap
 
+> **Last Updated:** 2025-07-01
+> **Current Version:** 4.3.0
+
 ## Table of Contents
 
 - [Development Roadmap](#development-roadmap)
 	- [Table of Contents](#table-of-contents)
+	- [🗺️ Sprint Overview (v4.4.0)](#️-sprint-overview-v440)
 	- [✅ Completed Features](#-completed-features)
-		- [Version 3.0.0 (Released 2025-11-28)](#version-300-released-2025-11-28)
-		- [Version 2.8.0](#version-280)
-		- [Version 2.7.x](#version-27x)
-		- [Version 2.x](#version-2x)
-	- [🚀 Current Sprint (v3.1.0)](#-current-sprint-v310)
+		- [Version 4.3.0 (Current)](#version-430-current)
+		- [Version 4.2.0](#version-420)
+		- [Version 4.1.0](#version-410)
+		- [Version 4.0.0](#version-400)
+		- [Earlier Versions (archived)](#earlier-versions-archived)
+	- [🚀 Current Sprint (v4.4.0)](#-current-sprint-v440)
 		- [High Priority](#high-priority)
 		- [Medium Priority](#medium-priority)
 		- [Low Priority](#low-priority)
 	- [🔮 Future Versions](#-future-versions)
-		- [Version 3.2.0 - Enhanced Library](#version-320---enhanced-library)
-		- [Version 3.3.0 - Cross-Device Sync](#version-330---cross-device-sync)
-		- [Version 3.4.0 - Advanced Enhancement](#version-340---advanced-enhancement)
-		- [Version 4.0.0 - Platform Expansion](#version-400---platform-expansion)
+		- [Version 4.4.0 - UX Polish \& Mobile](#version-440---ux-polish--mobile)
+		- [Version 4.5.0 - Advanced AI Controls](#version-450---advanced-ai-controls)
+		- [Version 5.0.0 - Platform Expansion](#version-500---platform-expansion)
 	- [🐛 Known Issues](#-known-issues)
 		- [Critical](#critical)
 		- [High Priority](#high-priority-1)
 		- [Medium Priority](#medium-priority-1)
 		- [Low Priority](#low-priority-1)
 	- [🔧 Technical Debt](#-technical-debt)
-		- [Code Quality](#code-quality)
-		- [Architecture](#architecture)
-		- [Documentation](#documentation)
 	- [💡 Feature Requests](#-feature-requests)
-		- [From Users](#from-users)
-		- [Community Ideas](#community-ideas)
-		- [Experimental](#experimental)
-	- [📊 Development Metrics](#-development-metrics)
-		- [Code Statistics (Estimated)](#code-statistics-estimated)
-		- [Test Coverage Goals](#test-coverage-goals)
-		- [Performance Targets](#performance-targets)
 	- [🗓️ Release Schedule](#️-release-schedule)
-		- [Tentative Timeline](#tentative-timeline)
 		- [Release Criteria](#release-criteria)
 	- [🤝 Contributing](#-contributing)
 	- [📞 Resources](#-resources)
 
-**Last Updated:** 2025-11-28
-**Current Version:** 3.0.0
+---
+
+## 🗺️ Sprint Overview (v4.4.0)
+
+```mermaid
+graph TB
+    Sprint["🚀 v4.4.0 — Active Sprint"]
+
+    Sprint --> High["🔴 High Priority"]
+    Sprint --> Medium["🟡 Medium Priority"]
+    Sprint --> Low["🟢 Low Priority"]
+
+    High --> H1["Summary Typography\nParity"]
+    High --> H2["Harden Summary\nTruncation"]
+    High --> H3["Summarize Shortcut\nEnd-to-end Wiring"]
+    High --> H4["Mobile Nav\nRedesign"]
+
+    Medium --> M1["BetterFiction\nToggle Bridge"]
+    Medium --> M2["WebNovel Handler\nRe-enable"]
+    Medium --> M3["Library Statistics\nDashboard"]
+
+    Low --> L1["Accessibility\nARIA + keyboard nav"]
+    Low --> L2["Performance\nLazy-load + virtual scroll"]
+    Low --> L3["Source Maps\nin debug builds"]
+
+    style Sprint fill:#1a2a3a,stroke:#f4a261,stroke-width:3px,color:#e8eef7
+    style High fill:#3a1a1a,stroke:#e05252,stroke-width:2px,color:#e8eef7
+    style Medium fill:#3a3a0a,stroke:#d4b44a,stroke-width:2px,color:#e8eef7
+    style Low fill:#1a3a1a,stroke:#4caf50,stroke-width:2px,color:#e8eef7
+```
+
+  **Diagram elements:**
+
+  - `Sprint` parent node for active release track
+  - `High` blocking items required before release cut
+  - `Medium` important items that should land in sprint when feasible
+  - `Low` quality follow-ups that can roll over if needed
+  - `H1` Summary typography parity
+  - `H2` Truncation hardening
+  - `H3` Shortcut pipeline wiring
+  - `H4` Mobile navigation redesign
+  - `M1` BetterFiction settings bridge
+  - `M2` WebNovel handler re-enable
+  - `M3` Library stats dashboard
+  - `L1` Accessibility polish
+  - `L2` Library performance optimization
+  - `L3` Debug source maps
 
 ---
 
 ## ✅ Completed Features
 
-### Version 3.0.0 (Released 2025-11-28)
+### Version 4.3.0 (Current)
 
-- [x] **Novel Library System**
-  - [x] Full library page with grid layout
-  - [x] Search, filter, and sort functionality
-  - [x] Novel metadata management
-  - [x] Import/export with merge mode
-  - [x] Per-novel custom prompts
-  - [x] Reading progress tracking
-  - [x] Dynamic shelf system
-- [x] **Documentation Overhaul**
-  - [x] Reorganized into subdirectories
-  - [x] Comprehensive ARCHITECTURE.md
-  - [x] Gateway README files
-  - [x] Updated CHANGELOG.md
-  - [x] Consistent formatting
+- [x] **Incognito Mode** — Auto-expiry, no-trace reading sessions
+- [x] **Collapsible Sections** — Fight scenes, R18 content, author notes
+- [x] **Hide Gemini UI for Read Aloud** — Clean screen reader / TTS support
+- [x] **Summary Quality Helpers** — `isLowQualityLongSummary`, `getSummaryOutputBudget`
+- [x] **Backup Model Selector** — Choose default model for backups per-novel
+- [x] **FanFiction Redirect Fix** — Proper `domainPreference` persistence (no more `?rgffswitch` token hack)
+- [x] **Metadata Hardening** — AO3, Ranobes, ScribbleHub extraction edge-cases fixed
 
-### Version 2.8.0
+### Version 4.2.0
 
-- [x] Backup API keys with rotation
-- [x] Failover and round-robin strategies
-- [x] Emoji support in dialogues
-- [x] Short summary mode
-- [x] Per-novel custom prompts
+- [x] **Custom Content Box Types** — Live preview when editing
+- [x] **Library Hero Eyebrow** — Improved novel card header layout
+- [x] **Character/Relationship Separation** — Distinct sections in library cards
+- [x] **Dynamic Reading-Status Buttons** — Status-aware CTA buttons
+- [x] **FanFiction DB Repair Pass** — `addRelationshipGroup` comma-split fix
+- [x] **Completion Status** — Derived automatically from `publicationStatus`
 
-### Version 2.7.x
+### Version 4.1.0
 
-- [x] Progressive enhancement with chunking
-- [x] Work-in-progress banner
-- [x] Chunk-based processing
-- [x] Real-time UI updates
+- [x] **Enhanced Theme System** — 5 new themes, auto schedule by time-of-day / sunrise-sunset
+- [x] **Reading Progress Bar** — Ranobes + ScribbleHub chapter progress
+- [x] **Chunking UI** — Pause, skip chunk, per-chunk enhance button
+- [x] **Export Template** — Word count column, EPUB as default format
+- [x] **Site Prompt Refinements** — AO3, Ranobes, ScribbleHub per-site prompt tuning
 
-### Version 2.x
+### Version 4.0.0
 
-- [x] Multi-site support (Ranobes, FanFiction, AO3, WebNovel)
-- [x] Handler system architecture
-- [x] Content extraction framework
-- [x] Gemini API integration
-- [x] Basic settings popup
+- [x] Cross-browser build (Firefox + Chromium + Edge)
+- [x] Manifest V3 with service-worker background script
+- [x] Google Drive OAuth PKCE backup
+- [x] Rolling backup retention (3 backups)
+- [x] Canvas particle animations for popup
+- [x] FichHub integration for novel search
+- [x] Dynamic domain generation in build pipeline
+- [x] Modular website handler auto-registry
+
+### Earlier Versions (archived)
+
+See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 feature history.
 
 ---
 
-## 🚀 Current Sprint (v3.1.0)
+## 🚀 Current Sprint (v4.4.0)
 
 ### High Priority
 
-- [ ] **Feature Documentation**
-  - [ ] Create NOVEL_LIBRARY.md in features/
-  - [ ] Create BACKUP_API_KEYS.md in features/
-  - [ ] Create CHUNKING_SYSTEM.md in features/
-  - [ ] Create EMOJI_SUPPORT.md in features/
-  - [ ] Create SUMMARY_MODES.md in features/
+- [ ] **Summary Typography Parity**
+  - [ ] Summary popup inherits page font-family
+  - [ ] Summary font-size / line-height consistent across all sites
+  - [ ] Heading sizes match chapter body
 
-- [ ] **User Guides**
-  - [ ] Create GETTING_STARTED.md in guides/
-  - [ ] Create CONFIGURATION.md in guides/
-  - [ ] Create TROUBLESHOOTING.md in guides/
+- [ ] **Harden Summary Truncation**
+  - [ ] Verify `isLowQualityLongSummary()` is called in the summarize flow
+  - [ ] Verify `getSummaryOutputBudget()` caps tokens correctly
+  - [ ] Add fallback message when summary is pruned
 
-- [ ] **Bug Fixes**
-  - [ ] Fix WebNovel infinite scroll button injection
-  - [ ] Improve error messages for API failures
-  - [ ] Handle network timeouts gracefully
+- [ ] **Summarize Shortcut Wiring**
+  - [ ] Confirm `summarizeWithGemini` command listener exists in `background.js`
+  - [ ] Confirm `content.js` message handler routes the action correctly
+  - [ ] Keyboard shortcut fires the correct pipeline end-to-end
+
+- [ ] **Redesign Mobile Nav UX**
+  - [ ] Bottom navigation bar for mobile library
+  - [ ] Touch-friendly tap targets (≥ 48px)
+  - [ ] Swipe-to-dismiss for modals
 
 ### Medium Priority
 
+- [ ] **BetterFiction Toggle Bridge**
+  - [ ] Verify `betterFictionSyncEnabled` setting is wired in `SETTINGS_DEFINITION`
+  - [ ] Confirm `extractBetterFictionStatus()` reads DOM and sets `document.body.dataset.rgBetterfictionSync`
+  - [ ] End-to-end test of BetterFiction page toggle → settings sync
+
+- [ ] **WebNovel Handler**
+  - [ ] Re-enable WebNovel (currently disabled)
+  - [ ] Fix infinite-scroll button injection
+  - [ ] Verify chapter extraction on paginated chapters
+
 - [ ] **Library Enhancements**
-  - [ ] Add library statistics page
-  - [ ] Implement tags system for novels
-  - [ ] Add cover image upload option
-  - [ ] Library dark mode improvements
-
-- [ ] **Content Enhancement**
-  - [ ] Cache management UI (view/clear cache)
-  - [ ] Resume failed enhancements
-  - [ ] Batch enhancement for multiple chapters
-
-- [ ] **Handler Improvements**
-  - [ ] Add Scribble Hub support
-  - [ ] Add Wattpad support
-  - [ ] Add Royal Road support
-  - [ ] Improve AO3 metadata extraction
+  - [ ] Library statistics dashboard (chapters read, word count)
+  - [ ] Novel tags/collections system
+  - [ ] Cover image upload option
 
 ### Low Priority
 
-- [ ] **UI Polish**
-  - [ ] Improve popup loading states
-  - [ ] Add tooltips to settings
-  - [ ] Better mobile responsive design
-  - [ ] Accessibility improvements (ARIA labels)
+- [ ] **Accessibility**
+  - [ ] ARIA labels for all interactive controls
+  - [ ] Screen reader announcement for enhance progress
+  - [ ] Keyboard navigation for library grid
 
 - [ ] **Performance**
-  - [ ] Optimize library page load time
-  - [ ] Lazy load novel cards
-  - [ ] Implement virtual scrolling for large libraries
+  - [ ] Lazy-load novel cards in library
+  - [ ] Virtual scrolling for large libraries (> 500 novels)
+  - [ ] Source maps in debug builds
 
 ---
 
 ## 🔮 Future Versions
 
-### Version 3.2.0 - Enhanced Library
+### Version 4.4.0 - UX Polish & Mobile
 
-**Focus:** Library features and organization**
+**Focus:** Summary quality, mobile nav, accessibility
 
-- [ ] Collections/folders for organizing novels
-- [ ] Advanced search with filters
-- [ ] Bulk actions (delete, export selected)
-- [ ] Novel recommendations based on reading history
-- [ ] Reading statistics dashboard
-- [ ] Custom shelf creation
-- [ ] Shelf color/icon customization
+- [ ] Summary typography parity (all sites)
+- [ ] Harden truncation flow
+- [ ] Mobile bottom nav bar
+- [ ] Summarize shortcut end-to-end
+- [ ] BetterFiction toggle bridge
 
-### Version 3.3.0 - Cross-Device Sync
+### Version 4.5.0 - Advanced AI Controls
 
-**Focus:** Cloud sync and multi-device support**
-
-- [ ] Firefox Sync integration for library
-- [ ] Settings sync across devices
-- [ ] Conflict resolution for library data
-- [ ] Export/import improvements
-- [ ] Sync status indicators
-
-### Version 3.4.0 - Advanced Enhancement
-
-**Focus:** Enhancement quality and options**
+**Focus:** AI model flexibility and prompt quality
 
 - [ ] Multiple enhancement styles (formal, casual, poetic)
-- [ ] Character name consistency checker
-- [ ] Terminology dictionary per novel
-- [ ] Enhancement comparison mode
-- [ ] A/B testing different prompts
-- [ ] Enhancement quality rating system
+- [ ] Per-site prompt presets
+- [ ] Enhancement comparison (split-screen)
+- [ ] Character glossary generation per novel
+- [ ] Terminology dictionary integration
 
-### Version 4.0.0 - Platform Expansion
+### Version 5.0.0 - Platform Expansion
 
-**Focus:** Chrome support and new features**
+**Focus:** React migration, plugin system, cross-device sync
 
-- [ ] Chrome extension port (Manifest V3)
-- [ ] Edge browser support
-- [ ] Unified codebase for all browsers
-- [ ] Extension API for third-party integrations
+- [ ] Migrate popup and library to React
+- [ ] Firefox Sync integration for library
 - [ ] Plugin system for custom handlers
+- [ ] REST API for third-party integrations
+- [ ] Dropbox / OneDrive backup adapters
 
 ---
 
@@ -200,141 +227,58 @@
 
 ### High Priority
 
-- [ ] WebNovel handler: Button injection fails on some chapters with infinite scroll
-- [ ] Long content (>100k chars) may timeout during chunking
-- [ ] Import library: Large libraries (>1000 novels) slow to import
+- [ ] WebNovel handler disabled — re-enable after infinite-scroll fix
+- [ ] Long chapters (> 100 k chars) may time out during chunking on slow connections
 
 ### Medium Priority
 
-- [ ] FanFiction mobile: Cover images sometimes fail to load
-- [ ] AO3: Tag extraction misses custom tags
-- [ ] Cache: Expired entries not automatically cleaned up
-- [ ] Popup: Library preview doesn't update immediately after changes
+- [ ] FanFiction mobile: Cover images sometimes fail to load due to CORS
+- [ ] AO3: Custom tags beyond the first 20 are not extracted
+- [ ] Cache entries are never automatically evicted; manual clear required
 
 ### Low Priority
 
-- [ ] Some sites with aggressive CSP block button styling
-- [ ] Debug panel: Performance metrics occasionally incorrect
-- [ ] Library grid: Card height inconsistent with long descriptions
+- [ ] Sites with strict CSP partially block injected button styles
+- [ ] Library grid card height inconsistent with very long tag lists
 
 ---
 
 ## 🔧 Technical Debt
 
-### Code Quality
-
-- [ ] Add comprehensive unit tests
-  - [ ] Handler tests with mock DOM
-  - [ ] Storage manager tests
-  - [ ] Novel library tests
-
-- [ ] Refactor background.js
-  - [ ] Split into modules (api.js, chunking.js, storage.js)
-  - [ ] Improve error handling consistency
-  - [ ] Better logging infrastructure
-
-- [ ] TypeScript migration
-  - [ ] Convert utility modules first
-  - [ ] Add type definitions for handlers
-  - [ ] Improve IDE autocomplete
-
-### Architecture
-
-- [ ] Implement proper state management
-  - [ ] Redux or similar for popup state
-  - [ ] Event-driven architecture for library updates
-
-- [ ] Modularize content script
-  - [ ] Split UI injection code
-  - [ ] Separate enhancement logic
-  - [ ] Better event handling
-
-- [ ] Build system improvements
-  - [ ] Add source maps for debugging
-  - [ ] Minification for production builds
-  - [ ] Bundle size optimization
-
-### Documentation
-
-- [ ] API documentation for handlers
-- [ ] Contributing guidelines
-- [ ] Code style guide
-- [ ] Architecture decision records (ADRs)
+- [ ] Background service worker (`background.js`) is very large — split into `api.js`, `chunking.js`, `drive.js`, `storage.js`
+- [ ] Add unit tests for handlers (mock DOM), storage manager, novel library
+- [ ] TypeScript migration — start with utility modules; add JSDoc types in the interim
+- [ ] Build system: add source maps for debug builds; minify production bundles
 
 ---
 
 ## 💡 Feature Requests
 
-### From Users
-
-- [ ] Support for reading offline (store enhanced chapters locally)
-- [ ] Dark mode for enhanced content
-- [ ] Text-to-speech integration
-- [ ] Translation mode (separate from enhancement)
-- [ ] Chapter download as EPUB/PDF
-- [ ] Browser reading mode integration
-
-### Community Ideas
-
-- [ ] Shared prompt library (community-driven)
-- [ ] Enhancement presets for different genres
-- [ ] Character glossary generation
-- [ ] Plot summary generation for entire novels
-- [ ] Author style analysis and matching
-
-### Experimental
-
-- [ ] AI-powered chapter predictions
-- [ ] Character dialogue consistency analysis
-- [ ] World-building consistency checker
-- [ ] Alternative ending generation
-- [ ] Interactive story branching
-
----
-
-## 📊 Development Metrics
-
-### Code Statistics (Estimated)
-
-- Total lines of code: ~8,000
-- JavaScript files: ~25
-- CSS files: ~5
-- Documentation pages: ~15
-
-### Test Coverage Goals
-
-- [ ] Handlers: 80% coverage
-- [ ] Storage: 90% coverage
-- [ ] Library: 85% coverage
-- [ ] Background: 75% coverage
-
-### Performance Targets
-
-- [ ] Extension startup: < 100ms
-- [ ] Content injection: < 50ms
-- [ ] Library page load: < 500ms (1000 novels)
-- [ ] API response: < 3s (per chunk)
+- [ ] Offline reading — store enhanced chapters in IndexedDB
+- [ ] EPUB/PDF export from library
+- [ ] Text-to-speech integration with Incognito Mode
+- [ ] Shared community prompt library
+- [ ] AI-powered chapter predictions (experimental)
+- [ ] Wattpad handler
+- [ ] Royal Road handler
 
 ---
 
 ## 🗓️ Release Schedule
 
-### Tentative Timeline
-
-- **v3.1.0** - Q1 2025 - Documentation & Bug Fixes
-- **v3.2.0** - Q2 2025 - Enhanced Library Features
-- **v3.3.0** - Q3 2025 - Cross-Device Sync
-- **v3.4.0** - Q4 2025 - Advanced Enhancement
-- **v4.0.0** - 2026 - Chrome Support & Platform Expansion
+| Version | Target  | Focus                          |
+| ------- | ------- | ------------------------------ |
+| v4.4.0  | Q3 2025 | UX Polish & Mobile             |
+| v4.5.0  | Q4 2025 | Advanced AI Controls           |
+| v5.0.0  | 2026    | React migration, plugin system |
 
 ### Release Criteria
 
-Each release must have:
-- [ ] All high-priority bugs fixed
-- [ ] Documentation updated
-- [ ] CHANGELOG.md updated
-- [ ] Tested on all supported sites
-- [ ] Firefox review approved (if store release)
+Each release must:
+- [ ] Fix all high-priority bugs in scope
+- [ ] Update CHANGELOG.md and release notes
+- [ ] Pass build (Firefox + Chromium)
+- [ ] Be tested on all supported sites
 
 ---
 
@@ -343,10 +287,10 @@ Each release must have:
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines.
 
 Priority areas for contributions:
-1. **New website handlers** - Always welcome!
-2. **Documentation improvements** - Help make docs clearer
-3. **Bug fixes** - Check issues labeled "good first issue"
-4. **Feature implementations** - Discuss in issues first
+1. **New website handlers** — Always welcome! See [ADDING_NEW_WEBSITES.md](../guides/ADDING_NEW_WEBSITES.md)
+2. **Bug fixes** — Check issues labeled `good first issue`
+3. **Documentation** — Help make docs clearer and more current
+4. **Feature implementations** — Discuss in Issues first
 
 ---
 
@@ -354,7 +298,7 @@ Priority areas for contributions:
 
 - **GitHub Repository:** [Life-Experimentalist/RanobeGemini](https://github.com/Life-Experimentalist/RanobeGemini)
 - **Issue Tracker:** [GitHub Issues](https://github.com/Life-Experimentalist/RanobeGemini/issues)
-- **Documentation:** [docs/README.md](../README.md)
+- **Changelog:** [docs/release/CHANGELOG.md](../release/CHANGELOG.md)
 - **Architecture:** [docs/architecture/ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
 
 ---

@@ -373,11 +373,22 @@
 					<span>Content Styles</span>
 				</div>
 			</div>
-			<nav class="nav">
-				<a href="./index.html">Home</a>
-				<a href="#builtin">Built-in</a>
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<!-- Section anchors on this page -->
+				<a href="#builtin">Built-in Types</a>
 				<a href="#custom">Custom Boxes</a>
 				<a href="#playground">Playground</a>
+				<span class="nav-sep" aria-hidden="true"></span>
+				<!-- Cross-page links -->
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html" aria-current="page">Styles</a>
+				<a href="./privacy.html">Privacy</a>
+				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub ↗</a>
 			</nav>
 		</header>
 
@@ -651,6 +662,6 @@
 
 			loadCustomBoxTypes();
 		</script>
-	</body>
+		<script src="./nav.js" defer></script>
 
 </html>

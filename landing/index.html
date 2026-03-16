@@ -61,16 +61,23 @@
 					<span>AI reading companion</span>
 				</div>
 			</div>
-			<nav class="nav">
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<!-- Section anchors on this page -->
 				<a href="#features">Features</a>
 				<a href="#how">How it works</a>
 				<a href="#browsers">Browsers</a>
-				<a href="./drive-setup.html">Drive setup</a>
-				<a href="./novel-status.html">Novel status</a>
-				<a href="./content-styles.html">Content Styles</a>
+				<a href="#sites">Integrations</a>
 				<a href="#faq">FAQ</a>
+				<span class="nav-sep" aria-hidden="true"></span>
+				<!-- Cross-page links -->
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Styles</a>
+				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
-					rel="noreferrer">GitHub</a>
+					rel="noreferrer">GitHub ↗</a>
 			</nav>
 		</header>
 
@@ -219,7 +226,7 @@
 						</p>
 					</div>
 					<div class="feature">
-						<div class="icon">�️</div>
+						<div class="icon">🥷</div>
 						<h3>Incognito Mode</h3>
 						<p>
 							Pause library tracking temporarily with
@@ -483,12 +490,14 @@
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
-				<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/release/CHANGELOG.md" target="_blank"
-					rel="noreferrer">Changelog</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/release/CHANGELOG.md"
+					target="_blank" rel="noreferrer">Changelog</a>
 			</div>
-			<p class="footnote">Built by <a href="https://github.com/Life-Experimentalist" target="_blank" rel="noreferrer">Life-Experimentalist</a></p>
+			<p class="footnote">Built by <a href="https://github.com/Life-Experimentalist" target="_blank"
+					rel="noreferrer">Life-Experimentalist</a></p>
 		</footer>
 
+		<script src="./nav.js" defer></script>
 		<script src="./script.js"></script>
 	</body>
 

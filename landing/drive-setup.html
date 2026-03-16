@@ -36,11 +36,22 @@
 					<span>Google Drive backup setup</span>
 				</div>
 			</div>
-			<nav class="nav">
-				<a href="./index.html">Home</a>
-				<a href="#getting-started">Setup</a>
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<!-- Section anchors on this page -->
+				<a href="#getting-started">Setup Guide</a>
 				<a href="#faqs">FAQs</a>
 				<a href="#troubleshooting">Troubleshooting</a>
+				<span class="nav-sep" aria-hidden="true"></span>
+				<!-- Cross-page links -->
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html" aria-current="page">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Styles</a>
+				<a href="./privacy.html">Privacy</a>
+				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub ↗</a>
 			</nav>
 		</header>
 
@@ -516,6 +527,7 @@
 			</section>
 		</main>
 
+		<script src="./nav.js" defer></script>
 		<script src="./drive-setup.js"></script>
 	</body>
 
