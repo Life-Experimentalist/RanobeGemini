@@ -52,6 +52,14 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     -   Do not change packaging scripts without updating `dev/package-*.js` and validating zip contents.
     -   Avoid changing the `manifest-*` templates in ways that the `dev/build.js` will overwrite unexpectedly (e.g., `version` and `matches`).
 
+-   **Documentation maintenance requirements (always apply)**:
+
+    -   When implementing or refactoring a user-visible feature, update all three surfaces in the same change: `README.md`, relevant `landing/*.html` docs pages, and roadmap/todo docs under `docs/`.
+    -   Keep status terminology consistent: primary reading statuses vs reading-list badges/state overlays.
+    -   Prefer Mermaid vertical orientation (`graph TD` / `graph TB` / `stateDiagram-v2` + `direction TB`) for readability.
+    -   Whenever a Mermaid diagram is added or edited, include a short "Diagram elements" list directly under it describing each major node/state.
+    -   If docs diverge from implementation, implementation wins and docs must be corrected before finishing.
+
 -   **Quick examples**:
     -   Add a handler: create `src/utils/website-handlers/my-site-handler.js` exporting the same shape as other handlers; run `npm run build` and verify `src/utils/website-handlers/handler-registry.js` includes it.
     -   Update domains: edit handlers, then run `npm run update-domains` (calls `dev/generate-manifest-domains.js`) before packaging.

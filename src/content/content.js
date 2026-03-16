@@ -4195,15 +4195,16 @@ if (window.__RGInitDone) {
 				{ value: "plan-to-read", label: "📋 Plan to Read" },
 				{ value: "on-hold", label: "⏸️ On Hold" },
 				{ value: "dropped", label: "❌ Dropped" },
-				{ value: "re-reading", label: "🔁 Re-reading" },
 			];
 		}
 
 		// Generate options from constants
-		return Object.entries(READING_STATUS_INFO).map(([value, info]) => ({
-			value: value,
-			label: info.label,
-		}));
+		return Object.entries(READING_STATUS_INFO)
+			.filter(([value]) => value !== "re-reading")
+			.map(([value, info]) => ({
+				value: value,
+				label: info.label,
+			}));
 	}
 
 	// Add novel to library when content is enhanced
@@ -5584,11 +5585,9 @@ if (window.__RGInitDone) {
 		});
 		rereadBtn.addEventListener("click", async () => {
 			try {
-				// Set re-reading overlay via novelLibrary
-				await novelLibrary.updateReadingStatus(
+				await novelLibrary.toggleNovelReadingList(
 					novelId,
-					READING_STATUS.RE_READING,
-					true, // isRereadingOverlay
+					"rereading",
 				);
 				showTimedBanner(
 					"📖 Re-reading mode started",
@@ -7716,44 +7715,58 @@ if (window.__RGInitDone) {
 				);
 				controlsContainer.appendChild(removeBtn);
 
-				// Re-reading overlay badge — visible only when re-reading overlay is active
-				if (existingNovel.rereadingStatus) {
-					const rereadBadge = document.createElement("span");
-					rereadBadge.title =
-						"Re-reading mode is active — click to stop re-reading";
-					rereadBadge.innerHTML = "🔁 Re-reading ×";
-					rereadBadge.style.cssText = `
+				const readingListBadges = document.createElement("div");
+				readingListBadges.style.cssText =
+					"display:flex;gap:6px;align-items:center;flex-wrap:wrap;";
+				const readingLists = new Set(existingNovel.readingLists || []);
+
+				const readingListBadgeDefs = [
+					{
+						id: "rereading",
+						label: "🔁 Rereading",
+						activeBg: "#7b1fa2",
+					},
+					{
+						id: "favourites",
+						label: "⭐ Favourites",
+						activeBg: "#92400e",
+					},
+				];
+
+				for (const listDef of readingListBadgeDefs) {
+					const isActive = readingLists.has(listDef.id);
+					const badge = document.createElement("button");
+					badge.type = "button";
+					badge.textContent = listDef.label;
+					badge.title = isActive
+						? `Remove from ${listDef.label}`
+						: `Add to ${listDef.label}`;
+					badge.style.cssText = `
 						padding: 4px 8px;
-						background: #7b1fa2;
-						color: white;
-						border-radius: 4px;
+						border-radius: 999px;
 						font-size: 11px;
 						font-weight: 600;
 						cursor: pointer;
 						white-space: nowrap;
+						border: 1px solid ${isActive ? listDef.activeBg : "#616161"};
+						color: ${isActive ? "#ffffff" : "#e0e0e0"};
+						background: ${isActive ? listDef.activeBg : "#2f2f2f"};
 						flex: 0 0 auto;
-						transition: background 0.15s;
 					`;
-					rereadBadge.addEventListener("mouseover", () => {
-						rereadBadge.style.background = "#9c27b0";
-					});
-					rereadBadge.addEventListener("mouseout", () => {
-						rereadBadge.style.background = "#7b1fa2";
-					});
-					rereadBadge.addEventListener("click", async () => {
+					badge.addEventListener("click", async () => {
 						try {
-							// Pass the current main status with overlay=true.
-							// Since it is not RE_READING, updateReadingStatus sets rereadingStatus=false.
-							await novelLibrary.updateReadingStatus(
-								existingNovel.id,
-								existingNovel.readingStatus,
-								true,
-							);
-							showTimedBanner(
-								"Re-reading mode cleared",
-								"success",
-								2000,
-							);
+							const updated =
+								await novelLibrary.toggleNovelReadingList(
+									existingNovel.id,
+									listDef.id,
+								);
+							if (updated) {
+								showTimedBanner(
+									`${listDef.label} updated`,
+									"success",
+									1800,
+								);
+							}
 							removeChapterNovelControlsFromDOM();
 							const newControls =
 								await createChapterPageNovelControls(
@@ -7766,19 +7779,18 @@ if (window.__RGInitDone) {
 								);
 							}
 						} catch (err) {
-							debugError(
-								"Failed to clear re-reading overlay",
-								err,
-							);
+							debugError("Failed to update reading list", err);
 							showTimedBanner(
-								"Failed to clear re-reading mode",
+								"Failed to update reading list",
 								"warning",
 								2000,
 							);
 						}
 					});
-					controlsContainer.appendChild(rereadBadge);
+					readingListBadges.appendChild(badge);
 				}
+
+				controlsContainer.appendChild(readingListBadges);
 			}
 
 			// Open Library button — pass novel ID so the library auto-opens the modal

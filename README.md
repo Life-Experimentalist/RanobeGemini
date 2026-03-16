@@ -17,7 +17,7 @@
 <br/>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-4.3.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
+[![Version](https://img.shields.io/badge/version-4.4.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls)
 [![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
@@ -40,6 +40,7 @@
 - **Chapter Summarization**: Generates concise or detailed summaries for long chapters without leaving the page.
 - **Multi-Site Support**: Works on `ranobes.top`, `fanfiction.net` (desktop + mobile), `archiveofourown.org` (AO3), `scribblehub.com`, and more.
 - **Novel Library**: Track novels across all supported sites with shelf-aware metadata, reading status, characters, relationships, genres, and tags.
+- **Reading Lists & Badges**: Apply list badges independent of status (`🔁 Rereading`, `⭐ Favourites`, plus custom labels like `R18`).
 - **Collapsible Content Sections**: Fight scenes, R18 content, and author notes can be hidden/shown on demand.
 - **Incognito Mode**: Temporarily pause library tracking without disabling the extension.
 - **Custom Content Box Types**: Define your own CSS classes and styling for special content blocks.
@@ -107,7 +108,7 @@ npm install
 npm run package
 ```
 
-**Output**: `releases/RanobeGemini_v4.3.0.zip`
+**Output**: `releases/RanobeGemini_v4.4.0.zip`
 
 ### Build Process Details
 
@@ -162,13 +163,13 @@ Access the extension's settings via the toolbar icon:
 
 ## Supported Websites
 
-| Site | Domains | Notes |
-|------|---------|-------|
-| **Ranobes** | ranobes.top, ranobes.net, ranobes.com, ranobes.org, and more | Novel + chapter pages |
-| **FanFiction.net** | www.fanfiction.net, m.fanfiction.net, fanfiction.ws | Desktop + mobile handlers |
-| **Archive of Our Own (AO3)** | archiveofourown.org, ao3.org | Work + chapter pages |
-| **ScribbleHub** | scribblehub.com | Series + chapter pages |
-| **WebNovel** | webnovel.com | Temporarily disabled — infinite scroll refinement in progress |
+| Site                         | Domains                                                      | Notes                                                         |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Ranobes**                  | ranobes.top, ranobes.net, ranobes.com, ranobes.org, and more | Novel + chapter pages                                         |
+| **FanFiction.net**           | www.fanfiction.net, m.fanfiction.net, fanfiction.ws          | Desktop + mobile handlers                                     |
+| **Archive of Our Own (AO3)** | archiveofourown.org, ao3.org                                 | Work + chapter pages                                          |
+| **ScribbleHub**              | scribblehub.com                                              | Series + chapter pages                                        |
+| **WebNovel**                 | webnovel.com                                                 | Temporarily disabled — infinite scroll refinement in progress |
 
 ## Architecture & Development
 

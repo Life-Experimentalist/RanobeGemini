@@ -31,8 +31,22 @@ export const READING_STATUS = {
 	PLAN_TO_READ: "plan-to-read",
 	ON_HOLD: "on-hold",
 	DROPPED: "dropped",
-	RE_READING: "re-reading",
+	RE_READING: "re-reading", // legacy only; mapped to reading list "rereading"
 };
+
+export const PRIMARY_READING_STATUSES = [
+	READING_STATUS.READING,
+	READING_STATUS.UP_TO_DATE,
+	READING_STATUS.COMPLETED,
+	READING_STATUS.PLAN_TO_READ,
+	READING_STATUS.ON_HOLD,
+	READING_STATUS.DROPPED,
+];
+
+export const BUILTIN_READING_LISTS = [
+	{ id: "rereading", label: "🔁 Rereading", color: "#9c27b0", builtIn: true },
+	{ id: "favourites", label: "⭐ Favourites", color: "#f59e0b", builtIn: true },
+];
 
 /**
  * Reading status display info
@@ -50,8 +64,42 @@ export const READING_STATUS_INFO = {
 	},
 	[READING_STATUS.ON_HOLD]: { label: "⏸️ On Hold", color: "#9e9e9e" },
 	[READING_STATUS.DROPPED]: { label: "❌ Dropped", color: "#f44336" },
-	[READING_STATUS.RE_READING]: { label: "🔁 Re-reading", color: "#9c27b0" },
 };
+
+function normalizeReadingListId(rawId) {
+	const normalized = String(rawId || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[_\s]+/g, "-");
+
+	if (normalized === "re-reading" || normalized === "rereading") {
+		return "rereading";
+	}
+	if (normalized === "favorite" || normalized === "favorites") {
+		return "favourites";
+	}
+	return normalized;
+}
+
+function normalizeReadingListsArray(readingLists) {
+	if (!Array.isArray(readingLists)) return [];
+	const out = [];
+	const seen = new Set();
+	for (const item of readingLists) {
+		const id = normalizeReadingListId(item);
+		if (!id || seen.has(id)) continue;
+		seen.add(id);
+		out.push(id);
+	}
+	return out;
+}
+
+function ensurePrimaryReadingStatus(status) {
+	if (PRIMARY_READING_STATUSES.includes(status)) {
+		return status;
+	}
+	return READING_STATUS.READING;
+}
 
 /**
  * Shelf definitions - dynamically imported from handler SHELF_METADATA
@@ -134,6 +182,7 @@ export class NovelLibrary {
 			hideGeminiUiFromReadAloud: true,
 			statusConfig: {},
 			customStatuses: [],
+			readingLists: [...BUILTIN_READING_LISTS],
 			stateMachineRules: [],
 			rereadingOverlay: getDefaultRereadingOverlay(),
 			// Novel info copy-to-clipboard format
@@ -163,9 +212,29 @@ export class NovelLibrary {
 					...(saved.novelCopyFormats?.siteOverrides || {}),
 				},
 			};
+			const savedReadingLists = Array.isArray(saved.readingLists)
+				? saved.readingLists
+				: [];
+			const mergedReadingLists = [...BUILTIN_READING_LISTS];
+			const seenReadingLists = new Set(
+				mergedReadingLists.map((item) => item.id),
+			);
+			for (const item of savedReadingLists) {
+				const normalizedId = normalizeReadingListId(item?.id);
+				if (!normalizedId || seenReadingLists.has(normalizedId)) continue;
+				mergedReadingLists.push({
+					id: normalizedId,
+					label: String(item?.label || normalizedId),
+					color: String(item?.color || "#64748b"),
+					builtIn: false,
+				});
+				seenReadingLists.add(normalizedId);
+			}
+
 			return {
 				...defaults,
 				...saved,
+				readingLists: mergedReadingLists,
 				rereadingOverlay,
 				novelCopyFormats,
 			};
@@ -288,7 +357,8 @@ export class NovelLibrary {
 			};
 
 			await this.applyStaleStatusRules(library);
-			if (this.normalizeFanfictionMetadata(library)) {
+			const normalizedReadingLists = this.normalizeNovelReadingLists(library);
+			if (normalizedReadingLists || this.normalizeFanfictionMetadata(library)) {
 				// Best-effort background save; never let a save failure break the read.
 				this.saveLibrary(library).catch((err) =>
 					debugError("getLibrary: normalization save failed:", err),
@@ -304,6 +374,57 @@ export class NovelLibrary {
 				version: "1.0",
 			};
 		}
+	}
+
+	/**
+	 * Normalize per-novel reading list data and migrate legacy re-reading status.
+	 * @param {Object} library
+	 * @returns {boolean} whether changes were applied
+	 */
+	normalizeNovelReadingLists(library) {
+		if (!library || !library.novels) return false;
+		let changed = false;
+
+		for (const novel of Object.values(library.novels)) {
+			const originalStatus = novel.readingStatus;
+			const initialLists = normalizeReadingListsArray(novel.readingLists);
+			const listSet = new Set(initialLists);
+
+			if (originalStatus === READING_STATUS.RE_READING) {
+				listSet.add("rereading");
+				novel.readingStatus = ensurePrimaryReadingStatus(
+					novel.lastPrimaryReadingStatus || READING_STATUS.READING,
+				);
+				changed = true;
+			}
+
+			if (novel.rereadingStatus === true) {
+				listSet.add("rereading");
+			}
+
+			if (novel.rereadingStatus !== listSet.has("rereading")) {
+				novel.rereadingStatus = listSet.has("rereading");
+				changed = true;
+			}
+
+			if (!PRIMARY_READING_STATUSES.includes(novel.readingStatus)) {
+				novel.readingStatus = ensurePrimaryReadingStatus(novel.readingStatus);
+				changed = true;
+			}
+
+			const normalizedLists = Array.from(listSet);
+			if (
+				JSON.stringify(initialLists) !== JSON.stringify(normalizedLists)
+			) {
+				novel.readingLists = normalizedLists;
+				changed = true;
+			} else if (!Array.isArray(novel.readingLists)) {
+				novel.readingLists = normalizedLists;
+				changed = true;
+			}
+		}
+
+		return changed;
 	}
 
 	/**
@@ -596,6 +717,9 @@ export class NovelLibrary {
 	 */
 	async addOrUpdateNovel(novelData, isManualEdit = false) {
 		const library = await this.getLibrary();
+		novelData.readingLists = normalizeReadingListsArray(
+			novelData.readingLists,
+		);
 
 		const existingNovel = library.novels[novelData.id];
 		const now = Date.now();
@@ -707,6 +831,12 @@ export class NovelLibrary {
 			updatedNovel.lastAccessedAt = now;
 			updatedNovel.addedAt = existingNovel.addedAt;
 			updatedNovel.editedFields = editedFields;
+			updatedNovel.readingLists = normalizeReadingListsArray(
+				updatedNovel.readingLists,
+			);
+			updatedNovel.rereadingStatus = updatedNovel.readingLists.includes(
+				"rereading",
+			);
 
 			library.novels[novelData.id] = updatedNovel;
 		} else {
@@ -725,7 +855,13 @@ export class NovelLibrary {
 						? novelData.lastReadChapter
 						: 0,
 				readingStatus:
-					novelData.readingStatus || READING_STATUS.PLAN_TO_READ,
+					ensurePrimaryReadingStatus(
+						novelData.readingStatus || READING_STATUS.PLAN_TO_READ,
+					),
+				readingLists: novelData.readingLists || [],
+				rereadingStatus: (novelData.readingLists || []).includes(
+					"rereading",
+				),
 				editedFields: {}, // Initialize empty edited fields
 			};
 		} // Update shelf stats
@@ -774,6 +910,13 @@ export class NovelLibrary {
 
 			// Update specified fields
 			for (const [key, value] of Object.entries(updates)) {
+				if (key === "readingLists") {
+					library.novels[novelId].readingLists =
+						normalizeReadingListsArray(value);
+					library.novels[novelId].rereadingStatus =
+						library.novels[novelId].readingLists.includes("rereading");
+					continue;
+				}
 				library.novels[novelId][key] = value;
 			}
 			library.novels[novelId].lastAccessedAt = Date.now();
@@ -894,23 +1037,38 @@ export class NovelLibrary {
 			}
 
 			if (isRereadingOverlay) {
-				// Toggle the re-reading overlay flag without changing primary status
-				novel.rereadingStatus =
-					newStatus === READING_STATUS.RE_READING ? true : false;
+				// Toggle the re-reading list/state without changing primary status
+				const readingLists = new Set(
+					normalizeReadingListsArray(novel.readingLists),
+				);
+				if (newStatus === READING_STATUS.RE_READING) {
+					readingLists.add("rereading");
+				} else {
+					readingLists.delete("rereading");
+				}
+				novel.readingLists = Array.from(readingLists);
+				novel.rereadingStatus = readingLists.has("rereading");
 			} else {
 				// Replace main status
 				const prevStatus = novel.readingStatus;
-				novel.readingStatus = newStatus;
+				novel.readingStatus = ensurePrimaryReadingStatus(newStatus);
 				novel.lastStatusChangedAt = Date.now();
 
 				// Apply re-reading auto-clear if status changed
-				if (prevStatus !== newStatus) {
+				if (prevStatus !== novel.readingStatus) {
 					const settings = await this.getSettings();
 					applyRereadingAutoClear(
 						novel,
-						newStatus,
+						novel.readingStatus,
 						settings.rereadingOverlay,
 					);
+					const readingLists = new Set(
+						normalizeReadingListsArray(novel.readingLists),
+					);
+					if (!novel.rereadingStatus) {
+						readingLists.delete("rereading");
+					}
+					novel.readingLists = Array.from(readingLists);
 				}
 			}
 
@@ -918,13 +1076,46 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 
 			debugLog(
-				`📊 Status updated: ${novel.title} → ${newStatus}${isRereadingOverlay ? " (overlay)" : ""}`,
+				`📊 Status updated: ${novel.title} → ${novel.readingStatus}${isRereadingOverlay ? " (rereading list)" : ""}`,
 			);
 			return true;
 		} catch (error) {
 			debugError("Error updating reading status:", error);
 			return false;
 		}
+	}
+
+	/**
+	 * Replace all reading list memberships on a novel.
+	 * @param {string} novelId
+	 * @param {Array<string>} readingLists
+	 * @returns {Promise<Object|null>}
+	 */
+	async setNovelReadingLists(novelId, readingLists) {
+		return this.updateNovel(novelId, { readingLists });
+	}
+
+	/**
+	 * Toggle a single reading list badge on/off for a novel.
+	 * @param {string} novelId
+	 * @param {string} listId
+	 * @returns {Promise<Object|null>}
+	 */
+	async toggleNovelReadingList(novelId, listId) {
+		const novel = await this.getNovel(novelId);
+		if (!novel) return null;
+
+		const normalizedId = normalizeReadingListId(listId);
+		if (!normalizedId) return novel;
+
+		const listSet = new Set(normalizeReadingListsArray(novel.readingLists));
+		if (listSet.has(normalizedId)) {
+			listSet.delete(normalizedId);
+		} else {
+			listSet.add(normalizedId);
+		}
+
+		return this.updateNovel(novelId, { readingLists: Array.from(listSet) });
 	}
 
 	/**
@@ -1170,7 +1361,7 @@ export class NovelLibrary {
 
 		// Build the full set of known status keys
 		const allStatusKeys = new Set([
-			...Object.values(READING_STATUS),
+			...PRIMARY_READING_STATUSES,
 			...(settings.customStatuses || []).map((cs) => cs.id),
 			"unset",
 		]);

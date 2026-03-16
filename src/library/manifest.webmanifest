@@ -3,7 +3,7 @@
 	"name": "Ranobe Gemini Library",
 	"short_name": "RG Library",
 	"description": "Your Novel Library powered by Ranobe Gemini — track, enhance, and organise your web novels with AI.",
-	"version": "4.3.0",
+	"version": "4.4.0",
 	"start_url": "library.html?standalone=1",
 	"scope": "./",
 	"display": "standalone",

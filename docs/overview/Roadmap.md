@@ -1,6 +1,6 @@
 ## Roadmap
 
-> Last updated: 2025-07-01 — Current version: **4.3.0**
+> Last updated: 2025-07-01 — Current version: **4.4.0**
 
 ---
 
@@ -14,15 +14,15 @@ graph TD
     v40["v4.0 — Cross-browser MV3\nFirefox + Chromium, PKCE"]
     v41["v4.1 — Themes & Progress\n5 themes, reading progress bar"]
     v42["v4.2 — Library UX\nCustom content boxes, status buttons"]
-    v43["✅ v4.3 — Privacy & Collapse  ← CURRENT\nIncognito Mode, collapsible sections"]
-    v44["🚀 v4.4 — UX Polish  ← ACTIVE SPRINT\nTypography, mobile nav, shortcuts"]
+    v43["✅ v4.3 — Privacy & Collapse\nIncognito Mode, collapsible sections"]
+    v44["🚀 v4.4 — UX Polish  ← CURRENT\nTypography, mobile nav, shortcuts"]
     v45["🔮 v4.5 — Advanced AI Controls\nPrompt presets, enhancement styles"]
     v50["🔮 v5.0 — Platform Expansion\nPlugin system, React migration"]
 
     v1 --> v2 --> v3 --> v40 --> v41 --> v42 --> v43 --> v44 --> v45 --> v50
 
-    style v43 fill:#1a3a2a,stroke:#4caf50,stroke-width:3px,color:#e8eef7
-    style v44 fill:#3a2a0a,stroke:#f4a261,stroke-width:3px,color:#e8eef7
+    style v43 fill:#152635,stroke:#4a6a9a,stroke-width:2px,color:#e8eef7
+    style v44 fill:#1a3a2a,stroke:#4caf50,stroke-width:3px,color:#e8eef7
     style v45 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
     style v50 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
 ```

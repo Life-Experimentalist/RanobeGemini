@@ -1,7 +1,7 @@
 # Development Roadmap
 
 > **Last Updated:** 2025-07-01
-> **Current Version:** 4.3.0
+> **Current Version:** 4.4.0
 
 ## Table of Contents
 
@@ -9,7 +9,8 @@
 	- [Table of Contents](#table-of-contents)
 	- [🗺️ Sprint Overview (v4.4.0)](#️-sprint-overview-v440)
 	- [✅ Completed Features](#-completed-features)
-		- [Version 4.3.0 (Current)](#version-430-current)
+    - [Version 4.4.0 (Current)](#version-440-current)
+    - [Version 4.3.0](#version-430)
 		- [Version 4.2.0](#version-420)
 		- [Version 4.1.0](#version-410)
 		- [Version 4.0.0](#version-400)
@@ -86,7 +87,13 @@ graph TB
 
 ## ✅ Completed Features
 
-### Version 4.3.0 (Current)
+### Version 4.4.0 (Current)
+
+- [x] **Reading Lists as Badge Layer** — `rereading` moved out of primary statuses and into list badges
+- [x] **Predefined Lists in RG Controls** — `🔁 Rereading` and `⭐ Favourites` quick toggles on chapter controls
+- [x] **Legacy Status Migration** — old `re-reading` status entries normalize to `reading` + `rereading` list
+
+### Version 4.3.0
 
 - [x] **Incognito Mode** — Auto-expiry, no-trace reading sessions
 - [x] **Collapsible Sections** — Fight scenes, R18 content, author notes
@@ -133,6 +140,11 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 ## 🚀 Current Sprint (v4.4.0)
 
 ### High Priority
+
+- [x] **Reading-List Model Refactor**
+  - [x] Move `re-reading` out of primary reading statuses
+  - [x] Add predefined list badges: `🔁 Rereading`, `⭐ Favourites`
+  - [x] Add backward-compat migration for legacy `re-reading` status
 
 - [ ] **Summary Typography Parity**
   - [ ] Summary popup inherits page font-family

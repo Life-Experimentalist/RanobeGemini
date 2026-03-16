@@ -691,7 +691,6 @@ async function initializePopup() {
 		{ value: "completed", label: "✅ Completed" },
 		{ value: "on-hold", label: "⏸️ On Hold" },
 		{ value: "dropped", label: "❌ Dropped" },
-		{ value: "re-reading", label: "🔁 Re-reading" },
 	];
 
 	function renderSiteToggles() {

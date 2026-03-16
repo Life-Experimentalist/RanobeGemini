@@ -78,7 +78,7 @@ export const BUILTIN_RULE_IDS = {
 	UTD_COMPLETE: "builtin-utd-complete",
 };
 
-/** The six primary built-in status keys (RE_READING is overlay-only). */
+/** The primary built-in status keys (re-reading is list/overlay-only). */
 export const BUILTIN_STATUS_KEYS = [
 	RS.READING,
 	RS.UP_TO_DATE,
@@ -86,7 +86,6 @@ export const BUILTIN_STATUS_KEYS = [
 	RS.PLAN_TO_READ,
 	RS.ON_HOLD,
 	RS.DROPPED,
-	RS.RE_READING, // kept for backward compat; shown as overlay in UI
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -372,7 +371,6 @@ export function getAllStatuses(settings = {}, readingStatusInfo = {}) {
 		RS.PLAN_TO_READ,
 		RS.ON_HOLD,
 		RS.DROPPED,
-		RS.RE_READING,
 	];
 
 	const builtins = ORDERED_BUILTIN.map((id, idx) => {
