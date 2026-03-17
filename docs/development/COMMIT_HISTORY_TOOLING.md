@@ -1,13 +1,10 @@
 # Commit History Tooling
 
-This repo now includes two reusable commit-history packages that are structured to be split into their own repositories without carrying Ranobe Gemini-specific implementation details.
+This repo uses a local commit-history generator script at `dev/commit-history.js` for release reporting.
 
-## Packages
+## Local Script Features
 
-- `packages/commit-history-cli` — npm / `npx` package
-- `packages/commit-history-uv` — Python / `uv` package
-
-Both support:
+The local script supports:
 
 - full or version-only commit views
 - text, markdown, and JSON output
@@ -22,19 +19,19 @@ Both support:
 
 ## Runtime Selection
 
-Use `dev/commit-history-auto.ps1` when both runtimes are installed and you want the machine to choose intelligently.
+Use `dev/commit-history-auto.ps1` to invoke the local commit-history script.
 
 Rules:
 
-1. Prefer Node when the target repo has `package.json` but not `pyproject.toml`.
-2. Prefer uv when the target repo has `pyproject.toml` but not `package.json`.
-3. If both exist, prefer Node unless you explicitly override with `-Runtime uv`.
+1. This repository uses `node dev/commit-history.js`.
+2. `-Runtime node` is supported for explicit invocation.
+3. `-Runtime auto` defaults to Node.
 
 ### Example
 
 ```powershell
 .\dev\commit-history-auto.ps1 --all --ci-summary
-.\dev\commit-history-auto.ps1 -Runtime uv --versions --format json --mcp-output
+.\dev\commit-history-auto.ps1 -Runtime node --versions --format json --mcp-output
 ```
 
 ## CI / CD Notes
@@ -43,14 +40,7 @@ Node example:
 
 ```yaml
 - name: Generate commit history
-  run: npx @life-experimentalist/commit-history-cli --all --format markdown --ci-summary --output docs/release/commit-history.md
-```
-
-uv example:
-
-```yaml
-- name: Generate commit history
-  run: uv run --project packages/commit-history-uv commit-history-uv --all --format markdown --ci-summary --output docs/release/commit-history.md
+  run: node dev/commit-history.js --all --format markdown --ci-summary --output docs/release/commit-history.md
 ```
 
 ## MCP Notes

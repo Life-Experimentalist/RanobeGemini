@@ -1,7 +1,25 @@
 Mode: all
 Format: text
-Generated: 2026-03-17T13:49:17.930Z
-Total commits: 72
+Generated: 2026-03-17T15:16:57.869Z
+Total commits: 73
+
+[a8b7fd6] 2026-03-17 feat(v4.4.0): release 4.4.0 with auto commit-history publish
+   feat(v4.4.0): release 4.4.0 with auto commit-history publish
+   Files:
+   - .gitignore
+   - dev/commit-history-auto.ps1
+   - dev/commit-history.js
+   - dev/fix_emoji.py
+   - docs/backup/ranobe-backup.schema.json
+   - docs/backups/BACKUP_GUIDE.md
+   - ... (35 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
 
 [25040ff] 2026-03-17 feat(v4.4.0)!: redesign landing pages with responsive content filters and library navigation
    feat(v4.4.0)!: redesign landing pages with responsive content filters and library navigation
@@ -573,12 +591,12 @@ Total commits: 72
    Signed-off-by: Krishna GSVV <75069043+VKrishna04@users.noreply.github.com>
    Files:
    - .vscode/extensions.json
-   - docs/ADVANCED_TAB_REORGANIZATION.md
-   - docs/BACKUP_GUIDE.md
-   - docs/BUILD_ARCHITECTURE.md
-   - docs/BUILD_SYSTEM.md
-   - docs/BUTTON_CONSISTENCY.md
-   - ... (72 more)
+   - docs/LIBRARY_SETTINGS_VISUAL_GUIDE.md
+   - docs/README.md
+   - docs/architecture/ARCHITECTURE.md
+   - docs/architecture/DYNAMIC_DOMAINS.md
+   - docs/architecture/KEEP_ALIVE.md
+   - ... (42 more)
    Package:
    - name: ranobe-gemini
    - version: 3.9.0
@@ -852,7 +870,7 @@ Total commits: 72
    - dev/package-all.js
    - dev/package-chromium.js
    - dev/package-firefox.js
-   - ... (16 more)
+   - ... (15 more)
    Package:
    - name: ranobe-gemini
    - version: 3.6.0
@@ -1044,11 +1062,11 @@ Total commits: 72
    Files:
    - .gitignore
    - .vscode/settings.json
-   - docs/ADDING_NEW_WEBSITES.md
    - docs/ARCHITECTURE.md
    - docs/CHANGELOG.md
-   - docs/DYNAMIC_DOMAINS.md
-   - ... (13 more)
+   - docs/README.md
+   - docs/TODO.md
+   - ... (11 more)
    Package:
    - name: ranobe-gemini
    - version: 3.0.0
@@ -1163,11 +1181,11 @@ Total commits: 72
    Files:
    - .vscode/extensions.json
    - package.json
-   - releases/RanobeGemini_v2.6.0 backup.zip
    - releases/RanobeGemini_v2.7.0.zip
    - src/content/content.js
    - src/manifest.json
-   - ... (7 more)
+   - src/popup/popup.css
+   - ... (6 more)
    Package:
    - name: ranobe-gemini
    - version: 2.7.0
@@ -1184,10 +1202,10 @@ Total commits: 72
    - .github/CONTRIBUTING.md
    - .gitignore
    - .vscode/tasks.json
-   - ADDING_NEW_WEBSITES.md
-   - ARCHITECTURE.md
-   - CHANGELOG.md
-   - ... (35 more)
+   - dev/build.js
+   - dev/package-firefox.js
+   - dev/watch.js
+   - ... (25 more)
    Package:
    - name: ranobe-gemini
    - version: 2.6.0
@@ -1248,7 +1266,7 @@ Total commits: 72
    - dist/config/config.js
    - dist/content/content.css
    - dist/content/content.js
-   - ... (42 more)
+   - ... (39 more)
 
 [941cf0c] 2025-05-17 feat: Enhance simple-popup.js with advanced settings and chunking options
    feat: Enhance simple-popup.js with advanced settings and chunking options
@@ -1266,7 +1284,7 @@ Total commits: 72
    - README.md
    - build/build.js
    - dist/background/background.js
-   - ... (48 more)
+   - ... (46 more)
 
 [6975d60] 2025-04-21 chore: Update architecture documentation, changelog, and license; fix icon references in manifest
    chore: Update architecture documentation, changelog, and license; fix icon references in manifest
@@ -1274,11 +1292,10 @@ Total commits: 72
    Files:
    - ARCHITECTURE.md
    - CHANGELOG.md
-   - LICENSE
    - LICENSE.md
    - src/README.md
    - src/icons/logo-light-1024.png
-   - ... (1 more)
+   - src/manifest.json
 
 [132bb95] 2025-04-19 v2.2.0 changed `FireFox` dir to `src` to indicate near future chomium support, added Fanfiction.net Mobile version, Corrected the summary colour scheme.
    v2.2.0 changed `FireFox` dir to `src` to indicate near future chomium support, added Fanfiction.net Mobile version, Corrected the summary colour scheme.
@@ -1290,7 +1307,7 @@ Total commits: 72
    - .vscode/settings.json
    - .vscode/tasks.json
    - ADDING_NEW_WEBSITES.md
-   - ... (93 more)
+   - ... (54 more)
 
 [53c7573] 2025-04-15 chore: Update changelog for version 2.1.0 and modify manifest and constants for improved functionality
    chore: Update changelog for version 2.1.0 and modify manifest and constants for improved functionality
@@ -1301,7 +1318,6 @@ Total commits: 72
    - FireFox/RanobeGemini_v2.1.0.zip
    - FireFox/manifest.json
    - FireFox/utils/constants.js
-   - FireFox/v2.0.0.zip
 
 [66a3d65] 2025-04-15 chore: Remove deprecated files and update manifest with additional icon sizes
    chore: Remove deprecated files and update manifest with additional icon sizes
@@ -1326,10 +1342,10 @@ Total commits: 72
    - ADDING_NEW_WEBSITES.md
    - CONTRIBUTING.md
    - FireFox/README.md
-   - FireFox/RanobeGemini_v1.1.0.zip
    - FireFox/background/background.js
    - FireFox/content/content.css
-   - ... (13 more)
+   - FireFox/content/content.js
+   - ... (12 more)
 
 [9798e98] 2025-04-10 Remove sensitive API key from environment configuration files
    Remove sensitive API key from environment configuration files
@@ -1378,9 +1394,17 @@ Total commits: 72
    - FireFox/config/config.js
    - FireFox/content/content.css
    - FireFox/content/content.js
-   - ... (28 more)
+   - ... (27 more)
 
 [7aa279c] 2025-04-03 v1.0.0 for Firefox version MVP it works!
    v1.0.0 for Firefox version MVP it works!
    Signed-off-by: VKrishna04 <krishnagsvv@gmail.com>
+   Files:
+   - .gitignore
+   - CHANGELOG.md
+   - Chromium/.editorconfig
+   - Chromium/.env
+   - Chromium/README.md
+   - FireFox/.editorconfig
+   - ... (25 more)
 
