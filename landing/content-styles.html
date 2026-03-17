@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en" data-theme="dark">
 
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Content Styles Showcase — Ranobe Gemini</title>
+		<title>Content Styles & Filters — Ranobe Gemini</title>
 		<meta name="description"
-			content="Preview all built-in and custom content box types used by Ranobe Gemini's AI enhancement." />
+			content="Complete guide to content filters and collapsible sections in Ranobe Gemini. Learn how to control fight scenes, mature content, and author notes." />
 		<link rel="icon"
 			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
 			sizes="32x32" />
@@ -16,410 +16,436 @@
 			rel="stylesheet" />
 		<link rel="stylesheet" href="./styles.css" />
 		<style>
-			/* ── Page layout ────────────────────────────────────────────────── */
-			.cs-wrap {
-				max-width: 860px;
-				margin: 0 auto;
-				padding: 40px 24px 80px;
+			/* ─────────────────────────────────────────────────────────────── */
+			/* RESPONSIVE CONTENT STYLES PAGE */
+			/* ─────────────────────────────────────────────────────────────── */
+
+			body {
+				--text-primary: var(--text);
+				--text-secondary: var(--muted);
+				--accent-color: var(--accent);
+				--bg-panel: var(--panel);
+				--bg-strong: var(--panel-strong);
+				--border-color: var(--border);
 			}
 
-			.cs-page-title {
+			main {
+				padding: 24px;
+			}
+
+			@media (min-width: 768px) {
+				main {
+					padding: 32px;
+				}
+			}
+
+			/* ── Page Header ──────────────────────────────────────────────── */
+			.cs-header {
+				max-width: 900px;
+				margin: 0 auto 48px;
+				padding-bottom: 32px;
+				border-bottom: 1px solid var(--border-color);
+			}
+
+			.cs-title {
 				font-size: 28px;
 				font-weight: 700;
-				margin: 0 0 8px;
+				margin: 0 0 12px;
+				line-height: 1.2;
 			}
 
-			.cs-page-desc {
-				color: var(--muted);
-				margin: 0 0 40px;
-				line-height: 1.7;
+			@media (min-width: 768px) {
+				.cs-title {
+					font-size: 36px;
+				}
 			}
 
-			/* ── Theme toggle ────────────────────────────────────────────────── */
-			.cs-theme-row {
+			.cs-subtitle {
+				font-size: 15px;
+				color: var(--text-secondary);
+				margin: 0;
+				line-height: 1.6;
+			}
+
+			/* ── Theme Toggle ─────────────────────────────────────────────── */
+			.cs-theme-group {
 				display: flex;
 				align-items: center;
 				gap: 12px;
-				margin-bottom: 36px;
+				margin-top: 20px;
+				flex-wrap: wrap;
+			}
+
+			.cs-theme-group label {
+				font-size: 13px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: var(--text-secondary);
+				font-weight: 600;
 			}
 
 			.cs-theme-btn {
-				background: var(--panel-strong);
-				border: 1px solid var(--border);
-				color: var(--text);
-				padding: 8px 16px;
+				background: var(--bg-panel);
+				border: 1px solid var(--border-color);
+				color: var(--text-primary);
+				padding: 8px 14px;
 				border-radius: 8px;
 				cursor: pointer;
-				font-size: 14px;
+				font-size: 13px;
 				font-family: inherit;
-				transition: background 0.2s;
+				transition: all 0.2s;
 			}
 
 			.cs-theme-btn:hover {
-				background: rgba(255, 255, 255, 0.12);
+				background: var(--bg-strong);
+				border-color: var(--accent-color);
 			}
 
 			.cs-theme-btn.active {
-				border-color: var(--accent);
-				color: var(--accent);
+				background: var(--accent-color);
+				border-color: var(--accent-color);
+				color: #0b1628;
+				font-weight: 600;
 			}
 
-			/* ── Section headers ─────────────────────────────────────────────── */
-			.cs-section-header {
+			/* ── Content Sections ─────────────────────────────────────────── */
+			.cs-container {
+				max-width: 900px;
+				margin: 0 auto;
+			}
+
+			.cs-section {
+				margin: 48px 0;
+				padding: 0;
+			}
+
+			.cs-section-title {
+				font-size: 22px;
+				font-weight: 700;
+				margin: 0 0 16px;
 				display: flex;
 				align-items: center;
 				gap: 10px;
-				font-size: 18px;
-				font-weight: 600;
-				margin: 40px 0 16px;
-				padding-bottom: 8px;
-				border-bottom: 1px solid var(--border);
+				padding-bottom: 12px;
+				border-bottom: 2px solid var(--border-color);
 			}
 
-			/* ── Playground card ─────────────────────────────────────────────── */
-			.cs-playground {
-				background: var(--panel);
-				border: 1px solid var(--border);
-				border-radius: 16px;
-				padding: 24px;
-				margin-top: 12px;
+			@media (min-width: 768px) {
+				.cs-section-title {
+					font-size: 26px;
+				}
 			}
 
-			.cs-playground-label {
-				font-size: 13px;
-				font-weight: 600;
-				letter-spacing: 0.5px;
-				text-transform: uppercase;
-				color: var(--muted);
-				margin-bottom: 10px;
-			}
-
-			.cs-playground textarea {
-				width: 100%;
-				box-sizing: border-box;
-				background: rgba(0, 0, 0, 0.3);
-				border: 1px solid var(--border);
-				border-radius: 10px;
-				color: var(--text);
-				font-family: "Courier New", monospace;
-				font-size: 13px;
-				padding: 12px 14px;
-				resize: vertical;
-				min-height: 120px;
-			}
-
-			.cs-playground textarea:focus {
-				outline: none;
-				border-color: var(--accent);
-			}
-
-			.cs-playground-btn {
-				margin-top: 12px;
-				background: var(--accent);
-				color: #0b1628;
-				border: none;
-				padding: 10px 20px;
-				border-radius: 8px;
-				font-weight: 600;
+			.cs-section-desc {
 				font-size: 14px;
-				cursor: pointer;
-				font-family: inherit;
-				transition: opacity 0.2s;
-			}
-
-			.cs-playground-btn:hover {
-				opacity: 0.85;
-			}
-
-			.cs-preview-area {
-				margin-top: 20px;
-				padding: 20px;
-				background: rgba(0, 0, 0, 0.2);
-				border: 1px dashed var(--border);
-				border-radius: 10px;
-				font-size: 15px;
-				line-height: 1.75;
-			}
-
-			/* ── Box type showcase ───────────────────────────────────────────── */
-			.cs-box-meta {
-				display: inline-flex;
-				align-items: center;
-				gap: 6px;
-				font-size: 12px;
-				font-family: "Courier New", monospace;
-				background: rgba(255, 255, 255, 0.06);
-				border: 1px solid var(--border);
-				border-radius: 6px;
-				padding: 3px 10px;
-				margin-bottom: 10px;
-				color: var(--muted);
-			}
-
-			/* ── Built-in box styles (mirrored from content.css) ─────────────── */
-			/* Dark defaults */
-			.game-stats-box {
-				font-family: 'Courier New', monospace;
-				white-space: pre-line;
-				background-color: rgba(35, 35, 35, 0.95);
-				border: 1px solid rgba(100, 100, 100, 0.8);
-				border-radius: 6px;
-				padding: 12px 14px;
-				margin: 16px 0;
-				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-				line-height: 1.5;
-				font-size: 14px;
-				width: 100%;
-				box-sizing: border-box;
-				color: #e8e8e8;
-				overflow-x: auto;
-				text-align: left;
-			}
-
-			.game-stats-box strong,
-			.game-stats-box b {
-				color: #8ab4f8;
-			}
-
-			.rg-author-note {
-				font-family: inherit;
-				background-color: rgba(45, 35, 10, 0.92);
-				border: 1px solid rgba(200, 155, 50, 0.55);
-				border-left: 3px solid rgba(220, 175, 70, 0.85);
-				border-radius: 6px;
-				padding: 12px 16px 12px 18px;
-				margin: 20px 0;
-				font-style: italic;
-				font-size: 13.5px;
-				color: #d4b87a;
+				color: var(--text-secondary);
 				line-height: 1.7;
-				box-sizing: border-box;
-				width: 100%;
+				margin: 16px 0 24px;
 			}
 
-			.rg-author-note::before {
-				content: "📝 Author's Note";
-				display: block;
-				font-style: normal;
-				font-weight: 700;
-				font-size: 11px;
-				letter-spacing: 0.9px;
-				text-transform: uppercase;
-				color: rgba(220, 175, 70, 0.8);
-				margin-bottom: 8px;
-			}
-
-			.rg-system-msg {
-				font-family: 'Courier New', Courier, monospace;
-				background-color: rgba(5, 12, 30, 0.97);
-				border: 1px solid rgba(55, 135, 255, 0.45);
-				border-radius: 6px;
-				padding: 12px 16px;
-				margin: 16px 0;
-				color: #9ecfff;
-				white-space: pre-line;
-				font-size: 13.5px;
-				line-height: 1.6;
-				box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
-				box-sizing: border-box;
-				width: 100%;
-			}
-
-			.rg-quote-box {
-				font-family: Georgia, 'Times New Roman', Times, serif;
-				background: transparent;
-				border: none;
-				border-left: 3px solid rgba(160, 155, 145, 0.55);
-				padding: 6px 18px;
-				margin: 18px 0 18px 10px;
-				font-style: italic;
-				color: rgba(205, 200, 185, 0.88);
+			/* ── Info Box ─────────────────────────────────────────────────── */
+			.cs-info-box {
+				background: rgba(100, 150, 255, 0.08);
+				border-left: 3px solid var(--accent-color);
+				border-radius: 8px;
+				padding: 16px;
+				margin: 20px 0;
 				font-size: 14px;
-				line-height: 1.85;
-				box-sizing: border-box;
-				width: calc(100% - 10px);
-				white-space: pre-line;
-			}
-
-			.rg-skill-box {
-				font-family: inherit;
-				background-color: rgba(12, 25, 14, 0.95);
-				border: 1px solid rgba(55, 160, 75, 0.45);
-				border-top: 2px solid rgba(65, 200, 90, 0.65);
-				border-radius: 5px;
-				padding: 10px 14px;
-				margin: 14px 0;
-				color: #9de8a8;
-				font-size: 13px;
 				line-height: 1.6;
-				box-sizing: border-box;
-				width: 100%;
-				white-space: pre-line;
+				color: var(--text-primary);
 			}
 
-			/* ── Collapsible showcase ───────────────────────────────────────── */
-			.cs-collapsible-grid {
+			.cs-info-box strong {
+				color: var(--accent-color);
+				font-weight: 600;
+			}
+
+			/* ── Grid Layouts ─────────────────────────────────────────────── */
+			.cs-grid {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-				gap: 14px;
-				margin-top: 14px;
+				grid-template-columns: 1fr;
+				gap: 16px;
+				margin: 24px 0;
 			}
 
-			.cs-collapsible-card {
-				background: var(--panel);
-				border: 1px solid var(--border);
+			@media (min-width: 600px) {
+				.cs-grid {
+					grid-template-columns: repeat(2, 1fr);
+				}
+			}
+
+			@media (min-width: 900px) {
+				.cs-grid {
+					grid-template-columns: repeat(3, 1fr);
+				}
+			}
+
+			/* ── Card Styles ──────────────────────────────────────────────── */
+			.cs-card {
+				background: var(--bg-panel);
+				border: 1px solid var(--border-color);
+				border-radius: 12px;
+				padding: 20px;
+				transition: all 0.2s;
+			}
+
+			.cs-card:hover {
+				background: var(--bg-strong);
+				border-color: var(--accent-color);
+			}
+
+			.cs-card-icon {
+				font-size: 32px;
+				margin-bottom: 12px;
+			}
+
+			.cs-card-title {
+				font-size: 16px;
+				font-weight: 600;
+				margin: 0 0 8px;
+				color: var(--text-primary);
+			}
+
+			.cs-card-desc {
+				font-size: 13px;
+				color: var(--text-secondary);
+				margin: 0;
+				line-height: 1.6;
+			}
+
+			/* ── Collapsible Demo Cards ───────────────────────────────────── */
+			.cs-collapsible-demo {
+				background: var(--bg-panel);
+				border: 1px solid var(--border-color);
 				border-radius: 12px;
 				overflow: hidden;
+				margin: 12px 0;
 			}
 
-			.cs-collapsible-card summary {
+			.cs-collapsible-demo summary {
 				list-style: none;
 				cursor: pointer;
-				padding: 10px 12px;
-				font-size: 13px;
+				padding: 14px 16px;
+				font-size: 14px;
 				font-weight: 600;
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				gap: 10px;
+				gap: 8px;
+				user-select: none;
+				transition: background 0.2s;
 			}
 
-			.cs-collapsible-card summary::-webkit-details-marker {
+			.cs-collapsible-demo summary:hover {
+				background: var(--bg-strong);
+			}
+
+			.cs-collapsible-demo summary::-webkit-details-marker {
 				display: none;
 			}
 
-			.cs-collapsible-card summary::after {
+			.cs-collapsible-demo summary::after {
 				content: "▾";
-				font-size: 12px;
-				opacity: 0.85;
+				font-size: 13px;
+				min-width: 16px;
+				text-align: center;
+				transition: transform 0.2s;
 			}
 
-			.cs-collapsible-card[open] summary::after {
-				content: "▴";
+			.cs-collapsible-demo[open] summary::after {
+				transform: rotate(180deg);
 			}
 
 			.cs-collapsible-body {
-				padding: 12px 14px;
+				padding: 16px;
+				border-top: 1px solid var(--border-color);
 				font-size: 13px;
-				line-height: 1.7;
-				border-top: 1px solid var(--border);
+				line-height: 1.8;
+				color: var(--text-secondary);
 			}
 
-			.cs-collapsible-fight summary {
-				background: rgba(200, 60, 60, 0.16);
-				border-bottom: 1px solid rgba(200, 80, 80, 0.25);
+			/* ── Type-specific Styling ────────────────────────────────────── */
+			.cs-demo-fight summary {
+				background: rgba(200, 60, 60, 0.12);
+				border-bottom: 1px solid rgba(200, 80, 80, 0.2);
+				color: #ff9999;
 			}
 
-			.cs-collapsible-r18 summary {
-				background: rgba(150, 90, 170, 0.18);
-				border-bottom: 1px solid rgba(160, 80, 200, 0.25);
+			.cs-demo-r18 summary {
+				background: rgba(150, 90, 170, 0.12);
+				border-bottom: 1px solid rgba(160, 80, 200, 0.2);
+				color: #d9a5ff;
 			}
 
-			.cs-collapsible-author summary {
-				background: rgba(220, 175, 70, 0.16);
-				border-bottom: 1px solid rgba(200, 155, 50, 0.3);
+			.cs-demo-author summary {
+				background: rgba(220, 175, 70, 0.12);
+				border-bottom: 1px solid rgba(200, 155, 50, 0.2);
+				color: #ffd070;
 			}
 
-			.rg-flashback {
-				font-family: inherit;
-				background-color: rgba(32, 26, 18, 0.88);
-				border: 1px dashed rgba(145, 115, 65, 0.5);
-				border-radius: 4px;
-				padding: 14px 18px;
-				margin: 22px 0;
-				font-style: italic;
-				color: rgba(215, 198, 165, 0.82);
-				font-size: inherit;
-				line-height: 1.78;
-				box-sizing: border-box;
+			/* ── Responsive SVG Diagram ───────────────────────────────────── */
+			.cs-diagram-wrapper {
 				width: 100%;
-				opacity: 0.92;
+				overflow-x: auto;
+				margin: 24px 0;
+				border: 1px solid var(--border-color);
+				border-radius: 12px;
+				padding: 16px;
+				background: var(--bg-panel);
 			}
 
-			.section-divider,
-			hr.section-divider {
+			.cs-diagram-wrapper svg {
+				width: 100%;
+				min-width: 400px;
+				height: auto;
+				display: block;
+			}
+
+			@media (max-width: 600px) {
+				.cs-diagram-wrapper {
+					padding: 12px;
+				}
+			}
+
+			/* ── Control Groups ───────────────────────────────────────────── */
+			.cs-control-list {
+				list-style: none;
+				margin: 16px 0;
+				padding: 0;
+			}
+
+			.cs-control-item {
+				padding: 12px 0;
+				border-bottom: 1px solid var(--border-color);
+				display: flex;
+				align-items: flex-start;
+				gap: 12px;
+				font-size: 14px;
+				line-height: 1.6;
+			}
+
+			.cs-control-item:last-child {
+				border-bottom: none;
+			}
+
+			.cs-control-icon {
+				font-size: 18px;
+				min-width: 24px;
+				text-align: center;
+				margin-top: 2px;
+			}
+
+			/* ── CTA Button ───────────────────────────────────────────────── */
+			.cs-cta-button {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				background: var(--accent-color);
+				color: #0b1628;
 				border: none;
-				height: 2px;
-				background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.5), transparent);
-				margin: 30px auto;
-				width: 80%;
-				max-width: 500px;
+				padding: 12px 24px;
+				border-radius: 8px;
+				font-weight: 600;
+				font-size: 14px;
+				cursor: pointer;
+				text-decoration: none;
+				transition: all 0.2s;
+				margin: 16px 0;
 			}
 
-			/* Light theme variants */
-			[data-theme="light"] {
-				--bg: #f8f5f0;
-				--bg-alt: #ede9e2;
-				--panel: rgba(0, 0, 0, 0.04);
-				--panel-strong: rgba(0, 0, 0, 0.07);
-				--accent: #d4711d;
-				--accent-strong: #c56010;
-				--text: #1a1a1a;
-				--muted: #5a5a5a;
-				--border: rgba(0, 0, 0, 0.12);
+			.cs-cta-button:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 8px 16px rgba(244, 162, 97, 0.2);
 			}
 
-			[data-theme="light"] body {
-				background: var(--bg);
+			/* ── Feature Overview ─────────────────────────────────────────── */
+			.cs-feature-box {
+				background: var(--bg-panel);
+				border: 1px solid var(--border-color);
+				border-radius: 12px;
+				padding: 20px;
+				margin: 16px 0;
 			}
 
-			[data-theme="light"] .game-stats-box {
-				background-color: #f0f0f0;
-				color: #333;
-				border-color: #ccc;
+			.cs-feature-box h4 {
+				font-size: 16px;
+				margin: 0 0 8px;
+				color: var(--text-primary);
+				display: flex;
+				align-items: center;
+				gap: 8px;
 			}
 
-			[data-theme="light"] .game-stats-box strong {
-				color: #1a73e8;
+			.cs-feature-box p {
+				margin: 0;
+				font-size: 13px;
+				color: var(--text-secondary);
+				line-height: 1.6;
 			}
 
-			[data-theme="light"] .rg-author-note {
-				background-color: rgba(255, 248, 225, 0.95);
-				border-left-color: rgba(200, 145, 20, 0.9);
-				border-color: rgba(200, 170, 80, 0.5);
-				color: #7a5c18;
+			/* ── Example Code ─────────────────────────────────────────────── */
+			.cs-code-block {
+				background: rgba(0, 0, 0, 0.3);
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				padding: 16px;
+				overflow-x: auto;
+				font-family: "Courier New", monospace;
+				font-size: 12px;
+				line-height: 1.5;
+				color: #9ecfff;
+				margin: 16px 0;
 			}
 
-			[data-theme="light"] .rg-author-note::before {
-				color: rgba(180, 130, 20, 0.9);
+			/* ── Responsive Text ──────────────────────────────────────────── */
+			@media (max-width: 600px) {
+				.cs-title {
+					font-size: 24px;
+				}
+
+				.cs-section-title {
+					font-size: 18px;
+				}
+
+				.cs-grid {
+					grid-template-columns: 1fr;
+				}
+
+				.cs-diagram-wrapper {
+					border-radius: 8px;
+				}
 			}
 
-			[data-theme="light"] .rg-system-msg {
-				background-color: rgba(235, 242, 255, 0.97);
-				border-color: rgba(55, 110, 220, 0.45);
+			/* ── Light Theme Adjustments ──────────────────────────────────── */
+			[data-theme="light"] .cs-info-box {
+				background: rgba(100, 150, 255, 0.1);
+				border-left-color: #1a73e8;
+			}
+
+			[data-theme="light"] .cs-card {
+				background: rgba(0, 0, 0, 0.04);
+				border-color: rgba(0, 0, 0, 0.1);
+			}
+
+			[data-theme="light"] .cs-card:hover {
+				background: rgba(0, 0, 0, 0.08);
+				border-color: var(--accent-color);
+			}
+
+			[data-theme="light"] .cs-collapsible-demo {
+				background: rgba(0, 0, 0, 0.04);
+				border-color: rgba(0, 0, 0, 0.1);
+			}
+
+			[data-theme="light"] .cs-collapsible-demo summary:hover {
+				background: rgba(0, 0, 0, 0.08);
+			}
+
+			[data-theme="light"] .cs-code-block {
+				background: rgba(0, 0, 0, 0.08);
 				color: #1a4a9a;
 			}
-
-			[data-theme="light"] .rg-quote-box {
-				border-left-color: rgba(100, 95, 85, 0.55);
-				color: rgba(80, 75, 65, 0.9);
-			}
-
-			[data-theme="light"] .rg-skill-box {
-				background-color: rgba(235, 255, 238, 0.95);
-				border-color: rgba(45, 140, 60, 0.45);
-				border-top-color: rgba(45, 165, 65, 0.65);
-				color: #1e6b30;
-			}
-
-			[data-theme="light"] .rg-flashback {
-				background-color: rgba(250, 245, 235, 0.9);
-				border-color: rgba(155, 125, 70, 0.45);
-				color: rgba(90, 75, 50, 0.88);
-			}
-
-			[data-theme="light"] .section-divider {
-				background: linear-gradient(90deg, transparent, rgba(100, 100, 100, 0.3), transparent);
-			}
-
-			/* ── Custom box style injection target ───────────────────────────── */
-			#cs-custom-styles {
-				/* populated by JS */
-			}
 		</style>
-
-		<!-- Custom box CSS injected here by the showcase JS -->
-		<style id="cs-custom-styles"></style>
 	</head>
 
 	<body>
@@ -433,19 +459,18 @@
 					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong>Ranobe Gemini</strong>
-					<span>Content Styles</span>
+					<span>Content Styles & Filters</span>
 				</div>
 			</div>
-			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
-				aria-label="Toggle navigation">☰</button>
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle navigation">
+				☰
+			</button>
 			<nav class="nav" id="main-nav">
-				<!-- Section anchors on this page -->
 				<a href="#builtin">Built-in Types</a>
-				<a href="#collapsible">Collapsible Types</a>
-				<a href="#custom">Custom Boxes</a>
-				<a href="#playground">Playground</a>
+				<a href="#collapsible">Collapsible Filters</a>
+				<a href="#controls">Your Controls</a>
+				<a href="#demo">Live Demo</a>
 				<span class="nav-sep" aria-hidden="true"></span>
-				<!-- Cross-page links -->
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./novel-status.html">Novel Status</a>
@@ -457,281 +482,488 @@
 		</header>
 
 		<main>
-			<div class="cs-wrap">
-				<h1 class="cs-page-title">🎨 Content Styles Showcase</h1>
-				<p class="cs-page-desc">
-					Live preview of all content box types that Ranobe Gemini can apply during chapter enhancement.
-					<strong>Built-in</strong> types are always available. <strong>Custom</strong> types can be defined
-					in
-					<a href="#" id="cs-settings-link" style="color:var(--accent);">Library Settings → Content Boxes</a>.
-				</p>
-
-				<!-- Theme toggle -->
-				<div class="cs-theme-row">
-					<span style="font-size:13px;color:var(--muted);">Preview theme:</span>
-					<button class="cs-theme-btn active" id="cs-theme-dark" onclick="setTheme('dark')">🌙 Dark</button>
-					<button class="cs-theme-btn" id="cs-theme-light" onclick="setTheme('light')">☀️ Light</button>
-				</div>
-
-				<!-- ── Built-in Box Types ───────────────────────────────────── -->
-				<h2 class="cs-section-header" id="builtin">📦 Built-in Box Types</h2>
-				<p style="color:var(--muted);margin-bottom:24px;font-size:14px;">
-					These classes are always injected by Ranobe Gemini. Gemini is prompted to use them based on
-					site-specific
-					rules defined in each website handler.
-				</p>
-
-				<!-- game-stats-box -->
-				<div>
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"game-stats-box"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Multi-line RPG / LitRPG stat windows</span>
-					</div>
-					<div class="game-stats-box">
-						Name: Kael Ashford Level: 47
-						Class: Shadow Assassin HP: 2,840 / 2,840
-						Attack: 1,456 Defense: 380 MP: 920 / 1,100
-						─────────────────────────────────────────────────
-						Active Skills:
-						[Shadow Step] (Rank A) — Teleport up to 15m into shadows
-						[Death Mark] (Rank S) — Target takes +40% damage for 10s
-						─────────────────────────────────────────────────
-						Status: <b>Stealthed</b> EXP to next level: 4,200</div>
-				</div>
-
-				<!-- rg-system-msg -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"rg-system-msg"</strong>
-						<span style="margin-left:8px;color:var(--muted);">System notification pop-ups</span>
-					</div>
-					<div class="rg-system-msg">【System Alert】
-						You have entered a Danger Zone: The Shattered Wastes (Level 60+ recommended).
-						All healing effects are reduced by 50%.
-						Retreat within 10 seconds or face hostile mob aggro.</div>
-				</div>
-
-				<!-- rg-skill-box -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"rg-skill-box"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Individual skill / spell / ability
-							cards</span>
-					</div>
-					<div class="rg-skill-box">【Skill Acquired】 Void Fracture (Passive · Rank B)
-						On killing a target below 20% HP, create a small gravitational rift dealing
-						380% magic damage to all enemies within 6m. Cooldown: 8s.</div>
-				</div>
-
-				<!-- rg-author-note -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"rg-author-note"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Author / Translator notes</span>
-					</div>
-					<div class="rg-author-note">
-						Hope you all enjoyed this chapter! Things are starting to pick up — the next arc will be
-						released at
-						the usual pace. Thank you for all your patience and support. ❤️
-					</div>
-				</div>
-
-				<!-- rg-quote-box -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"rg-quote-box"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Quotes, epigraphs, poetry, song lyrics</span>
-					</div>
-					<div class="rg-quote-box">In the end, we are but the shadows our choices cast—
-						long, stretched across ages, outliving flesh and memory.</div>
-				</div>
-
-				<!-- rg-flashback -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"rg-flashback"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Flashback / memory inserts</span>
-					</div>
-					<div class="rg-flashback">
-						Three years ago, on the night of the Collapse, Elara had stood at the edge of the cliff with
-						nothing
-						but a rusted sword and a promise she wasn't sure she could keep. The sky had burned amber and
-						violet,
-						and the screams from the valley below were already fading into silence.
-					</div>
-				</div>
-
-				<!-- section-divider -->
-				<div style="margin-top:24px;">
-					<div class="cs-box-meta">
-						<span>class=</span><strong>"section-divider"</strong>
-						<span style="margin-left:8px;color:var(--muted);">Scene / section separator</span>
-					</div>
-					<p style="margin:0 0 4px;font-size:14px;color:var(--muted);">…end of scene above…</p>
-					<hr class="section-divider" />
-					<p style="font-size:14px;color:var(--muted);">…start of new scene…</p>
-				</div>
-
-				<!-- ── Collapsible Types ───────────────────────────────────── -->
-				<h2 class="cs-section-header" id="collapsible" style="margin-top:60px;">� Content Filters: Collapsible Sections
-				</h2>
-				<p style="color:var(--muted);margin-bottom:20px;font-size:14px;">
-					<strong>Content Filters</strong> allow you to control how long or sensitive content is displayed. Instead of hiding content entirely, they are <strong>collapsed by default</strong> — showing only a brief summary until you choose to expand and read the full content. This keeps your reading experience focused while maintaining complete access to everything.
-				</p>
-
-				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">What Gets Collapsed?</h3>
-				<div style="background:rgba(100,100,255,0.1);border-left:3px solid var(--accent-color);padding:15px;margin-bottom:20px;border-radius:4px;">
-					<p style="margin:0;color:var(--text-primary);">
-						<strong>Fight Scenes</strong> (⚔️) · <strong>Mature Content</strong> (🔞) · <strong>Long Author Notes</strong> (📝)
-						<br/>
-						<span style="font-size:13px;color:var(--muted);">These are intelligently detected by Gemini AI and marked for collapsing. You control visibility in Settings → Content Filters.</span>
+			<div class="cs-container">
+				<!-- ── Page Header ──────────────────────────────────────────────── -->
+				<div class="cs-header">
+					<h1 class="cs-title">🎨 Content Styles & Filters</h1>
+					<p class="cs-subtitle">
+						Complete control over how your chapters are displayed.
+						Ranobe Gemini uses intelligent content detection and
+						user-defined filters to help you read comfortably and at
+						your own pace.
 					</p>
+					<div class="cs-theme-group">
+						<label>Preview theme:</label>
+						<button class="cs-theme-btn active" onclick="setTheme('dark')">
+							🌙 Dark
+						</button>
+						<button class="cs-theme-btn" onclick="setTheme('light')">
+							☀️ Light
+						</button>
+					</div>
 				</div>
 
-				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">⚔️ Fight Scenes</h4>
-				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
-					Action sequences and combat scenes. Collapsed by default because detailed fight mechanics can interrupt story pacing. Click <strong>▼ Read</strong> to expand and see all the details—power-ups, special moves, and tactical choices are preserved.
-				</p>
+				<!-- ── Section 1: Built-in Content Types ──────────────────────── -->
+				<section class="cs-section" id="builtin">
+					<h2 class="cs-section-title">
+						📦 Built-in Content Box Types
+					</h2>
+					<p class="cs-section-desc">
+						Gemini automatically detects and marks these content
+						types during chapter enhancement. Each has a distinct
+						visual style for easy recognition.
+					</p>
 
-				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">🔞 Mature Content</h4>
-				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
-					Adult/explicit scenes. Collapsed by default so you can comfortably read in public or around others. The summary tells you what's hidden, so you don't miss story context (relationships, emotional beats) even if you skip the full content.
-				</p>
-
-				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">📝 Author's Notes</h4>
-				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
-					Long, tangential author commentary (schedule updates, thank-yous, personal notes). Collapsed by default to preserve reading flow. Story-relevant notes (character clarifications, translation notes) always remain visible.
-				</p>
-
-				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">How It Works</h3>
-				<svg style="width:100%;height:auto;max-width:700px;margin:20px 0;" viewBox="0 0 700 250">
-					<!-- Gemini →  Marks sections -->
-					<rect x="10" y="20" width="150" height="60" fill="rgba(100,150,255,0.2)" stroke="var(--accent-color)" stroke-width="2" rx="4"/>
-					<text x="85" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Gemini</text>
-					<text x="85" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">Analyzes content</text>
-					<text x="85" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">Marks sections</text>
-
-					<line x1="170" y1="50" x2="210" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
-					<polygon points="210,50 200,45 200,55" fill="var(--accent-color)"/>
-
-					<!-- Settings → Storage -->
-					<rect x="220" y="20" width="150" height="60" fill="rgba(100,200,100,0.2)" stroke="rgba(100,200,100,0.8)" stroke-width="2" rx="4"/>
-					<text x="295" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Your Settings</text>
-					<text x="295" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">fight: enabled</text>
-					<text x="295" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">r18: enabled</text>
-
-					<line x1="370" y1="50" x2="410" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
-					<polygon points="410,50 400,45 400,55" fill="var(--accent-color)"/>
-
-					<!-- Render → Collapsible boxes -->
-					<rect x="420" y="20" width="150" height="60" fill="rgba(200,100,100,0.2)" stroke="rgba(200,100,100,0.8)" stroke-width="2" rx="4"/>
-					<text x="495" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Rendering</text>
-					<text x="495" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">Create wrappers</text>
-					<text x="495" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">Bind toggles</text>
-
-					<line x1="570" y1="50" x2="610" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
-					<polygon points="610,50 600,45 600,55" fill="var(--accent-color)"/>
-
-					<!-- Result → Reader controls -->
-					<rect x="620" y="20" width="70" height="60" fill="rgba(255,200,100,0.2)" stroke="rgba(255,200,100,0.8)" stroke-width="2" rx="4"/>
-					<text x="655" y="40" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--text-primary)">You Read</text>
-					<text x="655" y="60" text-anchor="middle" font-size="10" fill="var(--text-primary)">Control</text>
-
-					<!-- Legend -->
-					<text x="10" y="140" font-size="13" font-weight="bold" fill="var(--text-primary)">Collapsible → Summary Visible | Expandable Content</text>
-					<text x="10" y="165" font-size="12" fill="var(--muted)">Collapsed state shows: ▼ Read label + one-sentence summary</text>
-					<text x="10" y="185" font-size="12" fill="var(--muted)">Expanded state shows: ▲ Collapse label + full content (summaries hidden)</text>
-					<text x="10" y="205" font-size="12" fill="var(--muted)">Nothing is ever truly hidden—all content is collapsible, never deleted</text>
-					<text x="10" y="225" font-size="12" fill="var(--muted)">Disable a filter → content appears inline without collapsible box</text>
-				</svg>
-
-				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">Configure Your Filters</h3>
-				<p style="color:var(--muted);margin-bottom:15px;font-size:13px;">
-					Go to <strong>⚙️ Library Settings → Content Filters 🔽</strong> to:
-				</p>
-				<ul style="color:var(--text-primary);margin-left:20px;line-height:1.8;">
-					<li><strong>Toggle each type on/off</strong> — Disabled types appear inline, not collapsible</li>
-					<li><strong>Set default state</strong> — Should fight scenes start collapsed or expanded?</li>
-					<li><strong>Create custom types</strong> — Define your own collapsible content (e.g., "Flashbacks", "World Exposition")</li>
-					<li><strong>Test in Playground</strong> — Try your settings on live interactive examples</li>
-				</ul>
-
-				<div class="cs-collapsible-grid">
-					<details class="cs-collapsible-card cs-collapsible-fight">
-						<summary>⚔️ Fight Scene Summary: Duel at Black Gate</summary>
-						<div class="cs-collapsible-body">
-							Kael shifts stance, baits the spear thrust, then uses Shadow Step to flank.
-							A two-hit counter cracks the enemy guard and ends the exchange in under five seconds.
+					<div class="cs-grid">
+						<div class="cs-card">
+							<div class="cs-card-icon">📊</div>
+							<div class="cs-card-title">Game Stats</div>
+							<p class="cs-card-desc">
+								RPG/LitRPG stat windows, character sheets, and
+								numerical data formatted for readability.
+							</p>
 						</div>
-					</details>
-
-					<details class="cs-collapsible-card cs-collapsible-r18">
-						<summary>🔞 Mature Content Summary: Intimate Scene</summary>
-						<div class="cs-collapsible-body">
-							Scene includes explicit romantic content and emotionally intense dialogue.
-							Collapsed by default to keep chapter flow comfortable for all readers.
+						<div class="cs-card">
+							<div class="cs-card-icon">🔔</div>
+							<div class="cs-card-title">System Messages</div>
+							<p class="cs-card-desc">
+								In-world notifications, alerts, and system
+								prompts with distinct visual formatting.
+							</p>
 						</div>
-					</details>
-
-					<details class="cs-collapsible-card cs-collapsible-author">
-						<summary>📝 Author Note Summary: Arc Delay and Rewrite Notes</summary>
-						<div class="cs-collapsible-body">
-							Author explains pacing changes for the next arc and confirms revised chapter timing.
-							Readers can skip this block without losing story continuity.
+						<div class="cs-card">
+							<div class="cs-card-icon">⚡</div>
+							<div class="cs-card-title">Skill Cards</div>
+							<p class="cs-card-desc">
+								Individual ability descriptions, spell details,
+								and skill acquisition announcements.
+							</p>
 						</div>
-					</details>
-				</div>
+						<div class="cs-card">
+							<div class="cs-card-icon">📝</div>
+							<div class="cs-card-title">Author Notes</div>
+							<p class="cs-card-desc">
+								Long author commentary, translator notes, and
+								off-topic messages styled distinctly.
+							</p>
+						</div>
+						<div class="cs-card">
+							<div class="cs-card-icon">💬</div>
+							<div class="cs-card-title">Quotes & Poetry</div>
+							<p class="cs-card-desc">
+								Epigraphs, character quotes, song lyrics, and
+								poetic passages with italic styling.
+							</p>
+						</div>
+						<div class="cs-card">
+							<div class="cs-card-icon">⏮️</div>
+							<div class="cs-card-title">Flashbacks</div>
+							<p class="cs-card-desc">
+								Memory inserts, past event recollections, and
+								timeline shifts marked with dashed borders.
+							</p>
+						</div>
+					</div>
+				</section>
 
-				<!-- ── Custom Box Types ─────────────────────────────────────── -->
-				<h2 class="cs-section-header" id="custom" style="margin-top:60px;">🛠️ Custom Box Types</h2>
-				<p style="color:var(--muted);margin-bottom:20px;font-size:14px;">
-					Defined in <strong>Library Settings → 🎨 Content Boxes</strong>. Gemini is automatically instructed
-					to
-					use these classes. An empty list means no custom types have been defined yet.
-				</p>
+				<!-- ── Section 2: Collapsible Content Filters ──────────────────── -->
+				<section class="cs-section" id="collapsible">
+					<h2 class="cs-section-title">
+						🔽 Collapsible Content Filters
+					</h2>
+					<p class="cs-section-desc">
+						Instead of permanently hiding content, Ranobe Gemini
+						lets you <strong>collapse sections</strong> so you can
+						expand them whenever you want. Collapse is
+						<strong>temporary and user-controlled</strong>.
+					</p>
 
-				<div id="cs-custom-boxes-list">
-					<div class="cs-playground" style="text-align:center;padding:32px;">
-						<p style="color:var(--muted);margin:0;">
-							No custom box types defined.<br />
-							<a href="#" id="cs-go-settings" style="color:var(--accent);text-decoration:underline;">Open
-								Library Settings</a>
-							to create your first custom box type.
+					<div class="cs-info-box">
+						<strong>💡 Key Concept:</strong> Collapsible ≠ Hidden.
+						We make content accessible while keeping your reading
+						flow smooth. You're always in control.
+					</div>
+
+					<h3 style="
+							margin-top: 32px;
+							margin-bottom: 16px;
+							font-size: 18px;
+							font-weight: 600;
+						">
+						Three Built-in Filter Types
+					</h3>
+
+					<div class="cs-feature-box">
+						<h4>⚔️ Fight Scenes</h4>
+						<p>
+							Action sequences, combat details, and battle
+							mechanics. Collapsed by default because detailed
+							fighting can interrupt story pacing. Click to expand
+							when you're ready for the action.
 						</p>
 					</div>
-				</div>
 
-				<!-- ── CSS Playground ──────────────────────────────────────── -->
-				<h2 class="cs-section-header" id="playground" style="margin-top:60px;">🧪 CSS Playground</h2>
-				<p style="color:var(--muted);margin-bottom:20px;font-size:14px;">
-					Experiment with custom CSS live. Paste any CSS below and click "Apply" to see the preview.
-				</p>
-
-				<div class="cs-playground">
-					<div class="cs-playground-label">Custom CSS</div>
-					<textarea id="cs-playground-css" placeholder=".my-box {
-  background: rgba(20, 10, 40, 0.9);
-  border-left: 3px solid #9b59b6;
-  border-radius: 6px;
-  padding: 12px 18px;
-  color: #d8b4fe;
-  font-size: 13.5px;
-  line-height: 1.7;
-  width: 100%;
-  box-sizing: border-box;
-}"></textarea>
-					<button class="cs-playground-btn" id="cs-apply-btn">▶ Apply CSS</button>
-
-					<div class="cs-playground-label" style="margin-top:20px;">HTML to render (use your class name here)
+					<div class="cs-feature-box">
+						<h4>🔞 Mature Content</h4>
+						<p>
+							Explicit romantic or adult scenes. Collapsed by
+							default so you can read comfortably in public or
+							around others. Summaries preserve story context
+							(relationships, emotional beats) without full
+							details.
+						</p>
 					</div>
-					<textarea id="cs-playground-html"
-						placeholder='<div class="my-box">This is a sample paragraph using the custom class above. Edit both fields and click Apply.</div>'></textarea>
-					<button class="cs-playground-btn" id="cs-apply-html-btn">▶ Apply HTML</button>
 
-					<div class="cs-preview-area" id="cs-playground-preview">
-						<em style="color:var(--muted);">Preview will appear here after clicking Apply.</em>
+					<div class="cs-feature-box">
+						<h4>📝 Author's Notes</h4>
+						<p>
+							Long, tangential author commentary. Collapsed by
+							default to preserve reading flow. Story-relevant
+							notes (character clarifications, translation notes)
+							always remain visible.
+						</p>
 					</div>
-				</div>
+
+					<h3 style="
+							margin-top: 32px;
+							margin-bottom: 16px;
+							font-size: 18px;
+							font-weight: 600;
+						">
+						How It Works
+					</h3>
+					<div class="cs-diagram-wrapper">
+						<svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg"
+							preserveAspectRatio="xMidYMid meet">
+							<defs>
+								<style>
+									.diagram-box {
+										fill: rgba(100, 100, 255, 0.1);
+										stroke: #f4a261;
+										stroke-width: 2;
+									}
+
+									.diagram-text {
+										font-family: inherit;
+										font-size: 13px;
+										fill: #e8eef7;
+									}
+
+									.diagram-label {
+										font-family: inherit;
+										font-size: 11px;
+										fill: #9fb3c8;
+										font-weight: 500;
+									}
+
+									.diagram-arrow {
+										stroke: #f4a261;
+										stroke-width: 2;
+										fill: none;
+										marker-end: url(#arrowhead);
+									}
+
+									.diagram-icon {
+										font-size: 20px;
+									}
+								</style>
+								<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3"
+									orient="auto">
+									<polygon points="0 0, 10 3, 0 6" fill="#f4a261" />
+								</marker>
+							</defs>
+
+							<!-- Gemini Detection -->
+							<rect class="diagram-box" x="10" y="20" width="140" height="70" rx="6" />
+							<text class="diagram-text" x="80" y="45" text-anchor="middle" font-weight="bold">
+								Gemini AI
+							</text>
+							<text class="diagram-label" x="80" y="65" text-anchor="middle">
+								Analyzes & marks
+							</text>
+
+							<!-- Arrow -->
+							<path class="diagram-arrow" d="M 160 55 L 200 55" />
+
+							<!-- Settings & Config -->
+							<rect class="diagram-box" x="210" y="20" width="140" height="70" rx="6" />
+							<text class="diagram-text" x="280" y="45" text-anchor="middle" font-weight="bold">
+								Your Settings
+							</text>
+							<text class="diagram-label" x="280" y="65" text-anchor="middle">
+								fight: enabled
+							</text>
+
+							<!-- Arrow -->
+							<path class="diagram-arrow" d="M 360 55 L 400 55" />
+
+							<!-- Rendering -->
+							<rect class="diagram-box" x="410" y="20" width="140" height="70" rx="6" />
+							<text class="diagram-text" x="480" y="45" text-anchor="middle" font-weight="bold">
+								Rendering
+							</text>
+							<text class="diagram-label" x="480" y="65" text-anchor="middle">
+								Create wrappers
+							</text>
+
+							<!-- Arrow -->
+							<path class="diagram-arrow" d="M 560 55 L 600 55" />
+
+							<!-- Reader Control -->
+							<rect class="diagram-box" x="610" y="20" width="140" height="70" rx="6" />
+							<text class="diagram-text" x="680" y="45" text-anchor="middle" font-weight="bold">
+								You Read
+							</text>
+							<text class="diagram-label" x="680" y="65" text-anchor="middle">
+								You decide
+							</text>
+
+							<!-- Legend -->
+							<text class="diagram-label" x="10" y="115" font-weight="bold">
+								Collapsed:
+							</text>
+							<text class="diagram-label" x="10" y="132">
+								▼ Read + one-line summary
+							</text>
+							<text class="diagram-label" x="10" y="149">
+								Expanded:
+							</text>
+							<text class="diagram-label" x="10" y="166">
+								▲ Collapse + full content
+							</text>
+							<text class="diagram-label" x="450" y="115" font-weight="bold">
+								Disabled:
+							</text>
+							<text class="diagram-label" x="450" y="132">
+								Content appears inline
+							</text>
+							<text class="diagram-label" x="450" y="149">
+								Nothing deleted:
+							</text>
+							<text class="diagram-label" x="450" y="166">
+								All content always accessible
+							</text>
+						</svg>
+					</div>
+				</section>
+
+				<!-- ── Section 3: Your Controls ──────────────────────────────── -->
+				<section class="cs-section" id="controls">
+					<h2 class="cs-section-title">⚙️ Configure Your Filters</h2>
+					<p class="cs-section-desc">
+						Access your filter settings from the library. You have
+						complete control over which content types are collapsed,
+						expanded, or disabled.
+					</p>
+
+					<button class="cs-cta-button" onclick="
+							alert(
+								'💾 Install the extension via Firefox or Edge to access Library Settings!',
+							)
+						">
+						🔧 Open Library Settings
+					</button>
+
+					<h3 style="
+							margin-top: 32px;
+							margin-bottom: 16px;
+							font-size: 18px;
+							font-weight: 600;
+						">
+						Available Controls
+					</h3>
+
+					<ul class="cs-control-list">
+						<li class="cs-control-item">
+							<span class="cs-control-icon">✓</span>
+							<div>
+								<strong>Toggle Each Type</strong> – Enable or
+								disable fight scenes, R18 content, author notes.
+								Disabled types appear inline without collapse
+								boxes.
+							</div>
+						</li>
+						<li class="cs-control-item">
+							<span class="cs-control-icon">⛔</span>
+							<div>
+								<strong>Set Default State</strong> – Choose
+								whether each type starts collapsed or expanded.
+								Users can toggle them individually while
+								reading.
+							</div>
+						</li>
+						<li class="cs-control-item">
+							<span class="cs-control-icon">➕</span>
+							<div>
+								<strong>Create Custom Types</strong> – Define
+								your own collapsible categories like
+								"Flashbacks," "World Exposition," "Character
+								development," etc.
+							</div>
+						</li>
+						<li class="cs-control-item">
+							<span class="cs-control-icon">🧪</span>
+							<div>
+								<strong>Test Before Applying</strong> – Use the
+								playground in settings to try configurations on
+								real chapter content before saving.
+							</div>
+						</li>
+						<li class="cs-control-item">
+							<span class="cs-control-icon">💾</span>
+							<div>
+								<strong>Settings Persist</strong> – Your filter
+								preferences are saved locally in your browser.
+								Same settings apply to every chapter you read.
+							</div>
+						</li>
+					</ul>
+				</section>
+
+				<!-- ── Section 4: Live Demo ──────────────────────────────────── -->
+				<section class="cs-section" id="demo">
+					<h2 class="cs-section-title">🎬 Live Demo</h2>
+					<p class="cs-section-desc">
+						Click on the sections below to toggle collapse/expand.
+						This is exactly how it works in chapters.
+					</p>
+
+					<details class="cs-collapsible-demo cs-demo-fight">
+						<summary>
+							<span>⚔️ Fight Scene</span>
+							<span style="
+									font-size: 12px;
+									color: var(--text-secondary);
+								">Click to expand</span>
+						</summary>
+						<div class="cs-collapsible-body">
+							<strong>Summary:</strong> Kael executes a
+							devastating counter against the shadow creature.<br /><br />
+							<strong>Full Content:</strong> Kael shifts his
+							stance, reading his opponent's movements with the
+							precision of a thousand hours spent in combat. The
+							shadow creature lunges forward—too fast for a normal
+							reaction, but Kael is anything but normal. He
+							sidesteps by mere inches, using the creature's
+							momentum against it. A flash of steel. Three strikes
+							in rapid succession. The creature howls, its dark
+							form fracturing for a split second before it rights
+							itself. Kael's eyes gleam with cold calculation.
+							This fight is far from over.
+						</div>
+					</details>
+
+					<details class="cs-collapsible-demo cs-demo-r18">
+						<summary>
+							<span>🔞 Mature Content</span>
+							<span style="
+									font-size: 12px;
+									color: var(--text-secondary);
+								">Click to expand</span>
+						</summary>
+						<div class="cs-collapsible-body">
+							<strong>Summary:</strong> An intimate moment between
+							the protagonists, cementing their emotional bond.<br /><br />
+							<strong>Full Content:</strong> They moved together,
+							years of longing finally given form. Her hands
+							traced the familiar lines of his shoulders as he...
+							[This is where explicit content would appear in the
+							full version. Users can collapse this to skip or
+							expand to read.]
+						</div>
+					</details>
+
+					<details class="cs-collapsible-demo cs-demo-author">
+						<summary>
+							<span>📝 Author's Note</span>
+							<span style="
+									font-size: 12px;
+									color: var(--text-secondary);
+								">Click to expand</span>
+						</summary>
+						<div class="cs-collapsible-body">
+							<strong>Summary:</strong> Author announces next
+							chapter timeline and thanks readers for patience.<br /><br />
+							<strong>Full Content:</strong> Hey everyone! I hope
+							you enjoyed this chapter—the action really picked up
+							here! I know some of you have been wondering about
+							the release schedule. The next arc is coming in 2-3
+							weeks. I'm working on some major rewrites for better
+							pacing. Thank you all for your patience and
+							incredible support. Your comments really keep me
+							motivated. Special thanks to the folks supporting on
+							Patreon—you make this possible! See you next
+							chapter! ❤️
+						</div>
+					</details>
+				</section>
+
+				<!-- ── Section 5: Integration Info ──────────────────────────── -->
+				<section class="cs-section">
+					<h2 class="cs-section-title">🔗 Integration Points</h2>
+					<p class="cs-section-desc">
+						Content filters are integrated throughout Ranobe Gemini:
+					</p>
+
+					<div class="cs-feature-box">
+						<h4>📖 Chapter Reading</h4>
+						<p>
+							Collapsible sections appear automatically in every
+							chapter you read. Gemini AI detects the content
+							types and marks them accordingly.
+						</p>
+					</div>
+
+					<div class="cs-feature-box">
+						<h4>🔊 Text-to-Speech (TTS)</h4>
+						<p>
+							When you use the read-aloud feature, collapsed
+							sections are skipped by default (unless you expand
+							them first). Expanded sections are read normally.
+						</p>
+					</div>
+
+					<div class="cs-feature-box">
+						<h4>📚 Library Settings</h4>
+						<p>
+							Go to your Library to configure all filter settings,
+							test them in the playground, and manage custom
+							content types.
+						</p>
+					</div>
+
+					<div class="cs-feature-box">
+						<h4>💾 Persistence</h4>
+						<p>
+							Your filter preferences are saved locally in your
+							browser. Settings apply consistently across all
+							chapters.
+						</p>
+					</div>
+				</section>
+
+				<!-- ── Footer CTA ──────────────────────────────────────────── -->
+				<section style="
+						margin-top: 60px;
+						padding-top: 32px;
+						border-top: 1px solid var(--border-color);
+						text-align: center;
+					">
+					<h2 style="font-size: 24px; margin-bottom: 16px">
+						Ready to Install?
+					</h2>
+					<div style="
+							display: flex;
+							gap: 12px;
+							justify-content: center;
+							flex-wrap: wrap;
+						">
+						<a class="cs-cta-button" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank" rel="noreferrer">🔥 Firefox</a>
+						<a class="cs-cta-button" href="https://github.com/Life-Experimentalist/RanobeGemini"
+							target="_blank" rel="noreferrer">⚙️ GitHub</a>
+					</div>
+				</section>
 			</div>
 		</main>
 
@@ -748,94 +980,26 @@
 		</footer>
 
 		<script>
-			// ── Theme toggle ─────────────────────────────────────────────────────
+			// Theme toggle
 			function setTheme(theme) {
 				document.documentElement.setAttribute("data-theme", theme);
-				document.getElementById("cs-theme-dark").classList.toggle("active", theme === "dark");
-				document.getElementById("cs-theme-light").classList.toggle("active", theme === "light");
+				document.querySelectorAll(".cs-theme-btn").forEach((btn) => {
+					btn.classList.toggle(
+						"active",
+						btn.textContent.includes(
+							theme === "dark" ? "Dark" : "Light",
+						),
+					);
+				});
+				localStorage.setItem("rg-theme-preference", theme);
 			}
 
-			// ── Playground ───────────────────────────────────────────────────────
-			let playgroundStyleTag = document.getElementById("cs-custom-styles");
-
-			document.getElementById("cs-apply-btn").addEventListener("click", () => {
-				const css = document.getElementById("cs-playground-css").value;
-				// Playground styles go into a dedicated tag so they don't overwrite custom box styles
-				let pgStyle = document.getElementById("cs-playground-style");
-				if (!pgStyle) {
-					pgStyle = document.createElement("style");
-					pgStyle.id = "cs-playground-style";
-					document.head.appendChild(pgStyle);
-				}
-				pgStyle.textContent = css;
-			});
-
-			document.getElementById("cs-apply-html-btn").addEventListener("click", () => {
-				const html = document.getElementById("cs-playground-html").value;
-				// Sanitize: only allow a limited set of tags
-				const preview = document.getElementById("cs-playground-preview");
-				// We trust this is a local page used by the dev/user, so direct innerHTML is acceptable here.
-				preview.innerHTML = html;
-			});
-
-			// ── Custom box types from browser extension storage (if available) ──
-			async function loadCustomBoxTypes() {
-				const listEl = document.getElementById("cs-custom-boxes-list");
-				const customStylesEl = document.getElementById("cs-custom-styles");
-
-				let boxTypes = [];
-
-				// Try to read from extension storage (works when opened from within the extension)
-				if (typeof browser !== "undefined" && browser.storage) {
-					try {
-						const result = await browser.storage.local.get("rg_custom_box_types");
-						boxTypes = Array.isArray(result.rg_custom_box_types) ? result.rg_custom_box_types : [];
-					} catch (_) { /* not in extension context */ }
-				}
-
-				if (boxTypes.length === 0) {
-					listEl.innerHTML = `
-					<div class="cs-playground" style="text-align:center;padding:32px;">
-						<p style="color:var(--muted);margin:0;">
-							No custom box types defined yet.<br />
-							Open <strong>Library Settings → 🎨 Content Boxes</strong> to create one.
-						</p>
-					</div>`;
-					return;
-				}
-
-				// Generate and inject CSS
-				const cssLines = boxTypes.map((box) => {
-					if (!box.className) return "";
-					if (box.cssOverride && box.cssOverride.trim()) return box.cssOverride;
-					const bg = box.backgroundColor || "rgba(20,20,30,0.9)";
-					const bc = box.borderColor || "rgba(130,130,200,0.6)";
-					const tc = box.textColor || "#d0d0e0";
-					const bs = box.borderStyle || "solid";
-					const bw = box.borderWidth || "3px";
-					return `.${box.className} { background-color:${bg}; border:1px ${bs} ${bc}; border-left:${bw} ${bs} ${bc}; border-radius:6px; padding:12px 16px 12px 18px; margin:18px 0; color:${tc}; font-size:13.5px; line-height:1.7; box-sizing:border-box; width:100%; }`;
-				}).filter(Boolean).join("\n");
-
-				customStylesEl.textContent = (customStylesEl.textContent || "") + "\n" + cssLines;
-
-				// Render cards
-				listEl.innerHTML = boxTypes.map((box) => {
-					const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-					return `
-				<div style="margin-bottom:24px;">
-					<div class="cs-box-meta">
-						<span>${esc(box.emoji || "📦")}</span>
-						<strong>${esc(box.name)}</strong>
-						<span style="margin-left:4px;">class=</span><strong>"${esc(box.className)}"</strong>
-						${box.promptHint ? `<span style="margin-left:8px;color:var(--muted);">${esc(box.promptHint)}</span>` : ""}
-					</div>
-					<div class="${esc(box.className)}">This is a sample paragraph demonstrating the <strong>${esc(box.name)}</strong> content box. Gemini will wrap matching content with this CSS class during chapter enhancement.</div>
-				</div>`;
-				}).join("");
-			}
-
-			loadCustomBoxTypes();
+			// Restore theme preference
+			const savedTheme =
+				localStorage.getItem("rg-theme-preference") || "dark";
+			setTheme(savedTheme);
 		</script>
 		<script src="./nav.js" defer></script>
+	</body>
 
 </html>

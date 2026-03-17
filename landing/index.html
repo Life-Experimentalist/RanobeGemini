@@ -75,6 +75,7 @@
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚 Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub ↗</a>
@@ -499,6 +500,17 @@
 
 		<script src="./nav.js" defer></script>
 		<script src="./script.js"></script>
+		<script>
+			function openLibrarySettings() {
+				if (typeof chrome !== 'undefined' && chrome.runtime) {
+					chrome.runtime.sendMessage({ action: 'openLibrary' });
+				} else if (typeof browser !== 'undefined' && browser.runtime) {
+					browser.runtime.sendMessage({ action: 'openLibrary' });
+				} else {
+					alert('📚 Library is built into the Ranobe Gemini extension.\n\nInstall from Firefox or Edge to access your reading library, novel status, and content filter settings.\n\nhttps://github.com/Life-Experimentalist/RanobeGemini');
+				}
+			}
+		</script>
 	</body>
 
 </html>

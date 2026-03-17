@@ -342,8 +342,8 @@ Custom types available:
 
 ## Related Files
 
-- **Core Logic**: [`src/utils/collapsible-sections.js`](src/utils/collapsible-sections.js)
-- **Content Integration**: [`src/content/content.js`](src/content/content.js)
-- **Settings UI**: [`src/library/library-settings.html`](src/library/library-settings.html), [`src/library/library-settings.js`](src/library/library-settings.js)
-- **Landing Showcase**: [`landing/content-styles.html`](landing/content-styles.html)
-- **CSS Styling**: [`src/content/content.css`](src/content/content.css)
+- **Core Logic**: [`src/utils/collapsible-sections.js`](../../src/utils/collapsible-sections.js)
+- **Content Integration**: [`src/content/content.js`](../../src/content/content.js)
+- **Settings UI**: [`src/library/library-settings.html`](../../src/library/library-settings.html), [`src/library/library-settings.js`](../../src/library/library-settings.js)
+- **Landing Showcase**: [`landing/content-styles.html`](../../landing/content-styles.html)
+- **CSS Styling**: [`src/content/content.css`](../../src/content/content.css)

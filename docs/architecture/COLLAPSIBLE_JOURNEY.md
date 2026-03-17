@@ -493,7 +493,7 @@ renderCollapsibleSections(document.body, contentFilter.contentFilterSettings);
 
 ## Part 10: Related Documentation
 
-- [**COLLAPSIBLE_SECTIONS.md**](COLLAPSIBLE_SECTIONS.md) — Standard documentation
+- [**COLLAPSIBLE_SECTIONS.md**](../features/COLLAPSIBLE_SECTIONS.md) — Standard documentation
 - [**src/utils/collapsible-sections.js**](../../src/utils/collapsible-sections.js) — Implementation
 - [**src/library/library-settings.html**](../../src/library/library-settings.html) — Settings UI
 - [**landing/content-styles.html**](../../landing/content-styles.html) — Public showcase
