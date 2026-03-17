@@ -1153,6 +1153,247 @@
 				</section>
 
 				<!-- ════════════════════════════════════════════════
+		     PANEL: Content Filters (Collapsible Sections)
+		     ════════════════════════════════════════════════ -->
+				<section class="ls-panel" id="panel-content-filters">
+					<div class="ls-panel-header">
+						<div class="ls-panel-header-content">
+							<h1 class="ls-panel-title">🔽 Content Filters</h1>
+							<p class="ls-panel-description">Configure collapsible sections for fight scenes, mature
+								content, author notes, and custom types.</p>
+						</div>
+						<div class="ls-panel-header-actions">
+							<button id="content-filters-save-btn" class="ls-btn ls-btn-primary ls-btn-sm">💾
+								Save</button>
+						</div>
+					</div>
+
+					<!-- Info Section -->
+					<div class="ls-section" data-accent="blue">
+						<div class="ls-section-title">ℹ️ What are Collapsible Sections?</div>
+						<div class="ls-section-desc">
+							When Gemini enhances a chapter, certain content (fights, adult content, author notes) is
+							wrapped in collapsible boxes.
+							You can toggle them closed to hide lengthy sequences, and click to expand when you want to
+							read them.
+							<br /><a href="../../landing/content-styles.html#collapsible" target="_blank"
+								style="color:var(--accent-color);">
+								➜ View live examples on the showcase
+							</a>
+						</div>
+					</div>
+
+					<!-- Built-in Types Section -->
+					<div class="ls-section" data-accent="purple">
+						<div class="ls-section-title">📋 Built-in Types</div>
+						<div class="ls-section-desc">
+							Control whether each content type appears as a collapsible section and whether it starts
+							collapsed or expanded.
+						</div>
+
+						<!-- Fight Scene toggle -->
+						<div class="ls-form-group"
+							style="border-bottom:1px solid var(--border-color);padding-bottom:16px;margin-bottom:16px;">
+							<div
+								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+								<label class="ls-label" style="margin:0;">⚔️ Fight Scenes</label>
+								<label class="ls-toggle">
+									<input type="checkbox" id="cf-fight-enabled" checked />
+									<span class="ls-toggle-slider"></span>
+								</label>
+							</div>
+							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
+								Long action sequences and combat scenes. Commonly missed details: outcomes, special
+								moves, power-ups revealed.
+							</div>
+							<div class="ls-form-group" style="margin:0;">
+								<label class="ls-label" for="cf-fight-default">Default state when collapsed</label>
+								<select id="cf-fight-default" class="ls-input">
+									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
+									<option value="false">Expanded (Show full content by default)</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- R18 / Mature Content toggle -->
+						<div class="ls-form-group"
+							style="border-bottom:1px solid var(--border-color);padding-bottom:16px;margin-bottom:16px;">
+							<div
+								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+								<label class="ls-label" style="margin:0;">🔞 Mature Content</label>
+								<label class="ls-toggle">
+									<input type="checkbox" id="cf-r18-enabled" checked />
+									<span class="ls-toggle-slider"></span>
+								</label>
+							</div>
+							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
+								Explicit or adult content. Includes intimate scenes, graphic violence, mature themes.
+								Perfect for reading in public.
+							</div>
+							<div class="ls-form-group" style="margin:0;">
+								<label class="ls-label" for="cf-r18-default">Default state</label>
+								<select id="cf-r18-default" class="ls-input">
+									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
+									<option value="false">Expanded (Show full content by default)</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- Author Notes toggle -->
+						<div class="ls-form-group" style="padding-bottom:16px;">
+							<div
+								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+								<label class="ls-label" style="margin:0;">📝 Author's Notes</label>
+								<label class="ls-toggle">
+									<input type="checkbox" id="cf-author-enabled" checked />
+									<span class="ls-toggle-slider"></span>
+								</label>
+							</div>
+							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
+								Long, off-topic author notes (schedules, rambling, thanks to patrons). Story-relevant
+								notes always show.
+							</div>
+							<div class="ls-form-group" style="margin:0;">
+								<label class="ls-label" for="cf-author-default">Default state for long notes</label>
+								<select id="cf-author-default" class="ls-input">
+									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
+									<option value="false">Expanded (Show full content by default)</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<!-- Custom Types Section -->
+					<div class="ls-section" data-accent="orange">
+						<div class="ls-section-title">✨ Custom Types</div>
+						<div class="ls-section-desc">
+							Create your own collapsible types. Tell Gemini what kind of content to collapse (e.g.,
+							"flashback scenes", "world-building exposition").
+						</div>
+						<button id="cf-add-custom-btn" class="ls-btn ls-btn-secondary" style="margin-bottom:16px;">+ Add
+							Custom Type</button>
+						<div id="cf-custom-list" style="display:flex;flex-direction:column;gap:16px;">
+							<!-- Populated by JavaScript -->
+						</div>
+					</div>
+
+					<!-- Playground Section -->
+					<div class="ls-section" data-accent="green">
+						<div class="ls-section-title">🎮 Playground</div>
+						<div class="ls-section-desc">
+							Preview how collapsible sections look and work. Try collapsing and expanding different
+							types.
+						</div>
+
+						<!-- Fight Scene Example -->
+						<div style="margin-bottom:24px;">
+							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">⚔️
+								Fight Scene Example</h4>
+							<div class="rg-collapsible-wrapper rg-collapsible-fight rg-collapsed" id="pg-fight-example">
+								<div class="rg-collapsible-header"
+									style="background:rgba(60,15,15,0.85);border:1px solid rgba(200,80,80,0.4);border-left:3px solid rgba(200,60,60,0.7);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
+									<span class="rg-collapsible-badge"
+										style="color:rgba(200,60,60,0.7);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">⚔️
+										FIGHT SCENE</span>
+									<span class="rg-collapsible-inline-summary"
+										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Kael
+										defeats the shadow warrior in a intense duel</span>
+									<button class="rg-collapsible-toggle-btn"
+										style="background:rgba(60,15,15,0.85);color:rgba(200,60,60,0.7);border:1px solid rgba(200,80,80,0.4);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
+										Read</button>
+								</div>
+								<div class="rg-collapsible-summary-block"
+									style="background:rgba(60,15,15,0.85);border:1px solid rgba(200,80,80,0.4);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
+									Kael defeats the shadow warrior in a intense duel
+								</div>
+								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
+									<div
+										style="background:rgba(30,30,35,0.6);border-left:3px solid rgba(150,150,255,0.6);padding:10px;margin-bottom:10px;font-size:13px;color:rgba(200,195,185,0.9);">
+										<strong>Combat Log:</strong> Kael shifts into stance, baits the shadow's spear
+										thrust, then uses Shadow Step to flank. A two-hit combo cracks the enemy's
+										guard. Final blow bursts with dark energy—30 seconds total.
+									</div>
+									<div
+										style="background:rgba(40,25,15,0.5);border-left:3px solid rgba(220,140,60,0.6);padding:10px;margin-bottom:10px;color:rgba(200,195,185,0.9);">
+										<strong>Enemy's Final Words:</strong> "Impossible... a mortal besting my
+										technique..." *fades into shadow*
+									</div>
+									<div
+										style="background:rgba(20,30,20,0.4);border-left:3px solid rgba(100,200,100,0.5);padding:10px;color:rgba(200,195,185,0.9);">
+										<strong>Victory Bonus:</strong> +500 XP | *Dark Knight's Cloak* acquired
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- R18 Example -->
+						<div style="margin-bottom:24px;">
+							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">🔞
+								Mature Content Example</h4>
+							<div class="rg-collapsible-wrapper rg-collapsible-r18 rg-collapsed" id="pg-r18-example">
+								<div class="rg-collapsible-header"
+									style="background:rgba(40,15,55,0.9);border:1px solid rgba(160,80,200,0.45);border-left:3px solid rgba(180,100,200,0.8);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
+									<span class="rg-collapsible-badge"
+										style="color:rgba(180,100,200,0.8);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">🔞
+										MATURE CONTENT</span>
+									<span class="rg-collapsible-inline-summary"
+										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Explicit
+										intimate scene between characters [+18 content]</span>
+									<button class="rg-collapsible-toggle-btn"
+										style="background:rgba(40,15,55,0.9);color:rgba(180,100,200,0.8);border:1px solid rgba(160,80,200,0.45);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
+										Read</button>
+								</div>
+								<div class="rg-collapsible-summary-block"
+									style="background:rgba(40,15,55,0.9);border:1px solid rgba(160,80,200,0.45);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
+									Explicit intimate scene between characters [+18 content]
+								</div>
+								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
+									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin:0;">
+										[This is where mature/explicit content would appear. The system allows readers
+										to choose whether to view such content without interrupting the reading flow.]
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Author Note Example -->
+						<div>
+							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">📝
+								Author's Note Example</h4>
+							<div class="rg-collapsible-wrapper rg-collapsible-author-note rg-collapsed"
+								id="pg-author-example">
+								<div class="rg-collapsible-header"
+									style="background:rgba(45,35,10,0.92);border:1px solid rgba(200,155,50,0.55);border-left:3px solid rgba(220,175,70,0.85);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
+									<span class="rg-collapsible-badge"
+										style="color:rgba(220,175,70,0.85);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">📝
+										AUTHOR'S NOTE</span>
+									<span class="rg-collapsible-inline-summary"
+										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Update
+										on publishing schedule and thanks to patrons</span>
+									<button class="rg-collapsible-toggle-btn"
+										style="background:rgba(45,35,10,0.92);color:rgba(220,175,70,0.85);border:1px solid rgba(200,155,50,0.55);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
+										Read</button>
+								</div>
+								<div class="rg-collapsible-summary-block"
+									style="background:rgba(45,35,10,0.92);border:1px solid rgba(200,155,50,0.55);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
+									Update on publishing schedule and thanks to patrons
+								</div>
+								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
+									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin-bottom:10px;">
+										Hey everyone! Just a quick note on the publishing schedule. Due to real-life
+										stuff, I might miss next week's release. Thanks to all my patrons for your
+										support—you guys keep this going!
+									</p>
+									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin:0;">
+										Next chapter should be out by [date]. Love you all!
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<!-- ════════════════════════════════════════════════
 		     PANEL: Custom Content Boxes
 		     ════════════════════════════════════════════════ -->
 				<section class="ls-panel" id="panel-content-boxes">

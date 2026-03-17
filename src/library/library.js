@@ -216,6 +216,7 @@ const elements = {
 	sortSelect: document.getElementById("sort-select"),
 	viewButtons: document.querySelectorAll(".view-btn"),
 	refreshBtn: document.getElementById("refresh-btn"),
+	landingBtn: document.getElementById("landing-btn"),
 	settingsBtn: document.getElementById("settings-btn"),
 	openPopupBtn: document.getElementById("open-popup-btn"),
 	siteAutoAddList: document.getElementById("site-autoadd-list"),
@@ -2774,6 +2775,17 @@ function setupEventListeners() {
 			browser.tabs.create({ url: settingsUrl });
 		}
 	});
+
+	if (elements.landingBtn) {
+		elements.landingBtn.addEventListener("click", () => {
+			const landingUrl = "https://ranobe.vkrishna04.me/";
+			if (isStandaloneWindow) {
+				window.open(landingUrl, "_blank");
+			} else {
+				browser.tabs.create({ url: landingUrl });
+			}
+		});
+	}
 
 	// Incognito Mode — header button toggles the banner; on/off is via banner controls
 	if (elements.incognitoBtn) {

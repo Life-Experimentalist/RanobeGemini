@@ -110,15 +110,17 @@ Development roadmap, planned features, and known issues
 
 ### Development Tasks
 
-| Task                 | Command                    | Purpose                      |
-| -------------------- | -------------------------- | ---------------------------- |
-| **Watch & Build**    | `npm run watch`            | Auto-rebuild on file changes |
-| **Build Once**       | `npm run build`            | Single production build      |
-| **Package Firefox**  | `npm run package-firefox`  | Create distributable .xpi    |
-| **Package Chromium** | `npm run package-chromium` | Create distributable .zip    |
-| **Package Source**   | `npm run package-source`   | Create source code archive   |
-| **Package All**      | `npm run package`          | Refresh domains + build all  |
-| **Update Domains**   | `npm run update-domains`   | Regenerate manifest domains  |
+| Task                 | Command                    | Purpose                                                 |
+| -------------------- | -------------------------- | ------------------------------------------------------- |
+| **Watch & Build**    | `npm run watch`            | Auto-rebuild on file changes                            |
+| **Build Once**       | `npm run build`            | Single production build                                 |
+| **Package Firefox**  | `npm run package-firefox`  | Create distributable .xpi                               |
+| **Package Chromium** | `npm run package-chromium` | Create distributable .zip                               |
+| **Package Source**   | `npm run package-source`   | Create source code archive                              |
+| **Package All**      | `npm run package`          | Refresh domains + build all                             |
+| **Update Domains**   | `npm run update-domains`   | Regenerate manifest domains                             |
+| **All Commits**      | `npm run commits:all`      | Print all commit messages                               |
+| **Version Commits**  | `npm run commits:versions` | Print commits mentioning versions (`2.x`, `3.x`, `4.x`) |
 
 ### File Structure for Developers
 

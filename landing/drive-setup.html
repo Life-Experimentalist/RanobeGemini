@@ -125,7 +125,8 @@
 					<p class="eyebrow">Step-by-step OAuth setup</p>
 					<h2>🚀 Quick Setup Guide (5 minutes)</h2>
 					<p class="lede">
-						Create a free OAuth 2.0 client for secure, private Google Drive backups. Your data stays completely private — Ranobe Gemini never accesses your credentials or Drive data.
+						Create a free OAuth 2.0 client for secure, private Google Drive backups. Your data stays
+						completely private — Ranobe Gemini never accesses your credentials or Drive data.
 					</p>
 				</div>
 
@@ -141,7 +142,8 @@
 						<div class="timeline-marker">🔒</div>
 						<div class="timeline-text">
 							<strong>Data Privacy</strong>
-							<p>Your backups stored only in your Google Drive. Zero access from Ranobe Gemini servers.</p>
+							<p>Your backups stored only in your Google Drive. Zero access from Ranobe Gemini servers.
+							</p>
 						</div>
 					</div>
 					<div class="timeline-item">
@@ -157,21 +159,26 @@
 					<div class="step-card">
 						<div class="step-num">1</div>
 						<h4>Create a Google Cloud Project</h4>
-						<p>Visit <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer">console.cloud.google.com</a> and sign in with your Google account. Click the <strong>project selector</strong> → <strong>New Project</strong> and create a project named <em>"Ranobe Gemini Backup"</em> (or whatever you prefer).</p>
+						<p>Visit <a href="https://console.cloud.google.com/" target="_blank"
+								rel="noreferrer">console.cloud.google.com</a> and sign in with your Google account.
+							Click the <strong>project selector</strong> → <strong>New Project</strong> and create a
+							project named <em>"Ranobe Gemini Backup"</em> (or whatever you prefer).</p>
 						<div class="step-tip">💡 This is your personal project — no one else will use it.</div>
 					</div>
 
 					<div class="step-card">
 						<div class="step-num">2</div>
 						<h4>Enable Google Drive API</h4>
-						<p>Go to <strong>APIs & Services → Library</strong> and search for <strong>"Google Drive API"</strong>. Click the result and then click <strong>Enable</strong>.</p>
+						<p>Go to <strong>APIs & Services → Library</strong> and search for <strong>"Google Drive
+								API"</strong>. Click the result and then click <strong>Enable</strong>.</p>
 						<div class="step-tip">⚠️ Make sure you're in the correct project before enabling.</div>
 					</div>
 
 					<div class="step-card">
 						<div class="step-num">3</div>
 						<h4>Set Up OAuth Consent</h4>
-						<p>Navigate to <strong>APIs & Services → OAuth consent screen</strong>. Select <strong>External</strong> as user type. Fill in:</p>
+						<p>Navigate to <strong>APIs & Services → OAuth consent screen</strong>. Select
+							<strong>External</strong> as user type. Fill in:</p>
 						<ul style="margin: 8px 0; padding-left: 20px;">
 							<li><strong>App name:</strong> "Ranobe Gemini Backup"</li>
 							<li><strong>User support email:</strong> Your Gmail address</li>
@@ -184,7 +191,8 @@
 					<div class="step-card">
 						<div class="step-num">4</div>
 						<h4>Create OAuth Credentials</h4>
-						<p>Go to <strong>APIs & Services → Credentials</strong>. Click <strong>+ Create Credentials → OAuth client ID</strong>. Select:</p>
+						<p>Go to <strong>APIs & Services → Credentials</strong>. Click <strong>+ Create Credentials →
+								OAuth client ID</strong>. Select:</p>
 						<ul style="margin: 8px 0; padding-left: 20px;">
 							<li><strong>Application type:</strong> Desktop app</li>
 							<li><strong>Name:</strong> "Ranobe Gemini"</li>
@@ -195,7 +203,8 @@
 					<div class="step-card">
 						<div class="step-num">5</div>
 						<h4>Add Redirect URIs</h4>
-						<p>Click the ✏️ edit icon next to your OAuth client. Under <strong>Authorised redirect URIs</strong>, add these URLs for your browser:</p>
+						<p>Click the ✏️ edit icon next to your OAuth client. Under <strong>Authorised redirect
+								URIs</strong>, add these URLs for your browser:</p>
 						<div class="uri-boxes">
 							<div class="uri-box">
 								<span class="uri-icon">🌐</span>
@@ -212,28 +221,35 @@
 								</div>
 							</div>
 						</div>
-						<p style="margin-top: 12px; font-size: 12px;">You can add both even if you only use one browser.</p>
+						<p style="margin-top: 12px; font-size: 12px;">You can add both even if you only use one browser.
+						</p>
 					</div>
 
 					<div class="step-card">
 						<div class="step-num">6</div>
 						<h4>Download Your Credentials</h4>
-						<p>On the Credentials page, find your OAuth client. Click the <strong>⬇️ download</strong> icon to save your <code>client_secret_*.json</code> file. Keep this file safe — don't share it publicly.</p>
+						<p>On the Credentials page, find your OAuth client. Click the <strong>⬇️ download</strong> icon
+							to save your <code>client_secret_*.json</code> file. Keep this file safe — don't share it
+							publicly.</p>
 						<div class="step-tip">⚠️ This file contains your Client Secret. Treat it like a password.</div>
 					</div>
 
 					<div class="step-card final-step">
 						<div class="step-num">7</div>
 						<h4>Configure Ranobe Gemini</h4>
-						<p>Open Ranobe Gemini → <strong>Library → Settings → Backup → Google Drive Setup</strong>. Choose one of these methods:</p>
+						<p>Open Ranobe Gemini → <strong>Library → Settings → Backup → Google Drive Setup</strong>.
+							Choose one of these methods:</p>
 						<div class="method-cards">
 							<div class="method">
 								<strong>✅ Recommended: Paste JSON</strong>
-								<p>Open your <code>client_secret_*.json</code> file, copy all contents, paste into the <em>"Paste credentials JSON"</em> box, and click <strong>Parse JSON → Save to Storage</strong>.</p>
+								<p>Open your <code>client_secret_*.json</code> file, copy all contents, paste into the
+									<em>"Paste credentials JSON"</em> box, and click <strong>Parse JSON → Save to
+										Storage</strong>.</p>
 							</div>
 							<div class="method">
 								<strong>Manual Entry</strong>
-								<p>Copy your Client ID and Client Secret from the JSON file and paste them into the individual fields, then click <strong>Save Credentials</strong>.</p>
+								<p>Copy your Client ID and Client Secret from the JSON file and paste them into the
+									individual fields, then click <strong>Save Credentials</strong>.</p>
 							</div>
 						</div>
 						<p style="margin-top: 16px; font-weight: 600; color: #fff;">

@@ -160,7 +160,7 @@
 			/* Dark defaults */
 			.game-stats-box {
 				font-family: 'Courier New', monospace;
-				white-space: pre-wrap;
+				white-space: pre-line;
 				background-color: rgba(35, 35, 35, 0.95);
 				border: 1px solid rgba(100, 100, 100, 0.8);
 				border-radius: 6px;
@@ -217,7 +217,7 @@
 				padding: 12px 16px;
 				margin: 16px 0;
 				color: #9ecfff;
-				white-space: pre-wrap;
+				white-space: pre-line;
 				font-size: 13.5px;
 				line-height: 1.6;
 				box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
@@ -238,7 +238,7 @@
 				line-height: 1.85;
 				box-sizing: border-box;
 				width: calc(100% - 10px);
-				white-space: pre-wrap;
+				white-space: pre-line;
 			}
 
 			.rg-skill-box {
@@ -254,7 +254,70 @@
 				line-height: 1.6;
 				box-sizing: border-box;
 				width: 100%;
-				white-space: pre-wrap;
+				white-space: pre-line;
+			}
+
+			/* ── Collapsible showcase ───────────────────────────────────────── */
+			.cs-collapsible-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+				gap: 14px;
+				margin-top: 14px;
+			}
+
+			.cs-collapsible-card {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				overflow: hidden;
+			}
+
+			.cs-collapsible-card summary {
+				list-style: none;
+				cursor: pointer;
+				padding: 10px 12px;
+				font-size: 13px;
+				font-weight: 600;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+			}
+
+			.cs-collapsible-card summary::-webkit-details-marker {
+				display: none;
+			}
+
+			.cs-collapsible-card summary::after {
+				content: "▾";
+				font-size: 12px;
+				opacity: 0.85;
+			}
+
+			.cs-collapsible-card[open] summary::after {
+				content: "▴";
+			}
+
+			.cs-collapsible-body {
+				padding: 12px 14px;
+				font-size: 13px;
+				line-height: 1.7;
+				border-top: 1px solid var(--border);
+			}
+
+			.cs-collapsible-fight summary {
+				background: rgba(200, 60, 60, 0.16);
+				border-bottom: 1px solid rgba(200, 80, 80, 0.25);
+			}
+
+			.cs-collapsible-r18 summary {
+				background: rgba(150, 90, 170, 0.18);
+				border-bottom: 1px solid rgba(160, 80, 200, 0.25);
+			}
+
+			.cs-collapsible-author summary {
+				background: rgba(220, 175, 70, 0.16);
+				border-bottom: 1px solid rgba(200, 155, 50, 0.3);
 			}
 
 			.rg-flashback {
@@ -378,6 +441,7 @@
 			<nav class="nav" id="main-nav">
 				<!-- Section anchors on this page -->
 				<a href="#builtin">Built-in Types</a>
+				<a href="#collapsible">Collapsible Types</a>
 				<a href="#custom">Custom Boxes</a>
 				<a href="#playground">Playground</a>
 				<span class="nav-sep" aria-hidden="true"></span>
@@ -506,6 +570,116 @@
 					<p style="margin:0 0 4px;font-size:14px;color:var(--muted);">…end of scene above…</p>
 					<hr class="section-divider" />
 					<p style="font-size:14px;color:var(--muted);">…start of new scene…</p>
+				</div>
+
+				<!-- ── Collapsible Types ───────────────────────────────────── -->
+				<h2 class="cs-section-header" id="collapsible" style="margin-top:60px;">� Content Filters: Collapsible Sections
+				</h2>
+				<p style="color:var(--muted);margin-bottom:20px;font-size:14px;">
+					<strong>Content Filters</strong> allow you to control how long or sensitive content is displayed. Instead of hiding content entirely, they are <strong>collapsed by default</strong> — showing only a brief summary until you choose to expand and read the full content. This keeps your reading experience focused while maintaining complete access to everything.
+				</p>
+
+				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">What Gets Collapsed?</h3>
+				<div style="background:rgba(100,100,255,0.1);border-left:3px solid var(--accent-color);padding:15px;margin-bottom:20px;border-radius:4px;">
+					<p style="margin:0;color:var(--text-primary);">
+						<strong>Fight Scenes</strong> (⚔️) · <strong>Mature Content</strong> (🔞) · <strong>Long Author Notes</strong> (📝)
+						<br/>
+						<span style="font-size:13px;color:var(--muted);">These are intelligently detected by Gemini AI and marked for collapsing. You control visibility in Settings → Content Filters.</span>
+					</p>
+				</div>
+
+				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">⚔️ Fight Scenes</h4>
+				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
+					Action sequences and combat scenes. Collapsed by default because detailed fight mechanics can interrupt story pacing. Click <strong>▼ Read</strong> to expand and see all the details—power-ups, special moves, and tactical choices are preserved.
+				</p>
+
+				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">🔞 Mature Content</h4>
+				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
+					Adult/explicit scenes. Collapsed by default so you can comfortably read in public or around others. The summary tells you what's hidden, so you don't miss story context (relationships, emotional beats) even if you skip the full content.
+				</p>
+
+				<h4 style="color:var(--text-primary);margin:20px 0 10px 0;">📝 Author's Notes</h4>
+				<p style="color:var(--muted);font-size:13px;margin:0 0 10px 0;">
+					Long, tangential author commentary (schedule updates, thank-yous, personal notes). Collapsed by default to preserve reading flow. Story-relevant notes (character clarifications, translation notes) always remain visible.
+				</p>
+
+				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">How It Works</h3>
+				<svg style="width:100%;height:auto;max-width:700px;margin:20px 0;" viewBox="0 0 700 250">
+					<!-- Gemini →  Marks sections -->
+					<rect x="10" y="20" width="150" height="60" fill="rgba(100,150,255,0.2)" stroke="var(--accent-color)" stroke-width="2" rx="4"/>
+					<text x="85" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Gemini</text>
+					<text x="85" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">Analyzes content</text>
+					<text x="85" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">Marks sections</text>
+
+					<line x1="170" y1="50" x2="210" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
+					<polygon points="210,50 200,45 200,55" fill="var(--accent-color)"/>
+
+					<!-- Settings → Storage -->
+					<rect x="220" y="20" width="150" height="60" fill="rgba(100,200,100,0.2)" stroke="rgba(100,200,100,0.8)" stroke-width="2" rx="4"/>
+					<text x="295" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Your Settings</text>
+					<text x="295" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">fight: enabled</text>
+					<text x="295" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">r18: enabled</text>
+
+					<line x1="370" y1="50" x2="410" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
+					<polygon points="410,50 400,45 400,55" fill="var(--accent-color)"/>
+
+					<!-- Render → Collapsible boxes -->
+					<rect x="420" y="20" width="150" height="60" fill="rgba(200,100,100,0.2)" stroke="rgba(200,100,100,0.8)" stroke-width="2" rx="4"/>
+					<text x="495" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="var(--text-primary)">Rendering</text>
+					<text x="495" y="55" text-anchor="middle" font-size="11" fill="var(--text-primary)">Create wrappers</text>
+					<text x="495" y="70" text-anchor="middle" font-size="11" fill="var(--text-primary)">Bind toggles</text>
+
+					<line x1="570" y1="50" x2="610" y2="50" stroke="var(--accent-color)" stroke-width="2"/>
+					<polygon points="610,50 600,45 600,55" fill="var(--accent-color)"/>
+
+					<!-- Result → Reader controls -->
+					<rect x="620" y="20" width="70" height="60" fill="rgba(255,200,100,0.2)" stroke="rgba(255,200,100,0.8)" stroke-width="2" rx="4"/>
+					<text x="655" y="40" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--text-primary)">You Read</text>
+					<text x="655" y="60" text-anchor="middle" font-size="10" fill="var(--text-primary)">Control</text>
+
+					<!-- Legend -->
+					<text x="10" y="140" font-size="13" font-weight="bold" fill="var(--text-primary)">Collapsible → Summary Visible | Expandable Content</text>
+					<text x="10" y="165" font-size="12" fill="var(--muted)">Collapsed state shows: ▼ Read label + one-sentence summary</text>
+					<text x="10" y="185" font-size="12" fill="var(--muted)">Expanded state shows: ▲ Collapse label + full content (summaries hidden)</text>
+					<text x="10" y="205" font-size="12" fill="var(--muted)">Nothing is ever truly hidden—all content is collapsible, never deleted</text>
+					<text x="10" y="225" font-size="12" fill="var(--muted)">Disable a filter → content appears inline without collapsible box</text>
+				</svg>
+
+				<h3 style="color:var(--text-primary);margin:30px 0 15px 0;font-size:18px;">Configure Your Filters</h3>
+				<p style="color:var(--muted);margin-bottom:15px;font-size:13px;">
+					Go to <strong>⚙️ Library Settings → Content Filters 🔽</strong> to:
+				</p>
+				<ul style="color:var(--text-primary);margin-left:20px;line-height:1.8;">
+					<li><strong>Toggle each type on/off</strong> — Disabled types appear inline, not collapsible</li>
+					<li><strong>Set default state</strong> — Should fight scenes start collapsed or expanded?</li>
+					<li><strong>Create custom types</strong> — Define your own collapsible content (e.g., "Flashbacks", "World Exposition")</li>
+					<li><strong>Test in Playground</strong> — Try your settings on live interactive examples</li>
+				</ul>
+
+				<div class="cs-collapsible-grid">
+					<details class="cs-collapsible-card cs-collapsible-fight">
+						<summary>⚔️ Fight Scene Summary: Duel at Black Gate</summary>
+						<div class="cs-collapsible-body">
+							Kael shifts stance, baits the spear thrust, then uses Shadow Step to flank.
+							A two-hit counter cracks the enemy guard and ends the exchange in under five seconds.
+						</div>
+					</details>
+
+					<details class="cs-collapsible-card cs-collapsible-r18">
+						<summary>🔞 Mature Content Summary: Intimate Scene</summary>
+						<div class="cs-collapsible-body">
+							Scene includes explicit romantic content and emotionally intense dialogue.
+							Collapsed by default to keep chapter flow comfortable for all readers.
+						</div>
+					</details>
+
+					<details class="cs-collapsible-card cs-collapsible-author">
+						<summary>📝 Author Note Summary: Arc Delay and Rewrite Notes</summary>
+						<div class="cs-collapsible-body">
+							Author explains pacing changes for the next arc and confirms revised chapter timing.
+							Readers can skip this block without losing story continuity.
+						</div>
+					</details>
 				</div>
 
 				<!-- ── Custom Box Types ─────────────────────────────────────── -->

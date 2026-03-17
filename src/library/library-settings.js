@@ -105,6 +105,12 @@ const SETTINGS_TABS = [
 		panelId: "panel-copy",
 	},
 	{
+		id: "content-filters",
+		icon: "🔽",
+		label: "Content Filters",
+		panelId: "panel-content-filters",
+	},
+	{
 		id: "content-boxes",
 		icon: "🎨",
 		label: "Content Boxes",
@@ -3722,6 +3728,237 @@ async function initContentBoxesTab() {
 	}
 }
 
+// ── Content Filters Tab ─────────────────────────────────────────────────────
+async function initContentFiltersTab() {
+	const { DEFAULT_CONTENT_FILTER_SETTINGS } =
+		await import("../utils/collapsible-sections.js");
+
+	// Load current settings
+	const result = await browser.storage.local.get("contentFilterSettings");
+	let settings = {
+		...DEFAULT_CONTENT_FILTER_SETTINGS,
+		...result.contentFilterSettings,
+	};
+
+	// Wire up built-in type toggles and dropdowns
+	const fightToggle = document.getElementById("cf-fight-enabled");
+	const fightDefault = document.getElementById("cf-fight-default");
+	const r18Toggle = document.getElementById("cf-r18-enabled");
+	const r18Default = document.getElementById("cf-r18-default");
+	const authorToggle = document.getElementById("cf-author-enabled");
+	const authorDefault = document.getElementById("cf-author-default");
+
+	if (fightToggle) {
+		fightToggle.checked = settings.fight?.enabled !== false;
+		fightToggle.addEventListener("change", () => {
+			settings.fight = {
+				...settings.fight,
+				enabled: fightToggle.checked,
+			};
+		});
+	}
+	if (fightDefault) {
+		fightDefault.value = String(settings.fight?.defaultCollapsed ?? true);
+		fightDefault.addEventListener("change", () => {
+			settings.fight = {
+				...settings.fight,
+				defaultCollapsed: fightDefault.value === "true",
+			};
+		});
+	}
+
+	if (r18Toggle) {
+		r18Toggle.checked = settings.r18?.enabled !== false;
+		r18Toggle.addEventListener("change", () => {
+			settings.r18 = { ...settings.r18, enabled: r18Toggle.checked };
+		});
+	}
+	if (r18Default) {
+		r18Default.value = String(settings.r18?.defaultCollapsed ?? true);
+		r18Default.addEventListener("change", () => {
+			settings.r18 = {
+				...settings.r18,
+				defaultCollapsed: r18Default.value === "true",
+			};
+		});
+	}
+
+	if (authorToggle) {
+		authorToggle.checked = settings.authorNote?.enabled !== false;
+		authorToggle.addEventListener("change", () => {
+			settings.authorNote = {
+				...settings.authorNote,
+				enabled: authorToggle.checked,
+			};
+		});
+	}
+	if (authorDefault) {
+		authorDefault.value = String(
+			settings.authorNote?.defaultCollapsed ?? false,
+		);
+		authorDefault.addEventListener("change", () => {
+			settings.authorNote = {
+				...settings.authorNote,
+				defaultCollapsed: authorDefault.value === "true",
+			};
+		});
+	}
+
+	// Wire up playground toggles
+	const playgroundExamples = [
+		{ id: "pg-fight-example", type: "fight" },
+		{ id: "pg-r18-example", type: "r18" },
+		{ id: "pg-author-example", type: "author-note" },
+	];
+
+	for (const example of playgroundExamples) {
+		const wrapper = document.getElementById(example.id);
+		if (wrapper) {
+			const header = wrapper.querySelector(".rg-collapsible-header");
+			if (header) {
+				header.addEventListener("click", () => {
+					const isCollapsed =
+						wrapper.classList.contains("rg-collapsed");
+					const summaryBlock = wrapper.querySelector(
+						".rg-collapsible-summary-block",
+					);
+					const contentBlock = wrapper.querySelector(
+						".rg-collapsible-content",
+					);
+					const toggleBtn = wrapper.querySelector(
+						".rg-collapsible-toggle-btn",
+					);
+
+					if (isCollapsed) {
+						wrapper.classList.remove("rg-collapsed");
+						wrapper.classList.add("rg-expanded");
+						if (contentBlock) contentBlock.style.display = "block";
+						if (summaryBlock) summaryBlock.style.display = "none";
+						if (toggleBtn) toggleBtn.textContent = "▲ Collapse";
+					} else {
+						wrapper.classList.remove("rg-expanded");
+						wrapper.classList.add("rg-collapsed");
+						if (contentBlock) contentBlock.style.display = "none";
+						if (summaryBlock) summaryBlock.style.display = "block";
+						if (toggleBtn) toggleBtn.textContent = "▼ Read";
+					}
+				});
+			}
+		}
+	}
+
+	// Custom types UI
+	const customList = document.getElementById("cf-custom-list");
+	const addCustomBtn = document.getElementById("cf-add-custom-btn");
+
+	function renderCustomTypes() {
+		customList.innerHTML = "";
+		const customTypes = settings.custom || [];
+		if (customTypes.length === 0) {
+			customList.innerHTML = `<p class="ls-hint" style="color:rgba(200,195,185,0.6);">No custom types yet. Click "+ Add Custom Type" to create one.</p>`;
+			return;
+		}
+		customTypes.forEach((type, idx) => {
+			const card = document.createElement("div");
+			card.className = "ls-form-group";
+			card.style.cssText =
+				"border-top:1px solid var(--border-color);padding-top:12px;padding-bottom:12px;";
+			card.innerHTML = `
+				<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+					<span style="font-size:24px;" class="cf-icon">${type.icon || "📄"}</span>
+					<input type="text" class="ls-input cf-name" placeholder="Type name" value="${type.name || ""}" style="flex:1;"/>
+					<button class="ls-btn ls-btn-danger ls-btn-sm cf-delete-btn" data-idx="${idx}">🗑️</button>
+				</div>
+				<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+					<div>
+						<label class="ls-label" style="font-size:12px;">Type ID</label>
+						<input type="text" class="ls-input cf-id" placeholder="flashback" value="${type.id || ""}" disabled style="opacity:0.6;" />
+					</div>
+					<div>
+						<label class="ls-label" style="font-size:12px;">Emoji</label>
+						<input type="text" class="ls-input cf-icon-input" placeholder="⏮️" value="${type.icon || ""}" style="width:100%;" />
+					</div>
+				</div>
+				<div style="margin-top:10px;">
+					<label class="ls-label" style="font-size:12px;">Hint for Gemini <span class="ls-hint">(what content to wrap)</span></label>
+					<textarea class="ls-input cf-hint" placeholder="e.g., flashback scenes with heavy worldbuilding exposition" style="min-height:60px;font-family:monospace;font-size:12px;">${type.hint || ""}</textarea>
+				</div>
+				<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+					<label class="ls-label-checkbox" style="display:flex;align-items:center;gap:8px;">
+						<input type="checkbox" class="cf-enabled" ${type.enabled !== false ? "checked" : ""} />
+						<span>Enabled</span>
+					</label>
+					<label class="ls-label-checkbox" style="display:flex;align-items:center;gap:8px;">
+						<input type="checkbox" class="cf-collapsed" ${type.defaultCollapsed !== false ? "checked" : ""} />
+						<span>Default collapsed</span>
+					</label>
+				</div>
+			`;
+
+			const nameInput = card.querySelector(".cf-name");
+			const iconInput = card.querySelector(".cf-icon-input");
+			const hintInput = card.querySelector(".cf-hint");
+			const enabledCheckbox = card.querySelector(".cf-enabled");
+			const collapsedCheckbox = card.querySelector(".cf-collapsed");
+			const deleteBtn = card.querySelector(".cf-delete-btn");
+			const iconDisplay = card.querySelector(".cf-icon");
+
+			nameInput.addEventListener("change", () => {
+				settings.custom[idx].name = nameInput.value;
+			});
+			iconInput.addEventListener("change", () => {
+				settings.custom[idx].icon = iconInput.value;
+				iconDisplay.textContent = iconInput.value || "📄";
+			});
+			hintInput.addEventListener("change", () => {
+				settings.custom[idx].hint = hintInput.value;
+			});
+			enabledCheckbox.addEventListener("change", () => {
+				settings.custom[idx].enabled = enabledCheckbox.checked;
+			});
+			collapsedCheckbox.addEventListener("change", () => {
+				settings.custom[idx].defaultCollapsed =
+					collapsedCheckbox.checked;
+			});
+			deleteBtn.addEventListener("click", () => {
+				settings.custom.splice(idx, 1);
+				renderCustomTypes();
+			});
+
+			customList.appendChild(card);
+		});
+	}
+
+	if (addCustomBtn) {
+		addCustomBtn.addEventListener("click", () => {
+			const newType = {
+				id: `custom-${Date.now()}`,
+				name: "New Type",
+				icon: "📄",
+				enabled: true,
+				defaultCollapsed: true,
+				hint: "",
+			};
+			if (!settings.custom) settings.custom = [];
+			settings.custom.push(newType);
+			renderCustomTypes();
+		});
+	}
+
+	renderCustomTypes();
+
+	// Save button
+	const saveBtn = document.getElementById("content-filters-save-btn");
+	if (saveBtn) {
+		saveBtn.addEventListener("click", async () => {
+			await browser.storage.local.set({
+				contentFilterSettings: settings,
+			});
+			showToast("✅ Content filter settings saved!");
+		});
+	}
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
 	debugLog("⚙️ Library Settings page initialising…");
@@ -3776,6 +4013,9 @@ async function init() {
 
 	// Custom Content Boxes tab
 	await initContentBoxesTab();
+
+	// Content Filters tab
+	await initContentFiltersTab();
 
 	// Wire up all event listeners
 	setupEventListeners();

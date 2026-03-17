@@ -1,0 +1,52 @@
+title: "Idea: "
+labels: ["ideas"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              # Share Your Ideas
+
+              Do you have an idea to improve Ranobe Gemini? We'd love to hear it! This is a place for brainstorming and discussing potential features.
+
+    - type: textarea
+      id: idea
+      attributes:
+          label: "Your Idea"
+          description: "Describe your idea in detail"
+          placeholder: "What feature or improvement would you like to see?"
+      validations:
+          required: true
+
+    - type: textarea
+      id: use_case
+      attributes:
+          label: "Use Case"
+          description: "How would this feature benefit users?"
+          placeholder: "Explain how this would improve the reading experience..."
+
+    - type: textarea
+      id: examples
+      attributes:
+          label: "Examples or Mockups"
+          description: "Any examples, mockups, or references?"
+          placeholder: "Links to similar features, screenshots, or detailed descriptions..."
+
+    - type: dropdown
+      id: scope
+      attributes:
+          label: "Scope"
+          options:
+              - "Core Reading Experience"
+              - "Library & Organization"
+              - "Settings & Customization"
+              - "Backup & Sync"
+              - "Website Support"
+              - "Website Handler"
+              - "UI/UX Polish"
+              - "Other"
+
+    - type: markdown
+      attributes:
+          value: |
+              ---
+              **Before posting:** Check existing discussions to avoid duplicates. If you find a related idea, please reply there instead!

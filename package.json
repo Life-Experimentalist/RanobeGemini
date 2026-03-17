@@ -13,6 +13,8 @@
 		"publish": "node dev/build.js --package --source",
 		"update-domains": "node dev/build.js --update",
 		"watch": "npm run build && node dev/watch.js",
+		"commits:all": "node dev/commit-history.js --all",
+		"commits:versions": "node dev/commit-history.js --versions",
 		"lint": "eslint src/**/*.js",
 		"lint:fix": "eslint src/**/*.js --fix",
 		"format": "prettier --write \"src/**/*.{js,json,css,html}\"",

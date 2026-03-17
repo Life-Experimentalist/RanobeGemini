@@ -1,0 +1,48 @@
+title: "Q&A: "
+labels: ["question"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              # Questions & Answers
+
+              Have a question about Ranobe Gemini? Ask here and the community will help!
+
+    - type: textarea
+      id: question
+      attributes:
+          label: "Your Question"
+          description: "What do you need help with?"
+          placeholder: "Ask your question here..."
+      validations:
+          required: true
+
+    - type: textarea
+      id: context
+      attributes:
+          label: "Context"
+          description: "Any additional information that would help answer your question?"
+          placeholder: "Environment details, error messages, reproduction steps, etc."
+
+    - type: dropdown
+      id: topic
+      attributes:
+          label: "Topic"
+          options:
+              - "How do I...?"
+              - "Why doesn't...?"
+              - "Error/Unexpected behavior"
+              - "Configuration help"
+              - "Website handler question"
+              - "Development/Contributing"
+              - "Other"
+
+    - type: markdown
+      attributes:
+          value: |
+              ---
+              **Tips for getting a fast answer:**
+              - Be specific and detailed
+              - Include error messages or screenshots
+              - Mention your browser, OS, and extension version
+              - Check [Documentation](https://ranobe.vkrishna04.me/) first

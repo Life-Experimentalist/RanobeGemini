@@ -1,0 +1,50 @@
+title: "FAQ: "
+labels: ["faq"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              # Frequently Asked Questions
+
+              Thank you for your question! Please use this template for commonly asked questions about Ranobe Gemini.
+
+    - type: textarea
+      id: question
+      attributes:
+          label: "Your Question"
+          description: "What would you like to know about Ranobe Gemini?"
+          placeholder: "Ask your question here..."
+      validations:
+          required: true
+
+    - type: dropdown
+      id: category
+      attributes:
+          label: "Category"
+          options:
+              - "Usage & Features"
+              - "Installation & Setup"
+              - "Google Drive Backup"
+              - "API Keys & Configuration"
+              - "Troubleshooting"
+              - "Website Support"
+              - "Development"
+              - "Other"
+      validations:
+          required: true
+
+    - type: textarea
+      id: context
+      attributes:
+          label: "Additional Context"
+          description: "Any additional information that might help answer your question?"
+          placeholder: "Screenshots, error messages, or other relevant details..."
+
+    - type: markdown
+      attributes:
+          value: |
+              ---
+              **Note:** If this question isn't answered after 48 hours, please check:
+              - [Documentation](https://ranobe.vkrishna04.me/)
+              - [Guides](https://github.com/Vkrishna27/ranobe-gemini/tree/main/docs/guides)
+              - [Existing Issues](https://github.com/Vkrishna27/ranobe-gemini/issues)

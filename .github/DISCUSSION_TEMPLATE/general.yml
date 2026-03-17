@@ -1,0 +1,35 @@
+title: "Discussion: "
+labels: ["discussions"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              # General Discussion
+
+              Share thoughts, feedback, or anything else about Ranobe Gemini!
+
+    - type: textarea
+      id: topic
+      attributes:
+          label: "Discussion Topic"
+          description: "What would you like to discuss?"
+          placeholder: "Start a conversation..."
+      validations:
+          required: true
+
+    - type: textarea
+      id: thoughts
+      attributes:
+          label: "Your Thoughts"
+          description: "What are your thoughts on this topic?"
+          placeholder: "Share your perspective..."
+
+    - type: markdown
+      attributes:
+          value: |
+              ---
+              **Community Guidelines:**
+              - Be respectful and constructive
+              - No spam or self-promotion
+              - Keep discussions on-topic
+              - See [CODE_OF_CONDUCT.md](https://github.com/Vkrishna27/ranobe-gemini/blob/main/CODE_OF_CONDUCT.md)
