@@ -49,7 +49,8 @@
 				<a href="./drive-setup.html" aria-current="page">Drive Setup</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚 Library</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub ↗</a>
@@ -179,7 +180,8 @@
 						<div class="step-num">3</div>
 						<h4>Set Up OAuth Consent</h4>
 						<p>Navigate to <strong>APIs & Services → OAuth consent screen</strong>. Select
-							<strong>External</strong> as user type. Fill in:</p>
+							<strong>External</strong> as user type. Fill in:
+						</p>
 						<ul style="margin: 8px 0; padding-left: 20px;">
 							<li><strong>App name:</strong> "Ranobe Gemini Backup"</li>
 							<li><strong>User support email:</strong> Your Gmail address</li>
@@ -245,7 +247,8 @@
 								<strong>✅ Recommended: Paste JSON</strong>
 								<p>Open your <code>client_secret_*.json</code> file, copy all contents, paste into the
 									<em>"Paste credentials JSON"</em> box, and click <strong>Parse JSON → Save to
-										Storage</strong>.</p>
+										Storage</strong>.
+								</p>
 							</div>
 							<div class="method">
 								<strong>Manual Entry</strong>
@@ -439,7 +442,42 @@
 					</li>
 				</ul>
 			</section>
+
+			<section class="cta section">
+				<div class="cta-card">
+					<p class="eyebrow">Ready to Install</p>
+					<h2>Install once, then tune everything from Library</h2>
+					<p>
+						Install Ranobe Gemini, open Library, then configure backups, reading status, content filters,
+						and custom boxes from one place.
+					</p>
+					<div class="cta-row">
+						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank" rel="noreferrer">Get for Firefox</a>
+						<a class="btn primarysecondary"
+							href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/releases"
+							target="_blank" rel="noreferrer">Get for Edge</a>
+						<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open Library</button>
+					</div>
+				</div>
+			</section>
 		</main>
+
+		<footer class="footer">
+			<div class="footer-brand">Ranobe Gemini <span style="font-size: 0.75em; opacity: 0.6;">v4.4.0</span></div>
+			<div class="footer-links">
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Content Styles</a>
+				<a href="./privacy.html">Privacy</a>
+				<a href="./terms.html">Terms</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
+			</div>
+			<p class="footnote">Built by Life-Experimentalist. Local-first, reader-first, open source.</p>
+		</footer>
 
 		<script src="./nav.js" defer></script>
 		<script src="./drive-setup.js"></script>

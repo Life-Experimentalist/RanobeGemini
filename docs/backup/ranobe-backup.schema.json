@@ -200,8 +200,11 @@
 					"minimum": 0
 				},
 				"rg_rolling_backup_meta": {
-					"type": "object",
-					"additionalProperties": true
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": true
+					}
 				},
 				"rg_backup_config": {
 					"type": "object",
@@ -231,6 +234,19 @@
 				"rg_domain_settings": {
 					"type": "object",
 					"additionalProperties": true
+				},
+				"contentFilterSettings": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Default collapsed/expanded preferences for fight scenes, R18 content, author notes, and custom collapsible box types"
+				},
+				"rg_custom_box_types": {
+					"type": "array",
+					"description": "User-defined custom content box types and styling presets",
+					"items": {
+						"type": "object",
+						"additionalProperties": true
+					}
 				}
 			}
 		},

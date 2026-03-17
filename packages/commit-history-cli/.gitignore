@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+dist/
+.nyc_output/
+*.log
+*.tmp
+*.bak
+test-output.txt

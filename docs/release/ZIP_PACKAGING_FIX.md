@@ -93,6 +93,7 @@ npm run package-chromium # Repackage Chromium (13.69 MB)
 
 ```bash
 npm run publish
+	├─ npm run commits:write
   ├─ npm run update-domains
   ├─ npm run build
   ├─ npm run package-firefox

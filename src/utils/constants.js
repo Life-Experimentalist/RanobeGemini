@@ -276,6 +276,7 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"novelUpdateEnabled", // Periodic novel update enabled
 	"novelUpdateIntervalDays", // Periodic novel update interval (days)
 	"contentFilterSettings", // Collapsible content sections settings
+	"rg_custom_box_types", // User-defined custom content box types
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators

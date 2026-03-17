@@ -16,3 +16,4 @@ Changes.md
 .vscode/*
 !.vscode/tasks.json
 dev/emoji-report.txt
+.venv/

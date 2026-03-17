@@ -144,13 +144,16 @@
 - Reading progress
 - Cover URLs
 - Novel descriptions
+- Content filter preferences for collapsible fight scenes, R18 content, author notes, and custom collapsible types
+- Custom content box definitions from Library Settings, including saved styling presets
+- Full/comprehensive backups also preserve supported extension settings used to rebuild the reading experience across browsers
 
 #### What Doesn't Get Backed Up
 
 - Cache of enhanced content
 - Debug logs
-- API keys (stored separately)
-- Settings/preferences
+- Temporary runtime/session state
+- OAuth access tokens issued by Google Drive sign-in
 
 #### Merge Algorithm Details
 

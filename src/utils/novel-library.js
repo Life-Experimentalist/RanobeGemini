@@ -45,7 +45,12 @@ export const PRIMARY_READING_STATUSES = [
 
 export const BUILTIN_READING_LISTS = [
 	{ id: "rereading", label: "🔁 Rereading", color: "#9c27b0", builtIn: true },
-	{ id: "favourites", label: "⭐ Favourites", color: "#f59e0b", builtIn: true },
+	{
+		id: "favourites",
+		label: "⭐ Favourites",
+		color: "#f59e0b",
+		builtIn: true,
+	},
 ];
 
 /**
@@ -221,7 +226,8 @@ export class NovelLibrary {
 			);
 			for (const item of savedReadingLists) {
 				const normalizedId = normalizeReadingListId(item?.id);
-				if (!normalizedId || seenReadingLists.has(normalizedId)) continue;
+				if (!normalizedId || seenReadingLists.has(normalizedId))
+					continue;
 				mergedReadingLists.push({
 					id: normalizedId,
 					label: String(item?.label || normalizedId),
@@ -357,8 +363,12 @@ export class NovelLibrary {
 			};
 
 			await this.applyStaleStatusRules(library);
-			const normalizedReadingLists = this.normalizeNovelReadingLists(library);
-			if (normalizedReadingLists || this.normalizeFanfictionMetadata(library)) {
+			const normalizedReadingLists =
+				this.normalizeNovelReadingLists(library);
+			if (
+				normalizedReadingLists ||
+				this.normalizeFanfictionMetadata(library)
+			) {
 				// Best-effort background save; never let a save failure break the read.
 				this.saveLibrary(library).catch((err) =>
 					debugError("getLibrary: normalization save failed:", err),
@@ -408,7 +418,9 @@ export class NovelLibrary {
 			}
 
 			if (!PRIMARY_READING_STATUSES.includes(novel.readingStatus)) {
-				novel.readingStatus = ensurePrimaryReadingStatus(novel.readingStatus);
+				novel.readingStatus = ensurePrimaryReadingStatus(
+					novel.readingStatus,
+				);
 				changed = true;
 			}
 
@@ -834,9 +846,8 @@ export class NovelLibrary {
 			updatedNovel.readingLists = normalizeReadingListsArray(
 				updatedNovel.readingLists,
 			);
-			updatedNovel.rereadingStatus = updatedNovel.readingLists.includes(
-				"rereading",
-			);
+			updatedNovel.rereadingStatus =
+				updatedNovel.readingLists.includes("rereading");
 
 			library.novels[novelData.id] = updatedNovel;
 		} else {
@@ -854,10 +865,9 @@ export class NovelLibrary {
 					novelData.lastReadChapter !== undefined
 						? novelData.lastReadChapter
 						: 0,
-				readingStatus:
-					ensurePrimaryReadingStatus(
-						novelData.readingStatus || READING_STATUS.PLAN_TO_READ,
-					),
+				readingStatus: ensurePrimaryReadingStatus(
+					novelData.readingStatus || READING_STATUS.PLAN_TO_READ,
+				),
 				readingLists: novelData.readingLists || [],
 				rereadingStatus: (novelData.readingLists || []).includes(
 					"rereading",
@@ -914,7 +924,9 @@ export class NovelLibrary {
 					library.novels[novelId].readingLists =
 						normalizeReadingListsArray(value);
 					library.novels[novelId].rereadingStatus =
-						library.novels[novelId].readingLists.includes("rereading");
+						library.novels[novelId].readingLists.includes(
+							"rereading",
+						);
 					continue;
 				}
 				library.novels[novelId][key] = value;
@@ -1803,6 +1815,8 @@ export class NovelLibrary {
 
 			// Processing options
 			chunkingEnabled: allData.chunkingEnabled,
+			contentFilterSettings: allData.contentFilterSettings,
+			rg_custom_box_types: allData.rg_custom_box_types,
 
 			// Theme settings
 			themeSettings: allData.themeSettings,
@@ -1873,6 +1887,8 @@ export class NovelLibrary {
 					"topP",
 					"topK",
 					"chunkingEnabled",
+					"contentFilterSettings",
+					"rg_custom_box_types",
 					"themeSettings",
 					"theme",
 					"themeMode",

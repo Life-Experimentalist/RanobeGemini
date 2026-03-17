@@ -15,6 +15,23 @@
 		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
 			rel="stylesheet" />
 		<link rel="stylesheet" href="./styles.css" />
+		<script type="module">
+			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'dark',
+				themeVariables: {
+					primaryColor: '#162234',
+					primaryTextColor: '#e8eef7',
+					primaryBorderColor: '#f4a261',
+					lineColor: '#9fb3c8',
+					secondaryColor: '#0b1628',
+					tertiaryColor: '#121d2b',
+					edgeLabelBackground: '#0b1628',
+					fontFamily: 'Space Grotesk, system-ui, sans-serif'
+				}
+			});
+		</script>
 		<style>
 			/* ─────────────────────────────────────────────────────────────── */
 			/* RESPONSIVE CONTENT STYLES PAGE */
@@ -213,6 +230,145 @@
 				line-height: 1.6;
 			}
 
+			.cs-box-meta {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				font-size: 12px;
+				font-family: "Courier New", monospace;
+				background: rgba(255, 255, 255, 0.06);
+				border: 1px solid var(--border-color);
+				border-radius: 6px;
+				padding: 4px 10px;
+				margin-bottom: 10px;
+				color: var(--text-secondary);
+			}
+
+			.game-stats-box {
+				font-family: 'Courier New', monospace;
+				white-space: pre-line;
+				background-color: rgba(35, 35, 35, 0.95);
+				border: 1px solid rgba(100, 100, 100, 0.8);
+				border-radius: 6px;
+				padding: 12px 14px;
+				margin: 16px 0;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+				line-height: 1.5;
+				font-size: 14px;
+				width: 100%;
+				box-sizing: border-box;
+				color: #e8e8e8;
+				overflow-x: auto;
+				text-align: left;
+			}
+
+			.game-stats-box strong,
+			.game-stats-box b {
+				color: #8ab4f8;
+			}
+
+			.rg-author-note {
+				font-family: inherit;
+				background-color: rgba(45, 35, 10, 0.92);
+				border: 1px solid rgba(200, 155, 50, 0.55);
+				border-left: 3px solid rgba(220, 175, 70, 0.85);
+				border-radius: 6px;
+				padding: 12px 16px 12px 18px;
+				margin: 20px 0;
+				font-style: italic;
+				font-size: 13.5px;
+				color: #d4b87a;
+				line-height: 1.7;
+				box-sizing: border-box;
+				width: 100%;
+			}
+
+			.rg-author-note::before {
+				content: "📝 Author's Note";
+				display: block;
+				font-style: normal;
+				font-weight: 700;
+				font-size: 11px;
+				letter-spacing: 0.9px;
+				text-transform: uppercase;
+				color: rgba(220, 175, 70, 0.8);
+				margin-bottom: 8px;
+			}
+
+			.rg-system-msg {
+				font-family: 'Courier New', Courier, monospace;
+				background-color: rgba(5, 12, 30, 0.97);
+				border: 1px solid rgba(55, 135, 255, 0.45);
+				border-radius: 6px;
+				padding: 12px 16px;
+				margin: 16px 0;
+				color: #9ecfff;
+				white-space: pre-line;
+				font-size: 13.5px;
+				line-height: 1.6;
+				box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
+				box-sizing: border-box;
+				width: 100%;
+			}
+
+			.rg-quote-box {
+				font-family: Georgia, 'Times New Roman', Times, serif;
+				background: transparent;
+				border: none;
+				border-left: 3px solid rgba(160, 155, 145, 0.55);
+				padding: 6px 18px;
+				margin: 18px 0 18px 10px;
+				font-style: italic;
+				color: rgba(205, 200, 185, 0.88);
+				font-size: 14px;
+				line-height: 1.85;
+				box-sizing: border-box;
+				width: calc(100% - 10px);
+				white-space: pre-line;
+			}
+
+			.rg-skill-box {
+				font-family: inherit;
+				background-color: rgba(12, 25, 14, 0.95);
+				border: 1px solid rgba(55, 160, 75, 0.45);
+				border-top: 2px solid rgba(65, 200, 90, 0.65);
+				border-radius: 5px;
+				padding: 10px 14px;
+				margin: 14px 0;
+				color: #9de8a8;
+				font-size: 13px;
+				line-height: 1.6;
+				box-sizing: border-box;
+				width: 100%;
+				white-space: pre-line;
+			}
+
+			.rg-flashback {
+				font-family: inherit;
+				background-color: rgba(32, 26, 18, 0.88);
+				border: 1px dashed rgba(145, 115, 65, 0.5);
+				border-radius: 4px;
+				padding: 14px 18px;
+				margin: 22px 0;
+				font-style: italic;
+				color: rgba(215, 198, 165, 0.82);
+				font-size: inherit;
+				line-height: 1.78;
+				box-sizing: border-box;
+				width: 100%;
+				opacity: 0.92;
+			}
+
+			.section-divider,
+			hr.section-divider {
+				border: none;
+				height: 2px;
+				background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.5), transparent);
+				margin: 30px auto;
+				width: 80%;
+				max-width: 500px;
+			}
+
 			/* ── Collapsible Demo Cards ───────────────────────────────────── */
 			.cs-collapsible-demo {
 				background: var(--bg-panel);
@@ -397,6 +553,265 @@
 				margin: 16px 0;
 			}
 
+			/* ── Actual Chapter Preview ──────────────────────────────────── */
+			.cs-chapter-shell {
+				background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+				border: 1px solid var(--border-color);
+				border-radius: 20px;
+				padding: 20px;
+				box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+			}
+
+			.cs-chapter-topbar {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 12px;
+				flex-wrap: wrap;
+				padding-bottom: 16px;
+				margin-bottom: 18px;
+				border-bottom: 1px solid var(--border-color);
+			}
+
+			.cs-chapter-badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 6px 10px;
+				border-radius: 999px;
+				background: rgba(244, 162, 97, 0.14);
+				border: 1px solid rgba(244, 162, 97, 0.28);
+				font-size: 12px;
+				color: var(--text-primary);
+			}
+
+			.cs-chapter-meta {
+				font-size: 12px;
+				color: var(--text-secondary);
+			}
+
+			.cs-chapter-card {
+				max-width: 760px;
+				margin: 0 auto;
+				background: rgba(0, 0, 0, 0.16);
+				border: 1px solid var(--border-color);
+				border-radius: 18px;
+				padding: 22px;
+			}
+
+			.cs-chapter-title {
+				margin: 0 0 4px;
+				font-size: 26px;
+				line-height: 1.2;
+			}
+
+			.cs-chapter-subtitle {
+				margin: 0 0 20px;
+				font-size: 13px;
+				color: var(--text-secondary);
+			}
+
+			.cs-reading-surface {
+				font-size: 16px;
+				line-height: 1.95;
+				color: var(--text-primary);
+			}
+
+			.cs-reading-surface p {
+				margin: 0 0 18px;
+			}
+
+			.cs-inline-note {
+				display: inline-block;
+				padding: 2px 8px;
+				margin: 0 4px;
+				border-radius: 999px;
+				background: rgba(244, 162, 97, 0.15);
+				color: var(--accent-strong);
+				font-size: 12px;
+				font-weight: 600;
+				vertical-align: middle;
+			}
+
+			.cs-chapter-preview-details {
+				margin: 18px 0 22px;
+				border-radius: 14px;
+				overflow: hidden;
+				border: 1px solid var(--border-color);
+				background: rgba(255, 255, 255, 0.03);
+			}
+
+			.cs-chapter-preview-details summary {
+				list-style: none;
+				cursor: pointer;
+				padding: 14px 16px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 12px;
+				font-size: 14px;
+				font-weight: 600;
+			}
+
+			.cs-chapter-preview-details summary::-webkit-details-marker {
+				display: none;
+			}
+
+			.cs-chapter-preview-details summary::after {
+				content: "Read";
+				font-size: 12px;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--text-secondary);
+			}
+
+			.cs-chapter-preview-details[open] summary::after {
+				content: "Collapse";
+			}
+
+			.cs-chapter-preview-body {
+				padding: 16px 18px 18px;
+				border-top: 1px solid var(--border-color);
+				font-size: 15px;
+				line-height: 1.9;
+				color: var(--text-primary);
+			}
+
+			.cs-preview-summary {
+				display: block;
+				font-size: 12px;
+				font-weight: 500;
+				color: var(--text-secondary);
+				margin-top: 4px;
+			}
+
+			.cs-preview-fight summary {
+				background: rgba(200, 60, 60, 0.12);
+				color: #ffabab;
+			}
+
+			.cs-preview-r18 summary {
+				background: rgba(150, 90, 170, 0.12);
+				color: #dfb0ff;
+			}
+
+			.cs-preview-author summary {
+				background: rgba(220, 175, 70, 0.12);
+				color: #ffd87f;
+			}
+
+			.cs-preview-footer {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 12px;
+				flex-wrap: wrap;
+				margin-top: 20px;
+				padding-top: 16px;
+				border-top: 1px solid var(--border-color);
+				font-size: 13px;
+				color: var(--text-secondary);
+			}
+
+			.cs-showcase-stack>div {
+				margin-top: 22px;
+			}
+
+			.cs-custom-shell,
+			.cs-playground-shell,
+			.cs-mermaid-shell {
+				background: var(--bg-panel);
+				border: 1px solid var(--border-color);
+				border-radius: 16px;
+				padding: 20px;
+				margin-top: 20px;
+			}
+
+			.cs-custom-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+				gap: 18px;
+				margin-top: 18px;
+			}
+
+			.cs-custom-empty {
+				padding: 20px;
+				border-radius: 12px;
+				border: 1px dashed var(--border-color);
+				color: var(--text-secondary);
+				line-height: 1.7;
+			}
+
+			.cs-custom-card {
+				background: rgba(255, 255, 255, 0.03);
+				border: 1px solid var(--border-color);
+				border-radius: 14px;
+				padding: 16px;
+			}
+
+			.cs-custom-preview {
+				margin-top: 14px;
+			}
+
+			.cs-playground-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+				gap: 18px;
+			}
+
+			.cs-playground-label {
+				display: block;
+				font-size: 12px;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				font-weight: 700;
+				color: var(--text-secondary);
+				margin-bottom: 10px;
+			}
+
+			.cs-playground-shell textarea,
+			.cs-playground-shell select {
+				width: 100%;
+				background: rgba(0, 0, 0, 0.22);
+				border: 1px solid var(--border-color);
+				border-radius: 10px;
+				color: var(--text-primary);
+				font-family: inherit;
+				font-size: 14px;
+				padding: 12px 14px;
+				box-sizing: border-box;
+			}
+
+			.cs-playground-shell textarea {
+				min-height: 170px;
+				resize: vertical;
+				font-family: 'Courier New', monospace;
+			}
+
+			.cs-playground-actions {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				margin-top: 12px;
+			}
+
+			.cs-preview-surface {
+				border: 1px dashed var(--border-color);
+				border-radius: 14px;
+				padding: 18px;
+				background: rgba(0, 0, 0, 0.16);
+				min-height: 220px;
+			}
+
+			.cs-preview-surface em {
+				color: var(--text-secondary);
+			}
+
+			.mermaid {
+				overflow-x: auto;
+			}
+
 			/* ── Responsive Text ──────────────────────────────────────────── */
 			@media (max-width: 600px) {
 				.cs-title {
@@ -413,6 +828,24 @@
 
 				.cs-diagram-wrapper {
 					border-radius: 8px;
+				}
+
+				.cs-chapter-shell,
+				.cs-chapter-card {
+					padding: 16px;
+				}
+
+				.cs-chapter-title {
+					font-size: 21px;
+				}
+
+				.cs-reading-surface {
+					font-size: 15px;
+					line-height: 1.85;
+				}
+
+				.cs-playground-grid {
+					grid-template-columns: 1fr;
 				}
 			}
 
@@ -445,7 +878,94 @@
 				background: rgba(0, 0, 0, 0.08);
 				color: #1a4a9a;
 			}
+
+			[data-theme="light"] .cs-chapter-shell {
+				background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.01));
+			}
+
+			[data-theme="light"] .cs-chapter-card {
+				background: rgba(255, 255, 255, 0.66);
+			}
+
+			[data-theme="light"] .cs-chapter-preview-details {
+				background: rgba(0, 0, 0, 0.03);
+			}
+
+			[data-theme="light"] .cs-chapter-title,
+			[data-theme="light"] .cs-reading-surface,
+			[data-theme="light"] .cs-chapter-preview-body {
+				color: #1a1f2b;
+			}
+
+			[data-theme="light"] .cs-chapter-subtitle,
+			[data-theme="light"] .cs-preview-summary,
+			[data-theme="light"] .cs-preview-footer,
+			[data-theme="light"] .cs-chapter-meta,
+			[data-theme="light"] .cs-chapter-preview-details summary::after {
+				color: #4a5568;
+			}
+
+			[data-theme="light"] .cs-preview-fight summary {
+				background: rgba(210, 75, 75, 0.18);
+				color: #8b1f1f;
+			}
+
+			[data-theme="light"] .cs-preview-r18 summary {
+				background: rgba(150, 90, 170, 0.2);
+				color: #5c2b77;
+			}
+
+			[data-theme="light"] .cs-preview-author summary {
+				background: rgba(220, 175, 70, 0.24);
+				color: #7a5a10;
+			}
+
+			[data-theme="light"] .game-stats-box {
+				background-color: #f0f0f0;
+				color: #333;
+				border-color: #ccc;
+			}
+
+			[data-theme="light"] .game-stats-box strong {
+				color: #1a73e8;
+			}
+
+			[data-theme="light"] .rg-author-note {
+				background-color: rgba(255, 248, 225, 0.95);
+				border-left-color: rgba(200, 145, 20, 0.9);
+				border-color: rgba(200, 170, 80, 0.5);
+				color: #7a5c18;
+			}
+
+			[data-theme="light"] .rg-author-note::before {
+				color: rgba(180, 130, 20, 0.9);
+			}
+
+			[data-theme="light"] .rg-system-msg {
+				background-color: rgba(235, 242, 255, 0.97);
+				border-color: rgba(55, 110, 220, 0.45);
+				color: #1a4a9a;
+			}
+
+			[data-theme="light"] .rg-quote-box {
+				border-left-color: rgba(100, 95, 85, 0.55);
+				color: rgba(80, 75, 65, 0.9);
+			}
+
+			[data-theme="light"] .rg-skill-box {
+				background-color: rgba(235, 255, 238, 0.95);
+				border-color: rgba(45, 140, 60, 0.45);
+				border-top-color: rgba(45, 165, 65, 0.65);
+				color: #1e6b30;
+			}
+
+			[data-theme="light"] .rg-flashback {
+				background-color: rgba(250, 245, 235, 0.9);
+				border-color: rgba(155, 125, 70, 0.45);
+				color: rgba(90, 75, 50, 0.88);
+			}
 		</style>
+		<style id="cs-custom-styles"></style>
 	</head>
 
 	<body>
@@ -467,14 +987,17 @@
 			</button>
 			<nav class="nav" id="main-nav">
 				<a href="#builtin">Built-in Types</a>
+				<a href="#custom-library">Custom Boxes</a>
 				<a href="#collapsible">Collapsible Filters</a>
-				<a href="#controls">Your Controls</a>
-				<a href="#demo">Live Demo</a>
+				<a href="#playground">Playground</a>
+				<a href="#chapter-preview">Chapter Preview</a>
 				<span class="nav-sep" aria-hidden="true"></span>
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html" aria-current="page">Styles</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub ↗</a>
@@ -562,6 +1085,100 @@
 								Memory inserts, past event recollections, and
 								timeline shifts marked with dashed borders.
 							</p>
+						</div>
+					</div>
+
+					<div class="cs-showcase-stack">
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"game-stats-box"</strong><span>LitRPG
+									stat windows</span></div>
+							<div class="game-stats-box">Name: Kael Ashford Level: 47
+								Class: Shadow Assassin HP: 2,840 / 2,840
+								Attack: 1,456 Defense: 380 MP: 920 / 1,100
+								────────────────────────────────────────
+								Active Skills:
+								[Shadow Step] (Rank A) — Teleport into shadows
+								[Death Mark] (Rank S) — Target takes +40% damage for 10s
+								Status: <b>Stealthed</b></div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"rg-system-msg"</strong><span>System
+									notifications</span></div>
+							<div class="rg-system-msg">【System Alert】
+								You have entered a Danger Zone: The Shattered Wastes.
+								All healing effects are reduced by 50%.
+								Retreat within 10 seconds or face hostile aggro.</div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"rg-skill-box"</strong><span>Skill /
+									spell callouts</span></div>
+							<div class="rg-skill-box">【Skill Acquired】 Void Fracture (Passive · Rank B)
+								On killing a target below 20% HP, create a small gravitational rift dealing 380% magic
+								damage in a 6m radius.</div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"rg-author-note"</strong><span>Author /
+									translator notes</span></div>
+							<div class="rg-author-note">Hope you all enjoyed this chapter. The next vault chapter took
+								longer than expected because I merged two scenes for better pacing.</div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"rg-quote-box"</strong><span>Poetry /
+									epigraphs</span></div>
+							<div class="rg-quote-box">In the end, we are not measured by what we carry into the dark,
+								but by what we refuse to leave behind.</div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"rg-flashback"</strong><span>Memory
+									inserts</span></div>
+							<div class="rg-flashback">Three years ago, on the night of the Collapse, Elara had stood on
+								the cliff with a rusted sword and a promise she was certain would kill her.</div>
+						</div>
+
+						<div>
+							<div class="cs-box-meta"><span>class=</span><strong>"section-divider"</strong><span>Scene
+									breaks</span></div>
+							<p style="margin: 0 0 6px; font-size: 14px; color: var(--text-secondary);">Scene above ends
+								here</p>
+							<hr class="section-divider" />
+							<p style="margin: 6px 0 0; font-size: 14px; color: var(--text-secondary);">Next scene starts
+								after the divider</p>
+						</div>
+					</div>
+				</section>
+
+				<section class="cs-section" id="custom-library">
+					<h2 class="cs-section-title">🧩 Custom Boxes From Your Library</h2>
+					<p class="cs-section-desc">
+						This page can read your saved custom box types from Library Settings when it is opened in the
+						extension context.
+						Those classes are injected here and previewed exactly like Gemini would use them in chapter
+						output.
+					</p>
+
+					<div class="cs-mermaid-shell">
+						<div class="mermaid">
+							flowchart LR
+							A[Library Settings] --> B[rg_custom_box_types]
+							B --> C[Landing Styles Page]
+							C --> D[Injected CSS Preview]
+							B --> E[Gemini Prompt Appendix]
+							E --> F[Actual Chapter Rendering]
+						</div>
+					</div>
+
+					<div class="cs-custom-shell">
+						<div id="cs-custom-boxes-list" class="cs-custom-grid">
+							<div class="cs-custom-empty">
+								No custom box types detected yet. Open <strong>Library → Settings → Content
+									Boxes</strong>, create one,
+								then revisit this page from the extension to preview the exact styles.
+							</div>
 						</div>
 					</div>
 				</section>
@@ -756,11 +1373,7 @@
 						expanded, or disabled.
 					</p>
 
-					<button class="cs-cta-button" onclick="
-							alert(
-								'💾 Install the extension via Firefox or Edge to access Library Settings!',
-							)
-						">
+					<button class="cs-cta-button" onclick="openLibrarySettings()">
 						🔧 Open Library Settings
 					</button>
 
@@ -820,85 +1433,194 @@
 					</ul>
 				</section>
 
-				<!-- ── Section 4: Live Demo ──────────────────────────────────── -->
-				<section class="cs-section" id="demo">
-					<h2 class="cs-section-title">🎬 Live Demo</h2>
+				<section class="cs-section" id="playground">
+					<h2 class="cs-section-title">🧪 Playground</h2>
 					<p class="cs-section-desc">
-						Click on the sections below to toggle collapse/expand.
-						This is exactly how it works in chapters.
+						Test a custom class, inject CSS, or render sample HTML. This helps validate what a
+						library-defined box will look like before Gemini applies it in a chapter.
 					</p>
 
-					<details class="cs-collapsible-demo cs-demo-fight">
-						<summary>
-							<span>⚔️ Fight Scene</span>
-							<span style="
-									font-size: 12px;
-									color: var(--text-secondary);
-								">Click to expand</span>
-						</summary>
-						<div class="cs-collapsible-body">
-							<strong>Summary:</strong> Kael executes a
-							devastating counter against the shadow creature.<br /><br />
-							<strong>Full Content:</strong> Kael shifts his
-							stance, reading his opponent's movements with the
-							precision of a thousand hours spent in combat. The
-							shadow creature lunges forward—too fast for a normal
-							reaction, but Kael is anything but normal. He
-							sidesteps by mere inches, using the creature's
-							momentum against it. A flash of steel. Three strikes
-							in rapid succession. The creature howls, its dark
-							form fracturing for a split second before it rights
-							itself. Kael's eyes gleam with cold calculation.
-							This fight is far from over.
-						</div>
-					</details>
+					<div class="cs-playground-shell">
+						<div class="cs-playground-grid">
+							<div>
+								<label class="cs-playground-label" for="cs-box-select">Detected custom box</label>
+								<select id="cs-box-select">
+									<option value="">Choose a detected custom box</option>
+								</select>
+								<div class="cs-playground-actions">
+									<button class="cs-cta-button" type="button" id="cs-load-selected">Load Selected
+										Box</button>
+									<button class="cs-cta-button" type="button" id="cs-reset-playground">Reset</button>
+								</div>
+							</div>
 
-					<details class="cs-collapsible-demo cs-demo-r18">
-						<summary>
-							<span>🔞 Mature Content</span>
-							<span style="
-									font-size: 12px;
-									color: var(--text-secondary);
-								">Click to expand</span>
-						</summary>
-						<div class="cs-collapsible-body">
-							<strong>Summary:</strong> An intimate moment between
-							the protagonists, cementing their emotional bond.<br /><br />
-							<strong>Full Content:</strong> They moved together,
-							years of longing finally given form. Her hands
-							traced the familiar lines of his shoulders as he...
-							[This is where explicit content would appear in the
-							full version. Users can collapse this to skip or
-							expand to read.]
-						</div>
-					</details>
+							<div>
+								<label class="cs-playground-label" for="cs-playground-css">CSS</label>
+								<textarea id="cs-playground-css" spellcheck="false">.my-box {
+									background: rgba(20, 10, 40, 0.9);
+									border-left: 3px solid #9b59b6;
+									border-radius: 6px;
+									padding: 12px 18px;
+									color: #d8b4fe;
+									line-height: 1.7;
+								}</textarea>
+							</div>
 
-					<details class="cs-collapsible-demo cs-demo-author">
-						<summary>
-							<span>📝 Author's Note</span>
-							<span style="
-									font-size: 12px;
-									color: var(--text-secondary);
-								">Click to expand</span>
-						</summary>
-						<div class="cs-collapsible-body">
-							<strong>Summary:</strong> Author announces next
-							chapter timeline and thanks readers for patience.<br /><br />
-							<strong>Full Content:</strong> Hey everyone! I hope
-							you enjoyed this chapter—the action really picked up
-							here! I know some of you have been wondering about
-							the release schedule. The next arc is coming in 2-3
-							weeks. I'm working on some major rewrites for better
-							pacing. Thank you all for your patience and
-							incredible support. Your comments really keep me
-							motivated. Special thanks to the folks supporting on
-							Patreon—you make this possible! See you next
-							chapter! ❤️
+							<div>
+								<label class="cs-playground-label" for="cs-playground-html">HTML</label>
+								<textarea id="cs-playground-html"
+									spellcheck="false"><div class="my-box">This is a sample preview using the class above. Replace the class with a custom library class or your own CSS sandbox.</div></textarea>
+								<div class="cs-playground-actions">
+									<button class="cs-cta-button" type="button" id="cs-apply-preview">Apply
+										Preview</button>
+								</div>
+							</div>
+
+							<div>
+								<label class="cs-playground-label">Preview Surface</label>
+								<div id="cs-playground-preview" class="cs-preview-surface">
+									<em>Apply CSS and HTML to preview a content box here.</em>
+								</div>
+							</div>
 						</div>
-					</details>
+					</div>
 				</section>
 
-				<!-- ── Section 5: Integration Info ──────────────────────────── -->
+				<section class="cs-section" id="chapter-preview">
+					<h2 class="cs-section-title">📖 Actual Chapter Preview</h2>
+					<p class="cs-section-desc">
+						This preview shows the feature in the form readers actually encounter: regular chapter prose,
+						with collapsible sections injected between paragraphs so the reading flow stays natural.
+					</p>
+
+					<div class="cs-chapter-shell">
+						<div class="cs-chapter-topbar">
+							<div>
+								<div class="cs-chapter-badge">Enhanced Chapter View</div>
+								<div class="cs-chapter-meta">Site handler + Gemini + your Library settings decide what
+									starts collapsed.</div>
+							</div>
+							<button class="cs-cta-button" style="margin: 0;" onclick="openLibrarySettings()">⚙️ Tune In
+								Library</button>
+						</div>
+
+						<article class="cs-chapter-card">
+							<h3 class="cs-chapter-title">Chapter 187: The Hall Beneath the Black Bell</h3>
+							<p class="cs-chapter-subtitle">This is a realistic reading mockup, not a detached demo card.
+							</p>
+
+							<div class="cs-reading-surface">
+								<p>
+									The bronze doors opened with the slow reluctance of something ancient being forced
+									awake.
+									A draft slid through the corridor and lifted the candle-smoke into long silver
+									threads.
+									Kael stepped inside first, one hand on the hilt at his waist, the other raised
+									slightly as if he could stop the dark by will alone.
+								</p>
+
+								<p>
+									Behind him, Serin whispered a warning he had already understood.
+									The chamber was too quiet, too symmetrical, too carefully arranged to be empty.
+									Somewhere beyond the pillars, metal clicked once.
+									<span class="cs-inline-note">Filter active</span>
+									The next section is what readers would see collapsed directly in the chapter.
+								</p>
+
+								<details class="cs-chapter-preview-details cs-preview-fight">
+									<summary>
+										<span>
+											⚔️ Fight Scene
+											<span class="cs-preview-summary">Summary: Kael intercepts the first
+												bell-guard and turns the ambush before Serin is cornered.</span>
+										</span>
+									</summary>
+									<div class="cs-chapter-preview-body">
+										The first construct dropped soundlessly from the rafters, blade arm already
+										descending.
+										Kael met it on instinct. Steel collided with a peal so sharp the sound seemed to
+										crack the air itself.
+										He pivoted, drove his shoulder forward, and forced the automaton sideways into
+										the next column just as a second one lunged for Serin from behind.
+										By the time the third bell-guard arrived, he had already counted the gaps in
+										their rhythm.
+										That was when the fight stopped being survival and became mathematics.
+									</div>
+								</details>
+
+								<p>
+									When the ringing finally died, the hall looked unchanged, but the silence was
+									different now.
+									Earned. Serin knelt near the broken guard and brushed dust off the sigils etched
+									into its chestplate.
+									"These were wardens," she said softly. "Not assassins. We broke something that was
+									trying to keep the lower vault shut."
+								</p>
+
+								<details class="cs-chapter-preview-details cs-preview-r18">
+									<summary>
+										<span>
+											🔞 Mature Content
+											<span class="cs-preview-summary">Summary: The scene shifts into intimate
+												emotional tension; context is preserved even while collapsed.</span>
+										</span>
+									</summary>
+									<div class="cs-chapter-preview-body">
+										He caught her wrist when she turned away, not roughly, just enough to stop the
+										distance from growing.
+										For a moment the vault, the danger, even the blood on his sleeve seemed to
+										recede.
+										Her forehead rested against his, and the confession between them was quieter
+										than a kiss but somehow more dangerous.
+										The full chapter version would continue this scene here for readers who want it
+										expanded.
+									</div>
+								</details>
+
+								<p>
+									They found the stair after that, hidden beneath a brass medallion worked into the
+									floor mosaic.
+									As the stone turned, cold air climbed from below carrying the smell of rainwater and
+									old paper.
+									Kael did not smile often, but when he did it usually meant the worst part had not
+									started yet.
+								</p>
+
+								<details class="cs-chapter-preview-details cs-preview-author">
+									<summary>
+										<span>
+											📝 Author's Note
+											<span class="cs-preview-summary">Summary: Release pacing update and a note
+												about the next arc revision.</span>
+										</span>
+									</summary>
+									<div class="cs-chapter-preview-body">
+										Quick note: the next two chapters are being revised together because this vault
+										sequence leads directly into the political arc.
+										I would rather delay slightly than split the momentum in the wrong place.
+										Thank you for the patience and for catching continuity mistakes in the last
+										update.
+									</div>
+								</details>
+
+								<p>
+									Below them, the first bell rang again.
+									Not from above this time, but from somewhere deep under the city, where no clock
+									should have been able to survive.
+									Serin looked at Kael. Kael looked at the dark. Then both of them went down.
+								</p>
+							</div>
+
+							<div class="cs-preview-footer">
+								<span>What the reader experiences: normal prose first, collapsibles only where they
+									help.</span>
+								<span>Disable a filter in Library and this content returns inline.</span>
+							</div>
+						</article>
+					</div>
+				</section>
+
+				<!-- ── Section 4: Integration Info ──────────────────────────── -->
 				<section class="cs-section">
 					<h2 class="cs-section-title">🔗 Integration Points</h2>
 					<p class="cs-section-desc">
@@ -943,40 +1665,42 @@
 				</section>
 
 				<!-- ── Footer CTA ──────────────────────────────────────────── -->
-				<section style="
-						margin-top: 60px;
-						padding-top: 32px;
-						border-top: 1px solid var(--border-color);
-						text-align: center;
-					">
-					<h2 style="font-size: 24px; margin-bottom: 16px">
-						Ready to Install?
-					</h2>
-					<div style="
-							display: flex;
-							gap: 12px;
-							justify-content: center;
-							flex-wrap: wrap;
-						">
-						<a class="cs-cta-button" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
-							target="_blank" rel="noreferrer">🔥 Firefox</a>
-						<a class="cs-cta-button" href="https://github.com/Life-Experimentalist/RanobeGemini"
-							target="_blank" rel="noreferrer">⚙️ GitHub</a>
+				<section class="cta section">
+					<div class="cta-card">
+						<p class="eyebrow">Ready to Install</p>
+						<h2>Install once, then tune everything from Library</h2>
+						<p>
+							Install Ranobe Gemini, open Library, configure content filters and custom boxes, then return
+							here to preview what real chapter output will look like.
+						</p>
+						<div class="cta-row">
+							<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+								target="_blank" rel="noreferrer">Get for Firefox</a>
+							<a class="btn primarysecondary"
+								href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/releases"
+								target="_blank" rel="noreferrer">Get for Edge</a>
+							<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open
+								Library</button>
+						</div>
 					</div>
 				</section>
 			</div>
 		</main>
 
 		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini</div>
+			<div class="footer-brand">Ranobe Gemini <span style="font-size: 0.75em; opacity: 0.6;">v4.4.0</span></div>
 			<div class="footer-links">
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="./index.html">Home</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
 			</div>
-			<p class="footnote">Built by Life-Experimentalist</p>
+			<p class="footnote">Built by Life-Experimentalist. Local-first, reader-first, open source.</p>
 		</footer>
 
 		<script>
@@ -994,10 +1718,178 @@
 				localStorage.setItem("rg-theme-preference", theme);
 			}
 
+			function openLibrarySettings() {
+				if (typeof chrome !== "undefined" && chrome.runtime) {
+					chrome.runtime.sendMessage({ action: "openLibrary" });
+					return;
+				}
+
+				if (typeof browser !== "undefined" && browser.runtime) {
+					browser.runtime.sendMessage({ action: "openLibrary" });
+					return;
+				}
+
+				alert(
+					"📚 Library lives inside the Ranobe Gemini extension. Install it in Firefox or Chromium-based browsers to open the Library, tune content filters, and preview the exact in-chapter behavior.",
+				);
+			}
+
+			const CUSTOM_BOX_TYPES_KEY = "rg_custom_box_types";
+
+			function getExtensionStorage() {
+				if (typeof browser !== "undefined" && browser.storage && browser.storage.local) {
+					return {
+						async get(key) {
+							return browser.storage.local.get(key);
+						}
+					};
+				}
+
+				if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+					return {
+						async get(key) {
+							return new Promise((resolve) => chrome.storage.local.get(key, resolve));
+						}
+					};
+				}
+
+				return null;
+			}
+
+			function escapeHtml(value) {
+				return String(value ?? "")
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/\"/g, "&quot;");
+			}
+
+			function buildCustomBoxCss(boxes) {
+				if (!Array.isArray(boxes)) {
+					return "";
+				}
+
+				return boxes.map((box) => {
+					if (!box.className) {
+						return "";
+					}
+
+					if (box.cssOverride && box.cssOverride.trim()) {
+						return box.cssOverride.trim();
+					}
+
+					return `.${box.className.replace(/\./g, "")} {
+						background-color: ${box.backgroundColor || "rgba(20, 20, 30, 0.9)"};
+						border: 1px ${box.borderStyle || "solid"} ${box.borderColor || "rgba(130, 130, 200, 0.6)"};
+						border-left: ${box.borderWidth || "3px"} ${box.borderStyle || "solid"} ${box.borderColor || "rgba(130, 130, 200, 0.6)"};
+						border-radius: 6px;
+						padding: 12px 16px 12px 18px;
+						margin: 18px 0;
+						color: ${box.textColor || "#d0d0e0"};
+						font-size: 13.5px;
+						line-height: 1.7;
+						box-sizing: border-box;
+						width: 100%;
+					}`;
+				}).filter(Boolean).join("\n\n");
+			}
+
+			function renderCustomBoxList(boxes) {
+				const list = document.getElementById("cs-custom-boxes-list");
+				const select = document.getElementById("cs-box-select");
+				const styleTag = document.getElementById("cs-custom-styles");
+				styleTag.textContent = buildCustomBoxCss(boxes);
+
+				select.innerHTML = '<option value="">Choose a detected custom box</option>';
+
+				if (!Array.isArray(boxes) || boxes.length === 0) {
+					list.innerHTML = `<div class="cs-custom-empty">No custom box types detected yet. Open <strong>Library → Settings → Content Boxes</strong>, create one, then reopen this page from the extension to preview them here.</div>`;
+					return;
+				}
+
+				list.innerHTML = boxes.map((box, index) => {
+					const className = escapeHtml(box.className || "rg-custom-box");
+					const name = escapeHtml(box.name || className);
+					const emoji = escapeHtml(box.emoji || "📦");
+					const promptHint = box.promptHint ? `<p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 13px;">${escapeHtml(box.promptHint)}</p>` : "";
+					select.insertAdjacentHTML("beforeend", `<option value="${index}">${emoji} ${name} (${className})</option>`);
+
+					return `<div class="cs-custom-card">
+						<div class="cs-box-meta"><span>${emoji}</span><strong>${name}</strong><span>class=</span><strong>"${className}"</strong></div>
+						${promptHint}
+						<div class="cs-custom-preview">
+							<div class="${className}">This is how <strong>${name}</strong> looks when loaded from your Library settings and rendered on a chapter page.</div>
+						</div>
+					</div>`;
+				}).join("");
+			}
+
+			async function loadCustomBoxTypes() {
+				const storage = getExtensionStorage();
+				if (!storage) {
+					renderCustomBoxList([]);
+					return [];
+				}
+
+				try {
+					const result = await storage.get(CUSTOM_BOX_TYPES_KEY);
+					const boxes = Array.isArray(result[CUSTOM_BOX_TYPES_KEY]) ? result[CUSTOM_BOX_TYPES_KEY] : [];
+					renderCustomBoxList(boxes);
+					return boxes;
+				} catch (_error) {
+					renderCustomBoxList([]);
+					return [];
+				}
+			}
+
+			function applyPlayground() {
+				let playgroundStyle = document.getElementById("cs-playground-style");
+				if (!playgroundStyle) {
+					playgroundStyle = document.createElement("style");
+					playgroundStyle.id = "cs-playground-style";
+					document.head.appendChild(playgroundStyle);
+				}
+
+				playgroundStyle.textContent = document.getElementById("cs-playground-css").value;
+				document.getElementById("cs-playground-preview").innerHTML = document.getElementById("cs-playground-html").value;
+			}
+
+			function bindPlayground(boxes) {
+				document.getElementById("cs-apply-preview").addEventListener("click", applyPlayground);
+				document.getElementById("cs-reset-playground").addEventListener("click", () => {
+					document.getElementById("cs-playground-css").value = `.my-box {\n\tbackground: rgba(20, 10, 40, 0.9);\n\tborder-left: 3px solid #9b59b6;\n\tborder-radius: 6px;\n\tpadding: 12px 18px;\n\tcolor: #d8b4fe;\n\tline-height: 1.7;\n}`;
+					document.getElementById("cs-playground-html").value = '<div class="my-box">This is a sample preview using the class above. Replace the class with a custom library class or your own CSS sandbox.</div>';
+					applyPlayground();
+				});
+
+				document.getElementById("cs-load-selected").addEventListener("click", () => {
+					const selectedIndex = document.getElementById("cs-box-select").value;
+					if (selectedIndex === "") {
+						return;
+					}
+
+					const box = boxes[Number(selectedIndex)];
+					if (!box) {
+						return;
+					}
+
+					const css = box.cssOverride && box.cssOverride.trim()
+						? box.cssOverride.trim()
+						: `.${box.className.replace(/\./g, "")} {\n\tbackground-color: ${box.backgroundColor || "rgba(20, 20, 30, 0.9)"};\n\tborder: 1px ${box.borderStyle || "solid"} ${box.borderColor || "rgba(130, 130, 200, 0.6)"};\n\tborder-left: ${box.borderWidth || "3px"} ${box.borderStyle || "solid"} ${box.borderColor || "rgba(130, 130, 200, 0.6)"};\n\tborder-radius: 6px;\n\tpadding: 12px 16px 12px 18px;\n\tmargin: 18px 0;\n\tcolor: ${box.textColor || "#d0d0e0"};\n\tfont-size: 13.5px;\n\tline-height: 1.7;\n\tbox-sizing: border-box;\n\twidth: 100%;\n}`;
+
+					document.getElementById("cs-playground-css").value = css;
+					document.getElementById("cs-playground-html").value = `<div class="${box.className.replace(/\./g, "")}">${escapeHtml(box.name || box.className)} preview loaded from Library settings.</div>`;
+					applyPlayground();
+				});
+
+				applyPlayground();
+			}
+
 			// Restore theme preference
 			const savedTheme =
 				localStorage.getItem("rg-theme-preference") || "dark";
 			setTheme(savedTheme);
+			loadCustomBoxTypes().then((boxes) => bindPlayground(boxes));
 		</script>
 		<script src="./nav.js" defer></script>
 	</body>

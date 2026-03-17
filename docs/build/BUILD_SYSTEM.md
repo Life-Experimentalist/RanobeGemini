@@ -54,7 +54,8 @@ npm run package:source     # Package source code
 
 # Utilities
 npm run update-domains     # Manually update manifest domains from handlers
-npm run publish            # Build, package both platforms, and source code
+npm run commits:write      # Refresh docs/release/commit-history.md
+npm run publish            # Refresh commit history, then build/package/source bundle
 ```
 
 ### Build Output
@@ -78,10 +79,11 @@ npm run watch
 
 ```bash
 # 1. Update version in package.json
-# 2. Build and package everything
+# 2. Refresh commit history, then build and package everything
 npm run publish
 
 # This creates:
+# - docs/release/commit-history.md
 # - releases/RanobeGemini_v3.6.0_firefox.zip
 # - releases/RanobeGemini_v3.6.0_chromium.zip
 # - releases/source/RanobeGemini_v3.6.0_source/
@@ -105,7 +107,8 @@ npm run package:chromium
    - Optionally updates manifest domains
    - Copies assets to `dist/`
    - Embeds version from `package.json` into manifest
-3. **package-firefox.js** / **package-chromium.js**: Create versioned ZIP files in `releases/`
+3. **commit-history.js**: Refreshes release commit-history output before publish packaging
+4. **package-firefox.js** / **package-chromium.js**: Create versioned ZIP files in `releases/`
 
 ### Troubleshooting
 

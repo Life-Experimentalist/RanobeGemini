@@ -117,9 +117,10 @@ npm run publish
 ```
 
 This automatically:
-1. Runs `npm run update-domains` - Updates both manifests
-2. Runs `npm run package` - Builds and packages both versions
-3. Runs `npm run package-source` - Packages source for review
+1. Refreshes `docs/release/commit-history.md`
+2. Runs `npm run update-domains` - Updates both manifests
+3. Runs `npm run package` - Builds and packages both versions
+4. Runs `npm run package-source` - Packages source for review
 
 ## Scripts
 

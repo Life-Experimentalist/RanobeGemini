@@ -3,34 +3,51 @@
 > **Index:**
 
 - [Changelog](#changelog)
-	- [4.3.0 - 2026-03-15](#430---2026-03-15)
-	- [4.2.0 - 2026-03-12](#420---2026-03-12)
-	- [4.1.0 - 2026-03-08](#410---2026-03-08)
-	- [4.0.0 - 2026-03-06](#400---2026-03-06)
+	- [4.4.0 - 2026-03-17](#440---2026-03-17)
 		- [Highlights](#highlights)
 		- [Added](#added)
 		- [Changed](#changed)
 		- [Fixed](#fixed)
-	- [3.9.0 - 2026-02-10](#390---2026-02-10)
+	- [4.3.0 - 2026-03-15](#430---2026-03-15)
 		- [Highlights](#highlights-1)
 		- [Added](#added-1)
 		- [Changed](#changed-1)
 		- [Fixed](#fixed-1)
+	- [4.2.0 - 2026-03-12](#420---2026-03-12)
+		- [Highlights](#highlights-2)
+		- [Added](#added-2)
+		- [Changed](#changed-2)
+		- [Fixed](#fixed-2)
+	- [4.1.0 - 2026-03-08](#410---2026-03-08)
+		- [Highlights](#highlights-3)
+		- [Added](#added-3)
+		- [Changed](#changed-3)
+		- [Fixed](#fixed-3)
+	- [4.0.0 - 2026-03-06](#400---2026-03-06)
+		- [Highlights](#highlights-4)
+		- [Added](#added-4)
+		- [Changed](#changed-4)
+		- [Fixed](#fixed-4)
+	- [3.9.0 - 2026-02-10](#390---2026-02-10)
+		- [Highlights](#highlights-5)
+		- [Added](#added-5)
+		- [Changed](#changed-5)
+		- [Fixed](#fixed-5)
 	- [3.7.0 - 2026-01-30](#370---2026-01-30)
 		- [🔧 Google Drive OAuth Enhancements \& UI Improvements](#-google-drive-oauth-enhancements--ui-improvements)
-		- [Added](#added-1)
+		- [Added](#added-6)
 			- [☁️ Google Drive OAuth Improvements](#️-google-drive-oauth-improvements)
 			- [💾 Comprehensive Backup System](#-comprehensive-backup-system)
 			- [📊 Anonymous Analytics (Opt-Out)](#-anonymous-analytics-opt-out)
 			- [📢 Enhanced Notification System](#-enhanced-notification-system)
 			- [🎯 Domain-Specific Settings](#-domain-specific-settings)
 			- [📖 Reading Progress Tracking](#-reading-progress-tracking)
-		- [Changed](#changed-1)
+		- [Changed](#changed-6)
 			- [🖥️ Popup UI Refactoring](#️-popup-ui-refactoring)
 			- [🌐 Website Handler Improvements](#-website-handler-improvements)
 			- [📚 Library Enhancements](#-library-enhancements)
 			- [🏗️ Build System \& Documentation](#️-build-system--documentation)
-		- [Fixed](#fixed-1)
+		- [Fixed](#fixed-6)
 			- [🐛 Bug Fixes](#-bug-fixes)
 			- [🔧 Google Drive OAuth](#-google-drive-oauth)
 		- [Developer Experience](#developer-experience)
@@ -42,25 +59,25 @@
 		- [Known Issues](#known-issues)
 	- [3.5.0 - 2025-12-20](#350---2025-12-20)
 		- [🎨 Shelf Pages, Analytics \& UX Improvements](#-shelf-pages-analytics--ux-improvements)
-		- [Added](#added-2)
+		- [Added](#added-7)
 			- [📊 Website Shelf Pages](#-website-shelf-pages)
 			- [🎨 Popup Modal Improvements](#-popup-modal-improvements)
 			- [🏗️ Keep-Alive Architecture Documentation](#️-keep-alive-architecture-documentation)
-		- [Changed](#changed-2)
-		- [Fixed](#fixed-2)
+		- [Changed](#changed-7)
+		- [Fixed](#fixed-7)
 		- [Documentation](#documentation)
 	- [3.0.0 - 2025-11-28](#300---2025-11-28)
 		- [🎉 Major Release: Novel Library System](#-major-release-novel-library-system)
-		- [Added](#added-3)
+		- [Added](#added-8)
 			- [📚 Novel Library System](#-novel-library-system)
 			- [🔧 Dynamic Shelf System](#-dynamic-shelf-system)
 			- [🎨 UI Enhancements](#-ui-enhancements)
 			- [📖 Metadata Extraction](#-metadata-extraction)
 			- [📝 Documentation Overhaul](#-documentation-overhaul)
-		- [Changed](#changed-3)
+		- [Changed](#changed-8)
 			- [🏗️ Architecture Improvements](#️-architecture-improvements)
 			- [📚 Documentation](#-documentation)
-		- [Fixed](#fixed-3)
+		- [Fixed](#fixed-8)
 		- [Developer Experience](#developer-experience-1)
 			- [Adding New Website Support (Simplified)](#adding-new-website-support-simplified)
 			- [Build Scripts](#build-scripts)
@@ -70,48 +87,79 @@
 		- [Migration Notes](#migration-notes-1)
 	- [2.9.0 - 2025-11-25](#290---2025-11-25)
 		- [Summary](#summary)
-		- [Added](#added-4)
-		- [Changed](#changed-4)
-		- [Fixed](#fixed-4)
+		- [Added](#added-9)
+		- [Changed](#changed-9)
+		- [Fixed](#fixed-9)
 	- [2.8.0 - 2025-11-25](#280---2025-11-25)
 		- [Summary](#summary-1)
-		- [Added](#added-5)
-		- [Changed](#changed-5)
-		- [Fixed](#fixed-5)
+		- [Added](#added-10)
+		- [Changed](#changed-10)
+		- [Fixed](#fixed-10)
 		- [Developer Experience](#developer-experience-2)
 		- [Migration Notes](#migration-notes-2)
 		- [Known Issues](#known-issues-1)
 	- [2.2.1 - 2025-04-26](#221---2025-04-26)
 		- [Summary](#summary-2)
-		- [Added](#added-6)
-		- [Changed](#changed-6)
-		- [Fixed](#fixed-6)
+		- [Added](#added-11)
+		- [Changed](#changed-11)
+		- [Fixed](#fixed-11)
 	- [2.2.0 - 2025-04-19](#220---2025-04-19)
 		- [Summary](#summary-3)
-		- [Added](#added-7)
-		- [Changed](#changed-7)
-		- [Fixed](#fixed-7)
+		- [Added](#added-12)
+		- [Changed](#changed-12)
+		- [Fixed](#fixed-12)
 	- [2.1.0 - 2025-04-15](#210---2025-04-15)
 		- [Summary](#summary-4)
-		- [Added](#added-8)
-		- [Changed](#changed-8)
-		- [Fixed](#fixed-8)
+		- [Added](#added-13)
+		- [Changed](#changed-13)
+		- [Fixed](#fixed-13)
 	- [2.0.0 - 2025-04-13](#200---2025-04-13)
 		- [Summary](#summary-5)
-		- [Added](#added-9)
-		- [Changed](#changed-9)
-		- [Fixed](#fixed-9)
+		- [Added](#added-14)
+		- [Changed](#changed-14)
+		- [Fixed](#fixed-14)
 	- [1.1.0 - 2025-04-10](#110---2025-04-10)
-		- [Added](#added-10)
-		- [Changed](#changed-10)
-		- [Fixed](#fixed-10)
+		- [Added](#added-15)
+		- [Changed](#changed-15)
+		- [Fixed](#fixed-15)
 	- [1.0.0 - 2025-06-15](#100---2025-06-15)
-		- [Added](#added-11)
-		- [Fixed](#fixed-11)
+		- [Added](#added-16)
+		- [Fixed](#fixed-16)
 
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [4.4.0](RELEASE_NOTES_4.4.0.md) - 2026-03-17
+
+### Highlights
+
+- Reading Lists split out from primary reading status so badges like `rereading`, `favourites`, and custom lists can coexist cleanly.
+- Content-style documentation and landing pages were redesigned with real chapter previews, custom-box showcases, Mermaid journeys, and consistent install/footer patterns.
+- Backup coverage now preserves collapsible content filter preferences and custom content box definitions across comprehensive, Drive, and rolling backup flows.
+- Special content boxes now use `white-space: pre-line` for cleaner rendering of system messages, stats, quotes, and skill-style blocks.
+
+### Added
+
+- Reading Lists architecture and UI coverage across docs and contributor instructions.
+- Public content-styles documentation page showing built-in boxes, custom boxes, actual chapter rendering, and a live playground.
+- GitHub discussion templates for FAQ, ideas, Q&A, and general discussions.
+- 4.4.0 release documentation covering reading lists, collapsible sections, landing improvements, and backup persistence.
+
+### Changed
+
+- Landing pages now share a consistent Library navigation path, install CTA, and footer structure.
+- `landing/content-styles.html` now reflects actual chapter behavior instead of abstract samples, including custom box discovery from saved library settings.
+- `content.css` special content blocks now prefer `white-space: pre-line` for more natural paragraph flow without losing intentional line breaks.
+- Commit-history tooling and docs were expanded to make version-relevant changes easier to review.
+
+### Fixed
+
+- Full/comprehensive backups now include user-defined custom content box definitions.
+- Drive/download library backups now restore collapsible section preferences and custom content box types alongside the library.
+- Light-theme chapter preview text and collapsible summaries on the landing docs page now maintain readable contrast.
 
 ---
 

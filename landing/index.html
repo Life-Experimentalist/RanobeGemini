@@ -75,7 +75,8 @@
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚 Library</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub ↗</a>
@@ -463,10 +464,11 @@
 
 			<section class="cta section fade-slide">
 				<div class="cta-card">
-					<h2>Ready to read better?</h2>
+					<p class="eyebrow">Ready to Install</p>
+					<h2>Install once, then tune everything from Library</h2>
 					<p>
-						Install the Edge or Firefox build, link Gemini API, and
-						start enhancing chapters in seconds.
+						Install Ranobe Gemini, open Library, then configure reading status, content filters, custom
+						boxes, and backups from one place.
 					</p>
 					<div class="cta-row">
 						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
@@ -474,28 +476,26 @@
 						<a class="btn primary"
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 							target="_blank" rel="noreferrer">Get for Edge</a>
-						<button class="btn ghost" id="cta-library-btn" type="button" style="display: none;">Open
-							Library</button>
-						<a class="btn ghost" href="https://ranobe.vkrishna04.me/#faq">View FAQ</a>
+						<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open Library</button>
 					</div>
 				</div>
 			</section>
 		</main>
 
 		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.3.0</span></div>
+			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.4.0</span></div>
 			<div class="footer-links">
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="./content-styles.html">Content Styles</a>
-				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
-				<a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/release/CHANGELOG.md"
-					target="_blank" rel="noreferrer">Changelog</a>
 			</div>
-			<p class="footnote">Built by <a href="https://github.com/Life-Experimentalist" target="_blank"
-					rel="noreferrer">Life-Experimentalist</a></p>
+			<p class="footnote">Built by Life-Experimentalist. Local-first, reader-first, open source.</p>
 		</footer>
 
 		<script src="./nav.js" defer></script>
