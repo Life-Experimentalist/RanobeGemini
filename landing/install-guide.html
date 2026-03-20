@@ -121,6 +121,7 @@
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./install-guide.html" aria-current="page">Install Guide</a>
+				<a href="./architecture.html">Architecture</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
 				<a href="./privacy.html">Privacy</a>
@@ -135,12 +136,13 @@
 					<p class="eyebrow">Install once, read everywhere</p>
 					<h1>Browser Install Guide</h1>
 					<p class="lede">
-						Use the published store listing where available. If the latest build is not published yet, side-load
+						Use the published store listing where available. If the latest build is not published yet,
+						side-load
 						the package from local releases or GitHub releases.
 					</p>
 					<div class="cta-row">
-						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/" target="_blank"
-							rel="noreferrer">Get for Firefox</a>
+						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+							target="_blank" rel="noreferrer">Get for Firefox</a>
 						<a class="btn primarysecondary"
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 							target="_blank" rel="noreferrer">Get for Edge</a>
@@ -177,20 +179,20 @@
 						</tr>
 					</tbody>
 				</table>
-				<div class="notice-card">
-					<strong>Edge listing link:</strong> https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn
-				</div>
 			</section>
 
 			<section id="temporary" class="section">
 				<div class="section-head">
 					<p class="eyebrow">When latest is not published</p>
 					<h2>Temporary / Side-load Install</h2>
-					<p class="lede">Use these steps for Chrome, Brave, Opera, Vivaldi, Ulaa, Arc, and other Chromium browsers.</p>
+					<p class="lede">Use these steps for Chrome, Brave, Opera, Vivaldi, Ulaa, Arc, and other Chromium
+						browsers.</p>
 				</div>
 				<div class="card-grid">
 					<div class="card">
-						<div class="card-header"><h3>1. Get build package</h3></div>
+						<div class="card-header">
+							<h3>1. Get build package</h3>
+						</div>
 						<div class="card-body">
 							<p>Use either local package output or GitHub release zip:</p>
 							<ul>
@@ -200,7 +202,9 @@
 						</div>
 					</div>
 					<div class="card">
-						<div class="card-header"><h3>2. Load unpacked/temporary</h3></div>
+						<div class="card-header">
+							<h3>2. Load unpacked/temporary</h3>
+						</div>
 						<div class="card-body">
 							<ul>
 								<li>Firefox: about:debugging → This Firefox → Load Temporary Add-on</li>
@@ -209,9 +213,12 @@
 						</div>
 					</div>
 					<div class="card">
-						<div class="card-header"><h3>3. Re-load after updates</h3></div>
+						<div class="card-header">
+							<h3>3. Re-load after updates</h3>
+						</div>
 						<div class="card-body">
-							<p>Temporary installs may reset IDs. If ID changes, update Google OAuth redirect URI accordingly.</p>
+							<p>Temporary installs may reset IDs. If ID changes, update Google OAuth redirect URI
+								accordingly.</p>
 						</div>
 					</div>
 				</div>
@@ -225,13 +232,41 @@
 						</tr>
 					</thead>
 					<tbody>
-						<tr><td>Chrome</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Brave</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Opera</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Vivaldi</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Ulaa (Zoho)</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Arc (Chromium)</td><td>Not published</td><td>Yes</td></tr>
-						<tr><td>Other Chromium browsers</td><td>Not published</td><td>Usually yes</td></tr>
+						<tr>
+							<td>Chrome</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Brave</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Opera</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Vivaldi</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Ulaa (Zoho)</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Arc (Chromium)</td>
+							<td>Not published</td>
+							<td>Yes</td>
+						</tr>
+						<tr>
+							<td>Other Chromium browsers</td>
+							<td>Not published</td>
+							<td>Usually yes</td>
+						</tr>
 					</tbody>
 				</table>
 			</section>
@@ -240,10 +275,12 @@
 				<div class="section-head">
 					<p class="eyebrow">Google Drive OAuth</p>
 					<h2>Extension IDs and Redirect URI Generator</h2>
-					<p class="lede">Published installs can use known IDs. Temporary installs must use their own assigned ID.</p>
+					<p class="lede">Published installs can use known IDs. Temporary installs must use their own assigned
+						ID.</p>
 				</div>
 				<div class="notice-card">
-					<strong>Important:</strong> For temporary installs, your browser assigns a unique extension ID. Google OAuth redirect URIs must match that exact ID format.
+					<strong>Important:</strong> For temporary installs, your browser assigns a unique extension ID.
+					Google OAuth redirect URIs must match that exact ID format.
 				</div>
 				<div class="generator">
 					<label>
@@ -263,7 +300,8 @@
 					<div class="code-chip" id="installRedirectOut">Enter extension ID above</div>
 				</div>
 				<div class="notice-card">
-					<strong>Data ownership notice:</strong> Ranobe Gemini does not receive your backup data. Backup files stay in your Google Drive account, under your control.
+					<strong>Data ownership notice:</strong> Ranobe Gemini does not receive your backup data. Backup
+					files stay in your Google Drive account, under your control.
 				</div>
 			</section>
 		</main>
@@ -274,13 +312,16 @@
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
 				<a href="./install-guide.html">Install Guide</a>
+				<a href="./architecture.html">Architecture</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank" rel="noreferrer">GitHub</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub</a>
 			</div>
-			<p class="footnote">Ready to install? Start with the Install Guide. Built by Life-Experimentalist. Local-first, reader-first.</p>
+			<p class="footnote">Ready to install? Start with the Install Guide. Built by Life-Experimentalist.
+				Local-first, reader-first.</p>
 		</footer>
 		<script src="./nav.js" defer></script>
 		<script>

@@ -25,7 +25,8 @@ const BROWSERS = [
 	{
 		name: "Chrome",
 		status: "coming",
-		description: "Not published yet; install temporarily from Chromium package",
+		description:
+			"Not published yet; install temporarily from Chromium package",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/e/e1/Google_Chrome_icon_%28February_2022%29.svg",
 		cta: {
 			label: "Install Guide",
