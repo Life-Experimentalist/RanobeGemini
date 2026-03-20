@@ -20,4 +20,19 @@
 		<changefreq>monthly</changefreq>
 		<priority>0.7</priority>
 	</url>
+	<url>
+		<loc>https://ranobe.vkrishna04.me/install-guide.html</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.8</priority>
+	</url>
+	<url>
+		<loc>https://ranobe.vkrishna04.me/novel-status.html</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.7</priority>
+	</url>
+	<url>
+		<loc>https://ranobe.vkrishna04.me/content-styles.html</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.7</priority>
+	</url>
 </urlset>

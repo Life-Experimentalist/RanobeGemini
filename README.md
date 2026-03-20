@@ -77,6 +77,16 @@
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on..." and select the `manifest.json` file inside the `src` directory.
 
+## Installation (Edge + Other Browsers)
+
+- Edge (published): https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn
+- Firefox (published): https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/
+- Chrome / Brave / Opera / Vivaldi / Ulaa / Arc: temporary/sideload install from the latest Chromium package.
+
+For full browser-specific steps and Google Drive OAuth redirect ID guidance, use:
+
+- Landing install guide: https://ranobe.vkrishna04.me/install-guide.html
+
 ## Build Instructions (For AMO Reviewers)
 
 ### Build Environment

@@ -18,6 +18,16 @@ function setText(id, value) {
 }
 
 function applyConfig() {
+	const savedChromium = localStorage.getItem("rg-landing-chromium-id");
+	const savedFirefox = localStorage.getItem("rg-landing-firefox-id");
+
+	if (savedChromium) {
+		DRIVE_SETUP_CONFIG.chromiumExtensionId = savedChromium;
+	}
+	if (savedFirefox) {
+		DRIVE_SETUP_CONFIG.firefoxExtensionId = savedFirefox;
+	}
+
 	setText("brandName", DRIVE_SETUP_CONFIG.brandName);
 	setText("chromiumExtensionId", DRIVE_SETUP_CONFIG.chromiumExtensionId);
 	setText("firefoxExtensionId", DRIVE_SETUP_CONFIG.firefoxExtensionId);
@@ -32,10 +42,22 @@ function applyConfig() {
 	setText(
 		"firefoxRedirect",
 		buildRedirect(
-			"moz-extension.org",
+			"extensions.allizom.org",
 			DRIVE_SETUP_CONFIG.firefoxExtensionId,
 		),
 	);
 }
 
+function applyRuntimeHints() {
+	// If this page ever runs in extension context, use runtime.id automatically.
+	try {
+		if (typeof chrome !== "undefined" && chrome.runtime?.id) {
+			localStorage.setItem("rg-landing-chromium-id", chrome.runtime.id);
+		}
+	} catch (_) {
+		// ignore
+	}
+}
+
+applyRuntimeHints();
 applyConfig();

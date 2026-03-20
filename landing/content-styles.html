@@ -539,6 +539,83 @@
 				line-height: 1.6;
 			}
 
+			/* ── Library Settings Mock Panel ─────────────────────────────── */
+			.cs-library-panel {
+				margin-top: 24px;
+				border: 1px solid var(--border-color);
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.02);
+				overflow: hidden;
+			}
+
+			.cs-library-panel-head {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 12px 14px;
+				border-bottom: 1px solid var(--border-color);
+				font-size: 13px;
+				color: var(--text-secondary);
+			}
+
+			.cs-library-filter-row {
+				display: grid;
+				grid-template-columns: minmax(120px, 1fr) auto auto;
+				gap: 10px;
+				align-items: center;
+				padding: 12px 14px;
+				border-bottom: 1px solid var(--border-color);
+			}
+
+			.cs-library-filter-row:last-child {
+				border-bottom: none;
+			}
+
+			.cs-pill {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 5px 10px;
+				border-radius: 999px;
+				font-size: 12px;
+				font-weight: 600;
+				border: 1px solid var(--border-color);
+			}
+
+			.cs-pill.fight {
+				background: rgba(200, 60, 60, 0.14);
+				color: #ffadad;
+			}
+
+			.cs-pill.r18 {
+				background: rgba(150, 90, 170, 0.14);
+				color: #e3bbff;
+			}
+
+			.cs-pill.author {
+				background: rgba(220, 175, 70, 0.14);
+				color: #ffd98e;
+			}
+
+			.cs-toggle-chip {
+				padding: 5px 10px;
+				border-radius: 999px;
+				font-size: 11px;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				border: 1px solid var(--border-color);
+			}
+
+			.cs-toggle-chip.on {
+				background: rgba(34, 197, 94, 0.14);
+				color: #90e0ae;
+			}
+
+			.cs-toggle-chip.off {
+				background: rgba(148, 163, 184, 0.14);
+				color: #cad5e2;
+			}
+
 			/* ── Example Code ─────────────────────────────────────────────── */
 			.cs-code-block {
 				background: rgba(0, 0, 0, 0.3);
@@ -994,6 +1071,7 @@
 				<span class="nav-sep" aria-hidden="true"></span>
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./install-guide.html">Install Guide</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html" aria-current="page">Styles</a>
 				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
@@ -1025,6 +1103,35 @@
 						</button>
 					</div>
 				</div>
+
+				<section class="cs-section" id="library-preview">
+					<h2 class="cs-section-title">⚙️ Library Settings Style Preview</h2>
+					<p class="cs-section-desc">
+						This mirrors the actual Library Settings feel: per-type filter toggles plus collapsible content output.
+						Use this as the visual reference before enabling filters in your extension.
+					</p>
+					<div class="cs-library-panel">
+						<div class="cs-library-panel-head">
+							<span>Content Filter Controls</span>
+							<span>Default collapse behavior</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill fight">⚔️ Fight Scene</span>
+							<span class="cs-toggle-chip on">Enabled</span>
+							<span class="cs-toggle-chip on">Collapsed</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill r18">🔞 R18 Content</span>
+							<span class="cs-toggle-chip on">Enabled</span>
+							<span class="cs-toggle-chip on">Collapsed</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill author">📝 Author Note</span>
+							<span class="cs-toggle-chip on">Enabled</span>
+							<span class="cs-toggle-chip off">Expanded</span>
+						</div>
+					</div>
+				</section>
 
 				<!-- ── Section 1: Built-in Content Types ──────────────────────── -->
 				<section class="cs-section" id="builtin">
@@ -1676,9 +1783,9 @@
 						<div class="cta-row">
 							<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
 								target="_blank" rel="noreferrer">Get for Firefox</a>
-							<a class="btn primarysecondary"
-								href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/releases"
+							<a class="btn primarysecondary" href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 								target="_blank" rel="noreferrer">Get for Edge</a>
+							<a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
 							<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open
 								Library</button>
 						</div>
@@ -1692,6 +1799,7 @@
 			<div class="footer-links">
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./install-guide.html">Install Guide</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
@@ -1700,7 +1808,7 @@
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
 			</div>
-			<p class="footnote">Built by Life-Experimentalist. Local-first, reader-first, open source.</p>
+			<p class="footnote">Ready to install? Start with Install Guide. Your backup data stays in your own Google Drive.</p>
 		</footer>
 
 		<script>

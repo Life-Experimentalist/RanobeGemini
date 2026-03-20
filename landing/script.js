@@ -25,33 +25,53 @@ const BROWSERS = [
 	{
 		name: "Chrome",
 		status: "coming",
-		description: "Chromium zip works when sideloaded; store build coming",
+		description: "Not published yet; install temporarily from Chromium package",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/e/e1/Google_Chrome_icon_%28February_2022%29.svg",
 		cta: {
-			label: "Side Load",
-			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+			label: "Install Guide",
+			href: "./install-guide.html#temporary",
 		},
 	},
 	{
 		name: "Brave",
 		status: "coming",
-		description: "Supported via Chromium zip; store listing coming",
+		description: "Not published yet; use temporary Chromium install",
 		icon: "https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png",
 		cta: {
-			label: "Side Load",
-			href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
+			label: "Install Guide",
+			href: "./install-guide.html#temporary",
 		},
 	},
-	// {
-	// 	name: "Opera / Vivaldi",
-	// 	status: "coming",
-	// 	description: "Works with Chromium.zip side-load; store builds planned",
-	// 	icon: "https://upload.wikimedia.org/wikipedia/commons/4/49/Opera_2015_icon.svg",
-	// 	cta: {
-	// 		label: "Side Load",
-	// 		href: "https://github.com/Life-Experimentalist/RanobeGemini/releases/latest/download/dist-chromium.zip",
-	// 	},
-	// },
+	{
+		name: "Opera",
+		status: "coming",
+		description: "Not published yet; use temporary Chromium install",
+		icon: "https://upload.wikimedia.org/wikipedia/commons/4/49/Opera_2015_icon.svg",
+		cta: {
+			label: "Install Guide",
+			href: "./install-guide.html#temporary",
+		},
+	},
+	{
+		name: "Vivaldi",
+		status: "coming",
+		description: "Not published yet; use temporary Chromium install",
+		icon: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Vivaldi_web_browser_logo_stacked.svg",
+		cta: {
+			label: "Install Guide",
+			href: "./install-guide.html#temporary",
+		},
+	},
+	{
+		name: "Ulaa",
+		status: "coming",
+		description: "Zoho Ulaa uses Chromium extension flow",
+		icon: "https://www.zoho.com/sites/zweb/images/ulaa/ulaa-logo-dark.svg",
+		cta: {
+			label: "Install Guide",
+			href: "./install-guide.html#temporary",
+		},
+	},
 ];
 
 const SITES = [

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Install Guide | Ranobe Gemini</title>
+		<meta name="description"
+			content="Install Ranobe Gemini on Firefox, Edge, Chrome, Brave, Opera, Vivaldi, Ulaa, and other Chromium browsers. Includes published-store links and temporary side-load instructions." />
+		<link rel="canonical" href="https://ranobe.vkrishna04.me/install-guide.html" />
+		<meta name="theme-color" content="#0b1628" />
+		<link rel="icon"
+			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			sizes="32x32" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+			rel="stylesheet" />
+		<link rel="stylesheet" href="./styles.css" />
+		<style>
+			.install-table {
+				width: 100%;
+				border-collapse: collapse;
+				margin: 18px 0;
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				overflow: hidden;
+			}
+
+			.install-table th,
+			.install-table td {
+				padding: 12px;
+				border-bottom: 1px solid var(--border);
+				text-align: left;
+				font-size: 14px;
+				vertical-align: top;
+			}
+
+			.install-table th {
+				color: var(--accent-strong);
+				font-size: 12px;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+			}
+
+			.install-table tr:last-child td {
+				border-bottom: none;
+			}
+
+			.code-chip {
+				display: inline-block;
+				padding: 4px 8px;
+				border-radius: 8px;
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid var(--border);
+				font-family: "Courier New", monospace;
+				font-size: 12px;
+				word-break: break-all;
+			}
+
+			.notice-card {
+				padding: 14px;
+				border-radius: 12px;
+				border: 1px solid var(--border);
+				background: var(--panel);
+				margin-top: 12px;
+			}
+
+			.notice-card strong {
+				color: var(--accent-strong);
+			}
+
+			.generator {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+				gap: 12px;
+				margin-top: 12px;
+			}
+
+			.generator label {
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				font-size: 13px;
+				color: var(--muted);
+			}
+
+			.generator input,
+			.generator select {
+				padding: 11px 12px;
+				border-radius: 10px;
+				border: 1px solid var(--border);
+				background: rgba(0, 0, 0, 0.28);
+				color: var(--text);
+				font: inherit;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="bg-glow"></div>
+		<div class="bg-dots"></div>
+		<header class="topbar">
+			<div class="brand">
+				<img class="logo-img"
+					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					alt="Ranobe Gemini" />
+				<div class="meta">
+					<strong>Ranobe Gemini</strong>
+					<span>Install guide</span>
+				</div>
+			</div>
+			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+				aria-label="Toggle navigation">☰</button>
+			<nav class="nav" id="main-nav">
+				<a href="#published">Published</a>
+				<a href="#temporary">Temporary Install</a>
+				<a href="#oauth-ids">OAuth IDs</a>
+				<span class="nav-sep" aria-hidden="true"></span>
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./install-guide.html" aria-current="page">Install Guide</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Styles</a>
+				<a href="./privacy.html">Privacy</a>
+				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+					rel="noreferrer">GitHub ↗</a>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero section">
+				<div class="hero-copy">
+					<p class="eyebrow">Install once, read everywhere</p>
+					<h1>Browser Install Guide</h1>
+					<p class="lede">
+						Use the published store listing where available. If the latest build is not published yet, side-load
+						the package from local releases or GitHub releases.
+					</p>
+					<div class="cta-row">
+						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/" target="_blank"
+							rel="noreferrer">Get for Firefox</a>
+						<a class="btn primarysecondary"
+							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
+							target="_blank" rel="noreferrer">Get for Edge</a>
+						<a class="btn ghost" href="#temporary">Temporary Install Steps</a>
+					</div>
+				</div>
+			</section>
+
+			<section id="published" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Store installs</p>
+					<h2>Published Browsers</h2>
+				</div>
+				<table class="install-table">
+					<thead>
+						<tr>
+							<th>Browser</th>
+							<th>Status</th>
+							<th>Install</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Firefox</td>
+							<td>Published</td>
+							<td><a href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/" target="_blank"
+									rel="noreferrer">Install from AMO</a></td>
+						</tr>
+						<tr>
+							<td>Edge</td>
+							<td>Published</td>
+							<td><a href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
+									target="_blank" rel="noreferrer">Install from Edge Add-ons</a></td>
+						</tr>
+					</tbody>
+				</table>
+				<div class="notice-card">
+					<strong>Edge listing link:</strong> https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn
+				</div>
+			</section>
+
+			<section id="temporary" class="section">
+				<div class="section-head">
+					<p class="eyebrow">When latest is not published</p>
+					<h2>Temporary / Side-load Install</h2>
+					<p class="lede">Use these steps for Chrome, Brave, Opera, Vivaldi, Ulaa, Arc, and other Chromium browsers.</p>
+				</div>
+				<div class="card-grid">
+					<div class="card">
+						<div class="card-header"><h3>1. Get build package</h3></div>
+						<div class="card-body">
+							<p>Use either local package output or GitHub release zip:</p>
+							<ul>
+								<li>Local: <span class="code-chip">releases/</span> (firefox/chromium packages)</li>
+								<li>GitHub: Releases page artifacts</li>
+							</ul>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header"><h3>2. Load unpacked/temporary</h3></div>
+						<div class="card-body">
+							<ul>
+								<li>Firefox: about:debugging → This Firefox → Load Temporary Add-on</li>
+								<li>Chromium browsers: extensions page → Developer mode → Load unpacked</li>
+							</ul>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-header"><h3>3. Re-load after updates</h3></div>
+						<div class="card-body">
+							<p>Temporary installs may reset IDs. If ID changes, update Google OAuth redirect URI accordingly.</p>
+						</div>
+					</div>
+				</div>
+
+				<table class="install-table">
+					<thead>
+						<tr>
+							<th>Browser</th>
+							<th>Store status</th>
+							<th>Temporary install support</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr><td>Chrome</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Brave</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Opera</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Vivaldi</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Ulaa (Zoho)</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Arc (Chromium)</td><td>Not published</td><td>Yes</td></tr>
+						<tr><td>Other Chromium browsers</td><td>Not published</td><td>Usually yes</td></tr>
+					</tbody>
+				</table>
+			</section>
+
+			<section id="oauth-ids" class="section">
+				<div class="section-head">
+					<p class="eyebrow">Google Drive OAuth</p>
+					<h2>Extension IDs and Redirect URI Generator</h2>
+					<p class="lede">Published installs can use known IDs. Temporary installs must use their own assigned ID.</p>
+				</div>
+				<div class="notice-card">
+					<strong>Important:</strong> For temporary installs, your browser assigns a unique extension ID. Google OAuth redirect URIs must match that exact ID format.
+				</div>
+				<div class="generator">
+					<label>
+						Browser family
+						<select id="installBrowserFamily">
+							<option value="chromium">Chromium (Edge/Chrome/Brave/Opera/Vivaldi/Ulaa/Arc)</option>
+							<option value="firefox">Firefox</option>
+						</select>
+					</label>
+					<label>
+						Extension ID
+						<input id="installExtensionIdInput" placeholder="Paste your extension ID" />
+					</label>
+				</div>
+				<div class="notice-card">
+					<strong>Redirect URI:</strong>
+					<div class="code-chip" id="installRedirectOut">Enter extension ID above</div>
+				</div>
+				<div class="notice-card">
+					<strong>Data ownership notice:</strong> Ranobe Gemini does not receive your backup data. Backup files stay in your Google Drive account, under your control.
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer">
+			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.4.0</span></div>
+			<div class="footer-links">
+				<a href="./index.html">Home</a>
+				<a href="./drive-setup.html">Drive Setup</a>
+				<a href="./install-guide.html">Install Guide</a>
+				<a href="./novel-status.html">Novel Status</a>
+				<a href="./content-styles.html">Content Styles</a>
+				<a href="./privacy.html">Privacy</a>
+				<a href="./terms.html">Terms</a>
+				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank" rel="noreferrer">GitHub</a>
+			</div>
+			<p class="footnote">Ready to install? Start with the Install Guide. Built by Life-Experimentalist. Local-first, reader-first.</p>
+		</footer>
+		<script src="./nav.js" defer></script>
+		<script>
+			(function () {
+				const browserEl = document.getElementById("installBrowserFamily");
+				const inputEl = document.getElementById("installExtensionIdInput");
+				const outEl = document.getElementById("installRedirectOut");
+
+				function formatRedirect(browserFamily, extensionId) {
+					const clean = (extensionId || "").trim();
+					if (!clean) return "Enter extension ID above";
+					if (browserFamily === "firefox") {
+						return `https://${clean}.extensions.allizom.org/drive`;
+					}
+					return `https://${clean}.chromiumapp.org/drive`;
+				}
+
+				function sync() {
+					outEl.textContent = formatRedirect(browserEl.value, inputEl.value);
+				}
+
+				browserEl.addEventListener("change", sync);
+				inputEl.addEventListener("input", sync);
+				sync();
+			})();
+		</script>
+	</body>
+
+</html>

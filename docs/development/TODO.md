@@ -92,6 +92,7 @@ graph TB
 - [x] **Reading Lists as Badge Layer** — `rereading` moved out of primary statuses and into list badges
 - [x] **Predefined Lists in RG Controls** — `🔁 Rereading` and `⭐ Favourites` quick toggles on chapter controls
 - [x] **Legacy Status Migration** — old `re-reading` status entries normalize to `reading` + `rereading` list
+- [x] **Install Guide + Landing Polish** — added cross-browser install guide page, standardized footer/nav install links, and updated published Edge install path
 
 ### Version 4.3.0
 
