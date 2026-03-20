@@ -1477,7 +1477,7 @@ async function initializePopup() {
 		if (backupFolderInput) backupFolderInput.value = backupFolder;
 		if (autoBackupCheckbox)
 			autoBackupCheckbox.checked = data.autoBackupEnabled || false;
-		const backupMode = data.backupMode || "scheduled";
+		const backupMode = data.backupMode || "both";
 		backupHistory = data.backupHistory || [];
 		renderBackupHistory();
 
@@ -3166,8 +3166,7 @@ async function initializePopup() {
 		const backupFolder = folderValue || "RanobeGeminiBackups";
 		const autoBackupEnabled = autoBackupCheckbox?.checked || false;
 		const storedPrefs = await browser.storage.local.get("backupMode");
-		const backupMode =
-			extra.backupMode || storedPrefs.backupMode || "scheduled";
+		const backupMode = extra.backupMode || storedPrefs.backupMode || "both";
 
 		backupHistory = (backupHistory || []).slice(0, BACKUP_RETENTION);
 
@@ -4745,7 +4744,7 @@ async function initializePopup() {
 					"backupMode",
 					"continuousBackupCheckIntervalMinutes",
 				]);
-				const mode = prefs.backupMode || "scheduled";
+				const mode = prefs.backupMode || "both";
 				const modeRadio = document.querySelector(
 					`input[name="driveBackupMode"][value="${mode}"]`,
 				);

@@ -7,6 +7,10 @@ releases/source/*
 !releases/source/*.zip
 .env
 sample/
+client_secret*.json
+*apps.googleusercontent.com.json
+oauth-client*.json
+google-oauth-client*.json
 src-backup/
 src/icons/static/
 ranobe-gemini-library-2025-12-05.json

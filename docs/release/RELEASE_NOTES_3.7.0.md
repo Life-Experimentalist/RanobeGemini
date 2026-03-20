@@ -288,7 +288,7 @@ Previously, the extension only worked with "Chrome Extension" type OAuth credent
 2. **Web Application Type Credentials**:
    - Open popup → Advanced tab
    - Expand "Advanced setup (optional)"
-   - Enter your Client Secret (starts with `GOCSPX-`)
+	- Enter your OAuth Client Secret
    - Click "Connect Google Drive"
 
 #### Settings & Data

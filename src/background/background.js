@@ -415,7 +415,7 @@ if (typeof browser === "undefined") {
 			return { success: false, skipped: true, reason: "disabled" };
 		}
 
-		const mode = prefs.backupMode || "scheduled";
+		const mode = prefs.backupMode || "both";
 		if (mode !== "scheduled" && mode !== "both") {
 			return { success: false, skipped: true, reason: "mode" };
 		}
@@ -495,14 +495,23 @@ if (typeof browser === "undefined") {
 			return { success: false, skipped: true, reason: "disabled" };
 		}
 
-		const backupMode = prefs.backupMode || "scheduled";
+		const backupMode = prefs.backupMode || "both";
 		const mergeMode = prefs.driveAutoRestoreMergeMode || "merge";
 		const shouldMerge = mergeMode !== "replace";
 
-		const latestFile =
-			backupMode === "continuous" || backupMode === "both"
-				? await getContinuousDriveBackup()
-				: await getLatestDriveBackup();
+		let latestFile = null;
+		if (backupMode === "continuous") {
+			latestFile = await getContinuousDriveBackup();
+		} else if (backupMode === "both") {
+			// Prefer the rolling file in both mode, but fall back to the latest
+			// versioned backup when continuous does not exist yet.
+			latestFile = await getContinuousDriveBackup();
+			if (!latestFile?.id) {
+				latestFile = await getLatestDriveBackup();
+			}
+		} else {
+			latestFile = await getLatestDriveBackup();
+		}
 
 		if (!latestFile?.id) {
 			return { success: false, skipped: true, reason: "no-backup" };
@@ -572,7 +581,7 @@ if (typeof browser === "undefined") {
 				await browser.storage.local.get("driveAuthTokens");
 			const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
 
-			const mode = prefs.backupMode || "scheduled";
+			const mode = prefs.backupMode || "both";
 			const isContinuousMode = mode === "continuous" || mode === "both";
 
 			if (!isContinuousMode) return;
@@ -601,7 +610,7 @@ if (typeof browser === "undefined") {
 		const driveConnected = !!driveTokens.driveAuthTokens?.access_token;
 		const enabled = prefs.autoBackupEnabled || driveConnected;
 		const intervalDays = prefs.backupIntervalDays || 1;
-		const mode = prefs.backupMode || "scheduled";
+		const mode = prefs.backupMode || "both";
 
 		if (!browser.alarms) return false;
 
@@ -1178,7 +1187,7 @@ if (typeof browser === "undefined") {
 					debugLog("Auth tokens verified for backup");
 
 					const prefs = await browser.storage.local.get("backupMode");
-					const mode = prefs.backupMode || "scheduled";
+					const mode = prefs.backupMode || "both";
 
 					debugLog("Uploading primary backup...");
 					const primary = await uploadLibraryBackupToDriveWithHistory(
@@ -1295,8 +1304,16 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "syncDriveNow") {
-			syncLibraryFromDrive({ force: true, reason: "manual" })
-				.then((result) => sendResponse({ success: true, ...result }))
+			syncLibraryFromDrive({
+				force: message.force !== false,
+				reason: message.reason || "manual",
+			})
+				.then((result) =>
+					sendResponse({
+						success: result?.success === true,
+						...result,
+					}),
+				)
 				.catch((error) =>
 					sendResponse({ success: false, error: error.message }),
 				);

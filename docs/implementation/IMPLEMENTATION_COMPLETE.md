@@ -172,7 +172,7 @@ File: `src/utils/constants.js`
 ```javascript
 // Default Google Drive OAuth Client ID
 export const DEFAULT_DRIVE_CLIENT_ID =
-  "1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com";
+  "YOUR_CLIENT_ID.apps.googleusercontent.com";
 
 // Google OAuth scopes required for backup
 export const GOOGLE_OAUTH_SCOPES = [
@@ -752,7 +752,7 @@ Each should:
 ```javascript
 // src/utils/constants.js - Ensure this is set:
 export const DEFAULT_DRIVE_CLIENT_ID =
-  "1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com";
+  "YOUR_CLIENT_ID.apps.googleusercontent.com";
 ```
 
 Or set custom ID in popup Settings.

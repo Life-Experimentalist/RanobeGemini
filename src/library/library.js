@@ -6415,7 +6415,7 @@ async function updateDriveUI() {
 				tokens.driveClientSecret || "";
 		}
 
-		const mode = tokens.backupMode || "scheduled";
+		const mode = tokens.backupMode || "both";
 		const continuousContainer = document.getElementById(
 			"continuousBackupCheckContainer",
 		);

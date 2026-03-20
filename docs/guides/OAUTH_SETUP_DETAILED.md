@@ -442,7 +442,7 @@ The extension includes a default Google OAuth Client ID:
 ```javascript
 // src/utils/constants.js
 export const DEFAULT_DRIVE_CLIENT_ID =
-  "1009134964226-9qblnrbhvo8brs7u18p1d268pvt0111a.apps.googleusercontent.com";
+  "YOUR_CLIENT_ID.apps.googleusercontent.com";
 ```
 
 This works out of the box for all browsers. If you want to use your own:

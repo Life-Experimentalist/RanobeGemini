@@ -899,7 +899,7 @@ function renderSiteAutoAddSettings() {
 		const faviconUrl = shelf.icon
 			? (() => {
 					try {
-						return `https://www.google.com/s2/favicons?domain=${new URL(shelf.icon).hostname}&sz=32`;
+						return `https://icons.duckduckgo.com/ip3/${new URL(shelf.icon).hostname}.ico`;
 					} catch {
 						return null;
 					}
@@ -1272,15 +1272,22 @@ async function updateDriveUI() {
 			// Some browser builds also accept the bare extension URL as a redirect
 			const secondary = browser.identity.getRedirectURL("");
 			const uris = [...new Set([primary, secondary].filter(Boolean))];
-			uriListEl.innerHTML = uris
-				.map(
-					(uri) =>
-						`<div style="display:flex;align-items:center;gap:6px;">
+			const isFirefox = navigator.userAgent.includes("Firefox");
+			const firefoxNote = isFirefox
+				? `<div style="font-size:11px;color:var(--text-secondary);margin-top:8px;padding:6px;background:var(--bg-tertiary);border-radius:4px;">
+					⚠️ <strong>Firefox Note:</strong> Google Cloud may show "Alizom" instead of the app name. This is a Firefox extension system limitation. <strong>Make sure the redirect URI above is registered in Google Cloud Console OAuth</strong> for logins to work.
+				</div>`
+				: "";
+			uriListEl.innerHTML =
+				uris
+					.map(
+						(uri) =>
+							`<div style="display:flex;align-items:center;gap:6px;">
 							<code style="flex:1;font-size:10px;background:var(--bg-secondary);padding:3px 6px;border-radius:4px;word-break:break-all;">${uri}</code>
 							<button class="ls-btn ls-btn-sm ls-btn-secondary copy-redirect-uri-btn" data-uri="${uri}" title="Copy" style="min-width:32px;flex-shrink:0;">📋</button>
 						</div>`,
-				)
-				.join("");
+					)
+					.join("") + firefoxNote;
 			uriListEl
 				.querySelectorAll(".copy-redirect-uri-btn")
 				.forEach((btn) => {
@@ -1320,7 +1327,7 @@ async function updateDriveUI() {
 		const clientSecIn = $("driveClientSecret");
 		if (clientSecIn) clientSecIn.value = tokens.driveClientSecret || "";
 
-		const mode = tokens.backupMode || "scheduled";
+		const mode = tokens.backupMode || "both";
 		const contCont = $("continuousBackupCheckContainer");
 		if (contCont)
 			contCont.style.display =
@@ -1351,12 +1358,37 @@ async function updateDriveUI() {
 			driveConn.style.display = "none";
 			const authErrMsg = tokens.driveAuthError?.message;
 			if (authErrMsg) {
-				driveStatus.textContent = "🔴 Auth failed";
-				driveStatus.style.color = "#f59e0b";
+				const isRevoked = authErrMsg.includes("revoked");
+				driveStatus.textContent = isRevoked
+					? "🔴 Access Revoked"
+					: "🔴 Auth failed";
+				driveStatus.style.color = "#ef4444";
 				const authErr = $("driveAuthError");
 				if (authErr) {
-					authErr.textContent = authErrMsg;
-					authErr.style.display = "block";
+					if (isRevoked) {
+						// Show revocation banner with reconnect button
+						authErr.innerHTML = `
+							<div style="background:#fca5a5;border:2px solid #dc2626;border-radius:8px;padding:12px;margin-bottom:12px;">
+								<div style="font-weight:bold;color:#7f1d1d;margin-bottom:8px;">⛔ Google Drive access was revoked</div>
+								<div style="color:#991b1b;font-size:13px;margin-bottom:10px;">Your Google Drive access has been revoked. To reconnect, please click the button below.</div>
+								<button class="ls-btn ls-btn-primary" id="reconnectDriveBtn" style="width:100%;">
+									🔐 Reconnect Google Drive
+								</button>
+							</div>
+						`;
+						authErr.style.display = "block";
+						// Wire up the reconnect button
+						const reconnectBtn = $("reconnectDriveBtn");
+						if (reconnectBtn) {
+							reconnectBtn.addEventListener(
+								"click",
+								handleConnectDrive,
+							);
+						}
+					} else {
+						authErr.textContent = authErrMsg;
+						authErr.style.display = "block";
+					}
 				}
 			} else {
 				driveStatus.textContent = "⚫ Disconnected";
@@ -1501,12 +1533,38 @@ async function handleConnectDrive() {
 			action: "ensureDriveAuth",
 		});
 		if (response?.success) {
+			const current = await browser.storage.local.get(["backupMode"]);
 			await browser.storage.local.set({
 				driveAutoRestoreEnabled: true,
 				driveAutoRestoreMergeMode: "merge",
+				backupMode: current.backupMode || "both",
 			});
 			showToast("✅ Google Drive connected!", "success");
 			await updateDriveUI();
+
+			const syncResponse = await browser.runtime.sendMessage({
+				action: "syncDriveNow",
+				reason: "connect",
+				force: true,
+			});
+
+			if (syncResponse?.success) {
+				showToast("✅ Synced existing Google Drive backup", "success");
+			} else if (syncResponse?.skipped) {
+				if (syncResponse.reason === "no-backup") {
+					showToast(
+						"ℹ️ Connected. No existing Drive backup found yet.",
+						"info",
+					);
+					await browser.runtime.sendMessage({
+						action: "uploadLibraryBackupToDrive",
+						reason: "first-connect",
+						variant: "versioned",
+					});
+				} else {
+					showToast("ℹ️ Drive connected. Sync skipped.", "info");
+				}
+			}
 		} else {
 			throw new Error(response?.error || "Authentication failed");
 		}
@@ -2486,6 +2544,8 @@ function setupEventListeners() {
 				});
 				if (response?.success) {
 					showToast("✅ Backed up to Google Drive!", "success");
+					// Auto-refresh the backup list after successful backup
+					setTimeout(() => loadDriveBackupsList(), 500);
 				} else {
 					throw new Error(response?.error || "Backup failed");
 				}
@@ -2507,9 +2567,19 @@ function setupEventListeners() {
 				const response = await browser.runtime.sendMessage({
 					action: "syncDriveNow",
 					reason: "manual",
+					force: true,
 				});
 				if (response?.success) {
 					showToast("✅ Synced from Google Drive!", "success");
+				} else if (response?.skipped) {
+					if (response.reason === "no-backup") {
+						showToast("ℹ️ No backup found in Drive yet.", "info");
+					} else {
+						showToast(
+							`ℹ️ Sync skipped: ${response.reason}`,
+							"info",
+						);
+					}
 				} else {
 					throw new Error(response?.error || "Sync failed");
 				}
@@ -2530,7 +2600,7 @@ function setupEventListeners() {
 				const mode =
 					document.querySelector(
 						'input[name="driveBackupMode"]:checked',
-					)?.value || "scheduled";
+					)?.value || "both";
 				await browser.storage.local.set({ backupMode: mode });
 				const contCont = $("continuousBackupCheckContainer");
 				if (contCont)
