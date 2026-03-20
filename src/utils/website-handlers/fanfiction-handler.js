@@ -1796,6 +1796,14 @@ When enhancing, improve readability while fully respecting the author's creative
 					.toLowerCase(),
 			),
 		);
+		(metadata.genres || []).forEach((value) => {
+			const cleaned = String(value || "")
+				.trim()
+				.toLowerCase();
+			if (cleaned) {
+				blockedCharacterValues.add(cleaned);
+			}
+		});
 		(metadata.metadata?.fandomHierarchy || []).forEach((entry) => {
 			if (entry?.name) {
 				blockedCharacterValues.add(

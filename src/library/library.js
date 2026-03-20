@@ -5328,6 +5328,30 @@ function populateNovelMetadata(novel) {
 	const metadata = novel.metadata || {};
 	let hasAnyMetadata = false;
 
+	const cleanModalName = (value) =>
+		String(value || "")
+			.replace(/[[\]]/g, "")
+			.replace(/\s+/g, " ")
+			.trim();
+
+	const getRelationshipMembers = (relationships) => {
+		if (!Array.isArray(relationships)) return [];
+		const members = [];
+		relationships.forEach((group) => {
+			if (Array.isArray(group)) {
+				group.forEach((entry) => members.push(cleanModalName(entry)));
+				return;
+			}
+			if (typeof group === "string") {
+				group
+					.split(",")
+					.map((entry) => cleanModalName(entry))
+					.forEach((entry) => members.push(entry));
+			}
+		});
+		return members.filter(Boolean);
+	};
+
 	// Helper function to render tag list
 	const renderTagList = (container, tags) => {
 		if (!container || !tags || tags.length === 0) return false;
@@ -5420,10 +5444,18 @@ function populateNovelMetadata(novel) {
 	}
 
 	// Characters section
-	if (metadata.characters && metadata.characters.length > 0) {
+	const modalCharacters = [
+		...(Array.isArray(metadata.characters) ? metadata.characters : []),
+		...getRelationshipMembers(metadata.relationships),
+	]
+		.map((entry) => cleanModalName(entry))
+		.filter(Boolean)
+		.filter((entry, index, all) => all.indexOf(entry) === index);
+
+	if (modalCharacters.length > 0) {
 		hasAnyMetadata = true;
 		elements.modalCharactersSection.style.display = "block";
-		renderTagList(elements.modalCharacters, metadata.characters);
+		renderTagList(elements.modalCharacters, modalCharacters);
 	} else {
 		elements.modalCharactersSection.style.display = "none";
 	}

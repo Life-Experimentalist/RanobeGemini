@@ -5,17 +5,25 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Highlights](#highlights)
-- [✨ What's New](#-whats-new)
-  - [🏷️ Reading Lists](#️-reading-lists)
-  - [🧩 Content Styles & Collapsible Documentation](#-content-styles--collapsible-documentation)
-  - [🗣️ Community & Contributor Workflow Updates](#️-community--contributor-workflow-updates)
-- [🔄 Changed](#-changed)
-- [🛡️ Backup & Restore Improvements](#️-backup--restore-improvements)
-- [🐛 Fixes](#-fixes)
-- [⬆️ Migration Notes](#️-migration-notes)
-- [📥 Getting This Update](#-getting-this-update)
+- [Ranobe Gemini v4.4.0 Release Notes](#ranobe-gemini-v440-release-notes)
+	- [Table of Contents](#table-of-contents)
+	- [Overview](#overview)
+	- [Highlights](#highlights)
+	- [✨ What's New](#-whats-new)
+		- [🏷️ Reading Lists](#️-reading-lists)
+		- [🧩 Content Styles \& Collapsible Documentation](#-content-styles--collapsible-documentation)
+		- [🗣️ Community \& Contributor Workflow Updates](#️-community--contributor-workflow-updates)
+	- [🔄 Changed](#-changed)
+	- [🛡️ Backup \& Restore Improvements](#️-backup--restore-improvements)
+	- [🐛 Fixes](#-fixes)
+	- [⬆️ Migration Notes](#️-migration-notes)
+	- [📥 Getting This Update](#-getting-this-update)
+- [Ranobe Gemini v4.4.0 Release Notes - Consise version](#ranobe-gemini-v440-release-notes---consise-version)
+	- [What shipped](#what-shipped)
+	- [Fixes](#fixes)
+	- [Backup + restore notes](#backup--restore-notes)
+	- [Upgrade notes](#upgrade-notes)
+	- [Get update](#get-update)
 
 ---
 
@@ -108,3 +116,42 @@ This means moving between browsers or restoring from backup no longer drops the 
 - **Firefox (AMO)**: Update automatically or visit [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/).
 - **Edge/Chromium**: Download the latest package from the [Releases page](https://github.com/Life-Experimentalist/RanobeGemini/releases) and sideload it.
 - **Build from source**: `npm run package`
+
+
+---
+
+# Ranobe Gemini v4.4.0 Release Notes - Consise version
+
+**Release Date**: March 17, 2026
+**Type**: Feature + Stability Update
+
+## What shipped
+
+- Reading Lists are now first-class badges (`rereading`, `favourites`, and custom lists) and are separate from primary reading status.
+- Content-style docs were refreshed with real chapter-like examples and clearer collapsible-content behavior.
+- Backup coverage now persists content filter preferences and custom content box types more reliably.
+- Landing/install/docs pages were aligned for consistent navigation and install guidance.
+
+## Fixes
+
+- Drive backup history now reloads each time the backup panel is expanded.
+- Architecture page now has a fallback renderer to prevent blank output if Mermaid runtime loading fails.
+- Backup schema endpoint is available at `/schemas/ranobe-backup.schema.json` via hosted proxy.
+- FanFiction metadata cleanup improved for character/relationship normalization and modal display consistency.
+
+## Backup + restore notes
+
+- New backups preserve:
+  - `contentFilterSettings`
+  - `rg_custom_box_types`
+- Older backups may miss newer fields and restore with defaults.
+
+## Upgrade notes
+
+- No manual migration required.
+- Existing libraries continue to work.
+
+## Get update
+
+- Firefox (AMO): https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/
+- Source/Releases: https://github.com/Life-Experimentalist/RanobeGemini/releases

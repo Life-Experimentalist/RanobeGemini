@@ -798,6 +798,19 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const relationships = Array.isArray(metadata.relationships)
 			? metadata.relationships
 			: [];
+		const cleanCharacterName = (value) =>
+			String(value || "")
+				.replace(/[\[\]]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+		const relationshipMembers = relationships
+			.flatMap((group) => (Array.isArray(group) ? group : []))
+			.map((entry) => cleanCharacterName(entry))
+			.filter(Boolean);
+		const mergedCharacters = [...characters, ...relationshipMembers]
+			.map((entry) => cleanCharacterName(entry))
+			.filter(Boolean)
+			.filter((entry, index, all) => all.indexOf(entry) === index);
 		const contentTypes = getArray("contentTypes"); // or from hierarchy
 
 		// Fallback for tags if not found in standard keys
@@ -917,17 +930,13 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 
 					<!-- Characters Column -->
 					${(() => {
-						const groupMemberSet = new Set(relationships.flat());
-						const soloChars = characters.filter(
-							(c) => !groupMemberSet.has(c),
-						);
 						const charCol =
-							soloChars.length > 0
+							mergedCharacters.length > 0
 								? `
 						<div class="fanfic-modal-column">
 							<h4 class="modal-section-title">Characters</h4>
 							<div class="tags-list">
-								${renderTagList(soloChars, "tag-character")}
+								${renderTagList(mergedCharacters, "tag-character")}
 							</div>
 						</div>`
 								: "";
@@ -942,13 +951,13 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 										const cleanedGroup = Array.isArray(
 											group,
 										)
-											? group.map((c) =>
-													String(c || "")
-														.replace(/[[]\]]/g, "")
-														.trim(),
-												)
+											? group
+													.map((c) =>
+														cleanCharacterName(c),
+													)
+													.filter(Boolean)
 											: [];
-										return `<span class="tag tag-relationship" title="Relationship Group">[${cleanedGroup.map((c) => this.escapeHtml(c)).join(", ")}]</span>`;
+										return `<span class="tag tag-relationship" title="Relationship Group">${cleanedGroup.map((c) => this.escapeHtml(c)).join(", ")}</span>`;
 									})
 									.join("")}
 							</div>

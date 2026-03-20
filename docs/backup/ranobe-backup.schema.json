@@ -287,6 +287,38 @@
 		}
 	},
 	"$defs": {
+		"characterName": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[^\\[\\]]+$",
+			"description": "Character display name without square bracket markers"
+		},
+		"relationshipGroup": {
+			"type": "array",
+			"minItems": 2,
+			"maxItems": 4,
+			"items": {
+				"$ref": "#/$defs/characterName"
+			}
+		},
+		"novelMetadata": {
+			"type": "object",
+			"additionalProperties": true,
+			"properties": {
+				"characters": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/characterName"
+					}
+				},
+				"relationships": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/relationshipGroup"
+					}
+				}
+			}
+		},
 		"library": {
 			"type": "object",
 			"additionalProperties": false,
@@ -360,6 +392,18 @@
 						"type": "string"
 					}
 				},
+				"characters": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/characterName"
+					}
+				},
+				"relationships": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/relationshipGroup"
+					}
+				},
 				"tags": {
 					"type": "array",
 					"items": {
@@ -382,8 +426,7 @@
 					"type": "boolean"
 				},
 				"metadata": {
-					"type": "object",
-					"additionalProperties": true
+					"$ref": "#/$defs/novelMetadata"
 				},
 				"editedFields": {
 					"type": "object",

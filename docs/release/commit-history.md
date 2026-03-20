@@ -1,7 +1,83 @@
 Mode: all
 Format: text
-Generated: 2026-03-17T15:16:57.869Z
-Total commits: 73
+Generated: 2026-03-20T08:36:45.241Z
+Total commits: 77
+
+[5645535] 2026-03-20 landing: add architecture charts page and wire modular-flow navigation
+   landing: add architecture charts page and wire modular-flow navigation
+   Files:
+   - landing/architecture.html
+   - landing/content-styles.html
+   - landing/drive-setup.html
+   - landing/index.html
+   - landing/install-guide.html
+   - landing/novel-status.html
+   - ... (4 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
+
+[25601ce] 2026-03-20 landing: add cross-browser install guide and standardize install UX
+   landing: add cross-browser install guide and standardize install UX
+   Files:
+   - README.md
+   - docs/development/TODO.md
+   - landing/content-styles.html
+   - landing/drive-setup.html
+   - landing/drive-setup.js
+   - landing/index.html
+   - ... (6 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
+
+[2fa177e] 2026-03-20 security: remediate OAuth credential exposure and harden Drive UX
+   security: remediate OAuth credential exposure and harden Drive UX
+   Files:
+   - .gitignore
+   - docs/guides/FIREFOX_GOOGLE_DRIVE_OAUTH.md
+   - docs/guides/OAUTH_SETUP_DETAILED.md
+   - docs/implementation/DETAILED_CODE_CHANGES.md
+   - docs/implementation/IMPLEMENTATION_COMPLETE.md
+   - docs/release/GOOGLE_DRIVE_FIREFOX_FIXES.md
+   - ... (5 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
+
+[713c6c9] 2026-03-17 feat: remove commit-history-cli and commit-history-uv packages
+   feat: remove commit-history-cli and commit-history-uv packages
+   - Deleted the `commit-history-cli` package, including its `package.json` and test files.
+   - Removed the `commit-history-uv` package, including its README, `.gitignore`, `pyproject.toml`, source files, and tests.
+   - Cleaned up associated files and directories to streamline the repository.
+   Signed-off-by: Krishna GSVV <75069043+VKrishna04@users.noreply.github.com>
+   Files:
+   - dev/commit-history-auto.ps1
+   - dev/commit-history.js
+   - docs/development/COMMIT_HISTORY_TOOLING.md
+   - docs/release/commit-history.md
+   - packages/commit-history-cli/.gitignore
+   - packages/commit-history-cli/README.md
+   - ... (12 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
 
 [a8b7fd6] 2026-03-17 feat(v4.4.0): release 4.4.0 with auto commit-history publish
    feat(v4.4.0): release 4.4.0 with auto commit-history publish

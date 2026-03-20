@@ -494,6 +494,89 @@ When enhancing, improve readability while fully respecting the author's creative
 			}
 
 			// Surface frequently-used fields to top level
+			const blockedCharacterValues = new Set(
+				(metadata.metadata?.fandoms || []).map((value) =>
+					String(value || "")
+						.trim()
+						.toLowerCase(),
+				),
+			);
+			(metadata.genres || []).forEach((value) => {
+				const cleaned = String(value || "")
+					.trim()
+					.toLowerCase();
+				if (cleaned) {
+					blockedCharacterValues.add(cleaned);
+				}
+			});
+			(metadata.metadata?.fandomHierarchy || []).forEach((entry) => {
+				if (entry?.name) {
+					blockedCharacterValues.add(
+						String(entry.name).trim().toLowerCase(),
+					);
+				}
+			});
+
+			const cleanCharacterName = (value) => {
+				const cleaned = String(value || "")
+					.replace(/[[]\]]/g, "")
+					.replace(/\s+/g, " ")
+					.trim();
+				if (!cleaned) return null;
+				if (/^\d+$/.test(cleaned)) return null;
+				if (
+					/^(?:published|updated|status|chapters|words|reviews|favs|follows|id)$/i.test(
+						cleaned,
+					)
+				)
+					return null;
+				if (
+					/^(?:complete|completed|ongoing|in-progress|unknown)$/i.test(
+						cleaned,
+					)
+				)
+					return null;
+				if (blockedCharacterValues.has(cleaned.toLowerCase()))
+					return null;
+				return cleaned;
+			};
+
+			const normalizedCharacters = [];
+			const seenCharacters = new Set();
+			(metadata.metadata?.characters || []).forEach((entry) => {
+				const cleaned = cleanCharacterName(entry);
+				if (!cleaned) return;
+				const key = cleaned.toLowerCase();
+				if (seenCharacters.has(key)) return;
+				seenCharacters.add(key);
+				normalizedCharacters.push(cleaned);
+			});
+
+			const normalizedRelationships = [];
+			const seenRelationships = new Set();
+			(metadata.metadata?.relationships || []).forEach((group) => {
+				if (!Array.isArray(group)) return;
+				const cleanedGroup = group
+					.map((entry) => cleanCharacterName(entry))
+					.filter(Boolean)
+					.slice(0, 4);
+				if (cleanedGroup.length < 2) return;
+				const key = cleanedGroup.join("|").toLowerCase();
+				if (seenRelationships.has(key)) return;
+				seenRelationships.add(key);
+				normalizedRelationships.push(cleanedGroup);
+				cleanedGroup.forEach((entry) => {
+					const charKey = entry.toLowerCase();
+					if (!seenCharacters.has(charKey)) {
+						seenCharacters.add(charKey);
+						normalizedCharacters.push(entry);
+					}
+				});
+			});
+
+			metadata.metadata.characters = normalizedCharacters;
+			metadata.metadata.relationships = normalizedRelationships;
+
 			metadata.rating = metadata.metadata.rating || null;
 			metadata.language = metadata.metadata.language || null;
 			metadata.words = metadata.metadata.words || 0;
@@ -506,9 +589,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			metadata.fandoms = Array.isArray(metadata.metadata.fandoms)
 				? [...metadata.metadata.fandoms]
 				: [];
-			metadata.characters = Array.isArray(metadata.metadata.characters)
-				? [...metadata.metadata.characters]
-				: [];
+			metadata.characters = [...normalizedCharacters];
 			metadata.relationships = Array.isArray(
 				metadata.metadata.relationships,
 			)

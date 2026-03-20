@@ -5,20 +5,22 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Highlights](#highlights)
-- [✨ What's New](#-whats-new)
-  - [🕵️ Incognito Mode](#️-incognito-mode)
-  - [🔽 Collapsible Content Sections](#-collapsible-content-sections)
-  - [🔇 Hide Gemini UI During Read Aloud](#-hide-gemini-ui-during-read-aloud)
-  - [🗂️ Summary Quality Improvements](#️-summary-quality-improvements)
-  - [🔑 Popup Backup Model Selection](#-popup-backup-model-selection)
-- [🌐 Website Handler Updates](#-website-handler-updates)
-  - [FanFiction.net — Redirect Fix](#fanfictionnet--redirect-fix)
-  - [Metadata Extraction Hardening](#metadata-extraction-hardening)
-- [🐛 Bug Fixes](#-bug-fixes)
-- [⬆️ Migration Notes](#️-migration-notes)
-- [📥 Getting This Update](#-getting-this-update)
+- [Ranobe Gemini v4.3.0 Release Notes](#ranobe-gemini-v430-release-notes)
+	- [Table of Contents](#table-of-contents)
+	- [Overview](#overview)
+	- [Highlights](#highlights)
+	- [✨ What's New](#-whats-new)
+		- [🕵️ Incognito Mode](#️-incognito-mode)
+		- [🔽 Collapsible Content Sections](#-collapsible-content-sections)
+		- [🔇 Hide Gemini UI During Read Aloud](#-hide-gemini-ui-during-read-aloud)
+		- [🗂️ Summary Quality Improvements](#️-summary-quality-improvements)
+		- [🔑 Popup Backup Model Selection](#-popup-backup-model-selection)
+	- [🌐 Website Handler Updates](#-website-handler-updates)
+		- [FanFiction.net — Redirect Fix](#fanfictionnet--redirect-fix)
+		- [Metadata Extraction Hardening](#metadata-extraction-hardening)
+	- [🐛 Bug Fixes](#-bug-fixes)
+	- [⬆️ Migration Notes](#️-migration-notes)
+	- [📥 Getting This Update](#-getting-this-update)
 
 ---
 

@@ -1,219 +1,266 @@
 <!doctype html>
 <html lang="en">
 
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Architecture | Ranobe Gemini</title>
-		<meta name="description"
-			content="How Ranobe Gemini works: modular architecture, runtime flow, and backup/sync pipeline diagrams." />
-		<link rel="canonical" href="https://ranobe.vkrishna04.me/architecture.html" />
-		<meta name="theme-color" content="#0b1628" />
-		<link rel="icon"
-			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
-			sizes="32x32" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet" />
-		<link rel="stylesheet" href="./styles.css" />
-		<style>
-			.diagram-shell {
-				padding: 18px;
-				border-radius: 14px;
-				border: 1px solid var(--border);
-				background: var(--panel);
-				overflow-x: auto;
-			}
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Architecture | Ranobe Gemini</title>
+        <meta name="description"
+            content="How Ranobe Gemini works: modular architecture, runtime flow, and backup/sync pipeline diagrams." />
+        <link rel="canonical" href="https://ranobe.vkrishna04.me/architecture.html" />
+        <meta name="theme-color" content="#0b1628" />
+        <link rel="icon"
+            href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+            sizes="32x32" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+            rel="stylesheet" />
+        <link rel="stylesheet" href="./styles.css" />
+        <style>
+            .diagram-shell {
+                padding: 18px;
+                border-radius: 14px;
+                border: 1px solid var(--border);
+                background: var(--panel);
+                overflow-x: auto;
+            }
 
-			.diagram-notes {
-				margin-top: 12px;
-				padding-left: 18px;
-				color: var(--muted);
-			}
+            .diagram-shell .mermaid {
+                min-height: 180px;
+            }
 
-			.diagram-notes li {
-				margin: 6px 0;
-			}
-		</style>
-		<script type="module">
-			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'dark',
-				themeVariables: {
-					primaryColor: '#162234',
-					primaryTextColor: '#e8eef7',
-					primaryBorderColor: '#f4a261',
-					lineColor: '#9fb3c8',
-					secondaryColor: '#0b1628',
-					tertiaryColor: '#121d2b',
-					edgeLabelBackground: '#0b1628',
-					fontFamily: 'Space Grotesk, system-ui, sans-serif'
-				}
-			});
-		</script>
-	</head>
+            .diagram-fallback {
+                display: none;
+                white-space: pre-wrap;
+                font-family: "Courier New", monospace;
+                font-size: 12px;
+                line-height: 1.6;
+                color: var(--text);
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 12px;
+                margin-top: 10px;
+            }
 
-	<body>
-		<div class="bg-glow"></div>
-		<div class="bg-dots"></div>
-		<header class="topbar">
-			<div class="brand">
-				<img class="logo-img"
-					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
-					alt="Ranobe Gemini" />
-				<div class="meta">
-					<strong>Ranobe Gemini</strong>
-					<span>Architecture</span>
-				</div>
-			</div>
-			<button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
-				aria-label="Toggle navigation">☰</button>
-			<nav class="nav" id="main-nav">
-				<a href="#runtime">Runtime Flow</a>
-				<a href="#modularity">Modularity</a>
-				<a href="#backup-sync">Backup + Sync</a>
-				<span class="nav-sep" aria-hidden="true"></span>
-				<a href="./index.html">Home</a>
-				<a href="./drive-setup.html">Drive Setup</a>
-				<a href="./install-guide.html">Install Guide</a>
-				<a href="./architecture.html" aria-current="page">Architecture</a>
-				<a href="./novel-status.html">Novel Status</a>
-				<a href="./content-styles.html">Styles</a>
-				<a href="./privacy.html">Privacy</a>
-				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
-					rel="noreferrer">GitHub ↗</a>
-			</nav>
-		</header>
+            .diagram-fallback.visible {
+                display: block;
+            }
 
-		<main>
-			<section class="hero section fade-slide">
-				<div class="hero-copy">
-					<p class="eyebrow">System view</p>
-					<h1>How Ranobe Gemini Works</h1>
-					<p class="lede">
-						A modular browser-extension architecture: content scripts for in-page UX,
-						background orchestration for AI/backup flows, and storage-first state.
-					</p>
-				</div>
-			</section>
+            .diagram-notes {
+                margin-top: 12px;
+                padding-left: 18px;
+                color: var(--muted);
+            }
 
-			<section id="runtime" class="section fade-slide">
-				<div class="section-head">
-					<p class="eyebrow">Runtime</p>
-					<h2>Reader-to-Result Flow</h2>
-				</div>
-				<div class="diagram-shell">
-					<div class="mermaid">
-						flowchart TB
-							A[Open supported chapter] --> B[Content script detects handler]
-							B --> C[Inject Enhance and Summarize controls]
-							C --> D{API key configured?}
-							D -->|No| E[Show setup prompt]
-							D -->|Yes| F[Send request to background]
-							F --> G[Chunking and model pipeline]
-							G --> H[Render enhanced text]
-							H --> I[Optional summary and content boxes]
-					</div>
-				</div>
-				<ul class="diagram-notes">
-					<li><strong>A:</strong> User starts from any supported site chapter page.</li>
-					<li><strong>B:</strong> Site-specific handler is selected dynamically.</li>
-					<li><strong>G:</strong> Large chapters are chunked to avoid model timeout risk.</li>
-					<li><strong>I:</strong> Collapsible sections and style boxes are applied after model output.</li>
-				</ul>
-			</section>
+            .diagram-notes li {
+                margin: 6px 0;
+            }
+        </style>
+    </head>
 
-			<section id="modularity" class="section fade-slide">
-				<div class="section-head">
-					<p class="eyebrow">Modular Design</p>
-					<h2>Extension Component Map</h2>
-				</div>
-				<div class="diagram-shell">
-					<div class="mermaid">
-						flowchart TB
-							UI[Popup and Library UI] --> STATE[Storage and Settings]
-							SITES[Website Handlers] --> CONTENT[Content Script Runtime]
-							CONTENT --> BG[Background Orchestrator]
-							BG --> AI[Gemini Model Client]
-							BG --> DRIVE[Drive OAuth and Backup]
-							STATE --> BG
-							STATE --> CONTENT
-					</div>
-				</div>
-				<ul class="diagram-notes">
-					<li><strong>Website Handlers:</strong> One module per website keeps extraction logic isolated.</li>
-					<li><strong>Background Orchestrator:</strong> Centralizes API calls, alarms, and backup sync.</li>
-					<li><strong>Storage and Settings:</strong> Shared contract for popup, library, and content layers.</li>
-					<li><strong>Drive OAuth and Backup:</strong> Optional module; disabled users still have full local workflow.</li>
-				</ul>
-			</section>
+    <body>
+        <div class="bg-glow"></div>
+        <div class="bg-dots"></div>
+        <header class="topbar">
+            <div class="brand">
+                <img class="logo-img"
+                    src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+                    alt="Ranobe Gemini" />
+                <div class="meta">
+                    <strong>Ranobe Gemini</strong>
+                    <span>Architecture</span>
+                </div>
+            </div>
+            <button class="nav-toggle" aria-expanded="false" aria-controls="main-nav"
+                aria-label="Toggle navigation">☰</button>
+            <nav class="nav" id="main-nav">
+                <a href="#runtime">Runtime Flow</a>
+                <a href="#modularity">Modularity</a>
+                <a href="#backup-sync">Backup + Sync</a>
+                <span class="nav-sep" aria-hidden="true"></span>
+                <a href="./index.html">Home</a>
+                <a href="./drive-setup.html">Drive Setup</a>
+                <a href="./install-guide.html">Install Guide</a>
+                <a href="./architecture.html" aria-current="page">Architecture</a>
+                <a href="./novel-status.html">Novel Status</a>
+                <a href="./content-styles.html">Styles</a>
+                <a href="./privacy.html">Privacy</a>
+                <a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+                    rel="noreferrer">GitHub ↗</a>
+            </nav>
+        </header>
 
-			<section id="backup-sync" class="section fade-slide">
-				<div class="section-head">
-					<p class="eyebrow">Reliability</p>
-					<h2>Backup and Sync Decision Flow</h2>
-				</div>
-				<div class="diagram-shell">
-					<div class="mermaid">
-						flowchart TB
-							A1[Library data changed] --> B1{Backup mode}
-							B1 -->|Scheduled| C1[Run alarm-based backup]
-							B1 -->|Continuous| D1[Debounced upload]
-							B1 -->|Both| E1[Continuous plus scheduled]
-							C1 --> F1[Versioned backup file]
-							D1 --> G1[Rolling continuous backup file]
-							E1 --> F1
-							E1 --> G1
-							F1 --> H1{Drive connected?}
-							G1 --> H1
-							H1 -->|No| I1[Keep local backup history]
-							H1 -->|Yes| J1[Upload to user Drive]
-					</div>
-				</div>
-				<ul class="diagram-notes">
-					<li><strong>Both mode:</strong> Combines periodic safety points with near-real-time rolling backup.</li>
-					<li><strong>Drive connected?</strong> Backup always remains local-first; cloud sync is optional.</li>
-					<li><strong>User ownership:</strong> Backup files remain in the user's own Google Drive account.</li>
-				</ul>
-			</section>
+        <main>
+            <section class="hero section fade-slide">
+                <div class="hero-copy">
+                    <p class="eyebrow">System view</p>
+                    <h1>How Ranobe Gemini Works</h1>
+                    <p class="lede">
+                        A modular browser-extension architecture: content scripts for in-page UX,
+                        background orchestration for AI/backup flows, and storage-first state.
+                    </p>
+                </div>
+            </section>
 
-			<section class="cta section">
-				<div class="cta-card">
-					<p class="eyebrow">Ready to Install</p>
-					<h2>Install once, then verify every module yourself</h2>
-					<p>
-						Use published Firefox and Edge builds, or temporary install on Chromium browsers.
-						Then open Library and inspect handlers, filters, and backups in action.
-					</p>
-					<div class="cta-row">
-						<a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
-							target="_blank" rel="noreferrer">Get for Firefox</a>
-						<a class="btn primarysecondary" href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
-							target="_blank" rel="noreferrer">Get for Edge</a>
-						<a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
-					</div>
-				</div>
-			</section>
-		</main>
+            <section id="runtime" class="section fade-slide">
+                <div class="section-head">
+                    <p class="eyebrow">Runtime</p>
+                    <h2>Reader-to-Result Flow</h2>
+                </div>
+                <div class="diagram-shell">
+                    <div class="mermaid">
+                        flowchart TB
+                        A[Open supported chapter] --> B[Content script detects handler]
+                        B --> C[Inject Enhance and Summarize controls]
+                        C --> D{API key configured?}
+                        D -->|No| E[Show setup prompt]
+                        D -->|Yes| F[Send request to background]
+                        F --> G[Chunking and model pipeline]
+                        G --> H[Render enhanced text]
+                        H --> I[Optional summary and content boxes]
+                    </div>
+                    <pre
+                        class="diagram-fallback">Open chapter -> Detect handler -> Inject controls -> Check API key -> Process with background pipeline -> Render enhanced content + summary boxes</pre>
+                </div>
+                <ul class="diagram-notes">
+                    <li><strong>A:</strong> User starts from any supported site chapter page.</li>
+                    <li><strong>B:</strong> Site-specific handler is selected dynamically.</li>
+                    <li><strong>G:</strong> Large chapters are chunked to avoid model timeout risk.</li>
+                    <li><strong>I:</strong> Collapsible sections and style boxes are applied after model output.</li>
+                </ul>
+            </section>
 
-		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.4.0</span></div>
-			<div class="footer-links">
-				<a href="./index.html">Home</a>
-				<a href="./drive-setup.html">Drive Setup</a>
-				<a href="./install-guide.html">Install Guide</a>
-				<a href="./architecture.html">Architecture</a>
-				<a href="./novel-status.html">Novel Status</a>
-				<a href="./content-styles.html">Content Styles</a>
-				<a href="./privacy.html">Privacy</a>
-				<a href="./terms.html">Terms</a>
-				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank" rel="noreferrer">GitHub</a>
-			</div>
-			<p class="footnote">Ready to install? Start with Install Guide. Built by Life-Experimentalist. Local-first, reader-first.</p>
-		</footer>
-		<script src="./nav.js" defer></script>
-	</body>
+            <section id="modularity" class="section fade-slide">
+                <div class="section-head">
+                    <p class="eyebrow">Modular Design</p>
+                    <h2>Extension Component Map</h2>
+                </div>
+                <div class="diagram-shell">
+                    <div class="mermaid">
+                        flowchart TB
+                        UI[Popup and Library UI] --> STATE[Storage and Settings]
+                        SITES[Website Handlers] --> CONTENT[Content Script Runtime]
+                        CONTENT --> BG[Background Orchestrator]
+                        BG --> AI[Gemini Model Client]
+                        BG --> DRIVE[Drive OAuth and Backup]
+                        STATE --> BG
+                        STATE --> CONTENT
+                    </div>
+                    <pre
+                        class="diagram-fallback">UI modules -> Shared settings/storage -> Background orchestrator -> AI client + Drive module, with content scripts and website handlers as isolated modules</pre>
+                </div>
+                <ul class="diagram-notes">
+                    <li><strong>Website Handlers:</strong> One module per website keeps extraction logic isolated.</li>
+                    <li><strong>Background Orchestrator:</strong> Centralizes API calls, alarms, and backup sync.</li>
+                    <li><strong>Storage and Settings:</strong> Shared contract for popup, library, and content layers.
+                    </li>
+                    <li><strong>Drive OAuth and Backup:</strong> Optional module; disabled users still have full local
+                        workflow.</li>
+                </ul>
+            </section>
+
+            <section id="backup-sync" class="section fade-slide">
+                <div class="section-head">
+                    <p class="eyebrow">Reliability</p>
+                    <h2>Backup and Sync Decision Flow</h2>
+                </div>
+                <div class="diagram-shell">
+                    <div class="mermaid">
+                        flowchart TB
+                        A1[Library data changed] --> B1{Backup mode}
+                        B1 -->|Scheduled| C1[Run alarm-based backup]
+                        B1 -->|Continuous| D1[Debounced upload]
+                        B1 -->|Both| E1[Continuous plus scheduled]
+                        C1 --> F1[Versioned backup file]
+                        D1 --> G1[Rolling continuous backup file]
+                        E1 --> F1
+                        E1 --> G1
+                        F1 --> H1{Drive connected?}
+                        G1 --> H1
+                        H1 -->|No| I1[Keep local backup history]
+                        H1 -->|Yes| J1[Upload to user Drive]
+                    </div>
+                    <pre
+                        class="diagram-fallback">Library change -> Mode decision (scheduled/continuous/both) -> Create backup artifact -> If Drive connected upload, else keep local history</pre>
+                </div>
+                <ul class="diagram-notes">
+                    <li><strong>Both mode:</strong> Combines periodic safety points with near-real-time rolling backup.
+                    </li>
+                    <li><strong>Drive connected?</strong> Backup always remains local-first; cloud sync is optional.
+                    </li>
+                    <li><strong>User ownership:</strong> Backup files remain in the user's own Google Drive account.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="cta section">
+                <div class="cta-card">
+                    <p class="eyebrow">Ready to Install</p>
+                    <h2>Install once, then verify every module yourself</h2>
+                    <p>
+                        Use published Firefox and Edge builds, or temporary install on Chromium browsers.
+                        Then open Library and inspect handlers, filters, and backups in action.
+                    </p>
+                    <div class="cta-row">
+                        <a class="btn primary" href="https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/"
+                            target="_blank" rel="noreferrer">Get for Firefox</a>
+                        <a class="btn primarysecondary"
+                            href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
+                            target="_blank" rel="noreferrer">Get for Edge</a>
+                        <a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.4.0</span></div>
+            <div class="footer-links">
+                <a href="./index.html">Home</a>
+                <a href="./drive-setup.html">Drive Setup</a>
+                <a href="./install-guide.html">Install Guide</a>
+                <a href="./architecture.html">Architecture</a>
+                <a href="./novel-status.html">Novel Status</a>
+                <a href="./content-styles.html">Content Styles</a>
+                <a href="./privacy.html">Privacy</a>
+                <a href="./terms.html">Terms</a>
+                <a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
+                    rel="noreferrer">GitHub</a>
+            </div>
+            <p class="footnote">Ready to install? Start with Install Guide. Built by Life-Experimentalist. Local-first,
+                reader-first.</p>
+        </footer>
+        <script src="./nav.js" defer></script>
+        <script>
+            (async function initMermaid() {
+                try {
+                    const { default: mermaid } = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
+                    mermaid.initialize({
+                        startOnLoad: false,
+                        theme: "dark",
+                        themeVariables: {
+                            primaryColor: "#162234",
+                            primaryTextColor: "#e8eef7",
+                            primaryBorderColor: "#f4a261",
+                            lineColor: "#9fb3c8",
+                            secondaryColor: "#0b1628",
+                            tertiaryColor: "#121d2b",
+                            edgeLabelBackground: "#0b1628",
+                            fontFamily: "Space Grotesk, system-ui, sans-serif",
+                        },
+                    });
+                    await mermaid.run({
+                        querySelector: ".mermaid",
+                    });
+                } catch (_) {
+                    document.querySelectorAll(".diagram-fallback").forEach((el) => {
+                        el.classList.add("visible");
+                    });
+                }
+            })();
+        </script>
+    </body>
 
 </html>

@@ -2636,14 +2636,24 @@ function setupEventListeners() {
 
 	// View Drive backups — toggle the inline <details> collapsible
 	const viewBackupsBtn = $("library-view-backups-btn");
+	const driveBackupsSection = $("drive-backups-section");
+
+	if (driveBackupsSection) {
+		driveBackupsSection.addEventListener("toggle", () => {
+			// Always reload when expanded, including when user toggles
+			// the details header directly without using the button.
+			if (driveBackupsSection.open) {
+				loadDriveBackupsList();
+			}
+		});
+	}
+
 	if (viewBackupsBtn) {
 		viewBackupsBtn.addEventListener("click", () => {
-			const section = $("drive-backups-section");
-			if (section) {
-				section.open = !section.open;
-				if (section.open) {
-					loadDriveBackupsList();
-					section.scrollIntoView({
+			if (driveBackupsSection) {
+				driveBackupsSection.open = !driveBackupsSection.open;
+				if (driveBackupsSection.open) {
+					driveBackupsSection.scrollIntoView({
 						behavior: "smooth",
 						block: "nearest",
 					});

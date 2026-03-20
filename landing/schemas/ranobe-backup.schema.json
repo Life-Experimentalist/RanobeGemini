@@ -1,0 +1,6 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json",
+    "$comment": "Canonical schema proxy. Source of truth is the raw GitHub schema file.",
+    "$ref": "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/docs/backup/ranobe-backup.schema.json"
+}

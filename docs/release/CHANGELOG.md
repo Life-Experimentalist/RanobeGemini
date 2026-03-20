@@ -147,6 +147,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Public content-styles documentation page showing built-in boxes, custom boxes, actual chapter rendering, and a live playground.
 - GitHub discussion templates for FAQ, ideas, Q&A, and general discussions.
 - 4.4.0 release documentation covering reading lists, collapsible sections, landing improvements, and backup persistence.
+- Public architecture documentation page with modular runtime, component, and backup flow diagrams.
+- Hosted schema endpoint proxy at `https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json` referencing the canonical raw schema source.
 
 ### Changed
 
@@ -160,6 +162,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Full/comprehensive backups now include user-defined custom content box definitions.
 - Drive/download library backups now restore collapsible section preferences and custom content box types alongside the library.
 - Light-theme chapter preview text and collapsible summaries on the landing docs page now maintain readable contrast.
+- Drive backup history panel now reloads on every expand/toggle so users always see up-to-date Drive files.
+- Architecture docs page now includes diagram fallback behavior to avoid blank content if Mermaid runtime loading fails.
 
 ---
 
