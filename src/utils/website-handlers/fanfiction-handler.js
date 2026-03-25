@@ -202,7 +202,9 @@ When enhancing, improve readability while fully respecting the author's creative
 					// Save it to sessionStorage on the new domain so subsequent clicks on same domain don't lose it
 					try {
 						sessionStorage.setItem("rg_ff_preference", preference);
-					} catch (e) {}
+					} catch (_e) {
+						// non-critical (private mode or blocked storage)
+					}
 					// Keep override tab-scoped and avoid leaking rg_view in copied/shared links.
 					try {
 						const cleanUrl = new URL(window.location.href);
@@ -800,7 +802,8 @@ When enhancing, improve readability while fully respecting the author's creative
 
 	cleanFanfictionCharacterToken(value) {
 		const cleaned = String(value || "")
-			.replace(/[[]\]]/g, "")
+			.replaceAll("[", "")
+			.replaceAll("]", "")
 			.replace(/^[-,:;\s]+|[-,:;\s]+$/g, "")
 			.replace(/\s+/g, " ")
 			.trim();
@@ -810,7 +813,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	parseFanfictionRelationshipToken(token) {
 		const rawToken = String(token || "").trim();
 		if (!rawToken) return null;
-		if (!/[\/&+]|\bx\b/i.test(rawToken)) return null;
+		if (!/[&+/]|\bx\b/i.test(rawToken)) return null;
 
 		const candidates = rawToken
 			.split(/\s*(?:\/|&|\+|\bx\b)\s*/i)

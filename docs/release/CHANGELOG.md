@@ -3,6 +3,11 @@
 > **Index:**
 
 - [Changelog](#changelog)
+  - [4.6.0 - 2026-03-25](#460---2026-03-25)
+    - [Highlights](#highlights)
+    - [Added](#added)
+    - [Changed](#changed)
+    - [Fixed](#fixed)
 	- [4.4.0 - 2026-03-17](#440---2026-03-17)
 		- [Highlights](#highlights)
 		- [Added](#added)
@@ -129,6 +134,35 @@
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [4.6.0](RELEASE_NOTES_4.6.0.md) - 2026-03-25
+
+### Highlights
+
+- Shareable modal deep-links now open reliably across main library and site shelf pages.
+- Missing deep-link IDs now recover via prompt + timed auto-open/add flow.
+- True web PWA foundation added with installable landing app entry and offline fallback.
+- Automated Mermaid visual dashboard pipeline added for doc status visibility.
+
+### Added
+
+- `landing/manifest.webmanifest`, `landing/sw.js`, `landing/offline.html`, and `landing/library-hub.html` for web PWA entry.
+- `dev/generate-doc-visualizers.js` and `npm run docs:visualize` for generated doc charts/tables.
+- `docs/overview/VISUAL_DASHBOARD.md` automated visualization output.
+- v4.6.0 release documentation and architecture/update references.
+
+### Changed
+
+- Query deep-link handling now preserves shareable params for modal flows.
+- Mobile RG controls no longer force full-width for primary control groups on narrow screens.
+- Landing PWA install flow now exposes install state and browser fallback messaging.
+
+### Fixed
+
+- Timer declaration-order and cleanup safety in deep-link recovery prompt path.
+- Tab wait listener lifecycle cleanup for both success and timeout paths.
 
 ---
 

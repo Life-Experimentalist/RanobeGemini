@@ -301,7 +301,9 @@ function bindPwaInstallButton() {
 			} finally {
 				deferredInstallPrompt = null;
 				pwaInstallBtn.classList.add("hidden");
-				updatePwaNote("Install prompt handled. Use your app drawer/menu to launch Ranobe Gemini Web App.");
+				updatePwaNote(
+					"Install prompt handled. Use your app drawer/menu to launch Ranobe Gemini Web App.",
+				);
 			}
 			return;
 		}
@@ -316,14 +318,18 @@ async function initPwaSupport() {
 	bindPwaInstallButton();
 
 	if (!("serviceWorker" in navigator)) {
-		updatePwaNote("This browser does not support Service Worker-based web app installation.");
+		updatePwaNote(
+			"This browser does not support Service Worker-based web app installation.",
+		);
 		return;
 	}
 
 	try {
 		await navigator.serviceWorker.register("./sw.js", { scope: "./" });
 	} catch (_err) {
-		updatePwaNote("Web App install service failed to initialize. Reload and try again.");
+		updatePwaNote(
+			"Web App install service failed to initialize. Reload and try again.",
+		);
 		return;
 	}
 
@@ -337,7 +343,9 @@ async function initPwaSupport() {
 		event.preventDefault();
 		deferredInstallPrompt = event;
 		if (pwaInstallBtn) pwaInstallBtn.classList.remove("hidden");
-		updatePwaNote("Install prompt is ready. Use the Install Web App button.");
+		updatePwaNote(
+			"Install prompt is ready. Use the Install Web App button.",
+		);
 	});
 
 	window.addEventListener("appinstalled", () => {
@@ -346,7 +354,9 @@ async function initPwaSupport() {
 		updatePwaNote("Web App installed successfully.");
 	});
 
-	updatePwaNote("Install support initialized. On some browsers, install appears in the address bar or browser menu.");
+	updatePwaNote(
+		"Install support initialized. On some browsers, install appears in the address bar or browser menu.",
+	);
 }
 
 function pingExtension() {

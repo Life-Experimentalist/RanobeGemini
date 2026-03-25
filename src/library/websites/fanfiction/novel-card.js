@@ -800,7 +800,8 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			: [];
 		const cleanCharacterName = (value) =>
 			String(value || "")
-				.replace(/[\[\]]/g, "")
+				.replaceAll("[", "")
+				.replaceAll("]", "")
 				.replace(/\s+/g, " ")
 				.trim();
 		const relationshipMembers = relationships

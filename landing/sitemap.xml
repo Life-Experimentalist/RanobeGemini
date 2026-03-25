@@ -26,6 +26,11 @@
 		<priority>0.8</priority>
 	</url>
 	<url>
+		<loc>https://ranobe.vkrishna04.me/library-hub.html</loc>
+		<changefreq>weekly</changefreq>
+		<priority>0.8</priority>
+	</url>
+	<url>
 		<loc>https://ranobe.vkrishna04.me/architecture.html</loc>
 		<changefreq>monthly</changefreq>
 		<priority>0.8</priority>

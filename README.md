@@ -17,7 +17,7 @@
 <br/>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-4.4.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
+[![Version](https://img.shields.io/badge/version-4.6.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls)
 [![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
@@ -54,6 +54,7 @@
 - **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
 - **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
 - **Google Drive Sync**: Optional OAuth-based backup to Google Drive with configurable retention.
+- **True Web PWA Entry**: Installable landing web app (Android/Windows supported browsers) with library hub and extension handoff.
 - **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
 - **Multiple Gemini Models**: Gemini 2.0 Flash (recommended), 2.5 Flash (fastest), 2.5 Pro (highest quality), with backup key rotation.
 - **Export Templates**: Configurable filename templates for novel copy/download operations.
@@ -194,6 +195,7 @@ For developers extending or contributing to Ranobe Gemini:
 - **[Quick Reference](docs/WHATS_WHERE.md)** — Index of all systems and where things are located
 - **[Implementation Guide](docs/implementation/METADATA_AND_SETTINGS_GUIDE.md)** — Metadata fetching and handler settings API
 - **[Build System](docs/build/BUILD_SYSTEM.md)** — Complete build process, scripts, and manifest generation
+- **[Visual Dashboard](docs/overview/VISUAL_DASHBOARD.md)** — Auto-generated Mermaid charts for browser/site support and delivery topology
 - **[Changelog](docs/release/CHANGELOG.md)** — Full version history
 
 ## Adding New Website Support

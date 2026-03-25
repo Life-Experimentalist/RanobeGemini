@@ -2,8 +2,8 @@
 
 > **Index:** <!-- TO BE FILLED -->
 
-**Version:** 3.0.0
-**Last Updated:** 2025-01-15
+**Version:** 4.6.0
+**Last Updated:** 2026-03-25
 **Maintainer:** VKrishna04
 
 ---
@@ -152,6 +152,25 @@ graph TB
 | **Settings Store**            | Configuration      | User preferences, API keys, prompts               | Key-value storage                            |
 | **Cache Store**               | Temporary Storage  | Enhanced chapters, partial results                | Time-based expiration                        |
 | **Gemini API**                | External Service   | AI processing, content enhancement                | RESTful API calls                            |
+
+## True Web PWA Companion Architecture (v4.6.0+)
+
+```mermaid
+graph TD
+    A[HTTPS Web PWA] --> B[Library Hub]
+    B --> C[Extension Library]
+    C --> D[Website Content Controls]
+    B --> E[Drive Backup Bridge]
+    C --> E
+```
+
+Diagram elements:
+
+- `A`: Installable web app surface for Android/Windows browsers
+- `B`: PWA launch page for library workflows and navigation entry
+- `C`: Extension-backed library runtime with full site integrations
+- `D`: In-page enhancement and summarization controls
+- `E`: Cross-surface sync bridge via Drive backups
 
 ---
 
@@ -607,29 +626,29 @@ graph TB
 
 ### Storage Schema
 
-| Key                    | Type          | Purpose                                        | Default                      |
-| ---------------------- | ------------- | ---------------------------------------------- | ---------------------------- |
-| **apiKey**             | string        | Primary Gemini API key                         | ""                           |
+| Key                    | Type            | Purpose                                        | Default                      |
+| ---------------------- | --------------- | ---------------------------------------------- | ---------------------------- |
+| **apiKey**             | string          | Primary Gemini API key                         | ""                           |
 | **backupApiKeys**      | `Array<string>` | Backup keys for failover                       | []                           |
-| **apiKeyRotation**     | string        | Rotation strategy: "failover" or "round-robin" | "failover"                   |
-| **currentApiKeyIndex** | number        | Current key index for round-robin              | 0                            |
-| **selectedModelId**    | string        | Gemini model identifier                        | "gemini-2.0-flash-exp"       |
-| **modelEndpoint**      | string        | Full API endpoint URL                          | "https://..."                |
-| **defaultPrompt**      | string        | Enhancement prompt template                    | DEFAULT_PROMPT               |
-| **summaryPrompt**      | string        | Long summary prompt                            | DEFAULT_SUMMARY_PROMPT       |
-| **shortSummaryPrompt** | string        | Short summary prompt                           | DEFAULT_SHORT_SUMMARY_PROMPT |
-| **permanentPrompt**    | string        | Always-applied instructions                    | DEFAULT_PERMANENT_PROMPT     |
-| **chunkingEnabled**    | boolean       | Enable chunk processing                        | true                         |
-| **chunkSize**          | number        | Characters per chunk                           | 20000                        |
-| **chunkThreshold**     | number        | Minimum chars to trigger chunking              | 20000                        |
-| **useEmoji**           | boolean       | Add emotional emojis to dialogue               | false                        |
-| **fontSize**           | number        | Enhanced content font size %                   | 100                          |
-| **temperature**        | number        | AI creativity (0.0-2.0)                        | 0.7                          |
-| **topP**               | number        | Nucleus sampling (0.0-1.0)                     | 0.95                         |
-| **topK**               | number        | Token limit per step (1-40)                    | 40                           |
-| **maxOutputTokens**    | number        | Maximum response length                        | 8192                         |
-| **debugMode**          | boolean       | Enable debug logging                           | false                        |
-| **rg_novel_library**   | Object        | Novel library database                         | {}                           |
+| **apiKeyRotation**     | string          | Rotation strategy: "failover" or "round-robin" | "failover"                   |
+| **currentApiKeyIndex** | number          | Current key index for round-robin              | 0                            |
+| **selectedModelId**    | string          | Gemini model identifier                        | "gemini-2.0-flash-exp"       |
+| **modelEndpoint**      | string          | Full API endpoint URL                          | "https://..."                |
+| **defaultPrompt**      | string          | Enhancement prompt template                    | DEFAULT_PROMPT               |
+| **summaryPrompt**      | string          | Long summary prompt                            | DEFAULT_SUMMARY_PROMPT       |
+| **shortSummaryPrompt** | string          | Short summary prompt                           | DEFAULT_SHORT_SUMMARY_PROMPT |
+| **permanentPrompt**    | string          | Always-applied instructions                    | DEFAULT_PERMANENT_PROMPT     |
+| **chunkingEnabled**    | boolean         | Enable chunk processing                        | true                         |
+| **chunkSize**          | number          | Characters per chunk                           | 20000                        |
+| **chunkThreshold**     | number          | Minimum chars to trigger chunking              | 20000                        |
+| **useEmoji**           | boolean         | Add emotional emojis to dialogue               | false                        |
+| **fontSize**           | number          | Enhanced content font size %                   | 100                          |
+| **temperature**        | number          | AI creativity (0.0-2.0)                        | 0.7                          |
+| **topP**               | number          | Nucleus sampling (0.0-1.0)                     | 0.95                         |
+| **topK**               | number          | Token limit per step (1-40)                    | 40                           |
+| **maxOutputTokens**    | number          | Maximum response length                        | 8192                         |
+| **debugMode**          | boolean         | Enable debug logging                           | false                        |
+| **rg_novel_library**   | Object          | Novel library database                         | {}                           |
 
 ### Novel Library Schema
 

@@ -19,7 +19,7 @@ self.addEventListener("install", (event) => {
 		caches
 			.open(CACHE_NAME)
 			.then((cache) => cache.addAll(CORE_ASSETS))
-			.then(() => self.skipWaiting())
+			.then(() => self.skipWaiting()),
 	);
 });
 
@@ -32,12 +32,13 @@ self.addEventListener("activate", (event) => {
 					keys
 						.filter(
 							(key) =>
-								key.startsWith("rg-landing-pwa-") && key !== CACHE_NAME,
+								key.startsWith("rg-landing-pwa-") &&
+								key !== CACHE_NAME,
 						)
 						.map((key) => caches.delete(key)),
 				),
 			)
-			.then(() => self.clients.claim())
+			.then(() => self.clients.claim()),
 	);
 });
 
@@ -53,7 +54,9 @@ self.addEventListener("fetch", (event) => {
 			fetch(request)
 				.then((response) => {
 					const clone = response.clone();
-					caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+					caches
+						.open(CACHE_NAME)
+						.then((cache) => cache.put(request, clone));
 					return response;
 				})
 				.catch(() =>
@@ -72,10 +75,12 @@ self.addEventListener("fetch", (event) => {
 			return fetch(request).then((response) => {
 				if (response && response.ok) {
 					const clone = response.clone();
-					caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+					caches
+						.open(CACHE_NAME)
+						.then((cache) => cache.put(request, clone));
 				}
 				return response;
 			});
-		})
+		}),
 	);
 });

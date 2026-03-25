@@ -250,6 +250,37 @@ Dedicated shelf pages for each supported website with advanced filtering, sortin
 - Shared links preserve modal-open state in the address bar for copy/paste workflows
 - If a deep-linked `novelId` is missing locally, recovery can regenerate the source URL, open the source tab, and auto-add the novel
 
+```mermaid
+sequenceDiagram
+  participant User
+  participant ShelfPage
+  participant Recovery
+  participant SourceTab
+  participant Library
+
+  User->>ShelfPage: Open URL ?novel=<id>&openModal=1
+  ShelfPage->>Library: Lookup novel by ID
+  alt Novel exists
+    Library-->>ShelfPage: Novel found
+    ShelfPage-->>User: Open modal directly
+  else Novel missing
+    Library-->>ShelfPage: Not found
+    ShelfPage->>Recovery: recoverMissingNovelById()
+    Recovery->>User: Prompt + 7s countdown
+    Recovery->>SourceTab: Open generated source URL
+    SourceTab->>Library: addToLibrary message
+    Library-->>ShelfPage: Novel now available
+    ShelfPage-->>User: Reopen modal for imported novel
+  end
+```
+
+Diagram elements:
+- `User`: reader opening a shared deep-link
+- `ShelfPage`: main library or site shelf page deep-link handler
+- `Recovery`: missing-ID prompt and auto-import orchestration
+- `SourceTab`: source website tab used to rehydrate library entry
+- `Library`: stored novels and modal-open source of truth
+
 #### AO3 Shelf Page
 
 **Browse by Fandom**:

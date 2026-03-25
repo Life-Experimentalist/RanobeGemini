@@ -1,7 +1,7 @@
 # Development Roadmap
 
-> **Last Updated:** 2025-07-01
-> **Current Version:** 4.4.0
+> **Last Updated:** 2026-03-25
+> **Current Version:** 4.6.0
 
 ## Table of Contents
 
@@ -96,6 +96,8 @@ graph TB
 - [x] **Adaptive URL Import Pipeline** — URL import now canonicalizes via handler templates, auto-skips existing novels, and deduplicates pasted links per batch
 - [x] **Shareable Library Modal Links** — Main + per-site shelf pages now support `?novel=<id>&openModal=1` deep links and preserve modal URL state for sharing
 - [x] **Missing Deep-Link Recovery** — If a shared novel id is not in local storage, prompt-assisted 7s auto-recovery opens source URL and auto-adds the novel
+- [x] **True Web PWA Foundation** — Landing now includes installable manifest + service worker + offline page + dedicated library hub entrypoint
+- [x] **Automated Visual Dashboard** — Added reproducible Mermaid/status visualizer generation via `npm run docs:visualize`
 - [x] **Legacy Status Migration** — old `re-reading` status entries normalize to `reading` + `rereading` list
 - [x] **Install Guide + Landing Polish** — added cross-browser install guide page, standardized footer/nav install links, and updated published Edge install path
 
