@@ -23,7 +23,7 @@ async function openDatabase() {
 		request.onerror = () => {
 			console.error(
 				"[ImageCache] Failed to open database:",
-				request.error,
+				request.error
 			);
 			reject(request.error);
 		};
@@ -96,7 +96,7 @@ export async function getCachedImage(url) {
 			request.onerror = () => {
 				console.warn(
 					"[ImageCache] Failed to get cached image:",
-					request.error,
+					request.error
 				);
 				resolve(null);
 			};
@@ -135,7 +135,7 @@ export async function cacheImage(url, dataUrl) {
 			request.onerror = () => {
 				console.warn(
 					"[ImageCache] Failed to cache image:",
-					request.error,
+					request.error
 				);
 				reject(request.error);
 			};
@@ -216,7 +216,7 @@ export async function fetchAndCacheImage(url, fallbackUrl = "") {
 		console.debug(
 			"[ImageCache] Could not fetch image:",
 			url,
-			error.message,
+			error.message
 		);
 		return fallbackUrl || url;
 	}
@@ -268,7 +268,7 @@ export async function loadImageWithCache(imgElement, url, fallbackUrl = "") {
 			// Canvas tainted or other error - just skip caching
 			console.debug(
 				"[ImageCache] Could not cache image after load:",
-				e.message,
+				e.message
 			);
 		}
 	};

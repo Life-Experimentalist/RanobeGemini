@@ -43,7 +43,7 @@
 		- [Version History](#version-history)
 
 **Version:** 3.0.0
-**Last updated: 2026-03-25
+**Last Updated:** 2025-01-15
 **Maintainer:** VKrishna04
 
 ---

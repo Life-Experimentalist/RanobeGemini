@@ -3,7 +3,7 @@
 > **Index:** <!-- TO BE FILLED -->
 
 **Version:** 4.6.0
-**Last updated: 2026-03-25
+**Last Updated:** 2026-03-25
 **Maintainer:** VKrishna04
 
 ---

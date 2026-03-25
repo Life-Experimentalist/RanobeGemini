@@ -13,19 +13,19 @@
 ───────────────────────────────────────────────────────────── */
 
 body[data-bg-animation]::before {
-	content: "";
-	position: fixed;
-	inset: 0;
-	z-index: 1;
-	pointer-events: none;
-	opacity: 0;
-	transition: opacity 0.5s ease;
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
 }
 
 /* Hide animation when "none" or not specified */
 body[data-bg-animation="none"]::before,
 body:not([data-bg-animation])::before {
-	opacity: 0;
+    opacity: 0;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -34,48 +34,36 @@ body:not([data-bg-animation])::before {
 ───────────────────────────────────────────────────────────── */
 
 @keyframes rg-wave {
-	0% {
-		background-position:
-			0% 50%,
-			0% 50%;
-	}
+    0% {
+        background-position: 0% 50%, 0% 50%;
+    }
 
-	50% {
-		background-position:
-			100% 50%,
-			100% 50%;
-	}
+    50% {
+        background-position: 100% 50%, 100% 50%;
+    }
 
-	100% {
-		background-position:
-			200% 50%,
-			200% 50%;
-	}
+    100% {
+        background-position: 200% 50%, 200% 50%;
+    }
 }
 
 body[data-bg-animation="waves"]::before {
-	opacity: 0.08;
-	background:
-		linear-gradient(
-			90deg,
-			transparent 0%,
-			var(--primary-color, #00bcd4) 25%,
-			transparent 50%,
-			var(--primary-color, #00bcd4) 75%,
-			transparent 100%
-		),
-		linear-gradient(
-			90deg,
-			transparent 0%,
-			var(--success-color, #66bb6a) 30%,
-			transparent 60%,
-			var(--success-color, #66bb6a) 90%,
-			transparent 100%
-		);
-	background-size:
-		200% 100%,
-		200% 100%;
-	animation: rg-wave 15s linear infinite;
+    opacity: 0.08;
+    background:
+        linear-gradient(90deg,
+            transparent 0%,
+            var(--primary-color, #00bcd4) 25%,
+            transparent 50%,
+            var(--primary-color, #00bcd4) 75%,
+            transparent 100%),
+        linear-gradient(90deg,
+            transparent 0%,
+            var(--success-color, #66bb6a) 30%,
+            transparent 60%,
+            var(--success-color, #66bb6a) 90%,
+            transparent 100%);
+    background-size: 200% 100%, 200% 100%;
+    animation: rg-wave 15s linear infinite;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -84,45 +72,35 @@ body[data-bg-animation="waves"]::before {
 ───────────────────────────────────────────────────────────── */
 
 @keyframes rg-leaves {
-	0% {
-		background-position: 0% 0%;
-	}
+    0% {
+        background-position: 0% 0%;
+    }
 
-	100% {
-		background-position: 100% 100%;
-	}
+    100% {
+        background-position: 100% 100%;
+    }
 }
 
 body[data-bg-animation="leaves"]::before {
-	opacity: 0.12;
-	background-image:
-		radial-gradient(
-			circle 2px at 20% 30%,
-			var(--success-color, #66bb6a) 50%,
-			transparent 50%
-		),
-		radial-gradient(
-			circle 3px at 60% 20%,
-			var(--primary-color, #66bb6a) 50%,
-			transparent 50%
-		),
-		radial-gradient(
-			circle 2px at 80% 60%,
-			var(--success-color, #66bb6a) 50%,
-			transparent 50%
-		),
-		radial-gradient(
-			circle 3px at 40% 80%,
-			var(--primary-color, #66bb6a) 50%,
-			transparent 50%
-		),
-		radial-gradient(
-			circle 2px at 10% 70%,
-			var(--success-color, #66bb6a) 50%,
-			transparent 50%
-		);
-	background-size: 150px 150px;
-	animation: rg-leaves 20s linear infinite;
+    opacity: 0.12;
+    background-image:
+        radial-gradient(circle 2px at 20% 30%,
+            var(--success-color, #66bb6a) 50%,
+            transparent 50%),
+        radial-gradient(circle 3px at 60% 20%,
+            var(--primary-color, #66bb6a) 50%,
+            transparent 50%),
+        radial-gradient(circle 2px at 80% 60%,
+            var(--success-color, #66bb6a) 50%,
+            transparent 50%),
+        radial-gradient(circle 3px at 40% 80%,
+            var(--primary-color, #66bb6a) 50%,
+            transparent 50%),
+        radial-gradient(circle 2px at 10% 70%,
+            var(--success-color, #66bb6a) 50%,
+            transparent 50%);
+    background-size: 150px 150px;
+    animation: rg-leaves 20s linear infinite;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -131,31 +109,30 @@ body[data-bg-animation="leaves"]::before {
 ───────────────────────────────────────────────────────────── */
 
 @keyframes rg-shimmer {
-	0%,
-	100% {
-		opacity: 0.06;
-		background-position: 0% 0%;
-	}
 
-	50% {
-		opacity: 0.12;
-		background-position: 100% 100%;
-	}
+    0%,
+    100% {
+        opacity: 0.06;
+        background-position: 0% 0%;
+    }
+
+    50% {
+        opacity: 0.12;
+        background-position: 100% 100%;
+    }
 }
 
 body[data-bg-animation="shimmer"]::before {
-	background: linear-gradient(
-		135deg,
-		transparent 0%,
-		var(--primary-color, #ff7043) 20%,
-		transparent 40%,
-		var(--primary-color, #ff7043) 60%,
-		transparent 80%,
-		var(--primary-color, #ff7043) 100%
-	);
-	background-size: 400% 400%;
-	animation: rg-shimmer 8s ease-in-out infinite;
-	opacity: 0.08;
+    background: linear-gradient(135deg,
+            transparent 0%,
+            var(--primary-color, #ff7043) 20%,
+            transparent 40%,
+            var(--primary-color, #ff7043) 60%,
+            transparent 80%,
+            var(--primary-color, #ff7043) 100%);
+    background-size: 400% 400%;
+    animation: rg-shimmer 8s ease-in-out infinite;
+    opacity: 0.08;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -163,8 +140,8 @@ body[data-bg-animation="shimmer"]::before {
 ───────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-	body[data-bg-animation]::before {
-		animation: none;
-		opacity: 0.04;
-	}
+    body[data-bg-animation]::before {
+        animation: none;
+        opacity: 0.04;
+    }
 }

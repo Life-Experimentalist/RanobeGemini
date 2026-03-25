@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,22 +12,11 @@
 		<div class="container">
 			<div class="header">
 				<h1>
-					<img
-						src="../icons/logo-48.png"
-						alt="Ranobe Gemini"
-						style="width: 48px; height: 48px; margin-right: 8px"
-					/>Ranobe Gemini
+					<img src="../icons/logo-48.png" alt="Ranobe Gemini"
+						style="width: 48px; height: 48px; margin-right: 8px" />Ranobe Gemini
 				</h1>
-				<button
-					id="quickLibraryBtn"
-					class="quick-library-btn"
-					title="Open Full Library (Ctrl+Alt+N)"
-				>
-					<img
-						src="../icons/icon.png"
-						alt="Library"
-						style="width: 48px; height: 48px; margin-right: 8px"
-					/>
+				<button id="quickLibraryBtn" class="quick-library-btn" title="Open Full Library (Ctrl+Alt+N)">
+					<img src="../icons/icon.png" alt="Library" style="width: 48px; height: 48px; margin-right: 8px" />
 				</button>
 			</div>
 
@@ -34,96 +24,43 @@
 			<div class="tabs">
 				<button class="tab-btn" data-tab="novels">Novels</button>
 				<button class="tab-btn active" data-tab="config">Config</button>
-				<button
-					class="tab-btn"
-					data-tab="notifications"
-					id="notificationsTabBtn"
-				>
+				<button class="tab-btn" data-tab="notifications" id="notificationsTabBtn">
 					🔔
-					<span
-						id="notificationBadge"
-						class="notification-badge"
-						style="display: none"
-						>0</span
-					>
+					<span id="notificationBadge" class="notification-badge" style="display: none">0</span>
 				</button>
 			</div>
 
 			<!-- Config Tab -->
 			<div id="config" class="tab-content active">
+
 				<!-- SECTION: Incognito Mode -->
 				<div class="config-section" id="incognito-section">
 					<h3 class="config-section-title">🕵️ Incognito Mode</h3>
 					<div class="config-section-content">
 						<!-- Status bar -->
-						<div
-							id="incognito-status-bar"
-							style="
-								display: none;
-								padding: 8px 10px;
-								border-radius: 6px;
-								margin-bottom: 10px;
-								background: #37474f;
-								border: 1px solid #546e7a;
-								font-size: 11px;
-								font-weight: 600;
-								color: #b0bec5;
-							"
-						>
-							🕵️
-							<span id="incognito-status-text"
-								>Incognito active</span
-							>
+						<div id="incognito-status-bar"
+							style="display:none; padding:8px 10px; border-radius:6px; margin-bottom:10px; background:#37474f; border:1px solid #546e7a; font-size:11px; font-weight:600; color:#b0bec5;">
+							🕵️ <span id="incognito-status-text">Incognito active</span>
 						</div>
 						<div class="config-item">
 							<label
-								style="
-									display: flex;
-									align-items: center;
-									gap: 8px;
-									cursor: pointer;
-									font-weight: normal;
-								"
-							>
+								style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
 								<input type="checkbox" id="incognitoEnabled" />
 								<span>Pause library tracking</span>
 							</label>
-							<div class="description">
-								When on, new novels and chapter progress won't
-								be saved automatically. Summarize &amp; Enhance
-								still work.
-							</div>
+							<div class="description">When on, new novels and chapter progress won't be saved
+								automatically. Summarize &amp; Enhance still work.</div>
 						</div>
-						<div
-							class="config-item"
-							id="incognito-duration-row"
-							style="display: none; margin-top: 6px"
-						>
-							<label
-								for="incognitoDuration"
-								style="font-size: 12px; font-weight: 500"
-								>Duration</label
-							>
-							<select
-								id="incognitoDuration"
-								style="
-									width: 100%;
-									font-size: 11px;
-									margin-top: 4px;
-								"
-							>
-								<option value="0">
-									Indefinite (manual off)
-								</option>
+						<div class="config-item" id="incognito-duration-row" style="display:none; margin-top:6px;">
+							<label for="incognitoDuration" style="font-size:12px; font-weight:500;">Duration</label>
+							<select id="incognitoDuration" style="width:100%; font-size:11px; margin-top:4px;">
+								<option value="0">Indefinite (manual off)</option>
 								<option value="60">1 hour</option>
 								<option value="240">4 hours</option>
 								<option value="480">8 hours</option>
 								<option value="1440">24 hours</option>
 							</select>
-							<div
-								class="description"
-								style="margin-top: 4px; font-size: 10px"
-							>
+							<div class="description" style="margin-top:4px; font-size:10px;">
 								Timer starts when you enable incognito mode.
 							</div>
 						</div>
@@ -136,69 +73,26 @@
 					<div class="config-section-content">
 						<div class="config-item">
 							<label>Gemini API Keys</label>
-							<div
-								id="apiKeysList"
-								class="backup-keys-list"
-								style="
-									max-height: 150px;
-									overflow-y: auto;
-									margin-bottom: 8px;
-								"
-							></div>
-							<div
-								style="
-									display: flex;
-									gap: 6px;
-									margin-bottom: 8px;
-								"
-							>
-								<input
-									type="password"
-									id="newApiKey"
-									placeholder="Add API key"
-									style="flex: 1; font-size: 11px"
-								/>
-								<button id="addApiKey" style="font-size: 11px">
-									+ Add
-								</button>
-								<button id="testApiKey" style="font-size: 11px">
-									🧪 Test
-								</button>
-								<a id="getKeyLink" href="#" class="config-link"
-									>Get Key</a
-								>
+							<div id="apiKeysList" class="backup-keys-list"
+								style="max-height: 150px; overflow-y: auto; margin-bottom: 8px"></div>
+							<div style="display: flex; gap: 6px; margin-bottom: 8px">
+								<input type="password" id="newApiKey" placeholder="Add API key"
+									style="flex: 1; font-size: 11px" />
+								<button id="addApiKey" style="font-size: 11px">+ Add</button>
+								<button id="testApiKey" style="font-size: 11px">🧪 Test</button>
+								<a id="getKeyLink" href="#" class="config-link">Get Key</a>
 							</div>
-							<div
-								id="status"
-								class="status"
-								style="margin-top: 8px; font-size: 11px"
-							></div>
+							<div id="status" class="status" style="margin-top: 8px; font-size: 11px"></div>
 							<div>
-								<label
-									for="apiKeyRotation"
-									style="font-size: 12px; font-weight: 500"
-									>Rotation Strategy</label
-								>
-								<select
-									id="apiKeyRotation"
-									style="
-										width: 100%;
-										font-size: 11px;
-										margin-top: 4px;
-									"
-								>
-									<option value="round_robin">
-										Round Robin
-									</option>
+								<label for="apiKeyRotation" style="font-size: 12px; font-weight: 500">Rotation
+									Strategy</label>
+								<select id="apiKeyRotation" style="width: 100%; font-size: 11px; margin-top: 4px">
+									<option value="round_robin">Round Robin</option>
 									<option value="random">Random</option>
 									<option value="off">Off</option>
 								</select>
-								<div
-									class="description"
-									style="font-size: 10px; margin-top: 4px"
-								>
-									Auto-rotate through keys. Round Robin is
-									recommended.
+								<div class="description" style="font-size: 10px; margin-top: 4px">
+									Auto-rotate through keys. Round Robin is recommended.
 								</div>
 							</div>
 						</div>
@@ -213,87 +107,43 @@
 							<label for="modelSelect">Gemini Model</label>
 							<div style="display: flex; gap: 6px">
 								<select id="modelSelect" style="flex: 1">
-									<option value="gemini-2.5-flash">
-										Gemini 2.5 Flash (Recommended)
-									</option>
-									<option value="gemini-2.0-flash">
-										Gemini 2.0 Flash
-									</option>
-									<option value="gemini-2.5-pro">
-										Gemini 2.5 Pro (Better quality)
-									</option>
+									<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+									<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+									<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
 								</select>
-								<button
-									id="refreshModels"
-									title="Refresh models"
-									style="font-size: 16px; padding: 0 6px"
-								>
-									↻
-								</button>
+								<button id="refreshModels" title="Refresh models"
+									style="font-size: 16px; padding: 0 6px">↻</button>
 							</div>
-							<div class="description" style="margin-top: 4px">
-								Lists models available with your API key
+							<div class="description" style="margin-top: 4px">Lists models available with your API key
 							</div>
 						</div>
 
 						<div class="config-item">
-							<label for="backupModelSelect"
-								>Backup Model (fallback on overload)</label
-							>
+							<label for="backupModelSelect">Backup Model (fallback on overload)</label>
 							<select id="backupModelSelect" style="width: 100%">
-								<option value="">
-									None (disable fallback)
-								</option>
-								<option value="gemini-2.0-flash">
-									Gemini 2.0 Flash
-								</option>
-								<option value="gemini-2.5-flash">
-									Gemini 2.5 Flash
-								</option>
-								<option value="gemini-2.5-pro">
-									Gemini 2.5 Pro
-								</option>
+								<option value="">None (disable fallback)</option>
+								<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+								<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+								<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
 							</select>
-							<div class="description" style="margin-top: 4px">
-								Used automatically when the primary model
-								reports high load or is unavailable
-							</div>
+							<div class="description" style="margin-top: 4px">Used automatically when the primary model
+								reports high load or is unavailable</div>
 						</div>
 
 						<div class="config-item">
-							<label for="maxOutputTokens"
-								>Max Output Length</label
-							>
-							<input
-								type="number"
-								id="maxOutputTokens"
-								min="1000"
-								max="32768"
-								step="512"
-								value="8192"
-								style="width: 100%"
-							/>
-							<div class="description">
-								Maximum tokens in generated content
-							</div>
+							<label for="maxOutputTokens">Max Output Length</label>
+							<input type="number" id="maxOutputTokens" min="1000" max="32768" step="512" value="8192"
+								style="width: 100%" />
+							<div class="description">Maximum tokens in generated content</div>
 						</div>
 
 						<div class="config-item">
 							<label
-								style="
-									display: flex;
-									align-items: center;
-									gap: 8px;
-									cursor: pointer;
-									font-weight: normal;
-								"
-							>
+								style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal">
 								<input type="checkbox" id="useEmoji" />
 								<span>Add emotion emojis to dialogue</span>
 							</label>
-							<div class="description">
-								Enhances emotional expressions in text
-							</div>
+							<div class="description">Enhances emotional expressions in text</div>
 						</div>
 					</div>
 				</div>
@@ -304,381 +154,124 @@
 					<div class="config-section-content">
 						<!-- Drive Status Display -->
 						<div
-							style="
-								padding: 8px;
-								background: var(--bg-secondary);
-								border-radius: 6px;
-								margin-bottom: 10px;
-								display: flex;
-								align-items: center;
-								justify-content: space-between;
-							"
-						>
-							<span style="font-size: 11px; font-weight: 500"
-								>Status:</span
-							>
-							<span
-								id="driveStatus"
-								style="font-size: 11px; font-weight: 600"
-								>⚫ Disconnected</span
-							>
+							style="padding: 8px; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+							<span style="font-size: 11px; font-weight: 500;">Status:</span>
+							<span id="driveStatus" style="font-size: 11px; font-weight: 600;">⚫ Disconnected</span>
 						</div>
 						<!-- Drive Auth Error Display -->
-						<div
-							id="driveAuthError"
-							style="
-								display: none;
-								padding: 8px;
-								background: #fef3c7;
-								color: #92400e;
-								border-radius: 4px;
-								margin-bottom: 10px;
-								font-size: 11px;
-							"
-						></div>
+						<div id="driveAuthError"
+							style="display: none; padding: 8px; background: #fef3c7; color: #92400e; border-radius: 4px; margin-bottom: 10px; font-size: 11px;">
+						</div>
 
 						<!-- Drive OAuth Credentials -->
-						<details
-							id="driveOAuthDetails"
-							class="config-item"
-							open
-						>
+						<details id="driveOAuthDetails" class="config-item" open>
 							<summary
-								style="
-									cursor: pointer;
-									font-weight: 600;
-									font-size: 12px;
-									color: var(--text-primary);
-								"
-							>
+								style="cursor: pointer; font-weight: 600; font-size: 12px; color: var(--text-primary)">
 								🔑 OAuth Credentials
 							</summary>
-							<div
-								style="
-									margin-top: 8px;
-									display: flex;
-									flex-direction: column;
-									gap: 8px;
-								"
-							>
+							<div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
 								<div class="config-item">
 									<label for="driveClientId">Client ID</label>
-									<input
-										type="text"
-										id="driveClientId"
-										placeholder="Paste OAuth client ID"
-									/>
+									<input type="text" id="driveClientId" placeholder="Paste OAuth client ID" />
 								</div>
 								<div class="config-item">
-									<label for="driveClientSecret"
-										>Client Secret</label
-									>
-									<div
-										style="
-											display: flex;
-											gap: 6px;
-											align-items: center;
-										"
-									>
-										<input
-											type="password"
-											id="driveClientSecret"
-											placeholder="Paste OAuth client secret"
-											style="flex: 1"
-										/>
-										<button
-											id="toggleClientSecretVisibility"
-											style="
-												padding: 6px 8px;
-												font-size: 11px;
-											"
-										>
-											👁
-										</button>
+									<label for="driveClientSecret">Client Secret</label>
+									<div style="display: flex; gap: 6px; align-items: center;">
+										<input type="password" id="driveClientSecret"
+											placeholder="Paste OAuth client secret" style="flex: 1;" />
+										<button id="toggleClientSecretVisibility"
+											style="padding: 6px 8px; font-size: 11px;">👁</button>
 									</div>
 								</div>
 								<div class="config-actions">
-									<button
-										id="connectDriveBtn"
-										style="flex: 1"
-									>
-										🔗 Connect Drive
-									</button>
-									<button
-										id="disconnectDriveBtn"
-										style="flex: 1"
-									>
-										⏏ Disconnect
-									</button>
+									<button id="connectDriveBtn" style="flex: 1;">🔗 Connect Drive</button>
+									<button id="disconnectDriveBtn" style="flex: 1;">⏏ Disconnect</button>
 								</div>
-								<a
-									class="config-link open-library-settings"
-									href="#"
-									>Drive setup guide (Library Settings)</a
-								>
+								<a class="config-link open-library-settings" href="#">Drive setup guide (Library
+									Settings)</a>
 							</div>
 						</details>
 
 						<!-- Drive Not Connected Section -->
-						<div id="driveNotConnected" style="display: none">
+						<div id="driveNotConnected" style="display: none;">
 							<div
-								style="
-									padding: 10px;
-									background: var(--bg-secondary);
-									border-radius: 6px;
-									margin-bottom: 10px;
-									border-left: 3px solid #4285f4;
-								"
-							>
-								<p
-									style="
-										margin: 0;
-										font-size: 11px;
-										color: var(--text-secondary);
-										line-height: 1.4;
-									"
-								>
-									📝
-									<strong>Setup Required:</strong> Configure
-									OAuth credentials here or in Library
+								style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 10px; border-left: 3px solid #4285f4">
+								<p style="margin: 0; font-size: 11px; color: var(--text-secondary); line-height: 1.4">
+									📝 <strong>Setup Required:</strong> Configure OAuth credentials here or in Library
 									Settings → Backups
 								</p>
 							</div>
-							<button
-								id="openLibrarySettings"
-								class="open-library-settings"
-								style="
-									width: 100%;
-									padding: 8px;
-									background: #667eea;
-									color: white;
-									border: none;
-									border-radius: 4px;
-									cursor: pointer;
-									font-size: 12px;
-								"
-							>
+							<button id="openLibrarySettings" class="open-library-settings"
+								style="width: 100%; padding: 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px">
 								⚙️ Open Library Settings
 							</button>
 						</div>
 
 						<!-- Drive Connected Section -->
-						<div id="driveConnected" style="display: none">
+						<div id="driveConnected" style="display: none;">
 							<!-- Backup Mode Selection -->
-							<div
-								class="config-item"
-								style="margin-bottom: 12px"
-							>
+							<div class="config-item" style="margin-bottom: 12px;">
 								<label
-									style="
-										font-size: 11px;
-										font-weight: 500;
-										margin-bottom: 6px;
-										display: block;
-									"
-									>Backup Mode</label
-								>
-								<div
-									style="
-										display: flex;
-										flex-direction: column;
-										gap: 6px;
-									"
-								>
+									style="font-size: 11px; font-weight: 500; margin-bottom: 6px; display: block;">Backup
+									Mode</label>
+								<div style="display: flex; flex-direction: column; gap: 6px;">
 									<label
-										style="
-											display: flex;
-											align-items: center;
-											gap: 6px;
-											font-size: 11px;
-											cursor: pointer;
-										"
-									>
-										<input
-											type="radio"
-											name="driveBackupMode"
-											value="continuous"
-										/>
-										<span
-											>🔄 Continuous (saves every
-											change)</span
-										>
+										style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+										<input type="radio" name="driveBackupMode" value="continuous" />
+										<span>🔄 Continuous (saves every change)</span>
 									</label>
 									<label
-										style="
-											display: flex;
-											align-items: center;
-											gap: 6px;
-											font-size: 11px;
-											cursor: pointer;
-										"
-									>
-										<input
-											type="radio"
-											name="driveBackupMode"
-											value="scheduled"
-										/>
-										<span
-											>⏰ Scheduled (hourly checks)</span
-										>
+										style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+										<input type="radio" name="driveBackupMode" value="scheduled" />
+										<span>⏰ Scheduled (hourly checks)</span>
 									</label>
 									<label
-										style="
-											display: flex;
-											align-items: center;
-											gap: 6px;
-											font-size: 11px;
-											cursor: pointer;
-										"
-									>
-										<input
-											type="radio"
-											name="driveBackupMode"
-											value="both"
-										/>
+										style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+										<input type="radio" name="driveBackupMode" value="both" />
 										<span>⚡ Both (recommended)</span>
 									</label>
 									<label
-										style="
-											display: flex;
-											align-items: center;
-											gap: 6px;
-											font-size: 11px;
-											cursor: pointer;
-										"
-									>
-										<input
-											type="radio"
-											name="driveBackupMode"
-											value="manual"
-										/>
+										style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+										<input type="radio" name="driveBackupMode" value="manual" />
 										<span>✋ Manual only</span>
 									</label>
 								</div>
 							</div>
 
 							<!-- Continuous Backup Check Interval -->
-							<div
-								id="continuousBackupCheckContainer"
-								style="display: none; margin-bottom: 12px"
-							>
-								<label
-									style="
-										font-size: 11px;
-										font-weight: 500;
-										margin-bottom: 6px;
-										display: block;
-									"
-								>
-									Check Interval:
-									<span id="continuousCheckIntervalDisplay"
-										>2</span
-									>
-									minutes
+							<div id="continuousBackupCheckContainer" style="display: none; margin-bottom: 12px;">
+								<label style="font-size: 11px; font-weight: 500; margin-bottom: 6px; display: block;">
+									Check Interval: <span id="continuousCheckIntervalDisplay">2</span> minutes
 								</label>
-								<input
-									type="range"
-									min="1"
-									max="60"
-									step="1"
-									value="2"
-									class="slider"
-									id="continuousBackupCheckInterval"
-								/>
-								<div class="description">
-									How often to check for changes in continuous
-									mode
-								</div>
+								<input type="range" min="1" max="60" step="1" value="2" class="slider"
+									id="continuousBackupCheckInterval" />
+								<div class="description">How often to check for changes in continuous mode</div>
 							</div>
 
 							<!-- Auto Restore Toggle -->
-							<div
-								class="config-item"
-								style="margin-bottom: 12px"
-							>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 8px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="driveAutoRestoreEnabled"
-									/>
-									<span
-										style="
-											font-size: 11px;
-											font-weight: 500;
-										"
-										>Auto-restore from Drive on
-										startup</span
-									>
+							<div class="config-item" style="margin-bottom: 12px;">
+								<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+									<input type="checkbox" id="driveAutoRestoreEnabled" />
+									<span style="font-size: 11px; font-weight: 500;">Auto-restore from Drive on
+										startup</span>
 								</label>
-								<div class="description">
-									Automatically sync library from Drive when
-									extension loads
+								<div class="description">Automatically sync library from Drive when extension loads
 								</div>
 							</div>
 
 							<!-- Action Buttons -->
-							<div
-								style="
-									display: flex;
-									gap: 6px;
-									margin-top: 12px;
-								"
-							>
-								<button
-									id="backupNowBtn"
-									style="
-										flex: 1;
-										padding: 6px;
-										background: #34a853;
-										color: white;
-										border: none;
-										border-radius: 4px;
-										cursor: pointer;
-										font-size: 11px;
-										font-weight: 500;
-									"
-								>
+							<div style="display: flex; gap: 6px; margin-top: 12px;">
+								<button id="backupNowBtn"
+									style="flex: 1; padding: 6px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 500;">
 									💾 Backup Now
 								</button>
-								<button
-									id="driveSyncNowBtn"
-									style="
-										flex: 1;
-										padding: 6px;
-										background: #4285f4;
-										color: white;
-										border: none;
-										border-radius: 4px;
-										cursor: pointer;
-										font-size: 11px;
-										font-weight: 500;
-									"
-								>
+								<button id="driveSyncNowBtn"
+									style="flex: 1; padding: 6px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 500;">
 									🔁 Sync Now
 								</button>
 							</div>
-							<button
-								id="viewBackupsBtn"
-								style="
-									width: 100%;
-									padding: 6px;
-									background: #667eea;
-									color: white;
-									border: none;
-									border-radius: 4px;
-									cursor: pointer;
-									font-size: 11px;
-									font-weight: 500;
-									margin-top: 6px;
-								"
-							>
+							<button id="viewBackupsBtn"
+								style="width: 100%; padding: 6px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 500; margin-top: 6px;">
 								📂 View Drive Backups
 							</button>
 						</div>
@@ -691,13 +284,9 @@
 							<div class="config-item">
 								<label for="themeMode">Theme Mode</label>
 								<select id="themeMode" style="width: 100%">
-									<option value="dark">
-										Dark Mode (Default)
-									</option>
+									<option value="dark">Dark Mode (Default)</option>
 									<option value="light">Light Mode</option>
-									<option value="auto">
-										Auto (System Preference)
-									</option>
+									<option value="auto">Auto (System Preference)</option>
 								</select>
 							</div>
 
@@ -711,24 +300,11 @@
 							<div class="config-item">
 								<label for="fontSizeSlider">
 									Font Size
-									<span
-										class="slider-value"
-										id="fontSizeValue"
-										>100%</span
-									>
+									<span class="slider-value" id="fontSizeValue">100%</span>
 								</label>
-								<input
-									type="range"
-									min="80"
-									max="150"
-									step="5"
-									value="100"
-									class="slider"
-									id="fontSizeSlider"
-								/>
-								<div class="description">
-									Adjusts enhanced content font size
-								</div>
+								<input type="range" min="80" max="150" step="5" value="100" class="slider"
+									id="fontSizeSlider" />
+								<div class="description">Adjusts enhanced content font size</div>
 							</div>
 						</div>
 					</div>
@@ -736,78 +312,34 @@
 					<!-- SECTION: Site Toggles -->
 					<details class="config-section">
 						<summary
-							style="
-								cursor: pointer;
-								font-weight: 600;
-								font-size: 13px;
-								color: var(--text-primary);
-								display: flex;
-								justify-content: space-between;
-								align-items: center;
-							"
-						>
+							style="cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center">
 							<span>🌐 Site Toggles</span>
-							<span
-								style="
-									font-size: 11px;
-									color: var(--text-secondary);
-									font-weight: normal;
-								"
-								>Toggle sites on/off</span
-							>
+							<span style="font-size: 11px; color: var(--text-secondary); font-weight: normal">Toggle
+								sites on/off</span>
 						</summary>
-						<div
-							class="config-section-content"
-							style="margin-top: 10px"
-						>
-							<div
-								class="description"
-								style="margin-bottom: 10px"
-							>
-								Turn off a site to hide enhancement buttons and
-								library sections for it.
+						<div class="config-section-content" style="margin-top: 10px">
+							<div class="description" style="margin-bottom: 10px">
+								Turn off a site to hide enhancement buttons and library sections for it.
 							</div>
-							<div
-								id="siteToggleList"
-								class="site-toggle-list"
-							></div>
+							<div id="siteToggleList" class="site-toggle-list"></div>
 						</div>
 					</details>
 
 					<!-- SECTION: Keyboard Shortcuts -->
 					<div class="config-section">
-						<h3 class="config-section-title">
-							⌨️ Keyboard Shortcuts
-						</h3>
+						<h3 class="config-section-title">⌨️ Keyboard Shortcuts</h3>
 						<div class="config-section-content">
 							<div class="config-item">
-								<div
-									class="description"
-									style="
-										margin-bottom: 8px;
-										line-height: 1.45;
-									"
-								>
-									Default shortcuts:
-									<strong>Alt+Shift+L</strong> for Library,
-									<strong>Alt+Shift+E</strong> for Enhance,
-									and <strong>Alt+Shift+S</strong> for
-									Summary.
+								<div class="description" style="margin-bottom: 8px; line-height: 1.45;">
+									Default shortcuts: <strong>Alt+Shift+L</strong> for Library,
+									<strong>Alt+Shift+E</strong> for Enhance, and
+									<strong>Alt+Shift+S</strong> for Summary.
 								</div>
-								<div
-									class="description"
-									style="line-height: 1.45"
-								>
-									To change them, open your browser's
-									extension shortcut manager. Chromium
-									browsers use
-									<strong
-										>chrome://extensions/shortcuts</strong
-									>
-									or
-									<strong>edge://extensions/shortcuts</strong
-									>. Firefox manages this from the add-on
-									settings page.
+								<div class="description" style="line-height: 1.45;">
+									To change them, open your browser's extension shortcut manager.
+									Chromium browsers use <strong>chrome://extensions/shortcuts</strong>
+									or <strong>edge://extensions/shortcuts</strong>. Firefox manages this from the
+									add-on settings page.
 								</div>
 							</div>
 						</div>
@@ -815,34 +347,12 @@
 
 					<!-- Action Buttons -->
 					<div style="display: flex; gap: 8px; margin-top: 16px">
-						<button
-							id="saveSettings"
-							style="
-								flex: 1;
-								padding: 8px;
-								background: #34a853;
-								color: white;
-								border: none;
-								border-radius: 4px;
-								cursor: pointer;
-								font-weight: 500;
-							"
-						>
+						<button id="saveSettings"
+							style="flex: 1; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500">
 							✅ Save Settings
 						</button>
-						<button
-							class="open-library-settings"
-							style="
-								flex: 1;
-								padding: 8px;
-								background: #667eea;
-								color: white;
-								border: none;
-								border-radius: 4px;
-								cursor: pointer;
-								font-weight: 500;
-							"
-						>
+						<button class="open-library-settings"
+							style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500">
 							⚙️ Library Settings
 						</button>
 					</div>
@@ -852,272 +362,89 @@
 				<div class="config-section">
 					<h3 class="config-section-title">📑 Content Sections</h3>
 					<div class="config-section-content">
-						<div
-							class="description"
-							style="margin-bottom: 10px; font-size: 10px"
-						>
-							Collapsible blocks injected by Gemini into enhanced
-							chapters. Each disabled section shows content
-							inline. Collapsed sections are read as summaries by
-							the TTS/read-aloud feature when available.
+						<div class="description" style="margin-bottom:10px;font-size:10px;">
+							Collapsible blocks injected by Gemini into enhanced chapters. Each disabled section shows
+							content inline. Collapsed sections are read as summaries by the TTS/read-aloud feature when
+							available.
 						</div>
 
 						<!-- Fight / Action Scenes -->
-						<div class="config-item" style="margin-bottom: 10px">
-							<label style="font-size: 12px; font-weight: 600"
-								>⚔️ Fight / Action Scenes</label
-							>
-							<div
-								style="
-									display: flex;
-									gap: 14px;
-									margin-top: 6px;
-									flex-wrap: wrap;
-								"
-							>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-fight-enabled"
-									/>
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">⚔️ Fight / Action Scenes</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-fight-enabled" />
 									<span>Enable</span>
 								</label>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-fight-collapsed"
-									/>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-fight-collapsed" />
 									<span>Collapsed by default</span>
 								</label>
 							</div>
-							<div
-								class="description"
-								style="font-size: 10px; margin-top: 4px"
-							>
-								Identifies combat sequences ≥3 paragraphs and
-								wraps them with a summary.
-							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Identifies combat sequences
+								≥3 paragraphs and wraps them with a summary.</div>
 						</div>
 
 						<!-- R18 / Mature Content -->
-						<div class="config-item" style="margin-bottom: 10px">
-							<label style="font-size: 12px; font-weight: 600"
-								>🔞 Mature Content (R-18)</label
-							>
-							<div
-								style="
-									display: flex;
-									gap: 14px;
-									margin-top: 6px;
-									flex-wrap: wrap;
-								"
-							>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-r18-enabled"
-									/>
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">🔞 Mature Content (R-18)</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-r18-enabled" />
 									<span>Enable</span>
 								</label>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-r18-collapsed"
-									/>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-r18-collapsed" />
 									<span>Collapsed by default</span>
 								</label>
 							</div>
-							<div
-								class="description"
-								style="font-size: 10px; margin-top: 4px"
-							>
-								Wraps explicit adult scenes with a tasteful
-								summary.
-							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Wraps explicit adult scenes
+								with a tasteful summary.</div>
 						</div>
 
 						<!-- Author Notes -->
-						<div class="config-item" style="margin-bottom: 10px">
-							<label style="font-size: 12px; font-weight: 600"
-								>📝 Author / Translator Notes</label
-							>
-							<div
-								style="
-									display: flex;
-									gap: 14px;
-									margin-top: 6px;
-									flex-wrap: wrap;
-								"
-							>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-author-note-enabled"
-									/>
-									<span
-										>Auto-collapse long / off-topic
-										notes</span
-									>
+						<div class="config-item" style="margin-bottom:10px;">
+							<label style="font-size:12px;font-weight:600;">📝 Author / Translator Notes</label>
+							<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap;">
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-author-note-enabled" />
+									<span>Auto-collapse long / off-topic notes</span>
 								</label>
-								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 6px;
-										font-size: 11px;
-										cursor: pointer;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-author-note-collapsed"
-									/>
+								<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+									<input type="checkbox" id="cf-author-note-collapsed" />
 									<span>Collapsed by default</span>
 								</label>
 							</div>
-							<div
-								class="description"
-								style="font-size: 10px; margin-top: 4px"
-							>
-								Notes &gt;150 words or about release
-								schedules/personal life are automatically
-								collapsed with a story-relevant summary.
-							</div>
+							<div class="description" style="font-size:10px;margin-top:4px;">Notes &gt;150 words or about
+								release schedules/personal life are automatically collapsed with a story-relevant
+								summary.</div>
 						</div>
 
 						<!-- Custom Types -->
 						<div class="config-item">
-							<label style="font-size: 12px; font-weight: 600"
-								>➕ Custom Section Types</label
-							>
-							<div
-								id="cf-custom-list"
-								style="
-									margin: 8px 0;
-									display: flex;
-									flex-direction: column;
-									gap: 6px;
-								"
-							></div>
-							<div
-								style="
-									display: flex;
-									gap: 6px;
-									align-items: center;
-									flex-wrap: wrap;
-									margin-top: 4px;
-								"
-							>
-								<input
-									type="text"
-									id="cf-custom-name"
-									placeholder="Section name…"
-									style="
-										flex: 1;
-										min-width: 80px;
-										font-size: 11px;
-									"
-								/>
-								<input
-									type="text"
-									id="cf-custom-icon"
-									placeholder="Icon (emoji)"
-									style="
-										width: 52px;
-										font-size: 11px;
-										text-align: center;
-									"
-								/>
+							<label style="font-size:12px;font-weight:600;">➕ Custom Section Types</label>
+							<div id="cf-custom-list" style="margin:8px 0;display:flex;flex-direction:column;gap:6px;">
+							</div>
+							<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+								<input type="text" id="cf-custom-name" placeholder="Section name…"
+									style="flex:1;min-width:80px;font-size:11px;" />
+								<input type="text" id="cf-custom-icon" placeholder="Icon (emoji)"
+									style="width:52px;font-size:11px;text-align:center;" />
 								<label
-									style="
-										display: flex;
-										align-items: center;
-										gap: 4px;
-										font-size: 11px;
-										cursor: pointer;
-										white-space: nowrap;
-									"
-								>
-									<input
-										type="checkbox"
-										id="cf-custom-collapsed"
-										checked
-									/>
+									style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;white-space:nowrap;">
+									<input type="checkbox" id="cf-custom-collapsed" checked />
 									Collapsed
 								</label>
-								<button
-									id="cf-custom-add"
-									style="
-										font-size: 11px;
-										padding: 4px 10px;
-										background: #4285f4;
-										color: white;
-										border: none;
-										border-radius: 4px;
-										cursor: pointer;
-									"
-								>
+								<button id="cf-custom-add"
+									style="font-size:11px;padding:4px 10px;background:#4285f4;color:white;border:none;border-radius:4px;cursor:pointer;">
 									+ Add
 								</button>
 							</div>
-							<div
-								class="description"
-								style="font-size: 10px; margin-top: 4px"
-							>
-								Custom types need Gemini instructions. Tell
-								Gemini (via permanent prompt or custom prompt)
-								to wrap content in:
+							<div class="description" style="font-size:10px;margin-top:4px;">
+								Custom types need Gemini instructions. Tell Gemini (via permanent prompt or custom
+								prompt) to wrap content in:
 								<code
-									style="
-										font-size: 9px;
-										background: rgba(0, 0, 0, 0.2);
-										padding: 1px 3px;
-										border-radius: 2px;
-									"
-									>&lt;div class="rg-collapsible-section"
-									data-type="YOUR_ID" data-name="Name"
-									data-summary="…"&gt;</code
-								>
+									style="font-size:9px;background:rgba(0,0,0,0.2);padding:1px 3px;border-radius:2px;">&lt;div class="rg-collapsible-section" data-type="YOUR_ID" data-name="Name" data-summary="…"&gt;</code>
 							</div>
 						</div>
 					</div>
@@ -1126,166 +453,54 @@
 			<!-- Novels Tab -->
 			<div class="tab-content" id="novels">
 				<!-- Quick Filter -->
-				<div
-					style="
-						display: flex;
-						gap: 6px;
-						margin-bottom: 12px;
-						overflow-x: auto;
-						padding-bottom: 4px;
-					"
-				>
-					<button
-						class="novel-filter-btn active"
-						data-filter="all"
-						style="white-space: nowrap"
-					>
-						All
-					</button>
-					<button
-						class="novel-filter-btn"
-						data-filter="reading"
-						style="white-space: nowrap"
-					>
-						📖 Reading
-					</button>
-					<button
-						class="novel-filter-btn"
-						data-filter="up-to-date"
-						style="white-space: nowrap"
-					>
-						✨ Up-to-Date
-					</button>
-					<button
-						class="novel-filter-btn"
-						data-filter="completed"
-						style="white-space: nowrap"
-					>
-						✅ Completed
-					</button>
-					<button
-						class="novel-filter-btn"
-						data-filter="on-hold"
-						style="white-space: nowrap"
-					>
-						⏸️ Hold
-					</button>
+				<div style="display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px">
+					<button class="novel-filter-btn active" data-filter="all" style="white-space: nowrap">All</button>
+					<button class="novel-filter-btn" data-filter="reading" style="white-space: nowrap">📖
+						Reading</button>
+					<button class="novel-filter-btn" data-filter="up-to-date" style="white-space: nowrap">✨
+						Up-to-Date</button>
+					<button class="novel-filter-btn" data-filter="completed" style="white-space: nowrap">✅
+						Completed</button>
+					<button class="novel-filter-btn" data-filter="on-hold" style="white-space: nowrap">⏸️
+						Hold</button>
 				</div>
 				<!-- Currently Reading Section -->
 				<section class="novels-section" style="margin-bottom: 16px">
-					<h3
-						style="
-							margin: 0 0 10px 0;
-							font-size: 13px;
-							font-weight: 600;
-							color: var(--text-secondary);
-						"
-					>
+					<h3 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: var(--text-secondary)">
 						📖 Now Reading
 					</h3>
 					<div id="currentNovelInfo">
-						<div
-							class="current-novel-card"
-							style="
-								display: none;
-								background: linear-gradient(
-									135deg,
-									rgba(59, 130, 246, 0.1),
-									rgba(139, 92, 246, 0.1)
-								);
-								border: 1px solid rgba(59, 130, 246, 0.3);
-								border-radius: 8px;
-								padding: 12px;
-								margin-bottom: 12px;
-							"
-						>
+						<div class="current-novel-card"
+							style="display: none; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px">
 							<div style="display: flex; gap: 10px">
-								<div style="font-size: 28px; flex-shrink: 0">
-									📕
-								</div>
+								<div style="font-size: 28px; flex-shrink: 0">📕</div>
 								<div style="flex: 1; min-width: 0">
-									<div
-										style="
-											font-weight: 600;
-											font-size: 12px;
-											color: var(--text-primary);
-											word-break: break-word;
-											margin-bottom: 4px;
-										"
-										id="current-novel-title"
-									></div>
-									<div
-										style="
-											font-size: 10px;
-											color: var(--text-secondary);
-											margin-bottom: 6px;
-										"
-										id="current-novel-site"
-									></div>
+									<div style="font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px"
+										id="current-novel-title"></div>
+									<div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px"
+										id="current-novel-site">
+									</div>
 									<div>
+										<div style="font-size: 9px; color: var(--text-secondary); margin-bottom: 2px">
+											Progress</div>
 										<div
-											style="
-												font-size: 9px;
-												color: var(--text-secondary);
-												margin-bottom: 2px;
-											"
-										>
-											Progress
+											style="background: var(--bg-secondary); border-radius: 3px; height: 5px; overflow: hidden">
+											<div id="current-novel-progress"
+												style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: 0%; transition: width 0.3s ease">
+											</div>
 										</div>
-										<div
-											style="
-												background: var(--bg-secondary);
-												border-radius: 3px;
-												height: 5px;
-												overflow: hidden;
-											"
-										>
-											<div
-												id="current-novel-progress"
-												style="
-													background: linear-gradient(
-														90deg,
-														#3b82f6,
-														#8b5cf6
-													);
-													height: 100%;
-													width: 0%;
-													transition: width 0.3s ease;
-												"
-											></div>
-										</div>
-										<div
-											style="
-												font-size: 9px;
-												color: var(--text-secondary);
-												margin-top: 2px;
-											"
-											id="current-novel-progress-text"
-										>
-											0%
-										</div>
+										<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px"
+											id="current-novel-progress-text">0%</div>
 									</div>
 								</div>
 							</div>
 						</div>
-						<div
-							class="no-current-novel"
-							style="
-								text-align: center;
-								padding: 16px;
-								color: var(--text-secondary);
-								font-size: 11px;
-								background: var(--bg-secondary);
-								border-radius: 6px;
-							"
-						>
+						<div class="no-current-novel"
+							style="text-align: center; padding: 16px; color: var(--text-secondary); font-size: 11px; background: var(--bg-secondary); border-radius: 6px">
 							<p style="margin: 0 0 4px 0">📖</p>
-							<p style="margin: 0; font-weight: 500">
-								No novel on this page
-							</p>
-							<p style="margin: 4px 0 0 0; font-size: 10px">
-								Visit a supported site to see current novel
-							</p>
+							<p style="margin: 0; font-weight: 500">No novel on this page</p>
+							<p style="margin: 4px 0 0 0; font-size: 10px">Visit a supported site to see current
+								novel</p>
 						</div>
 					</div>
 				</section>
@@ -1293,137 +508,47 @@
 				<!-- Library Section -->
 				<section class="novels-section">
 					<div
-						style="
-							display: flex;
-							justify-content: space-between;
-							align-items: center;
-							margin-bottom: 10px;
-						"
-					>
-						<h3
-							style="margin: 0; font-size: 13px; font-weight: 600"
-						>
+						style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
+						<h3 style="margin: 0; font-size: 13px; font-weight: 600">
 							📚 Your Library
 							<span
-								style="
-									font-size: 11px;
-									background: var(--accent-primary);
-									color: white;
-									padding: 2px 6px;
-									border-radius: 12px;
-									margin-left: 6px;
-								"
-							>
+								style="font-size: 11px; background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 12px; margin-left: 6px">
 								<span id="novelCountBadge">0</span>
 							</span>
 						</h3>
-						<button
-							id="refreshNovels"
-							title="Refresh"
-							style="
-								background: transparent;
-								border: 1px solid var(--border-color);
-								color: var(--text-primary);
-								padding: 4px 6px;
-								border-radius: 4px;
-								cursor: pointer;
-								font-size: 12px;
-							"
-						>
-							↻
-						</button>
+						<button id="refreshNovels" title="Refresh"
+							style="background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12px">↻</button>
 					</div>
 					<!-- View Toggle -->
 					<div style="display: flex; gap: 4px; margin-bottom: 10px">
-						<button
-							class="novel-view-btn active"
-							data-view="list"
-							style="flex: 1; font-size: 11px"
-						>
-							📋 List
-						</button>
-						<button
-							class="novel-view-btn"
-							data-view="grid"
-							style="flex: 1; font-size: 11px"
-						>
-							⬜ Grid
-						</button>
+						<button class="novel-view-btn active" data-view="list" style="flex: 1; font-size: 11px">📋
+							List</button>
+						<button class="novel-view-btn" data-view="grid" style="flex: 1; font-size: 11px">⬜
+							Grid</button>
 					</div>
 
 					<!-- Novels Container -->
-					<div
-						id="novelsList"
-						class="novels-list"
-						style="
-							display: grid;
-							grid-template-columns: 1fr;
-							gap: 8px;
-							max-height: 400px;
-							overflow-y: auto;
-						"
-					>
+					<div id="novelsList" class="novels-list"
+						style="display: grid; grid-template-columns: 1fr; gap: 8px; max-height: 400px; overflow-y: auto">
 						<div
-							style="
-								text-align: center;
-								padding: 24px;
-								color: var(--text-secondary);
-								font-size: 11px;
-								grid-column: 1/-1;
-							"
-						>
+							style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
 							<p style="margin: 0; font-size: 20px">📚</p>
-							<p style="margin: 8px 0 0 0; font-weight: 500">
-								No novels yet
-							</p>
-							<p style="margin: 4px 0 0 0; font-size: 10px">
-								Open full library to add novels
-							</p>
+							<p style="margin: 8px 0 0 0; font-weight: 500">No novels yet</p>
+							<p style="margin: 4px 0 0 0; font-size: 10px">Open full library to add novels</p>
 						</div>
 					</div>
 				</section>
 
 				<!-- Open Full Library Link -->
 				<div style="margin-top: 16px">
-					<a
-						href="#"
-						id="openMainLibrary"
-						style="
-							display: flex;
-							align-items: center;
-							justify-content: space-between;
-							background: linear-gradient(
-								135deg,
-								rgba(59, 130, 246, 0.15),
-								rgba(139, 92, 246, 0.15)
-							);
-							border: 1px solid rgba(59, 130, 246, 0.3);
-							border-radius: 8px;
-							padding: 12px;
-							text-decoration: none;
-							color: var(--text-primary);
-							transition: all 0.2s;
-						"
-					>
-						<div
-							style="
-								display: flex;
-								align-items: center;
-								gap: 10px;
-							"
-						>
+					<a href="#" id="openMainLibrary"
+						style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; text-decoration: none; color: var(--text-primary); transition: all 0.2s">
+						<div style="display: flex; align-items: center; gap: 10px">
 							<span style="font-size: 18px">🏛️</span>
 							<div>
-								<strong style="display: block; font-size: 12px"
-									>Open Full Library</strong
-								>
-								<span
-									style="
-										font-size: 10px;
-										color: var(--text-secondary);
-									"
-									>Manage all novels & settings</span
-								>
+								<strong style="display: block; font-size: 12px">Open Full Library</strong>
+								<span style="font-size: 10px; color: var(--text-secondary)">Manage all novels &
+									settings</span>
 							</div>
 						</div>
 						<span style="color: var(--text-secondary)">→</span>
@@ -1437,51 +562,25 @@
 					<div class="notifications-stats">
 						<span id="totalNotifs">0</span> total
 						<span class="notif-stat-sep">·</span>
-						<span id="unreadNotifs" class="notif-unread-count"
-							>0</span
-						>
-						unread
+						<span id="unreadNotifs" class="notif-unread-count">0</span> unread
 					</div>
 					<div class="notifications-tab-actions">
-						<button id="markAllReadBtn" class="notif-action-btn">
-							✓ Read All
-						</button>
-						<button
-							id="clearNotificationsBtn"
-							class="notif-action-btn notif-action-danger"
-						>
-							🗑 Clear
-						</button>
+						<button id="markAllReadBtn" class="notif-action-btn">✓ Read All</button>
+						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">🗑
+							Clear</button>
 					</div>
 				</div>
 				<div class="notifications-filter-bar">
-					<button
-						class="notification-filter-btn active"
-						data-filter="all"
-					>
-						All
-					</button>
-					<button
-						class="notification-filter-btn"
-						data-filter="success"
-					>
-						Success
-					</button>
-					<button class="notification-filter-btn" data-filter="error">
-						Errors
-					</button>
-					<button class="notification-filter-btn" data-filter="info">
-						Info
-					</button>
+					<button class="notification-filter-btn active" data-filter="all">All</button>
+					<button class="notification-filter-btn" data-filter="success">Success</button>
+					<button class="notification-filter-btn" data-filter="error">Errors</button>
+					<button class="notification-filter-btn" data-filter="info">Info</button>
 				</div>
 				<div id="notificationsContainer" class="notifications-list">
 					<div class="no-notifications">
 						<p style="font-size: 36px; margin-bottom: 8px">📭</p>
 						<p>No notifications yet</p>
-						<p class="description">
-							Notifications will appear here as you use the
-							extension
-						</p>
+						<p class="description">Notifications will appear here as you use the extension</p>
 					</div>
 				</div>
 			</div>
@@ -1491,14 +590,11 @@
 
 			<!-- * NOTICE: DO NOT TOUCH THIS BELOW DIV (FROM EXPERIENCE)!!! -->
 			<!-- Resize handle with improved visibility -->
-			<div
-				class="resize-handle"
-				id="resize-handle"
-				title="Drag to resize"
-			></div>
+			<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
 		</div>
 		<!-- Browser API polyfill for Chrome/Edge compatibility -->
 		<script src="../lib/browser-polyfill.min.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>
+
 </html>

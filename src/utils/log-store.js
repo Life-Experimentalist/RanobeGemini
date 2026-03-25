@@ -20,9 +20,7 @@ function openDb() {
 		req.onupgradeneeded = () => {
 			const db = req.result;
 			if (!db.objectStoreNames.contains(STORE_NAME)) {
-				const store = db.createObjectStore(STORE_NAME, {
-					keyPath: "id",
-				});
+				const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
 				store.createIndex(INDEX_TS, INDEX_TS, { unique: false });
 			}
 		};
@@ -156,10 +154,7 @@ export async function exportLogsBlob({ limit = 5000 } = {}) {
 	return { blob, count: logs.length };
 }
 
-export async function downloadLogs({
-	limit = 5000,
-	filename = "ranobe-logs.json",
-} = {}) {
+export async function downloadLogs({ limit = 5000, filename = "ranobe-logs.json" } = {}) {
 	const { blob, count } = await exportLogsBlob({ limit });
 	if (typeof document === "undefined") return { blob, count };
 	const url = URL.createObjectURL(blob);
@@ -175,12 +170,8 @@ export async function downloadLogs({
 
 // Optional helper for external upload targets (e.g., Google Drive). Caller passes an async uploader.
 export async function uploadWithAdapter(adapter, options = {}) {
-	if (typeof adapter !== "function")
-		throw new Error("adapter must be a function");
+	if (typeof adapter !== "function") throw new Error("adapter must be a function");
 	const { blob, count } = await exportLogsBlob(options);
-	await adapter(blob, {
-		count,
-		filename: options.filename || "ranobe-logs.json",
-	});
+	await adapter(blob, { count, filename: options.filename || "ranobe-logs.json" });
 	return { count };
 }

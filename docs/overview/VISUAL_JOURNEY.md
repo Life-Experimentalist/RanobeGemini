@@ -1,4 +1,4 @@
-# The Journey to Ranobe Gemini v4.6.0 — Visual Architecture
+# The Journey to Ranobe Gemini v4.4.0 — Visual Architecture
 
 > _How a reading experience evolved from one-direction text to intelligent, user-controlled content presentation._
 
@@ -70,7 +70,7 @@ graph LR
 
 ---
 
-## Act 3: The Intelligent System (v4.6.0+)
+## Act 3: The Intelligent System (v4.4.0+)
 
 ### Layer 1: Gemini-Aware Markup
 
@@ -405,7 +405,7 @@ RENDERING PHASE:
 
 ### Problem: Fighting Overwhelm
 
-| Before v4.6.0                            | After v4.6.0                                    |
+| Before v4.4.0                            | After v4.4.0                                    |
 | ---------------------------------------- | ----------------------------------------------- |
 | 30-line fight scene in middle of chapter | 1-line summary visible, expand button available |
 | Reader skips or scrolls frantically      | Reader controls when to dive deep               |
@@ -598,7 +598,7 @@ v3.5
 
 →→→ MAJOR UPGRADE POINT ←←←
 
-v4.6.0 ⭐ (March 2026)
+v4.4.0 ⭐ (March 2026)
   ├─ Gemini-aware collapsible markup
   ├─ Complete storage system
   ├─ Rich settings UI

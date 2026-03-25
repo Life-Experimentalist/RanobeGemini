@@ -34,7 +34,7 @@
 		- [Troubleshooting](#troubleshooting)
 
 **Feature Version:** 2.8.0
-**Last updated: 2026-03-25
+**Last Updated:** 2025-11-28
 **Status:** ✅ Active
 
 ---
