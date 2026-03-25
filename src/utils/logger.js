@@ -100,7 +100,10 @@ async function getTruncationSettings() {
 function formatOutput(value, maxLength = 500) {
 	const str = safeStringify(value);
 	if (str.length > maxLength) {
-		return str.substring(0, maxLength) + `... [truncated, ${str.length - maxLength} more chars]`;
+		return (
+			str.substring(0, maxLength) +
+			`... [truncated, ${str.length - maxLength} more chars]`
+		);
 	}
 	return str;
 }
@@ -251,9 +254,9 @@ try {
 			}
 			isDebugEnabledAsync().catch(() => {});
 		};
-			console.__rgLogWrapped = true;
-			isDebugEnabledAsync().catch(() => {});
-		}
+		console.__rgLogWrapped = true;
+		isDebugEnabledAsync().catch(() => {});
+	}
 } catch (err) {
 	// ignore
 }
@@ -363,7 +366,7 @@ export class Logger {
 
 		// Also log the trace step immediately as INFO
 		const timeInfo = `[+${sinceStart.toFixed(0)}ms | +${sinceLast.toFixed(
-			0
+			0,
 		)}ms]`;
 		this._log(LogLevel.INFO, `TRACE STEP: ${step} ${timeInfo}`, data);
 	}

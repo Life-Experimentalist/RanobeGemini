@@ -14,6 +14,7 @@
 		"update-domains": "node dev/build.js --update",
 		"watch": "npm run build && node dev/watch.js",
 		"docs:visualize": "node dev/generate-doc-visualizers.js",
+		"docs:update-versions": "node dev/update-doc-versions.js",
 		"commits:all": "node dev/commit-history.js --all",
 		"commits:write": "node dev/commit-history.js --all --output docs/release/commit-history.md",
 		"commits:versions": "node dev/commit-history.js --versions",

@@ -1,6 +1,5 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en">
-
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,36 +10,60 @@
 	</head>
 
 	<body>
-
 		<div class="ls-layout">
-
 			<!-- ── Sidebar ────────────────────────────────────────────────── -->
 			<aside class="ls-sidebar">
 				<div class="ls-sidebar-header">
-					<a href="library.html" class="ls-back-link" aria-label="← Back to Library">
-						<img src="../icons/logo-256.png" class="ls-logo" alt="Ranobe Gemini" />
+					<a
+						href="library.html"
+						class="ls-back-link"
+						aria-label="← Back to Library"
+					>
+						<img
+							src="../icons/logo-256.png"
+							class="ls-logo"
+							alt="Ranobe Gemini"
+						/>
 						<div>
 							<div class="ls-sidebar-title">Library Settings</div>
 							<div class="ls-sidebar-subtitle">Ranobe Gemini</div>
-							<div class="ls-sidebar-subtitle">← Back to Library</div>
+							<div class="ls-sidebar-subtitle">
+								← Back to Library
+							</div>
 						</div>
 					</a>
 				</div>
 
-				<nav class="ls-nav" id="ls-nav" role="navigation" aria-label="Settings navigation">
+				<nav
+					class="ls-nav"
+					id="ls-nav"
+					role="navigation"
+					aria-label="Settings navigation"
+				>
 					<!-- Navigation items rendered by library-settings.js -->
 				</nav>
 
 				<div class="ls-sidebar-footer">
-					<a href="https://ranobe.vkrishna04.me" target="_blank" class="ls-sidebar-link">Ranobe Gemini <div
-							id="ls-version-badge" style="font-size:11px;color:var(--text-secondary);">v—</div>
+					<a
+						href="https://ranobe.vkrishna04.me"
+						target="_blank"
+						class="ls-sidebar-link"
+						>Ranobe Gemini
+						<div
+							id="ls-version-badge"
+							style="
+								font-size: 11px;
+								color: var(--text-secondary);
+							"
+						>
+							v—
+						</div>
 					</a>
 				</div>
 			</aside>
 
 			<!-- ── Main Content ───────────────────────────────────────────── -->
 			<main class="ls-content" id="ls-content">
-
 				<!-- ════════════════════════════════════════════════
 		     PANEL: General
 		     ════════════════════════════════════════════════ -->
@@ -48,30 +71,69 @@
 					<div class="ls-panel-header">
 						<div class="ls-panel-header-content">
 							<h1 class="ls-panel-title">💾 General</h1>
-							<p class="ls-panel-description">Theme, AI model, API keys, and URL import.</p>
+							<p class="ls-panel-description">
+								Theme, AI model, API keys, and URL import.
+							</p>
 						</div>
 						<div class="ls-panel-header-actions">
-							<button id="library-reset-theme" class="ls-btn ls-btn-danger ls-btn-sm">↺ Reset</button>
-							<button id="library-save-theme" class="ls-btn ls-btn-primary ls-btn-sm">💾 Save
-								Theme</button>
+							<button
+								id="library-reset-theme"
+								class="ls-btn ls-btn-danger ls-btn-sm"
+							>
+								↺ Reset
+							</button>
+							<button
+								id="library-save-theme"
+								class="ls-btn ls-btn-primary ls-btn-sm"
+							>
+								💾 Save Theme
+							</button>
 						</div>
 					</div>
 					<!-- Theme -->
 					<div class="ls-section" data-accent="orange">
 						<div class="ls-section-title">🎨 Theme</div>
-						<div class="ls-section-desc">Customise the look of your library. Presets are saved in backups.
+						<div class="ls-section-desc">
+							Customise the look of your library. Presets are
+							saved in backups.
 						</div>
 
 						<!-- ── Mode pills ──────────────────────────────────────── -->
 						<div class="ls-form-group">
 							<label class="ls-label">Display Mode</label>
-							<div class="ls-mode-pills" role="group" aria-label="Theme mode">
-								<button type="button" class="ls-mode-pill" data-mode="dark">🌙 Dark</button>
-								<button type="button" class="ls-mode-pill" data-mode="light">☀️ Light</button>
-								<button type="button" class="ls-mode-pill" data-mode="auto">🔄 Auto</button>
+							<div
+								class="ls-mode-pills"
+								role="group"
+								aria-label="Theme mode"
+							>
+								<button
+									type="button"
+									class="ls-mode-pill"
+									data-mode="dark"
+								>
+									🌙 Dark
+								</button>
+								<button
+									type="button"
+									class="ls-mode-pill"
+									data-mode="light"
+								>
+									☀️ Light
+								</button>
+								<button
+									type="button"
+									class="ls-mode-pill"
+									data-mode="auto"
+								>
+									🔄 Auto
+								</button>
 							</div>
 							<!-- Hidden select keeps JS compatibility -->
-							<select id="library-theme-mode" style="display:none" aria-hidden="true">
+							<select
+								id="library-theme-mode"
+								style="display: none"
+								aria-hidden="true"
+							>
 								<option value="dark">Dark</option>
 								<option value="light">Light</option>
 								<option value="auto">Auto</option>
@@ -79,40 +141,99 @@
 						</div>
 
 						<!-- ── Auto-mode behavior panel ────────────────────────── -->
-						<div id="ls-auto-behavior-panel" class="ls-auto-panel" style="display:none;">
+						<div
+							id="ls-auto-behavior-panel"
+							class="ls-auto-panel"
+							style="display: none"
+						>
 							<div class="ls-auto-panel-inner">
-								<label class="ls-label"
-									style="margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;opacity:.8;">Auto
-									Mode Behavior</label>
+								<label
+									class="ls-label"
+									style="
+										margin-bottom: 8px;
+										font-size: 12px;
+										text-transform: uppercase;
+										letter-spacing: 0.05em;
+										opacity: 0.8;
+									"
+									>Auto Mode Behavior</label
+								>
 								<div class="ls-auto-radios">
 									<label class="ls-radio-label">
-										<input type="radio" name="ls-auto-behavior" id="ls-ab-system" value="system">
-										<span>🖥️ Follow OS (system dark / light setting)</span>
+										<input
+											type="radio"
+											name="ls-auto-behavior"
+											id="ls-ab-system"
+											value="system"
+										/>
+										<span
+											>🖥️ Follow OS (system dark / light
+											setting)</span
+										>
 									</label>
 									<label class="ls-radio-label">
-										<input type="radio" name="ls-auto-behavior" id="ls-ab-sun" value="sun">
-										<span>🌅 Sunrise / Sunset <span class="ls-hint-inline">(estimated from your
-												timezone — no location needed)</span></span>
+										<input
+											type="radio"
+											name="ls-auto-behavior"
+											id="ls-ab-sun"
+											value="sun"
+										/>
+										<span
+											>🌅 Sunrise / Sunset
+											<span class="ls-hint-inline"
+												>(estimated from your timezone —
+												no location needed)</span
+											></span
+										>
 									</label>
 									<label class="ls-radio-label">
-										<input type="radio" name="ls-auto-behavior" id="ls-ab-schedule"
-											value="schedule">
+										<input
+											type="radio"
+											name="ls-auto-behavior"
+											id="ls-ab-schedule"
+											value="schedule"
+										/>
 										<span>🕐 Custom daily schedule</span>
 									</label>
 								</div>
-								<div id="ls-schedule-inputs" class="ls-schedule-grid"
-									style="display:none;margin-top:10px;">
-									<div class="ls-form-group" style="margin-bottom:0;">
-										<label class="ls-label" for="ls-auto-time-start" style="font-size:11px;">Light
-											from</label>
-										<input type="time" id="ls-auto-time-start" class="ls-input ls-input-time"
-											value="06:00" />
+								<div
+									id="ls-schedule-inputs"
+									class="ls-schedule-grid"
+									style="display: none; margin-top: 10px"
+								>
+									<div
+										class="ls-form-group"
+										style="margin-bottom: 0"
+									>
+										<label
+											class="ls-label"
+											for="ls-auto-time-start"
+											style="font-size: 11px"
+											>Light from</label
+										>
+										<input
+											type="time"
+											id="ls-auto-time-start"
+											class="ls-input ls-input-time"
+											value="06:00"
+										/>
 									</div>
-									<div class="ls-form-group" style="margin-bottom:0;">
-										<label class="ls-label" for="ls-auto-time-end" style="font-size:11px;">Dark
-											from</label>
-										<input type="time" id="ls-auto-time-end" class="ls-input ls-input-time"
-											value="18:00" />
+									<div
+										class="ls-form-group"
+										style="margin-bottom: 0"
+									>
+										<label
+											class="ls-label"
+											for="ls-auto-time-end"
+											style="font-size: 11px"
+											>Dark from</label
+										>
+										<input
+											type="time"
+											id="ls-auto-time-end"
+											class="ls-input ls-input-time"
+											value="18:00"
+										/>
 									</div>
 								</div>
 							</div>
@@ -120,14 +241,26 @@
 
 						<!-- ── Preset skin ─────────────────────────────────────── -->
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-theme-preset">Preset Skin</label>
-							<div class="ls-inline" style="gap:8px;">
-								<select id="library-theme-preset" class="ls-select" style="flex:1;">
+							<label class="ls-label" for="library-theme-preset"
+								>Preset Skin</label
+							>
+							<div class="ls-inline" style="gap: 8px">
+								<select
+									id="library-theme-preset"
+									class="ls-select"
+									style="flex: 1"
+								>
 									<!-- Populated by JS -->
 								</select>
-								<button type="button" id="library-delete-custom-preset"
-									class="ls-btn ls-btn-danger ls-btn-sm" title="Delete selected custom preset"
-									style="display:none;">🗑️</button>
+								<button
+									type="button"
+									id="library-delete-custom-preset"
+									class="ls-btn ls-btn-danger ls-btn-sm"
+									title="Delete selected custom preset"
+									style="display: none"
+								>
+									🗑️
+								</button>
 							</div>
 						</div>
 
@@ -142,79 +275,176 @@
 						<!-- ── Main color pickers ──────────────────────────────── -->
 						<div class="ls-grid-2">
 							<div class="ls-form-group">
-								<label class="ls-label" for="library-accentColorPicker">Accent Color</label>
+								<label
+									class="ls-label"
+									for="library-accentColorPicker"
+									>Accent Color</label
+								>
 								<div class="ls-color-row">
-									<input type="color" id="library-accentColorPicker" class="ls-color-picker"
-										value="#bb86fc" />
-									<input type="text" id="library-accentColorText" class="ls-color-text"
-										value="#bb86fc" maxlength="7" />
+									<input
+										type="color"
+										id="library-accentColorPicker"
+										class="ls-color-picker"
+										value="#bb86fc"
+									/>
+									<input
+										type="text"
+										id="library-accentColorText"
+										class="ls-color-text"
+										value="#bb86fc"
+										maxlength="7"
+									/>
 								</div>
 							</div>
 							<div class="ls-form-group">
-								<label class="ls-label" for="library-backgroundColorPicker">Background</label>
+								<label
+									class="ls-label"
+									for="library-backgroundColorPicker"
+									>Background</label
+								>
 								<div class="ls-color-row">
-									<input type="color" id="library-backgroundColorPicker" class="ls-color-picker"
-										value="#0f172a" />
-									<input type="text" id="library-backgroundColorText" class="ls-color-text"
-										value="#0f172a" maxlength="7" />
+									<input
+										type="color"
+										id="library-backgroundColorPicker"
+										class="ls-color-picker"
+										value="#0f172a"
+									/>
+									<input
+										type="text"
+										id="library-backgroundColorText"
+										class="ls-color-text"
+										value="#0f172a"
+										maxlength="7"
+									/>
 								</div>
-								<span class="ls-hint">Surface &amp; card colors auto-derive from this.</span>
+								<span class="ls-hint"
+									>Surface &amp; card colors auto-derive from
+									this.</span
+								>
 							</div>
 							<div class="ls-form-group">
-								<label class="ls-label" for="library-textColorPicker">Text Color</label>
+								<label
+									class="ls-label"
+									for="library-textColorPicker"
+									>Text Color</label
+								>
 								<div class="ls-color-row">
-									<input type="color" id="library-textColorPicker" class="ls-color-picker"
-										value="#e5e7eb" />
-									<input type="text" id="library-textColorText" class="ls-color-text" value="#e5e7eb"
-										maxlength="7" />
+									<input
+										type="color"
+										id="library-textColorPicker"
+										class="ls-color-picker"
+										value="#e5e7eb"
+									/>
+									<input
+										type="text"
+										id="library-textColorText"
+										class="ls-color-text"
+										value="#e5e7eb"
+										maxlength="7"
+									/>
 								</div>
-								<span class="ls-hint">Auto-adjusts when switching light/dark mode.</span>
+								<span class="ls-hint"
+									>Auto-adjusts when switching light/dark
+									mode.</span
+								>
 							</div>
 						</div>
 
 						<!-- ── Advanced overrides (collapsible) ───────────────── -->
 						<details class="ls-details ls-theme-advanced">
-							<summary class="ls-details-summary">⚙️ Advanced Color Overrides</summary>
-							<div class="ls-details-body" style="padding-top:12px;">
-								<p class="ls-hint" style="margin:0 0 10px;">
-									Override the preset's surface and accent-hover colors. Leave matching
-									the primary background to auto-derive.
+							<summary class="ls-details-summary">
+								⚙️ Advanced Color Overrides
+							</summary>
+							<div
+								class="ls-details-body"
+								style="padding-top: 12px"
+							>
+								<p class="ls-hint" style="margin: 0 0 10px">
+									Override the preset's surface and
+									accent-hover colors. Leave matching the
+									primary background to auto-derive.
 								</p>
 								<div class="ls-grid-2">
 									<div class="ls-form-group">
-										<label class="ls-label" for="library-accentSecondaryPicker">Accent
-											Secondary / Hover</label>
+										<label
+											class="ls-label"
+											for="library-accentSecondaryPicker"
+											>Accent Secondary / Hover</label
+										>
 										<div class="ls-color-row">
-											<input type="color" id="library-accentSecondaryPicker"
-												class="ls-color-picker" value="#6b7280" />
-											<input type="text" id="library-accentSecondaryText" class="ls-color-text"
-												value="#6b7280" maxlength="7" />
+											<input
+												type="color"
+												id="library-accentSecondaryPicker"
+												class="ls-color-picker"
+												value="#6b7280"
+											/>
+											<input
+												type="text"
+												id="library-accentSecondaryText"
+												class="ls-color-text"
+												value="#6b7280"
+												maxlength="7"
+											/>
 										</div>
 									</div>
 									<div class="ls-form-group">
-										<label class="ls-label" for="library-bgSecondaryPicker">Background
-											Surface</label>
+										<label
+											class="ls-label"
+											for="library-bgSecondaryPicker"
+											>Background Surface</label
+										>
 										<div class="ls-color-row">
-											<input type="color" id="library-bgSecondaryPicker" class="ls-color-picker"
-												value="#111827" />
-											<input type="text" id="library-bgSecondaryText" class="ls-color-text"
-												value="#111827" maxlength="7" />
-											<button type="button" id="library-bgSecondaryReset"
+											<input
+												type="color"
+												id="library-bgSecondaryPicker"
+												class="ls-color-picker"
+												value="#111827"
+											/>
+											<input
+												type="text"
+												id="library-bgSecondaryText"
+												class="ls-color-text"
+												value="#111827"
+												maxlength="7"
+											/>
+											<button
+												type="button"
+												id="library-bgSecondaryReset"
 												class="ls-btn ls-btn-secondary ls-btn-sm"
-												title="Reset to auto-derived">↺</button>
+												title="Reset to auto-derived"
+											>
+												↺
+											</button>
 										</div>
 									</div>
 									<div class="ls-form-group">
-										<label class="ls-label" for="library-bgTertiaryPicker">Background
-											Card</label>
+										<label
+											class="ls-label"
+											for="library-bgTertiaryPicker"
+											>Background Card</label
+										>
 										<div class="ls-color-row">
-											<input type="color" id="library-bgTertiaryPicker" class="ls-color-picker"
-												value="#1f2937" />
-											<input type="text" id="library-bgTertiaryText" class="ls-color-text"
-												value="#1f2937" maxlength="7" />
-											<button type="button" id="library-bgTertiaryReset"
+											<input
+												type="color"
+												id="library-bgTertiaryPicker"
+												class="ls-color-picker"
+												value="#1f2937"
+											/>
+											<input
+												type="text"
+												id="library-bgTertiaryText"
+												class="ls-color-text"
+												value="#1f2937"
+												maxlength="7"
+											/>
+											<button
+												type="button"
+												id="library-bgTertiaryReset"
 												class="ls-btn ls-btn-secondary ls-btn-sm"
-												title="Reset to auto-derived">↺</button>
+												title="Reset to auto-derived"
+											>
+												↺
+											</button>
 										</div>
 									</div>
 								</div>
@@ -222,27 +452,61 @@
 						</details>
 
 						<!-- ── Save as custom preset ───────────────────────────── -->
-						<div class="ls-callout ls-callout-blue" style="margin-top:12px;">
-							<div class="ls-label" style="margin-bottom:6px;">💾 Save Current Colors as Preset</div>
-							<div class="ls-inline" style="gap:6px;flex-wrap:wrap;">
-								<input type="text" id="library-custom-preset-name" class="ls-input ls-input-sm"
-									placeholder="My Custom Theme" style="flex:1;min-width:140px;" />
-								<button id="library-save-custom-preset" class="ls-btn ls-btn-secondary ls-btn-sm">Save
-									Preset</button>
+						<div
+							class="ls-callout ls-callout-blue"
+							style="margin-top: 12px"
+						>
+							<div class="ls-label" style="margin-bottom: 6px">
+								💾 Save Current Colors as Preset
 							</div>
-							<span class="ls-hint">Custom presets appear in the Preset Skin dropdown and are
-								included in backups automatically.</span>
+							<div
+								class="ls-inline"
+								style="gap: 6px; flex-wrap: wrap"
+							>
+								<input
+									type="text"
+									id="library-custom-preset-name"
+									class="ls-input ls-input-sm"
+									placeholder="My Custom Theme"
+									style="flex: 1; min-width: 140px"
+								/>
+								<button
+									id="library-save-custom-preset"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
+									Save Preset
+								</button>
+							</div>
+							<span class="ls-hint"
+								>Custom presets appear in the Preset Skin
+								dropdown and are included in backups
+								automatically.</span
+							>
 						</div>
 
 						<div class="ls-divider"></div>
 
-						<div class="ls-section-title" style="color:#ec4899;">🔤 Font Size</div>
-						<div class="ls-form-group" style="margin-top:10px;">
+						<div class="ls-section-title" style="color: #ec4899">
+							🔤 Font Size
+						</div>
+						<div class="ls-form-group" style="margin-top: 10px">
 							<label class="ls-label">
-								Size: <span id="library-font-size-value" style="color:#ec4899;">100%</span>
+								Size:
+								<span
+									id="library-font-size-value"
+									style="color: #ec4899"
+									>100%</span
+								>
 							</label>
-							<input type="range" id="library-font-size-slider" class="ls-range" min="80" max="150"
-								step="5" value="100" />
+							<input
+								type="range"
+								id="library-font-size-slider"
+								class="ls-range"
+								min="80"
+								max="150"
+								step="5"
+								value="100"
+							/>
 							<span class="ls-hint">80% - 150%</span>
 						</div>
 					</div>
@@ -250,71 +514,150 @@
 					<!-- AI Model -->
 					<div class="ls-section" data-accent="blue">
 						<div class="ls-section-title">🤖 AI Model</div>
-						<div class="ls-section-desc">Configure model and generation settings.</div>
-
-						<div class="ls-form-group">
-							<label class="ls-label" for="library-model-select">Model</label>
-							<div class="ls-inline">
-								<select id="library-model-select" class="ls-select">
-									<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-									<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
-									<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
-								</select>
-								<button id="library-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻
-									Refresh</button>
-							</div>
-							<span class="ls-hint">Model list updates using your API key.</span>
+						<div class="ls-section-desc">
+							Configure model and generation settings.
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-model-endpoint">Model Endpoint URL</label>
+							<label class="ls-label" for="library-model-select"
+								>Model</label
+							>
 							<div class="ls-inline">
-								<input type="text" id="library-model-endpoint" class="ls-input" readonly
-									placeholder="Auto-generated..." />
-								<button id="library-copy-model-endpoint" class="ls-btn ls-btn-secondary ls-btn-sm">📋
-									Copy</button>
+								<select
+									id="library-model-select"
+									class="ls-select"
+								>
+									<option value="gemini-2.0-flash">
+										Gemini 2.0 Flash (Recommended)
+									</option>
+									<option value="gemini-2.5-flash">
+										Gemini 2.5 Flash (Faster)
+									</option>
+									<option value="gemini-2.5-pro">
+										Gemini 2.5 Pro (Better quality)
+									</option>
+								</select>
+								<button
+									id="library-refresh-models"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
+									↻ Refresh
+								</button>
 							</div>
-							<span class="ls-hint">Auto-generated from the selected model above.</span>
+							<span class="ls-hint"
+								>Model list updates using your API key.</span
+							>
+						</div>
+
+						<div class="ls-form-group">
+							<label class="ls-label" for="library-model-endpoint"
+								>Model Endpoint URL</label
+							>
+							<div class="ls-inline">
+								<input
+									type="text"
+									id="library-model-endpoint"
+									class="ls-input"
+									readonly
+									placeholder="Auto-generated..."
+								/>
+								<button
+									id="library-copy-model-endpoint"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
+									📋 Copy
+								</button>
+							</div>
+							<span class="ls-hint"
+								>Auto-generated from the selected model
+								above.</span
+							>
 						</div>
 
 						<div class="ls-form-group">
 							<label class="ls-label">
-								Temperature: <span id="library-temperature-value" style="color:#3b82f6;">0.7</span>
+								Temperature:
+								<span
+									id="library-temperature-value"
+									style="color: #3b82f6"
+									>0.7</span
+								>
 							</label>
-							<input type="range" id="library-temperature-slider" class="ls-range" min="0" max="1"
-								step="0.1" value="0.7" />
-							<span class="ls-hint">0 = Deterministic · 1 = Creative</span>
+							<input
+								type="range"
+								id="library-temperature-slider"
+								class="ls-range"
+								min="0"
+								max="1"
+								step="0.1"
+								value="0.7"
+							/>
+							<span class="ls-hint"
+								>0 = Deterministic · 1 = Creative</span
+							>
 						</div>
 					</div>
 
 					<!-- API Keys (unified) -->
 					<div class="ls-section" data-accent="green">
 						<div class="ls-section-title">🔑 API Keys</div>
-						<div class="ls-section-desc">Add and manage Gemini API keys. All keys are treated equally
-							and
-							can be rotated.</div>
-
-						<div id="library-api-keys-list" style="max-height:150px;overflow-y:auto;margin-bottom:10px;padding:6px;
-					       background:var(--bg-tertiary);border-radius:6px;border:1px solid var(--border-color);">
+						<div class="ls-section-desc">
+							Add and manage Gemini API keys. All keys are treated
+							equally and can be rotated.
 						</div>
 
-						<div class="ls-inline" style="margin-bottom:12px;">
-							<input type="password" id="library-new-api-key" class="ls-input"
-								placeholder="Add API key…" />
-							<button id="library-add-api-key" class="ls-btn ls-btn-secondary ls-btn-sm">➕
-								Add</button>
-							<button id="library-test-api-key" class="ls-btn ls-btn-secondary ls-btn-sm">🧪
-								Test</button>
+						<div
+							id="library-api-keys-list"
+							style="
+								max-height: 150px;
+								overflow-y: auto;
+								margin-bottom: 10px;
+								padding: 6px;
+								background: var(--bg-tertiary);
+								border-radius: 6px;
+								border: 1px solid var(--border-color);
+							"
+						></div>
+
+						<div class="ls-inline" style="margin-bottom: 12px">
+							<input
+								type="password"
+								id="library-new-api-key"
+								class="ls-input"
+								placeholder="Add API key…"
+							/>
+							<button
+								id="library-add-api-key"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+							>
+								➕ Add
+							</button>
+							<button
+								id="library-test-api-key"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+							>
+								🧪 Test
+							</button>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-api-key-rotation">Rotation Strategy</label>
-							<select id="library-api-key-rotation" class="ls-select">
+							<label
+								class="ls-label"
+								for="library-api-key-rotation"
+								>Rotation Strategy</label
+							>
+							<select
+								id="library-api-key-rotation"
+								class="ls-select"
+							>
 								<option value="off">Off</option>
 								<option value="round_robin">Round Robin</option>
 								<option value="random">Random</option>
 							</select>
-							<span class="ls-hint">Auto-rotate through keys. Round Robin is recommended.</span>
+							<span class="ls-hint"
+								>Auto-rotate through keys. Round Robin is
+								recommended.</span
+							>
 						</div>
 					</div>
 
@@ -322,17 +665,37 @@
 					<div class="ls-section" data-accent="sky">
 						<div class="ls-section-title">🔗 Import URLs</div>
 						<div class="ls-section-desc">
-							Paste any text and we'll extract supported novel URLs, open them in the background, and
-							add
-							them to your library.
+							Paste any text and we'll extract supported novel
+							URLs, open them in the background, and add them to
+							your library.
 						</div>
-						<textarea id="url-import-text" class="ls-textarea" rows="5"
-							placeholder="Paste links or text here…"></textarea>
-						<div class="ls-row" style="margin-top:10px;">
-							<button id="url-import-btn" class="ls-btn ls-btn-primary">➕ Add URLs to Library</button>
-							<button id="url-import-clear" class="ls-btn ls-btn-secondary">Clear</button>
+						<textarea
+							id="url-import-text"
+							class="ls-textarea"
+							rows="5"
+							placeholder="Paste links or text here…"
+						></textarea>
+						<div class="ls-row" style="margin-top: 10px">
+							<button
+								id="url-import-btn"
+								class="ls-btn ls-btn-primary"
+							>
+								➕ Add URLs to Library
+							</button>
+							<button
+								id="url-import-clear"
+								class="ls-btn ls-btn-secondary"
+							>
+								Clear
+							</button>
 						</div>
-						<p id="url-import-status" class="ls-hint" style="margin-top:8px;">Ready to import.</p>
+						<p
+							id="url-import-status"
+							class="ls-hint"
+							style="margin-top: 8px"
+						>
+							Ready to import.
+						</p>
 					</div>
 				</section>
 
@@ -342,313 +705,683 @@
 				<section class="ls-panel" id="panel-backups">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">☁️ Backups</h1>
-						<p class="ls-panel-description">Local and Google Drive backups, rolling snapshots, and restore
-							options.</p>
+						<p class="ls-panel-description">
+							Local and Google Drive backups, rolling snapshots,
+							and restore options.
+						</p>
 					</div>
 
 					<!-- LOCAL BACKUPS -->
-					<div class="ls-section" style="background:rgba(52,168,83,0.08);border-left:3px solid #34a853;">
-						<div class="ls-section-title" style="color:#34a853;">💾 Local Backups</div>
-						<div class="ls-section-desc">Create and manage backups stored in your browser.</div>
+					<div
+						class="ls-section"
+						style="
+							background: rgba(52, 168, 83, 0.08);
+							border-left: 3px solid #34a853;
+						"
+					>
+						<div class="ls-section-title" style="color: #34a853">
+							💾 Local Backups
+						</div>
+						<div class="ls-section-desc">
+							Create and manage backups stored in your browser.
+						</div>
 					</div>
 
 					<!-- Comprehensive Backup -->
 					<div class="ls-section" data-accent="green">
-						<div class="ls-section-title">📦 Comprehensive Backup (Recommended)</div>
-						<div class="ls-section-desc">Complete backup including library, API keys, prompts, theme, and
-							all settings.</div>
+						<div class="ls-section-title">
+							📦 Comprehensive Backup (Recommended)
+						</div>
+						<div class="ls-section-desc">
+							Complete backup including library, API keys,
+							prompts, theme, and all settings.
+						</div>
 
 						<div class="ls-form-group">
 							<label class="ls-checkbox-label">
-								<input type="checkbox" id="backupIncludeApiKeys" checked />
+								<input
+									type="checkbox"
+									id="backupIncludeApiKeys"
+									checked
+								/>
 								<span>Include API keys and credentials</span>
 							</label>
-							<label class="ls-checkbox-label" style="margin-top:6px;">
-								<input type="checkbox" id="backupIncludeCredentials" checked />
+							<label
+								class="ls-checkbox-label"
+								style="margin-top: 6px"
+							>
+								<input
+									type="checkbox"
+									id="backupIncludeCredentials"
+									checked
+								/>
 								<span>Include OAuth credentials</span>
 							</label>
 						</div>
 
 						<div class="ls-grid-2">
-							<button id="createComprehensiveBackup" class="ls-btn ls-btn-secondary">💾 Full
-								Backup</button>
-							<button id="restoreComprehensiveBackup" class="ls-btn ls-btn-secondary">📂 Restore
-								Full</button>
-							<input type="file" id="comprehensiveBackupFile" accept=".json" class="ls-hidden" />
+							<button
+								id="createComprehensiveBackup"
+								class="ls-btn ls-btn-secondary"
+							>
+								💾 Full Backup
+							</button>
+							<button
+								id="restoreComprehensiveBackup"
+								class="ls-btn ls-btn-secondary"
+							>
+								📂 Restore Full
+							</button>
+							<input
+								type="file"
+								id="comprehensiveBackupFile"
+								accept=".json"
+								class="ls-hidden"
+							/>
 						</div>
 
 						<div class="ls-divider"></div>
 
 						<div class="ls-form-group">
 							<label class="ls-checkbox-label">
-								<input type="checkbox" id="autoBackupEnabled" checked />
+								<input
+									type="checkbox"
+									id="autoBackupEnabled"
+									checked
+								/>
 								<span>Enable automatic rolling backups</span>
 							</label>
-							<p class="ls-hint">Creates browser-stored backups automatically when your library changes
-								(keeps last 5).</p>
+							<p class="ls-hint">
+								Creates browser-stored backups automatically
+								when your library changes (keeps last 5).
+							</p>
 						</div>
 
 						<div class="ls-form-group">
 							<label class="ls-label">
-								Frequency: <span id="rollingBackupIntervalDisplay" style="color:#34a853;">1440</span>
+								Frequency:
+								<span
+									id="rollingBackupIntervalDisplay"
+									style="color: #34a853"
+									>1440</span
+								>
 								minutes
 							</label>
-							<div id="carousel-manual-container" class="ls-hidden">
-								<input type="number" id="rollingBackupInterval" class="ls-input" min="5" value="1440"
-									style="width:120px;" />
-								<span class="ls-hint">How often a rolling backup is created automatically.</span>
+							<div
+								id="carousel-manual-container"
+								class="ls-hidden"
+							>
+								<input
+									type="number"
+									id="rollingBackupInterval"
+									class="ls-input"
+									min="5"
+									value="1440"
+									style="width: 120px"
+								/>
+								<span class="ls-hint"
+									>How often a rolling backup is created
+									automatically.</span
+								>
 							</div>
 						</div>
 					</div>
 
 					<!-- Rolling Backups -->
 					<div class="ls-section" data-accent="indigo">
-						<div class="ls-section-title">🔄 Rolling Backups (Browser Storage, Max 5)</div>
-						<div class="ls-section-desc">Automatic browser-stored snapshots. Most recent 5 are kept.</div>
+						<div class="ls-section-title">
+							🔄 Rolling Backups (Browser Storage, Max 5)
+						</div>
+						<div class="ls-section-desc">
+							Automatic browser-stored snapshots. Most recent 5
+							are kept.
+						</div>
 
-						<div id="rollingBackupStatus" style="background:rgba(102,126,234,0.1);padding:12px;border-radius:6px;margin-bottom:12px;
-					       border:1px solid rgba(102,126,234,0.3);display:none;">
-							<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-								<span id="backupStatusIcon" style="font-size:14px;">⏳</span>
-								<span id="backupStatusText" style="font-size:12px;font-weight:500;color:#667eea;">Backup
-									status…</span>
+						<div
+							id="rollingBackupStatus"
+							style="
+								background: rgba(102, 126, 234, 0.1);
+								padding: 12px;
+								border-radius: 6px;
+								margin-bottom: 12px;
+								border: 1px solid rgba(102, 126, 234, 0.3);
+								display: none;
+							"
+						>
+							<div
+								style="
+									display: flex;
+									align-items: center;
+									gap: 8px;
+									margin-bottom: 8px;
+								"
+							>
+								<span
+									id="backupStatusIcon"
+									style="font-size: 14px"
+									>⏳</span
+								>
+								<span
+									id="backupStatusText"
+									style="
+										font-size: 12px;
+										font-weight: 500;
+										color: #667eea;
+									"
+									>Backup status…</span
+								>
 							</div>
-							<div id="backupCountdownContainer" style="display:none;margin-top:8px;">
-								<div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">Next
-									automatic backup in:</div>
-								<div style="font-size:13px;font-weight:600;color:#4f46e5;"><span
-										id="backupCountdownTime">--:--</span></div>
+							<div
+								id="backupCountdownContainer"
+								style="display: none; margin-top: 8px"
+							>
+								<div
+									style="
+										font-size: 11px;
+										color: var(--text-secondary);
+										margin-bottom: 6px;
+									"
+								>
+									Next automatic backup in:
+								</div>
+								<div
+									style="
+										font-size: 13px;
+										font-weight: 600;
+										color: #4f46e5;
+									"
+								>
+									<span id="backupCountdownTime">--:--</span>
+								</div>
 							</div>
-							<div id="lastBackupTime"
-								style="font-size:10px;color:var(--text-secondary);margin-top:8px;display:none;">
-								Last backup: <span id="lastBackupTimeText">Never</span>
+							<div
+								id="lastBackupTime"
+								style="
+									font-size: 10px;
+									color: var(--text-secondary);
+									margin-top: 8px;
+									display: none;
+								"
+							>
+								Last backup:
+								<span id="lastBackupTimeText">Never</span>
 							</div>
 						</div>
 
-						<div id="rollingBackupList" style="margin-top:8px;">
-							<div class="no-backups" style="text-align:center;padding:15px;color:#888;font-size:12px;">
-								No rolling backups yet. Enable auto-backup or create one manually.
+						<div id="rollingBackupList" style="margin-top: 8px">
+							<div
+								class="no-backups"
+								style="
+									text-align: center;
+									padding: 15px;
+									color: #888;
+									font-size: 12px;
+								"
+							>
+								No rolling backups yet. Enable auto-backup or
+								create one manually.
 							</div>
 						</div>
-						<button id="createRollingBackup" class="ls-btn ls-btn-secondary ls-btn-full"
-							style="margin-top:10px;">
+						<button
+							id="createRollingBackup"
+							class="ls-btn ls-btn-secondary ls-btn-full"
+							style="margin-top: 10px"
+						>
 							➕ Create Rolling Backup Now
 						</button>
 					</div>
 
 					<!-- Import & Merge Options -->
 					<div class="ls-section" data-accent="purple">
-						<div class="ls-section-title">⚙️ Import & Merge Options</div>
-						<div class="ls-section-desc">Choose how backups are restored to your library.</div>
+						<div class="ls-section-title">
+							⚙️ Import & Merge Options
+						</div>
+						<div class="ls-section-desc">
+							Choose how backups are restored to your library.
+						</div>
 
 						<label class="ls-radio-label">
-							<input type="radio" name="mergeMode" value="merge" checked />
+							<input
+								type="radio"
+								name="mergeMode"
+								value="merge"
+								checked
+							/>
 							<span>Merge (Recommended)</span>
 						</label>
-						<p class="ls-radio-desc">Combines backup with existing data. Newer entries take priority.
-							Preserves your current library.</p>
+						<p class="ls-radio-desc">
+							Combines backup with existing data. Newer entries
+							take priority. Preserves your current library.
+						</p>
 
-						<label class="ls-radio-label" style="margin-top:8px;">
-							<input type="radio" name="mergeMode" value="replace" />
+						<label class="ls-radio-label" style="margin-top: 8px">
+							<input
+								type="radio"
+								name="mergeMode"
+								value="replace"
+							/>
 							<span>Replace</span>
 						</label>
-						<p class="ls-radio-desc">Completely replaces your library with the backup. <strong
-								style="color:#f59e0b;">Use with caution!</strong></p>
+						<p class="ls-radio-desc">
+							Completely replaces your library with the backup.
+							<strong style="color: #f59e0b"
+								>Use with caution!</strong
+							>
+						</p>
 					</div>
 
 					<!-- ☁️ Google Drive Backups -->
 					<div class="ls-section" data-accent="blue">
-						<div class="ls-row-between" style="align-items:center;flex-wrap:wrap;gap:8px;">
+						<div
+							class="ls-row-between"
+							style="
+								align-items: center;
+								flex-wrap: wrap;
+								gap: 8px;
+							"
+						>
 							<div>
-								<div class="ls-section-title">☁️ Google Drive Backups</div>
-								<div class="ls-section-desc">Cloud storage with automatic sync and version history.
+								<div class="ls-section-title">
+									☁️ Google Drive Backups
+								</div>
+								<div class="ls-section-desc">
+									Cloud storage with automatic sync and
+									version history.
 								</div>
 							</div>
-							<span id="driveStatus" class="ls-badge ls-badge-muted">⚪ Disconnected</span>
+							<span
+								id="driveStatus"
+								class="ls-badge ls-badge-muted"
+								>⚪ Disconnected</span
+							>
 						</div>
 
 						<!-- Not connected state -->
-						<div id="driveNotConnected" class="ls-drive-connect-box">
+						<div
+							id="driveNotConnected"
+							class="ls-drive-connect-box"
+						>
 							<div class="ls-drive-connect-info">
 								<span class="ls-drive-icon">☁️</span>
 								<div>
-									<p class="ls-drive-connect-title">Sync your library to Google Drive</p>
-									<p class="ls-hint">Automatic version history, easy restore across devices, and
-										rolling backups — free with any Google account.</p>
+									<p class="ls-drive-connect-title">
+										Sync your library to Google Drive
+									</p>
+									<p class="ls-hint">
+										Automatic version history, easy restore
+										across devices, and rolling backups —
+										free with any Google account.
+									</p>
 								</div>
 							</div>
-							<div id="driveAuthError" class="ls-alert ls-alert-warn" style="display:none;"></div>
-							<button id="connectDriveBtn" class="ls-btn ls-btn-secondary ls-btn-full">🔗 Connect Google
-								Drive</button>
+							<div
+								id="driveAuthError"
+								class="ls-alert ls-alert-warn"
+								style="display: none"
+							></div>
+							<button
+								id="connectDriveBtn"
+								class="ls-btn ls-btn-secondary ls-btn-full"
+							>
+								🔗 Connect Google Drive
+							</button>
 						</div>
 
 						<!-- Connected state -->
-						<div id="driveConnected" style="display:none;">
-
+						<div id="driveConnected" style="display: none">
 							<!-- Backup Mode cards -->
 							<div class="ls-form-group">
 								<label class="ls-label">⚙️ Backup Mode</label>
-								<div class="ls-grid-3" style="margin-top:6px;">
+								<div class="ls-grid-3" style="margin-top: 6px">
 									<label class="backup-mode-card">
-										<input type="radio" name="driveBackupMode" id="driveScheduled" value="scheduled"
-											checked />
+										<input
+											type="radio"
+											name="driveBackupMode"
+											id="driveScheduled"
+											value="scheduled"
+											checked
+										/>
 										<div class="backup-mode-card-body">
-											<span class="backup-mode-icon">📅</span>
-											<span class="backup-mode-name">Scheduled</span>
-											<p class="backup-mode-desc">Daily versioned backup at regular intervals</p>
+											<span class="backup-mode-icon"
+												>📅</span
+											>
+											<span class="backup-mode-name"
+												>Scheduled</span
+											>
+											<p class="backup-mode-desc">
+												Daily versioned backup at
+												regular intervals
+											</p>
 										</div>
 									</label>
 									<label class="backup-mode-card">
-										<input type="radio" name="driveBackupMode" id="driveContinuous"
-											value="continuous" />
+										<input
+											type="radio"
+											name="driveBackupMode"
+											id="driveContinuous"
+											value="continuous"
+										/>
 										<div class="backup-mode-card-body">
-											<span class="backup-mode-icon">🔄</span>
-											<span class="backup-mode-name">Continuous</span>
-											<p class="backup-mode-desc">Auto-backup when changes detected</p>
+											<span class="backup-mode-icon"
+												>🔄</span
+											>
+											<span class="backup-mode-name"
+												>Continuous</span
+											>
+											<p class="backup-mode-desc">
+												Auto-backup when changes
+												detected
+											</p>
 										</div>
 									</label>
 									<label class="backup-mode-card">
-										<input type="radio" name="driveBackupMode" id="driveBoth" value="both" />
+										<input
+											type="radio"
+											name="driveBackupMode"
+											id="driveBoth"
+											value="both"
+										/>
 										<div class="backup-mode-card-body">
-											<span class="backup-mode-icon">⚡</span>
-											<span class="backup-mode-name">Both</span>
-											<p class="backup-mode-desc">Scheduled daily + continuous detection</p>
+											<span class="backup-mode-icon"
+												>⚡</span
+											>
+											<span class="backup-mode-name"
+												>Both</span
+											>
+											<p class="backup-mode-desc">
+												Scheduled daily + continuous
+												detection
+											</p>
 										</div>
 									</label>
 								</div>
 							</div>
 
 							<!-- Continuous backup info -->
-							<div class="ls-callout ls-callout-blue" id="continuousBackupCheckContainer">
-								<p class="ls-callout-title">🔄 Continuous Backup</p>
-								<p class="ls-hint">When changes are detected in your library, a backup is automatically
-									uploaded to Drive after a short delay. No manual action needed.</p>
+							<div
+								class="ls-callout ls-callout-blue"
+								id="continuousBackupCheckContainer"
+							>
+								<p class="ls-callout-title">
+									🔄 Continuous Backup
+								</p>
+								<p class="ls-hint">
+									When changes are detected in your library, a
+									backup is automatically uploaded to Drive
+									after a short delay. No manual action
+									needed.
+								</p>
 							</div>
 
 							<!-- Retention policy -->
 							<div class="ls-callout ls-callout-yellow">
-								<p class="ls-callout-title">🗂️ Backup Retention Policy</p>
+								<p class="ls-callout-title">
+									🗂️ Backup Retention Policy
+								</p>
 								<div class="ls-retention-grid">
-									<div class="ls-retention-row"><strong>📅 Scheduled:</strong><span>Keep 4 (daily auto
-											+ manual)</span></div>
-									<div class="ls-retention-row"><strong>🔄 Continuous:</strong><span>Keep 1 (real-time
-											sync)</span></div>
+									<div class="ls-retention-row">
+										<strong>📅 Scheduled:</strong
+										><span
+											>Keep 4 (daily auto + manual)</span
+										>
+									</div>
+									<div class="ls-retention-row">
+										<strong>🔄 Continuous:</strong
+										><span>Keep 1 (real-time sync)</span>
+									</div>
 								</div>
-								<span class="ls-hint">Oldest backups are deleted automatically. Quota is <strong>shared
-										per Google Account</strong> across all browsers.</span>
+								<span class="ls-hint"
+									>Oldest backups are deleted automatically.
+									Quota is
+									<strong>shared per Google Account</strong>
+									across all browsers.</span
+								>
 							</div>
 
 							<!-- Auto-restore -->
 							<div class="ls-form-group">
 								<label class="ls-checkbox-label">
-									<input type="checkbox" id="driveAutoRestoreEnabled" />
-									<span>Auto-restore from Drive on startup (merge latest backup)</span>
+									<input
+										type="checkbox"
+										id="driveAutoRestoreEnabled"
+									/>
+									<span
+										>Auto-restore from Drive on startup
+										(merge latest backup)</span
+									>
 								</label>
-								<p class="ls-hint">Checks Drive every 10 minutes and merges the newest backup silently.
+								<p class="ls-hint">
+									Checks Drive every 10 minutes and merges the
+									newest backup silently.
 								</p>
 							</div>
 
 							<!-- Action buttons -->
 							<div class="ls-drive-actions">
-								<button id="backupNowBtn" class="ls-btn ls-btn-success">📤 Backup Now</button>
-								<button id="library-view-backups-btn" class="ls-btn ls-btn-secondary">📋 View
-									Backups</button>
-								<button id="library-sync-from-drive-btn" class="ls-btn ls-btn-secondary">🔄 Sync from
-									Drive</button>
-								<button id="disconnectDriveBtn" class="ls-btn ls-btn-danger">🔌 Disconnect</button>
+								<button
+									id="backupNowBtn"
+									class="ls-btn ls-btn-success"
+								>
+									📤 Backup Now
+								</button>
+								<button
+									id="library-view-backups-btn"
+									class="ls-btn ls-btn-secondary"
+								>
+									📋 View Backups
+								</button>
+								<button
+									id="library-sync-from-drive-btn"
+									class="ls-btn ls-btn-secondary"
+								>
+									🔄 Sync from Drive
+								</button>
+								<button
+									id="disconnectDriveBtn"
+									class="ls-btn ls-btn-danger"
+								>
+									🔌 Disconnect
+								</button>
 							</div>
 						</div>
 
 						<!-- OAuth Setup -->
-						<details class="ls-details" style="margin-top:16px;">
+						<details class="ls-details" style="margin-top: 16px">
 							<summary class="ls-details-summary">
 								<span>🔧 OAuth Setup</span>
-								<span class="ls-details-hint">Required once to enable Google Drive</span>
+								<span class="ls-details-hint"
+									>Required once to enable Google Drive</span
+								>
 							</summary>
 
 							<div class="ls-details-body">
-								<div class="ls-callout ls-callout-blue" style="margin-bottom:12px;">
-									<p style="margin:0 0 6px;font-size:12px;color:var(--text-secondary);">
-										You need free Google OAuth credentials for Drive access. This is a one-time
+								<div
+									class="ls-callout ls-callout-blue"
+									style="margin-bottom: 12px"
+								>
+									<p
+										style="
+											margin: 0 0 6px;
+											font-size: 12px;
+											color: var(--text-secondary);
+										"
+									>
+										You need free Google OAuth credentials
+										for Drive access. This is a one-time
 										setup that takes about 2 minutes.
 									</p>
-									<a href="https://ranobe.vkrishna04.me/drive-setup.html" target="_blank"
-										class="ls-link">📖 Open Step-by-Step Setup Guide →</a>
+									<a
+										href="https://ranobe.vkrishna04.me/drive-setup.html"
+										target="_blank"
+										class="ls-link"
+										>📖 Open Step-by-Step Setup Guide →</a
+									>
 								</div>
 
 								<!-- Step 1: Redirect URIs -->
-								<div id="drive-redirect-uri-box" class="ls-callout ls-callout-blue"
-									style="margin-bottom:12px;">
-									<p class="ls-callout-title">📌 Step 1 — Add Redirect URIs in Google Console</p>
-									<p class="ls-hint" style="margin-bottom:8px;">Open your OAuth Client →
-										<strong>Authorised redirect URIs</strong> and add <strong>both</strong> of these
+								<div
+									id="drive-redirect-uri-box"
+									class="ls-callout ls-callout-blue"
+									style="margin-bottom: 12px"
+								>
+									<p class="ls-callout-title">
+										📌 Step 1 — Add Redirect URIs in Google
+										Console
+									</p>
+									<p
+										class="ls-hint"
+										style="margin-bottom: 8px"
+									>
+										Open your OAuth Client →
+										<strong
+											>Authorised redirect URIs</strong
+										>
+										and add <strong>both</strong> of these
 										URLs:
 									</p>
-									<div id="drive-redirect-uri-list" class="ls-uri-list">
+									<div
+										id="drive-redirect-uri-list"
+										class="ls-uri-list"
+									>
 										<div class="ls-hint">Loading…</div>
 									</div>
 								</div>
 
 								<!-- Step 2: Credentials -->
-								<p class="ls-callout-title" style="margin-bottom:8px;">🔑 Step 2 — Enter Your
-									Credentials</p>
+								<p
+									class="ls-callout-title"
+									style="margin-bottom: 8px"
+								>
+									🔑 Step 2 — Enter Your Credentials
+								</p>
 
 								<!-- Method 1: JSON paste -->
 								<div class="ls-method-card">
-									<label class="ls-label">📋 Method A — Paste credentials JSON <span
-											class="ls-badge ls-badge-accent">Recommended</span></label>
-									<p class="ls-hint" style="margin-bottom:8px;">Download your
-										<code>client_secret_*.json</code> from Google Cloud Console and paste the full
+									<label class="ls-label"
+										>📋 Method A — Paste credentials JSON
+										<span class="ls-badge ls-badge-accent"
+											>Recommended</span
+										></label
+									>
+									<p
+										class="ls-hint"
+										style="margin-bottom: 8px"
+									>
+										Download your
+										<code>client_secret_*.json</code> from
+										Google Cloud Console and paste the full
 										contents here:
 									</p>
-									<textarea id="oauthJsonPaste" class="ls-textarea"
+									<textarea
+										id="oauthJsonPaste"
+										class="ls-textarea"
 										placeholder='{ "installed": { "client_id": "...", "client_secret": "..." } }'
-										style="height:80px;font-size:11px;"></textarea>
-									<div class="ls-grid-2" style="gap:6px;margin-top:8px;">
-										<button id="parseOAuthJson" class="ls-btn ls-btn-secondary ls-btn-sm">✓ Parse
-											JSON</button>
-										<button id="saveOAuthFromJson" class="ls-btn ls-btn-secondary ls-btn-sm">💾 Save
-											to Storage</button>
+										style="height: 80px; font-size: 11px"
+									></textarea>
+									<div
+										class="ls-grid-2"
+										style="gap: 6px; margin-top: 8px"
+									>
+										<button
+											id="parseOAuthJson"
+											class="ls-btn ls-btn-secondary ls-btn-sm"
+										>
+											✓ Parse JSON
+										</button>
+										<button
+											id="saveOAuthFromJson"
+											class="ls-btn ls-btn-secondary ls-btn-sm"
+										>
+											💾 Save to Storage
+										</button>
 									</div>
 								</div>
 
 								<!-- Method 2: Manual entry -->
-								<div class="ls-method-card" style="margin-top:10px;">
-									<label class="ls-label">✏️ Method B — Manual Entry</label>
+								<div
+									class="ls-method-card"
+									style="margin-top: 10px"
+								>
+									<label class="ls-label"
+										>✏️ Method B — Manual Entry</label
+									>
 									<div class="ls-form-group">
-										<label class="ls-label" for="driveClientId">Client ID</label>
-										<input id="driveClientId" type="text" class="ls-input"
-											placeholder="*.apps.googleusercontent.com" />
+										<label
+											class="ls-label"
+											for="driveClientId"
+											>Client ID</label
+										>
+										<input
+											id="driveClientId"
+											type="text"
+											class="ls-input"
+											placeholder="*.apps.googleusercontent.com"
+										/>
 									</div>
 									<div class="ls-form-group">
-										<label class="ls-label" for="driveClientSecret">Client Secret <span
-												class="ls-hint" style="font-weight:normal;">(optional for
-												PKCE)</span></label>
+										<label
+											class="ls-label"
+											for="driveClientSecret"
+											>Client Secret
+											<span
+												class="ls-hint"
+												style="font-weight: normal"
+												>(optional for PKCE)</span
+											></label
+										>
 										<div class="ls-inline">
-											<input id="driveClientSecret" type="password" class="ls-input"
-												placeholder="Leave blank if using PKCE only" />
-											<button id="toggleClientSecretVisibility" type="button"
+											<input
+												id="driveClientSecret"
+												type="password"
+												class="ls-input"
+												placeholder="Leave blank if using PKCE only"
+											/>
+											<button
+												id="toggleClientSecretVisibility"
+												type="button"
 												class="ls-btn ls-btn-secondary ls-btn-sm"
-												title="Show/Hide Client Secret">👁️</button>
+												title="Show/Hide Client Secret"
+											>
+												👁️
+											</button>
 										</div>
 									</div>
-									<button id="saveOAuthSettings" class="ls-btn ls-btn-secondary ls-btn-full">💾 Save
-										Credentials</button>
+									<button
+										id="saveOAuthSettings"
+										class="ls-btn ls-btn-secondary ls-btn-full"
+									>
+										💾 Save Credentials
+									</button>
 								</div>
 							</div>
 						</details>
 					</div>
 
 					<!-- Drive Backups Inline Collapsible -->
-					<details id="drive-backups-section" class="ls-details" style="margin-top:12px;">
+					<details
+						id="drive-backups-section"
+						class="ls-details"
+						style="margin-top: 12px"
+					>
 						<summary class="ls-details-summary">
 							<span>☁️ Drive Backup History</span>
-							<span class="ls-details-hint" id="drive-backups-count"></span>
+							<span
+								class="ls-details-hint"
+								id="drive-backups-count"
+							></span>
 						</summary>
-						<div class="ls-details-body" style="padding:12px 0 0;">
+						<div class="ls-details-body" style="padding: 12px 0 0">
 							<div id="drive-backups-list">
-								<div style="padding:16px;text-align:center;color:var(--text-secondary);font-size:13px;">
-									Click the header above to load your Drive backups.
+								<div
+									style="
+										padding: 16px;
+										text-align: center;
+										color: var(--text-secondary);
+										font-size: 13px;
+									"
+								>
+									Click the header above to load your Drive
+									backups.
 								</div>
 							</div>
 						</div>
@@ -661,32 +1394,64 @@
 				<section class="ls-panel" id="panel-automation">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">⚡ Automation</h1>
-						<p class="ls-panel-description">Carousel settings and auto-hold rules.</p>
+						<p class="ls-panel-description">
+							Carousel settings and auto-hold rules.
+						</p>
 					</div>
 
 					<!-- Carousel -->
 					<div class="ls-section" data-accent="purple">
 						<div class="ls-section-title">🎠 Carousel Settings</div>
-						<div class="ls-section-desc">Controls how many recent novels appear in the carousel view.</div>
+						<div class="ls-section-desc">
+							Controls how many recent novels appear in the
+							carousel view.
+						</div>
 
 						<div class="ls-form-group">
 							<label class="ls-label">
-								Auto count: <span id="carousel-auto-count"
-									style="color:#8b5cf6;font-weight:600;">10</span>
-								<span class="ls-hint" style="display:inline;margin-left:4px;">(Active sites + 5, min
-									10)</span>
+								Auto count:
+								<span
+									id="carousel-auto-count"
+									style="color: #8b5cf6; font-weight: 600"
+									>10</span
+								>
+								<span
+									class="ls-hint"
+									style="display: inline; margin-left: 4px"
+									>(Active sites + 5, min 10)</span
+								>
 							</label>
-							<label class="ls-checkbox-label" style="margin-top:8px;">
-								<input type="checkbox" id="carousel-use-manual" />
+							<label
+								class="ls-checkbox-label"
+								style="margin-top: 8px"
+							>
+								<input
+									type="checkbox"
+									id="carousel-use-manual"
+								/>
 								<span>Manual override</span>
 							</label>
 						</div>
 
-						<div id="carousel-manual-container-auto" class="ls-hidden">
+						<div
+							id="carousel-manual-container-auto"
+							class="ls-hidden"
+						>
 							<div class="ls-form-group">
-								<input type="number" id="carousel-manual-count" class="ls-input" min="1" max="100"
-									step="1" value="10" style="width:120px;" />
-								<span class="ls-hint">1-100 novels (overrides automatic calculation)</span>
+								<input
+									type="number"
+									id="carousel-manual-count"
+									class="ls-input"
+									min="1"
+									max="100"
+									step="1"
+									value="10"
+									style="width: 120px"
+								/>
+								<span class="ls-hint"
+									>1-100 novels (overrides automatic
+									calculation)</span
+								>
 							</div>
 						</div>
 					</div>
@@ -694,38 +1459,67 @@
 					<!-- Auto Hold -->
 					<div class="ls-section" data-accent="yellow">
 						<div class="ls-section-title">⏰ Auto-Hold</div>
-						<div class="ls-section-desc">Automatically mark inactive novels as "On Hold".</div>
+						<div class="ls-section-desc">
+							Automatically mark inactive novels as "On Hold".
+						</div>
 
 						<div class="ls-form-group">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
-									<span class="ls-label">Enable Auto-Hold</span>
-									<span class="ls-hint">Mark inactive novels as "On Hold" after N days without a
-										chapter read.</span>
+									<span class="ls-label"
+										>Enable Auto-Hold</span
+									>
+									<span class="ls-hint"
+										>Mark inactive novels as "On Hold" after
+										N days without a chapter read.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="auto-hold-toggle" />
+									<input
+										type="checkbox"
+										id="auto-hold-toggle"
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="auto-hold-days">Days of inactivity before hold:</label>
-							<input type="number" id="auto-hold-days" class="ls-input" min="1" max="90" step="1"
-								value="7" style="width:90px;" />
+							<label class="ls-label" for="auto-hold-days"
+								>Days of inactivity before hold:</label
+							>
+							<input
+								type="number"
+								id="auto-hold-days"
+								class="ls-input"
+								min="1"
+								max="90"
+								step="1"
+								value="7"
+								style="width: 90px"
+							/>
 						</div>
 
-						<div class="ls-form-group" style="margin-top: 14px;">
+						<div class="ls-form-group" style="margin-top: 14px">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
-									<span class="ls-label">Hide Gemini UI from Read Aloud / TTS</span>
-									<span class="ls-hint">Keeps Gemini control banners visible, but marked aria-hidden
-										for readers. During click/focus interaction, aria-hidden is temporarily lifted
-										to avoid browser focus warnings.</span>
+									<span class="ls-label"
+										>Hide Gemini UI from Read Aloud /
+										TTS</span
+									>
+									<span class="ls-hint"
+										>Keeps Gemini control banners visible,
+										but marked aria-hidden for readers.
+										During click/focus interaction,
+										aria-hidden is temporarily lifted to
+										avoid browser focus warnings.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="hide-gemini-ui-readaloud-toggle" />
+									<input
+										type="checkbox"
+										id="hide-gemini-ui-readaloud-toggle"
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
@@ -734,30 +1528,53 @@
 
 					<!-- Periodic Chapter Check -->
 					<div class="ls-section" data-accent="blue">
-						<div class="ls-section-title">🔄 Periodic Chapter Check</div>
-						<div class="ls-section-desc">Automatically check "Up to Date" novels for new chapters in the
-							background.</div>
+						<div class="ls-section-title">
+							🔄 Periodic Chapter Check
+						</div>
+						<div class="ls-section-desc">
+							Automatically check "Up to Date" novels for new
+							chapters in the background.
+						</div>
 
 						<div class="ls-form-group">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
-									<span class="ls-label">Enable Chapter Checking</span>
-									<span class="ls-hint">When new chapters are found the novel status changes back to
-										"Reading".</span>
+									<span class="ls-label"
+										>Enable Chapter Checking</span
+									>
+									<span class="ls-hint"
+										>When new chapters are found the novel
+										status changes back to "Reading".</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="novel-update-toggle" />
+									<input
+										type="checkbox"
+										id="novel-update-toggle"
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="novel-update-interval">Check every (days):</label>
-							<input type="number" id="novel-update-interval" class="ls-input" min="1" max="30" step="1"
-								value="3" style="width:90px;" />
-							<span class="ls-hint">1–30 days. Per-novel opt-out is available on each novel's detail
-								card.</span>
+							<label class="ls-label" for="novel-update-interval"
+								>Check every (days):</label
+							>
+							<input
+								type="number"
+								id="novel-update-interval"
+								class="ls-input"
+								min="1"
+								max="30"
+								step="1"
+								value="3"
+								style="width: 90px"
+							/>
+							<span class="ls-hint"
+								>1–30 days. Per-novel opt-out is available on
+								each novel's detail card.</span
+							>
 						</div>
 					</div>
 				</section>
@@ -768,16 +1585,23 @@
 				<section class="ls-panel" id="panel-sites">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">🌐 Sites</h1>
-						<p class="ls-panel-description">Enable or disable site enhancements, and configure site-specific
-							settings.</p>
+						<p class="ls-panel-description">
+							Enable or disable site enhancements, and configure
+							site-specific settings.
+						</p>
 					</div>
 
 					<!-- Auto-Add by Site -->
 					<div class="ls-section" data-accent="purple">
 						<div class="ls-section-title">🌐 Auto-Add by Site</div>
-						<div class="ls-section-desc">Configure auto-add behavior and reading status for each supported
-							site.</div>
-						<div id="site-autoadd-list" class="site-autoadd-list"></div>
+						<div class="ls-section-desc">
+							Configure auto-add behavior and reading status for
+							each supported site.
+						</div>
+						<div
+							id="site-autoadd-list"
+							class="site-autoadd-list"
+						></div>
 					</div>
 
 					<!-- Per-site settings panels (rendered by site-settings-ui.js) -->
@@ -790,41 +1614,93 @@
 				<section class="ls-panel" id="panel-prompts">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">✍️ Prompts</h1>
-						<p class="ls-panel-description">Customise the AI prompt templates used for chapter enhancement.
+						<p class="ls-panel-description">
+							Customise the AI prompt templates used for chapter
+							enhancement.
 						</p>
 					</div>
 					<div class="ls-section" data-accent="green">
 						<div class="ls-form-group">
-							<div class="ls-section-title">Main Enhancement Prompt</div>
-							<label class="ls-label" for="library-prompt-main"></label>
-							<textarea id="library-prompt-main" class="ls-textarea" rows="5"></textarea>
-							<button id="library-reset-prompt-main" class="ls-btn ls-btn-secondary ls-btn-sm"
-								style="margin-top:6px;">↺ Reset to Default</button>
+							<div class="ls-section-title">
+								Main Enhancement Prompt
+							</div>
+							<label
+								class="ls-label"
+								for="library-prompt-main"
+							></label>
+							<textarea
+								id="library-prompt-main"
+								class="ls-textarea"
+								rows="5"
+							></textarea>
+							<button
+								id="library-reset-prompt-main"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+								style="margin-top: 6px"
+							>
+								↺ Reset to Default
+							</button>
 						</div>
 					</div>
 					<div class="ls-section" data-accent="yellow">
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-prompt-summary">Summary Prompt</label>
-							<textarea id="library-prompt-summary" class="ls-textarea" rows="4"></textarea>
-							<button id="library-reset-prompt-summary" class="ls-btn ls-btn-secondary ls-btn-sm"
-								style="margin-top:6px;">↺ Reset to Default</button>
+							<label class="ls-label" for="library-prompt-summary"
+								>Summary Prompt</label
+							>
+							<textarea
+								id="library-prompt-summary"
+								class="ls-textarea"
+								rows="4"
+							></textarea>
+							<button
+								id="library-reset-prompt-summary"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+								style="margin-top: 6px"
+							>
+								↺ Reset to Default
+							</button>
 						</div>
 					</div>
 					<div class="ls-section" data-accent="blue">
-						<div class="ls-form-group" style="margin-top:12px;">
-							<label class="ls-label" for="library-prompt-short-summary">Short Summary Prompt</label>
-							<textarea id="library-prompt-short-summary" class="ls-textarea" rows="3"></textarea>
-							<button id="library-reset-prompt-short-summary" class="ls-btn ls-btn-secondary ls-btn-sm"
-								style="margin-top:6px;">↺ Reset to
-								Default</button>
+						<div class="ls-form-group" style="margin-top: 12px">
+							<label
+								class="ls-label"
+								for="library-prompt-short-summary"
+								>Short Summary Prompt</label
+							>
+							<textarea
+								id="library-prompt-short-summary"
+								class="ls-textarea"
+								rows="3"
+							></textarea>
+							<button
+								id="library-reset-prompt-short-summary"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+								style="margin-top: 6px"
+							>
+								↺ Reset to Default
+							</button>
 						</div>
 					</div>
 					<div class="ls-section" data-accent="orange">
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-prompt-permanent">Permanent Context Prompt</label>
-							<textarea id="library-prompt-permanent" class="ls-textarea" rows="4"></textarea>
-							<button id="library-reset-prompt-permanent" class="ls-btn ls-btn-secondary ls-btn-sm"
-								style="margin-top:6px;">↺ Reset to Default</button>
+							<label
+								class="ls-label"
+								for="library-prompt-permanent"
+								>Permanent Context Prompt</label
+							>
+							<textarea
+								id="library-prompt-permanent"
+								class="ls-textarea"
+								rows="4"
+							></textarea>
+							<button
+								id="library-reset-prompt-permanent"
+								class="ls-btn ls-btn-secondary ls-btn-sm"
+								style="margin-top: 6px"
+							>
+								↺ Reset to Default
+							</button>
 						</div>
 					</div>
 				</section>
@@ -835,8 +1711,10 @@
 				<section class="ls-panel" id="panel-statuses">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">📋 Statuses</h1>
-						<p class="ls-panel-description">Customise reading status labels, colours, custom statuses,
-							re-reading overlay, and transition rules.</p>
+						<p class="ls-panel-description">
+							Customise reading status labels, colours, custom
+							statuses, re-reading overlay, and transition rules.
+						</p>
 					</div>
 
 					<!-- status-settings-ui.js will render into this container -->
@@ -849,42 +1727,69 @@
 				<section class="ls-panel" id="panel-advanced">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">⚙️ Advanced</h1>
-						<p class="ls-panel-description">Power user settings. Change only if you know what you're doing.
+						<p class="ls-panel-description">
+							Power user settings. Change only if you know what
+							you're doing.
 						</p>
 					</div>
 
-					<div class="ls-section" style="background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;">
-						<div class="ls-section-title" style="color:#f59e0b;">⚠️ Advanced Area</div>
-						<div class="ls-section-desc">These settings are for power users. Incorrect values may affect
-							extension functionality.</div>
+					<div
+						class="ls-section"
+						style="
+							background: rgba(245, 158, 11, 0.08);
+							border-left: 3px solid #f59e0b;
+						"
+					>
+						<div class="ls-section-title" style="color: #f59e0b">
+							⚠️ Advanced Area
+						</div>
+						<div class="ls-section-desc">
+							These settings are for power users. Incorrect values
+							may affect extension functionality.
+						</div>
 					</div>
 
 					<!-- Analytics -->
 					<div class="ls-section" data-accent="teal">
-						<div class="ls-section-title">📊 Analytics &amp; Diagnostics</div>
+						<div class="ls-section-title">
+							📊 Analytics &amp; Diagnostics
+						</div>
 
 						<div class="ls-form-group">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
 									<span class="ls-label">Usage Data</span>
-									<span class="ls-hint">Anonymous usage statistics only. Helps improve the
-										extension.</span>
+									<span class="ls-hint"
+										>Anonymous usage statistics only. Helps
+										improve the extension.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="telemetry-toggle" checked />
+									<input
+										type="checkbox"
+										id="telemetry-toggle"
+										checked
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
 						</div>
 
-						<div class="ls-form-group" style="margin-top:12px;">
+						<div class="ls-form-group" style="margin-top: 12px">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
 									<span class="ls-label">Error Reports</span>
-									<span class="ls-hint">Help fix bugs by sending anonymous error reports.</span>
+									<span class="ls-hint"
+										>Help fix bugs by sending anonymous
+										error reports.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="send-errors-toggle" checked />
+									<input
+										type="checkbox"
+										id="send-errors-toggle"
+										checked
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
@@ -899,85 +1804,180 @@
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
 									<span class="ls-label">🧪 Debug Mode</span>
-									<span class="ls-hint">Enable detailed console logging for debugging extension
-										issues.</span>
+									<span class="ls-hint"
+										>Enable detailed console logging for
+										debugging extension issues.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="library-debug-mode" />
+									<input
+										type="checkbox"
+										id="library-debug-mode"
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
 						</div>
 
-						<div id="debug-sub-options" class="ls-hidden"
-							style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);">
+						<div
+							id="debug-sub-options"
+							class="ls-hidden"
+							style="
+								margin-top: 12px;
+								padding-top: 12px;
+								border-top: 1px solid var(--border-color);
+							"
+						>
 							<div class="ls-form-group">
 								<div class="ls-toggle-row">
 									<div class="ls-toggle-row-label">
-										<span class="ls-label">📏 Truncate Console Output</span>
-										<span class="ls-hint">Limits output length to prevent console overflow.</span>
+										<span class="ls-label"
+											>📏 Truncate Console Output</span
+										>
+										<span class="ls-hint"
+											>Limits output length to prevent
+											console overflow.</span
+										>
 									</div>
 									<label class="ls-toggle">
-										<input type="checkbox" id="library-debug-truncate" checked />
+										<input
+											type="checkbox"
+											id="library-debug-truncate"
+											checked
+										/>
 										<span class="ls-toggle-track"></span>
 									</label>
 								</div>
 							</div>
 							<div class="ls-form-group">
-								<label class="ls-label" for="library-debug-truncate-length">📌 Max Characters per
-									Log:</label>
-								<input type="number" id="library-debug-truncate-length" class="ls-input" min="100"
-									max="10000" value="500" step="100" style="width:160px;" />
-								<span class="ls-hint">Characters before truncation (100-10000)</span>
+								<label
+									class="ls-label"
+									for="library-debug-truncate-length"
+									>📌 Max Characters per Log:</label
+								>
+								<input
+									type="number"
+									id="library-debug-truncate-length"
+									class="ls-input"
+									min="100"
+									max="10000"
+									value="500"
+									step="100"
+									style="width: 160px"
+								/>
+								<span class="ls-hint"
+									>Characters before truncation
+									(100-10000)</span
+								>
 							</div>
 						</div>
 
-						<div class="ls-form-group" style="margin-top:12px;">
-							<label class="ls-label" for="webhook-url">Webhook URL</label>
-							<input type="url" id="webhook-url" class="ls-input" placeholder="https://…" />
-							<span class="ls-hint">Custom endpoint for error reporting.</span>
+						<div class="ls-form-group" style="margin-top: 12px">
+							<label class="ls-label" for="webhook-url"
+								>Webhook URL</label
+							>
+							<input
+								type="url"
+								id="webhook-url"
+								class="ls-input"
+								placeholder="https://…"
+							/>
+							<span class="ls-hint"
+								>Custom endpoint for error reporting.</span
+							>
 						</div>
 					</div>
 
 					<!-- Processing Options -->
 					<div class="ls-section" data-accent="sky">
-						<div class="ls-section-title">🧪 Processing Options</div>
+						<div class="ls-section-title">
+							🧪 Processing Options
+						</div>
 
 						<div class="ls-form-group">
 							<div class="ls-toggle-row">
 								<div class="ls-toggle-row-label">
-									<span class="ls-label">Split large chapters automatically</span>
-									<span class="ls-hint">Processes large chapters in parts to avoid token
-										limits.</span>
+									<span class="ls-label"
+										>Split large chapters
+										automatically</span
+									>
+									<span class="ls-hint"
+										>Processes large chapters in parts to
+										avoid token limits.</span
+									>
 								</div>
 								<label class="ls-toggle">
-									<input type="checkbox" id="library-chunking-enabled" />
+									<input
+										type="checkbox"
+										id="library-chunking-enabled"
+									/>
 									<span class="ls-toggle-track"></span>
 								</label>
 							</div>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-chunk-size">Segment size (words per chunk):</label>
-							<input type="number" id="library-chunk-size" class="ls-input" min="100" max="10000"
-								step="100" value="3200" style="width:160px;" />
-							<span class="ls-hint">Recommended: 3200. Smaller = safer but more API calls.</span>
+							<label class="ls-label" for="library-chunk-size"
+								>Segment size (words per chunk):</label
+							>
+							<input
+								type="number"
+								id="library-chunk-size"
+								class="ls-input"
+								min="100"
+								max="10000"
+								step="100"
+								value="3200"
+								style="width: 160px"
+							/>
+							<span class="ls-hint"
+								>Recommended: 3200. Smaller = safer but more API
+								calls.</span
+							>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-chunk-summary-count">Summary buttons every N
-								chunks:</label>
-							<input type="number" id="library-chunk-summary-count" class="ls-input" min="1" max="10"
-								step="1" value="2" style="width:100px;" />
-							<span class="ls-hint">Controls how often summary buttons appear between chunks.</span>
+							<label
+								class="ls-label"
+								for="library-chunk-summary-count"
+								>Summary buttons every N chunks:</label
+							>
+							<input
+								type="number"
+								id="library-chunk-summary-count"
+								class="ls-input"
+								min="1"
+								max="10"
+								step="1"
+								value="2"
+								style="width: 100px"
+							/>
+							<span class="ls-hint"
+								>Controls how often summary buttons appear
+								between chunks.</span
+							>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-max-output-tokens">Maximum Output Length
-								(tokens):</label>
-							<input type="number" id="library-max-output-tokens" class="ls-input" min="1000" max="32768"
-								step="512" value="8192" style="width:160px;" />
-							<span class="ls-hint">Controls the maximum length of generated text.</span>
+							<label
+								class="ls-label"
+								for="library-max-output-tokens"
+								>Maximum Output Length (tokens):</label
+							>
+							<input
+								type="number"
+								id="library-max-output-tokens"
+								class="ls-input"
+								min="1000"
+								max="32768"
+								step="512"
+								value="8192"
+								style="width: 160px"
+							/>
+							<span class="ls-hint"
+								>Controls the maximum length of generated
+								text.</span
+							>
 						</div>
 					</div>
 
@@ -986,109 +1986,271 @@
 						<div class="ls-section-title">🎯 AI Parameters</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label">Top K: <span id="library-top-k-value">40</span></label>
-							<input type="range" id="library-top-k-slider" class="ls-range" min="1" max="100" step="1"
-								value="40" />
-							<span class="ls-hint">Limits token selection pool (1-100)</span>
+							<label class="ls-label"
+								>Top K:
+								<span id="library-top-k-value">40</span></label
+							>
+							<input
+								type="range"
+								id="library-top-k-slider"
+								class="ls-range"
+								min="1"
+								max="100"
+								step="1"
+								value="40"
+							/>
+							<span class="ls-hint"
+								>Limits token selection pool (1-100)</span
+							>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label">Top P: <span id="library-top-p-value">0.95</span></label>
-							<input type="range" id="library-top-p-slider" class="ls-range" min="0" max="1" step="0.05"
-								value="0.95" />
+							<label class="ls-label"
+								>Top P:
+								<span id="library-top-p-value"
+									>0.95</span
+								></label
+							>
+							<input
+								type="range"
+								id="library-top-p-slider"
+								class="ls-range"
+								min="0"
+								max="1"
+								step="0.05"
+								value="0.95"
+							/>
 							<span class="ls-hint">Nucleus sampling (0-1)</span>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label">Word Count Threshold: <span
-									id="library-word-count-threshold-value">25</span>%</label>
-							<input type="range" id="library-word-count-threshold-slider" class="ls-range" min="0"
-								max="100" step="1" value="25" />
-							<span class="ls-hint">Warning shown if word change exceeds this % (0-100%)</span>
+							<label class="ls-label"
+								>Word Count Threshold:
+								<span id="library-word-count-threshold-value"
+									>25</span
+								>%</label
+							>
+							<input
+								type="range"
+								id="library-word-count-threshold-slider"
+								class="ls-range"
+								min="0"
+								max="100"
+								step="1"
+								value="25"
+							/>
+							<span class="ls-hint"
+								>Warning shown if word change exceeds this %
+								(0-100%)</span
+							>
 						</div>
 
 						<div class="ls-form-group">
-							<label class="ls-label" for="library-advanced-model-endpoint">Model Endpoint URL</label>
+							<label
+								class="ls-label"
+								for="library-advanced-model-endpoint"
+								>Model Endpoint URL</label
+							>
 							<div class="ls-inline">
-								<input type="text" id="library-advanced-model-endpoint" class="ls-input" readonly
-									placeholder="Auto-generated…" />
-								<button id="library-advanced-copy-endpoint" class="ls-btn ls-btn-secondary ls-btn-sm">📋
-									Copy</button>
+								<input
+									type="text"
+									id="library-advanced-model-endpoint"
+									class="ls-input"
+									readonly
+									placeholder="Auto-generated…"
+								/>
+								<button
+									id="library-advanced-copy-endpoint"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
+									📋 Copy
+								</button>
 							</div>
-							<span class="ls-hint">Auto-generated model API endpoint.</span>
+							<span class="ls-hint"
+								>Auto-generated model API endpoint.</span
+							>
 						</div>
 					</div>
 
 					<!-- Database Fixes -->
 					<div class="ls-section" data-accent="amber">
 						<div class="ls-section-title">🔧 Database Fixes</div>
-						<p class="ls-section-description"
-							style="margin:0 0 12px;font-size:12px;color:var(--text-secondary);">
-							Apply data corrections to your library. These operations re-process existing novel data
-							without deleting anything.
+						<p
+							class="ls-section-description"
+							style="
+								margin: 0 0 12px;
+								font-size: 12px;
+								color: var(--text-secondary);
+							"
+						>
+							Apply data corrections to your library. These
+							operations re-process existing novel data without
+							deleting anything.
 						</p>
 
 						<div class="ls-form-group">
 							<div class="ls-row ls-row-between">
 								<div>
-									<span class="ls-label">Fix FanFiction.net Character Data</span>
-									<span class="ls-hint">Re-runs character/relationship normalization on all FF.net
-										novels. Removes genres from character lists and properly groups romantic
-										relationships like [A, B, C].</span>
+									<span class="ls-label"
+										>Fix FanFiction.net Character Data</span
+									>
+									<span class="ls-hint"
+										>Re-runs character/relationship
+										normalization on all FF.net novels.
+										Removes genres from character lists and
+										properly groups romantic relationships
+										like [A, B, C].</span
+									>
 								</div>
-								<button id="fix-ffnet-characters-btn" class="ls-btn ls-btn-secondary ls-btn-sm">
+								<button
+									id="fix-ffnet-characters-btn"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
 									🔄 Run Fix
 								</button>
 							</div>
-							<div id="fix-ffnet-characters-result"
-								style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px;"></div>
+							<div
+								id="fix-ffnet-characters-result"
+								style="
+									display: none;
+									margin-top: 8px;
+									padding: 8px;
+									border-radius: 6px;
+									font-size: 12px;
+								"
+							></div>
 						</div>
 
 						<div class="ls-form-group">
 							<div class="ls-row ls-row-between">
 								<div>
-									<span class="ls-label">Forceful FF.net Metadata Scan</span>
-									<span class="ls-hint">Runs a stricter repair pass for FF.net novels to remove
-										date-like
-										character leaks, repair malformed relationships, recover parseable stats/dates,
-										and backfill missing fandom categories.</span>
+									<span class="ls-label"
+										>Forceful FF.net Metadata Scan</span
+									>
+									<span class="ls-hint"
+										>Runs a stricter repair pass for FF.net
+										novels to remove date-like character
+										leaks, repair malformed relationships,
+										recover parseable stats/dates, and
+										backfill missing fandom
+										categories.</span
+									>
 								</div>
-								<button id="scan-ffnet-metadata-btn" class="ls-btn ls-btn-secondary ls-btn-sm">
+								<button
+									id="scan-ffnet-metadata-btn"
+									class="ls-btn ls-btn-secondary ls-btn-sm"
+								>
 									🧪 Scan &amp; Fix
 								</button>
 							</div>
-							<div id="scan-ffnet-metadata-result"
-								style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px;"></div>
+							<div
+								id="scan-ffnet-metadata-result"
+								style="
+									display: none;
+									margin-top: 8px;
+									padding: 8px;
+									border-radius: 6px;
+									font-size: 12px;
+								"
+							></div>
 						</div>
 					</div>
 
 					<!-- Factory Reset -->
-					<div class="ls-section" style="background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(220,38,38,0.12));
-				border:2px solid #ef4444;border-left:4px solid #dc2626;">
-						<div class="ls-section-title" style="color:#ef4444;font-size:16px;">
-							<span style="font-size:20px;">⚠️</span> Factory Reset
+					<div
+						class="ls-section"
+						style="
+							background: linear-gradient(
+								135deg,
+								rgba(239, 68, 68, 0.12),
+								rgba(220, 38, 38, 0.12)
+							);
+							border: 2px solid #ef4444;
+							border-left: 4px solid #dc2626;
+						"
+					>
+						<div
+							class="ls-section-title"
+							style="color: #ef4444; font-size: 16px"
+						>
+							<span style="font-size: 20px">⚠️</span> Factory
+							Reset
 						</div>
 						<div
-							style="background:rgba(239,68,68,0.1);padding:12px;border-radius:6px;border-left:3px solid #ef4444;margin:12px 0;">
-							<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#fecaca;">⚡ This will
-								permanently delete:</p>
+							style="
+								background: rgba(239, 68, 68, 0.1);
+								padding: 12px;
+								border-radius: 6px;
+								border-left: 3px solid #ef4444;
+								margin: 12px 0;
+							"
+						>
+							<p
+								style="
+									margin: 0 0 8px;
+									font-size: 13px;
+									font-weight: 600;
+									color: #fecaca;
+								"
+							>
+								⚡ This will permanently delete:
+							</p>
 							<ul
-								style="margin:0;padding-left:20px;font-size:12px;line-height:1.8;color:var(--text-secondary);">
+								style="
+									margin: 0;
+									padding-left: 20px;
+									font-size: 12px;
+									line-height: 1.8;
+									color: var(--text-secondary);
+								"
+							>
 								<li>All novels from your library</li>
 								<li>All enhanced chapters and summaries</li>
 								<li>Google Drive OAuth credentials</li>
 								<li>All local and browser-stored backups</li>
 								<li>Theme settings and preferences</li>
 							</ul>
-							<p style="margin:8px 0 0;font-size:11px;color:#fca5a5;font-style:italic;">💡 This does NOT
-								delete Google Drive cloud backups.</p>
+							<p
+								style="
+									margin: 8px 0 0;
+									font-size: 11px;
+									color: #fca5a5;
+									font-style: italic;
+								"
+							>
+								💡 This does NOT delete Google Drive cloud
+								backups.
+							</p>
 						</div>
-						<button id="library-factory-reset-btn" class="ls-btn ls-btn-full" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;font-weight:700;font-size:13px;
-					       padding:14px;border:none;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+						<button
+							id="library-factory-reset-btn"
+							class="ls-btn ls-btn-full"
+							style="
+								background: linear-gradient(
+									135deg,
+									#ef4444,
+									#dc2626
+								);
+								color: white;
+								font-weight: 700;
+								font-size: 13px;
+								padding: 14px;
+								border: none;
+								box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+							"
+						>
 							🔥 Factory Reset — Delete Everything
 						</button>
-						<p style="margin-top:10px;text-align:center;font-size:10px;color:var(--text-secondary);">
-							⚠️ This action cannot be undone. Create a backup first!
+						<p
+							style="
+								margin-top: 10px;
+								text-align: center;
+								font-size: 10px;
+								color: var(--text-secondary);
+							"
+						>
+							⚠️ This action cannot be undone. Create a backup
+							first!
 						</p>
 					</div>
 				</section>
@@ -1099,52 +2261,103 @@
 				<section class="ls-panel" id="panel-copy">
 					<div class="ls-panel-header">
 						<div class="ls-panel-header-content">
-							<h1 class="ls-panel-title">📋 Copy / Export Format</h1>
-							<p class="ls-panel-description">Configure the filename template used when copying novel
-								filenames from modals.</p>
+							<h1 class="ls-panel-title">
+								📋 Copy / Export Format
+							</h1>
+							<p class="ls-panel-description">
+								Configure the filename template used when
+								copying novel filenames from modals.
+							</p>
 						</div>
 						<div class="ls-panel-header-actions">
-							<button id="copy-format-save-btn" class="ls-btn ls-btn-primary ls-btn-sm">💾 Save</button>
+							<button
+								id="copy-format-save-btn"
+								class="ls-btn ls-btn-primary ls-btn-sm"
+							>
+								💾 Save
+							</button>
 						</div>
 					</div>
 
 					<!-- Export filename template -->
 					<div class="ls-section" data-accent="teal">
-						<div class="ls-section-title">📚 Copy Filename Template</div>
+						<div class="ls-section-title">
+							📚 Copy Filename Template
+						</div>
 						<div class="ls-section-desc">
-							Used when you click <strong>📋 Copy</strong> on a novel. The filename is
-							copied to your clipboard. Use <code>{titleSafe}</code> and <code>{authorSafe}</code> for
-							filesystem-safe names. Add an extension directly in the template if you want one
-							(e.g. <code>{titleSafe}.epub</code>).
+							Used when you click <strong>📋 Copy</strong> on a
+							novel. The filename is copied to your clipboard. Use
+							<code>{titleSafe}</code> and
+							<code>{authorSafe}</code> for filesystem-safe names.
+							Add an extension directly in the template if you
+							want one (e.g. <code>{titleSafe}.epub</code>).
 						</div>
 						<div class="ls-form-group">
-							<label class="ls-label" for="copy-export-template">Filename template</label>
-							<input type="text" id="copy-export-template" class="ls-input"
-								placeholder="{titleSafe} - {authorSafe}" />
+							<label class="ls-label" for="copy-export-template"
+								>Filename template</label
+							>
+							<input
+								type="text"
+								id="copy-export-template"
+								class="ls-input"
+								placeholder="{titleSafe} - {authorSafe}"
+							/>
 						</div>
 						<div class="ls-form-group">
 							<label class="ls-label">Preview</label>
-							<div id="copy-export-preview"
-								style="font-family:monospace;font-size:13px;padding:10px 12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);word-break:break-all;min-height:2.5em;">
+							<div
+								id="copy-export-preview"
+								style="
+									font-family: monospace;
+									font-size: 13px;
+									padding: 10px 12px;
+									background: var(--bg-tertiary);
+									border: 1px solid var(--border-color);
+									border-radius: 6px;
+									color: var(--text-primary);
+									word-break: break-all;
+									min-height: 2.5em;
+								"
+							>
 								—
 							</div>
 						</div>
 						<!-- Export token chips -->
 						<div class="ls-form-group">
-							<label class="ls-label">Filename tokens <span class="ls-hint"
-									style="display:inline;margin-left:4px;">(click to insert)</span></label>
-							<div id="copy-export-tokens-grid"
-								style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+							<label class="ls-label"
+								>Filename tokens
+								<span
+									class="ls-hint"
+									style="display: inline; margin-left: 4px"
+									>(click to insert)</span
+								></label
+							>
+							<div
+								id="copy-export-tokens-grid"
+								style="
+									display: flex;
+									flex-wrap: wrap;
+									gap: 6px;
+									margin-top: 6px;
+								"
+							>
 								<!-- Populated by library-settings.js -->
 							</div>
 						</div>
 					</div>
 					<!-- Per-site filename template overrides -->
-					<div class="ls-section" data-accent="orange" id="copy-site-overrides-section" style="display:none;">
-						<div class="ls-section-title">🌐 Per-Site Filename Templates</div>
+					<div
+						class="ls-section"
+						data-accent="orange"
+						id="copy-site-overrides-section"
+						style="display: none"
+					>
+						<div class="ls-section-title">
+							🌐 Per-Site Filename Templates
+						</div>
 						<div class="ls-section-desc">
-							Override the filename template for specific sites. Leave blank to
-							use the global template above.
+							Override the filename template for specific sites.
+							Leave blank to use the global template above.
 						</div>
 						<div id="copy-site-overrides-list">
 							<!-- Populated by library-settings.js -->
@@ -1159,25 +2372,37 @@
 					<div class="ls-panel-header">
 						<div class="ls-panel-header-content">
 							<h1 class="ls-panel-title">🔽 Content Filters</h1>
-							<p class="ls-panel-description">Configure collapsible sections for fight scenes, mature
-								content, author notes, and custom types.</p>
+							<p class="ls-panel-description">
+								Configure collapsible sections for fight scenes,
+								mature content, author notes, and custom types.
+							</p>
 						</div>
 						<div class="ls-panel-header-actions">
-							<button id="content-filters-save-btn" class="ls-btn ls-btn-primary ls-btn-sm">💾
-								Save</button>
+							<button
+								id="content-filters-save-btn"
+								class="ls-btn ls-btn-primary ls-btn-sm"
+							>
+								💾 Save
+							</button>
 						</div>
 					</div>
 
 					<!-- Info Section -->
 					<div class="ls-section" data-accent="blue">
-						<div class="ls-section-title">ℹ️ What are Collapsible Sections?</div>
+						<div class="ls-section-title">
+							ℹ️ What are Collapsible Sections?
+						</div>
 						<div class="ls-section-desc">
-							When Gemini enhances a chapter, certain content (fights, adult content, author notes) is
-							wrapped in collapsible boxes.
-							You can toggle them closed to hide lengthy sequences, and click to expand when you want to
-							read them.
-							<br /><a href="../../landing/content-styles.html#collapsible" target="_blank"
-								style="color:var(--accent-color);">
+							When Gemini enhances a chapter, certain content
+							(fights, adult content, author notes) is wrapped in
+							collapsible boxes. You can toggle them closed to
+							hide lengthy sequences, and click to expand when you
+							want to read them.
+							<br /><a
+								href="../../landing/content-styles.html#collapsible"
+								target="_blank"
+								style="color: var(--accent-color)"
+							>
 								➜ View live examples on the showcase
 							</a>
 						</div>
@@ -1187,77 +2412,159 @@
 					<div class="ls-section" data-accent="purple">
 						<div class="ls-section-title">📋 Built-in Types</div>
 						<div class="ls-section-desc">
-							Control whether each content type appears as a collapsible section and whether it starts
-							collapsed or expanded.
+							Control whether each content type appears as a
+							collapsible section and whether it starts collapsed
+							or expanded.
 						</div>
 
 						<!-- Fight Scene toggle -->
-						<div class="ls-form-group"
-							style="border-bottom:1px solid var(--border-color);padding-bottom:16px;margin-bottom:16px;">
+						<div
+							class="ls-form-group"
+							style="
+								border-bottom: 1px solid var(--border-color);
+								padding-bottom: 16px;
+								margin-bottom: 16px;
+							"
+						>
 							<div
-								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-								<label class="ls-label" style="margin:0;">⚔️ Fight Scenes</label>
+								style="
+									display: flex;
+									justify-content: space-between;
+									align-items: center;
+									margin-bottom: 10px;
+								"
+							>
+								<label class="ls-label" style="margin: 0"
+									>⚔️ Fight Scenes</label
+								>
 								<label class="ls-toggle">
-									<input type="checkbox" id="cf-fight-enabled" checked />
+									<input
+										type="checkbox"
+										id="cf-fight-enabled"
+										checked
+									/>
 									<span class="ls-toggle-slider"></span>
 								</label>
 							</div>
-							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
-								Long action sequences and combat scenes. Commonly missed details: outcomes, special
+							<div
+								class="ls-section-desc"
+								style="margin-bottom: 10px; margin-top: 0"
+							>
+								Long action sequences and combat scenes.
+								Commonly missed details: outcomes, special
 								moves, power-ups revealed.
 							</div>
-							<div class="ls-form-group" style="margin:0;">
-								<label class="ls-label" for="cf-fight-default">Default state when collapsed</label>
+							<div class="ls-form-group" style="margin: 0">
+								<label class="ls-label" for="cf-fight-default"
+									>Default state when collapsed</label
+								>
 								<select id="cf-fight-default" class="ls-input">
-									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
-									<option value="false">Expanded (Show full content by default)</option>
+									<option value="true">
+										Collapsed (Show summary → ▼ Read to
+										expand)
+									</option>
+									<option value="false">
+										Expanded (Show full content by default)
+									</option>
 								</select>
 							</div>
 						</div>
 
 						<!-- R18 / Mature Content toggle -->
-						<div class="ls-form-group"
-							style="border-bottom:1px solid var(--border-color);padding-bottom:16px;margin-bottom:16px;">
+						<div
+							class="ls-form-group"
+							style="
+								border-bottom: 1px solid var(--border-color);
+								padding-bottom: 16px;
+								margin-bottom: 16px;
+							"
+						>
 							<div
-								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-								<label class="ls-label" style="margin:0;">🔞 Mature Content</label>
+								style="
+									display: flex;
+									justify-content: space-between;
+									align-items: center;
+									margin-bottom: 10px;
+								"
+							>
+								<label class="ls-label" style="margin: 0"
+									>🔞 Mature Content</label
+								>
 								<label class="ls-toggle">
-									<input type="checkbox" id="cf-r18-enabled" checked />
+									<input
+										type="checkbox"
+										id="cf-r18-enabled"
+										checked
+									/>
 									<span class="ls-toggle-slider"></span>
 								</label>
 							</div>
-							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
-								Explicit or adult content. Includes intimate scenes, graphic violence, mature themes.
-								Perfect for reading in public.
+							<div
+								class="ls-section-desc"
+								style="margin-bottom: 10px; margin-top: 0"
+							>
+								Explicit or adult content. Includes intimate
+								scenes, graphic violence, mature themes. Perfect
+								for reading in public.
 							</div>
-							<div class="ls-form-group" style="margin:0;">
-								<label class="ls-label" for="cf-r18-default">Default state</label>
+							<div class="ls-form-group" style="margin: 0">
+								<label class="ls-label" for="cf-r18-default"
+									>Default state</label
+								>
 								<select id="cf-r18-default" class="ls-input">
-									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
-									<option value="false">Expanded (Show full content by default)</option>
+									<option value="true">
+										Collapsed (Show summary → ▼ Read to
+										expand)
+									</option>
+									<option value="false">
+										Expanded (Show full content by default)
+									</option>
 								</select>
 							</div>
 						</div>
 
 						<!-- Author Notes toggle -->
-						<div class="ls-form-group" style="padding-bottom:16px;">
+						<div class="ls-form-group" style="padding-bottom: 16px">
 							<div
-								style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-								<label class="ls-label" style="margin:0;">📝 Author's Notes</label>
+								style="
+									display: flex;
+									justify-content: space-between;
+									align-items: center;
+									margin-bottom: 10px;
+								"
+							>
+								<label class="ls-label" style="margin: 0"
+									>📝 Author's Notes</label
+								>
 								<label class="ls-toggle">
-									<input type="checkbox" id="cf-author-enabled" checked />
+									<input
+										type="checkbox"
+										id="cf-author-enabled"
+										checked
+									/>
 									<span class="ls-toggle-slider"></span>
 								</label>
 							</div>
-							<div class="ls-section-desc" style="margin-bottom:10px;margin-top:0;">
-								Long, off-topic author notes (schedules, rambling, thanks to patrons). Story-relevant
+							<div
+								class="ls-section-desc"
+								style="margin-bottom: 10px; margin-top: 0"
+							>
+								Long, off-topic author notes (schedules,
+								rambling, thanks to patrons). Story-relevant
 								notes always show.
 							</div>
-							<div class="ls-form-group" style="margin:0;">
-								<label class="ls-label" for="cf-author-default">Default state for long notes</label>
+							<div class="ls-form-group" style="margin: 0">
+								<label class="ls-label" for="cf-author-default"
+									>Default state for long notes</label
+								>
 								<select id="cf-author-default" class="ls-input">
-									<option value="true">Collapsed (Show summary → ▼ Read to expand)</option>
-									<option value="false">Expanded (Show full content by default)</option>
+									<option value="true">
+										Collapsed (Show summary → ▼ Read to
+										expand)
+									</option>
+									<option value="false">
+										Expanded (Show full content by default)
+									</option>
 								</select>
 							</div>
 						</div>
@@ -1267,12 +2574,25 @@
 					<div class="ls-section" data-accent="orange">
 						<div class="ls-section-title">✨ Custom Types</div>
 						<div class="ls-section-desc">
-							Create your own collapsible types. Tell Gemini what kind of content to collapse (e.g.,
-							"flashback scenes", "world-building exposition").
+							Create your own collapsible types. Tell Gemini what
+							kind of content to collapse (e.g., "flashback
+							scenes", "world-building exposition").
 						</div>
-						<button id="cf-add-custom-btn" class="ls-btn ls-btn-secondary" style="margin-bottom:16px;">+ Add
-							Custom Type</button>
-						<div id="cf-custom-list" style="display:flex;flex-direction:column;gap:16px;">
+						<button
+							id="cf-add-custom-btn"
+							class="ls-btn ls-btn-secondary"
+							style="margin-bottom: 16px"
+						>
+							+ Add Custom Type
+						</button>
+						<div
+							id="cf-custom-list"
+							style="
+								display: flex;
+								flex-direction: column;
+								gap: 16px;
+							"
+						>
 							<!-- Populated by JavaScript -->
 						</div>
 					</div>
@@ -1281,76 +2601,263 @@
 					<div class="ls-section" data-accent="green">
 						<div class="ls-section-title">🎮 Playground</div>
 						<div class="ls-section-desc">
-							Preview how collapsible sections look and work. Try collapsing and expanding different
-							types.
+							Preview how collapsible sections look and work. Try
+							collapsing and expanding different types.
 						</div>
 
 						<!-- Fight Scene Example -->
-						<div style="margin-bottom:24px;">
-							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">⚔️
-								Fight Scene Example</h4>
-							<div class="rg-collapsible-wrapper rg-collapsible-fight rg-collapsed" id="pg-fight-example">
-								<div class="rg-collapsible-header"
-									style="background:rgba(60,15,15,0.85);border:1px solid rgba(200,80,80,0.4);border-left:3px solid rgba(200,60,60,0.7);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
-									<span class="rg-collapsible-badge"
-										style="color:rgba(200,60,60,0.7);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">⚔️
-										FIGHT SCENE</span>
-									<span class="rg-collapsible-inline-summary"
-										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Kael
-										defeats the shadow warrior in a intense duel</span>
-									<button class="rg-collapsible-toggle-btn"
-										style="background:rgba(60,15,15,0.85);color:rgba(200,60,60,0.7);border:1px solid rgba(200,80,80,0.4);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
-										Read</button>
+						<div style="margin-bottom: 24px">
+							<h4
+								style="
+									font-size: 13px;
+									font-weight: 600;
+									margin-bottom: 8px;
+									color: var(--accent-color);
+								"
+							>
+								⚔️ Fight Scene Example
+							</h4>
+							<div
+								class="rg-collapsible-wrapper rg-collapsible-fight rg-collapsed"
+								id="pg-fight-example"
+							>
+								<div
+									class="rg-collapsible-header"
+									style="
+										background: rgba(60, 15, 15, 0.85);
+										border: 1px solid rgba(200, 80, 80, 0.4);
+										border-left: 3px solid
+											rgba(200, 60, 60, 0.7);
+										border-radius: 6px;
+										padding: 10px 14px;
+										display: flex;
+										align-items: center;
+										gap: 10px;
+										cursor: pointer;
+										user-select: none;
+										flex-wrap: wrap;
+									"
+								>
+									<span
+										class="rg-collapsible-badge"
+										style="
+											color: rgba(200, 60, 60, 0.7);
+											font-weight: 700;
+											font-size: 12px;
+											letter-spacing: 0.6px;
+											text-transform: uppercase;
+										"
+										>⚔️ FIGHT SCENE</span
+									>
+									<span
+										class="rg-collapsible-inline-summary"
+										style="
+											flex: 1;
+											font-size: 13px;
+											color: rgba(200, 195, 185, 0.85);
+											font-style: italic;
+										"
+										>Kael defeats the shadow warrior in a
+										intense duel</span
+									>
+									<button
+										class="rg-collapsible-toggle-btn"
+										style="
+											background: rgba(60, 15, 15, 0.85);
+											color: rgba(200, 60, 60, 0.7);
+											border: 1px solid
+												rgba(200, 80, 80, 0.4);
+											border-radius: 4px;
+											padding: 3px 10px;
+											font-size: 11px;
+											font-weight: 600;
+											cursor: pointer;
+											white-space: nowrap;
+											flex-shrink: 0;
+										"
+									>
+										▼ Read
+									</button>
 								</div>
-								<div class="rg-collapsible-summary-block"
-									style="background:rgba(60,15,15,0.85);border:1px solid rgba(200,80,80,0.4);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
-									Kael defeats the shadow warrior in a intense duel
+								<div
+									class="rg-collapsible-summary-block"
+									style="
+										background: rgba(60, 15, 15, 0.85);
+										border: 1px solid rgba(200, 80, 80, 0.4);
+										border-top: none;
+										border-radius: 0 0 6px 6px;
+										padding: 10px 14px;
+										margin: 0 0 12px 0;
+										font-size: 13px;
+										font-style: italic;
+										color: rgba(200, 195, 185, 0.8);
+										line-height: 1.6;
+									"
+								>
+									Kael defeats the shadow warrior in a intense
+									duel
 								</div>
-								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
+								<div
+									class="rg-collapsible-content"
+									style="margin: 0 0 12px 0; display: none"
+								>
 									<div
-										style="background:rgba(30,30,35,0.6);border-left:3px solid rgba(150,150,255,0.6);padding:10px;margin-bottom:10px;font-size:13px;color:rgba(200,195,185,0.9);">
-										<strong>Combat Log:</strong> Kael shifts into stance, baits the shadow's spear
-										thrust, then uses Shadow Step to flank. A two-hit combo cracks the enemy's
-										guard. Final blow bursts with dark energy—30 seconds total.
+										style="
+											background: rgba(30, 30, 35, 0.6);
+											border-left: 3px solid
+												rgba(150, 150, 255, 0.6);
+											padding: 10px;
+											margin-bottom: 10px;
+											font-size: 13px;
+											color: rgba(200, 195, 185, 0.9);
+										"
+									>
+										<strong>Combat Log:</strong> Kael shifts
+										into stance, baits the shadow's spear
+										thrust, then uses Shadow Step to flank.
+										A two-hit combo cracks the enemy's
+										guard. Final blow bursts with dark
+										energy—30 seconds total.
 									</div>
 									<div
-										style="background:rgba(40,25,15,0.5);border-left:3px solid rgba(220,140,60,0.6);padding:10px;margin-bottom:10px;color:rgba(200,195,185,0.9);">
-										<strong>Enemy's Final Words:</strong> "Impossible... a mortal besting my
+										style="
+											background: rgba(40, 25, 15, 0.5);
+											border-left: 3px solid
+												rgba(220, 140, 60, 0.6);
+											padding: 10px;
+											margin-bottom: 10px;
+											color: rgba(200, 195, 185, 0.9);
+										"
+									>
+										<strong>Enemy's Final Words:</strong>
+										"Impossible... a mortal besting my
 										technique..." *fades into shadow*
 									</div>
 									<div
-										style="background:rgba(20,30,20,0.4);border-left:3px solid rgba(100,200,100,0.5);padding:10px;color:rgba(200,195,185,0.9);">
-										<strong>Victory Bonus:</strong> +500 XP | *Dark Knight's Cloak* acquired
+										style="
+											background: rgba(20, 30, 20, 0.4);
+											border-left: 3px solid
+												rgba(100, 200, 100, 0.5);
+											padding: 10px;
+											color: rgba(200, 195, 185, 0.9);
+										"
+									>
+										<strong>Victory Bonus:</strong> +500 XP
+										| *Dark Knight's Cloak* acquired
 									</div>
 								</div>
 							</div>
 						</div>
 
 						<!-- R18 Example -->
-						<div style="margin-bottom:24px;">
-							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">🔞
-								Mature Content Example</h4>
-							<div class="rg-collapsible-wrapper rg-collapsible-r18 rg-collapsed" id="pg-r18-example">
-								<div class="rg-collapsible-header"
-									style="background:rgba(40,15,55,0.9);border:1px solid rgba(160,80,200,0.45);border-left:3px solid rgba(180,100,200,0.8);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
-									<span class="rg-collapsible-badge"
-										style="color:rgba(180,100,200,0.8);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">🔞
-										MATURE CONTENT</span>
-									<span class="rg-collapsible-inline-summary"
-										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Explicit
-										intimate scene between characters [+18 content]</span>
-									<button class="rg-collapsible-toggle-btn"
-										style="background:rgba(40,15,55,0.9);color:rgba(180,100,200,0.8);border:1px solid rgba(160,80,200,0.45);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
-										Read</button>
+						<div style="margin-bottom: 24px">
+							<h4
+								style="
+									font-size: 13px;
+									font-weight: 600;
+									margin-bottom: 8px;
+									color: var(--accent-color);
+								"
+							>
+								🔞 Mature Content Example
+							</h4>
+							<div
+								class="rg-collapsible-wrapper rg-collapsible-r18 rg-collapsed"
+								id="pg-r18-example"
+							>
+								<div
+									class="rg-collapsible-header"
+									style="
+										background: rgba(40, 15, 55, 0.9);
+										border: 1px solid
+											rgba(160, 80, 200, 0.45);
+										border-left: 3px solid
+											rgba(180, 100, 200, 0.8);
+										border-radius: 6px;
+										padding: 10px 14px;
+										display: flex;
+										align-items: center;
+										gap: 10px;
+										cursor: pointer;
+										user-select: none;
+										flex-wrap: wrap;
+									"
+								>
+									<span
+										class="rg-collapsible-badge"
+										style="
+											color: rgba(180, 100, 200, 0.8);
+											font-weight: 700;
+											font-size: 12px;
+											letter-spacing: 0.6px;
+											text-transform: uppercase;
+										"
+										>🔞 MATURE CONTENT</span
+									>
+									<span
+										class="rg-collapsible-inline-summary"
+										style="
+											flex: 1;
+											font-size: 13px;
+											color: rgba(200, 195, 185, 0.85);
+											font-style: italic;
+										"
+										>Explicit intimate scene between
+										characters [+18 content]</span
+									>
+									<button
+										class="rg-collapsible-toggle-btn"
+										style="
+											background: rgba(40, 15, 55, 0.9);
+											color: rgba(180, 100, 200, 0.8);
+											border: 1px solid
+												rgba(160, 80, 200, 0.45);
+											border-radius: 4px;
+											padding: 3px 10px;
+											font-size: 11px;
+											font-weight: 600;
+											cursor: pointer;
+											white-space: nowrap;
+											flex-shrink: 0;
+										"
+									>
+										▼ Read
+									</button>
 								</div>
-								<div class="rg-collapsible-summary-block"
-									style="background:rgba(40,15,55,0.9);border:1px solid rgba(160,80,200,0.45);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
-									Explicit intimate scene between characters [+18 content]
+								<div
+									class="rg-collapsible-summary-block"
+									style="
+										background: rgba(40, 15, 55, 0.9);
+										border: 1px solid
+											rgba(160, 80, 200, 0.45);
+										border-top: none;
+										border-radius: 0 0 6px 6px;
+										padding: 10px 14px;
+										margin: 0 0 12px 0;
+										font-size: 13px;
+										font-style: italic;
+										color: rgba(200, 195, 185, 0.8);
+										line-height: 1.6;
+									"
+								>
+									Explicit intimate scene between characters
+									[+18 content]
 								</div>
-								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
-									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin:0;">
-										[This is where mature/explicit content would appear. The system allows readers
-										to choose whether to view such content without interrupting the reading flow.]
+								<div
+									class="rg-collapsible-content"
+									style="margin: 0 0 12px 0; display: none"
+								>
+									<p
+										style="
+											color: rgba(200, 195, 185, 0.9);
+											line-height: 1.8;
+											margin: 0;
+										"
+									>
+										[This is where mature/explicit content
+										would appear. The system allows readers
+										to choose whether to view such content
+										without interrupting the reading flow.]
 									</p>
 								</div>
 							</div>
@@ -1358,34 +2865,124 @@
 
 						<!-- Author Note Example -->
 						<div>
-							<h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent-color);">📝
-								Author's Note Example</h4>
-							<div class="rg-collapsible-wrapper rg-collapsible-author-note rg-collapsed"
-								id="pg-author-example">
-								<div class="rg-collapsible-header"
-									style="background:rgba(45,35,10,0.92);border:1px solid rgba(200,155,50,0.55);border-left:3px solid rgba(220,175,70,0.85);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;flex-wrap:wrap;">
-									<span class="rg-collapsible-badge"
-										style="color:rgba(220,175,70,0.85);font-weight:700;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;">📝
-										AUTHOR'S NOTE</span>
-									<span class="rg-collapsible-inline-summary"
-										style="flex:1;font-size:13px;color:rgba(200,195,185,0.85);font-style:italic;">Update
-										on publishing schedule and thanks to patrons</span>
-									<button class="rg-collapsible-toggle-btn"
-										style="background:rgba(45,35,10,0.92);color:rgba(220,175,70,0.85);border:1px solid rgba(200,155,50,0.55);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">▼
-										Read</button>
+							<h4
+								style="
+									font-size: 13px;
+									font-weight: 600;
+									margin-bottom: 8px;
+									color: var(--accent-color);
+								"
+							>
+								📝 Author's Note Example
+							</h4>
+							<div
+								class="rg-collapsible-wrapper rg-collapsible-author-note rg-collapsed"
+								id="pg-author-example"
+							>
+								<div
+									class="rg-collapsible-header"
+									style="
+										background: rgba(45, 35, 10, 0.92);
+										border: 1px solid
+											rgba(200, 155, 50, 0.55);
+										border-left: 3px solid
+											rgba(220, 175, 70, 0.85);
+										border-radius: 6px;
+										padding: 10px 14px;
+										display: flex;
+										align-items: center;
+										gap: 10px;
+										cursor: pointer;
+										user-select: none;
+										flex-wrap: wrap;
+									"
+								>
+									<span
+										class="rg-collapsible-badge"
+										style="
+											color: rgba(220, 175, 70, 0.85);
+											font-weight: 700;
+											font-size: 12px;
+											letter-spacing: 0.6px;
+											text-transform: uppercase;
+										"
+										>📝 AUTHOR'S NOTE</span
+									>
+									<span
+										class="rg-collapsible-inline-summary"
+										style="
+											flex: 1;
+											font-size: 13px;
+											color: rgba(200, 195, 185, 0.85);
+											font-style: italic;
+										"
+										>Update on publishing schedule and
+										thanks to patrons</span
+									>
+									<button
+										class="rg-collapsible-toggle-btn"
+										style="
+											background: rgba(45, 35, 10, 0.92);
+											color: rgba(220, 175, 70, 0.85);
+											border: 1px solid
+												rgba(200, 155, 50, 0.55);
+											border-radius: 4px;
+											padding: 3px 10px;
+											font-size: 11px;
+											font-weight: 600;
+											cursor: pointer;
+											white-space: nowrap;
+											flex-shrink: 0;
+										"
+									>
+										▼ Read
+									</button>
 								</div>
-								<div class="rg-collapsible-summary-block"
-									style="background:rgba(45,35,10,0.92);border:1px solid rgba(200,155,50,0.55);border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;margin:0 0 12px 0;font-size:13px;font-style:italic;color:rgba(200,195,185,0.8);line-height:1.6;">
-									Update on publishing schedule and thanks to patrons
+								<div
+									class="rg-collapsible-summary-block"
+									style="
+										background: rgba(45, 35, 10, 0.92);
+										border: 1px solid
+											rgba(200, 155, 50, 0.55);
+										border-top: none;
+										border-radius: 0 0 6px 6px;
+										padding: 10px 14px;
+										margin: 0 0 12px 0;
+										font-size: 13px;
+										font-style: italic;
+										color: rgba(200, 195, 185, 0.8);
+										line-height: 1.6;
+									"
+								>
+									Update on publishing schedule and thanks to
+									patrons
 								</div>
-								<div class="rg-collapsible-content" style="margin:0 0 12px 0;display:none;">
-									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin-bottom:10px;">
-										Hey everyone! Just a quick note on the publishing schedule. Due to real-life
-										stuff, I might miss next week's release. Thanks to all my patrons for your
+								<div
+									class="rg-collapsible-content"
+									style="margin: 0 0 12px 0; display: none"
+								>
+									<p
+										style="
+											color: rgba(200, 195, 185, 0.9);
+											line-height: 1.8;
+											margin-bottom: 10px;
+										"
+									>
+										Hey everyone! Just a quick note on the
+										publishing schedule. Due to real-life
+										stuff, I might miss next week's release.
+										Thanks to all my patrons for your
 										support—you guys keep this going!
 									</p>
-									<p style="color:rgba(200,195,185,0.9);line-height:1.8;margin:0;">
-										Next chapter should be out by [date]. Love you all!
+									<p
+										style="
+											color: rgba(200, 195, 185, 0.9);
+											line-height: 1.8;
+											margin: 0;
+										"
+									>
+										Next chapter should be out by [date].
+										Love you all!
 									</p>
 								</div>
 							</div>
@@ -1400,32 +2997,48 @@
 					<div class="ls-panel-header">
 						<div class="ls-panel-header-content">
 							<h1 class="ls-panel-title">🎨 Content Boxes</h1>
-							<p class="ls-panel-description">Define custom CSS classes for content regions. Gemini will
-								be instructed to wrap matching content with your class names.</p>
+							<p class="ls-panel-description">
+								Define custom CSS classes for content regions.
+								Gemini will be instructed to wrap matching
+								content with your class names.
+							</p>
 						</div>
 						<div class="ls-panel-header-actions">
-							<button id="content-boxes-add-btn" class="ls-btn ls-btn-primary ls-btn-sm">+ Add Box
-								Type</button>
+							<button
+								id="content-boxes-add-btn"
+								class="ls-btn ls-btn-primary ls-btn-sm"
+							>
+								+ Add Box Type
+							</button>
 						</div>
 					</div>
 
 					<div class="ls-section" data-accent="blue">
 						<div class="ls-section-title">ℹ️ How it works</div>
 						<div class="ls-section-desc">
-							Each box type defines a CSS class (e.g. <code>rg-my-box</code>) and a hint for Gemini (e.g.
-							"stat windows, pop-ups"). When you enhance a chapter, Gemini will wrap matching content in
-							<code>&lt;div class="rg-my-box"&gt;…&lt;/div&gt;</code>. The CSS is automatically injected
-							into every page you visit. See the
-							<a href="../../landing/content-styles.html" target="_blank"
-								style="color:var(--accent-color);">Content Styles Showcase</a>
-							for a live preview of all built-in and custom box types.
+							Each box type defines a CSS class (e.g.
+							<code>rg-my-box</code>) and a hint for Gemini (e.g.
+							"stat windows, pop-ups"). When you enhance a
+							chapter, Gemini will wrap matching content in
+							<code
+								>&lt;div
+								class="rg-my-box"&gt;…&lt;/div&gt;</code
+							>. The CSS is automatically injected into every page
+							you visit. See the
+							<a
+								href="../../landing/content-styles.html"
+								target="_blank"
+								style="color: var(--accent-color)"
+								>Content Styles Showcase</a
+							>
+							for a live preview of all built-in and custom box
+							types.
 						</div>
 					</div>
 
 					<!-- Box type cards — rendered by library-settings.js -->
-					<div id="content-boxes-list" style="padding: 0 4px;"></div>
+					<div id="content-boxes-list" style="padding: 0 4px"></div>
 				</section>
-
 			</main>
 		</div>
 
@@ -1436,5 +3049,4 @@
 		<script src="../lib/browser-polyfill.min.js"></script>
 		<script type="module" src="library-settings.js"></script>
 	</body>
-
 </html>

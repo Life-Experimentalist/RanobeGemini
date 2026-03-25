@@ -1,6 +1,6 @@
 ## Roadmap
 
-> Last updated: 2025-07-01 — Current version: **4.4.0**
+> Last updated: 2026-03-25
 
 ---
 
@@ -15,7 +15,7 @@ graph TD
     v41["v4.1 — Themes & Progress\n5 themes, reading progress bar"]
     v42["v4.2 — Library UX\nCustom content boxes, status buttons"]
     v43["✅ v4.3 — Privacy & Collapse\nIncognito Mode, collapsible sections"]
-    v44["🚀 v4.4 — UX Polish  ← CURRENT\nTypography, mobile nav, shortcuts"]
+    v44["🚀 v4.6 — UX Polish  ← CURRENT\nTypography, mobile nav, shortcuts"]
     v45["🔮 v4.5 — Advanced AI Controls\nPrompt presets, enhancement styles"]
     v50["🔮 v5.0 — Platform Expansion\nPlugin system, React migration"]
 
@@ -36,7 +36,7 @@ graph TD
 - `v4.1` Theme and reading-progress UX improvements
 - `v4.2` Library UX and metadata quality improvements
 - `v4.3` Privacy/collapsible milestone currently released
-- `v4.4` Active sprint for UX polish and reading-list model cleanup
+- `v4.6` Active sprint for UX polish and reading-list model cleanup
 - `v4.5` Planned advanced AI controls
 - `v5.0` Planned platform expansion and plugin foundation
 
@@ -70,7 +70,7 @@ graph TD
 
 ---
 
-### 🚀 Active (v4.4.0)
+### 🚀 Active (v4.6.0)
 
 - Fix summary typography parity (inherit page font across all sites)
 - Harden summary truncation flow (`isLowQualityLongSummary` + `getSummaryOutputBudget`)

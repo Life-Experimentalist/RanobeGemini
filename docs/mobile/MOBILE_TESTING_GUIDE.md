@@ -434,7 +434,7 @@ If you fix a mobile-specific issue:
 
 ---
 
-**Last Updated:** 2025-02-08
+**Last updated: 2026-03-25
 **Tested On:**
 - Firefox Nightly 116.0a1 (Android 13, Pixel 6)
 - Kiwi Browser 116.0 (Android 12, Galaxy S21)

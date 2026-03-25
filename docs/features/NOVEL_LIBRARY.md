@@ -60,7 +60,7 @@
 		- [Data Management](#data-management)
 
 **Feature Version:** 3.0.0
-**Last Updated:** 2025-11-28
+**Last updated: 2026-03-25
 **Status:** ✅ Active
 
 ---

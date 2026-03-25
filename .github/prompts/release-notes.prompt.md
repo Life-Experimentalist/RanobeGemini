@@ -49,6 +49,23 @@ Follow the same style as docs/release/RELEASE_NOTES_4.5.0.md and docs/release/RE
 - Update docs/release/CHANGELOG.md with matching version entry.
 - Keep README feature highlights aligned when release includes user-visible features.
 
+### Docs Automation
+
+- After generating release notes, run the docs version sync script to keep version-sensitive docs consistent:
+
+```bash
+npm run docs:update-versions
+```
+
+- The script updates common files that contain hard-coded versions/dates, such as:
+    - docs/overview/Roadmap.md
+    - docs/overview/VISUAL_JOURNEY.md
+    - docs/development/TODO.md
+    - docs/architecture/COLLAPSIBLE_JOURNEY.md
+    - any `**Last updated:**` or `Last updated:` lines in `docs/`
+
+- Ensure you commit the updated docs alongside the release notes.
+
 ## Release Readiness Checklist (must include)
 
 - Lint status

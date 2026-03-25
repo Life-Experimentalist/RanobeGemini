@@ -14,7 +14,7 @@ export function debugContentExtraction() {
 			debugError("DEBUG: Content extraction failed - no content found");
 			showStatusMessage(
 				"Debug: Content extraction failed - no content found",
-				"error"
+				"error",
 			);
 			return;
 		}
@@ -74,13 +74,13 @@ export function debugContentExtraction() {
 		// Show success message
 		showStatusMessage(
 			"Debug: Content extraction information displayed",
-			"info"
+			"info",
 		);
 	} catch (error) {
 		debugError("Debug content extraction error:", error);
 		showStatusMessage(
 			"Debug: Error during content extraction debugging",
-			"error"
+			"error",
 		);
 	}
 }

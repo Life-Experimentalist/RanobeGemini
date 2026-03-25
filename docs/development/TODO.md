@@ -7,20 +7,20 @@
 
 - [Development Roadmap](#development-roadmap)
 	- [Table of Contents](#table-of-contents)
-	- [🗺️ Sprint Overview (v4.4.0)](#️-sprint-overview-v440)
+	- [🗺️ Sprint Overview (v4.6.0)](#️-sprint-overview-v460)
 	- [✅ Completed Features](#-completed-features)
-    - [Version 4.4.0 (Current)](#version-440-current)
+    - [Version 4.6.0 (Current)](#version-460-current)
     - [Version 4.3.0](#version-430)
 		- [Version 4.2.0](#version-420)
 		- [Version 4.1.0](#version-410)
 		- [Version 4.0.0](#version-400)
 		- [Earlier Versions (archived)](#earlier-versions-archived)
-	- [🚀 Current Sprint (v4.4.0)](#-current-sprint-v440)
+	- [🚀 Current Sprint (v4.6.0)](#-current-sprint-v460)
 		- [High Priority](#high-priority)
 		- [Medium Priority](#medium-priority)
 		- [Low Priority](#low-priority)
 	- [🔮 Future Versions](#-future-versions)
-		- [Version 4.4.0 - UX Polish \& Mobile](#version-440---ux-polish--mobile)
+		- [Version 4.6.0 - UX Polish \& Mobile](#version-460---ux-polish--mobile)
 		- [Version 4.5.0 - Advanced AI Controls](#version-450---advanced-ai-controls)
 		- [Version 5.0.0 - Platform Expansion](#version-500---platform-expansion)
 	- [🐛 Known Issues](#-known-issues)
@@ -37,11 +37,11 @@
 
 ---
 
-## 🗺️ Sprint Overview (v4.4.0)
+## 🗺️ Sprint Overview (v4.6.0)
 
 ```mermaid
 graph TB
-    Sprint["🚀 v4.4.0 — Active Sprint"]
+    Sprint["🚀 v4.6.0 — Active Sprint"]
 
     Sprint --> High["🔴 High Priority"]
     Sprint --> Medium["🟡 Medium Priority"]
@@ -145,7 +145,7 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 
 ---
 
-## 🚀 Current Sprint (v4.4.0)
+## 🚀 Current Sprint (v4.6.0)
 
 ### High Priority
 
@@ -293,7 +293,7 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 
 | Version | Target  | Focus                          |
 | ------- | ------- | ------------------------------ |
-| v4.4.0  | Q3 2025 | UX Polish & Mobile             |
+| v4.6.0  | Q3 2025 | UX Polish & Mobile             |
 | v4.5.0  | Q4 2025 | Advanced AI Controls           |
 | v5.0.0  | 2026    | React migration, plugin system |
 

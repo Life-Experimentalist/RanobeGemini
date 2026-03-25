@@ -1,4 +1,4 @@
-# Ranobe Gemini v4.4.0+ — Architecture Journey & Implementation Guide
+# Ranobe Gemini v4.6.0+ — Architecture Journey & Implementation Guide
 
 ## Executive Summary
 
@@ -561,16 +561,16 @@ renderCollapsibleSections(container, {
 
 | Version | Change                                                                 |
 | ------- | ---------------------------------------------------------------------- |
-| v4.4.0  | Initial collapsible sections system with fight/r18/author-note support |
-| v4.4.0  | Added settings UI panel with toggles, dropdowns, custom type editor    |
-| v4.4.0  | Added playground examples in settings                                  |
-| v4.4.0  | Enhanced commit-history.js to show version/manifest changes            |
-| v4.4.0  | Created issue/discussion templates on GitHub                           |
+| v4.6.0  | Initial collapsible sections system with fight/r18/author-note support |
+| v4.6.0  | Added settings UI panel with toggles, dropdowns, custom type editor    |
+| v4.6.0  | Added playground examples in settings                                  |
+| v4.6.0  | Enhanced commit-history.js to show version/manifest changes            |
+| v4.6.0  | Created issue/discussion templates on GitHub                           |
 | TBD     | Animated transitions for collapse/expand                               |
 | TBD     | Per-chapter collapse state history                                     |
 
 ---
 
-**Last Updated:** March 17, 2026
+**Last updated: 2026-03-25
 **Maintainers:** @Vkrishna27
 **License:** MIT

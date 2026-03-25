@@ -72,8 +72,9 @@ html {
 }
 
 body {
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-		Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+		Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 	line-height: 1.6;
 	min-height: 100vh;
 	background: var(--bg-primary);
@@ -141,7 +142,11 @@ body {
 	text-decoration: none;
 	padding: 8px 18px;
 	border-radius: var(--radius-md);
-	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	background: linear-gradient(
+		135deg,
+		var(--primary-color),
+		var(--primary-hover)
+	);
 	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 	font-weight: 600;
 	font-size: 0.9rem;
@@ -149,7 +154,11 @@ body {
 }
 
 .back-link:hover {
-	background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+	background: linear-gradient(
+		135deg,
+		var(--primary-hover),
+		var(--primary-color)
+	);
 	transform: translateY(-1px);
 	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
 }
@@ -655,9 +664,11 @@ body {
 	width: 80px;
 	height: 110px;
 	border-radius: var(--radius-sm);
-	background: linear-gradient(135deg,
-			var(--bg-tertiary) 0%,
-			var(--bg-secondary) 100%);
+	background: linear-gradient(
+		135deg,
+		var(--bg-tertiary) 0%,
+		var(--bg-secondary) 100%
+	);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1599,9 +1610,11 @@ body {
 }
 
 .ao3-modal-header {
-	background: linear-gradient(135deg,
-			rgba(153, 0, 0, 0.1) 0%,
-			rgba(102, 0, 0, 0.05) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(153, 0, 0, 0.1) 0%,
+		rgba(102, 0, 0, 0.05) 100%
+	);
 	border-bottom: 1px solid rgba(153, 0, 0, 0.2);
 }
 
@@ -1628,14 +1641,17 @@ body {
 .ao3-modal-placeholder-pattern {
 	position: absolute;
 	inset: 0;
-	background-image: linear-gradient(45deg,
-			rgba(255, 255, 255, 0.05) 25%,
-			transparent 25%),
+	background-image:
+		linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
 		linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
 		linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
 		linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
 	background-size: 16px 16px;
-	background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+	background-position:
+		0 0,
+		0 8px,
+		8px -8px,
+		-8px 0px;
 }
 
 .ao3-modal-placeholder-content {
@@ -1864,9 +1880,11 @@ body {
 /* Light mode adjustments for AO3 */
 @media (prefers-color-scheme: light) {
 	.ao3-modal-header {
-		background: linear-gradient(135deg,
-				rgba(153, 0, 0, 0.08) 0%,
-				rgba(102, 0, 0, 0.03) 100%);
+		background: linear-gradient(
+			135deg,
+			rgba(153, 0, 0, 0.08) 0%,
+			rgba(102, 0, 0, 0.03) 100%
+		);
 	}
 
 	.ao3-modal-row.primary-meta {
@@ -2126,7 +2144,6 @@ body {
 	background: var(--primary-hover);
 	transform: scale(1.05);
 }
-
 
 /**
  * Enhanced Fandom Grid Styles for AO3
