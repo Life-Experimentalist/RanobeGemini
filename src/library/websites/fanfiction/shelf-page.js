@@ -23,6 +23,7 @@ import {
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
 import { getAllStatuses } from "../../status-machine.js";
+import { recoverMissingNovelById } from "../../shared-shelf-helpers.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -604,6 +605,20 @@ function renderNovels(novels = filteredNovels) {
 async function showNovelModal(novel) {
 	const modal = document.getElementById("novel-modal");
 	if (!modal) return;
+
+	// Keep a shareable deep-link URL for this modal.
+	try {
+		const params = new URLSearchParams(window.location.search);
+		params.set("novel", novel.id);
+		params.set("openModal", "1");
+		history.replaceState(
+			null,
+			"",
+			`${window.location.pathname}?${params.toString()}`,
+		);
+	} catch (_err) {
+		// non-critical
+	}
 
 	// ── Close mechanism — set up first so buttons wired below work, and use
 	// onclick (not addEventListener) to prevent listener accumulation on repeat opens.
@@ -2053,22 +2068,34 @@ function openNovelFromQuery() {
 	try {
 		const params = new URLSearchParams(window.location.search);
 		const novelId = params.get("novel");
-		const consumeQuery = params.get("openModal") === "1";
 		if (!novelId) return;
 		const novel = allNovels.find((n) => n && n.id === novelId);
 		if (novel) {
 			showNovelModal(novel);
-			if (consumeQuery) {
-				params.delete("openModal");
-				params.delete("novel");
-				history.replaceState(
-					null,
-					"",
-					`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`,
-				);
-			}
 		} else {
-			showToast("Novel not found in this shelf", "info");
+			recoverMissingNovelById(novelId, {
+				showToast,
+				onImported: async (result) => {
+					if (result?.shelfId && result.shelfId !== "fanfiction") {
+						const targetUrl = browser.runtime.getURL(
+							`library/websites/${result.shelfId}/index.html?novel=${encodeURIComponent(novelId)}&openModal=1`,
+						);
+						window.open(targetUrl, "_blank");
+						return;
+					}
+					const library = await novelLibrary.getLibrary();
+					allNovels = Object.values(library.novels || {}).filter(
+						(n) => n && n.shelfId === "fanfiction",
+					);
+					const imported = allNovels.find(
+						(n) => n && n.id === novelId,
+					);
+					if (imported) {
+						applyFiltersAndSort();
+						showNovelModal(imported);
+					}
+				},
+			});
 		}
 	} catch (_err) {
 		// ignore

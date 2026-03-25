@@ -245,6 +245,11 @@ Dedicated shelf pages for each supported website with advanced filtering, sortin
 
 **Access**: Library → Click shelf icon (e.g., AO3, FanFiction, Ranobes)
 
+**Shareable Deep Links (v4.6.0+)**:
+- Open novel modals directly with `?novel=<novelId>&openModal=1` on main library and per-site shelf pages
+- Shared links preserve modal-open state in the address bar for copy/paste workflows
+- If a deep-linked `novelId` is missing locally, recovery can regenerate the source URL, open the source tab, and auto-add the novel
+
 #### AO3 Shelf Page
 
 **Browse by Fandom**:

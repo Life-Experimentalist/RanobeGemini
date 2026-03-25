@@ -11,6 +11,10 @@
 			content="Ranobe Gemini, web novel, light novel, Gemini AI, AI summary, Edge extension, Firefox extension, fanfiction, AO3, archiveofourown, ranobes, scribblehub, novel library, reading tracker, browser extension, MV3, manifest v3" />
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/" />
 		<meta name="theme-color" content="#0b1628" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<link rel="manifest" href="./manifest.webmanifest" />
+		<link rel="apple-touch-icon" href="../src/icons/logo-512.png" />
 		<meta property="og:title" content="Ranobe Gemini | AI-powered reading companion" />
 		<meta property="og:description"
 			content="Enhance, summarize, and manage your web novels with Gemini AI. Incognito mode, custom content boxes, canvas animations, and rolling backups. Firefox, Edge & Chromium supported." />
@@ -67,6 +71,7 @@
 				<!-- Section anchors on this page -->
 				<a href="#features">Features</a>
 				<a href="#how">How it works</a>
+				<a href="#docs">Docs</a>
 				<a href="#browsers">Browsers</a>
 				<a href="#sites">Integrations</a>
 				<a href="#faq">FAQ</a>
@@ -104,6 +109,7 @@
 						<a class="btn primarysecondary"
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 							target="_blank" rel="noreferrer">Get it for Edge</a>
+						<button class="btn secondary hidden" id="pwa-install-btn" type="button">Install Web App</button>
 						<a class="btn ghost" href="#browsers">Other browsers</a>
 						<button class="btn ghost hidden" id="library-btn" type="button">
 							Open Library (if installed)
@@ -113,6 +119,9 @@
 
 					<p class="micro" id="library-note">
 						Works on Edge & Firefox desktop/mobile.
+					</p>
+					<p class="micro" id="pwa-install-note">
+						Installable Web App support is available on supported browsers.
 					</p>
 					<ul class="pill-list">
 						<li>Gemini-powered enhancement</li>
@@ -296,6 +305,46 @@
 						</p>
 					</li>
 				</ol>
+			</section>
+
+			<section id="docs" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">Documentation map</p>
+					<h2>Landing pages backed by docs</h2>
+					<p class="lede">
+						Use these docs as the canonical source when validating behavior, setup, and feature intent.
+					</p>
+				</div>
+				<div class="grid features">
+					<div class="feature">
+						<div class="icon">🏗️</div>
+						<h3>Architecture docs</h3>
+						<p>Runtime flow, modular systems, keep-alive behavior, and build-generated registries.</p>
+						<p><a href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/docs/architecture"
+								target="_blank" rel="noreferrer">Open docs/architecture ↗</a></p>
+					</div>
+					<div class="feature">
+						<div class="icon">💾</div>
+						<h3>Backup + OAuth docs</h3>
+						<p>Google Drive flow, OAuth setup examples, and troubleshooting for Firefox/Chromium.</p>
+						<p><a href="https://github.com/Life-Experimentalist/RanobeGemini/tree/main/docs/backup"
+								target="_blank" rel="noreferrer">Open docs/backup ↗</a></p>
+					</div>
+					<div class="feature">
+						<div class="icon">📚</div>
+						<h3>Library + status docs</h3>
+						<p>Primary statuses, reading-list badges, shareable modal links, and recovery behavior.</p>
+						<p><a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/features/NOVEL_LIBRARY.md"
+								target="_blank" rel="noreferrer">Open docs/features/NOVEL_LIBRARY.md ↗</a></p>
+					</div>
+					<div class="feature">
+						<div class="icon">🎯</div>
+						<h3>Roadmap + TODO</h3>
+						<p>Current sprint priorities and known gaps tracked for implementation parity checks.</p>
+						<p><a href="https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/development/TODO.md"
+								target="_blank" rel="noreferrer">Open docs/development/TODO.md ↗</a></p>
+					</div>
+				</div>
 			</section>
 
 			<section id="browsers" class="section fade-slide">
@@ -491,7 +540,8 @@
 		</main>
 
 		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini <span style="font-size:0.75em;opacity:0.6">v4.4.0</span></div>
+			<div class="footer-brand">Ranobe Gemini <span class="version-display" data-prefix="v"
+					style="font-size:0.75em;opacity:0.6">v...</span></div>
 			<div class="footer-links">
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
@@ -510,6 +560,7 @@
 		</footer>
 
 		<script src="./nav.js" defer></script>
+		<script src="./version.js"></script>
 		<script src="./script.js"></script>
 		<script>
 			function openLibrarySettings() {

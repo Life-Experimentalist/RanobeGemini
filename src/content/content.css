@@ -876,7 +876,9 @@ html[data-darkreader-mode] .rg-system-msg,
 	/* Adjust controls for smaller screens */
 	#gemini-controls {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: 8px;
 		padding: 8px;
 	}
@@ -885,7 +887,9 @@ html[data-darkreader-mode] .rg-system-msg,
 	.gemini-button,
 	.gemini-enhance-btn,
 	.gemini-toggle-banners-btn {
-		width: 100% !important;
+		width: auto !important;
+		max-width: max-content !important;
+		min-width: 132px !important;
 		padding: 12px !important;
 		font-size: 16px !important;
 		min-height: 44px !important;
@@ -1084,14 +1088,18 @@ html[data-darkreader-mode] .rg-system-msg,
 
 /* Novel page UI controls (#rg-novel-controls) - mobile layout */
 #rg-novel-controls {
-	flex-direction: column !important;
+	flex-direction: row !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
 	gap: 8px !important;
 	padding: 12px !important;
 }
 
 #rg-novel-controls button,
 #rg-novel-controls select {
-	width: 100% !important;
+	width: auto !important;
+	max-width: max-content !important;
+	min-width: 132px !important;
 	min-height: 44px !important;
 	font-size: 15px !important;
 	padding: 12px 10px !important;

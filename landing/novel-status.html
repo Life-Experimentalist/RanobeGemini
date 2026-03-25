@@ -567,6 +567,22 @@
 				</p>
 			</section>
 
+			<section style="
+					margin-top: 24px;
+					padding: 20px;
+					background: rgba(16, 185, 129, 0.08);
+					border-radius: 10px;
+					border: 1px solid rgba(16, 185, 129, 0.35);
+				">
+				<h3>🔗 Shareable Novel Modals</h3>
+				<p>
+					You can share direct links that open a specific novel modal in Library.
+					Use links like <code>library.html?novel=&lt;novelId&gt;&amp;openModal=1</code>
+					or the matching website shelf page URL. If the novel is missing locally,
+					Ranobe Gemini offers a guided recovery flow and auto-opens the source page.
+				</p>
+			</section>
+
 			<section class="cta section">
 				<div class="cta-card">
 					<p class="eyebrow">Ready to Install</p>
@@ -589,7 +605,8 @@
 		</main>
 
 		<footer class="footer">
-			<div class="footer-brand">Ranobe Gemini <span style="font-size: 0.75em; opacity: 0.6;">v4.4.0</span></div>
+			<div class="footer-brand">Ranobe Gemini <span class="version-display" data-prefix="v"
+					style="font-size: 0.75em; opacity: 0.6;">v...</span></div>
 			<div class="footer-links">
 				<a href="./index.html">Home</a>
 				<a href="./drive-setup.html">Drive Setup</a>
@@ -607,6 +624,7 @@
 				Drive.</p>
 		</footer>
 		<script src="./nav.js" defer></script>
+		<script src="./version.js"></script>
 		<script>
 			function openLibrarySettings() {
 				if (typeof chrome !== 'undefined' && chrome.runtime) {

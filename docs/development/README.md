@@ -6,6 +6,7 @@
 	- [Table of Contents](#table-of-contents)
 	- [📁 Documents in This Directory](#-documents-in-this-directory)
 		- [TODO.md](#todomd)
+		- [LANDING_CODE_AUDIT.md](#landing_code_auditmd)
 	- [🔗 Quick Development Navigation](#-quick-development-navigation)
 	- [📚 Related Documentation](#-related-documentation)
 	- [🔧 Development Workflow](#-development-workflow)
@@ -57,6 +58,14 @@ Development roadmap, planned features, and known issues
 - 🐛 Known bugs
 - 💡 Enhancement proposals
 - ✅ Completed work
+
+### [LANDING_CODE_AUDIT.md](./LANDING_CODE_AUDIT.md)
+
+Function-level landing page audit and docs-parity checks.
+
+- Audited JS and inline-script functions in `landing/`
+- Tracks docs-representation alignment status
+- Includes actionable TODO items for follow-up hardening
 
 ---
 

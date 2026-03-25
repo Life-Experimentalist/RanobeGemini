@@ -230,14 +230,21 @@ function renderSites() {
 // Extension detection for library button
 const libraryBtn = document.getElementById("library-btn");
 const libraryNote = document.getElementById("library-note");
+const pwaInstallBtn = document.getElementById("pwa-install-btn");
+const pwaInstallNote = document.getElementById("pwa-install-note");
 let extensionDetected = false;
 let libraryUrl = null;
+let deferredInstallPrompt = null;
 
 const EXTENSION_IDS = {
 	chromium: [
 		...BROWSERS.map((b) => b.extensionId).filter(Boolean),
 		...(window.RG_EXTENSION_IDS?.chromium || []),
 	],
+	firefox: [
+		BROWSERS.find((b) => b.name === "Firefox")?.extensionId,
+		...(window.RG_EXTENSION_IDS?.firefox || []),
+	].filter(Boolean),
 };
 
 function showLibraryButton() {
@@ -267,6 +274,79 @@ function updateLibraryButton() {
 		return;
 	}
 	showLibraryButton();
+}
+
+function updatePwaNote(message) {
+	if (!pwaInstallNote) return;
+	pwaInstallNote.textContent = message;
+}
+
+function detectStandaloneMode() {
+	return (
+		window.matchMedia("(display-mode: standalone)").matches ||
+		window.navigator.standalone === true
+	);
+}
+
+function bindPwaInstallButton() {
+	if (!pwaInstallBtn || pwaInstallBtn.dataset.bound) return;
+	pwaInstallBtn.dataset.bound = "1";
+	pwaInstallBtn.addEventListener("click", async () => {
+		if (deferredInstallPrompt) {
+			try {
+				await deferredInstallPrompt.prompt();
+				await deferredInstallPrompt.userChoice;
+			} catch (_err) {
+				// ignore prompt errors
+			} finally {
+				deferredInstallPrompt = null;
+				pwaInstallBtn.classList.add("hidden");
+				updatePwaNote("Install prompt handled. Use your app drawer/menu to launch Ranobe Gemini Web App.");
+			}
+			return;
+		}
+
+		updatePwaNote(
+			"If install is not shown automatically, use your browser menu and choose Install app / Add to Home Screen.",
+		);
+	});
+}
+
+async function initPwaSupport() {
+	bindPwaInstallButton();
+
+	if (!("serviceWorker" in navigator)) {
+		updatePwaNote("This browser does not support Service Worker-based web app installation.");
+		return;
+	}
+
+	try {
+		await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+	} catch (_err) {
+		updatePwaNote("Web App install service failed to initialize. Reload and try again.");
+		return;
+	}
+
+	if (detectStandaloneMode()) {
+		if (pwaInstallBtn) pwaInstallBtn.classList.add("hidden");
+		updatePwaNote("Running in installed Web App mode.");
+		return;
+	}
+
+	window.addEventListener("beforeinstallprompt", (event) => {
+		event.preventDefault();
+		deferredInstallPrompt = event;
+		if (pwaInstallBtn) pwaInstallBtn.classList.remove("hidden");
+		updatePwaNote("Install prompt is ready. Use the Install Web App button.");
+	});
+
+	window.addEventListener("appinstalled", () => {
+		deferredInstallPrompt = null;
+		if (pwaInstallBtn) pwaInstallBtn.classList.add("hidden");
+		updatePwaNote("Web App installed successfully.");
+	});
+
+	updatePwaNote("Install support initialized. On some browsers, install appears in the address bar or browser menu.");
 }
 
 function pingExtension() {
@@ -372,11 +452,19 @@ function detectBrowser() {
 
 // Build library URL based on browser
 function buildLibraryUrl() {
+	// This helper returns a cached runtime-discovered URL first when available.
+	// Fallback browser-based construction is only used when cache is empty.
+	if (libraryUrl) {
+		return libraryUrl;
+	}
+
 	const browser = detectBrowser();
 
 	if (browser === "firefox") {
-		// Firefox uses manifest ID
-		return "moz-extension://33b0347d-8e94-40d6-a169-249716997cc6/library/library.html";
+		const fallbackFirefoxId = EXTENSION_IDS.firefox[0];
+		if (fallbackFirefoxId) {
+			return `moz-extension://${fallbackFirefoxId}/library/library.html`;
+		}
 	} else if (browser === "edge" || browser === "chrome") {
 		// Try to use detected extension ID from BROWSERS array
 		const edgeBrowser = BROWSERS.find((b) => b.name === "Edge");
@@ -385,7 +473,7 @@ function buildLibraryUrl() {
 		}
 	}
 
-	return libraryUrl || null;
+	return null;
 }
 
 libraryBtn?.addEventListener("click", async () => {
@@ -465,29 +553,5 @@ links.forEach((link) => {
 // Initial render
 renderBrowsers();
 renderSites();
+initPwaSupport();
 detectExtension();
-
-// Fetch version from package.json
-(async () => {
-	try {
-		// Try fetching from root first (local dev or root-served site)
-		let response = await fetch("../package.json");
-		if (!response.ok) {
-			// Fallback to GitHub raw for hosted landing page if relative fetch fails
-			response = await fetch(
-				"https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/main/package.json",
-			);
-		}
-
-		if (response.ok) {
-			const data = await response.json();
-			const versionElements =
-				document.querySelectorAll(".version-display");
-			versionElements.forEach((el) => {
-				el.textContent = `v${data.version}`;
-			});
-		}
-	} catch (e) {
-		console.error("Failed to fetch version", e);
-	}
-})();

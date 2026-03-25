@@ -234,6 +234,17 @@ h3 {
 	border: 1px solid var(--border);
 }
 
+.micro {
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--muted);
+	margin: 8px 0;
+}
+
+#pwa-install-note {
+	color: #9ad2ff;
+}
+
 .hero-visual {
 	position: relative;
 	min-height: 320px;

@@ -94,6 +94,8 @@ graph TB
 - [x] **Library Card Dropdown Lists** — Novel-card status dropdown now includes reading-list toggle actions (including `rereading`)
 - [x] **Narrow-Mobile Control Compaction** — Library view/filter chips no longer force full-width buttons on small phones
 - [x] **Adaptive URL Import Pipeline** — URL import now canonicalizes via handler templates, auto-skips existing novels, and deduplicates pasted links per batch
+- [x] **Shareable Library Modal Links** — Main + per-site shelf pages now support `?novel=<id>&openModal=1` deep links and preserve modal URL state for sharing
+- [x] **Missing Deep-Link Recovery** — If a shared novel id is not in local storage, prompt-assisted 7s auto-recovery opens source URL and auto-adds the novel
 - [x] **Legacy Status Migration** — old `re-reading` status entries normalize to `reading` + `rereading` list
 - [x] **Install Guide + Landing Polish** — added cross-browser install guide page, standardized footer/nav install links, and updated published Edge install path
 
@@ -198,6 +200,11 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
   - [ ] Lazy-load novel cards in library
   - [ ] Virtual scrolling for large libraries (> 500 novels)
   - [ ] Source maps in debug builds
+
+- [ ] **Landing Docs Parity Automation**
+  - [ ] Add a lightweight check to detect version drift between `package.json` and landing footer labels
+  - [ ] Validate `landing/*.html` structure in CI to catch malformed pages early
+  - [ ] Require at least one canonical docs link per landing page section during docs reviews
 
 ---
 

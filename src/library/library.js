@@ -46,6 +46,7 @@ import {
 	getAllStatuses,
 	getDefaultRereadingOverlay,
 } from "./status-machine.js";
+import { recoverMissingNovelById } from "./shared-shelf-helpers.js";
 import { openInlineEditModal } from "./edit-modal.js";
 import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -725,7 +726,6 @@ if (isSidebar) {
 async function openNovelFromQueryParams() {
 	try {
 		const params = new URLSearchParams(window.location.search);
-		const consumeQuery = params.get("openModal") === "1";
 
 		// Open novel detail panel
 		const novelId = params.get("novel");
@@ -733,15 +733,18 @@ async function openNovelFromQueryParams() {
 			const novel = await novelLibrary.getNovel(novelId);
 			if (novel) {
 				openNovelDetail(novel);
-				if (consumeQuery) {
-					params.delete("openModal");
-					params.delete("novel");
-					history.replaceState(
-						null,
-						"",
-						`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`,
-					);
-				}
+			} else {
+				await recoverMissingNovelById(novelId, {
+					showToast: (message, type = "info") =>
+						showNotification(message, type),
+					onImported: async () => {
+						await loadLibrary();
+						const imported = await novelLibrary.getNovel(novelId);
+						if (imported) {
+							openNovelDetail(imported);
+						}
+					},
+				});
 			}
 		}
 
@@ -5147,6 +5150,19 @@ function showNotification(message, type = "success") {
  */
 async function openNovelDetail(novel) {
 	currentModalNovel = novel || null;
+	// Keep a shareable deep-link URL for this modal.
+	try {
+		const params = new URLSearchParams(window.location.search);
+		params.set("novel", novel.id);
+		params.set("openModal", "1");
+		history.replaceState(
+			null,
+			"",
+			`${window.location.pathname}?${params.toString()}`,
+		);
+	} catch (_err) {
+		// non-critical
+	}
 	if (elements.modalRemoveBtn && novel?.id) {
 		elements.modalRemoveBtn.dataset.novelId = novel.id;
 	}

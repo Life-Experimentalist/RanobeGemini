@@ -1,0 +1,38 @@
+{
+	"name": "Ranobe Gemini Web App",
+	"short_name": "Ranobe Gemini",
+	"description": "Installable companion for Ranobe Gemini with quick access to library workflows and setup guidance.",
+	"start_url": "./library-hub.html",
+	"scope": "./",
+	"display": "standalone",
+	"background_color": "#050b14",
+	"theme_color": "#0b1628",
+	"lang": "en",
+	"orientation": "portrait-primary",
+	"prefer_related_applications": false,
+	"icons": [
+		{
+			"src": "../src/icons/logo-128.png",
+			"sizes": "128x128",
+			"type": "image/png"
+		},
+		{
+			"src": "../src/icons/logo-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "Open Library Hub",
+			"url": "./library-hub.html",
+			"description": "Open the web app library hub"
+		},
+		{
+			"name": "Install Guide",
+			"url": "./install-guide.html",
+			"description": "Open browser install instructions"
+		}
+	]
+}

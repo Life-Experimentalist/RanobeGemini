@@ -40,6 +40,8 @@
 - **Chapter Summarization**: Generates concise or detailed summaries for long chapters without leaving the page.
 - **Multi-Site Support**: Works on `ranobes.top`, `fanfiction.net` (desktop + mobile), `archiveofourown.org` (AO3), `scribblehub.com`, and more.
 - **Novel Library**: Track novels across all supported sites with shelf-aware metadata, reading status, characters, relationships, genres, and tags.
+- **Shareable Library Deep Links**: Open and share direct modal links like `library.html?novel=<id>&openModal=1` (including per-site shelf pages).
+- **Missing-ID Recovery Flow**: If a shared modal link points to a novel not yet in your library, Ranobe Gemini can regenerate the source URL, open it, and auto-add the entry.
 - **Reading Lists & Badges**: Apply list badges independent of status (`🔁 Rereading`, `⭐ Favourites`, plus custom labels like `R18`).
 - **Unified Status Dropdown**: Manage primary status and toggle reading-list membership directly from each novel card dropdown.
 - **Compact Mobile Controls**: Narrow-screen library chips and filters stay compact instead of forcing full-width buttons.
