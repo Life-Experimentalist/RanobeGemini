@@ -60,15 +60,6 @@ export const DEFAULT_CONTENT_FILTER_SETTINGS = {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function escapeHtml(str) {
-	return String(str ?? "")
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}
-
 /**
  * Resolve section type settings, mapping "author-note" → settings.authorNote.
  * Falls back to DEFAULT_CONTENT_FILTER_SETTINGS for unknown types.
@@ -148,10 +139,6 @@ function buildCollapsibleWrapper(
 	const wrapper = document.createElement("div");
 	wrapper.className = `rg-collapsible-wrapper rg-collapsible-${type} ${startCollapsed ? "rg-collapsed" : "rg-expanded"}`;
 	wrapper.setAttribute("data-rg-collapsible-type", type);
-
-	const safeLabel = escapeHtml(meta.label);
-	const safeIcon = escapeHtml(meta.icon);
-	const safeSummary = escapeHtml(summary || "");
 
 	// Header — always visible, aria-hidden so screen readers / TTS skip it (we expose content directly)
 	const header = document.createElement("div");

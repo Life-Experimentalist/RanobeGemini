@@ -33,7 +33,7 @@ export class NovelCardRenderer {
 	 * @param {Object} options - Rendering options
 	 * @returns {HTMLElement} The rendered card element
 	 */
-	static renderCard(novel, options = {}) {
+	static renderCard(novel, _options = {}) {
 		const card = document.createElement("div");
 		card.className = "novel-card";
 		card.dataset.novelId = novel.id;
@@ -106,7 +106,7 @@ export class NovelCardRenderer {
 	 * @param {Object} config - Shelf configuration
 	 * @returns {string} HTML for metadata
 	 */
-	static renderCardMeta(novel, config) {
+	static renderCardMeta(novel, _config) {
 		return `
 			<div class="novel-card-meta">
 				<span class="meta-item" title="Enhanced chapters">
@@ -183,7 +183,7 @@ export class NovelCardRenderer {
 	 * @param {Object} novel - The novel to show
 	 * @returns {Promise<boolean>} True if handled, false to fallback to default
 	 */
-	static async showModal(novel) {
+	static async showModal(_novel) {
 		// Default implementation returns false to trigger fallback
 		return false;
 	}

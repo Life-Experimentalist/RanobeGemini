@@ -50,6 +50,7 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     - Keep status terminology consistent: primary reading statuses vs reading-list badges/state overlays.
     - Prefer Mermaid vertical orientation (`graph TD` / `graph TB` / `stateDiagram-v2` + `direction TB`) for readability.
     - Whenever a Mermaid diagram is added or edited, include a short "Diagram elements" list directly under it describing each major node/state.
+    - For every version release note, always include two sections in the same file: a detailed long-form release note and a short quick-release summary at the bottom (same style as [v4.5.0](../docs/release/RELEASE_NOTES_4.5.0.md) and [v4.6.0](../docs/release/RELEASE_NOTES_4.6.0.md)).
     - If docs diverge from implementation, implementation wins and docs must be corrected before finishing.
 
 - **Key architectural features** (v4.4.0+):

@@ -33,19 +33,9 @@ const CATEGORY_LOOKUP = {
 	additionalTags: new Set(),
 };
 
-// Initialize taxonomy categories from handler definition
-const TAXONOMY = AO3Handler.SHELF_METADATA?.taxonomy || [
-	{ id: "fandoms", label: "Fandoms", type: "array" },
-	{ id: "relationships", label: "Relationships", type: "array" },
-	{ id: "characters", label: "Characters", type: "array" },
-	{ id: "additionalTags", label: "Additional Tags", type: "array" },
-];
-
 // State for filtering and rendering
 let allNovels = [];
 let filteredNovels = [];
-let currentView = "all";
-let selectedFandom = null;
 
 const FILTER_STORAGE_KEY = "rg_ao3_filters";
 const DEFAULT_FILTERS = {
@@ -90,14 +80,6 @@ function registerLabel(label, category) {
 
 function canonicalizeLabel(label, category) {
 	return registerLabel(label, category);
-}
-
-function categorizeLabel(label) {
-	const lower = label.toLowerCase();
-	for (const key of Object.keys(CATEGORY_LOOKUP)) {
-		if (CATEGORY_LOOKUP[key].has(lower)) return key;
-	}
-	return null;
 }
 
 function sortAlpha(list = []) {
@@ -606,8 +588,6 @@ function showNovelModal(novel) {
 	}
 
 	const metadata = novel.metadata || {};
-	const rating = metadata.rating || novel.rating || "";
-
 	const titleEl = document.getElementById("modal-title");
 	if (titleEl) titleEl.textContent = novel.title || "";
 

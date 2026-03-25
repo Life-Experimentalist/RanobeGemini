@@ -157,20 +157,36 @@ graph TB
 
 ```mermaid
 graph TD
-    A[HTTPS Web PWA] --> B[Library Hub]
-    B --> C[Extension Library]
-    C --> D[Website Content Controls]
-    B --> E[Drive Backup Bridge]
-    C --> E
+    A[HTTPS Web PWA Install Surface] --> B[Library Hub Entry]
+    B --> C{Extension Runtime Available?}
+    C -->|Yes| D[Open Extension Library]
+    C -->|No| E[Show Extension Guidance]
+    D --> F[Site Shelf Pages]
+    F --> G[Modal Deep Link Handler]
+    G --> H{Novel Exists Locally?}
+    H -->|Yes| I[Open Modal]
+    H -->|No| J[Recovery Prompt and Auto Import]
+    J --> K[Source Tab Hydration]
+    K --> L[Reopen Modal]
+    D --> M[Drive Backup and Sync]
+    B --> M
 ```
 
 Diagram elements:
 
-- `A`: Installable web app surface for Android/Windows browsers
-- `B`: PWA launch page for library workflows and navigation entry
-- `C`: Extension-backed library runtime with full site integrations
-- `D`: In-page enhancement and summarization controls
-- `E`: Cross-surface sync bridge via Drive backups
+- `A`: installable HTTPS companion surface
+- `B`: shared launch point for library workflows
+- `C`: runtime availability decision gate
+- `D`: extension library entry path
+- `E`: fallback guidance when extension runtime is unavailable
+- `F`: website shelf browsing pages
+- `G`: deep-link modal routing layer
+- `H`: local novel-availability decision
+- `I`: direct modal-open success path
+- `J`: missing-ID recovery prompt path
+- `K`: source page hydration and add-to-library step
+- `L`: return path to requested modal after recovery
+- `M`: shared backup/sync bridge used by web and extension surfaces
 
 ---
 

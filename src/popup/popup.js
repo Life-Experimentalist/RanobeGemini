@@ -28,10 +28,6 @@ import {
 import {
 	notificationManager,
 	NotificationType,
-	notifySuccess,
-	notifyError,
-	notifyInfo,
-	notifyWarning,
 } from "../utils/notification-manager.js";
 
 // Log that imports completed successfully
@@ -319,10 +315,6 @@ async function initializePopup() {
 
 	// Library backup elements
 	const autoBackupCheckbox = document.getElementById("autoBackupEnabled");
-	const backupLocation = document.getElementById("backupLocation");
-	const chooseBackupLocation = document.getElementById(
-		"chooseBackupLocation",
-	);
 	const createManualBackup = document.getElementById("createManualBackup");
 	// restoreBackupBtn2 removed as duplicate
 	const backupList = document.getElementById("backupList");
@@ -333,12 +325,8 @@ async function initializePopup() {
 
 	// Library Tab Elements (New)
 	const libraryLoading = document.getElementById("libraryLoading");
-	const currentPageSection = document.getElementById("currentPageSection");
 	const pageStatusBadge = document.getElementById("pageStatusBadge");
 	const currentNovelCard = document.getElementById("currentNovelCard");
-	const currentNovelCover = document.getElementById("currentNovelCover");
-	const currentNovelTitle = document.getElementById("currentNovelTitle");
-	const currentNovelAuthor = document.getElementById("currentNovelAuthor");
 	const currentPageTypeTag = document.getElementById("currentPageTypeTag");
 	const currentStatusTag = document.getElementById("currentStatusTag");
 	const currentChapterInfo = document.getElementById("currentChapterInfo");
@@ -419,7 +407,6 @@ async function initializePopup() {
 	const disconnectDriveBtn = document.getElementById("disconnectDriveBtn");
 	const backupNowBtn = document.getElementById("backupNowBtn");
 	const viewBackupsBtn = document.getElementById("viewBackupsBtn");
-	const openLibrarySettings = document.getElementById("openLibrarySettings");
 	const driveNotConnected = document.getElementById("driveNotConnected");
 	const driveConnected = document.getElementById("driveConnected");
 	const driveStatusSpan = document.getElementById("driveStatus");
@@ -446,7 +433,6 @@ async function initializePopup() {
 	const randomizeSuggestionsBtn = document.getElementById(
 		"randomizeSuggestions",
 	);
-	const notificationsTabBtn = document.getElementById("notificationsTabBtn");
 	const notificationBadge = document.getElementById("notificationBadge");
 	const notificationsContainer = document.getElementById(
 		"notificationsContainer",
@@ -463,7 +449,6 @@ async function initializePopup() {
 	const {
 		DEFAULT_THEME: defaultTheme,
 		setThemeVariables,
-		applyThemeFromStorage,
 		setupThemeListener,
 		getPresetList,
 	} = await import("../utils/theme-config.js");
@@ -488,41 +473,6 @@ async function initializePopup() {
 		} catch (error) {
 			debugError("Error loading theme:", error);
 			setThemeVariables(defaultTheme);
-		}
-	}
-
-	async function saveTheme() {
-		try {
-			// Read current settings first so we don't overwrite preset/colors
-			const result = await browser.storage.local.get("themeSettings");
-			const current = result.themeSettings || { ...defaultTheme };
-			const theme = {
-				...current,
-				mode: themeModeSelect?.value || "dark",
-			};
-
-			await browser.storage.local.set({ themeSettings: theme });
-			setThemeVariables(theme);
-			showStatus("Theme mode saved successfully!", "success");
-		} catch (error) {
-			debugError("Error saving theme:", error);
-			showStatus("Failed to save theme", "error");
-		}
-	}
-
-	async function resetTheme() {
-		try {
-			await browser.storage.local.set({ themeSettings: defaultTheme });
-
-			if (themeModeSelect) themeModeSelect.value = defaultTheme.mode;
-			const presetSelect = document.getElementById("themePreset");
-			if (presetSelect) presetSelect.value = defaultTheme.preset;
-
-			setThemeVariables(defaultTheme);
-			showStatus("Theme reset to default", "success");
-		} catch (error) {
-			debugError("Error resetting theme:", error);
-			showStatus("Failed to reset theme", "error");
 		}
 	}
 
@@ -1477,7 +1427,6 @@ async function initializePopup() {
 		if (backupFolderInput) backupFolderInput.value = backupFolder;
 		if (autoBackupCheckbox)
 			autoBackupCheckbox.checked = data.autoBackupEnabled || false;
-		const backupMode = data.backupMode || "both";
 		backupHistory = data.backupHistory || [];
 		renderBackupHistory();
 
@@ -1931,12 +1880,6 @@ async function initializePopup() {
 	// Model endpoint display removed: too advanced for popup
 	// Users can view/copy endpoint in Library Settings if needed
 
-	// Helper function to update model endpoint display
-	async function updateModelEndpointDisplay() {
-		// Removed: model endpoint display not needed in popup (too advanced)
-		// Users can see this in Library Settings if needed
-	}
-
 	// Helper function to show status messages
 	async function showStatus(message, type, options = {}) {
 		if (statusDiv) {
@@ -2032,100 +1975,6 @@ async function initializePopup() {
 		}
 	}
 
-	/**
-	 * Format a complete date
-	 * @param {string} dateStr - ISO date string
-	 * @returns {string} - Formatted date string
-	 */
-	function formatCompleteDate(dateStr) {
-		const date = new Date(dateStr);
-		return date.toLocaleDateString(undefined, {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	}
-
-	/**
-	 * Extract domain from URL
-	 * @param {string} url - Full URL
-	 * @returns {string} - Domain name
-	 */
-	function extractDomain(url) {
-		try {
-			const urlObj = new URL(url);
-			return urlObj.hostname.replace("www.", "");
-		} catch (e) {
-			return "unknown";
-		}
-	}
-
-	/**
-	 * Display novels grouped by website
-	 */
-	async function displayNovelsByWebsite(allNovels, options = {}) {
-		try {
-			if (!novelsListContainer) {
-				return;
-			}
-			if (allNovels.length === 0) {
-				novelsListContainer.innerHTML =
-					'<div class="no-novels">No novels in your library yet.</div>';
-				return;
-			}
-
-			const novelsByShelf = new Map();
-			allNovels.forEach((novel) => {
-				if (!novel || !novel.shelfId) return;
-				const shelf = Object.values(SHELVES).find(
-					(s) => s.id === novel.shelfId,
-				);
-				if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
-					return;
-				}
-				if (!novelsByShelf.has(novel.shelfId)) {
-					novelsByShelf.set(novel.shelfId, []);
-				}
-				novelsByShelf.get(novel.shelfId).push(novel);
-			});
-
-			const sortedShelves = Array.from(novelsByShelf.entries()).sort(
-				(a, b) => {
-					const latestA = Math.max(
-						...a[1].map((n) => n.lastAccessedAt || 0),
-					);
-					const latestB = Math.max(
-						...b[1].map((n) => n.lastAccessedAt || 0),
-					);
-					return latestB - latestA;
-				},
-			);
-
-			novelsListContainer.innerHTML = "";
-			sortedShelves.forEach(([shelfId, shelfNovels]) => {
-				const sortedNovels = shelfNovels.sort(
-					(a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0),
-				);
-				const section = createDomainSection(
-					shelfId,
-					sortedNovels,
-					options,
-				);
-				novelsListContainer.appendChild(section);
-			});
-
-			attachLibraryListHandlers();
-		} catch (error) {
-			debugError("Error displaying novels by website:", error);
-			if (novelsListContainer) {
-				novelsListContainer.innerHTML =
-					'<div class="no-novels">Failed to display novels.</div>';
-			}
-		}
-	}
-
 	function attachLibraryListHandlers() {
 		document.querySelectorAll(".domain-toggle").forEach((toggle) => {
 			toggle.addEventListener("click", function (e) {
@@ -2167,110 +2016,7 @@ async function initializePopup() {
 			});
 		});
 	}
-
-	/**
-	 * Load novels from storage and display them grouped by domain
-	 */
-	async function loadNovels() {
-		showStatus("Loading novels...", "info");
-
-		try {
-			const depsOk = await ensureLibraryDeps();
-			if (!depsOk) {
-				showStatus("Novel history unavailable in popup", "error");
-				return;
-			}
-
-			const library = await novelLibrary.getLibrary();
-			const novels = library.novels || {};
-
-			if (Object.keys(novels).length === 0) {
-				novelsListContainer.innerHTML =
-					'<div class="no-novels">No novels found in your reading history.</div>';
-				showStatus("No novels found in your reading history.", "info");
-				return;
-			}
-
-			// Clear the novels list
-			novelsListContainer.innerHTML = "";
-
-			await displayNovelsByWebsite(Object.values(novels), {
-				collapsed: false,
-				limitPerShelf: 0,
-			});
-
-			showStatus(
-				`Loaded ${Object.keys(novels).length} novels from library.`,
-				"success",
-			);
-
-			// Add event listeners for auto-enhance checkboxes
-			document
-				.querySelectorAll(".auto-enhance-checkbox")
-				.forEach((checkbox) => {
-					const novelId = checkbox.dataset.novelId;
-
-					// Load saved state
-					browser.storage.local
-						.get(["autoEnhanceNovels"])
-						.then((result) => {
-							const autoEnhanceNovels =
-								result.autoEnhanceNovels || [];
-							checkbox.checked =
-								autoEnhanceNovels.includes(novelId);
-						});
-
-					checkbox.addEventListener("change", async function () {
-						const result = await browser.storage.local.get([
-							"autoEnhanceNovels",
-						]);
-						let autoEnhanceNovels = result.autoEnhanceNovels || [];
-
-						if (this.checked) {
-							if (!autoEnhanceNovels.includes(novelId)) {
-								autoEnhanceNovels.push(novelId);
-							}
-						} else {
-							autoEnhanceNovels = autoEnhanceNovels.filter(
-								(id) => id !== novelId,
-							);
-						}
-
-						await browser.storage.local.set({ autoEnhanceNovels });
-						debugLog(
-							"Auto-enhance updated for:",
-							novelId,
-							this.checked,
-						);
-					});
-				});
-		} catch (error) {
-			debugError("Error loading novels:", error);
-			showStatus("Error loading novels. Please try again.", "error");
-		}
-	}
-
-	/**
-	 * Get shelf info by domain name
-	 * @param {string} domain - Domain name (e.g., "www.fanfiction.net")
-	 * @returns {Object|null} Shelf definition or null
-	 */
-	function getShelfByDomain(domain) {
-		const normalizedDomain = domain.toLowerCase();
-		for (const [key, shelf] of Object.entries(SHELVES)) {
-			for (const shelfDomain of shelf.domains) {
-				const normalizedShelfDomain = shelfDomain.toLowerCase();
-				if (
-					normalizedDomain === normalizedShelfDomain ||
-					normalizedDomain === `www.${normalizedShelfDomain}` ||
-					normalizedDomain.endsWith(`.${normalizedShelfDomain}`)
-				) {
-					return shelf;
-				}
-			}
-		}
-		return null;
-	}
+	void attachLibraryListHandlers;
 
 	/**
 	 * Render a shelf/domain icon - supports emoji, URL strings
@@ -2355,6 +2101,7 @@ async function initializePopup() {
 
 		return section;
 	}
+	void createDomainSection;
 
 	/**
 	 * Create a novel item element
@@ -2436,19 +2183,6 @@ async function initializePopup() {
 		`;
 
 		return novelItem;
-	}
-
-	/**
-	 * Create HTML for chapters list
-	 * @param {Array} chapters - Array of chapter objects
-	 * @param {string} novelUrl - Base URL of the novel
-	 * @returns {string} - HTML string for chapters list
-	 */
-	function createChaptersListHtml(chapters, novelUrl) {
-		// Sort chapters by read date (most recent first)
-		const sortedChapters = [...chapters].sort((a, b) => {
-			return new Date(b.date || 0) - new Date(a.date || 0);
-		});
 	}
 
 	// Add event listener for quick library button in header
@@ -3565,83 +3299,6 @@ async function initializePopup() {
 		});
 	}
 
-	// Function to get site-specific prompt from current handler
-	function getSiteSpecificPrompt(currentHandler) {
-		if (
-			currentHandler &&
-			typeof currentHandler.getSiteSpecificPrompt === "function"
-		) {
-			return currentHandler.getSiteSpecificPrompt();
-		}
-		return "";
-	}
-
-	// Helper function to update the UI with the current site-specific prompt
-	function updateSiteSpecificPromptUI() {
-		const currentSite = getCurrentSiteIdentifier();
-		const currentHandler = handlerManager.getHandlerForCurrentSite();
-
-		if (currentHandler) {
-			const sitePrompt = getSiteSpecificPrompt(currentHandler);
-			// Create or update site-specific prompt UI
-			const container = document.getElementById(
-				"siteSpecificPromptsContainer",
-			);
-
-			if (container) {
-				const existingSitePrompt = container.querySelector(
-					`[data-site="${currentSite}"]`,
-				);
-
-				if (sitePrompt && sitePrompt.length > 0) {
-					if (existingSitePrompt) {
-						// Update existing prompt
-						existingSitePrompt.querySelector(
-							".prompt-text",
-						).textContent = sitePrompt;
-					} else {
-						// Create new prompt element
-						const sitePromptEl = document.createElement("div");
-						sitePromptEl.className = "site-prompt";
-						sitePromptEl.dataset.site = currentSite;
-
-						const siteName = document.createElement("strong");
-						siteName.textContent =
-							getSiteDisplayName(currentSite) + ":";
-
-						const promptText = document.createElement("div");
-						promptText.className = "prompt-text";
-						promptText.textContent = sitePrompt;
-
-						sitePromptEl.appendChild(siteName);
-						sitePromptEl.appendChild(promptText);
-						container.appendChild(sitePromptEl);
-					}
-				}
-			}
-		}
-	}
-
-	// Helper function to get a display name for a site
-	function getSiteDisplayName(siteIdentifier) {
-		const siteMappings = {
-			ranobes: "Ranobes",
-			fanfiction: "FanFiction.net",
-			// Add more mappings as needed
-		};
-
-		// Extract domain from identifier if it's a full URL
-		let domain = siteIdentifier;
-		if (domain.includes(".")) {
-			domain = domain.split(".")[0].toLowerCase();
-		}
-
-		return (
-			siteMappings[domain] ||
-			domain.charAt(0).toUpperCase() + domain.slice(1)
-		);
-	}
-
 	// Function to load site-specific prompts
 	async function loadSiteHandlerPrompts() {
 		try {
@@ -4035,7 +3692,7 @@ async function initializePopup() {
 
 			// Pick 1-2 random novels from each eligible site
 			const randomSuggestions = [];
-			eligibleSites.forEach(([shelfId, novels]) => {
+			eligibleSites.forEach(([_shelfId, novels]) => {
 				// Shuffle and take 1-2 novels
 				const shuffled = [...novels].sort(() => Math.random() - 0.5);
 				const count = Math.min(2, shuffled.length);
@@ -4274,7 +3931,7 @@ async function initializePopup() {
 	/**
 	 * Update current novel info section
 	 */
-	async function updateCurrentNovelInfo(allNovels = []) {
+	async function updateCurrentNovelInfo(_allNovels = []) {
 		try {
 			if (!currentNovelInfo) {
 				return null;
@@ -4414,52 +4071,6 @@ async function initializePopup() {
 		}
 	}
 
-	/**
-	 * Show top 6 recent novels from all sites
-	 */
-	async function showTopRecentNovels(allNovels) {
-		try {
-			if (!suggestedNovelsList) {
-				return;
-			}
-			if (allNovels.length === 0) {
-				suggestedNovelsList.innerHTML = `
-					<div class="no-suggestions">
-						<p>No novels in your library yet. Start reading to build your collection!</p>
-					</div>
-				`;
-				return;
-			}
-
-			// Get top 6 most recent
-			const recentNovels = allNovels
-				.sort(
-					(a, b) =>
-						new Date(b.lastRead || 0) - new Date(a.lastRead || 0),
-				)
-				.slice(0, 6);
-
-			suggestedNovelsList.innerHTML = `
-				<div class="suggested-novels-container">
-					${recentNovels.map((novel) => renderSuggestedNovelCard(novel)).join("")}
-				</div>
-			`;
-
-			// Add click handlers to open novels in library
-			suggestedNovelsList
-				.querySelectorAll(".suggested-novel-card")
-				.forEach((card) => {
-					card.addEventListener("click", async () => {
-						const novelId = card.dataset.novelId;
-						const shelf = card.dataset.shelfId;
-						await openNovelInLibrary(novelId, shelf);
-					});
-				});
-		} catch (error) {
-			debugError("Error showing top recent novels:", error);
-		}
-	}
-
 	function renderCurrentNovelDetails(novel) {
 		const title = novel.title || novel.bookTitle || "Unknown";
 		const site = novel.website || "Unknown Site";
@@ -4506,49 +4117,6 @@ async function initializePopup() {
 	`;
 	}
 
-	async function showSuggestedNovelsFromShelf(
-		shelfId,
-		allNovels,
-		excludeNovelId,
-	) {
-		try {
-			if (!suggestedNovelsList) return;
-			const suggestions = allNovels
-				.filter((n) => n.shelfId === shelfId && n.id !== excludeNovelId)
-				.sort(
-					(a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0),
-				)
-				.slice(0, 6);
-
-			if (suggestions.length === 0) {
-				suggestedNovelsList.innerHTML = `
-					<div class="no-suggestions">
-						<p>No suggestions yet for this website.</p>
-					</div>
-				`;
-				return;
-			}
-
-			suggestedNovelsList.innerHTML = `
-				<div class="suggested-novels-container">
-					${suggestions.map((novel) => renderSuggestedNovelCard(novel)).join("")}
-				</div>
-			`;
-
-			suggestedNovelsList
-				.querySelectorAll(".suggested-novel-card")
-				.forEach((card) => {
-					card.addEventListener("click", async () => {
-						const novelId = card.dataset.novelId;
-						const shelf = card.dataset.shelfId;
-						await openNovelInLibrary(novelId, shelf);
-					});
-				});
-		} catch (error) {
-			debugError("Error showing shelf suggestions:", error);
-		}
-	}
-
 	function renderSuggestedNovelCard(novel) {
 		const status = novel.readingStatus || novel.status || "Reading";
 		const chapters = novel.totalChapters || novel.chapterCount || null;
@@ -4581,14 +4149,6 @@ async function initializePopup() {
 				</div>
 			</div>
 		`;
-	}
-
-	/**
-	 * Update suggested novels based on reading history
-	 */
-	async function updateSuggestedNovels(allNovels) {
-		// This is now replaced by showTopRecentNovels
-		await showTopRecentNovels(allNovels);
 	}
 
 	// ========== LIBRARY BACKUP HANDLERS ==========
@@ -5059,16 +4619,6 @@ async function initializePopup() {
 		return `${days}d ago`;
 	}
 
-	function getBackupTags(name) {
-		const tags = [];
-		const lower = (name || "").toLowerCase();
-		if (lower.includes("continuous")) tags.push("🔄 Continuous");
-		else tags.push("📅 Scheduled");
-		const versionMatch = name?.match(/v\d+(?:\.\d+)?/i);
-		if (versionMatch) tags.push(versionMatch[0].toUpperCase());
-		return tags;
-	}
-
 	async function handleRestoreDriveBackup(fileId) {
 		try {
 			if (!fileId) return;
@@ -5110,7 +4660,6 @@ async function initializePopup() {
 			const created = new Date(
 				backup.modifiedTime || backup.createdTime || Date.now(),
 			);
-			const modified = new Date(backup.modifiedTime || Date.now());
 			const sizeLabel = formatFileSize(Number(backup.size));
 
 			// Determine backup type from filename
@@ -5642,7 +5191,6 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	if (novelFilterBtns.length > 0) {
 		novelFilterBtns.forEach((btn) => {
 			btn.addEventListener("click", () => {
-				const filter = btn.getAttribute("data-filter");
 				novelFilterBtns.forEach((b) => b.classList.remove("active"));
 				btn.classList.add("active");
 

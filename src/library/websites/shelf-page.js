@@ -7,7 +7,6 @@ import { storageManager } from "../../utils/storage-manager.js";
 import {
 	getNovelLibrary,
 	updateNovelInLibrary,
-	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
 import {
@@ -19,7 +18,7 @@ import {
 	getWebsiteSettingsDefinition,
 	renderWebsiteSettingsPanel,
 } from "../site-settings-ui.js";
-import { debugLog, debugError } from "../../utils/logger.js";
+import { debugError } from "../../utils/logger.js";
 
 // Theme — centralized
 import {
@@ -39,7 +38,6 @@ const READING_STATUS_LABELS = Object.fromEntries(
 
 // State variables
 let currentShelf = null;
-let shelfConfig = null;
 let allNovels = [];
 let filteredNovels = [];
 let currentFilters = {
@@ -100,9 +98,8 @@ function openNovelFromQuery() {
  * @param {string} shelfId - The shelf identifier
  * @param {Object} config - Shelf configuration (id, name, icon, color, primaryDomain)
  */
-export async function initShelfPage(shelfId, config = {}) {
+export async function initShelfPage(shelfId, _config = {}) {
 	currentShelf = shelfId;
-	shelfConfig = config;
 
 	await applyShelfTheme();
 	setupThemeListener();

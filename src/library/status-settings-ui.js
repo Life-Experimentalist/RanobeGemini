@@ -23,7 +23,6 @@ import {
 import {
 	generateId,
 	BUILTIN_RULE_IDS,
-	getBuiltInRules,
 	mergeRules,
 	getAllStatuses,
 	getDefaultRereadingOverlay,

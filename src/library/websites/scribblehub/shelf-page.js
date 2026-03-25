@@ -49,7 +49,6 @@ const MAX_FANDOMS = 10;
 // State for filtering and rendering
 let allNovels = [];
 let filteredNovels = [];
-let currentView = "all";
 
 const FILTER_STORAGE_KEY = "rg_filters_scribblehub";
 const DEFAULT_FILTERS = {
@@ -1013,13 +1012,6 @@ function normalizeModalStatus(status) {
 	return normalizeReadingStatus(status) || READING_STATUS.PLAN_TO_READ;
 }
 
-function normalizeRatingClass(rating) {
-	const val = (rating || "").toString().trim().toLowerCase();
-	if (!val) return "";
-	if (val === "k+") return "rating-kp";
-	return `rating-${val}`;
-}
-
 function categorizeNovelAttributes(novel) {
 	const metadata = novel.metadata || {};
 	const buckets = {
@@ -1070,121 +1062,6 @@ function getNovelCharacters(novel) {
 	// ScribbleHub doesn't have character taxonomy data
 	const metadata = novel.metadata || {};
 	return metadata.characters || novel.characters || [];
-}
-
-function setupFandomNav(novels) {
-	const filterContainer = document.getElementById("fandom-filter-section");
-	const categoryGrid = document.getElementById("category-grid");
-	const renderTarget = filterContainer || categoryGrid;
-	if (!renderTarget) return;
-
-	const singleFandoms = new Map();
-	const crossoverPairs = new Map();
-
-	novels.forEach((novel) => {
-		const isCrossover = novel.metadata?.isCrossover === true;
-		const fandoms = novel.metadata?.fandoms || [];
-
-		if (isCrossover) {
-			fandoms.forEach((fandom) => {
-				if (!crossoverPairs.has(fandom)) {
-					crossoverPairs.set(fandom, new Set());
-				}
-			});
-		} else if (fandoms.length > 0) {
-			const fandom = fandoms[0];
-			singleFandoms.set(fandom, (singleFandoms.get(fandom) || 0) + 1);
-		}
-	});
-
-	let html = "";
-
-	if (singleFandoms.size > 0) {
-		html +=
-			'<div class="category-group"><h4>Single Fandom Stories</h4><div class="fandom-grid">';
-		singleFandoms.forEach((count, fandom) => {
-			html += `
-				<button class="fandom-card single" data-fandom="${encodeURIComponent(
-					fandom,
-				)}" data-type="single">
-					<span class="fandom-icon">📖</span>
-					<span class="fandom-name">${escapeHtml(fandom)}</span>
-					<span class="fandom-count">${count} ${count === 1 ? "story" : "stories"}</span>
-				</button>
-			`;
-		});
-		html += "</div></div>";
-	}
-
-	if (crossoverPairs.size > 0) {
-		html +=
-			'<div class="category-group"><h4>Crossover Stories</h4><div class="fandom-grid">';
-		crossoverPairs.forEach((otherFandoms, fandom) => {
-			html += `
-				<button class="fandom-card crossover" data-fandom="${encodeURIComponent(
-					fandom,
-				)}" data-type="crossover">
-					<span class="fandom-icon">🔀</span>
-					<span class="fandom-name">${escapeHtml(fandom)}</span>
-					<span class="fandom-count">${otherFandoms.size} ${
-						otherFandoms.size === 1 ? "crossover" : "crossovers"
-					}</span>
-				</button>
-			`;
-		});
-		html += "</div></div>";
-	}
-
-	renderTarget.innerHTML = html;
-
-	renderTarget.querySelectorAll(".fandom-card").forEach((card) => {
-		card.addEventListener("click", () => {
-			const fandom = decodeURIComponent(card.dataset.fandom);
-			const type = card.dataset.type;
-			handleFandomClick(fandom, type);
-		});
-	});
-}
-
-function handleFandomClick(fandom, type) {
-	const filtered = allNovels.filter((novel) => {
-		const fandoms = novel.metadata?.fandoms || [];
-		const isCrossover = novel.metadata?.isCrossover === true;
-		if (type === "crossover") {
-			return isCrossover && fandoms.includes(fandom);
-		}
-		return !isCrossover && fandoms.includes(fandom);
-	});
-
-	renderNovels(filtered);
-	document
-		.getElementById("novel-grid")
-		?.scrollIntoView({ behavior: "smooth" });
-}
-
-function filterNovelsByFandomPair(fandom1, fandom2) {
-	const filtered = allNovels.filter((novel) => {
-		const fandoms = novel.metadata?.fandoms || [];
-		return fandoms.includes(fandom1) && fandoms.includes(fandom2);
-	});
-
-	renderNovels(filtered);
-	document
-		.getElementById("novel-grid")
-		.scrollIntoView({ behavior: "smooth" });
-}
-
-function filterNovelsBySingleFandom(fandom) {
-	const filtered = allNovels.filter((novel) => {
-		const fandoms = novel.metadata?.fandoms || [];
-		const isCrossover = novel.metadata?.isCrossover === true;
-		return !isCrossover && fandoms.includes(fandom);
-	});
-
-	renderNovels(filtered);
-	document
-		.getElementById("novel-grid")
-		.scrollIntoView({ behavior: "smooth" });
 }
 
 function escapeHtml(text) {
@@ -1687,6 +1564,8 @@ function setupFandomFilter() {
 
 	renderActiveFilters();
 }
+
+void setupFandomFilter;
 
 function ensureRandomSelectButton() {
 	const searchInput = document.getElementById("search-input");

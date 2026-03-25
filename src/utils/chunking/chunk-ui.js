@@ -3,7 +3,7 @@
  * Creates and manages UI elements for individual chunks
  */
 
-import { getContentThemeColors, resolveMode } from "../theme-config.js";
+import { getContentThemeColors } from "../theme-config.js";
 
 /**
  * Detect if dark mode is active
@@ -114,7 +114,6 @@ export function createChunkBanner(
 	// Status icon and text
 	let statusIcon = "⏳";
 	let statusText = "Pending";
-	let statusColor = "#666";
 
 	// Cache time display
 	let cacheTimeText = "";
@@ -130,27 +129,22 @@ export function createChunkBanner(
 		case "processing":
 			statusIcon = "⏳";
 			statusText = "Processing...";
-			statusColor = "#4285f4";
 			break;
 		case "completed":
 			statusIcon = isFromCache ? "✓" : "✅";
 			statusText = isFromCache ? `Cached${cacheTimeText}` : "Complete";
-			statusColor = "#0f9d58";
 			break;
 		case "error":
 			statusIcon = "❌";
 			statusText = errorMessage || "Error";
-			statusColor = "#ea4335";
 			break;
 		case "cached":
 			statusIcon = "✓";
 			statusText = `Cached${cacheTimeText}`;
-			statusColor = "#0f9d58";
 			break;
 		case "paused":
 			statusIcon = "⏸";
 			statusText = "Enhancement Ready";
-			statusColor = "#ff9800";
 			break;
 		default:
 			// Show "Not Enhanced" with an enhance action when a callback is available
@@ -162,7 +156,6 @@ export function createChunkBanner(
 				statusIcon = "⏳";
 				statusText = "Pending";
 			}
-			statusColor = "#666";
 	}
 
 	const colors = getThemeColors();

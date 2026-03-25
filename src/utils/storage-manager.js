@@ -202,7 +202,6 @@ export class StorageManager {
 			const allData = await browser.storage.local.get(null);
 			let totalEntries = 0;
 			let totalSize = 0;
-			const now = Date.now();
 
 			for (const key in allData) {
 				if (key.startsWith(this.DB_KEY_PREFIX)) {

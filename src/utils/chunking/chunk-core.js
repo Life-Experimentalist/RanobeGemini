@@ -210,7 +210,6 @@ function splitByParagraphs(content, chunkSizeWords) {
 
 	for (let i = 0; i < paragraphs.length; i++) {
 		const para = paragraphs[i];
-		const remainingParas = paragraphs.length - i - 1;
 		const remainingWords = paragraphs
 			.slice(i + 1)
 			.reduce((sum, p) => sum + p.wordCount, 0);

@@ -104,7 +104,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 	 * @param {Object} config - Shelf configuration
 	 * @returns {string} HTML for metadata
 	 */
-	static renderCardMeta(novel, config) {
+	static renderCardMeta(novel, _config) {
 		const metadata = novel.metadata || {};
 		const stats = metadata.stats || {};
 
@@ -319,7 +319,6 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		const workStatus = getVal("status");
 		const words = getVal("words", 0);
 		const kudos = getVal("kudos", 0);
-		const hits = getVal("hits", 0);
 		const fandoms = metadata.fandoms || [];
 		const primaryFandom = fandoms[0] || "";
 		const coverUrl = getVal("coverUrl") || getVal("cover") || "";
@@ -685,8 +684,6 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		if (!modal) return false;
 
 		const metadata = novel.metadata || {};
-		const rating = metadata.rating || novel.rating || "";
-
 		// Basic Info
 		const titleEl = document.getElementById("modal-title");
 		if (titleEl) titleEl.textContent = novel.title || "";

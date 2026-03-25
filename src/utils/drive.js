@@ -4,7 +4,6 @@
 import { debugLog, debugError, uploadLogsWithAdapter } from "./logger.js";
 import {
 	DEFAULT_DRIVE_CLIENT_ID,
-	DRIVE_BACKUP_MAX_COUNT,
 	DRIVE_BACKUP_PREFIX,
 	DRIVE_CONTINUOUS_BACKUP_BASENAME,
 	GOOGLE_OAUTH_SCOPES,

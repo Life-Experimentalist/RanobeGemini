@@ -351,7 +351,6 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const language = getVal("language");
 		const isCrossover = !!getVal("isCrossover", false);
 		const workStatus = getVal("status");
-		const words = getVal("words", 0);
 		const views = getVal("views", 0);
 		const favorites = getVal("favorites", 0);
 		const follows = getVal("follows", 0);
@@ -686,7 +685,6 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const language = getVal("language", "English");
 		const status = getVal("status", "Unknown");
 		const chapters = getVal("totalChapters") || getVal("chapterCount") || 0;
-		const words = getVal("words", 0);
 		const views = getVal("views", 0);
 		const favorites = getVal("favorites", 0);
 		const readers = getVal("readers", 0);

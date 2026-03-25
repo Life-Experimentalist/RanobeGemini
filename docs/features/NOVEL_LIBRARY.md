@@ -281,6 +281,30 @@ Diagram elements:
 - `SourceTab`: source website tab used to rehydrate library entry
 - `Library`: stored novels and modal-open source of truth
 
+```mermaid
+graph TB
+  A[Shared Deep-Link URL] --> B[Parse novel and openModal params]
+  B --> C{Found in Library?}
+  C -->|Yes| D[Render Modal]
+  C -->|No| E[Show Recovery Prompt]
+  E --> F[Start Countdown]
+  F --> G[Open Canonical Source URL]
+  G --> H[Send Add To Library Message]
+  H --> I[Reload Shelf Data]
+  I --> D
+```
+
+Diagram elements:
+- `A`: shared URL entry point
+- `B`: deep-link parameter parse stage
+- `C`: lookup decision in local library
+- `D`: final modal render path
+- `E`: user-facing recovery prompt
+- `F`: timed automation before import
+- `G`: canonical source URL open step
+- `H`: content-script add-to-library action
+- `I`: shelf data refresh before modal reopen
+
 #### AO3 Shelf Page
 
 **Browse by Fandom**:

@@ -1,7 +1,76 @@
 Mode: all
 Format: text
-Generated: 2026-03-25T08:29:49.178Z
-Total commits: 78
+Generated: 2026-03-25T16:21:27.899Z
+Total commits: 81
+
+[3eaa27e] 2026-03-25 feat: update to version 4.6.0, enhance PWA support, and add automated visual dashboard
+   feat: update to version 4.6.0, enhance PWA support, and add automated visual dashboard
+   Signed-off-by: Krishna GSVV <75069043+VKrishna04@users.noreply.github.com>
+   Files:
+   - README.md
+   - dev/generate-doc-visualizers.js
+   - docs/architecture/ARCHITECTURE.md
+   - docs/development/TODO.md
+   - docs/features/NOVEL_LIBRARY.md
+   - docs/overview/VISUAL_DASHBOARD.md
+   - ... (12 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
+
+[ec564f6] 2026-03-25 feat: update version to 4.6.0 and enhance novel sharing functionality
+   feat: update version to 4.6.0 and enhance novel sharing functionality
+   - Updated version display mechanism across multiple HTML files to dynamically fetch version from package.json.
+   - Added a new section in novel-status.html for shareable novel modals with direct links.
+   - Improved OAuth redirect handling in oauth-redirect.html for better user experience.
+   - Implemented a recovery flow for missing novels in the library, allowing users to auto-import missing novels from shareable links.
+   - Refactored shared-shelf-helpers.js to include novel recovery logic.
+   - Updated manifest files for both Chromium and Firefox to reflect the new version.
+   - Various minor fixes and improvements across library shelf pages to support the new recovery feature.
+   Files:
+   - README.md
+   - docs/development/LANDING_CODE_AUDIT.md
+   - docs/development/README.md
+   - docs/development/TODO.md
+   - docs/features/NOVEL_LIBRARY.md
+   - landing/architecture.html
+   - ... (26 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
+
+[d3d5176] 2026-03-25 feat: Enhance novel library features and improve search functionality
+   feat: Enhance novel library features and improve search functionality
+   - Added compact control chips for narrow phones in library CSS.
+   - Improved URL import handling in library JS, including deduplication and skipping existing novels.
+   - Enhanced search functionality across various websites to include more metadata fields (description, tags, genres).
+   - Updated manifest files to version 4.5.0.
+   - Introduced canonical import URLs for various website handlers (AO3, Fanfiction, Ranobes, ScribbleHub, WebNovel).
+   - Refactored reading list handling and status dropdown options for better user experience.
+   - Removed redundant desktop switcher button from mobile handler.
+   Files:
+   - README.md
+   - docs/backup/ranobe-backup.schema.json
+   - docs/development/TODO.md
+   - docs/release/RELEASE_NOTES_4.5.0.md
+   - docs/release/commit-history.md
+   - landing/architecture.html
+   - ... (28 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.5.0
+   Manifests:
+   - src/manifest-firefox.json: 4.5.0
+   - src/manifest-chromium.json: 4.5.0
+   - src/library/manifest.webmanifest: 4.5.0
 
 [b872185] 2026-03-20 feat: add architecture documentation and schema endpoint
    feat: add architecture documentation and schema endpoint

@@ -14,7 +14,6 @@
  */
 import { FanfictionHandler } from "./fanfiction-handler.js";
 import { debugLog, debugError } from "../logger.js";
-import { SITE_SETTINGS_KEY } from "../site-settings.js";
 
 export class FanfictionMobileHandler extends FanfictionHandler {
 	// Static properties for domain management

@@ -150,7 +150,7 @@ export function createSummaryButtonGroup(
 	chunkIndices,
 	onLongSummary,
 	onShortSummary,
-	onEnhance = null,
+	_onEnhance = null,
 ) {
 	const colors = getThemeColors();
 	const card = buildCard("gemini-chunk-summary-group", colors);

@@ -61,8 +61,6 @@ const MAX_CHARACTERS = 4;
 // State for filtering and rendering
 let allNovels = [];
 let filteredNovels = [];
-let currentView = "all";
-let selectedFandom = null;
 
 const FILTER_STORAGE_KEY = "rg_ff_filters_fanfiction";
 const DEFAULT_FILTERS = {
@@ -1142,13 +1140,6 @@ function normalizeModalStatus(status) {
 	return normalizeReadingStatus(status) || READING_STATUS.PLAN_TO_READ;
 }
 
-function normalizeRatingClass(rating) {
-	const val = (rating || "").toString().trim().toLowerCase();
-	if (!val) return "";
-	if (val === "k+") return "rating-kp";
-	return `rating-${val}`;
-}
-
 function categorizeNovelAttributes(novel) {
 	const metadata = novel.metadata || {};
 	const buckets = {
@@ -1398,18 +1389,6 @@ function handleFandomClick(fandom, type) {
 		filterNovelsBySingleFandom(fandom);
 	}
 
-	document
-		.getElementById("novel-grid")
-		.scrollIntoView({ behavior: "smooth" });
-}
-
-function filterNovelsByFandomPair(fandom1, fandom2) {
-	const filtered = allNovels.filter((novel) => {
-		const fandoms = novel.metadata?.fandoms || [];
-		return fandoms.includes(fandom1) && fandoms.includes(fandom2);
-	});
-
-	renderNovels(filtered);
 	document
 		.getElementById("novel-grid")
 		.scrollIntoView({ behavior: "smooth" });

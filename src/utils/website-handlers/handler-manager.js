@@ -5,7 +5,7 @@
 
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { HANDLER_MODULES } from "./handler-registry.js";
-import { debugLog, debugError } from "../logger.js";
+import { debugLog } from "../logger.js";
 import {
 	getSiteSettings,
 	getDomainSettings,

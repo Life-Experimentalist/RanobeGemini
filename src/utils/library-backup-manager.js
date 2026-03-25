@@ -143,7 +143,7 @@ export class LibraryBackupManager {
 			const result = await browser.storage.local.get(BACKUP_METADATA_KEY);
 			const metadata = result[BACKUP_METADATA_KEY] || {};
 			const backups = Object.values(metadata).sort(
-				(a, b) => b.timestamp - a.timestamp
+				(a, b) => b.timestamp - a.timestamp,
 			);
 
 			debugLog(`Found ${backups.length} backups`);
@@ -172,9 +172,8 @@ export class LibraryBackupManager {
 
 			// Get current library data
 			let currentData = {};
-			const currentResult = await browser.storage.local.get(
-				"novelHistory"
-			);
+			const currentResult =
+				await browser.storage.local.get("novelHistory");
 			if (currentResult.novelHistory) {
 				currentData = currentResult.novelHistory;
 			}
@@ -263,7 +262,7 @@ export class LibraryBackupManager {
 	 * @param {string} mergeMode - How to merge: "merge", "replace", "append"
 	 * @returns {Promise<boolean>} Success status
 	 */
-	async importBackupFromFile(fileContent, mergeMode = "merge") {
+	async importBackupFromFile(fileContent, _mergeMode = "merge") {
 		try {
 			if (!fileContent.backup || !fileContent.backup.data) {
 				throw new Error("Invalid backup file format");
@@ -453,11 +452,11 @@ export class LibraryBackupManager {
 			const backups = await this.listBackups();
 			const totalSize = backups.reduce(
 				(sum, b) => sum + (b.size || 0),
-				0
+				0,
 			);
 			const totalNovels = backups.reduce(
 				(sum, b) => sum + (b.novelCount || 0),
-				0
+				0,
 			);
 
 			return {
