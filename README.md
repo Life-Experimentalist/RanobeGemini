@@ -41,6 +41,9 @@
 - **Multi-Site Support**: Works on `ranobes.top`, `fanfiction.net` (desktop + mobile), `archiveofourown.org` (AO3), `scribblehub.com`, and more.
 - **Novel Library**: Track novels across all supported sites with shelf-aware metadata, reading status, characters, relationships, genres, and tags.
 - **Reading Lists & Badges**: Apply list badges independent of status (`🔁 Rereading`, `⭐ Favourites`, plus custom labels like `R18`).
+- **Unified Status Dropdown**: Manage primary status and toggle reading-list membership directly from each novel card dropdown.
+- **Compact Mobile Controls**: Narrow-screen library chips and filters stay compact instead of forcing full-width buttons.
+- **Adaptive URL Import**: Import URLs now canonicalize per-handler templates, skip novels already in your library, and suppress duplicate links in the same paste batch.
 - **Collapsible Content Sections**: Fight scenes, R18 content, and author notes can be hidden/shown on demand.
 - **Incognito Mode**: Temporarily pause library tracking without disabling the extension.
 - **Custom Content Box Types**: Define your own CSS classes and styling for special content blocks.

@@ -1,7 +1,32 @@
 Mode: all
 Format: text
-Generated: 2026-03-20T08:36:45.241Z
-Total commits: 77
+Generated: 2026-03-25T08:29:49.178Z
+Total commits: 78
+
+[b872185] 2026-03-20 feat: add architecture documentation and schema endpoint
+   feat: add architecture documentation and schema endpoint
+   - Introduced a public architecture documentation page with modular runtime, component, and backup flow diagrams.
+   - Added a hosted schema endpoint proxy at `https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json` referencing the canonical raw schema source.
+   fix: enhance drive backup history panel behavior
+   - Updated drive backup history panel to reload on every expand/toggle, ensuring users see up-to-date Drive files.
+   fix: improve architecture documentation resilience
+   - Implemented diagram fallback behavior in architecture docs to prevent blank content if Mermaid runtime loading fails.
+   chore: update release notes and changelog for v4.4.0
+   Files:
+   - docs/backup/BACKUP_GUIDE.md
+   - docs/backup/CONTINUOUS_BACKUP_GUIDE.md
+   - docs/backup/FIREFOX_DRIVE_SYNC_FIX.md
+   - docs/backup/OAUTH_CHECKBOX_FIX.md
+   - docs/backup/README_GOOGLE_DRIVE.md
+   - docs/backup/ranobe-backup.schema.json
+   - ... (15 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.4.0
+   Manifests:
+   - src/manifest-firefox.json: 4.4.0
+   - src/manifest-chromium.json: 4.4.0
+   - src/library/manifest.webmanifest: 4.4.0
 
 [5645535] 2026-03-20 landing: add architecture charts page and wire modular-flow navigation
    landing: add architecture charts page and wire modular-flow navigation

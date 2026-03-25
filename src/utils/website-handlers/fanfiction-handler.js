@@ -43,6 +43,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		color: "#2a4b8d",
 		novelIdPattern: /\/s\/(\d+)\//,
 		primaryDomain: "www.fanfiction.net",
+		importUrlTemplate: "https://www.fanfiction.net/s/{id}/1/",
 		// Default filename template for exported FanFiction files (user can override in settings)
 		defaultExportTemplate: "{titleSafe} - {authorSafe}",
 		// Download URL template - {url} is replaced with encoded source URL
@@ -194,16 +195,54 @@ When enhancing, improve readability while fully respecting the author's creative
 			let preference = "auto"; // Default to device-based routing
 			let preferredTld = "net"; // Default to .net
 			try {
-				const result =
-					await browser.storage.local.get(SITE_SETTINGS_KEY);
-				const settings = result?.[SITE_SETTINGS_KEY] || {};
-				const fanfictionSettings = settings?.fanfiction || {};
-				preference = fanfictionSettings.domainPreference || "auto";
-				preferredTld = fanfictionSettings.preferredTld
-					? fanfictionSettings.preferredTld
-					: fanfictionSettings.convertWsToNet === false
-						? "ws"
-						: "net";
+				const params = new URLSearchParams(window.location.search);
+				const overridePref = params.get("rg_view");
+				if (overridePref) {
+					preference = overridePref === "www" ? "www" : "m";
+					// Save it to sessionStorage on the new domain so subsequent clicks on same domain don't lose it
+					try {
+						sessionStorage.setItem("rg_ff_preference", preference);
+					} catch (e) {}
+					// Keep override tab-scoped and avoid leaking rg_view in copied/shared links.
+					try {
+						const cleanUrl = new URL(window.location.href);
+						cleanUrl.searchParams.delete("rg_view");
+						window.history.replaceState(
+							{},
+							"",
+							cleanUrl.toString(),
+						);
+					} catch (_e) {
+						/* non-critical */
+					}
+				} else {
+					const sessionPref =
+						sessionStorage.getItem("rg_ff_preference");
+					if (sessionPref) {
+						preference = sessionPref === "www" ? "www" : "m";
+					} else {
+						const result =
+							await browser.storage.local.get(SITE_SETTINGS_KEY);
+						const settings = result?.[SITE_SETTINGS_KEY] || {};
+						const fanfictionSettings = settings?.fanfiction || {};
+						const configuredPreference =
+							fanfictionSettings.domainPreference;
+						preference = [
+							"auto",
+							"mobile",
+							"desktop",
+							"m",
+							"www",
+						].includes(configuredPreference)
+							? configuredPreference
+							: "auto";
+						preferredTld = fanfictionSettings.preferredTld
+							? fanfictionSettings.preferredTld
+							: fanfictionSettings.convertWsToNet === false
+								? "ws"
+								: "net";
+					}
+				}
 			} catch (storageErr) {
 				debugError("Failed to load domain preference:", storageErr);
 				// Use defaults
@@ -448,21 +487,8 @@ When enhancing, improve readability while fully respecting the author's creative
 					const tld = url.hostname.endsWith(".ws") ? "ws" : "net";
 					const targetSubdomain = isMobile ? "www" : "m";
 					url.hostname = `${targetSubdomain}.fanfiction.${tld}`;
-					// Persist explicit preference so normalizeURL honours the switch
-					try {
-						const stored =
-							await browser.storage.local.get(SITE_SETTINGS_KEY);
-						const settings = stored?.[SITE_SETTINGS_KEY] || {};
-						if (!settings.fanfiction) settings.fanfiction = {};
-						settings.fanfiction.domainPreference = isMobile
-							? "www"
-							: "mobile";
-						await browser.storage.local.set({
-							[SITE_SETTINGS_KEY]: settings,
-						});
-					} catch (_e) {
-						/* non-critical — navigate anyway */
-					}
+					// Use a query parameter to persist the explicit override across domains
+					url.searchParams.set("rg_view", targetSubdomain);
 					window.location.href = url.toString();
 				},
 			});

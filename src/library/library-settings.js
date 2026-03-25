@@ -1423,17 +1423,91 @@ function filterSupportedUrls(urls) {
 }
 
 async function addUrlsToLibrary(urls) {
-	let added = 0,
-		failed = 0;
-	for (const url of urls) {
+	const results = {
+		total: urls.length,
+		queued: 0,
+		added: 0,
+		skipped: 0,
+		skippedExisting: 0,
+		skippedDuplicates: 0,
+		unsupported: 0,
+		failed: 0,
+	};
+
+	const prepared = await novelLibrary.prepareUrlsForImport(urls);
+	const queue = prepared.toImport || [];
+	results.queued = queue.length;
+	results.skippedExisting = prepared.skippedExisting || 0;
+	results.skippedDuplicates = prepared.skippedDuplicates || 0;
+	results.unsupported = prepared.unsupported || 0;
+	results.skipped =
+		results.skippedExisting +
+		results.skippedDuplicates +
+		results.unsupported;
+
+	for (const item of queue) {
+		let tabId = null;
 		try {
-			await browser.tabs.create({ url, active: false });
-			added++;
+			const tab = await browser.tabs.create({
+				url: item.url,
+				active: false,
+			});
+			tabId = tab.id;
+			await waitForTabComplete(tabId);
+			const success = await sendAddToLibraryMessage(tabId);
+			if (success) {
+				results.added += 1;
+			} else {
+				results.failed += 1;
+			}
 		} catch {
-			failed++;
+			results.failed += 1;
+		} finally {
+			if (tabId !== null) {
+				try {
+					await browser.tabs.remove(tabId);
+				} catch (_closeError) {
+					// ignore close errors
+				}
+			}
 		}
 	}
-	return { added, failed };
+
+	return results;
+}
+
+function waitForTabComplete(tabId, timeoutMs = 15000) {
+	return new Promise((resolve, reject) => {
+		let timeoutId;
+		const onUpdated = (updatedTabId, info) => {
+			if (updatedTabId !== tabId || info.status !== "complete") return;
+			browser.tabs.onUpdated.removeListener(onUpdated);
+			if (timeoutId) clearTimeout(timeoutId);
+			resolve();
+		};
+
+		browser.tabs.onUpdated.addListener(onUpdated);
+		timeoutId = setTimeout(() => {
+			browser.tabs.onUpdated.removeListener(onUpdated);
+			reject(new Error("Timed out waiting for tab load"));
+		}, timeoutMs);
+	});
+}
+
+async function sendAddToLibraryMessage(tabId) {
+	const maxAttempts = 3;
+	for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+		try {
+			const response = await browser.tabs.sendMessage(tabId, {
+				action: "addToLibrary",
+			});
+			if (response?.success) return true;
+		} catch (_err) {
+			// retry
+		}
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	}
+	return false;
 }
 
 // ── Legacy export / import / clear ───────────────────────────────────────────
@@ -2361,12 +2435,14 @@ function setupEventListeners() {
 				urlImportStatus.textContent =
 					supported.length === 0
 						? "No supported URLs found."
-						: `Found ${supported.length} supported URL(s). Adding…`;
+						: `Found ${supported.length} supported URL(s). Preparing import…`;
 			}
 			if (supported.length === 0) return;
 			const results = await addUrlsToLibrary(supported);
 			if (urlImportStatus) {
-				urlImportStatus.textContent = `Added ${results.added}, failed ${results.failed}.`;
+				urlImportStatus.textContent =
+					`Added ${results.added}, skipped ${results.skipped}, failed ${results.failed}. ` +
+					`(existing: ${results.skippedExisting}, duplicates: ${results.skippedDuplicates}, unsupported: ${results.unsupported})`;
 			}
 		});
 	}
@@ -3033,35 +3109,148 @@ function setupEventListeners() {
 	const fixFFNetCharactersResult = $("fix-ffnet-characters-result");
 	const scanFFNetMetadataBtn = $("scan-ffnet-metadata-btn");
 	const scanFFNetMetadataResult = $("scan-ffnet-metadata-result");
+
+	const runFanfictionMetadataFix = async () => {
+		const library = await novelLibrary.getLibrary();
+		const ffNovels = Object.values(library.novels || {}).filter(
+			(n) => (n.shelfId || "").toLowerCase() === "fanfiction",
+		);
+
+		const cleanName = (value) =>
+			String(value || "")
+				.replace(/[[]\]]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+
+		const isInvalidToken = (value) => {
+			const token = cleanName(value);
+			if (!token) return true;
+			if (/^\d+$/.test(token)) return true;
+			if (
+				/^(?:published|updated|status|chapters|words|reviews|favs|follows|id)$/i.test(
+					token,
+				)
+			)
+				return true;
+			if (
+				/^(?:complete|completed|ongoing|unknown|in-progress)$/i.test(
+					token,
+				)
+			) {
+				return true;
+			}
+			return false;
+		};
+
+		const report = {
+			scanned: ffNovels.length,
+			changed: 0,
+			charactersFixed: 0,
+			relationshipsFixed: 0,
+			tagsFixed: 0,
+		};
+
+		for (const novel of ffNovels) {
+			let changed = false;
+			novel.metadata = novel.metadata || {};
+			const meta = novel.metadata;
+
+			const prevCharacters = JSON.stringify(
+				Array.isArray(meta.characters) ? meta.characters : [],
+			);
+			const prevRelationships = JSON.stringify(
+				Array.isArray(meta.relationships) ? meta.relationships : [],
+			);
+			const prevTags = JSON.stringify(
+				Array.isArray(novel.tags) ? novel.tags : [],
+			);
+
+			const normalizedRelationships = [];
+			const seenRelationship = new Set();
+			if (Array.isArray(meta.relationships)) {
+				for (const group of meta.relationships) {
+					if (!Array.isArray(group)) continue;
+					const cleanedGroup = group
+						.map((entry) => cleanName(entry))
+						.filter((entry) => entry && !isInvalidToken(entry))
+						.slice(0, 4);
+					if (cleanedGroup.length < 2) continue;
+					const key = cleanedGroup.join("|").toLowerCase();
+					if (seenRelationship.has(key)) continue;
+					seenRelationship.add(key);
+					normalizedRelationships.push(cleanedGroup);
+				}
+			}
+
+			const characterSet = new Set();
+			const normalizedCharacters = [];
+			const pushCharacter = (entry) => {
+				const cleaned = cleanName(entry);
+				if (!cleaned || isInvalidToken(cleaned)) return;
+				const key = cleaned.toLowerCase();
+				if (characterSet.has(key)) return;
+				characterSet.add(key);
+				normalizedCharacters.push(cleaned);
+			};
+
+			if (Array.isArray(meta.characters)) {
+				meta.characters.forEach(pushCharacter);
+			}
+			normalizedRelationships.forEach((group) =>
+				group.forEach(pushCharacter),
+			);
+
+			if (normalizedCharacters.length > 0) {
+				meta.characters = normalizedCharacters;
+			} else {
+				delete meta.characters;
+			}
+			if (normalizedRelationships.length > 0) {
+				meta.relationships = normalizedRelationships;
+			} else {
+				delete meta.relationships;
+			}
+
+			if (Array.isArray(novel.tags)) {
+				novel.tags = novel.tags
+					.map((entry) => cleanName(entry))
+					.filter((entry) => entry && !isInvalidToken(entry))
+					.filter(
+						(entry, index, all) => all.indexOf(entry) === index,
+					);
+			}
+
+			if (JSON.stringify(meta.characters || []) !== prevCharacters) {
+				report.charactersFixed += 1;
+				changed = true;
+			}
+			if (
+				JSON.stringify(meta.relationships || []) !== prevRelationships
+			) {
+				report.relationshipsFixed += 1;
+				changed = true;
+			}
+			if (JSON.stringify(novel.tags || []) !== prevTags) {
+				report.tagsFixed += 1;
+				changed = true;
+			}
+
+			if (changed) report.changed += 1;
+		}
+
+		// Final canonical pass shared with runtime extraction pipeline.
+		novelLibrary.normalizeFanfictionMetadata(library);
+		await novelLibrary.saveLibrary(library);
+
+		return report;
+	};
+
 	if (fixFFNetCharactersBtn) {
 		fixFFNetCharactersBtn.addEventListener("click", async () => {
 			fixFFNetCharactersBtn.disabled = true;
 			fixFFNetCharactersBtn.textContent = "⏳ Running…";
 			try {
-				const library = await novelLibrary.getLibrary();
-				const ffNovels = Object.values(library.novels || {}).filter(
-					(n) => (n.shelfId || "").toLowerCase() === "fanfiction",
-				);
-				// Force re-normalization: clear existing normalized data so the
-				// normalizeFanfictionMetadata function sees it as "changed"
-				for (const novel of ffNovels) {
-					if (novel.metadata) {
-						delete novel.metadata.relationships;
-						// Keep characters array so normalization re-derives it cleanly
-					}
-				}
-				// Save the cleared state then re-load (getLibrary runs normalization)
-				await browser.storage.local.set({
-					[novelLibrary.LIBRARY_KEY]: library,
-				});
-				// getLibrary runs normalizeFanfictionMetadata automatically
-				const reloaded = await novelLibrary.getLibrary();
-				const fixedCount = Object.values(reloaded.novels || {}).filter(
-					(n) =>
-						(n.shelfId || "").toLowerCase() === "fanfiction" &&
-						(n.metadata?.relationships?.length > 0 ||
-							n.metadata?.characters?.length > 0),
-				).length;
+				const report = await runFanfictionMetadataFix();
 
 				if (fixFFNetCharactersResult) {
 					fixFFNetCharactersResult.style.display = "block";
@@ -3071,10 +3260,12 @@ function setupEventListeners() {
 						"1px solid rgba(34,197,94,0.3)";
 					fixFFNetCharactersResult.style.color =
 						"var(--success-color)";
-					fixFFNetCharactersResult.textContent = `✅ Fix applied to ${ffNovels.length} FF.net novel(s). ${fixedCount} have character/relationship data.`;
+					fixFFNetCharactersResult.textContent =
+						`✅ FF fix complete. Scanned ${report.scanned}, changed ${report.changed}. ` +
+						`Characters: ${report.charactersFixed}, Relationships: ${report.relationshipsFixed}, Tags: ${report.tagsFixed}.`;
 				}
 				showToast(
-					`✅ Character data fixed for ${ffNovels.length} FF.net novels`,
+					`✅ FF metadata fix complete (${report.changed}/${report.scanned} changed)`,
 					"success",
 				);
 			} catch (err) {

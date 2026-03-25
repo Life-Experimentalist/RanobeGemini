@@ -36,6 +36,7 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		color: "#ff6600",
 		novelIdPattern: /\/book\/(\d+)/,
 		primaryDomain: "www.webnovel.com",
+		importUrlTemplate: "https://www.webnovel.com/book/{id}",
 	};
 
 	// Handler type: Metadata requires visiting dedicated novel info page

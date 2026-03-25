@@ -44,6 +44,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
+		importUrlTemplate: "https://archiveofourown.org/works/{id}",
 		// Default filename template for exported AO3 files (user can override in settings)
 		defaultExportTemplate: "{titleSafe} - {authorSafe}",
 		// Download URL template - {url} is replaced with encoded source URL

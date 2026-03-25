@@ -640,18 +640,30 @@ function applyFiltersAndSort() {
 
 	// Apply search filter
 	if (currentFilters.search) {
-		filteredNovels = filteredNovels.filter(
-			(novel) =>
-				novel.title.toLowerCase().includes(currentFilters.search) ||
-				(novel.author &&
-					novel.author
-						.toLowerCase()
-						.includes(currentFilters.search)) ||
-				(novel.description &&
-					novel.description
-						.toLowerCase()
-						.includes(currentFilters.search)),
-		);
+		filteredNovels = filteredNovels.filter((novel) => {
+			const metadata = novel.metadata || {};
+			const toArray = (value) =>
+				Array.isArray(value) ? value : value ? [String(value)] : [];
+			const searchableText = [
+				novel.title,
+				novel.author,
+				novel.description,
+				...toArray(novel.tags),
+				...toArray(novel.genres),
+				...toArray(metadata.tags),
+				...toArray(metadata.additionalTags),
+				...toArray(metadata.genres),
+				...toArray(metadata.fandoms),
+				...toArray(metadata.characters),
+				...toArray(metadata.relationships),
+				...toArray(metadata.warnings),
+				...toArray(metadata.categories),
+			]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+			return searchableText.includes(currentFilters.search);
+		});
 	}
 
 	// Apply reading status filter

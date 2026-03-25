@@ -377,20 +377,38 @@ if (typeof browser === "undefined") {
 
 		const filename = uploadResult.name;
 
-		// Track history for visibility
+		// Track history for visibility while avoiding redundant continuous rows.
 		const stored = await browser.storage.local.get("backupHistory");
-		const history = [
-			{
-				filename,
-				createdAt: Date.now(),
-				uploadedToDrive: true,
-				reason,
-				fileId: uploadResult.id,
-				webViewLink: uploadResult?.webViewLink,
-				variant,
-			},
-			...(stored.backupHistory || []),
-		].slice(0, 50); // keep last 50 backup history entries for UI
+		const newEntry = {
+			filename,
+			createdAt: Date.now(),
+			uploadedToDrive: true,
+			reason,
+			fileId: uploadResult.id,
+			webViewLink: uploadResult?.webViewLink,
+			variant,
+		};
+		const existingHistory = Array.isArray(stored.backupHistory)
+			? stored.backupHistory
+			: [];
+		const dedupedHistory = existingHistory.filter((entry) => {
+			if (!entry) return false;
+			if (!entry.uploadedToDrive) return true;
+			if (!entry.fileId) return false;
+
+			// Continuous backup updates overwrite a single Drive file.
+			// Keep only the latest row for that file/variant.
+			if (variant === "continuous") {
+				if (entry.variant === "continuous") return false;
+				if (entry.fileId === newEntry.fileId) return false;
+			}
+
+			// For versioned backups, keep only one row per Drive file id.
+			if (entry.fileId === newEntry.fileId) return false;
+			return true;
+		});
+
+		const history = [newEntry, ...dedupedHistory].slice(0, 50);
 
 		await browser.storage.local.set({
 			backupHistory: history,
@@ -398,6 +416,34 @@ if (typeof browser === "undefined") {
 		});
 
 		return { filename, history, uploadResult };
+	}
+
+	async function reconcileDriveBackupHistoryWithLiveFiles(liveBackups) {
+		try {
+			const stored = await browser.storage.local.get("backupHistory");
+			const current = Array.isArray(stored.backupHistory)
+				? stored.backupHistory
+				: [];
+			if (current.length === 0) return;
+
+			const liveIds = new Set(
+				(Array.isArray(liveBackups) ? liveBackups : [])
+					.map((file) => file?.id)
+					.filter(Boolean),
+			);
+
+			const filtered = current.filter((entry) => {
+				if (!entry?.uploadedToDrive) return true;
+				if (!entry?.fileId) return false;
+				return liveIds.has(entry.fileId);
+			});
+
+			if (filtered.length !== current.length) {
+				await browser.storage.local.set({ backupHistory: filtered });
+			}
+		} catch (error) {
+			debugError("Failed to reconcile Drive backup history", error);
+		}
 	}
 
 	async function performAutoBackup() {
@@ -1239,7 +1285,10 @@ if (typeof browser === "undefined") {
 
 		if (message.action === "listDriveBackups") {
 			listDriveBackups()
-				.then((backups) => sendResponse({ success: true, backups }))
+				.then(async (backups) => {
+					await reconcileDriveBackupHistoryWithLiveFiles(backups);
+					sendResponse({ success: true, backups });
+				})
 				.catch((error) =>
 					sendResponse({
 						success: false,

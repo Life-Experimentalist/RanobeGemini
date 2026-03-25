@@ -760,13 +760,28 @@ function applyFiltersAndSort() {
 	if (search) {
 		const query = search.toLowerCase();
 		filteredNovels = filteredNovels.filter((n) => {
-			const titleMatch = n.title?.toLowerCase().includes(query);
-			const authorMatch = n.author?.toLowerCase().includes(query);
-			const genreMatch = (n.metadata?.genres || [])
+			const metadata = n.metadata || {};
+			const toArray = (value) =>
+				Array.isArray(value) ? value : value ? [String(value)] : [];
+			const searchableText = [
+				n.title,
+				n.author,
+				n.description,
+				...toArray(n.tags),
+				...toArray(n.genres),
+				...toArray(metadata.tags),
+				...toArray(metadata.additionalTags),
+				...toArray(metadata.genres),
+				...toArray(metadata.fandoms),
+				...toArray(metadata.characters),
+				...toArray(metadata.relationships),
+				...toArray(metadata.warnings),
+				...toArray(metadata.categories),
+			]
+				.filter(Boolean)
 				.join(" ")
-				.toLowerCase()
-				.includes(query);
-			return titleMatch || authorMatch || genreMatch;
+				.toLowerCase();
+			return searchableText.includes(query);
 		});
 	}
 

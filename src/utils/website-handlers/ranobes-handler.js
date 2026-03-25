@@ -29,7 +29,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		id: "ranobes",
 		isPrimary: true,
 		name: "Ranobes",
-		icon: "https://ranobes.top/templates/Dark/images/favicon.ico?v=2",
+		icon: "https://ranobes.top/favicon.ico",
 		emoji: "🍃",
 		color: "#4a7c4e",
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
@@ -41,6 +41,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
+		importUrlTemplate: "https://ranobes.top/read-{id}.html",
 		// Taxonomy for shelf page filtering
 		taxonomy: [
 			{ id: "genres", label: "Genres", type: "array" },

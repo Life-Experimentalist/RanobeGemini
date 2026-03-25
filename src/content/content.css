@@ -198,7 +198,7 @@ body.reading_fullwidth .watermark-badge {
 }
 
 .gemini-processed-notice button {
-	/* Adjust button to be minimal – matching native colors */
+	/* Adjust button to be minimal â€“ matching native colors */
 	float: right;
 	background: transparent;
 	color: #bab9a0;
@@ -713,7 +713,7 @@ html[data-darkreader-mode] .section-divider {
 }
 
 .rg-author-note::before {
-	content: "📝 Author's Note";
+	content: "ðŸ“ Author's Note";
 	display: block;
 	font-style: normal;
 	font-weight: 700;
@@ -1169,48 +1169,55 @@ html[data-darkreader-mode] .rg-system-msg,
 /* Chapter compact controls -- better touch targets */
 #rg-chapter-novel-controls {
 	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none !important;
+	/* Firefox */
 }
 
-@media screen and (max-width: 768px) {
-
-	/* Chapter compact bar: full-width flex column layout */
-	#rg-chapter-novel-controls {
-		flex-direction: column !important;
-		align-items: stretch !important;
-		gap: 6px !important;
-		padding: 10px !important;
-	}
-
-	/* Every direct child button/select in compact bar gets full-width + comfortable height */
-	#rg-chapter-novel-controls>button,
-	#rg-chapter-novel-controls>select {
-		width: 100% !important;
-		min-height: 44px !important;
-		font-size: 14px !important;
-		padding: 10px 12px !important;
-		box-sizing: border-box !important;
-		text-align: center !important;
-		justify-content: center !important;
-	}
-
-	/* Status badge (span) takes full width too */
-	#rg-chapter-novel-controls>span {
-		text-align: center !important;
-		width: 100% !important;
-		padding: 6px 8px !important;
-		font-size: 12px !important;
-	}
+#rg-chapter-novel-controls::-webkit-scrollbar {
+	display: none !important;
+	/* Safari and Chrome */
 }
 
-@media screen and (max-width: 480px) {
-
-	/* Ultra-compact: even bigger tap targets */
-	#rg-chapter-novel-controls>button,
-	#rg-chapter-novel-controls>select {
-		min-height: 48px !important;
-		font-size: 15px !important;
-	}
+/* Ensure buttons/selects are ALWAYS absolutely compact, inline, and uniform on ALL platforms */
+#rg-chapter-novel-controls>button,
+#rg-chapter-novel-controls>select,
+#rg-chapter-novel-controls>div,
+#rg-chapter-novel-controls>div>button {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	flex: 0 0 auto !important;
+	min-width: auto !important;
+	width: max-content !important;
+	max-width: max-content !important;
+	min-height: 28px !important;
+	max-height: 28px !important;
+	font-size: 11px !important;
+	padding: 4px 8px !important;
+	box-sizing: border-box !important;
+	white-space: nowrap !important;
+	line-height: 1 !important;
 }
+
+/* Defensive override: never allow this chapter bar to inherit full-width mobile button styles */
+#rg-chapter-novel-controls button,
+#rg-chapter-novel-controls select {
+	width: auto !important;
+	max-width: max-content !important;
+	min-width: auto !important;
+	flex: 0 0 auto !important;
+}
+
+/* Status badge (span) stays compact */
+#rg-chapter-novel-controls>span {
+	text-align: center !important;
+	width: auto !important;
+	padding: 4px 6px !important;
+	font-size: 11px !important;
+	flex: 0 0 auto !important;
+}
+
+
 
 /* ──────────────────────────────────────────────────────────────────
    Collapsible Content Sections (fight scenes, R18, author notes, custom)

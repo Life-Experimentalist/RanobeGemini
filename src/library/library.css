@@ -3514,6 +3514,46 @@ html.sidebar-mode .novel-detail-cover {
 	.stat-label {
 		font-size: 0.65rem;
 	}
+
+	/* Keep control chips compact on narrow phones. */
+	.view-toggle {
+		overflow-x: auto;
+		justify-content: flex-start;
+		flex-wrap: nowrap;
+		gap: 6px;
+		padding-bottom: 4px;
+	}
+
+	.view-btn {
+		flex: 0 0 auto;
+		min-width: 0;
+		padding: 7px 10px;
+		font-size: 0.78rem;
+		white-space: nowrap;
+	}
+
+	.reading-status-filter {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.status-filter-btn {
+		width: auto;
+		min-height: 34px;
+		padding: 6px 10px;
+		font-size: 0.75rem;
+		flex: 0 0 auto;
+	}
+
+	.novel-card-status {
+		margin-top: 6px;
+	}
+
+	.status-dropdown {
+		font-size: 0.74rem;
+		padding: 5px 24px 5px 8px;
+	}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

@@ -789,64 +789,9 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @returns {Array<HTMLElement>} Array of button elements
 	 */
 	getSiteSpecificEnhancements() {
-		// Only show on confirmed chapter pages - CRITICAL VALIDATION
-		if (!this.isChapterPage()) {
-			return [];
-		}
-
-		const button = document.createElement("button");
-		button.id = "fanfiction-version-switcher";
-		button.textContent = "🖥️ Desktop";
-		button.title = "Switch to desktop version";
-
-		// Match desktop button styling
-		button.style.cssText = `
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			padding: 8px 12px;
-			margin: 0;
-			background-color: #222;
-			color: #bab9a0;
-			border: 1px solid #ffffff21;
-			box-shadow: inset 0 0 0 1px #5a5a5a4d;
-			border-radius: 4px;
-			cursor: pointer;
-			font-weight: bold;
-			font-size: 12px;
-			z-index: 1000;
-		`;
-
-		button.addEventListener("click", async () => {
-			// Persist explicit preference so normalizeURL honours the switch
-			try {
-				const stored =
-					await browser.storage.local.get(SITE_SETTINGS_KEY);
-				const settings = stored?.[SITE_SETTINGS_KEY] || {};
-				if (!settings.fanfiction) settings.fanfiction = {};
-				settings.fanfiction.domainPreference = "www";
-				await browser.storage.local.set({
-					[SITE_SETTINGS_KEY]: settings,
-				});
-			} catch (_e) {
-				/* non-critical — navigate anyway */
-			}
-			const href = window.location.href;
-			const tld = href.includes("fanfiction.ws") ? "ws" : "net";
-			window.location.href = href.replace(
-				/m\.fanfiction\.(net|ws)/,
-				`www.fanfiction.${tld}`,
-			);
-		});
-
-		button.addEventListener("mouseover", () => {
-			button.style.backgroundColor = "#333";
-		});
-		button.addEventListener("mouseout", () => {
-			button.style.backgroundColor = "#222";
-		});
-
-		return [button];
+		// The desktop/mobile switcher is already rendered in chapter control banners.
+		// Return no site enhancement buttons to avoid duplicate top-row controls.
+		return [];
 	}
 
 	/**

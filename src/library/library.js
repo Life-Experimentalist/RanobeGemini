@@ -2686,16 +2686,32 @@ async function sendAddToLibraryMessage(tabId) {
 
 async function addUrlsToLibrary(urls = []) {
 	const results = {
+		total: urls.length,
+		queued: 0,
 		added: 0,
 		skipped: 0,
+		skippedExisting: 0,
+		skippedDuplicates: 0,
+		unsupported: 0,
 		failed: 0,
 	};
 
-	for (const url of urls) {
+	const prepared = await novelLibrary.prepareUrlsForImport(urls);
+	const queue = prepared.toImport || [];
+	results.queued = queue.length;
+	results.skippedExisting = prepared.skippedExisting || 0;
+	results.skippedDuplicates = prepared.skippedDuplicates || 0;
+	results.unsupported = prepared.unsupported || 0;
+	results.skipped =
+		results.skippedExisting +
+		results.skippedDuplicates +
+		results.unsupported;
+
+	for (const item of queue) {
 		let tabId = null;
 		try {
 			const tab = await browser.tabs.create({
-				url,
+				url: item.url,
 				active: false,
 			});
 			tabId = tab.id;
@@ -2856,15 +2872,19 @@ function setupEventListeners() {
 				elements.urlImportStatus.textContent =
 					supported.length === 0
 						? "No supported URLs found."
-						: `Found ${supported.length} supported URL(s). Adding...`;
+						: `Found ${supported.length} supported URL(s). Preparing import...`;
 			}
 
 			if (supported.length === 0) return;
 
 			const results = await addUrlsToLibrary(supported);
 			if (elements.urlImportStatus) {
-				elements.urlImportStatus.textContent = `Added ${results.added}, failed ${results.failed}.`;
+				elements.urlImportStatus.textContent =
+					`Added ${results.added}, skipped ${results.skipped}, failed ${results.failed}. ` +
+					`(existing: ${results.skippedExisting}, duplicates: ${results.skippedDuplicates}, unsupported: ${results.unsupported})`;
 			}
+
+			await loadLibrary();
 		});
 	}
 
@@ -4317,11 +4337,30 @@ function filterAndSortNovels() {
 	// Filter by search query
 	if (searchQuery) {
 		const query = searchQuery.toLowerCase();
-		novels = novels.filter(
-			(novel) =>
-				novel.title.toLowerCase().includes(query) ||
-				novel.author.toLowerCase().includes(query),
-		);
+		novels = novels.filter((novel) => {
+			const metadata = novel.metadata || {};
+			const toArray = (value) =>
+				Array.isArray(value) ? value : value ? [String(value)] : [];
+			const searchableText = [
+				novel.title,
+				novel.author,
+				novel.description,
+				...toArray(novel.tags),
+				...toArray(novel.genres),
+				...toArray(metadata.tags),
+				...toArray(metadata.additionalTags),
+				...toArray(metadata.genres),
+				...toArray(metadata.fandoms),
+				...toArray(metadata.characters),
+				...toArray(metadata.relationships),
+				...toArray(metadata.warnings),
+				...toArray(metadata.categories),
+			]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+			return searchableText.includes(query);
+		});
 	}
 
 	// Filter by reading status (only in lists view)
@@ -4606,6 +4645,93 @@ function renderShelvesView(novels) {
 	}
 }
 
+function normalizeReadingListIdLocal(rawId) {
+	return String(rawId || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[_\s]+/g, "-")
+		.replace(/^re-reading$/, "rereading")
+		.replace(/^favorite$/, "favourites")
+		.replace(/^favorites$/, "favourites");
+}
+
+function getNovelReadingListsSet(novel) {
+	const listSet = new Set(
+		Array.isArray(novel?.readingLists)
+			? novel.readingLists
+					.map((id) => normalizeReadingListIdLocal(id))
+					.filter(Boolean)
+			: [],
+	);
+
+	if (novel?.rereadingStatus === true) {
+		listSet.add("rereading");
+	}
+
+	return listSet;
+}
+
+function getConfiguredReadingLists() {
+	const configured = Array.isArray(librarySettings?.readingLists)
+		? librarySettings.readingLists
+		: [];
+
+	const out = [];
+	const seen = new Set();
+
+	for (const item of configured) {
+		const id = normalizeReadingListIdLocal(item?.id);
+		if (!id || seen.has(id)) continue;
+		seen.add(id);
+
+		let label = String(item?.label || id);
+		if (id === "rereading" && librarySettings?.rereadingOverlay?.label) {
+			label = librarySettings.rereadingOverlay.label;
+		}
+
+		out.push({
+			id,
+			label,
+		});
+	}
+
+	return out;
+}
+
+function buildStatusDropdownOptions(novel, currentStatus) {
+	const allStatusesForCard = getAllStatuses(
+		librarySettings || {},
+		READING_STATUS_INFO,
+	);
+
+	const statusOptions = allStatusesForCard
+		.filter((s) => !s.isRereadingOverlay)
+		.map(
+			(s) =>
+				`<option value="${escapeHtml(s.id)}" ${
+					s.id === currentStatus ? "selected" : ""
+				}>${escapeHtml(s.label)}</option>`,
+		)
+		.join("");
+
+	const configuredLists = getConfiguredReadingLists();
+	if (configuredLists.length === 0) {
+		return statusOptions;
+	}
+
+	const activeLists = getNovelReadingListsSet(novel);
+	const listOptions = configuredLists
+		.map((list) => {
+			const prefix = activeLists.has(list.id) ? "✓ " : "";
+			return `<option value="__list__:${escapeHtml(list.id)}">${escapeHtml(
+				`${prefix}${list.label}`,
+			)}</option>`;
+		})
+		.join("");
+
+	return `<optgroup label="Reading Status">${statusOptions}</optgroup><optgroup label="Reading Lists (toggle)">${listOptions}</optgroup>`;
+}
+
 /**
  * Create a novel card for shelf view (shows tags instead of website name)
  */
@@ -4635,38 +4761,7 @@ function createNovelCardForShelf(novel, shelf) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
-
-	// Generate status dropdown options including custom statuses
-	const allStatusesForCard = getAllStatuses(
-		librarySettings || {},
-		READING_STATUS_INFO,
-	);
-	const statusOptions = allStatusesForCard
-		.filter((s) => !s.isRereadingOverlay)
-		.map(
-			(s) =>
-				`<option value="${escapeHtml(s.id)}" ${
-					s.id === currentStatus ? "selected" : ""
-				}>${escapeHtml(s.label)}</option>`,
-		)
-		.join("");
-
-	// Re-reading overlay toggle (shown when overlay is enabled)
-	const rereadingOverlayCfg = librarySettings?.rereadingOverlay;
-	const showRereadingToggle = rereadingOverlayCfg?.enabled;
-	const isRereading = novel.rereadingStatus === true;
-	const rereadingToggleHtml = showRereadingToggle
-		? `<button class="rereading-toggle ${
-				isRereading ? "active" : ""
-			}" data-novel-id="${novel.id}" title="${
-				isRereading
-					? "Clear re-reading flag"
-					: "Mark as " +
-						escapeHtml(rereadingOverlayCfg?.label || "Re-reading")
-			}" style="--rereading-color: ${
-				rereadingOverlayCfg?.color || "#9c27b0"
-			}">${escapeHtml(rereadingOverlayCfg?.label || "🔁 Re-reading")}</button>`
-		: "";
+	const statusOptions = buildStatusDropdownOptions(novel, currentStatus);
 
 	// Show tags/genres instead of website name (since we're already in a shelf)
 	const tagsHtml = (novel.genres || novel.tags || [])
@@ -4697,7 +4792,6 @@ function createNovelCardForShelf(novel, shelf) {
 					}" title="Change reading status">
 						${statusOptions}
 					</select>
-					${rereadingToggleHtml}
 				</div>
 				${
 					novel.totalChapters > 0
@@ -4724,49 +4818,44 @@ function createNovelCardForShelf(novel, shelf) {
 	});
 	statusDropdown.addEventListener("change", async (e) => {
 		e.stopPropagation();
-		const newStatus = e.target.value;
-		e.target.dataset.status = newStatus;
-		await handleStatusChange(novel.id, newStatus);
-	});
+		const selectedValue = e.target.value;
 
-	// Re-reading toggle click handler
-	const rereadingToggleBtn = card.querySelector(".rereading-toggle");
-	if (rereadingToggleBtn) {
-		rereadingToggleBtn.addEventListener("click", async (e) => {
-			e.stopPropagation();
-			const wasRereading = novel.rereadingStatus === true;
-			const newRereadingState = !wasRereading;
-			try {
-				await novelLibrary.updateNovel(novel.id, {
-					rereadingStatus: newRereadingState,
-				});
-				// Update local cache
-				const novelIndex = allNovels.findIndex(
-					(n) => n.id === novel.id,
-				);
-				if (novelIndex !== -1) {
-					allNovels[novelIndex].rereadingStatus = newRereadingState;
-				}
-				// Update button appearance without full re-render
-				rereadingToggleBtn.classList.toggle(
-					"active",
-					newRereadingState,
-				);
-				novel.rereadingStatus = newRereadingState;
-				showNotification(
-					newRereadingState
-						? `Marked as ${
-								librarySettings?.rereadingOverlay?.label ||
-								"Re-reading"
-							}`
-						: "Re-reading flag cleared",
-				);
-			} catch (error) {
-				debugError("Failed to update re-reading status:", error);
-				showNotification("Failed to update re-reading status", "error");
+		if (selectedValue.startsWith("__list__:")) {
+			const listId = selectedValue.replace("__list__:", "");
+			const updatedNovel = await handleReadingListToggle(
+				novel.id,
+				listId,
+			);
+			if (updatedNovel) {
+				Object.assign(novel, updatedNovel);
 			}
-		});
-	}
+
+			const latestNovel =
+				allNovels.find((n) => n.id === novel.id) || novel;
+			const latestStatus =
+				latestNovel.readingStatus || READING_STATUS.PLAN_TO_READ;
+			e.target.innerHTML = buildStatusDropdownOptions(
+				latestNovel,
+				latestStatus,
+			);
+			e.target.value = latestStatus;
+			e.target.dataset.status = latestStatus;
+			renderListsStats();
+			return;
+		}
+
+		e.target.dataset.status = selectedValue;
+		const updatedNovel = await handleStatusChange(novel.id, selectedValue);
+		if (updatedNovel) {
+			Object.assign(novel, updatedNovel);
+			e.target.innerHTML = buildStatusDropdownOptions(
+				updatedNovel,
+				updatedNovel.readingStatus || READING_STATUS.PLAN_TO_READ,
+			);
+			e.target.value =
+				updatedNovel.readingStatus || READING_STATUS.PLAN_TO_READ;
+		}
+	});
 
 	// Attach cover fallback using inline onerror
 	const coverImg = card.querySelector(".novel-cover");
@@ -4855,40 +4944,7 @@ function createNovelCard(novel) {
 
 	// Get current reading status
 	const currentStatus = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
-
-	// Generate status dropdown options including custom statuses
-	const allStatusesForCard = getAllStatuses(
-		librarySettings || {},
-		READING_STATUS_INFO,
-	);
-	const statusOptions = allStatusesForCard
-		.filter((s) => !s.isRereadingOverlay)
-		.map(
-			(s) =>
-				`<option value="${escapeHtml(s.id)}" ${
-					s.id === currentStatus ? "selected" : ""
-				}>${escapeHtml(s.label)}</option>`,
-		)
-		.join("");
-
-	// Re-reading overlay toggle (shown when overlay is enabled)
-	const rereadingOverlayCfg = librarySettings?.rereadingOverlay;
-	const showRereadingToggle = rereadingOverlayCfg?.enabled;
-	const isRereading = novel.rereadingStatus === true;
-	const rereadingToggleHtml = showRereadingToggle
-		? `<button class="rereading-toggle ${
-				isRereading ? "active" : ""
-			}" data-novel-id="${novel.id}" title="${
-				isRereading
-					? "Clear re-reading flag"
-					: "Mark as " +
-						escapeHtml(rereadingOverlayCfg?.label || "Re-reading")
-			}" style="--rereading-color: ${
-				rereadingOverlayCfg?.color || "#9c27b0"
-			}">${escapeHtml(
-				rereadingOverlayCfg?.label || "🔁 Re-reading",
-			)}</button>`
-		: "";
+	const statusOptions = buildStatusDropdownOptions(novel, currentStatus);
 
 	card.innerHTML = `
 		<div class="novel-card-inner">
@@ -4912,7 +4968,6 @@ function createNovelCard(novel) {
 					}" title="Change reading status">
 						${statusOptions}
 					</select>
-					${rereadingToggleHtml}
 				</div>
 				${
 					novel.totalChapters > 0
@@ -4940,48 +4995,44 @@ function createNovelCard(novel) {
 	});
 	statusDropdown.addEventListener("change", async (e) => {
 		e.stopPropagation();
-		const newStatus = e.target.value;
-		// Update data attribute for CSS styling
-		e.target.dataset.status = newStatus;
-		await handleStatusChange(novel.id, newStatus);
-	});
+		const selectedValue = e.target.value;
 
-	// Re-reading toggle click handler
-	const rereadingToggleBtnCard = card.querySelector(".rereading-toggle");
-	if (rereadingToggleBtnCard) {
-		rereadingToggleBtnCard.addEventListener("click", async (e) => {
-			e.stopPropagation();
-			const wasRereading = novel.rereadingStatus === true;
-			const newRereadingState = !wasRereading;
-			try {
-				await novelLibrary.updateNovel(novel.id, {
-					rereadingStatus: newRereadingState,
-				});
-				const novelIndex = allNovels.findIndex(
-					(n) => n.id === novel.id,
-				);
-				if (novelIndex !== -1) {
-					allNovels[novelIndex].rereadingStatus = newRereadingState;
-				}
-				rereadingToggleBtnCard.classList.toggle(
-					"active",
-					newRereadingState,
-				);
-				novel.rereadingStatus = newRereadingState;
-				showNotification(
-					newRereadingState
-						? `Marked as ${
-								librarySettings?.rereadingOverlay?.label ||
-								"Re-reading"
-							}`
-						: "Re-reading flag cleared",
-				);
-			} catch (error) {
-				debugError("Failed to update re-reading status:", error);
-				showNotification("Failed to update re-reading status", "error");
+		if (selectedValue.startsWith("__list__:")) {
+			const listId = selectedValue.replace("__list__:", "");
+			const updatedNovel = await handleReadingListToggle(
+				novel.id,
+				listId,
+			);
+			if (updatedNovel) {
+				Object.assign(novel, updatedNovel);
 			}
-		});
-	}
+
+			const latestNovel =
+				allNovels.find((n) => n.id === novel.id) || novel;
+			const latestStatus =
+				latestNovel.readingStatus || READING_STATUS.PLAN_TO_READ;
+			e.target.innerHTML = buildStatusDropdownOptions(
+				latestNovel,
+				latestStatus,
+			);
+			e.target.value = latestStatus;
+			e.target.dataset.status = latestStatus;
+			renderListsStats();
+			return;
+		}
+
+		e.target.dataset.status = selectedValue;
+		const updatedNovel = await handleStatusChange(novel.id, selectedValue);
+		if (updatedNovel) {
+			Object.assign(novel, updatedNovel);
+			e.target.innerHTML = buildStatusDropdownOptions(
+				updatedNovel,
+				updatedNovel.readingStatus || READING_STATUS.PLAN_TO_READ,
+			);
+			e.target.value =
+				updatedNovel.readingStatus || READING_STATUS.PLAN_TO_READ;
+		}
+	});
 
 	card.addEventListener("click", () => openNovelDetail(novel));
 
@@ -4993,12 +5044,23 @@ function createNovelCard(novel) {
  */
 async function handleStatusChange(novelId, newStatus) {
 	try {
-		await novelLibrary.updateNovel(novelId, {
-			readingStatus: newStatus,
-		});
-		// Update local cache
+		const changed = await novelLibrary.updateReadingStatus(
+			novelId,
+			newStatus,
+			false,
+		);
+		if (!changed) {
+			throw new Error("Status update failed");
+		}
+
+		const updatedNovel = await novelLibrary.getNovel(novelId);
 		const novelIndex = allNovels.findIndex((n) => n.id === novelId);
-		if (novelIndex !== -1) {
+		if (novelIndex !== -1 && updatedNovel) {
+			allNovels[novelIndex] = {
+				...allNovels[novelIndex],
+				...updatedNovel,
+			};
+		} else if (novelIndex !== -1) {
 			allNovels[novelIndex].readingStatus = newStatus;
 		}
 		// Show brief notification
@@ -5007,11 +5069,54 @@ async function handleStatusChange(novelId, newStatus) {
 				READING_STATUS_INFO[newStatus]?.label || newStatus
 			}`,
 		);
+
+		return updatedNovel || allNovels[novelIndex] || null;
 	} catch (error) {
 		debugError("Failed to update reading status:", error);
 		showNotification("Failed to update status", "error");
 		// Reload to reset dropdown
-		loadLibrary();
+		await loadLibrary();
+		return null;
+	}
+}
+
+async function handleReadingListToggle(novelId, listId) {
+	try {
+		const normalizedListId = normalizeReadingListIdLocal(listId);
+		if (!normalizedListId) return null;
+
+		const updatedNovel = await novelLibrary.toggleNovelReadingList(
+			novelId,
+			normalizedListId,
+		);
+		if (!updatedNovel) {
+			throw new Error("Reading list toggle failed");
+		}
+
+		const novelIndex = allNovels.findIndex((n) => n.id === novelId);
+		if (novelIndex !== -1) {
+			allNovels[novelIndex] = {
+				...allNovels[novelIndex],
+				...updatedNovel,
+			};
+		}
+
+		const activeSet = getNovelReadingListsSet(updatedNovel);
+		const wasAdded = activeSet.has(normalizedListId);
+		const listLabel =
+			getConfiguredReadingLists().find(
+				(item) => item.id === normalizedListId,
+			)?.label || normalizedListId;
+
+		showNotification(
+			wasAdded ? `Added to ${listLabel}` : `Removed from ${listLabel}`,
+		);
+
+		return updatedNovel;
+	} catch (error) {
+		debugError("Failed to toggle reading list:", error);
+		showNotification("Failed to update reading list", "error");
+		return null;
 	}
 }
 

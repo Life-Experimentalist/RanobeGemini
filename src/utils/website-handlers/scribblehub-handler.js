@@ -35,6 +35,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		color: "#6c5ce7",
 		novelIdPattern: /\/series\/(\d+)\/|\/read\/(\d+)-/,
 		primaryDomain: "www.scribblehub.com",
+		importUrlTemplate: "https://www.scribblehub.com/series/{id}/",
 	};
 
 	// Handler type: Metadata requires visiting dedicated novel info page

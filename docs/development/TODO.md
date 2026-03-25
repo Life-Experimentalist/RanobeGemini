@@ -91,6 +91,9 @@ graph TB
 
 - [x] **Reading Lists as Badge Layer** — `rereading` moved out of primary statuses and into list badges
 - [x] **Predefined Lists in RG Controls** — `🔁 Rereading` and `⭐ Favourites` quick toggles on chapter controls
+- [x] **Library Card Dropdown Lists** — Novel-card status dropdown now includes reading-list toggle actions (including `rereading`)
+- [x] **Narrow-Mobile Control Compaction** — Library view/filter chips no longer force full-width buttons on small phones
+- [x] **Adaptive URL Import Pipeline** — URL import now canonicalizes via handler templates, auto-skips existing novels, and deduplicates pasted links per batch
 - [x] **Legacy Status Migration** — old `re-reading` status entries normalize to `reading` + `rereading` list
 - [x] **Install Guide + Landing Polish** — added cross-browser install guide page, standardized footer/nav install links, and updated published Edge install path
 

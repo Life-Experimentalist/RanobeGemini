@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://ranobe.vkrishna04.me/schemas/ranobe-backup.schema.json",
+	"$id": "https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/docs/backup/ranobe-backup.schema.json",
 	"title": "Ranobe Gemini Backup",
 	"description": "Complete backup format for Ranobe Gemini browser extension, including library data, settings, and enhanced chapter content",
 	"type": "object",
@@ -70,6 +70,10 @@
 				"selectedModelId": {
 					"type": "string",
 					"description": "Currently selected Gemini model (e.g., gemini-2.0-flash)"
+				},
+				"backupModelId": {
+					"type": "string",
+					"description": "Fallback Gemini model for retry/failover"
 				},
 				"customEndpoint": {
 					"type": "string",
@@ -142,6 +146,25 @@
 				"driveFolderId": {
 					"type": "string"
 				},
+				"driveAuthTokens": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"access_token": {
+							"type": "string"
+						},
+						"refresh_token": {
+							"type": "string"
+						},
+						"expires_at": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"token_type": {
+							"type": "string"
+						}
+					}
+				},
 				"backupMode": {
 					"type": "string"
 				},
@@ -213,7 +236,7 @@
 				"backupHistory": {
 					"type": "array",
 					"items": {
-						"type": "object"
+						"$ref": "#/$defs/backupHistoryEntry"
 					}
 				},
 				"lastBackupAt": {
@@ -234,6 +257,13 @@
 				"rg_domain_settings": {
 					"type": "object",
 					"additionalProperties": true
+				},
+				"novelUpdateEnabled": {
+					"type": "boolean"
+				},
+				"novelUpdateIntervalDays": {
+					"type": "integer",
+					"minimum": 0
 				},
 				"contentFilterSettings": {
 					"type": "object",
@@ -287,6 +317,46 @@
 		}
 	},
 	"$defs": {
+		"backupHistoryEntry": {
+			"type": "object",
+			"additionalProperties": true,
+			"properties": {
+				"filename": {
+					"type": "string"
+				},
+				"createdAt": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"uploadedToDrive": {
+					"type": "boolean"
+				},
+				"reason": {
+					"type": "string"
+				},
+				"variant": {
+					"type": "string",
+					"enum": [
+						"versioned",
+						"continuous"
+					]
+				},
+				"fileId": {
+					"type": "string"
+				},
+				"webViewLink": {
+					"type": "string",
+					"format": "uri"
+				},
+				"downloadId": {
+					"type": "integer"
+				},
+				"exportedAt": {
+					"type": "integer",
+					"minimum": 0
+				}
+			}
+		},
 		"characterName": {
 			"type": "string",
 			"minLength": 1,
@@ -305,6 +375,54 @@
 			"type": "object",
 			"additionalProperties": true,
 			"properties": {
+				"category": {
+					"type": [
+						"string",
+						"null"
+					]
+				},
+				"fandoms": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"fandomHierarchy": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": true,
+						"properties": {
+							"category": {
+								"type": [
+									"string",
+									"null"
+								]
+							},
+							"name": {
+								"type": "string"
+							},
+							"url": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"rating": {
+					"type": [
+						"string",
+						"null"
+					]
+				},
+				"language": {
+					"type": [
+						"string",
+						"null"
+					]
+				},
+				"isCrossover": {
+					"type": "boolean"
+				},
 				"characters": {
 					"type": "array",
 					"items": {
@@ -315,6 +433,54 @@
 					"type": "array",
 					"items": {
 						"$ref": "#/$defs/relationshipGroup"
+					}
+				},
+				"stats": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"words": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						},
+						"reviews": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						},
+						"favorites": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						},
+						"follows": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						},
+						"publishedDate": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						},
+						"updatedDate": {
+							"type": [
+								"integer",
+								"null"
+							],
+							"minimum": 0
+						}
 					}
 				}
 			}
@@ -373,7 +539,10 @@
 					"type": "string"
 				},
 				"totalChapters": {
-					"type": "integer",
+					"type": [
+						"integer",
+						"null"
+					],
 					"minimum": 0
 				},
 				"lastReadChapter": {

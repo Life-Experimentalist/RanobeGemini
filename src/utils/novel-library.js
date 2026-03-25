@@ -687,6 +687,107 @@ export class NovelLibrary {
 	}
 
 	/**
+	 * Get normalized shelf + siteNovelId + generated novelId from a URL.
+	 * @param {string} url
+	 * @returns {{ shelf: Object, siteNovelId: string, novelId: string } | null}
+	 */
+	getNovelIdentityFromUrl(url) {
+		const shelf = this.getShelfForUrl(url);
+		if (!shelf) return null;
+
+		const siteNovelId = this.extractNovelId(url, shelf);
+		if (!siteNovelId) return null;
+
+		const novelId = this.generateNovelId(shelf.id, siteNovelId);
+		return { shelf, siteNovelId, novelId };
+	}
+
+	/**
+	 * Build a canonical import URL using handler-provided shelf metadata.
+	 * Keeps main code generic and delegates templates to handler metadata.
+	 * @param {Object} shelf
+	 * @param {string} siteNovelId
+	 * @param {string} originalUrl
+	 * @returns {string}
+	 */
+	buildCanonicalImportUrl(shelf, siteNovelId, originalUrl) {
+		try {
+			const template = shelf?.importUrlTemplate;
+			if (template && siteNovelId) {
+				return template.replace(
+					"{id}",
+					encodeURIComponent(siteNovelId),
+				);
+			}
+
+			const parsed = new URL(originalUrl);
+			if (shelf?.primaryDomain) {
+				parsed.hostname = shelf.primaryDomain;
+			}
+			parsed.hash = "";
+			return parsed.toString();
+		} catch (_error) {
+			return originalUrl;
+		}
+	}
+
+	/**
+	 * Prepare URL import batch by deduplicating, skipping already-added novels,
+	 * and canonicalizing import URLs from handler metadata.
+	 * @param {Array<string>} urls
+	 * @returns {Promise<{toImport:Array<{url:string,novelId:string,shelfId:string}>, skippedExisting:number, skippedDuplicates:number, unsupported:number}>}
+	 */
+	async prepareUrlsForImport(urls = []) {
+		const library = await this.getLibrary();
+		const existingNovelIds = new Set(Object.keys(library.novels || {}));
+		const seenNovelIds = new Set();
+
+		const result = {
+			toImport: [],
+			skippedExisting: 0,
+			skippedDuplicates: 0,
+			unsupported: 0,
+		};
+
+		for (const rawUrl of urls) {
+			const url = String(rawUrl || "").trim();
+			if (!url) {
+				result.unsupported += 1;
+				continue;
+			}
+
+			const identity = this.getNovelIdentityFromUrl(url);
+			if (!identity) {
+				result.unsupported += 1;
+				continue;
+			}
+
+			if (existingNovelIds.has(identity.novelId)) {
+				result.skippedExisting += 1;
+				continue;
+			}
+
+			if (seenNovelIds.has(identity.novelId)) {
+				result.skippedDuplicates += 1;
+				continue;
+			}
+
+			seenNovelIds.add(identity.novelId);
+			result.toImport.push({
+				url: this.buildCanonicalImportUrl(
+					identity.shelf,
+					identity.siteNovelId,
+					url,
+				),
+				novelId: identity.novelId,
+				shelfId: identity.shelf.id,
+			});
+		}
+
+		return result;
+	}
+
+	/**
 	 * Extract novel ID from URL based on shelf pattern
 	 * @param {string} url - The URL to extract from
 	 * @param {Object} shelf - Shelf definition with novelIdPattern

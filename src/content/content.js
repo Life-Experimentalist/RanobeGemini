@@ -5148,23 +5148,6 @@ if (window.__RGInitDone) {
 						max-width: none !important;
 						font-size: 13px !important;
 					}
-					#rg-chapter-novel-controls {
-						flex-direction: column !important;
-						align-items: stretch !important;
-						gap: 6px !important;
-						padding: 8px !important;
-					}
-					#rg-chapter-novel-controls button,
-					#rg-chapter-novel-controls select {
-						min-height: 44px !important;
-						width: 100% !important;
-						font-size: 14px !important;
-						padding: 10px 12px !important;
-					}
-					#rg-chapter-novel-controls > span:first-child {
-						text-align: center !important;
-						margin-bottom: 4px !important;
-					}
 					.gemini-main-summary-group {
 						flex-direction: column !important;
 						align-items: stretch !important;
@@ -5585,10 +5568,7 @@ if (window.__RGInitDone) {
 		});
 		rereadBtn.addEventListener("click", async () => {
 			try {
-				await novelLibrary.toggleNovelReadingList(
-					novelId,
-					"rereading",
-				);
+				await novelLibrary.toggleNovelReadingList(novelId, "rereading");
 				showTimedBanner(
 					"📖 Re-reading mode started",
 					"success",
@@ -7561,15 +7541,18 @@ if (window.__RGInitDone) {
 			protectFromThemeExtensions(controlsContainer);
 			controlsContainer.style.cssText = `
 			display: flex;
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
 			align-items: center;
-			gap: 8px;
-			padding: 10px 12px;
+			gap: 6px;
+			padding: 8px 10px;
 			margin: 10px 0;
 			background: linear-gradient(135deg, #1a2540 0%, #16213e 100%);
 			border: 1px solid #2a4b8d;
 			border-radius: 6px;
 			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+			scrollbar-width: none;
 		`;
 
 			if (controlsConfig.wrapInDefinitionList) {
@@ -7630,6 +7613,11 @@ if (window.__RGInitDone) {
 				btn.addEventListener("mouseout", () => {
 					btn.style.filter = "brightness(1)";
 				});
+				// Enforce compact sizing with highest inline priority to avoid host/mobile CSS width:100% rules.
+				btn.style.setProperty("width", "auto", "important");
+				btn.style.setProperty("max-width", "max-content", "important");
+				btn.style.setProperty("min-width", "auto", "important");
+				btn.style.setProperty("flex", "0 0 auto", "important");
 				btn.addEventListener("click", onClick);
 				return btn;
 			};
@@ -7681,6 +7669,18 @@ if (window.__RGInitDone) {
 				overflow: hidden;
 				flex: 0 0 auto;
 			`;
+				statusSelect.style.setProperty("width", "auto", "important");
+				statusSelect.style.setProperty(
+					"max-width",
+					"180px",
+					"important",
+				);
+				statusSelect.style.setProperty(
+					"min-width",
+					"140px",
+					"important",
+				);
+				statusSelect.style.setProperty("flex", "0 0 auto", "important");
 
 				const statusOptions = getReadingStatusOptions();
 
@@ -7715,82 +7715,111 @@ if (window.__RGInitDone) {
 				);
 				controlsContainer.appendChild(removeBtn);
 
-				const readingListBadges = document.createElement("div");
-				readingListBadges.style.cssText =
-					"display:flex;gap:6px;align-items:center;flex-wrap:wrap;";
+				// --- Reading Lists Dropdown ---
 				const readingLists = new Set(existingNovel.readingLists || []);
-
 				const readingListBadgeDefs = [
-					{
-						id: "rereading",
-						label: "🔁 Rereading",
-						activeBg: "#7b1fa2",
-					},
-					{
-						id: "favourites",
-						label: "⭐ Favourites",
-						activeBg: "#92400e",
-					},
+					{ id: "rereading", label: "🔁 Rereading" },
+					{ id: "favourites", label: "⭐ Favourites" },
 				];
 
+				const readingListSelect = document.createElement("select");
+				readingListSelect.title = "Manage Reading Lists";
+				readingListSelect.style.cssText = `
+					padding: 6px 8px;
+					background: #2f2f2f;
+					color: white;
+					border: 1px solid #666;
+					border-radius: 4px;
+					cursor: pointer;
+					font-size: 12px;
+					min-width: 140px;
+					max-width: 180px;
+					white-space: nowrap;
+					text-overflow: ellipsis;
+					overflow: hidden;
+					flex: 0 0 auto;
+				`;
+				readingListSelect.style.setProperty(
+					"width",
+					"auto",
+					"important",
+				);
+				readingListSelect.style.setProperty(
+					"max-width",
+					"180px",
+					"important",
+				);
+				readingListSelect.style.setProperty(
+					"min-width",
+					"140px",
+					"important",
+				);
+				readingListSelect.style.setProperty(
+					"flex",
+					"0 0 auto",
+					"important",
+				);
+
+				// Default/Prompt Option
+				const defaultOpt = document.createElement("option");
+				defaultOpt.value = "";
+				defaultOpt.textContent = "📑 Add to List...";
+				defaultOpt.disabled = true;
+				defaultOpt.selected = true;
+				readingListSelect.appendChild(defaultOpt);
+
+				// List Options
 				for (const listDef of readingListBadgeDefs) {
 					const isActive = readingLists.has(listDef.id);
-					const badge = document.createElement("button");
-					badge.type = "button";
-					badge.textContent = listDef.label;
-					badge.title = isActive
-						? `Remove from ${listDef.label}`
-						: `Add to ${listDef.label}`;
-					badge.style.cssText = `
-						padding: 4px 8px;
-						border-radius: 999px;
-						font-size: 11px;
-						font-weight: 600;
-						cursor: pointer;
-						white-space: nowrap;
-						border: 1px solid ${isActive ? listDef.activeBg : "#616161"};
-						color: ${isActive ? "#ffffff" : "#e0e0e0"};
-						background: ${isActive ? listDef.activeBg : "#2f2f2f"};
-						flex: 0 0 auto;
-					`;
-					badge.addEventListener("click", async () => {
-						try {
-							const updated =
-								await novelLibrary.toggleNovelReadingList(
-									existingNovel.id,
-									listDef.id,
-								);
-							if (updated) {
-								showTimedBanner(
-									`${listDef.label} updated`,
-									"success",
-									1800,
-								);
-							}
-							removeChapterNovelControlsFromDOM();
-							const newControls =
-								await createChapterPageNovelControls(
-									controlsConfig,
-								);
-							if (newControls) {
-								placeChapterNovelControls(
-									newControls,
-									controlsConfig,
-								);
-							}
-						} catch (err) {
-							debugError("Failed to update reading list", err);
-							showTimedBanner(
-								"Failed to update reading list",
-								"warning",
-								2000,
-							);
-						}
-					});
-					readingListBadges.appendChild(badge);
+					const option = document.createElement("option");
+					option.value = listDef.id;
+					option.textContent =
+						(isActive ? "✓ " : "  ") + listDef.label;
+					readingListSelect.appendChild(option);
 				}
 
-				controlsContainer.appendChild(readingListBadges);
+				readingListSelect.addEventListener("change", async (e) => {
+					const listId = e.target.value;
+					if (!listId) return;
+
+					const listDef = readingListBadgeDefs.find(
+						(l) => l.id === listId,
+					);
+					try {
+						const updated =
+							await novelLibrary.toggleNovelReadingList(
+								existingNovel.id,
+								listId,
+							);
+						if (updated) {
+							showTimedBanner(
+								`${listDef.label} updated`,
+								"success",
+								1800,
+							);
+						}
+						removeChapterNovelControlsFromDOM();
+						const newControls =
+							await createChapterPageNovelControls(
+								controlsConfig,
+							);
+						if (newControls) {
+							placeChapterNovelControls(
+								newControls,
+								controlsConfig,
+							);
+						}
+					} catch (err) {
+						debugError("Failed to update reading list", err);
+						showTimedBanner(
+							"Failed to update reading list",
+							"warning",
+							2000,
+						);
+					}
+				});
+
+				controlsContainer.appendChild(readingListSelect);
 			}
 
 			// Open Library button — pass novel ID so the library auto-opens the modal
