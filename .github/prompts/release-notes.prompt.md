@@ -49,6 +49,24 @@ Follow the same style as docs/release/RELEASE_NOTES_4.5.0.md and docs/release/RE
 - Update docs/release/CHANGELOG.md with matching version entry.
 - Keep README feature highlights aligned when release includes user-visible features.
 
+## Version-Sensitive Docs Routine (LLM/AI Required)
+
+Use this routine in the same release task. Do not use a global replace script.
+
+1. Read `package.json` and take `version` as the source of truth.
+2. Check only known version-sensitive docs and update only when mismatched:
+	- `docs/overview/Roadmap.md`
+	- `docs/development/TODO.md`
+	- `docs/overview/VISUAL_JOURNEY.md`
+	- `docs/architecture/COLLAPSIBLE_JOURNEY.md`
+3. Keep historical docs unchanged unless explicitly requested:
+	- `docs/release/RELEASE_NOTES_*.md`
+	- `docs/release/commit-history.md`
+4. Update dates only for files actually edited in this release task.
+5. If a file already matches the target version and needs no content changes, leave it exactly as-is.
+6. Preserve document meaning and chronology. Do not rewrite past milestones as current unless the project docs intentionally changed that status.
+7. Keep formatting and heading style consistent with each file's existing style.
+
 ## Release Readiness Checklist (must include)
 
 - Lint status
