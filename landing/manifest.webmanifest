@@ -1,10 +1,16 @@
 {
 	"name": "Ranobe Gemini Web App",
 	"short_name": "Ranobe Gemini",
+	"id": "/landing/library-hub.html",
 	"description": "Installable companion for Ranobe Gemini with quick access to library workflows and setup guidance.",
 	"start_url": "./library-hub.html",
 	"scope": "./",
 	"display": "standalone",
+	"display_override": [
+		"standalone",
+		"minimal-ui",
+		"browser"
+	],
 	"background_color": "#050b14",
 	"theme_color": "#0b1628",
 	"lang": "en",

@@ -235,6 +235,7 @@ const pwaInstallNote = document.getElementById("pwa-install-note");
 let extensionDetected = false;
 let libraryUrl = null;
 let deferredInstallPrompt = null;
+let hasReloadedForSwUpdate = false;
 
 const EXTENSION_IDS = {
 	chromium: [
@@ -325,7 +326,40 @@ async function initPwaSupport() {
 	}
 
 	try {
-		await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+		const registration = await navigator.serviceWorker.register("./sw.js", {
+			scope: "./",
+		});
+
+		const activateWaitingWorker = () => {
+			if (registration.waiting) {
+				registration.waiting.postMessage({ type: "SKIP_WAITING" });
+			}
+		};
+
+		registration.addEventListener("updatefound", () => {
+			const { installing } = registration;
+			if (!installing) return;
+
+			installing.addEventListener("statechange", () => {
+				if (
+					installing.state === "installed" &&
+					navigator.serviceWorker.controller
+				) {
+					activateWaitingWorker();
+					updatePwaNote(
+						"An app update is available. Refreshing to apply the latest version...",
+					);
+				}
+			});
+		});
+
+		navigator.serviceWorker.addEventListener("controllerchange", () => {
+			if (hasReloadedForSwUpdate) return;
+			hasReloadedForSwUpdate = true;
+			window.location.reload();
+		});
+
+		activateWaitingWorker();
 	} catch (_err) {
 		updatePwaNote(
 			"Web App install service failed to initialize. Reload and try again.",
@@ -355,7 +389,7 @@ async function initPwaSupport() {
 	});
 
 	updatePwaNote(
-		"Install support initialized. On some browsers, install appears in the address bar or browser menu.",
+		"Install support initialized with offline caching. On some browsers, install appears in the address bar or browser menu.",
 	);
 }
 

@@ -1,4 +1,6 @@
-const CACHE_NAME = "rg-landing-pwa-v1";
+const CACHE_VERSION = "v2";
+const CACHE_NAME = `rg-landing-pwa-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `rg-landing-runtime-${CACHE_VERSION}`;
 const OFFLINE_URL = "./offline.html";
 
 const CORE_ASSETS = [
@@ -38,49 +40,92 @@ self.addEventListener("activate", (event) => {
 						.map((key) => caches.delete(key)),
 				),
 			)
+			.then(
+				() =>
+					self.registration?.navigationPreload?.enable?.() ||
+					Promise.resolve(),
+			)
 			.then(() => self.clients.claim()),
 	);
 });
 
+self.addEventListener("message", (event) => {
+	if (event?.data?.type === "SKIP_WAITING") {
+		self.skipWaiting();
+	}
+});
+
+function isCoreAsset(requestUrl) {
+	const pathname = requestUrl.pathname;
+	return CORE_ASSETS.some((asset) =>
+		pathname.endsWith(asset.replace("./", "/")),
+	);
+}
+
 self.addEventListener("fetch", (event) => {
 	const { request } = event;
 	if (request.method !== "GET") return;
+	if (request.cache === "only-if-cached" && request.mode !== "same-origin")
+		return;
 
 	const requestUrl = new URL(request.url);
 	if (requestUrl.origin !== self.location.origin) return;
 
 	if (request.mode === "navigate") {
 		event.respondWith(
-			fetch(request)
-				.then((response) => {
-					const clone = response.clone();
-					caches
-						.open(CACHE_NAME)
-						.then((cache) => cache.put(request, clone));
-					return response;
-				})
-				.catch(() =>
-					caches.match(request).then((cached) => {
-						if (cached) return cached;
-						return caches.match(OFFLINE_URL);
-					}),
-				),
+			(async () => {
+				try {
+					const preloadResponse = await event.preloadResponse;
+					if (preloadResponse) {
+						const cache = await caches.open(RUNTIME_CACHE);
+						cache.put(request, preloadResponse.clone());
+						return preloadResponse;
+					}
+
+					const networkResponse = await fetch(request);
+					if (networkResponse && networkResponse.ok) {
+						const cache = await caches.open(RUNTIME_CACHE);
+						cache.put(request, networkResponse.clone());
+					}
+					return networkResponse;
+				} catch (_err) {
+					const cached = await caches.match(request);
+					if (cached) return cached;
+					return caches.match(OFFLINE_URL);
+				}
+			})(),
 		);
 		return;
 	}
 
 	event.respondWith(
-		caches.match(request).then((cached) => {
-			if (cached) return cached;
-			return fetch(request).then((response) => {
-				if (response && response.ok) {
-					const clone = response.clone();
-					caches
-						.open(CACHE_NAME)
-						.then((cache) => cache.put(request, clone));
+		(async () => {
+			const fromCache = await caches.match(request);
+			if (fromCache) {
+				if (isCoreAsset(requestUrl)) {
+					fetch(request)
+						.then(async (response) => {
+							if (response && response.ok) {
+								const cache = await caches.open(CACHE_NAME);
+								cache.put(request, response.clone());
+							}
+						})
+						.catch(() => {
+							// Silent stale-while-revalidate failure.
+						});
 				}
-				return response;
-			});
-		}),
+				return fromCache;
+			}
+
+			const response = await fetch(request);
+			if (response && response.ok) {
+				const targetCache = isCoreAsset(requestUrl)
+					? CACHE_NAME
+					: RUNTIME_CACHE;
+				const cache = await caches.open(targetCache);
+				cache.put(request, response.clone());
+			}
+			return response;
+		})(),
 	);
 });
