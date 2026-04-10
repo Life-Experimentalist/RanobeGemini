@@ -5,6 +5,9 @@
 Purpose: make AI coding agents productive quickly when editing, building, and packaging this browser-extension.
 Use Powershell commands only since this is a Windows environment. Use `npm run` scripts for build/package steps, not direct calls to `dev/*.js` scripts, since the `npm run` scripts include important setup and validation.
 
+- **Roadmap authority**: `docs/overview/TECHNICAL_ROADMAP.md` is the active technical roadmap. If roadmap tasks are requested, follow phase order and acceptance criteria from that file unless the user explicitly reprioritizes.
+- **Roadmap change policy**: prefer incremental, phase-scoped implementation; avoid large rewrites that mix unrelated refactors.
+
 - **Big picture**: this is a cross-browser (Firefox/Chromium) browser extension. Runtime pieces live under `src/`:
     - `src/background/` — service-worker-style background logic (keep-alive, backups, message handlers).
     - `content/` — DOM injection and page-specific parsing/UX (`content.js`, styles).
@@ -52,6 +55,12 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     - Whenever a Mermaid diagram is added or edited, include a short "Diagram elements" list directly under it describing each major node/state.
     - For every version release note, always include two sections in the same file: a detailed long-form release note and a short quick-release summary at the bottom (same style as [v4.5.0](../docs/release/RELEASE_NOTES_4.5.0.md) and [v4.6.0](../docs/release/RELEASE_NOTES_4.6.0.md)).
     - If docs diverge from implementation, implementation wins and docs must be corrected before finishing.
+    - For release tasks, update version-sensitive docs only when mismatch exists; do not apply broad global replacements.
+    - Never alter historical release records (`docs/release/RELEASE_NOTES_*.md`, `docs/release/commit-history.md`) unless the user explicitly asks.
+
+- **Prompt-driven release routine**:
+    - Use `.github/prompts/release-notes.prompt.md` for release note generation and version-sensitive docs checks.
+    - If a doc already matches target version/content, leave it unchanged.
 
 - **Key architectural features** (v4.4.0+):
     - **Reading Lists**: Users can create custom reading lists (`rereading`, `favourites`, `r18`, etc.). Implemented in `src/utils/novel-library.js` with APIs:
