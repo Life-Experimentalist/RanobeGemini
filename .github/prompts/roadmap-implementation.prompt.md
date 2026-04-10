@@ -10,19 +10,30 @@ Use this prompt when implementing roadmap work in this repository.
 ## Execution Rules
 
 1. Confirm current phase and acceptance criteria from `docs/overview/TECHNICAL_ROADMAP.md`.
-2. Propose a minimal change set for that phase only.
-3. Implement code changes with no unrelated refactors.
-4. Run validation steps (build/test/lint as applicable).
-5. Update docs touched by implementation.
-6. Report what was intentionally not changed.
+2. Start with a current-state check: identify what is already done and what still remains.
+3. Propose a minimal change set only for remaining gaps in that phase.
+4. Implement code changes with no unrelated refactors.
+5. Prioritize modularization of active bottlenecks (especially `src/content/content.js`) over reworking already-completed migrations.
+6. Run validation steps (build/test/lint as applicable).
+7. Update docs touched by implementation.
+8. Report what was intentionally not changed.
 
 ## Documentation Rules
 
 - Do not use global replacement scripts for version updates.
 - Update version-sensitive docs only if mismatched to `package.json` version.
+- Keep contributor docs practical for handler/provider/plugin authoring and publishing.
 - Do not edit historical release files unless explicitly asked:
-  - `docs/release/RELEASE_NOTES_*.md`
-  - `docs/release/commit-history.md`
+    - `docs/release/RELEASE_NOTES_*.md`
+    - `docs/release/commit-history.md`
+
+## Architecture Rules
+
+- Preserve local-first design (no mandatory backend dependency).
+- Assume user-owned API keys/cloud credentials and optional anonymized telemetry with explicit consent on first library open.
+- Use `src/utils/constants.js` as global default configuration source of truth.
+- Keep AI integration provider-modular through adapters (do not hard-wire core flow to one provider).
+- Keep build-time secret injection via `.env`/build pipeline, never by hardcoding source secrets.
 
 ## Required Output
 

@@ -27,8 +27,13 @@
 	},
 	"devDependencies": {
 		"archiver": "^5.3.2",
+		"dotenv": "^16.4.5",
 		"eslint": "^8.57.0",
 		"prettier": "^3.2.5"
+	},
+	"overrides": {
+		"ajv": "^8.17.1",
+		"brace-expansion": "^2.0.3"
 	},
 	"files": [
 		".vscode",

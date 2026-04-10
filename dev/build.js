@@ -18,6 +18,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
+const dotenv = require("dotenv");
 
 // Configuration
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -25,6 +26,10 @@ const SRC_DIR = path.join(ROOT_DIR, "src");
 const DIST_DIR = path.join(ROOT_DIR, "dist");
 const RELEASES_DIR = path.join(ROOT_DIR, "releases");
 const HANDLERS_DIR = path.join(SRC_DIR, "utils", "website-handlers");
+const CONSTANTS_FILE = path.join(SRC_DIR, "utils", "constants.js");
+
+// Load local environment variables for build-time secret injection.
+dotenv.config({ path: path.join(ROOT_DIR, ".env") });
 
 const ASSETS_TO_COPY = [
 	"icons",
@@ -35,6 +40,21 @@ const ASSETS_TO_COPY = [
 	"utils",
 	"library",
 	"lib",
+];
+
+const BUILD_SECRET_ENV_MAP = [
+	{
+		envKey: "RG_DRIVE_CLIENT_ID",
+		constName: "DEFAULT_DRIVE_CLIENT_ID",
+	},
+	{
+		envKey: "RG_DRIVE_CLIENT_SECRET",
+		constName: "DEFAULT_DRIVE_CLIENT_SECRET",
+	},
+	{
+		envKey: "RG_TELEMETRY_ENDPOINT",
+		constName: "TELEMETRY_ENDPOINT",
+	},
 ];
 
 // Helper: Copy directory recursively
@@ -107,6 +127,61 @@ function clean() {
 	}
 }
 
+// Guardrail: source constants should not contain hardcoded secrets.
+function assertNoHardcodedSecretsInSource() {
+	if (!fs.existsSync(CONSTANTS_FILE)) return;
+	const source = fs.readFileSync(CONSTANTS_FILE, "utf8");
+
+	for (const item of BUILD_SECRET_ENV_MAP) {
+		const re = new RegExp(
+			`export const ${item.constName} = "([^"]*)";`,
+			"m",
+		);
+		const match = source.match(re);
+		if (!match) continue;
+
+		const value = match[1] || "";
+		if (value && !value.startsWith("%%")) {
+			throw new Error(
+				`Potential hardcoded secret in src/utils/constants.js for ${item.constName}. Keep source value empty or placeholder and use .env for build-time injection.`,
+			);
+		}
+	}
+}
+
+function injectBuildSecrets(platformDist) {
+	const distConstantsPath = path.join(platformDist, "utils", "constants.js");
+	if (!fs.existsSync(distConstantsPath)) return;
+
+	let content = fs.readFileSync(distConstantsPath, "utf8");
+	let injectedCount = 0;
+
+	for (const item of BUILD_SECRET_ENV_MAP) {
+		const envValue = process.env[item.envKey];
+		if (!envValue) continue;
+
+		const escaped = JSON.stringify(envValue);
+		const re = new RegExp(
+			`export const ${item.constName} = "[^"]*";`,
+			"m",
+		);
+		if (!re.test(content)) continue;
+
+		content = content.replace(
+			re,
+			`export const ${item.constName} = ${escaped};`,
+		);
+		injectedCount += 1;
+	}
+
+	if (injectedCount > 0) {
+		fs.writeFileSync(distConstantsPath, content, "utf8");
+		console.log(
+			`✅ Injected ${injectedCount} build-time secret value(s) into dist constants for ${path.basename(platformDist)}.`,
+		);
+	}
+}
+
 // Task: Build for Platform
 function build(platform) {
 	console.log(`\n🔨 Building for ${platform}...`);
@@ -148,6 +223,8 @@ function build(platform) {
 			}
 		}
 	});
+
+	injectBuildSecrets(platformDist);
 
 	console.log(`✨ ${platform} build complete.`);
 	return platformDist;
@@ -261,6 +338,7 @@ async function main() {
 
 	// Always sync source manifests with package.json version on every build
 	syncSourceManifests(packageJson.version);
+	assertNoHardcodedSecretsInSource();
 
 	for (const platform of platforms) {
 		build(platform);

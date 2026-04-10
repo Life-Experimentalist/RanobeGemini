@@ -6,6 +6,8 @@ releases/*
 releases/source/*
 !releases/source/*.zip
 .env
+.env.*
+!.env.example
 sample/
 client_secret*.json
 *apps.googleusercontent.com.json
@@ -22,3 +24,4 @@ Changes.md
 dev/emoji-report.txt
 .venv/
 INSTRUCTIONS.md
+gcm-diagnose.log

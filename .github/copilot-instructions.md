@@ -13,6 +13,13 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     - `content/` — DOM injection and page-specific parsing/UX (`content.js`, styles).
     - `src/utils/website-handlers/` — one handler per site; filenames end with `-handler.js` and are auto-registered.
     - `popup/`, `library/`, `icons/` — UI and assets.
+    - Architecture direction is local-first and plugin-friendly (no required backend service).
+
+- **Current-state corrections (must honor before planning work)**:
+    - `src/` migration is already complete; do not propose redoing that move.
+    - `src/background/background.js` has already been reduced significantly.
+    - Highest modularization priority is `src/content/content.js` (still 10k+).
+    - AI/provider abstraction should be treated as adapter-based modularization, not vendor-specific branching in core flow.
 
 - **Build & release flow** (authoritative): use the `dev` scripts.
     - Local dev: `npm install` then `npm run watch` (runs `dev/watch.js` to auto-build on changes).
@@ -42,6 +49,19 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
 - **Integration & external dependencies**:
     - Google Gemini API usage and models are configured via constants in `src/utils/constants.js` and used in `src/background/` and `utils/` modules.
     - Google Drive OAuth (PKCE) and backup flows live in `src/utils/drive.js`, with the OAuth redirect in `landing/oauth-redirect.html`. Do not hardcode secrets.
+    - Core behavior is user-device execution with user-owned API keys and storage.
+    - Optional telemetry must remain opt-in and anonymized only, with consent gathered on first library open.
+    - AI stack should remain provider-agnostic and ready for multiple backends (Gemini, local Ollama, OpenAI-compatible, router providers).
+
+- **Configuration source of truth**:
+    - Treat `src/utils/constants.js` as the global default source of truth for shared constants.
+    - Handler-specific/custom overrides must be explicit and documented, not ad-hoc inline literals.
+    - Build-time secrets should come from `.env` and be injected at build output only; do not hardcode secrets in source.
+
+- **Extensibility requirement**:
+    - Keep handler/provider/plugin integration paths easy to contribute to.
+    - Any extensibility feature must include docs for add, test, and publish flow.
+    - Include provider-adapter docs for AI integrations and keep contribution steps straightforward.
 
 - **What AI agents should avoid changing**:
     - Never modify code in `dist/` or artifacts in `releases/` — these are build outputs.
@@ -78,6 +98,7 @@ Use Powershell commands only since this is a Windows environment. Use `npm run` 
     - Add a handler: create `src/utils/website-handlers/my-site-handler.js` exporting the same shape as other handlers; run `npm run build` and verify `src/utils/website-handlers/handler-registry.js` includes it.
     - Update domains: edit handlers, then run `npm run update-domains` (calls `dev/generate-manifest-domains.js`) before packaging.
     - Add a new reading list type: Update `BUILTIN_READING_LISTS` in `novel-library.js` and update `landing/novel-status.html` with new badge examples.
+    - Modularize content runtime: split one cohesive concern from `src/content/content.js` into a dedicated module and keep `content.js` as a thin orchestrator.
 
 If something here is unclear or you need an expanded rule (e.g., handler API shape or background messaging conventions), tell me which area to expand.
 
