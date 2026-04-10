@@ -38,6 +38,14 @@
 // ─────────────────────────────────────────────────────────────
 
 let deps = null;
+const inFlightSummaryRequests = new Map();
+const latestRequestByContainer = new WeakMap();
+
+function buildSummaryRequestKey(chunkIndices, isShort) {
+	const ordered = Array.from(new Set(chunkIndices)).sort((a, b) => a - b);
+	const scope = window.location.href || document.location?.href || "unknown";
+	return `${scope}::${isShort ? "short" : "long"}::${ordered.join(",")}`;
+}
 
 function getSummaryReferenceNode() {
 	if (!deps) return document.body;
@@ -416,181 +424,224 @@ async function summariseLargeContent(
  * @param {boolean}  isShort      - true → short summary, false → long summary
  */
 async function summarize(chunkIndices, isShort) {
-	const {
-		sendMessageWithRetry,
-		wakeUpBackgroundWorker,
-		showStatusMessage,
-		logNotification,
-		resolveNovelDataForNotification,
-		debugLog,
-		debugError,
-	} = deps;
+	const requestKey = buildSummaryRequestKey(chunkIndices, isShort);
+	if (inFlightSummaryRequests.has(requestKey)) {
+		deps?.debugLog?.(
+			`Reusing in-flight ${isShort ? "short" : "long"} summary request for chunks ${chunkIndices.join(",")}`,
+		);
+		return inFlightSummaryRequests.get(requestKey);
+	}
 
-	const summaryType = isShort ? "Short" : "Long";
-	const statusDiv = document.getElementById("gemini-status");
+	const requestPromise = (async () => {
+		const {
+			sendMessageWithRetry,
+			wakeUpBackgroundWorker,
+			showStatusMessage,
+			logNotification,
+			resolveNovelDataForNotification,
+			debugLog,
+			debugError,
+		} = deps;
 
-	// Determine container
-	const startIdx = Math.min(...chunkIndices);
-	const endIdx = Math.max(...chunkIndices);
-	const summaryTextContainer = findSummaryContainer(startIdx, endIdx);
+		const summaryType = isShort ? "Short" : "Long";
+		const statusDiv = document.getElementById("gemini-status");
 
-	// Find the relevant button (to disable during processing)
-	const btnClass = isShort
-		? chunkIndices.length === 1 && chunkIndices[0] === 0
-			? ".gemini-main-short-summary-btn"
-			: ".gemini-main-short-summary-btn, .gemini-chunk-short-summary-btn"
-		: chunkIndices.length === 1 && chunkIndices[0] === 0
-			? ".gemini-main-long-summary-btn"
-			: ".gemini-main-long-summary-btn, .gemini-chunk-long-summary-btn";
-	const btn = document.querySelector(btnClass);
-	const originalBtnText = btn?.textContent || "";
-
-	try {
-		// Wake up background worker
-		if (btn) {
-			btn.disabled = true;
-			btn.textContent = "Waking up AI…";
-		}
-		if (statusDiv) statusDiv.textContent = "Waking up AI service…";
-
-		const isReady = await wakeUpBackgroundWorker();
-		if (!isReady) {
-			throw new Error(
-				"Background service is not responding. Please try again.",
-			);
-		}
-
-		// Collect content
-		if (btn) btn.textContent = "Extracting content…";
-		if (statusDiv) {
-			statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary…`;
-		}
+		// Determine container
+		const startIdx = Math.min(...chunkIndices);
+		const endIdx = Math.max(...chunkIndices);
+		const summaryTextContainer = findSummaryContainer(startIdx, endIdx);
+		const requestToken = Symbol(requestKey);
 		if (summaryTextContainer) {
-			summaryTextContainer.style.display = "block";
-			summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
+			latestRequestByContainer.set(summaryTextContainer, requestToken);
 		}
 
-		const collected = collectContent(chunkIndices);
+		// Find the relevant button (to disable during processing)
+		const btnClass = isShort
+			? chunkIndices.length === 1 && chunkIndices[0] === 0
+				? ".gemini-main-short-summary-btn"
+				: ".gemini-main-short-summary-btn, .gemini-chunk-short-summary-btn"
+			: chunkIndices.length === 1 && chunkIndices[0] === 0
+				? ".gemini-main-long-summary-btn"
+				: ".gemini-main-long-summary-btn, .gemini-chunk-long-summary-btn";
+		const btn = document.querySelector(btnClass);
+		const originalBtnText = btn?.textContent || "";
 
-		if (!collected.text) {
-			const msg = collected.error || "No content available for summary.";
-			showStatusMessage(msg, "warning", 3000);
+		try {
+			// Wake up background worker
+			if (btn) {
+				btn.disabled = true;
+				btn.textContent = "Waking up AI…";
+			}
+			if (statusDiv) statusDiv.textContent = "Waking up AI service…";
+
+			const isReady = await wakeUpBackgroundWorker();
+			if (!isReady) {
+				throw new Error(
+					"Background service is not responding. Please try again.",
+				);
+			}
+
+			// Collect content
+			if (btn) btn.textContent = "Extracting content…";
+			if (statusDiv) {
+				statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary…`;
+			}
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = msg;
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
 			}
-			return;
-		}
 
-		debugLog(
-			`Collected ${collected.text.length} chars from ${collected.source}`,
-		);
+			const collected = collectContent(chunkIndices);
 
-		// Get model info for context-window logic
-		if (btn) btn.textContent = "Summarising…";
-		if (statusDiv) {
-			statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summary…`;
-		}
-
-		const modelInfo = await sendMessageWithRetry({
-			action: "getModelInfo",
-		});
-		const maxContextSize = modelInfo.maxContextSize || 16000;
-		const estimatedTokens = Math.ceil(collected.text.length / 4);
-		const threshold = isShort ? maxContextSize * 0.8 : maxContextSize * 0.6;
-
-		let summary = "";
-
-		if (estimatedTokens > threshold) {
-			summary = await summariseLargeContent(
-				document.title,
-				collected.text,
-				maxContextSize,
-				statusDiv,
-				isShort,
-			);
-		} else {
-			const action = isShort
-				? "shortSummarizeWithGemini"
-				: "summarizeWithGemini";
-			const response = await sendMessageWithRetry({
-				action,
-				title: document.title,
-				content: collected.text,
-			});
-
-			if (response?.success && response.summary) {
-				summary = response.summary;
-			} else {
-				const errMsg = response?.error || "Failed to generate summary.";
-				if (errMsg.includes("API key is missing")) {
-					showStatusMessage(
-						"API key is missing. Opening settings page…",
-						"error",
-					);
-					// eslint-disable-next-line no-undef
-					browser.runtime.sendMessage({ action: "openPopup" });
-					if (summaryTextContainer) {
-						summaryTextContainer.textContent =
-							"API key is missing. Please add your Gemini API key in the settings.";
-					}
-					throw new Error("API key is missing");
+			if (!collected.text) {
+				const msg =
+					collected.error || "No content available for summary.";
+				showStatusMessage(msg, "warning", 3000);
+				if (summaryTextContainer) {
+					summaryTextContainer.style.display = "block";
+					summaryTextContainer.textContent = msg;
 				}
-				throw new Error(errMsg);
+				return;
 			}
-		}
 
-		// Render
-		if (summary) {
-			renderSummaryInContainer(
-				summaryTextContainer,
-				summary,
-				summaryType,
+			debugLog(
+				`Collected ${collected.text.length} chars from ${collected.source}`,
 			);
+
+			// Get model info for context-window logic
+			if (btn) btn.textContent = "Summarising…";
 			if (statusDiv) {
-				statusDiv.textContent = "Summary generated successfully!";
+				statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summary…`;
+			}
+
+			const modelInfo = await sendMessageWithRetry({
+				action: "getModelInfo",
+			});
+			const maxContextSize = modelInfo.maxContextSize || 16000;
+			const estimatedTokens = Math.ceil(collected.text.length / 4);
+			const threshold = isShort
+				? maxContextSize * 0.8
+				: maxContextSize * 0.6;
+
+			let summary = "";
+
+			if (estimatedTokens > threshold) {
+				summary = await summariseLargeContent(
+					document.title,
+					collected.text,
+					maxContextSize,
+					statusDiv,
+					isShort,
+				);
+			} else {
+				const action = isShort
+					? "shortSummarizeWithGemini"
+					: "summarizeWithGemini";
+				const response = await sendMessageWithRetry({
+					action,
+					title: document.title,
+					content: collected.text,
+				});
+
+				if (response?.success && response.summary) {
+					summary = response.summary;
+				} else {
+					const errMsg =
+						response?.error || "Failed to generate summary.";
+					if (errMsg.includes("API key is missing")) {
+						showStatusMessage(
+							"API key is missing. Opening settings page…",
+							"error",
+						);
+						// eslint-disable-next-line no-undef
+						browser.runtime.sendMessage({ action: "openPopup" });
+						if (summaryTextContainer) {
+							summaryTextContainer.textContent =
+								"API key is missing. Please add your Gemini API key in the settings.";
+						}
+						throw new Error("API key is missing");
+					}
+					throw new Error(errMsg);
+				}
+			}
+
+			// Render
+			if (summary) {
+				if (
+					summaryTextContainer &&
+					latestRequestByContainer.get(summaryTextContainer) !==
+						requestToken
+				) {
+					debugLog(
+						`Skipping stale ${summaryType.toLowerCase()} summary render for chunks ${chunkIndices.join(",")}`,
+					);
+					return {
+						skipped: true,
+						reason: "stale-request",
+						summaryType,
+					};
+				}
+
+				renderSummaryInContainer(
+					summaryTextContainer,
+					summary,
+					summaryType,
+				);
+				if (statusDiv) {
+					statusDiv.textContent = "Summary generated successfully!";
+				}
+				logNotification({
+					type: "success",
+					message: `${summaryType} summary generated`,
+					title: `${summaryType} summary`,
+					novelData: await resolveNovelDataForNotification(),
+					metadata: { summaryType, isShort, length: summary.length },
+				});
+			} else {
+				throw new Error("Failed to generate summary.");
+			}
+		} catch (error) {
+			debugError("Error in summarize:", error);
+			if (statusDiv) {
+				statusDiv.textContent = error.message.includes("API key")
+					? "API key is missing. Please check the settings."
+					: `Error: ${error.message}`;
+			}
+			if (summaryTextContainer) {
+				summaryTextContainer.textContent =
+					"Failed to generate summary.";
+				summaryTextContainer.style.display = "block";
 			}
 			logNotification({
-				type: "success",
-				message: `${summaryType} summary generated`,
-				title: `${summaryType} summary`,
+				type: "error",
+				message: `${summaryType} summary failed: ${error.message}`,
+				title: `${summaryType} summary failed`,
 				novelData: await resolveNovelDataForNotification(),
-				metadata: { summaryType, isShort, length: summary.length },
+				metadata: { summaryType, isShort },
 			});
-		} else {
-			throw new Error("Failed to generate summary.");
-		}
-	} catch (error) {
-		debugError("Error in summarize:", error);
-		if (statusDiv) {
-			statusDiv.textContent = error.message.includes("API key")
-				? "API key is missing. Please check the settings."
-				: `Error: ${error.message}`;
-		}
-		if (summaryTextContainer) {
-			summaryTextContainer.textContent = "Failed to generate summary.";
-			summaryTextContainer.style.display = "block";
-		}
-		logNotification({
-			type: "error",
-			message: `${summaryType} summary failed: ${error.message}`,
-			title: `${summaryType} summary failed`,
-			novelData: await resolveNovelDataForNotification(),
-			metadata: { summaryType, isShort },
-		});
-	} finally {
-		if (btn) {
-			btn.disabled = false;
-			btn.textContent = originalBtnText;
-		}
-		setTimeout(() => {
-			if (
-				statusDiv?.textContent?.includes("Summary generated") &&
-				!statusDiv.textContent.includes("API key is missing")
-			) {
-				statusDiv.textContent = "";
+		} finally {
+			if (btn) {
+				btn.disabled = false;
+				btn.textContent = originalBtnText;
 			}
-		}, 5000);
+			setTimeout(() => {
+				if (
+					statusDiv?.textContent?.includes("Summary generated") &&
+					!statusDiv.textContent.includes("API key is missing")
+				) {
+					statusDiv.textContent = "";
+				}
+			}, 5000);
+		}
+	})();
+
+	inFlightSummaryRequests.set(requestKey, requestPromise);
+	try {
+		return await requestPromise;
+	} finally {
+		if (inFlightSummaryRequests.get(requestKey) === requestPromise) {
+			inFlightSummaryRequests.delete(requestKey);
+		}
 	}
 }
 

@@ -575,39 +575,45 @@ if (window.__RGInitDone) {
 		const tempDiv = document.createElement("div");
 		tempDiv.innerHTML = text;
 
-		// Check if content has <p> tags
-		const pTags = tempDiv.querySelectorAll("p");
+		const decodeEntities = (value) => {
+			if (!value) return "";
+			const decoder = document.createElement("textarea");
+			decoder.innerHTML = value;
+			return decoder.value;
+		};
+
+		const blockSelector =
+			"p, div, li, blockquote, pre, section, article, h1, h2, h3, h4, h5, h6";
+		const blockNodes = Array.from(tempDiv.querySelectorAll(blockSelector));
 
 		let paragraphs = [];
 
-		if (pTags.length > 0) {
-			// Extract text from each <p> tag
-			paragraphs = Array.from(pTags)
-				.map((p) => p.textContent.trim())
-				.filter((text) => text.length > 0);
+		if (blockNodes.length > 0) {
+			paragraphs = blockNodes
+				.map((node) => node.textContent.trim())
+				.filter((content) => content.length > 0);
 		} else {
-			// No <p> tags - split by double newlines or <br><br>
-			// First normalize <br> tags to newlines
-			let normalized = text.replace(/<br\s*\/?\?>/gi, "\n");
-			// Remove remaining HTML tags
+			// Plain text fallback: normalize breaks and split on blank lines.
+			let normalized = text.replace(/<br\s*\/?\s*>/gi, "\n");
 			normalized = normalized.replace(/<[^>]*>/g, "");
-			// Split by double newlines
+			normalized = decodeEntities(normalized)
+				.replace(/\r\n?/g, "\n")
+				.replace(/[ \t]+\n/g, "\n");
+
 			paragraphs = normalized
-				.split(/\n\n+/)
+				.split(/\n\s*\n+/)
 				.map((p) => p.trim())
 				.filter((p) => p.length > 0);
+
+			if (paragraphs.length <= 1) {
+				paragraphs = normalized
+					.split(/\n+/)
+					.map((p) => p.trim())
+					.filter((p) => p.length > 0);
+			}
 		}
 
-		// Decode HTML entities in each paragraph
-		return paragraphs.map((p) => {
-			return p
-				.replace(/&amp;/g, "&")
-				.replace(/&lt;/g, "<")
-				.replace(/&gt;/g, ">")
-				.replace(/&quot;/g, '"')
-				.replace(/&#039;/g, "'")
-				.replace(/&nbsp;/g, " ");
-		});
+		return paragraphs.map((p) => decodeEntities(p));
 	}
 
 	/**
