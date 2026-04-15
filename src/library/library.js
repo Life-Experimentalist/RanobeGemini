@@ -3969,7 +3969,7 @@ function setupEventListeners() {
 	// Telemetry consent modal (opt-out notification)
 	if (elements.telemetryAcceptBtn) {
 		elements.telemetryAcceptBtn.addEventListener("click", async () => {
-			// Keep enabled (default)
+			await optInTelemetry();
 			await markFirstRunComplete();
 			closeModal(elements.telemetryConsentModal);
 			showNotification(
@@ -4017,10 +4017,7 @@ function setupEventListeners() {
 	}
 	if (elements.telemetryBannerKeep) {
 		elements.telemetryBannerKeep.addEventListener("click", async () => {
-			await saveTelemetryConfig({
-				consentShown: true,
-				consentDate: Date.now(),
-			});
+			await optInTelemetry();
 			await markFirstRunComplete();
 			if (elements.telemetryToggle) {
 				elements.telemetryToggle.checked = true;

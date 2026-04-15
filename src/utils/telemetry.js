@@ -1,12 +1,12 @@
 /**
  * Telemetry System for Ranobe Gemini
- * Opt-out analytics using CFlair-Counter
+ * Opt-in analytics using CFlair-Counter
  *
  * PRIVACY NOTICE:
- * - Enabled by default (opt-out)
+ * - Disabled by default until user consent
  * - Only tracks anonymous view counts
  * - No personal information or reading data collected
- * - User can disable anytime in settings
+ * - User can enable/disable anytime in settings
  */
 
 import { debugLog, debugError } from "./logger.js";
@@ -20,10 +20,10 @@ const PROJECT_NAME = "ranobe-gemini";
 
 /**
  * Default telemetry configuration
- * NOTE: Enabled by default (opt-out model)
+ * NOTE: Disabled by default (opt-in model)
  */
 const DEFAULT_CONFIG = {
-	enabled: true, // Opt-out: enabled by default
+	enabled: false, // Opt-in: disabled until user accepts
 	consentShown: false,
 	consentDate: null,
 	customWebhookUrl: "", // Optional custom webhook for advanced users
