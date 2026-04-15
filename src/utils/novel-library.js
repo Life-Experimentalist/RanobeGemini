@@ -692,6 +692,20 @@ export class NovelLibrary {
 	 * @returns {{ shelf: Object, siteNovelId: string, novelId: string } | null}
 	 */
 	getNovelIdentityFromUrl(url) {
+		try {
+			const parsed = new URL(url);
+			// AO3 series lists are not single importable novels.
+			if (
+				(parsed.hostname.includes("archiveofourown.org") ||
+					parsed.hostname.includes("ao3.org")) &&
+				/^\/series\/\d+/.test(parsed.pathname || "")
+			) {
+				return null;
+			}
+		} catch (_error) {
+			return null;
+		}
+
 		const shelf = this.getShelfForUrl(url);
 		if (!shelf) return null;
 
@@ -735,7 +749,7 @@ export class NovelLibrary {
 	 * Prepare URL import batch by deduplicating, skipping already-added novels,
 	 * and canonicalizing import URLs from handler metadata.
 	 * @param {Array<string>} urls
-	 * @returns {Promise<{toImport:Array<{url:string,novelId:string,shelfId:string}>, skippedExisting:number, skippedDuplicates:number, unsupported:number}>}
+	 * @returns {Promise<{toImport:Array<{url:string,originalUrl:string,novelId:string,shelfId:string}>, skippedExisting:number, skippedDuplicates:number, unsupported:number}>}
 	 */
 	async prepareUrlsForImport(urls = []) {
 		const library = await this.getLibrary();
@@ -779,6 +793,7 @@ export class NovelLibrary {
 					identity.siteNovelId,
 					url,
 				),
+				originalUrl: url,
 				novelId: identity.novelId,
 				shelfId: identity.shelf.id,
 			});

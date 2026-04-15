@@ -1415,23 +1415,57 @@ function extractUrlsFromText(text) {
 function filterSupportedUrls(urls) {
 	return urls.filter((url) => {
 		try {
-			return isSupportedDomain(new URL(url).hostname);
+			const parsed = new URL(url);
+			if (!isSupportedDomain(parsed.hostname)) return false;
+			// Explicitly ignore AO3 series lists (community-curated lists, not single works).
+			if (
+				(parsed.hostname.includes("archiveofourown.org") ||
+					parsed.hostname.includes("ao3.org")) &&
+				/^\/series\/\d+/.test(parsed.pathname || "")
+			) {
+				return false;
+			}
+			// Ensure the URL maps to an actual importable novel identity.
+			// Example: AO3 /series/* pages are intentionally excluded.
+			return !!novelLibrary.getNovelIdentityFromUrl(url);
 		} catch {
 			return false;
 		}
 	});
 }
 
-async function addUrlsToLibrary(urls) {
+function inferChapterHintFromUrl(url) {
+	try {
+		const parsed = new URL(url);
+		const fromQuery = Number(parsed.searchParams.get("chapter"));
+		if (Number.isFinite(fromQuery) && fromQuery > 0) return fromQuery;
+
+		const match = (parsed.pathname || "").match(
+			/(?:chapter|chap|ch)[-_/ ]?(\d{1,5})/i,
+		);
+		if (match) {
+			const n = Number(match[1]);
+			if (Number.isFinite(n) && n > 0) return n;
+		}
+	} catch (_error) {
+		// ignore parse issues
+	}
+	return 0;
+}
+
+async function addUrlsToLibrary(urls, onProgress = null) {
 	const results = {
 		total: urls.length,
 		queued: 0,
+		processed: 0,
 		added: 0,
+		continued: 0,
 		skipped: 0,
 		skippedExisting: 0,
 		skippedDuplicates: 0,
 		unsupported: 0,
 		failed: 0,
+		failedUrls: [],
 	};
 
 	const prepared = await novelLibrary.prepareUrlsForImport(urls);
@@ -1445,29 +1479,67 @@ async function addUrlsToLibrary(urls) {
 		results.skippedDuplicates +
 		results.unsupported;
 
+	if (typeof onProgress === "function") {
+		onProgress({ ...results, phase: "prepared" });
+	}
+
 	for (const item of queue) {
 		let tabId = null;
+		let shouldCloseTab = true;
 		try {
+			if (typeof onProgress === "function") {
+				onProgress({
+					...results,
+					phase: "processing",
+					currentUrl: item.originalUrl || item.url,
+				});
+			}
+
 			const tab = await browser.tabs.create({
-				url: item.url,
+				url: item.originalUrl || item.url,
 				active: false,
 			});
 			tabId = tab.id;
 			await waitForTabComplete(tabId);
-			const success = await sendAddToLibraryMessage(tabId);
-			if (success) {
+			const response = await sendAddToLibraryMessage(tabId);
+			if (response.success) {
 				results.added += 1;
+				const lastReadChapter = Number(
+					response?.novel?.lastReadChapter || 0,
+				);
+				const chapterHint = inferChapterHintFromUrl(
+					item.originalUrl || item.url,
+				);
+				if (lastReadChapter > 0 || chapterHint > 0) {
+					results.continued += 1;
+				}
 			} else {
 				results.failed += 1;
+				shouldCloseTab = false; // Keep failed tab open for user visibility/debugging.
+				results.failedUrls.push({
+					url: item.originalUrl || item.url,
+					error: response.error || "Failed to add this URL",
+				});
 			}
-		} catch {
+		} catch (error) {
 			results.failed += 1;
+			shouldCloseTab = false;
+			results.failedUrls.push({
+				url: item.originalUrl || item.url,
+				error: error?.message || "Unexpected import error",
+			});
 		} finally {
+			results.processed += 1;
+			if (typeof onProgress === "function") {
+				onProgress({ ...results, phase: "processed" });
+			}
 			if (tabId !== null) {
-				try {
-					await browser.tabs.remove(tabId);
-				} catch (_closeError) {
-					// ignore close errors
+				if (shouldCloseTab) {
+					try {
+						await browser.tabs.remove(tabId);
+					} catch (_closeError) {
+						// ignore close errors
+					}
 				}
 			}
 		}
@@ -1496,18 +1568,31 @@ function waitForTabComplete(tabId, timeoutMs = 15000) {
 
 async function sendAddToLibraryMessage(tabId) {
 	const maxAttempts = 3;
+	let lastError = null;
 	for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
 		try {
 			const response = await browser.tabs.sendMessage(tabId, {
 				action: "addToLibrary",
 			});
-			if (response?.success) return true;
-		} catch (_err) {
+			if (response?.success) {
+				return { success: true, novel: response.novel || null };
+			}
+			if (response && response.success === false) {
+				return {
+					success: false,
+					error: response.error || "Metadata extraction failed",
+				};
+			}
+		} catch (err) {
+			lastError = err;
 			// retry
 		}
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
-	return false;
+	return {
+		success: false,
+		error: lastError?.message || "Content script did not respond",
+	};
 }
 
 // ── Legacy export / import / clear ───────────────────────────────────────────
@@ -2430,20 +2515,63 @@ function setupEventListeners() {
 			const raw = urlImportText.value || "";
 			const extracted = extractUrlsFromText(raw);
 			const supported = filterSupportedUrls(extracted);
+			const unsupportedInInput = Math.max(0, extracted.length - supported.length);
 
 			if (urlImportStatus) {
 				urlImportStatus.textContent =
 					supported.length === 0
-						? "No supported URLs found."
-						: `Found ${supported.length} supported URL(s). Preparing import…`;
+						? "No importable URLs found (unsupported URLs like AO3 series pages are skipped)."
+						: `Found ${supported.length} importable URL(s). Preparing import…`;
 			}
-			if (supported.length === 0) return;
-			const results = await addUrlsToLibrary(supported);
+			if (supported.length === 0) {
+				showToast(
+					"❌ No importable URLs found. Unsupported URLs were skipped.",
+					"error",
+				);
+				return;
+			}
+
+			urlImportBtn.disabled = true;
+			const originalBtnText = urlImportBtn.textContent;
+			urlImportBtn.textContent = "⏳ Importing…";
+
+			const results = await addUrlsToLibrary(supported, (progress) => {
+				if (!urlImportStatus) return;
+				if (progress.phase === "prepared") {
+					urlImportStatus.textContent = `Queued ${progress.queued}. Processing 0/${progress.queued}…`;
+					return;
+				}
+
+				const currentUrlPart = progress.currentUrl
+					? ` | ${String(progress.currentUrl).slice(0, 80)}`
+					: "";
+				urlImportStatus.textContent =
+					`Processing ${progress.processed}/${progress.queued} | Added ${progress.added} (continued ${progress.continued}) | ` +
+					`Skipped ${progress.skipped} | Failed ${progress.failed}${currentUrlPart}`;
+			});
+
 			if (urlImportStatus) {
 				urlImportStatus.textContent =
-					`Added ${results.added}, skipped ${results.skipped}, failed ${results.failed}. ` +
+					`Done. Added ${results.added} (continued ${results.continued}), skipped ${results.skipped}, failed ${results.failed}. ` +
 					`(existing: ${results.skippedExisting}, duplicates: ${results.skippedDuplicates}, unsupported: ${results.unsupported})`;
 			}
+
+			if (results.failed > 0) {
+				showToast(
+					`⚠️ ${results.failed} URL(s) failed. Failed tabs were left open for inspection.`,
+					"warning",
+				);
+			}
+
+			if (results.unsupported > 0 || unsupportedInInput > 0) {
+				showToast(
+					`⚠️ Skipped ${Math.max(results.unsupported, unsupportedInInput)} unsupported URL(s) (for example AO3 /series pages).`,
+					"warning",
+				);
+			}
+
+			urlImportBtn.disabled = false;
+			urlImportBtn.textContent = originalBtnText;
 		});
 	}
 
