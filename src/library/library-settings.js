@@ -2515,7 +2515,10 @@ function setupEventListeners() {
 			const raw = urlImportText.value || "";
 			const extracted = extractUrlsFromText(raw);
 			const supported = filterSupportedUrls(extracted);
-			const unsupportedInInput = Math.max(0, extracted.length - supported.length);
+			const unsupportedInInput = Math.max(
+				0,
+				extracted.length - supported.length,
+			);
 
 			if (urlImportStatus) {
 				urlImportStatus.textContent =

@@ -124,7 +124,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				type: "toggle",
 				defaultValue: true,
 				description:
-					"Show a FichHub download button in chapter controls.",
+					"Show a FicHub download button in chapter controls.",
 			},
 			{
 				key: "showCopyButton",
@@ -438,7 +438,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	}
 
 	/**
-	 * Get chapter control buttons: version switcher + FichHub download.
+	 * Get chapter control buttons: version switcher + FicHub download.
 	 * Both buttons are controlled by site settings; async to read preferences.
 	 * @returns {Promise<Array>} Resolves to array of button spec objects
 	 */
@@ -525,7 +525,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			});
 		}
 
-		// ── Download button (opens FichHub for epub/mobi/etc) ───────────────
+		// ── Download button (opens FicHub for epub/mobi/etc) ───────────────
 		if (siteConf.downloadEnabled !== false) {
 			buttons.push({
 				text: "Download",

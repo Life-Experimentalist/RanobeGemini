@@ -117,10 +117,16 @@ When enhancing, improve readability while fully respecting the author's original
 
 	// Return true if this handler can handle the current website
 	canHandle() {
-		return (
+		const hostMatch =
 			window.location.hostname.includes("archiveofourown.org") ||
-			window.location.hostname.includes("ao3.org")
-		);
+			window.location.hostname.includes("ao3.org");
+		if (!hostMatch) return false;
+
+		// Ignore AO3 series list pages for now (not a single importable novel unit).
+		const path = window.location.pathname || "";
+		if (/^\/series\/\d+/.test(path)) return false;
+
+		return true;
 	}
 
 	/**
@@ -260,7 +266,7 @@ When enhancing, improve readability while fully respecting the author's original
 	}
 
 	/**
-	 * Get chapter control buttons: FichHub download.
+	 * Get chapter control buttons: FicHub download.
 	 * Reads site settings asynchronously so configuration reflects user prefs.
 	 * @returns {Promise<Array>} Resolves to array of button specs
 	 */

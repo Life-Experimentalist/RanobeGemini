@@ -7886,7 +7886,7 @@ if (window.__RGInitDone) {
 				controlsContainer.appendChild(toggleBannersBtn);
 			}
 
-			// Add custom handler buttons (e.g., FichHub download for FF.net and AO3)
+			// Add custom handler buttons (e.g., FicHub download for FF.net and AO3)
 			if (
 				currentHandler &&
 				typeof currentHandler.getCustomChapterButtons === "function"
@@ -10110,7 +10110,17 @@ if (window.__RGInitDone) {
 
 			// Import novel library
 			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
-			const { novelLibrary } = await import(libraryUrl);
+			const { novelLibrary, READING_STATUS } = await import(libraryUrl);
+
+			const inferredLastReadChapter = Number.isFinite(
+				Number(metadata.currentChapter),
+			)
+				? Number(metadata.currentChapter)
+				: 0;
+			const inferredReadingStatus =
+				inferredLastReadChapter > 0
+					? READING_STATUS.READING
+					: undefined;
 
 			// Add/update novel in library
 			const result = await novelLibrary.addOrUpdateNovel({
@@ -10118,6 +10128,9 @@ if (window.__RGInitDone) {
 				author: metadata.author,
 				coverUrl: metadata.coverUrl || metadata.coverImage,
 				currentChapter: metadata.currentChapter,
+				lastReadChapter: inferredLastReadChapter,
+				lastReadUrl: window.location.href,
+				readingStatus: inferredReadingStatus,
 				totalChapters:
 					metadata.totalChapters || metadata.metadata?.totalChapters,
 				chapterTitle: metadata.chapterTitle,
