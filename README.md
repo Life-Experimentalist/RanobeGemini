@@ -58,7 +58,7 @@
 - **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
 - **Multiple Gemini Models**: Gemini 2.0 Flash (recommended), 2.5 Flash (fastest), 2.5 Pro (highest quality), with backup key rotation.
 - **Export Templates**: Configurable filename templates for novel copy/download operations.
-- **FichHub Integration**: One-click download button for EPUB/MOBI via FichHub.
+- **FicHub Integration**: One-click download button for EPUB/MOBI via FicHub.
 - **Restore Original**: Revert to the original chapter text at any time.
 - **Dynamic Domain System**: Automatically handles subdomains and new site variations via build-time manifest generation.
 
@@ -220,10 +220,24 @@ This project is licensed under the Apache License, Version 2.0. See the [LICENSE
 
 Copyright 2025 VKrishna04
 
+## Project Counters (CFlair)
+
+Live project counters are powered by CFlair Counter at [counter.vkrishna04.me](https://counter.vkrishna04.me/).
+
+| Project | Counter |
+| ------- | ------- |
+| vkrishna04-portfolio | ![vkrishna04-portfolio](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio/badge?style=flat-square&color=blue&label=vkrishna04-portfolio) |
+| ranobe-gemini-startup | ![ranobe-gemini-startup](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup/badge?style=flat-square&color=brightgreen&label=ranobe-startup) |
+| ranobe-gemini-extension_update | ![ranobe-gemini-extension_update](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update/badge?style=flat-square&color=orange&label=rg-update) |
+| ranobe-gemini-extension_install | ![ranobe-gemini-extension_install](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install/badge?style=flat-square&color=purple&label=rg-install) |
+| ranobe-gemini-feature_usage | ![ranobe-gemini-feature_usage](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage/badge?style=flat-square&color=teal&label=rg-feature-usage) |
+| Eldritchify | ![Eldritchify](https://counter.vkrishna04.me/api/views/Eldritchify/badge?style=flat-square&color=red&label=Eldritchify) |
+| ranobe-gemini-opt_out | ![ranobe-gemini-opt_out](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out/badge?style=flat-square&color=yellow&label=rg-opt-out) |
+
 ## Acknowledgements
 
 - Powered by the [Google Gemini API](https://ai.google.dev/)
-- EPUB/MOBI downloads via [FichHub](https://fichub.net/)
+- EPUB/MOBI downloads via [FicHub](https://fichub.net/)
 - OAuth backup support for [Google Drive](https://drive.google.com/)
 
 ---
@@ -231,3 +245,5 @@ Copyright 2025 VKrishna04
 ## Project Topics
 
 `browser-extension` `firefox-extension` `chrome-extension` `edge-extension` `gemini-ai` `web-novel` `fanfiction` `archiveofourown` `ranobes` `scribblehub` `reading-tracker` `novel-library` `javascript` `manifest-v3` `google-ai` `ai-enhancement` `light-novel` `translation`
+
+> Warning: This project uses the CFlair Counter service for anonymized telemetry metrics (such as aggregate feature/page usage). No personal identity data is required for these counters.
