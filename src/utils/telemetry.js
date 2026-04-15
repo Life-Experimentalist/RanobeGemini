@@ -15,7 +15,7 @@ const TELEMETRY_CONFIG_KEY = "rg_telemetry_config";
 const FIRST_RUN_KEY = "rg_first_run_complete";
 
 // CFlair-Counter API configuration
-const CFLAIR_API_BASE = "https://cflaircounter.pages.dev";
+const CFLAIR_API_BASE = "https://counter.vkrishna04.me";
 const PROJECT_NAME = "ranobe-gemini";
 
 /**

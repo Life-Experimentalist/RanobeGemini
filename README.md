@@ -29,6 +29,13 @@
 [![MV3](https://img.shields.io/badge/Manifest-V3-orange?style=flat)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-4285F4?style=flat&logo=google)](https://ai.google.dev/)
 [![Edge Add-on](https://img.shields.io/badge/Microsoft%20Edge-Add--on-0078d7?style=flat&logo=microsoftedge)](https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn)
+[![vkrishna04-portfolio](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio/badge?style=flat-square&color=blue&label=vkrishna04-portfolio)](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio)
+[![ranobe-startup](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup/badge?style=flat-square&color=brightgreen&label=rg-startup)](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup)
+[![rg-update](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update/badge?style=flat-square&color=orange&label=rg-update)](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update)
+[![rg-install](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install/badge?style=flat-square&color=purple&label=rg-install)](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install)
+[![rg-feature-usage](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage/badge?style=flat-square&color=teal&label=rg-feature-usage)](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage)
+[![Eldritchify](https://counter.vkrishna04.me/api/views/Eldritchify/badge?style=flat-square&color=red&label=Eldritchify)](https://counter.vkrishna04.me/api/views/Eldritchify)
+[![rg-opt-out](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out/badge?style=flat-square&color=yellow&label=rg-opt-out)](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out)
 
 </div>
 
@@ -220,20 +227,6 @@ This project is licensed under the Apache License, Version 2.0. See the [LICENSE
 
 Copyright 2025 VKrishna04
 
-## Project Counters (CFlair)
-
-Live project counters are powered by CFlair Counter at [counter.vkrishna04.me](https://counter.vkrishna04.me/).
-
-| Project | Counter |
-| ------- | ------- |
-| vkrishna04-portfolio | ![vkrishna04-portfolio](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio/badge?style=flat-square&color=blue&label=vkrishna04-portfolio) |
-| ranobe-gemini-startup | ![ranobe-gemini-startup](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup/badge?style=flat-square&color=brightgreen&label=ranobe-startup) |
-| ranobe-gemini-extension_update | ![ranobe-gemini-extension_update](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update/badge?style=flat-square&color=orange&label=rg-update) |
-| ranobe-gemini-extension_install | ![ranobe-gemini-extension_install](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install/badge?style=flat-square&color=purple&label=rg-install) |
-| ranobe-gemini-feature_usage | ![ranobe-gemini-feature_usage](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage/badge?style=flat-square&color=teal&label=rg-feature-usage) |
-| Eldritchify | ![Eldritchify](https://counter.vkrishna04.me/api/views/Eldritchify/badge?style=flat-square&color=red&label=Eldritchify) |
-| ranobe-gemini-opt_out | ![ranobe-gemini-opt_out](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out/badge?style=flat-square&color=yellow&label=rg-opt-out) |
-
 ## Acknowledgements
 
 - Powered by the [Google Gemini API](https://ai.google.dev/)
@@ -246,4 +239,4 @@ Live project counters are powered by CFlair Counter at [counter.vkrishna04.me](h
 
 `browser-extension` `firefox-extension` `chrome-extension` `edge-extension` `gemini-ai` `web-novel` `fanfiction` `archiveofourown` `ranobes` `scribblehub` `reading-tracker` `novel-library` `javascript` `manifest-v3` `google-ai` `ai-enhancement` `light-novel` `translation`
 
-> Warning: This project uses the CFlair Counter service for anonymized telemetry metrics (such as aggregate feature/page usage). No personal identity data is required for these counters.
+> Stats note: Anonymous aggregate usage counters are powered by CFlair Counter and only run after telemetry consent in the Library.
