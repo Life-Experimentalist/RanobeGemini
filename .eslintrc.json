@@ -38,6 +38,7 @@
 	"ignorePatterns": [
 		"dist/",
 		"build/",
+		"src/config/build-version.js",
 		"src/manifest-chromium.json",
 		"src/manifest-firefox.json",
 		"src/lib/browser-polyfill.min.js"

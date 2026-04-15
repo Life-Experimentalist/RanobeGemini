@@ -32,7 +32,6 @@
 		"prettier": "^3.2.5"
 	},
 	"overrides": {
-		"ajv": "^8.17.1",
 		"brace-expansion": "^2.0.3"
 	},
 	"files": [
