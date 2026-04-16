@@ -24,6 +24,7 @@ import {
 } from "../../../utils/theme-config.js";
 import { getAllStatuses } from "../../status-machine.js";
 import {
+	bindModalSwipeDismiss,
 	createModalNavigationController,
 	recoverMissingNovelById,
 } from "../../shared-shelf-helpers.js";
@@ -650,6 +651,14 @@ async function showNovelModal(novel, options = {}) {
 			modal._escListener = null;
 		}
 	}
+
+	if (typeof modal._swipeCleanup === "function") {
+		modal._swipeCleanup();
+	}
+	modal._swipeCleanup = bindModalSwipeDismiss({
+		modal,
+		onDismiss: closeModal,
+	});
 
 	const closeBtn = document.getElementById("modal-close-btn");
 	const backdrop = document.getElementById("modal-backdrop");

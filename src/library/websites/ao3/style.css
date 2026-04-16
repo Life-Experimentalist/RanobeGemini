@@ -1663,12 +1663,11 @@ body {
 }
 
 .modal-description {
-	font-size: 0.9rem;
+	font-family: inherit;
+	font-size: 1rem;
 	color: var(--text-secondary);
-	line-height: 1.5;
-	max-height: 4.5em;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	line-height: 1.7;
+	/* No truncation — show the full description */
 }
 
 .ao3-read-btn {

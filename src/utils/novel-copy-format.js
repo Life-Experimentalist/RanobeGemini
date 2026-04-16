@@ -17,7 +17,7 @@
  *   {site}        - Shelf / source site ID (e.g. "ao3", "fanfiction")
  *   {id}          - Library novel ID
  *   {url}         - Source URL
- *   {description} - Novel description (first 200 chars unless :N limit added)
+ *   {description} - Novel description (full text unless :N limit added)
  *
  * Limit syntax: {description:100} trims the value to the first 100 characters.
  *
@@ -104,7 +104,7 @@ export const COPY_FORMAT_TOKENS = [
 	{ token: "{url}", desc: "Source URL", example: "https://..." },
 	{
 		token: "{description}",
-		desc: "Description (first 200 chars; use {description:N} for custom limit)",
+		desc: "Description (full text; use {description:N} for custom limit)",
 		example: "A story about...",
 	},
 ];
@@ -202,7 +202,7 @@ export function formatNovelInfo(novel, template) {
 		site: novel.shelfId || "",
 		id: novel.id || "",
 		url: novel.sourceUrl || novel.lastReadUrl || "",
-		description: (novel.description || "").substring(0, 200),
+		description: novel.description || "",
 	};
 
 	// Replace {token} and {token:N} (N = character limit)

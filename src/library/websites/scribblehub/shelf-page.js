@@ -23,6 +23,7 @@ import {
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
 import {
+	bindModalSwipeDismiss,
 	createModalNavigationController,
 	recoverMissingNovelById,
 } from "../../shared-shelf-helpers.js";
@@ -810,6 +811,14 @@ function showNovelModal(novel, options = {}) {
 	function closeModal() {
 		modal.style.display = "none";
 	}
+
+	if (typeof modal._swipeCleanup === "function") {
+		modal._swipeCleanup();
+	}
+	modal._swipeCleanup = bindModalSwipeDismiss({
+		modal,
+		onDismiss: closeModal,
+	});
 
 	closeBtn.addEventListener("click", closeModal);
 	backdrop.addEventListener("click", closeModal);

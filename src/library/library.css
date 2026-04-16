@@ -1524,6 +1524,20 @@ body {
 	pointer-events: none;
 }
 
+@media (max-width: 640px) {
+	.modal-close,
+	.modal-corner-btn {
+		width: 44px;
+		height: 44px;
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.modal-corner-nav {
+		gap: 8px;
+	}
+}
+
 /* Novel Detail Modal */
 .novel-detail {
 	padding: var(--spacing-xl);
@@ -1666,6 +1680,7 @@ body {
 }
 
 .novel-description p {
+	font-family: inherit;
 	font-size: 1rem;
 	color: var(--text-secondary);
 	line-height: 1.7;

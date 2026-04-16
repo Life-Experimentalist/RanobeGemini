@@ -430,3 +430,150 @@ export function createModalNavigationController({
 		getContextIndex: () => currentContextIndex,
 	};
 }
+
+/**
+ * Bind a touch swipe-down gesture to dismiss a modal on mobile devices.
+ * The gesture is ignored on desktop widths and when modal body is scrolled.
+ *
+ * @param {Object} options
+ * @param {HTMLElement|string} options.modal - Modal element or modal element id.
+ * @param {Function} options.onDismiss - Called when swipe threshold is met.
+ * @param {string} [options.contentSelector='.modal-content'] - Selector for swipe target container.
+ * @param {number} [options.minSwipeDistance=96] - Minimum downward travel to dismiss.
+ * @param {number} [options.maxHorizontalDrift=72] - Maximum horizontal movement to still count as dismiss gesture.
+ * @param {number} [options.mobileBreakpoint=900] - Max viewport width where swipe dismiss is active.
+ * @returns {Function} cleanup function.
+ */
+export function bindModalSwipeDismiss({
+	modal,
+	onDismiss,
+	contentSelector = ".modal-content",
+	minSwipeDistance = 96,
+	maxHorizontalDrift = 72,
+	mobileBreakpoint = 900,
+}) {
+	const modalEl =
+		typeof modal === "string" ? document.getElementById(modal) : modal;
+	if (!modalEl || typeof onDismiss !== "function") {
+		return () => {};
+	}
+
+	const swipeSurface =
+		modalEl.querySelector(contentSelector) ||
+		modalEl.querySelector(".modal-content") ||
+		modalEl;
+	if (!swipeSurface) {
+		return () => {};
+	}
+
+	let startX = 0;
+	let startY = 0;
+	let active = false;
+	let dragging = false;
+
+	const isModalOpen = () => {
+		if (modalEl.classList?.contains("hidden")) return false;
+		const style = window.getComputedStyle(modalEl);
+		return style.display !== "none" && style.visibility !== "hidden";
+	};
+
+	const resetSurface = () => {
+		swipeSurface.style.transition = "transform 160ms ease, opacity 160ms ease";
+		swipeSurface.style.transform = "";
+		swipeSurface.style.opacity = "";
+	};
+
+	const isEligibleTouchTarget = (eventTarget) => {
+		if (!eventTarget || !(eventTarget instanceof Element)) return true;
+		if (
+			eventTarget.closest(
+				"input, textarea, select, button, a, [role='button'], .modal-header-controls, .modal-corner-nav",
+			)
+		) {
+			return false;
+		}
+		const body = modalEl.querySelector(".modal-body");
+		if (body && body.scrollTop > 0) return false;
+		return true;
+	};
+
+	const handleTouchStart = (event) => {
+		if (window.innerWidth > mobileBreakpoint) return;
+		if (!isModalOpen()) return;
+		if (event.touches.length !== 1) return;
+		if (!isEligibleTouchTarget(event.target)) return;
+
+		const touch = event.touches[0];
+		startX = touch.clientX;
+		startY = touch.clientY;
+		active = true;
+		dragging = false;
+	};
+
+	const handleTouchMove = (event) => {
+		if (!active || event.touches.length !== 1) return;
+		const touch = event.touches[0];
+		const deltaX = touch.clientX - startX;
+		const deltaY = touch.clientY - startY;
+
+		if (deltaY <= 0) return;
+		if (Math.abs(deltaX) > maxHorizontalDrift) {
+			active = false;
+			resetSurface();
+			return;
+		}
+
+		dragging = true;
+		swipeSurface.style.transition = "none";
+		swipeSurface.style.transform = `translateY(${Math.min(deltaY, 140)}px)`;
+		swipeSurface.style.opacity = `${Math.max(0.76, 1 - deltaY / 520)}`;
+	};
+
+	const handleTouchEnd = (event) => {
+		if (!active) return;
+		active = false;
+
+		const touch = event.changedTouches?.[0];
+		const endX = touch ? touch.clientX : startX;
+		const endY = touch ? touch.clientY : startY;
+		const deltaX = endX - startX;
+		const deltaY = endY - startY;
+
+		if (
+			dragging &&
+			deltaY >= minSwipeDistance &&
+			Math.abs(deltaX) <= maxHorizontalDrift
+		) {
+			swipeSurface.style.transition = "transform 120ms ease, opacity 120ms ease";
+			swipeSurface.style.transform = "translateY(160px)";
+			swipeSurface.style.opacity = "0";
+			setTimeout(() => {
+				resetSurface();
+				onDismiss();
+			}, 120);
+			return;
+		}
+
+		resetSurface();
+	};
+
+	swipeSurface.addEventListener("touchstart", handleTouchStart, {
+		passive: true,
+	});
+	swipeSurface.addEventListener("touchmove", handleTouchMove, {
+		passive: true,
+	});
+	swipeSurface.addEventListener("touchend", handleTouchEnd, {
+		passive: true,
+	});
+	swipeSurface.addEventListener("touchcancel", handleTouchEnd, {
+		passive: true,
+	});
+
+	return () => {
+		swipeSurface.removeEventListener("touchstart", handleTouchStart);
+		swipeSurface.removeEventListener("touchmove", handleTouchMove);
+		swipeSurface.removeEventListener("touchend", handleTouchEnd);
+		swipeSurface.removeEventListener("touchcancel", handleTouchEnd);
+	};
+}

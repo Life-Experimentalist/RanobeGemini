@@ -46,7 +46,10 @@ import {
 	getAllStatuses,
 	getDefaultRereadingOverlay,
 } from "./status-machine.js";
-import { recoverMissingNovelById } from "./shared-shelf-helpers.js";
+import {
+	bindModalSwipeDismiss,
+	recoverMissingNovelById,
+} from "./shared-shelf-helpers.js";
 import { openInlineEditModal } from "./edit-modal.js";
 import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -2915,6 +2918,15 @@ function setupEventListeners() {
 	if (elements.modalNextBtn) {
 		elements.modalNextBtn.addEventListener("click", () => {
 			void navigateModalRelative(1);
+		});
+	}
+	if (elements.novelModal) {
+		if (typeof elements.novelModal._swipeCleanup === "function") {
+			elements.novelModal._swipeCleanup();
+		}
+		elements.novelModal._swipeCleanup = bindModalSwipeDismiss({
+			modal: elements.novelModal,
+			onDismiss: () => closeModal(elements.novelModal),
 		});
 	}
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);

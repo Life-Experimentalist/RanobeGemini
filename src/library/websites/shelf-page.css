@@ -393,6 +393,21 @@ body {
 	cursor: not-allowed;
 }
 
+@media (max-width: 600px) {
+	.modal-close,
+	.modal-header-library-btn,
+	.modal-header-nav-btn {
+		width: 44px;
+		height: 44px;
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.modal-header-controls {
+		gap: 8px;
+	}
+}
+
 .settings-modal-content {
 	max-width: 800px;
 	padding: var(--spacing-lg);
@@ -2782,9 +2797,10 @@ body {
 }
 
 .modal-description {
+	font-family: inherit;
 	font-size: 1rem;
 	color: var(--text-secondary);
-	line-height: 1.6;
+	line-height: 1.7;
 	/* No truncation — show the full description */
 }
 

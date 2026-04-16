@@ -1,7 +1,7 @@
 # Development Roadmap
 
-> **Last Updated:** 2026-03-25
-> **Current Version:** 4.6.0
+> **Last Updated:** 2026-04-16
+> **Current Version:** 4.7.0
 
 ## Table of Contents
 
@@ -141,7 +141,7 @@ graph TB
 
 ### Earlier Versions (archived)
 
-See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 feature history.
+See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historical context on the v1–v3 era.
 
 ---
 
@@ -154,10 +154,10 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
   - [x] Add predefined list badges: `🔁 Rereading`, `⭐ Favourites`
   - [x] Add backward-compat migration for legacy `re-reading` status
 
-- [ ] **Summary Typography Parity**
-  - [ ] Summary popup inherits page font-family
-  - [ ] Summary font-size / line-height consistent across all sites
-  - [ ] Heading sizes match chapter body
+- [x] **Summary Typography Parity**
+  - [x] Summary popup inherits page font-family
+  - [x] Summary font-size / line-height consistent across all sites
+  - [x] Heading sizes match chapter body
 
 - [x] **Modal Summary + Navigation Fidelity**
   - [x] Keep novel descriptions full-length in handler metadata and modal rendering
@@ -165,15 +165,15 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
   - [x] Keep modal traversal scoped to the active filter or carousel context
   - [x] Harden AO3 URL detection so search/home pages never import as works
 
-- [ ] **Summarize Shortcut Wiring**
-  - [ ] Confirm `summarizeWithGemini` command listener exists in `background.js`
-  - [ ] Confirm `content.js` message handler routes the action correctly
-  - [ ] Keyboard shortcut fires the correct pipeline end-to-end
+- [x] **Summarize Shortcut Wiring**
+  - [x] Confirm `summarizeWithGemini` command listener exists in `background.js`
+  - [x] Confirm `content.js` message handler routes the action correctly
+  - [x] Keyboard shortcut fires the correct pipeline end-to-end
 
 - [ ] **Redesign Mobile Nav UX**
   - [ ] Bottom navigation bar for mobile library
-  - [ ] Touch-friendly tap targets (≥ 48px)
-  - [ ] Swipe-to-dismiss for modals
+  - [x] Touch-friendly tap targets (≥ 48px)
+  - [x] Swipe-to-dismiss for modals
 
 ### Medium Priority
 
@@ -222,8 +222,8 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 
 **Focus:** Summary quality, mobile nav, accessibility
 
-- [ ] Summary typography parity (all sites)
-- [ ] Harden truncation flow
+- [x] Summary typography parity (all sites)
+- [x] Harden truncation flow
 - [ ] Mobile bottom nav bar
 - [ ] Summarize shortcut end-to-end
 - [ ] BetterFiction toggle bridge
