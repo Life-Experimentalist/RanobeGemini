@@ -170,7 +170,7 @@ See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historica
   - [x] Confirm `content.js` message handler routes the action correctly
   - [x] Keyboard shortcut fires the correct pipeline end-to-end
 
-- [ ] **Redesign Mobile Nav UX**
+- [x] **Redesign Mobile Nav UX**
   - [x] Bottom navigation bar for mobile library
   - [x] Touch-friendly tap targets (≥ 48px)
   - [x] Swipe-to-dismiss for modals
