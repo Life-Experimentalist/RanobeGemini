@@ -520,8 +520,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const authorLink = document.querySelector(
 					".chp_byauthor a[href*='/profile/']",
 				);
-				if (authorLink) {
-					metadata.author = authorLink.textContent.trim();
+			if (descEl) {
+				metadata.description = descEl.textContent.trim();
 				}
 
 				if (!metadata.author) {
@@ -599,10 +599,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 					if (descMeta?.getAttribute("content")) {
 						const desc = descMeta.getAttribute("content").trim();
 						if (desc) {
-							metadata.description =
-								desc.length > 500
-									? `${desc.substring(0, 500)}...`
-									: desc;
+							metadata.description = desc;
 						}
 					}
 				}
@@ -634,10 +631,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const descEl = document.querySelector(".wi_fic_desc");
 				if (descEl) {
 					const text = descEl.textContent.trim();
-					metadata.description =
-						text.length > 1000
-							? text.substring(0, 1000) + "..."
-							: text;
+					metadata.description = text;
 				}
 
 				const coverEl = document.querySelector(".fic_image img");

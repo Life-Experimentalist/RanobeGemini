@@ -13,6 +13,7 @@ import {
 	DEFAULT_EXPORT_TEMPLATE,
 	resolveExportTemplate,
 } from "../novel-copy-format.js";
+import { readExtensionBridgeStatus } from "../extension-bridges.js";
 
 /** Storage key for library settings (to read global copy template) */
 const LIBRARY_SETTINGS_KEY = "rg_library_settings";
@@ -1154,6 +1155,9 @@ When enhancing, improve readability while fully respecting the author's creative
 	 */
 	extractBetterFictionStatus() {
 		try {
+			const bridgedStatus = readExtensionBridgeStatus("betterfiction");
+			if (bridgedStatus) return bridgedStatus;
+
 			const syncFlag = document.body?.dataset?.rgBetterfictionSync;
 			if (syncFlag === "false") return null;
 

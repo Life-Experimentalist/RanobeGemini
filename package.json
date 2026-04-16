@@ -11,6 +11,7 @@
 		"package:chromium": "node dev/build.js --chromium --package",
 		"package:source": "node dev/build.js --source",
 		"publish": "npm run commits:write && node dev/build.js --package --source",
+		"publish:stores": "node dev/publish-addon-stores.js",
 		"update-domains": "node dev/build.js --update",
 		"watch": "npm run build && node dev/watch.js",
 		"docs:visualize": "node dev/generate-doc-visualizers.js",

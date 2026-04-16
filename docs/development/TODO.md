@@ -1,7 +1,7 @@
 # Development Roadmap
 
-> **Last Updated:** 2026-03-25
-> **Current Version:** 4.6.0
+> **Last Updated:** 2026-04-16
+> **Current Version:** 4.7.0
 
 ## Table of Contents
 
@@ -135,13 +135,13 @@ graph TB
 - [x] Google Drive OAuth PKCE backup
 - [x] Rolling backup retention (3 backups)
 - [x] Canvas particle animations for popup
-- [x] FichHub integration for novel search
+- [x] FicHub integration for novel search
 - [x] Dynamic domain generation in build pipeline
 - [x] Modular website handler auto-registry
 
 ### Earlier Versions (archived)
 
-See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 feature history.
+See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historical context on the v1–v3 era.
 
 ---
 
@@ -154,37 +154,43 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
   - [x] Add predefined list badges: `🔁 Rereading`, `⭐ Favourites`
   - [x] Add backward-compat migration for legacy `re-reading` status
 
-- [ ] **Summary Typography Parity**
-  - [ ] Summary popup inherits page font-family
-  - [ ] Summary font-size / line-height consistent across all sites
-  - [ ] Heading sizes match chapter body
+- [x] **Summary Typography Parity**
+  - [x] Summary popup inherits page font-family
+  - [x] Summary font-size / line-height consistent across all sites
+  - [x] Heading sizes match chapter body
 
-- [ ] **Harden Summary Truncation**
-  - [ ] Verify `isLowQualityLongSummary()` is called in the summarize flow
-  - [ ] Verify `getSummaryOutputBudget()` caps tokens correctly
-  - [ ] Add fallback message when summary is pruned
+- [x] **Modal Summary + Navigation Fidelity**
+  - [x] Keep novel descriptions full-length in handler metadata and modal rendering
+  - [x] Add prev/next modal navigation to library and shelf pages
+  - [x] Keep modal traversal scoped to the active filter or carousel context
+  - [x] Harden AO3 URL detection so search/home pages never import as works
 
-- [ ] **Summarize Shortcut Wiring**
-  - [ ] Confirm `summarizeWithGemini` command listener exists in `background.js`
-  - [ ] Confirm `content.js` message handler routes the action correctly
-  - [ ] Keyboard shortcut fires the correct pipeline end-to-end
+- [x] **Summarize Shortcut Wiring**
+  - [x] Confirm `summarizeWithGemini` command listener exists in `background.js`
+  - [x] Confirm `content.js` message handler routes the action correctly
+  - [x] Keyboard shortcut fires the correct pipeline end-to-end
 
-- [ ] **Redesign Mobile Nav UX**
-  - [ ] Bottom navigation bar for mobile library
-  - [ ] Touch-friendly tap targets (≥ 48px)
-  - [ ] Swipe-to-dismiss for modals
+- [x] **Redesign Mobile Nav UX**
+  - [x] Bottom navigation bar for mobile library
+  - [x] Touch-friendly tap targets (≥ 48px)
+  - [x] Swipe-to-dismiss for modals
 
 ### Medium Priority
 
-- [ ] **BetterFiction Toggle Bridge**
-  - [ ] Verify `betterFictionSyncEnabled` setting is wired in `SETTINGS_DEFINITION`
-  - [ ] Confirm `extractBetterFictionStatus()` reads DOM and sets `document.body.dataset.rgBetterfictionSync`
-  - [ ] End-to-end test of BetterFiction page toggle → settings sync
+- [ ] **Extension Bridge Framework (BetterFiction-first)**
+  - [x] Add reusable extension-bridge utility for DOM status adapters
+  - [x] Route BetterFiction status through the shared bridge utility
+  - [x] Add registry docs for connecting additional extensions with site settings
+  - [x] Add one more bridge adapter example (non-BetterFiction) behind feature toggle
 
-- [ ] **WebNovel Handler**
-  - [ ] Re-enable WebNovel (currently disabled)
-  - [ ] Fix infinite-scroll button injection
-  - [ ] Verify chapter extraction on paginated chapters
+- [ ] **WebNovel Handler (Deferred / Non-blocking)**
+  - [ ] Keep disabled until dedicated cycle (no active sprint time allocation)
+  - [ ] Re-enable only after isolated validation pass
+
+- [ ] **Addon Store Publish Automation**
+  - [ ] Publish Firefox releases through AMO API from CI
+  - [ ] Publish Chromium releases through Chrome Web Store API from CI
+  - [ ] Keep Edge Add-ons on a manual Partner Center fallback until a public API exists
 
 - [ ] **Library Enhancements**
   - [ ] Library statistics dashboard (chapters read, word count)
@@ -216,11 +222,11 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 
 **Focus:** Summary quality, mobile nav, accessibility
 
-- [ ] Summary typography parity (all sites)
-- [ ] Harden truncation flow
-- [ ] Mobile bottom nav bar
-- [ ] Summarize shortcut end-to-end
-- [ ] BetterFiction toggle bridge
+- [x] Summary typography parity (all sites)
+- [x] Harden truncation flow
+- [x] Mobile bottom nav bar
+- [x] Summarize shortcut end-to-end
+- [ ] Extension bridge framework follow-up
 
 ### Version 4.5.0 - Advanced AI Controls
 
@@ -252,10 +258,11 @@ See [archived TODO (v3)](../archive/TODO_v3.0.0.md) for completed v1–v3 featur
 
 ### High Priority
 
-- [ ] WebNovel handler disabled — re-enable after infinite-scroll fix
 - [ ] Long chapters (> 100 k chars) may time out during chunking on slow connections
 
 ### Medium Priority
+
+- [ ] WebNovel handler disabled — re-enable in dedicated deferred cycle
 
 - [ ] FanFiction mobile: Cover images sometimes fail to load due to CORS
 - [ ] AO3: Custom tags beyond the first 20 are not extracted

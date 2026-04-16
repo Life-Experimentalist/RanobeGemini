@@ -38,6 +38,7 @@ let cancelEnhanceButton = null;
 let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
+let extensionBridgesModule = null; // Extension bridge helpers
 let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const pausedChunks = new Set(); // Chunks where user pressed Pause (hold result, don't auto-apply)
@@ -3892,6 +3893,20 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	// Load extension bridge helpers
+	async function loadExtensionBridgesModule() {
+		try {
+			const bridgesUrl = browser.runtime.getURL(
+				"utils/extension-bridges.js",
+			);
+			const bridgesModule = await import(bridgesUrl);
+			return bridgesModule;
+		} catch (error) {
+			debugError("Error loading extension bridge helpers:", error);
+			return null;
+		}
+	}
+
 	// Inject handler-specific custom CSS from settings
 	async function injectHandlerCustomCSS() {
 		if (!currentHandler) return;
@@ -4864,6 +4879,7 @@ if (window.__RGInitDone) {
 		if (siteSettingsModule?.getSiteSettings) {
 			siteSettings = await siteSettingsModule.getSiteSettings();
 		}
+		extensionBridgesModule = await loadExtensionBridgesModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -4902,13 +4918,11 @@ if (window.__RGInitDone) {
 			return;
 		}
 
-		if (handlerShelfId === "fanfiction") {
-			const fanfictionSettings = siteSettings?.fanfiction || {};
-			document.body.dataset.rgBetterfictionSync =
-				fanfictionSettings.betterFictionSyncEnabled === false
-					? "false"
-					: "true";
-		}
+		extensionBridgesModule?.applyExtensionBridgeFlags?.({
+			siteSettings,
+			activeShelfId: handlerShelfId,
+			documentRef: document,
+		});
 
 		debugLog(`Using handler for ${window.location.hostname}`);
 

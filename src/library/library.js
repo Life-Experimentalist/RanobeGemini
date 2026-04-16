@@ -46,7 +46,10 @@ import {
 	getAllStatuses,
 	getDefaultRereadingOverlay,
 } from "./status-machine.js";
-import { recoverMissingNovelById } from "./shared-shelf-helpers.js";
+import {
+	bindModalSwipeDismiss,
+	recoverMissingNovelById,
+} from "./shared-shelf-helpers.js";
 import { openInlineEditModal } from "./edit-modal.js";
 import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -219,12 +222,15 @@ const elements = {
 	refreshBtn: document.getElementById("refresh-btn"),
 	landingBtn: document.getElementById("landing-btn"),
 	settingsBtn: document.getElementById("settings-btn"),
+	mobileSettingsBtn: document.getElementById("mobile-settings-btn"),
 	openPopupBtn: document.getElementById("open-popup-btn"),
 	siteAutoAddList: document.getElementById("site-autoadd-list"),
 
 	// Novel Modal
 	novelModal: document.getElementById("novel-modal"),
 	modalClose: document.getElementById("modal-close"),
+	modalPrevBtn: document.getElementById("modal-prev-btn"),
+	modalNextBtn: document.getElementById("modal-next-btn"),
 	modalCover: document.getElementById("modal-cover"),
 	modalTitle: document.getElementById("modal-title"),
 	modalAuthor: document.getElementById("modal-author"),
@@ -681,6 +687,7 @@ let carouselState = {
 	itemsPerView: 4,
 	itemsToShow: 10, // Max novels to try to show in carousel
 	uniqueCount: 0, // Actual unique novels available for the carousel
+	novelIds: [], // Scoped novel IDs used for carousel modal navigation
 };
 
 // Detect if running in sidebar (set via manifest URL parameter)
@@ -2795,6 +2802,12 @@ function setupEventListeners() {
 		}
 	});
 
+	if (elements.mobileSettingsBtn) {
+		elements.mobileSettingsBtn.addEventListener("click", () => {
+			elements.settingsBtn?.click();
+		});
+	}
+
 	if (elements.landingBtn) {
 		elements.landingBtn.addEventListener("click", () => {
 			const landingUrl = "https://ranobe.vkrishna04.me/";
@@ -2904,6 +2917,25 @@ function setupEventListeners() {
 	elements.modalClose.addEventListener("click", () =>
 		closeModal(elements.novelModal),
 	);
+	if (elements.modalPrevBtn) {
+		elements.modalPrevBtn.addEventListener("click", () => {
+			void navigateModalRelative(-1);
+		});
+	}
+	if (elements.modalNextBtn) {
+		elements.modalNextBtn.addEventListener("click", () => {
+			void navigateModalRelative(1);
+		});
+	}
+	if (elements.novelModal) {
+		if (typeof elements.novelModal._swipeCleanup === "function") {
+			elements.novelModal._swipeCleanup();
+		}
+		elements.novelModal._swipeCleanup = bindModalSwipeDismiss({
+			modal: elements.novelModal,
+			onDismiss: () => closeModal(elements.novelModal),
+		});
+	}
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);
 	elements.modalRefreshBtn.addEventListener("click", handleRefreshMetadata);
 	elements.modalEditBtn.addEventListener("click", () =>
@@ -2916,16 +2948,29 @@ function setupEventListeners() {
 
 	// Listen for openNovelModal events from shelf pages
 	window.addEventListener("openNovelModal", async (e) => {
-		const { novelId } = e.detail;
+		const { novelId, context } = e.detail || {};
 		if (novelId) {
 			try {
 				const novel = await novelLibrary.getNovel(novelId);
 				if (novel) {
-					openNovelDetail(novel);
+					openNovelDetail(novel, { context });
 				}
 			} catch (error) {
 				debugError("Error opening novel modal:", error);
 			}
+		}
+	});
+
+	document.addEventListener("keydown", (e) => {
+		if (elements.novelModal?.classList.contains("hidden")) return;
+		const targetTag = e.target?.tagName?.toLowerCase?.() || "";
+		if (targetTag === "input" || targetTag === "textarea") return;
+		if (e.key === "ArrowLeft") {
+			e.preventDefault();
+			void navigateModalRelative(-1);
+		} else if (e.key === "ArrowRight") {
+			e.preventDefault();
+			void navigateModalRelative(1);
 		}
 	});
 
@@ -5145,8 +5190,14 @@ function showNotification(message, type = "success") {
  * Open novel detail modal
  * Delegates to site-specific renderer if available
  */
-async function openNovelDetail(novel) {
+async function openNovelDetail(novel, options = {}) {
 	currentModalNovel = novel || null;
+	setModalContext({
+		novelIds: options?.context?.novelIds,
+		index: options?.context?.index,
+		novelId: novel?.id,
+		source: options?.context?.source || options?.contextSource || "view",
+	});
 	// Keep a shareable deep-link URL for this modal.
 	try {
 		const params = new URLSearchParams(window.location.search);
@@ -5183,6 +5234,7 @@ async function openNovelDetail(novel) {
 	} else {
 		applyModalActionVisibility(novel);
 	}
+	updateModalNavigationButtons();
 }
 
 /**
@@ -5761,6 +5813,90 @@ async function handleRemoveNovel() {
 // Store current novel being edited
 let currentEditingNovel = null;
 let currentModalNovel = null;
+let currentModalContextIds = [];
+let currentModalContextIndex = -1;
+
+function getModalContextIds(source = "view") {
+	if (source === "carousel") {
+		if (
+			Array.isArray(carouselState.novelIds) &&
+			carouselState.novelIds.length
+		) {
+			return [...carouselState.novelIds];
+		}
+	}
+
+	const filtered = filterAndSortNovels().map((n) => n.id);
+	if (filtered.length) return filtered;
+	return allNovels.map((n) => n.id);
+}
+
+function setModalContext(context = {}) {
+	let ids = [];
+	let index = -1;
+
+	if (Array.isArray(context.novelIds) && context.novelIds.length) {
+		ids = [...context.novelIds];
+		index = Number.isInteger(context.index) ? context.index : -1;
+	} else {
+		ids = getModalContextIds(context.source || "view");
+	}
+
+	if (index < 0 && context.novelId) {
+		index = ids.indexOf(context.novelId);
+	}
+
+	if (index < 0 && ids.length && context.novelId) {
+		ids = [...ids, context.novelId];
+		index = ids.length - 1;
+	}
+
+	currentModalContextIds = ids;
+	currentModalContextIndex = index;
+	updateModalNavigationButtons();
+}
+
+function updateModalNavigationButtons() {
+	const hasContext =
+		currentModalContextIds.length > 1 && currentModalContextIndex >= 0;
+
+	if (elements.modalPrevBtn) {
+		elements.modalPrevBtn.disabled =
+			!hasContext || currentModalContextIndex <= 0;
+	}
+	if (elements.modalNextBtn) {
+		elements.modalNextBtn.disabled =
+			!hasContext ||
+			currentModalContextIndex >= currentModalContextIds.length - 1;
+	}
+}
+
+async function navigateModalRelative(offset) {
+	if (!currentModalContextIds.length || currentModalContextIndex < 0) return;
+	const targetIndex = currentModalContextIndex + offset;
+	if (targetIndex < 0 || targetIndex >= currentModalContextIds.length) return;
+
+	const targetId = currentModalContextIds[targetIndex];
+	if (!targetId) return;
+
+	let targetNovel = allNovels.find((n) => n.id === targetId) || null;
+	if (!targetNovel) {
+		try {
+			targetNovel = await novelLibrary.getNovel(targetId);
+		} catch (_err) {
+			targetNovel = null;
+		}
+	}
+	if (!targetNovel) return;
+
+	await openNovelDetail(targetNovel, {
+		context: {
+			novelIds: currentModalContextIds,
+			index: targetIndex,
+			source: "modal-nav",
+		},
+	});
+}
 
 /**
  * Handle opening the edit modal
@@ -7140,6 +7276,7 @@ async function initCarousel(novels) {
 		elements.carouselSection.style.display = "none";
 		carouselState.uniqueCount = 0;
 		carouselState.currentIndex = 0;
+		carouselState.novelIds = [];
 		return;
 	}
 
@@ -7213,6 +7350,7 @@ async function initCarousel(novels) {
 			? [...recentNovels.slice(1), recentNovels[0]]
 			: recentNovels;
 	carouselState.uniqueCount = displayNovels.length;
+	carouselState.novelIds = displayNovels.map((n) => n.id);
 
 	// Duplicate novels for infinite scrolling
 	const infiniteNovels = [
@@ -7293,6 +7431,8 @@ async function initCarousel(novels) {
 			: "Not started";
 		const hoverTiming = formatRelativeTime(novel.lastAccessedAt);
 
+		const sourceIndex = index % displayNovels.length;
+
 		item.innerHTML = `
 			<div class="carousel-item-image-wrapper">
 				${siteBadge ? `<div class="carousel-site-chip">${siteBadge}</div>` : ""}
@@ -7341,7 +7481,13 @@ async function initCarousel(novels) {
 		// Click handler to open modal
 		item.addEventListener("click", (e) => {
 			if (!e.target.closest(".hover-btn")) {
-				openNovelDetail(novel);
+				openNovelDetail(novel, {
+					context: {
+						novelIds: carouselState.novelIds,
+						index: sourceIndex,
+						source: "carousel",
+					},
+				});
 			}
 		});
 
@@ -7373,7 +7519,13 @@ async function initCarousel(novels) {
 		if (detailsBtn) {
 			detailsBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
-				openNovelDetail(novel);
+				openNovelDetail(novel, {
+					context: {
+						novelIds: carouselState.novelIds,
+						index: sourceIndex,
+						source: "carousel",
+					},
+				});
 			});
 		}
 

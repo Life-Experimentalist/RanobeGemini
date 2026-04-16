@@ -66,7 +66,7 @@ graph TD
 
 9. **Canvas animations** — particle / ember system on popup load.
 
-10. **FichHub integration** — novel search and metadata import.
+10. **FicHub integration** — novel search and metadata import.
 
 ---
 

@@ -323,11 +323,8 @@ body {
 	color: var(--text-muted);
 	line-height: 1.5;
 	margin-top: var(--spacing-xs);
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	line-clamp: 4;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .modal-close {
@@ -1666,12 +1663,11 @@ body {
 }
 
 .modal-description {
-	font-size: 0.9rem;
+	font-family: inherit;
+	font-size: 1rem;
 	color: var(--text-secondary);
-	line-height: 1.5;
-	max-height: 4.5em;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	line-height: 1.7;
+	/* No truncation — show the full description */
 }
 
 .ao3-read-btn {

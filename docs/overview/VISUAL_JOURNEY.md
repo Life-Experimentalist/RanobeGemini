@@ -15,10 +15,6 @@ graph LR
     C -->|User Control| D["Full Content"]
 
     E["Disabled Filter"] -->|Content Inline| F["Appears without box"]
-
-    style A fill:#e8f4f8
-    style D fill:#d4edda
-    style F fill:#fff3cd
 ```
 
 - **Collapsed**: Summary visible, full content hidden behind toggle (always recoverable)
@@ -190,7 +186,7 @@ graph LR
 │ <p>Chapter text...</p>          │
 │                                 │
 │ ╔═══════════════════════════╗   │
-│ ║ ⚔️ FIGHT SCENE      [▼ Read]║ |  ← Collapsed
+│ ║ ⚔️ FIGHT SCENE    [▼ Read]║   |  ← Collapsed
 │ ╠═══════════════════════════╣   │
 │ ║ Kael defeats the knight   ║   │ Summary only
 │ ╚═══════════════════════════╝   │
@@ -198,10 +194,9 @@ graph LR
 │ <p>Story continues...</p>       │
 │                                 │
 │ ╔═══════════════════════════╗   │
-│ ║ 📝 AUTHOR'S NOTE   [▲ Hide]║  ← Expanded
+│ ║ 📝 AUTHOR'S NOTE  [▲ Hide]║   │ ← Expanded
 │ ║ Thanks to patrons!        ║   │
-│ ║ New chapter next week  ║   │ Full content
-                           ║   │ visible
+│ ║ New chapter next week  	  ║   │ Full content visible
 │ ╚═══════════════════════════╝   │
 │                                 │
 │ <p>Final paragraph...</p>       │
@@ -251,12 +246,12 @@ graph LR
         │         └────────────────────┘   │   │     │
         │                                  │   │     │
         └──────────────────────────────────┘   │     │
-                                               │     │
-                                    ┌──────────▼──┐  │
-                                    │ Settings UI │  │
-                                    │ Panel       │  │
-                                    └─────────────┘  │
-                                               │     │
+            	│                              │     │
+            	│                   ┌──────────▼──┐  │
+            	│                   │ Settings UI │  │
+            	│                   │ Panel       │  │
+            	│                   └─────────────┘  │
+            	│                              │     │
                 └──────────────────────────────┴─────┘
 ```
 
@@ -641,7 +636,7 @@ What looks simple on the surface...
 
   ╔════════════════════════╗
   ║ ⚔️ FIGHT [▼ Read]     ║
-  ║ Kael defeats shadow.. ║
+  ║ Kael defeats shadow..  ║
   ╚════════════════════════╝
 
 ...is actually powered by:

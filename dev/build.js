@@ -57,6 +57,45 @@ const BUILD_SECRET_ENV_MAP = [
 	},
 ];
 
+const TRANSIENT_COPY_ERRORS = new Set(["EPERM", "EBUSY", "EACCES"]);
+
+function copyFileWithRetries(srcPath, destPath, maxAttempts = 5) {
+	let lastError = null;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+		try {
+			fs.copyFileSync(srcPath, destPath);
+			return;
+		} catch (error) {
+			lastError = error;
+
+			if (!TRANSIENT_COPY_ERRORS.has(error?.code) || attempt >= maxAttempts) {
+				break;
+			}
+
+			try {
+				if (fs.existsSync(destPath)) {
+					fs.rmSync(destPath, { force: true });
+				}
+			} catch (_cleanupError) {
+				// Best-effort cleanup for transient file locks.
+			}
+
+			try {
+				const buffer = fs.readFileSync(srcPath);
+				fs.writeFileSync(destPath, buffer);
+				return;
+			} catch (_fallbackError) {
+				// Continue retry loop.
+			}
+		}
+	}
+
+	if (lastError) {
+		throw lastError;
+	}
+}
+
 // Helper: Copy directory recursively
 function copyDir(src, dest) {
 	if (!fs.existsSync(dest)) {
@@ -69,7 +108,7 @@ function copyDir(src, dest) {
 		if (entry.isDirectory()) {
 			copyDir(srcPath, destPath);
 		} else {
-			fs.copyFileSync(srcPath, destPath);
+			copyFileWithRetries(srcPath, destPath);
 		}
 	}
 }
@@ -161,10 +200,7 @@ function injectBuildSecrets(platformDist) {
 		if (!envValue) continue;
 
 		const escaped = JSON.stringify(envValue);
-		const re = new RegExp(
-			`export const ${item.constName} = "[^"]*";`,
-			"m",
-		);
+		const re = new RegExp(`export const ${item.constName} = "[^"]*";`, "m");
 		if (!re.test(content)) continue;
 
 		content = content.replace(

@@ -304,6 +304,8 @@ body {
 	color: var(--text-muted);
 	line-height: 1.5;
 	margin-top: var(--spacing-xs);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .modal-close {
@@ -360,9 +362,50 @@ body {
 	transition: all var(--transition-fast);
 }
 
+.modal-header-nav-btn {
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border-radius: 50%;
+	font-size: 0.95rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-color);
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
 .modal-header-library-btn:hover {
 	background: var(--bg-card-hover);
 	color: var(--text-primary);
+}
+
+.modal-header-nav-btn:hover:not(:disabled) {
+	background: var(--bg-card-hover);
+	color: var(--text-primary);
+}
+
+.modal-header-nav-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+	.modal-close,
+	.modal-header-library-btn,
+	.modal-header-nav-btn {
+		width: 44px;
+		height: 44px;
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.modal-header-controls {
+		gap: 8px;
+	}
 }
 
 .settings-modal-content {
@@ -2754,9 +2797,10 @@ body {
 }
 
 .modal-description {
+	font-family: inherit;
 	font-size: 1rem;
 	color: var(--text-secondary);
-	line-height: 1.6;
+	line-height: 1.7;
 	/* No truncation — show the full description */
 }
 

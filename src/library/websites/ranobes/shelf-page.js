@@ -22,7 +22,11 @@ import {
 	applyThemeFromStorage,
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
-import { recoverMissingNovelById } from "../../shared-shelf-helpers.js";
+import {
+	bindModalSwipeDismiss,
+	createModalNavigationController,
+	recoverMissingNovelById,
+} from "../../shared-shelf-helpers.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -48,6 +52,22 @@ TAXONOMY.forEach((tax) => {
 // State for filtering and rendering
 let allNovels = [];
 let filteredNovels = [];
+
+const modalNavigation = createModalNavigationController({
+	getContextIds: (novelId) => {
+		const visibleNovels = filteredNovels.length > 0 ? filteredNovels : allNovels;
+		const visibleIds = visibleNovels.map((novel) => novel.id);
+		if (novelId && visibleIds.includes(novelId)) return visibleIds;
+		const allIds = allNovels.map((novel) => novel.id);
+		if (novelId && allIds.includes(novelId)) return allIds;
+		return visibleIds.length > 0 ? visibleIds : allIds;
+	},
+	findNovelById: (novelId) =>
+		filteredNovels.find((novel) => novel.id === novelId) ||
+		allNovels.find((novel) => novel.id === novelId) ||
+		null,
+	onOpenNovel: (novel, options) => showNovelModal(novel, options),
+});
 
 const FILTER_STORAGE_KEY = "rg_filters_ranobes";
 const DEFAULT_FILTERS = {
@@ -516,9 +536,11 @@ function renderNovels(novels = filteredNovels) {
 	});
 }
 
-function showNovelModal(novel) {
+function showNovelModal(novel, options = {}) {
 	const modal = document.getElementById("novel-modal");
 	if (!modal) return;
+
+	modalNavigation.syncContext(novel.id, options.contextIds);
 
 	// Keep a shareable deep-link URL for this modal.
 	try {
@@ -741,6 +763,14 @@ function showNovelModal(novel) {
 	function closeModal() {
 		modal.style.display = "none";
 	}
+
+	if (typeof modal._swipeCleanup === "function") {
+		modal._swipeCleanup();
+	}
+	modal._swipeCleanup = bindModalSwipeDismiss({
+		modal,
+		onDismiss: closeModal,
+	});
 
 	closeBtn.addEventListener("click", closeModal);
 	backdrop.addEventListener("click", closeModal);
@@ -1535,6 +1565,7 @@ async function initializeRanobesShelf() {
 		setupFilters();
 		setupInsightClicks();
 		applyFiltersAndSort();
+		modalNavigation.bind();
 		openNovelFromQuery();
 	} catch (error) {
 		console.error(

@@ -1,7 +1,339 @@
 Mode: all
 Format: text
-Generated: 2026-03-25T16:21:27.899Z
-Total commits: 81
+Generated: 2026-04-16T05:33:42.853Z
+Total commits: 102
+
+[634cec0] 2026-04-16 Improve mobile modal touch targets
+   Improve mobile modal touch targets
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[6cc50c3] 2026-04-16 Remove hidden description truncation and fix TODO link
+   Remove hidden description truncation and fix TODO link
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[93b40d0] 2026-04-16 Align summary typography and roadmap status
+   Align summary typography and roadmap status
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e0ec88e] 2026-04-16 feat: update release notes and manage icon assets
+   feat: update release notes and manage icon assets
+   Signed-off-by: Krishna GSVV <krishnagsvv@gmail.com>
+   Files:
+   - docs/release/RELEASE_NOTES_4.1.0.md
+   - src/icons/Social Banner.png
+   - src/icons/logo-dark-1024.png
+   - src/icons/logo-dark-128.png
+   - src/icons/logo-dark-16.png
+   - src/icons/logo-dark-256.png
+   - ... (13 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[54b81dd] 2026-04-16 Add release automation and modal navigation updates
+   Add release automation and modal navigation updates
+   Files:
+   - .eslintrc.json
+   - .github/workflows/publish-addons.yml
+   - README.md
+   - dev/build.js
+   - dev/publish-addon-stores.js
+   - docs/development/README.md
+   - ... (26 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[bcccdab] 2026-04-16 feat: refine URL import flow and AO3 handler behavior
+   feat: refine URL import flow and AO3 handler behavior
+   Files:
+   - src/content/content.js
+   - src/library/library-settings.js
+   - src/utils/website-handlers/ao3-handler.js
+   - src/utils/website-handlers/fanfiction-handler.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[242abe2] 2026-04-16 fix: restore validation by resolving lint toolchain conflict
+   fix: restore validation by resolving lint toolchain conflict
+   Files:
+   - .eslintrc.json
+   - package-lock.json
+   - package.json
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[8dc9ec0] 2026-04-16 fix(import): skip AO3 series URLs and improve URL import progress/continuation handling
+   fix(import): skip AO3 series URLs and improve URL import progress/continuation handling
+   Files:
+   - src/library/library-settings.js
+   - src/utils/novel-library.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[62a6c5e] 2026-04-16 docs+telemetry: inline CFlair badges and enforce consent-gated telemetry
+   docs+telemetry: inline CFlair badges and enforce consent-gated telemetry
+   Files:
+   - src/library/library.js
+   - src/utils/telemetry.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[d285b2c] 2026-04-16 docs+telemetry: move CFlair counters to top badges and align counter endpoint
+   docs+telemetry: move CFlair counters to top badges and align counter endpoint
+   Files:
+   - README.md
+   - src/utils/telemetry.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[a0ae3c4] 2026-04-16 docs(readme): add CFlair project SVG counters and telemetry disclosure
+   docs(readme): add CFlair project SVG counters and telemetry disclosure
+   Files:
+   - README.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[047bb9a] 2026-04-10 feat: formalize modular roadmap, provider-agnostic AI direction, and secure build secrets
+   feat: formalize modular roadmap, provider-agnostic AI direction, and secure build secrets
+   - Update technical roadmap with verified current state and modular priorities
+   - Add provider-agnostic AI adapter phase (Gemini/Ollama/OpenAI-compatible/router)
+   - Add cross-device compatibility phase for web app + extension flows
+   - Strengthen Copilot and roadmap prompts for local-first modular architecture
+   - Add plugin/handler/provider authoring and publishing guide
+   - Add dotenv-based build-time secret injection to dist constants only
+   - Add guardrail to block hardcoded source secrets in constants
+   Files:
+   - .env.example
+   - .github/copilot-instructions.md
+   - .github/prompts/roadmap-implementation.prompt.md
+   - .gitignore
+   - dev/build.js
+   - docs/guides/PLUGIN_HANDLER_PUBLISHING.md
+   - ... (3 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[425f5da] 2026-04-10 docs: formalize technical roadmap and prompt-driven execution
+   docs: formalize technical roadmap and prompt-driven execution
+   Files:
+   - .github/copilot-instructions.md
+   - .github/prompts/roadmap-implementation.prompt.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e0b7de0] 2026-04-10 feat: enhance summary service with request caching and improved error handling
+   feat: enhance summary service with request caching and improved error handling
+   Signed-off-by: Krishna GSVV <75069043+VKrishna04@users.noreply.github.com>
+   Files:
+   - .gitignore
+   - src/content/content.js
+   - src/library/library.css
+   - src/utils/summary-service.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[91bcd4a] 2026-04-10 Merge pull request #1 from Life-Experimentalist/dependabot/npm_and_yarn/npm_and_yarn-c548022d36
+   Merge pull request #1 from Life-Experimentalist/dependabot/npm_and_yarn/npm_and_yarn-c548022d36
+   chore(deps-dev): bump the npm_and_yarn group across 1 directory with 2 updates
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[19360f6] 2026-04-10 chore(deps-dev): bump the npm_and_yarn group across 1 directory with 2 updates
+   chore(deps-dev): bump the npm_and_yarn group across 1 directory with 2 updates
+   Bumps the npm_and_yarn group with 2 updates in the / directory: [flatted](https://github.com/WebReflection/flatted) and [minimatch](https://github.com/isaacs/minimatch).
+   Updates `flatted` from 3.3.3 to 3.4.2
+   - [Commits](https://github.com/WebReflection/flatted/compare/v3.3.3...v3.4.2)
+   Updates `minimatch` from 3.1.2 to 3.1.5
+   - [Changelog](https://github.com/isaacs/minimatch/blob/main/changelog.md)
+   - [Commits](https://github.com/isaacs/minimatch/compare/v3.1.2...v3.1.5)
+   ---
+   Files:
+   - package-lock.json
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[15ed0b4] 2026-03-26 feat: add PWA testing guide and update version to 4.7.0 with service worker enhancements
+   feat: add PWA testing guide and update version to 4.7.0 with service worker enhancements
+   Signed-off-by: Krishna GSVV <75069043+VKrishna04@users.noreply.github.com>
+   Files:
+   - docs/guides/PWA_TESTING_EDGE_TEMP_ADDON.md
+   - landing/manifest.webmanifest
+   - landing/script.js
+   - landing/sw.js
+   - package.json
+   - src/config/build-version.js
+   - ... (3 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[3df3842] 2026-03-26 docs(prompt): enforce targeted version-sensitive doc updates
+   docs(prompt): enforce targeted version-sensitive doc updates
+   Files:
+   - .github/prompts/release-notes.prompt.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
+
+[8439423] 2026-03-26 Revert "chore: automate docs version sync and update to v4.6.0"
+   Revert "chore: automate docs version sync and update to v4.6.0"
+   This reverts commit 1a3646f7bfd6b096e929248c0b047d2e73748428.
+   Files:
+   - .github/prompts/release-notes.prompt.md
+   - dev/update-doc-versions.js
+   - docs/README.md
+   - docs/architecture/ARCHITECTURE.md
+   - docs/architecture/COLLAPSIBLE_JOURNEY.md
+   - docs/architecture/DYNAMIC_DOMAINS.md
+   - ... (36 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
+
+[1a3646f] 2026-03-26 chore: automate docs version sync and update to v4.6.0
+   chore: automate docs version sync and update to v4.6.0
+   - Add npm script 'docs:update-versions' to keep docs version-sensitive files in sync
+   - Update release-notes.prompt.md to include docs automation workflow instructions
+   - Add dev/update-doc-versions.js script that:
+   - Syncs version tokens from package.json to docs
+   - Updates 'Last Updated' timestamps across docs
+   - Skips release notes and commit history (historic records)
+   - Preserves capitalization of 'Last Updated' vs 'Last updated'
+   Files:
+   - .github/prompts/release-notes.prompt.md
+   - dev/update-doc-versions.js
+   - docs/README.md
+   - docs/architecture/ARCHITECTURE.md
+   - docs/architecture/COLLAPSIBLE_JOURNEY.md
+   - docs/architecture/DYNAMIC_DOMAINS.md
+   - ... (36 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
+
+[1ff85cd] 2026-03-25 Refactor and clean up code across multiple files
+   Refactor and clean up code across multiple files
+   - Updated method parameters to use underscore prefix for unused parameters in NovelCardRenderer and shelf-page.js.
+   - Removed unused fandom navigation functions and related code in ranobes and scribblehub shelf pages.
+   - Cleaned up ScribbleHubNovelCard by removing unused variables.
+   - Removed redundant variables and functions in popup.js related to theme management and notifications.
+   - Simplified chunking UI code by removing unused status colors and variables.
+   - Removed unnecessary escapeHtml function from collapsible-sections.js.
+   - Cleaned up domain-constants.js and drive.js by removing unused imports.
+   Files:
+   - .github/copilot-instructions.md
+   - .github/prompts/release-notes.prompt.md
+   - docs/architecture/ARCHITECTURE.md
+   - docs/features/NOVEL_LIBRARY.md
+   - docs/overview/VISUAL_DASHBOARD.md
+   - docs/release/RELEASE_NOTES_4.6.0.md
+   - ... (26 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.6.0
+   Manifests:
+   - src/manifest-firefox.json: 4.6.0
+   - src/manifest-chromium.json: 4.6.0
+   - src/library/manifest.webmanifest: 4.6.0
 
 [3eaa27e] 2026-03-25 feat: update to version 4.6.0, enhance PWA support, and add automated visual dashboard
    feat: update to version 4.6.0, enhance PWA support, and add automated visual dashboard

@@ -1041,9 +1041,22 @@ function showNovelMenu(novelId, anchor) {
  * @param {string} novelId - Novel ID
  */
 function openNovelDetails(novelId) {
+	const contextIds = (filteredNovels.length ? filteredNovels : allNovels).map(
+		(n) => n.id,
+	);
+	const contextIndex = contextIds.indexOf(novelId);
 	// Dispatch event for main library to handle
 	window.dispatchEvent(
-		new CustomEvent("openNovelModal", { detail: { novelId } }),
+		new CustomEvent("openNovelModal", {
+			detail: {
+				novelId,
+				context: {
+					novelIds: contextIds,
+					index: contextIndex,
+					source: "shelf-page",
+				},
+			},
+		}),
 	);
 }
 
