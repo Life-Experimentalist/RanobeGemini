@@ -2936,27 +2936,36 @@ if (window.__RGInitDone) {
 			state,
 			wordCounts,
 		);
-		// Try to swap existing banner in-place first — this works even when
-		// findContentArea() temporarily returns null during content replacement.
-		const existingBanner = document.querySelector(".gemini-wip-banner");
-		if (existingBanner && existingBanner.parentNode) {
-			existingBanner.parentNode.replaceChild(newBanner, existingBanner);
-			return;
-		}
+		void (async () => {
+			const domIntegration = await loadDomIntegrationModule();
+			if (domIntegration?.upsertWorkInProgressBannerRuntime) {
+				domIntegration.upsertWorkInProgressBannerRuntime({
+					documentRef: document,
+					newBanner,
+					findContentArea,
+				});
+				return;
+			}
 
-		// Only needed for first-time insertion
-		const contentArea = findContentArea();
-		if (!contentArea) return;
+			const existingBanner = document.querySelector(".gemini-wip-banner");
+			if (existingBanner && existingBanner.parentNode) {
+				existingBanner.parentNode.replaceChild(newBanner, existingBanner);
+				return;
+			}
 
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content",
-		);
-		if (chunkedContainer) {
-			contentArea.insertBefore(newBanner, chunkedContainer);
-			return;
-		}
+			const contentArea = findContentArea();
+			if (!contentArea) return;
 
-		contentArea.insertBefore(newBanner, contentArea.firstChild);
+			const chunkedContainer = document.getElementById(
+				"gemini-chunked-content",
+			);
+			if (chunkedContainer) {
+				contentArea.insertBefore(newBanner, chunkedContainer);
+				return;
+			}
+
+			contentArea.insertBefore(newBanner, contentArea.firstChild);
+		})();
 	}
 
 	/**

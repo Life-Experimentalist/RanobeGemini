@@ -72,3 +72,29 @@ export function ensureMasterBannerRuntime({
 	contentArea.insertBefore(masterBanner, contentArea.firstChild);
 	return true;
 }
+
+export function upsertWorkInProgressBannerRuntime({
+	documentRef = document,
+	newBanner,
+	findContentArea,
+}) {
+	if (!newBanner) return false;
+
+	const existingBanner = documentRef.querySelector(".gemini-wip-banner");
+	if (existingBanner && existingBanner.parentNode) {
+		existingBanner.parentNode.replaceChild(newBanner, existingBanner);
+		return true;
+	}
+
+	const contentArea = findContentArea?.();
+	if (!contentArea) return false;
+
+	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	if (chunkedContainer) {
+		contentArea.insertBefore(newBanner, chunkedContainer);
+		return true;
+	}
+
+	contentArea.insertBefore(newBanner, contentArea.firstChild);
+	return true;
+}
