@@ -330,9 +330,28 @@ localStorage.setItem('rg_debug', 'true');
 
 Use `npm run publish:stores` to automate store submissions when the required secrets are available:
 
-- Firefox uses `web-ext sign` with the AMO API key and secret.
-- Chrome uses the Chrome Web Store API with OAuth refresh credentials.
-- Edge still needs Partner Center upload today, so the Chromium package is kept as a ready-to-submit artifact.
+- Store publishing is modular (`auto|on|off` per channel).
+- Missing optional store credentials are skipped by default.
+- Use `PUBLISH_STRICT=true` to fail if an explicitly enabled store is missing required credentials.
+
+Store mode environment variables:
+
+- `PUBLISH_FIREFOX=auto|on|off`
+- `PUBLISH_CHROME=auto|on|off`
+- `PUBLISH_EDGE_MANUAL=auto|on|off`
+- Optional manual channels: `PUBLISH_BRAVE_MANUAL`, `PUBLISH_OPERA_MANUAL`, `PUBLISH_VIVALDI_MANUAL`, `PUBLISH_ULAA_MANUAL`, `PUBLISH_ARC_MANUAL`
+
+Required secrets:
+
+- Firefox: `AMO_API_KEY`, `AMO_API_SECRET`
+- Chrome: `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`
+
+Optional Firefox extras:
+
+- `AMO_METADATA_FILE` (only when metadata payload is needed)
+- `AMO_UPLOAD_SOURCE_CODE=true|false` (source upload toggle)
+
+Edge still needs Partner Center upload today, so the Chromium package is kept as a ready-to-submit artifact.
 
 ### Creating a Release
 
