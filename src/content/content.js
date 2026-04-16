@@ -2030,80 +2030,19 @@ if (window.__RGInitDone) {
 					// Add master banner if not already present (individual chunk enhance path)
 					const contentAreaForMaster = findContentArea();
 					if (contentAreaForMaster && chunking?.ui) {
-						const existingMasterBanner = document.querySelector(
-							".gemini-master-banner",
-						);
-						if (!existingMasterBanner) {
-							const allChunkEls2 = document.querySelectorAll(
-								".gemini-chunk-content",
-							);
-							const masterOrigWords = Array.from(
-								allChunkEls2,
-							).reduce(
-								(s, c) =>
-									s +
-									chunking.core.countWords(
-										c.getAttribute(
-											"data-original-chunk-content",
-										) || "",
-									),
-								0,
-							);
-							const masterEnhWords = Array.from(
-								allChunkEls2,
-							).reduce(
-								(s, c) =>
-									s + chunking.core.countWords(c.innerHTML),
-								0,
-							);
-							const masterBanner2 =
-								chunking.ui.createMasterBanner(
-									masterOrigWords,
-									masterEnhWords,
-									allChunkEls2.length,
-									false,
-									lastChunkModelInfo,
-									null,
-								);
-							const mToggleBtn = masterBanner2.querySelector(
-								".gemini-master-toggle-all-btn",
-							);
-							if (mToggleBtn) {
-								mToggleBtn.setAttribute(
-									"data-showing",
-									"enhanced",
-								);
-								mToggleBtn.addEventListener("click", (e) => {
-									e.preventDefault();
-									handleToggleAllChunks();
-								});
-							}
-							const mDeleteBtn = masterBanner2.querySelector(
-								".gemini-master-delete-all-btn",
-							);
-							if (mDeleteBtn) {
-								mDeleteBtn.addEventListener(
-									"click",
-									async (e) => {
-										e.preventDefault();
-										if (
-											confirm(
-												"Delete all cached enhanced content for this chapter?",
-											)
-										) {
-											await handleDeleteAllChunks();
-										}
-									},
-								);
-							}
-							if (shouldBannersBeHidden()) {
-								masterBanner2.style.display = "none";
-							}
-							contentAreaForMaster.insertBefore(
-								masterBanner2,
-								contentAreaForMaster.firstChild,
-							);
-						}
+						const domIntegration =
+							await loadDomIntegrationModule();
+						domIntegration?.ensureMasterBannerRuntime?.({
+							documentRef: document,
+							contentArea: contentAreaForMaster,
+							chunking,
+							totalChunks: null,
+							lastChunkModelInfo,
+							shouldBannersBeHidden,
+							onToggleAll: handleToggleAllChunks,
+							onDeleteAll: handleDeleteAllChunks,
+							confirmFn: confirm,
+						});
 					}
 
 					// Update novel library now that all chunks are individually complete
@@ -2432,76 +2371,18 @@ if (window.__RGInitDone) {
 			});
 
 			if (contentArea && chunking?.ui) {
-				const existingMaster = document.querySelector(
-					".gemini-master-banner",
-				);
-				if (!existingMaster) {
-					const originalWords = Array.from(
-						document.querySelectorAll(".gemini-chunk-content"),
-					).reduce((sum, chunk) => {
-						return (
-							sum +
-							chunking.core.countWords(
-								chunk.getAttribute(
-									"data-original-chunk-content",
-								) || "",
-							)
-						);
-					}, 0);
-					const enhancedWords = Array.from(
-						document.querySelectorAll(".gemini-chunk-content"),
-					).reduce((sum, chunkContent) => {
-						return (
-							sum +
-							chunking.core.countWords(chunkContent.innerHTML)
-						);
-					}, 0);
-
-					const masterBanner = chunking.ui.createMasterBanner(
-						originalWords,
-						enhancedWords,
-						totalChunks,
-						false,
-						lastChunkModelInfo,
-						null,
-					);
-
-					const toggleAllBtn = masterBanner.querySelector(
-						".gemini-master-toggle-all-btn",
-					);
-					if (toggleAllBtn) {
-						toggleAllBtn.setAttribute("data-showing", "enhanced");
-						toggleAllBtn.addEventListener("click", (e) => {
-							e.preventDefault();
-							handleToggleAllChunks();
-						});
-					}
-					const deleteAllBtn = masterBanner.querySelector(
-						".gemini-master-delete-all-btn",
-					);
-					if (deleteAllBtn) {
-						deleteAllBtn.addEventListener("click", async (e) => {
-							e.preventDefault();
-							if (
-								confirm(
-									"Delete all cached enhanced content for this chapter?",
-								)
-							) {
-								await handleDeleteAllChunks();
-							}
-						});
-					}
-
-					// Apply current visibility state to master banner
-					if (shouldBannersBeHidden()) {
-						masterBanner.style.display = "none";
-					}
-
-					contentArea.insertBefore(
-						masterBanner,
-						contentArea.firstChild,
-					);
-				}
+				const domIntegration = await loadDomIntegrationModule();
+				domIntegration?.ensureMasterBannerRuntime?.({
+					documentRef: document,
+					contentArea,
+					chunking,
+					totalChunks,
+					lastChunkModelInfo,
+					shouldBannersBeHidden,
+					onToggleAll: handleToggleAllChunks,
+					onDeleteAll: handleDeleteAllChunks,
+					confirmFn: confirm,
+				});
 
 				// Update the main summary text container's data-group-end to match the
 				// real total so summarizeChunkRange can find it by index range matching.
@@ -4012,6 +3893,7 @@ if (window.__RGInitDone) {
 	let summaryRuntimeModule = null;
 	let chunkEventsModule = null;
 	let chunkBatchModule = null;
+	let domIntegrationModule = null;
 
 	async function loadChunkEventsModule() {
 		if (chunkEventsModule) return chunkEventsModule;
@@ -4037,6 +3919,20 @@ if (window.__RGInitDone) {
 			return chunkBatchModule;
 		} catch (error) {
 			debugError("Error loading chunk batch module:", error);
+			return null;
+		}
+	}
+
+	async function loadDomIntegrationModule() {
+		if (domIntegrationModule) return domIntegrationModule;
+		try {
+			const domIntegrationUrl = browser.runtime.getURL(
+				"content/modules/dom-integration.js",
+			);
+			domIntegrationModule = await import(domIntegrationUrl);
+			return domIntegrationModule;
+		} catch (error) {
+			debugError("Error loading dom integration module:", error);
 			return null;
 		}
 	}
