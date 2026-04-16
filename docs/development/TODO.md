@@ -177,15 +177,15 @@ See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historica
 
 ### Medium Priority
 
-- [ ] **BetterFiction Toggle Bridge**
-  - [ ] Verify `betterFictionSyncEnabled` setting is wired in `SETTINGS_DEFINITION`
-  - [ ] Confirm `extractBetterFictionStatus()` reads DOM and sets `document.body.dataset.rgBetterfictionSync`
-  - [ ] End-to-end test of BetterFiction page toggle → settings sync
+- [ ] **Extension Bridge Framework (BetterFiction-first)**
+  - [x] Add reusable extension-bridge utility for DOM status adapters
+  - [x] Route BetterFiction status through the shared bridge utility
+  - [x] Add registry docs for connecting additional extensions with site settings
+  - [x] Add one more bridge adapter example (non-BetterFiction) behind feature toggle
 
-- [ ] **WebNovel Handler**
-  - [ ] Re-enable WebNovel (currently disabled)
-  - [ ] Fix infinite-scroll button injection
-  - [ ] Verify chapter extraction on paginated chapters
+- [ ] **WebNovel Handler (Deferred / Non-blocking)**
+  - [ ] Keep disabled until dedicated cycle (no active sprint time allocation)
+  - [ ] Re-enable only after isolated validation pass
 
 - [ ] **Addon Store Publish Automation**
   - [ ] Publish Firefox releases through AMO API from CI
@@ -224,9 +224,9 @@ See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historica
 
 - [x] Summary typography parity (all sites)
 - [x] Harden truncation flow
-- [ ] Mobile bottom nav bar
-- [ ] Summarize shortcut end-to-end
-- [ ] BetterFiction toggle bridge
+- [x] Mobile bottom nav bar
+- [x] Summarize shortcut end-to-end
+- [ ] Extension bridge framework follow-up
 
 ### Version 4.5.0 - Advanced AI Controls
 
@@ -258,10 +258,11 @@ See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historica
 
 ### High Priority
 
-- [ ] WebNovel handler disabled — re-enable after infinite-scroll fix
 - [ ] Long chapters (> 100 k chars) may time out during chunking on slow connections
 
 ### Medium Priority
+
+- [ ] WebNovel handler disabled — re-enable in dedicated deferred cycle
 
 - [ ] FanFiction mobile: Cover images sometimes fail to load due to CORS
 - [ ] AO3: Custom tags beyond the first 20 are not extracted

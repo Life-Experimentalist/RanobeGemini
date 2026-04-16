@@ -64,12 +64,12 @@ One unit should be small enough to complete in a focused implementation window w
 
 Every unit should be delivered in layers so core outcomes land before advanced polish.
 
-| Layer | Purpose | Typical Prompt Cost | Exit Condition |
-| --- | --- | --- | --- |
-| L0 Foundation | Minimal viable implementation to make the flow work | 1 | Core behavior works in primary path |
-| L1 Stabilization | Error handling + compatibility checks + docs sync | +1 | No known breakage in common paths |
-| L2 Hardening | Edge cases, fallback paths, performance/safety polish | +1 to +2 | Flow is resilient across expected variance |
-| L3 Optimization | Optional UX/perf enhancements and refactors | +1+ | Added value without delaying delivery |
+| Layer            | Purpose                                               | Typical Prompt Cost | Exit Condition                             |
+| ---------------- | ----------------------------------------------------- | ------------------- | ------------------------------------------ |
+| L0 Foundation    | Minimal viable implementation to make the flow work   | 1                   | Core behavior works in primary path        |
+| L1 Stabilization | Error handling + compatibility checks + docs sync     | +1                  | No known breakage in common paths          |
+| L2 Hardening     | Edge cases, fallback paths, performance/safety polish | +1 to +2            | Flow is resilient across expected variance |
+| L3 Optimization  | Optional UX/perf enhancements and refactors           | +1+                 | Added value without delaying delivery      |
 
 Rule: complete `L0` and `L1` before attempting `L2/L3`, unless a blocker forces deeper work.
 
@@ -77,50 +77,52 @@ Rule: complete `L0` and `L1` before attempting `L2/L3`, unless a blocker forces 
 
 Track both planned and actual effort per unit.
 
-| Field | Meaning |
-| --- | --- |
-| Expected Prompts | Planned range before implementation |
-| Actual Prompts | Real prompts consumed to completion |
-| Variance | `Actual - Expected midpoint` |
-| Variance Reason | Why variance happened (scope, unknowns, regressions, etc.) |
-| Assumption Status | `valid`, `partially-valid`, or `invalid` |
-| Recalibration Action | Budget/scope/process adjustment for next units |
+| Field                | Meaning                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| Expected Prompts     | Planned range before implementation                        |
+| Actual Prompts       | Real prompts consumed to completion                        |
+| Variance             | `Actual - Expected midpoint`                               |
+| Variance Reason      | Why variance happened (scope, unknowns, regressions, etc.) |
+| Assumption Status    | `valid`, `partially-valid`, or `invalid`                   |
+| Recalibration Action | Budget/scope/process adjustment for next units             |
 
 ### Grouped Workstreams
 
-| Group | Purpose | Related Phases |
-| --- | --- | --- |
-| Runtime Core | Modularize content/background runtime safely | 1, 6 |
-| Extensibility | Handler/provider/storage adapter architecture | 2, 3, 4 |
-| Release & Ops | Build, secrets, CI/CD publishing quality | 5, 9 |
-| Surface Compatibility | Landing, extension awareness, cross-device UX | 7, 8 |
+| Group                 | Purpose                                       | Related Phases |
+| --------------------- | --------------------------------------------- | -------------- |
+| Runtime Core          | Modularize content/background runtime safely  | 1, 6           |
+| Extensibility         | Handler/provider/storage adapter architecture | 2, 3, 4        |
+| Release & Ops         | Build, secrets, CI/CD publishing quality      | 5, 9           |
+| Surface Compatibility | Landing, extension awareness, cross-device UX | 7, 8           |
 
 ### Phase Unit Budget Summary
 
-| Phase | Unit Count | Target Prompts | Hard Cap | Status |
-| --- | --- | --- | --- | --- |
-| 0: Baseline Alignment | 2 | 2-4 | 5 | in-progress |
-| 1: Content Runtime Modularization | 5 | 10-16 | 20 | pending |
-| 2: Handler Ecosystem Maturity | 4 | 6-10 | 12 | in-progress |
-| 3: AI Provider Modularization | 4 | 8-12 | 14 | pending |
-| 4: Storage Adapter Pattern | 3 | 5-8 | 10 | pending |
-| 5: Secret Injection & Config Hygiene | 3 | 4-7 | 8 | pending |
-| 6: OAuth Reliability | 3 | 4-6 | 8 | pending |
-| 7: Landing Awareness | 2 | 3-5 | 6 | pending |
-| 8: Cross-Device Compatibility | 3 | 5-8 | 10 | pending |
-| 9: Deployment Automation | 3 | 4-7 | 8 | in-progress |
+| Phase                                | Unit Count | Target Prompts | Hard Cap | Status      |
+| ------------------------------------ | ---------- | -------------- | -------- | ----------- |
+| 0: Baseline Alignment                | 2          | 2-4            | 5        | in-progress |
+| 1: Content Runtime Modularization    | 5          | 10-16          | 20       | pending     |
+| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | in-progress |
+| 3: AI Provider Modularization        | 4          | 8-12           | 14       | pending     |
+| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | pending     |
+| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | pending     |
+| 6: OAuth Reliability                 | 3          | 4-6            | 8        | pending     |
+| 7: Landing Awareness                 | 2          | 3-5            | 6        | pending     |
+| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | pending     |
+| 9: Deployment Automation             | 3          | 4-7            | 8        | in-progress |
 
 ### Rolling Prompt Tracker
 
-| Phase-Unit | Expected Prompts | Actual Prompts | Variance | Variance Reason | Assumption Status | Recalibration Action | Last Updated |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0-U1 Roadmap alignment + drift cleanup | 1-2 | 2 | +0.5 vs midpoint | Scope matched expected documentation complexity | valid | Keep baseline docs budget unchanged | 2026-04-16 |
-| 0-U2 Docs consistency + broken links | 1-2 | 1 | -0.5 vs midpoint | Fewer link issues than expected | valid | Reduce simple docs-fix budget to 1 where scoped | 2026-04-16 |
-| 2-U3 Modal navigation + summary fidelity hardening | 2-3 | 3 | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort | partially-valid | Budget parity-sensitive UI units at upper bound | 2026-04-16 |
-| 8-U3 Mobile modal UX parity (touch targets + swipe dismiss) | 2-3 | 2 | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost | valid | Prefer shared helpers before per-surface edits | 2026-04-16 |
-| 8-U3a Mobile bottom navigation baseline (L0-L1) | 1-2 | 1 | -0.5 vs midpoint | Existing view-state logic enabled low-cost nav extension | valid | Keep mobile nav baseline as a thin UI layer over existing handlers | 2026-04-16 |
-| 9-U1 Store publish script + workflow | 2-3 | 2 | -0.5 vs midpoint | Existing release scripts lowered integration complexity | valid | Keep automation baseline budget at 2 prompts | 2026-04-16 |
-| 9-U2 Follow-up release automation polish | 1-2 | 1 | -0.5 vs midpoint | Small scoped polish with no major regressions | valid | Keep follow-up polish as single-prompt unit | 2026-04-16 |
+| Phase-Unit                                                  | Expected Prompts | Actual Prompts | Variance         | Variance Reason                                             | Assumption Status | Recalibration Action                                               | Last Updated |
+| ----------------------------------------------------------- | ---------------- | -------------- | ---------------- | ----------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ | ------------ |
+| 0-U1 Roadmap alignment + drift cleanup                      | 1-2              | 2              | +0.5 vs midpoint | Scope matched expected documentation complexity             | valid             | Keep baseline docs budget unchanged                                | 2026-04-16   |
+| 0-U2 Docs consistency + broken links                        | 1-2              | 1              | -0.5 vs midpoint | Fewer link issues than expected                             | valid             | Reduce simple docs-fix budget to 1 where scoped                    | 2026-04-16   |
+| 2-U3 Modal navigation + summary fidelity hardening          | 2-3              | 3              | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort | partially-valid   | Budget parity-sensitive UI units at upper bound                    | 2026-04-16   |
+| 2-U4 Extension bridge framework baseline (BetterFiction-first) | 1-2           | 2              | +0.5 vs midpoint | Introduced reusable adapter path across content and handler | valid             | Keep initial bridge work at 2 prompts when touching two runtimes   | 2026-04-16   |
+| 8-U3 Mobile modal UX parity (touch targets + swipe dismiss) | 2-3              | 2              | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost     | valid             | Prefer shared helpers before per-surface edits                     | 2026-04-16   |
+| 8-U3a Mobile bottom navigation baseline (L0-L1)             | 1-2              | 1              | -0.5 vs midpoint | Existing view-state logic enabled low-cost nav extension    | valid             | Keep mobile nav baseline as a thin UI layer over existing handlers | 2026-04-16   |
+| 9-U1 Store publish script + workflow                        | 2-3              | 2              | -0.5 vs midpoint | Existing release scripts lowered integration complexity     | valid             | Keep automation baseline budget at 2 prompts                       | 2026-04-16   |
+| 9-U2 Follow-up release automation polish                    | 1-2              | 1              | -0.5 vs midpoint | Small scoped polish with no major regressions               | valid             | Keep follow-up polish as single-prompt unit                        | 2026-04-16   |
+| 9-U3 Modular store gating + manual channel reporting        | 1-2              | 1              | -0.5 vs midpoint | Mode-based store flow avoided credential-blocked failures   | valid             | Keep modular publish polish scoped to one prompt when isolated     | 2026-04-16   |
 
 ### Budget Overrun and Assumption Recalibration Protocol
 
@@ -162,10 +164,10 @@ Align roadmap tasks with real current state and make contribution paths explicit
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 0-U1 | Align roadmap with actual architecture state | 1-2 | Current-state section verified and no false TODOs |
-| 0-U2 | Docs consistency checks and dead-link fixes | 1-2 | No broken internal docs links in touched files |
+| Unit | Scope                                        | Target Prompts | Exit Criteria                                     |
+| ---- | -------------------------------------------- | -------------- | ------------------------------------------------- |
+| 0-U1 | Align roadmap with actual architecture state | 1-2            | Current-state section verified and no false TODOs |
+| 0-U2 | Docs consistency checks and dead-link fixes  | 1-2            | No broken internal docs links in touched files    |
 
 ## Phase 1: Content Runtime Modularization (Top Priority)
 
@@ -200,13 +202,13 @@ Refactor oversized content runtime into cohesive ES modules while preserving beh
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 1-U1 | Extract summary runtime orchestration from `content.js` | 2-3 | Summary entrypoints routed through dedicated module |
-| 1-U2 | Extract chunking runtime controls/events | 2-4 | Chunk controls no longer depend on large inline blocks |
-| 1-U3 | Extract DOM integration and insertion boundaries | 2-3 | Handler DOM contracts centralized and documented |
-| 1-U4 | Extract telemetry consent wiring into isolated module | 1-2 | Consent gate logic is self-contained + tested |
-| 1-U5 | Reduce `content.js` to orchestrator + validation pass | 3-4 | No regressions and measurable line-count reduction |
+| Unit | Scope                                                   | Target Prompts | Exit Criteria                                          |
+| ---- | ------------------------------------------------------- | -------------- | ------------------------------------------------------ |
+| 1-U1 | Extract summary runtime orchestration from `content.js` | 2-3            | Summary entrypoints routed through dedicated module    |
+| 1-U2 | Extract chunking runtime controls/events                | 2-4            | Chunk controls no longer depend on large inline blocks |
+| 1-U3 | Extract DOM integration and insertion boundaries        | 2-3            | Handler DOM contracts centralized and documented       |
+| 1-U4 | Extract telemetry consent wiring into isolated module   | 1-2            | Consent gate logic is self-contained + tested          |
+| 1-U5 | Reduce `content.js` to orchestrator + validation pass   | 3-4            | No regressions and measurable line-count reduction     |
 
 ## Phase 2: Plugin and Handler Ecosystem Maturity
 
@@ -219,6 +221,7 @@ Make handler/provider extension truly modular and contributor-friendly.
 - Define clear handler capability contracts (required exports + optional hooks).
 - Document handler publishing/packaging path for community modules.
 - Keep registry/discovery workflow deterministic.
+- Add a reusable extension-bridge framework for third-party extension signals (BetterFiction-first, adapter-ready for others).
 - Add context-aware modal navigation to library and shelf pages so modal traversal respects the active filtered set.
 - Harden site handlers such as AO3 so non-work routes do not get treated as importable novels.
 - Preserve full-length summaries in stored metadata and only control presentation in the UI layer.
@@ -226,17 +229,19 @@ Make handler/provider extension truly modular and contributor-friendly.
 ### Acceptance criteria
 
 - New handler can be added with minimal boilerplate and clear docs.
+- New extension bridge adapter can be added without changing core content orchestration logic.
 - Build pipeline includes/validates handler registration without manual hacks.
 - Contributor docs contain concrete examples and troubleshooting.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 2-U1 | Formalize handler capability contract + optional hooks | 1-2 | Contract documented + consumed in registry logic |
-| 2-U2 | Add deterministic validation in build/registration path | 2-3 | Build fails fast on invalid handler shape |
-| 2-U3 | Modal/navigation and metadata fidelity hardening | 1-2 | Filter-scoped navigation + full-length metadata preserved |
-| 2-U4 | Contributor guide refresh for add/test/publish handler path | 2-3 | New handler can be onboarded from docs only |
+| Unit | Scope                                                       | Target Prompts | Exit Criteria                                             |
+| ---- | ----------------------------------------------------------- | -------------- | --------------------------------------------------------- |
+| 2-U1 | Formalize handler capability contract + optional hooks      | 1-2            | Contract documented + consumed in registry logic          |
+| 2-U2 | Add deterministic validation in build/registration path     | 2-3            | Build fails fast on invalid handler shape                 |
+| 2-U3 | Modal/navigation and metadata fidelity hardening            | 1-2            | Filter-scoped navigation + full-length metadata preserved |
+| 2-U4 | Extension bridge framework baseline (BetterFiction-first)   | 1-2            | Shared bridge utility integrated with content + handlers  |
+| 2-U5 | Contributor guide refresh for add/test/publish handler path | 2-3            | New handler/bridge can be onboarded from docs only        |
 
 ## Phase 3: AI Provider Modularization (Model Adapter Pattern)
 
@@ -263,12 +268,12 @@ Decouple AI requests from any single vendor and allow contributors/users to add 
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 3-U1 | Define provider interface + adapter registry | 2-3 | Core flow uses interface, not vendor conditionals |
-| 3-U2 | Implement Gemini adapter parity baseline | 1-2 | Existing Gemini behavior unchanged via adapter |
-| 3-U3 | Add OpenAI-compatible + Ollama adapters | 3-4 | Both providers callable through same pipeline |
-| 3-U4 | Provider settings UI + docs for adding providers | 2-3 | Provider switch works from settings without refactor |
+| Unit | Scope                                            | Target Prompts | Exit Criteria                                        |
+| ---- | ------------------------------------------------ | -------------- | ---------------------------------------------------- |
+| 3-U1 | Define provider interface + adapter registry     | 2-3            | Core flow uses interface, not vendor conditionals    |
+| 3-U2 | Implement Gemini adapter parity baseline         | 1-2            | Existing Gemini behavior unchanged via adapter       |
+| 3-U3 | Add OpenAI-compatible + Ollama adapters          | 3-4            | Both providers callable through same pipeline        |
+| 3-U4 | Provider settings UI + docs for adding providers | 2-3            | Provider switch works from settings without refactor |
 
 ## Phase 4: Multi-Provider Storage Sync (Adapter Pattern)
 
@@ -294,11 +299,11 @@ Decouple storage provider logic from core backup/sync orchestration.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 4-U1 | Define `StorageInterface` and orchestrator boundary | 1-2 | Core backup logic depends on interface only |
-| 4-U2 | Move Drive implementation behind adapter | 2-3 | Drive path uses adapter and passes existing flows |
-| 4-U3 | Add provider selection wiring + validation docs | 2-3 | Active sync provider switch is runtime-safe |
+| Unit | Scope                                               | Target Prompts | Exit Criteria                                     |
+| ---- | --------------------------------------------------- | -------------- | ------------------------------------------------- |
+| 4-U1 | Define `StorageInterface` and orchestrator boundary | 1-2            | Core backup logic depends on interface only       |
+| 4-U2 | Move Drive implementation behind adapter            | 2-3            | Drive path uses adapter and passes existing flows |
+| 4-U3 | Add provider selection wiring + validation docs     | 2-3            | Active sync provider switch is runtime-safe       |
 
 ## Phase 5: Build-Time Secret Injection and Config Hygiene
 
@@ -319,11 +324,11 @@ Keep secrets out of repository while supporting official default builds.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 5-U1 | Inventory placeholders and required env inputs | 1-2 | Required secret map documented |
-| 5-U2 | Build pipeline injection and validation checks | 2-3 | Missing secrets fail build with actionable errors |
-| 5-U3 | Docs + contributor setup for local/dev/release | 1-2 | Reproducible setup from docs without manual guesswork |
+| Unit | Scope                                          | Target Prompts | Exit Criteria                                         |
+| ---- | ---------------------------------------------- | -------------- | ----------------------------------------------------- |
+| 5-U1 | Inventory placeholders and required env inputs | 1-2            | Required secret map documented                        |
+| 5-U2 | Build pipeline injection and validation checks | 2-3            | Missing secrets fail build with actionable errors     |
+| 5-U3 | Docs + contributor setup for local/dev/release | 1-2            | Reproducible setup from docs without manual guesswork |
 
 ## Phase 6: Cross-Platform OAuth Reliability (Edge/Mobile)
 
@@ -343,11 +348,11 @@ Stabilize OAuth on Edge mobile and cross-browser environments.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 6-U1 | Normalize auth flow abstraction around web auth APIs | 1-2 | Browser-specific logic wrapped behind common flow |
-| 6-U2 | Edge mobile redirect + callback reliability fixes | 2-3 | Edge mobile success path verified |
-| 6-U3 | Error telemetry/messages and fallback UX hardening | 1-2 | Actionable user-facing OAuth error handling |
+| Unit | Scope                                                | Target Prompts | Exit Criteria                                     |
+| ---- | ---------------------------------------------------- | -------------- | ------------------------------------------------- |
+| 6-U1 | Normalize auth flow abstraction around web auth APIs | 1-2            | Browser-specific logic wrapped behind common flow |
+| 6-U2 | Edge mobile redirect + callback reliability fixes    | 2-3            | Edge mobile success path verified                 |
+| 6-U3 | Error telemetry/messages and fallback UX hardening   | 1-2            | Actionable user-facing OAuth error handling       |
 
 ## Phase 7: Landing and Extension Awareness
 
@@ -368,10 +373,10 @@ Allow first-party landing pages to detect extension presence safely.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 7-U1 | Manifest + background `EXTERNAL_PING` contract | 1-2 | Ping returns install state + version |
-| 7-U2 | Landing-side integration + docs and compatibility checks | 2-3 | Landing surfaces consume ping safely |
+| Unit | Scope                                                    | Target Prompts | Exit Criteria                        |
+| ---- | -------------------------------------------------------- | -------------- | ------------------------------------ |
+| 7-U1 | Manifest + background `EXTERNAL_PING` contract           | 1-2            | Ping returns install state + version |
+| 7-U2 | Landing-side integration + docs and compatibility checks | 2-3            | Landing surfaces consume ping safely |
 
 ## Phase 8: Cross-Device Compatibility (Web App + Extension)
 
@@ -392,11 +397,11 @@ Keep user experience consistent across extension runtime and first-party web app
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 8-U1 | Define compatibility contracts and migration policy | 1-2 | Shared contract documented and versioned |
-| 8-U2 | Validate backup/recovery parity across extension + web app | 2-3 | Cross-surface restore/load parity verified |
-| 8-U3 | Mobile and desktop UX behavior parity checklist | 2-3 | Known incompatibilities documented with owners |
+| Unit | Scope                                                      | Target Prompts | Exit Criteria                                  |
+| ---- | ---------------------------------------------------------- | -------------- | ---------------------------------------------- |
+| 8-U1 | Define compatibility contracts and migration policy        | 1-2            | Shared contract documented and versioned       |
+| 8-U2 | Validate backup/recovery parity across extension + web app | 2-3            | Cross-surface restore/load parity verified     |
+| 8-U3 | Mobile and desktop UX behavior parity checklist            | 2-3            | Known incompatibilities documented with owners |
 
 ## Phase 9: Deployment Automation (CI/CD)
 
@@ -416,19 +421,21 @@ Reduce manual store publishing work and release drift.
 
 - Tag push triggers build, package, and publish workflow.
 - Supported store uploads run from GitHub Actions secrets only.
+- Store channels can run conditionally so missing optional credentials do not fail the whole release.
 - Edge packaging remains artifact-assisted until Microsoft exposes a public programmatic publish path.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope | Target Prompts | Exit Criteria |
-| --- | --- | --- | --- |
-| 9-U1 | Implement workflow + publish script baseline | 2-3 | CI builds, packages, and calls publish entrypoint |
-| 9-U2 | Secret validation + failure transparency | 1-2 | CI failures identify missing/invalid secret scope clearly |
-| 9-U3 | Release artifact quality checks and docs | 1-2 | Release flow reproducible from docs + CI artifacts |
+| Unit | Scope                                        | Target Prompts | Exit Criteria                                             |
+| ---- | -------------------------------------------- | -------------- | --------------------------------------------------------- |
+| 9-U1 | Implement workflow + publish script baseline | 2-3            | CI builds, packages, and calls publish entrypoint         |
+| 9-U2 | Secret validation + modular store gating     | 1-2            | Optional stores skip cleanly; required stores fail clearly |
+| 9-U3 | Manual-channel reporting + release docs      | 1-2            | Manual channels are reported and release flow is reproducible |
 
 ## Product Evolution Track (Non-blocking)
 
 - Expand from novels to broader long-form reading surfaces (research/news/articles).
+- Keep WebNovel handler re-enable work deferred and non-blocking until a dedicated validation cycle.
 - Explore AI memory/context features (RAG-like chapter memory).
 - Keep local AI option as a strategic differentiator when feasible.
 - Keep all future expansion local-first with user-owned credentials and optional sync providers.

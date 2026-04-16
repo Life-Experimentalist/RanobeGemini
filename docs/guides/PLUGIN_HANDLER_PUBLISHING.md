@@ -39,6 +39,29 @@ This guide documents how contributors can add new handlers/providers and prepare
 4. Add provider settings schema and safe defaults through existing configuration paths.
 5. Validate with at least one enhancement and one summary flow end-to-end.
 
+## Add an Extension Bridge Adapter
+
+Use extension bridges when a third-party extension can expose page-level signals (for example reading status) that Ranobe Gemini should consume.
+
+1. Add a bridge entry in `src/utils/extension-bridges.js` with:
+	- `id`
+	- `shelfId`
+	- `settingKey`
+	- `datasetKey`
+	- `statusSelector` (and optional `statusAttribute`)
+2. Keep `defaultEnabled: false` for new/experimental bridges.
+3. Add a corresponding site setting toggle in the matching handler `SETTINGS_DEFINITION`.
+4. Consume bridge status from handler code using `readExtensionBridgeStatus(<bridge-id>)` before legacy fallback logic.
+5. Verify `applyExtensionBridgeFlags()` is called from content runtime initialization for the active shelf.
+6. Validate both toggle states:
+	- disabled: bridge has no effect
+	- enabled: bridge value is read and normalized correctly
+
+Current baseline adapters:
+
+- `betterfiction` (FanFiction)
+- `ao3-experimental-status` (AO3, opt-in example behind feature toggle)
+
 ## Packaging and Validation Checklist
 
 - Build: `npm run build`

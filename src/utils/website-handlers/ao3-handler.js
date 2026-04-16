@@ -75,6 +75,15 @@ export class AO3Handler extends BaseWebsiteHandler {
 				description:
 					"Automatically run Enhance when an AO3 chapter loads.",
 			},
+			{ key: "_bridges", type: "section", label: "🔌 Extension Bridges" },
+			{
+				key: "experimentalAo3BridgeEnabled",
+				label: "Enable experimental AO3 bridge adapter",
+				type: "toggle",
+				defaultValue: false,
+				description:
+					"Allows an external extension to provide reading status via data-rg-ao3-bridge-status.",
+			},
 			// Note: AO3 natively supports EPUB/MOBI/PDF/HTML download via
 			// the built-in Download button, so no custom download settings needed.
 		],
