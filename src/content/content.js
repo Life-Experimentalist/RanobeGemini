@@ -39,10 +39,9 @@ let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let extensionBridgesModule = null; // Extension bridge helpers
+let chunkControlRuntime = null; // Chunk control state/helpers
 let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
-const pausedChunks = new Set(); // Chunks where user pressed Pause (hold result, don't auto-apply)
-const skippedChunks = new Set(); // Chunks where user pressed Skip (discard result, reset to pending)
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
 const PROGRESS_PROMPT_TIMEOUT_MS = 30000; // 30 s — user needs time to decide
@@ -1536,14 +1535,14 @@ if (window.__RGInitDone) {
 	// ── Skip / Pause helpers ────────────────────────────────────────────────────
 
 	function handleSkipChunk(chunkIndex) {
-		skippedChunks.add(chunkIndex);
+		chunkControlRuntime?.markSkip(chunkIndex);
 		debugLog(
 			`Chunk ${chunkIndex} marked for skip — will discard result on arrival.`,
 		);
 	}
 
 	function handlePauseChunk(chunkIndex) {
-		pausedChunks.add(chunkIndex);
+		chunkControlRuntime?.markPause(chunkIndex);
 		debugLog(
 			`Chunk ${chunkIndex} marked for pause — will store result without applying.`,
 		);
@@ -1578,7 +1577,7 @@ if (window.__RGInitDone) {
 		chunkContent.innerHTML = enhancedContent;
 		applyCollapsibleSections(chunkContent);
 		chunkContent.setAttribute("data-chunk-enhanced", "true");
-		pausedChunks.delete(chunkIndex);
+		chunkControlRuntime?.clearPause(chunkIndex);
 
 		// Build a completed banner with word counts
 		const nTotalChunks = document.querySelectorAll(
@@ -1656,7 +1655,7 @@ if (window.__RGInitDone) {
 
 		// Clear the stored (but un-applied) enhanced content
 		chunkContent.removeAttribute("data-enhanced-chunk-content");
-		pausedChunks.delete(chunkIndex);
+		chunkControlRuntime?.clearPause(chunkIndex);
 
 		// Reset banner back to pending so the user can re-enhance later
 		const nTotalChunks = document.querySelectorAll(
@@ -1799,8 +1798,7 @@ if (window.__RGInitDone) {
 				}
 
 				// Check if user pressed Skip while this chunk was processing
-				if (skippedChunks.has(chunkIndex)) {
-					skippedChunks.delete(chunkIndex);
+				if (chunkControlRuntime?.consumeSkip(chunkIndex)) {
 					debugLog(
 						`Chunk ${chunkIndex} was skipped — discarding result.`,
 					);
@@ -1860,7 +1858,7 @@ if (window.__RGInitDone) {
 					);
 
 					// Check if user pressed Pause while this chunk was processing
-					if (pausedChunks.has(chunkIndex)) {
+					if (chunkControlRuntime?.consumePause(chunkIndex)) {
 						// Store enhanced content but don't apply it — user uses "Show Enhanced"
 						chunkContent.setAttribute(
 							"data-enhanced-chunk-content",
@@ -3830,6 +3828,22 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	async function loadChunkControlRuntime() {
+		if (chunkControlRuntime) return chunkControlRuntime;
+		try {
+			const controlsUrl = browser.runtime.getURL(
+				"content/modules/chunk-controls.js",
+			);
+			const controlsModule = await import(controlsUrl);
+			if (!controlsModule?.createChunkControlRuntime) return null;
+			chunkControlRuntime = controlsModule.createChunkControlRuntime();
+			return chunkControlRuntime;
+		} catch (error) {
+			debugError("Error loading chunk control runtime:", error);
+			return null;
+		}
+	}
+
 	// Inject handler-specific custom CSS from settings
 	async function injectHandlerCustomCSS() {
 		if (!currentHandler) return;
@@ -4808,6 +4822,7 @@ if (window.__RGInitDone) {
 			siteSettings = await siteSettingsModule.getSiteSettings();
 		}
 		extensionBridgesModule = await loadExtensionBridgesModule();
+		chunkControlRuntime = await loadChunkControlRuntime();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
