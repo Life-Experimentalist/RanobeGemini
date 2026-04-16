@@ -71,7 +71,7 @@ Version 4.1.0 brings a significantly expanded theme engine, a per-novel reading 
 - Word count is now included in the default export filename template.
 - Default export extension changed from generic to **EPUB**.
 - `novel-copy-format.js` updated with the new template variables and resolution logic.
-- **Copy button** in AO3 and FanFiction handlers uses the new template; FichHub download button no longer includes a duplicate "Copy Title" step.
+- **Copy button** in AO3 and FanFiction handlers uses the new template; FicHub download button no longer includes a duplicate "Copy Title" step.
 
 ---
 
