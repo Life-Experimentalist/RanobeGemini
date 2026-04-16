@@ -29,6 +29,13 @@
 [![MV3](https://img.shields.io/badge/Manifest-V3-orange?style=flat)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-4285F4?style=flat&logo=google)](https://ai.google.dev/)
 [![Edge Add-on](https://img.shields.io/badge/Microsoft%20Edge-Add--on-0078d7?style=flat&logo=microsoftedge)](https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn)
+<!-- Optional store badges (enable when store listing is live) -->
+<!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID?style=flat&logo=googlechrome&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
+<!-- [![Chrome Users](https://img.shields.io/chrome-web-store/users/YOUR_EXTENSION_ID?style=flat&logo=googlechrome&label=Chrome%20Users)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
+<!-- [![Opera Add-ons](https://img.shields.io/badge/Opera-Addons-ff1b2d?style=flat&logo=opera)](https://addons.opera.com/extensions/details/YOUR_EXTENSION_SLUG/) -->
+<!-- [![Brave Compatible](https://img.shields.io/badge/Brave-Compatible-fb542b?style=flat&logo=brave)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
+<!-- [![Vivaldi Compatible](https://img.shields.io/badge/Vivaldi-Compatible-ef3939?style=flat&logo=vivaldi)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
+<!-- [![Arc Compatible](https://img.shields.io/badge/Arc-Compatible-000000?style=flat)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
 [![vkrishna04-portfolio](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio/badge?style=flat-square&color=blue&label=vkrishna04-portfolio)](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio)
 [![ranobe-startup](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup/badge?style=flat-square&color=brightgreen&label=rg-startup)](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup)
 [![rg-update](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update/badge?style=flat-square&color=orange&label=rg-update)](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update)
@@ -168,7 +175,45 @@ npm run watch
 
 ### Store Publishing
 
-For release automation, use `npm run publish:stores` after the build artifacts are ready. The workflow publishes Firefox through the AMO API and Chrome through the Chrome Web Store API. Edge Add-ons still needs a manual Partner Center upload, so the Chromium package is kept as the upload-ready artifact.
+For release automation, use `npm run publish:stores` after the build artifacts are ready.
+
+- Publishing is now **modular**: stores run only when configured.
+- Missing credentials are skipped by default (no hard failure).
+- Set `PUBLISH_STRICT=true` to fail when an explicitly enabled store is missing required credentials.
+
+Environment modes per store:
+
+- `PUBLISH_FIREFOX=auto|on|off`
+- `PUBLISH_CHROME=auto|on|off`
+- `PUBLISH_EDGE_MANUAL=auto|on|off`
+- Optional Chromium-manual channels:
+  - `PUBLISH_BRAVE_MANUAL=on`
+  - `PUBLISH_OPERA_MANUAL=on`
+  - `PUBLISH_VIVALDI_MANUAL=on`
+  - `PUBLISH_ULAA_MANUAL=on`
+  - `PUBLISH_ARC_MANUAL=on`
+
+Required credentials:
+
+- Firefox AMO API: `AMO_API_KEY`, `AMO_API_SECRET`
+- Chrome Web Store API: `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`
+
+Optional Firefox publish extras (not required for standard version submission):
+
+- `AMO_METADATA_FILE` (when you need to submit metadata payload via `web-ext sign`)
+- `AMO_UPLOAD_SOURCE_CODE=true|false` (defaults to enabled if a source zip exists)
+
+### Edge Add-ons API Credentials (What Key to Use)
+
+Edge Add-ons publishing does not use a single "store key" like AMO. Use Partner Center API credentials:
+
+1. Open Microsoft Partner Center and go to your Edge Add-ons product.
+2. Open API access / credentials for the product.
+3. Create an app credential set (client app).
+4. Save values securely (tenant/app identifiers and secret values provided by Partner Center/Azure setup flow).
+5. Keep these in CI secrets only.
+
+Until a stable automated path is enabled in this repo, `PUBLISH_EDGE_MANUAL` keeps Edge in artifact-assisted manual submission mode.
 
 ## Usage
 

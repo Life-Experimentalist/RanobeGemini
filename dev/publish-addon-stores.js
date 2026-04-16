@@ -19,6 +19,21 @@ function toBoolean(value, defaultValue = false) {
 	return /^(1|true|yes|on)$/i.test(String(value).trim());
 }
 
+function getPublishMode(value, defaultMode = "auto") {
+	const normalized = String(value || defaultMode).trim().toLowerCase();
+	if (["off", "false", "0", "no"].includes(normalized)) return "off";
+	if (["on", "true", "1", "yes"].includes(normalized)) return "on";
+	return "auto";
+}
+
+function hasAllEnv(names) {
+	return names.every((name) => Boolean(process.env[name]));
+}
+
+function missingEnv(names) {
+	return names.filter((name) => !process.env[name]);
+}
+
 function collectFiles(dirPath) {
 	if (!fs.existsSync(dirPath)) {
 		return [];
@@ -59,6 +74,32 @@ function requireEnv(name) {
 		throw new Error(`Missing required environment variable: ${name}`);
 	}
 	return value;
+}
+
+function shouldRunStore({
+	storeLabel,
+	mode,
+	requiredVars = [],
+	strict = false,
+}) {
+	if (mode === "off") {
+		console.log(`Skipping ${storeLabel} publication (mode=off).`);
+		return false;
+	}
+
+	if (requiredVars.length === 0) return true;
+
+	if (hasAllEnv(requiredVars)) return true;
+
+	const missing = missingEnv(requiredVars);
+	const message = `${storeLabel} is not configured. Missing: ${missing.join(", ")}`;
+
+	if (strict && mode === "on") {
+		throw new Error(message);
+	}
+
+	console.log(`Skipping ${storeLabel}: ${message}`);
+	return false;
 }
 
 function runCommand(command, args) {
@@ -283,31 +324,82 @@ function reportEdgeStatus() {
 	);
 }
 
-async function main() {
-	const publishFirefoxEnabled = toBoolean(process.env.PUBLISH_FIREFOX, true);
-	const publishChromeEnabled = toBoolean(process.env.PUBLISH_CHROME, true);
-	const reportEdgeEnabled = toBoolean(process.env.PUBLISH_EDGE_MANUAL, true);
-
-	if (!publishFirefoxEnabled && !publishChromeEnabled && !reportEdgeEnabled) {
-		console.log("No store publishing actions enabled.");
+function reportManualStoreStatus(storeLabel, envPrefix) {
+	const mode = getPublishMode(process.env[`PUBLISH_${envPrefix}`], "off");
+	if (mode === "off") {
 		return;
 	}
 
-	if (publishFirefoxEnabled) {
-		await publishFirefox();
-	} else {
-		console.log("Skipping Firefox publication.");
+	const zipPath = findLatestFile(CHROMIUM_RELEASES_DIR, (filePath) =>
+		filePath.endsWith("_chromium.zip"),
+	);
+
+	if (!zipPath) {
+		console.log(`${storeLabel}: package not found yet.`);
+		return;
 	}
 
-	if (publishChromeEnabled) {
-		await publishChrome();
+	console.log(
+		`${storeLabel}: manual upload enabled. Use ${path.relative(ROOT_DIR, zipPath)}.`,
+	);
+}
+
+async function main() {
+	const strictPublishing = toBoolean(process.env.PUBLISH_STRICT, false);
+	const firefoxMode = getPublishMode(process.env.PUBLISH_FIREFOX, "auto");
+	const chromeMode = getPublishMode(process.env.PUBLISH_CHROME, "auto");
+	const edgeManualMode = getPublishMode(
+		process.env.PUBLISH_EDGE_MANUAL,
+		"auto",
+	);
+
+	const noPrimaryStores =
+		firefoxMode === "off" &&
+		chromeMode === "off" &&
+		edgeManualMode === "off";
+
+	if (noPrimaryStores) {
+		console.log("No store publishing actions enabled.");
 	} else {
-		console.log("Skipping Chrome publication.");
+		if (
+			shouldRunStore({
+				storeLabel: "Firefox (AMO)",
+				mode: firefoxMode,
+				requiredVars: ["AMO_API_KEY", "AMO_API_SECRET"],
+				strict: strictPublishing,
+			})
+		) {
+			await publishFirefox();
+		}
+
+		if (
+			shouldRunStore({
+				storeLabel: "Chrome Web Store",
+				mode: chromeMode,
+				requiredVars: [
+					"CWS_CLIENT_ID",
+					"CWS_CLIENT_SECRET",
+					"CWS_REFRESH_TOKEN",
+					"CWS_PUBLISHER_ID",
+					"CWS_EXTENSION_ID",
+				],
+				strict: strictPublishing,
+			})
+		) {
+			await publishChrome();
+		}
+
+		if (edgeManualMode !== "off") {
+			reportEdgeStatus();
+		}
 	}
 
-	if (reportEdgeEnabled) {
-		reportEdgeStatus();
-	}
+	// Additional Chromium-family manual channels (optional, non-blocking)
+	reportManualStoreStatus("Brave Add-ons", "BRAVE_MANUAL");
+	reportManualStoreStatus("Opera Add-ons", "OPERA_MANUAL");
+	reportManualStoreStatus("Vivaldi", "VIVALDI_MANUAL");
+	reportManualStoreStatus("Ulaa", "ULAA_MANUAL");
+	reportManualStoreStatus("Arc", "ARC_MANUAL");
 }
 
 main().catch((error) => {

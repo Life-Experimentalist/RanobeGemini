@@ -33,13 +33,17 @@ jobs:
 
       - name: Publish Firefox, Chrome, and Edge artifacts
         env:
-          PUBLISH_FIREFOX: "true"
-          PUBLISH_CHROME: "true"
-          PUBLISH_EDGE_MANUAL: "true"
+          PUBLISH_STRICT: "false"
+          PUBLISH_FIREFOX: "auto"
+          PUBLISH_CHROME: "auto"
+          PUBLISH_EDGE_MANUAL: "auto"
+          PUBLISH_BRAVE_MANUAL: "off"
+          PUBLISH_OPERA_MANUAL: "off"
+          PUBLISH_VIVALDI_MANUAL: "off"
+          PUBLISH_ULAA_MANUAL: "off"
+          PUBLISH_ARC_MANUAL: "off"
           AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
           AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
-          AMO_METADATA_FILE: ${{ secrets.AMO_METADATA_FILE }}
-          AMO_UPLOAD_SOURCE_CODE: ${{ secrets.AMO_UPLOAD_SOURCE_CODE }}
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
