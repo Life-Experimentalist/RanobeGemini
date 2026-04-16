@@ -4089,6 +4089,21 @@ if (window.__RGInitDone) {
 	// ── Summary service (unified summary pipeline) ──────────────
 	let summaryServiceModule = null;
 	let summaryRuntimeModule = null;
+	let chunkEventsModule = null;
+
+	async function loadChunkEventsModule() {
+		if (chunkEventsModule) return chunkEventsModule;
+		try {
+			const eventsUrl = browser.runtime.getURL(
+				"content/modules/chunk-events.js",
+			);
+			chunkEventsModule = await import(eventsUrl);
+			return chunkEventsModule;
+		} catch (error) {
+			debugError("Error loading chunk events module:", error);
+			return null;
+		}
+	}
 
 	async function loadSummaryRuntimeModule() {
 		if (summaryRuntimeModule) return summaryRuntimeModule;
@@ -4115,120 +4130,34 @@ if (window.__RGInitDone) {
 			debugError,
 			initContext: {
 				sendMessageWithRetry,
-				wakeUpBackgroundWorker,
-				extractContent,
-				findContentArea,
-				stripHtmlTags,
-				extractParagraphsFromHtml,
-				showStatusMessage,
-				logNotification,
-				resolveNovelDataForNotification,
-				loadChunkingSystem,
-				debugLog,
-				debugError,
-				getCurrentFontSize: () => currentFontSize,
-			},
-		});
+					const events = await loadChunkEventsModule();
+					if (!events?.toggleChunkViewRuntime) return;
 
-		return summaryServiceModule;
-	}
-
-	// Clear old chunk cache format once per page load
-	(async function initChunkCacheMigration() {
-		try {
-			const chunking = await loadChunkingSystem();
-			if (chunking?.cache?.clearOldCache) {
-				await chunking.cache.clearOldCache();
-			}
-		} catch (error) {
-			debugError("Chunk cache migration failed:", error);
-		}
-	})();
-
-	/**
-	 * Generate reading status dropdown options from READING_STATUS_INFO
-	 * @returns {Array} Array of {value, label} objects
-	 */
-	function getReadingStatusOptions() {
-		if (!READING_STATUS || !READING_STATUS_INFO) {
-			// Fallback if constants aren't loaded yet
-			return [
-				{ value: "reading", label: "📖 Reading" },
-				{ value: "completed", label: "✅ Completed" },
-				{ value: "plan-to-read", label: "📋 Plan to Read" },
-				{ value: "on-hold", label: "⏸️ On Hold" },
-				{ value: "dropped", label: "❌ Dropped" },
-			];
-		}
-
+					await events.toggleChunkViewRuntime({
+						chunkIndex,
+						documentRef: document,
+						applyCollapsibleSections,
+						findContentArea,
+						enableCopyOnContentArea,
+						escapeHtml,
+					});
 		// Generate options from constants
 		return Object.entries(READING_STATUS_INFO)
 			.filter(([value]) => value !== "re-reading")
-			.map(([value, info]) => ({
-				value: value,
-				label: info.label,
-			}));
-	}
+					const events = await loadChunkEventsModule();
+					if (!events?.deleteChunkEnhancementRuntime) return;
 
-	// Add novel to library when content is enhanced
-	async function addToNovelLibrary(context) {
-		// Validate that this is a valid chapter page (not user/author profile)
-		if (!currentHandler || !currentHandler.isChapterPage?.()) {
-			debugLog(
-				"Skipping library add: Not a chapter page or no valid handler",
-			);
-			return;
-		}
-
-		// Incognito mode — no automatic library registration
-		if (isIncognitoActive()) {
-			debugLog(
-				"📖 Incognito mode active — skipping automatic library registration",
-			);
-			return;
-		}
-
-		if (!novelLibrary) {
-			await loadNovelLibrary();
-		}
-
-		if (!novelLibrary) {
-			console.warn("Novel library not available");
-			return;
-		}
-
-		try {
-			// Create novel data from context
-			const novelData = novelLibrary.createNovelFromContext(
-				context,
-				currentHandler,
-			);
-
-			if (!novelData) {
-				debugLog("Could not create novel data from context");
-				return;
-			}
-
-			// When enhancing a chapter, user is actively reading
-			// Set status to READING if it's a new novel or still PLAN_TO_READ
-			novelData.readingStatus = READING_STATUS.READING;
-
-			// Add or update the novel in the library
-			await novelLibrary.addOrUpdateNovel(novelData);
-
-			// Try retroactive metadata update
-			const metadata = currentHandler.extractNovelMetadata?.() || {};
-			if (metadata && Object.keys(metadata).length > 0) {
-				await novelLibrary.updateNovelMetadata(novelData.id, metadata);
-			}
-
-			// Update chapter tracking
-			const enhancedChunkEls = document.querySelectorAll(
-				'.gemini-chunk-content[data-chunk-enhanced="true"]',
-			);
-			const totalChunkEls = document.querySelectorAll(
-				".gemini-chunk-content",
-			);
+					await events.deleteChunkEnhancementRuntime({
+						chunkIndex,
+						windowRef: window,
+						documentRef: document,
+						loadChunkingSystem,
+						showStatusMessage,
+						escapeHtml,
+						buildChunkBanner,
+						chunkBehaviorConfig,
+						onEnhance: () => handleReenhanceChunk(chunkIndex),
+					});
 			await novelLibrary.updateChapter(novelData.id, {
 				chapterNumber: context.chapterNumber || 1,
 				title: context.chapterTitle || document.title,
