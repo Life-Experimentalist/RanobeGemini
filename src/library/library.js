@@ -222,6 +222,7 @@ const elements = {
 	refreshBtn: document.getElementById("refresh-btn"),
 	landingBtn: document.getElementById("landing-btn"),
 	settingsBtn: document.getElementById("settings-btn"),
+	mobileSettingsBtn: document.getElementById("mobile-settings-btn"),
 	openPopupBtn: document.getElementById("open-popup-btn"),
 	siteAutoAddList: document.getElementById("site-autoadd-list"),
 
@@ -2800,6 +2801,12 @@ function setupEventListeners() {
 			browser.tabs.create({ url: settingsUrl });
 		}
 	});
+
+	if (elements.mobileSettingsBtn) {
+		elements.mobileSettingsBtn.addEventListener("click", () => {
+			elements.settingsBtn?.click();
+		});
+	}
 
 	if (elements.landingBtn) {
 		elements.landingBtn.addEventListener("click", () => {

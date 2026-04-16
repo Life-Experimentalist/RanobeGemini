@@ -118,6 +118,7 @@ Track both planned and actual effort per unit.
 | 0-U2 Docs consistency + broken links | 1-2 | 1 | -0.5 vs midpoint | Fewer link issues than expected | valid | Reduce simple docs-fix budget to 1 where scoped | 2026-04-16 |
 | 2-U3 Modal navigation + summary fidelity hardening | 2-3 | 3 | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort | partially-valid | Budget parity-sensitive UI units at upper bound | 2026-04-16 |
 | 8-U3 Mobile modal UX parity (touch targets + swipe dismiss) | 2-3 | 2 | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost | valid | Prefer shared helpers before per-surface edits | 2026-04-16 |
+| 8-U3a Mobile bottom navigation baseline (L0-L1) | 1-2 | 1 | -0.5 vs midpoint | Existing view-state logic enabled low-cost nav extension | valid | Keep mobile nav baseline as a thin UI layer over existing handlers | 2026-04-16 |
 | 9-U1 Store publish script + workflow | 2-3 | 2 | -0.5 vs midpoint | Existing release scripts lowered integration complexity | valid | Keep automation baseline budget at 2 prompts | 2026-04-16 |
 | 9-U2 Follow-up release automation polish | 1-2 | 1 | -0.5 vs midpoint | Small scoped polish with no major regressions | valid | Keep follow-up polish as single-prompt unit | 2026-04-16 |
 

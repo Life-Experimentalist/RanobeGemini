@@ -171,7 +171,7 @@ See [v3.8.0 final checklist](../release/v3.8.0_FINAL_CHECKLIST.md) for historica
   - [x] Keyboard shortcut fires the correct pipeline end-to-end
 
 - [ ] **Redesign Mobile Nav UX**
-  - [ ] Bottom navigation bar for mobile library
+  - [x] Bottom navigation bar for mobile library
   - [x] Touch-friendly tap targets (≥ 48px)
   - [x] Swipe-to-dismiss for modals
 
