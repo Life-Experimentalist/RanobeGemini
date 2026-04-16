@@ -112,19 +112,19 @@ Track both planned and actual effort per unit.
 
 ### Rolling Prompt Tracker
 
-| Phase-Unit                                                  | Expected Prompts | Actual Prompts | Variance         | Variance Reason                                             | Assumption Status | Recalibration Action                                               | Last Updated |
-| ----------------------------------------------------------- | ---------------- | -------------- | ---------------- | ----------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ | ------------ |
-| 0-U1 Roadmap alignment + drift cleanup                      | 1-2              | 2              | +0.5 vs midpoint | Scope matched expected documentation complexity             | valid             | Keep baseline docs budget unchanged                                | 2026-04-16   |
-| 0-U2 Docs consistency + broken links                        | 1-2              | 1              | -0.5 vs midpoint | Fewer link issues than expected                             | valid             | Reduce simple docs-fix budget to 1 where scoped                    | 2026-04-16   |
-| 1-U1 Summary runtime orchestration extraction (L0-L1)       | 2-3              | 2              | -0.5 vs midpoint | Helper-module boundary + build validation kept scope tight  | valid             | Keep summary refactors in helper slices with same-session build checks | 2026-04-16 |
-| 1-U2 Chunk control state/events extraction (L0)             | 2-4              | 2              | -1.0 vs midpoint | Event-handler modularization was isolated behind runtime loaders | valid         | Continue extracting chunk controls in bounded runtime modules      | 2026-04-16   |
-| 2-U3 Modal navigation + summary fidelity hardening          | 2-3              | 3              | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort | partially-valid   | Budget parity-sensitive UI units at upper bound                    | 2026-04-16   |
-| 2-U4 Extension bridge framework baseline (BetterFiction-first) | 1-2           | 2              | +0.5 vs midpoint | Introduced reusable adapter path across content and handler | valid             | Keep initial bridge work at 2 prompts when touching two runtimes   | 2026-04-16   |
-| 8-U3 Mobile modal UX parity (touch targets + swipe dismiss) | 2-3              | 2              | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost     | valid             | Prefer shared helpers before per-surface edits                     | 2026-04-16   |
-| 8-U3a Mobile bottom navigation baseline (L0-L1)             | 1-2              | 1              | -0.5 vs midpoint | Existing view-state logic enabled low-cost nav extension    | valid             | Keep mobile nav baseline as a thin UI layer over existing handlers | 2026-04-16   |
-| 9-U1 Store publish script + workflow                        | 2-3              | 2              | -0.5 vs midpoint | Existing release scripts lowered integration complexity     | valid             | Keep automation baseline budget at 2 prompts                       | 2026-04-16   |
-| 9-U2 Follow-up release automation polish                    | 1-2              | 1              | -0.5 vs midpoint | Small scoped polish with no major regressions               | valid             | Keep follow-up polish as single-prompt unit                        | 2026-04-16   |
-| 9-U3 Modular store gating + manual channel reporting        | 1-2              | 1              | -0.5 vs midpoint | Mode-based store flow avoided credential-blocked failures   | valid             | Keep modular publish polish scoped to one prompt when isolated     | 2026-04-16   |
+| Phase-Unit                                                     | Expected Prompts | Actual Prompts | Variance         | Variance Reason                                                  | Assumption Status | Recalibration Action                                                   | Last Updated |
+| -------------------------------------------------------------- | ---------------- | -------------- | ---------------- | ---------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------- | ------------ |
+| 0-U1 Roadmap alignment + drift cleanup                         | 1-2              | 2              | +0.5 vs midpoint | Scope matched expected documentation complexity                  | valid             | Keep baseline docs budget unchanged                                    | 2026-04-16   |
+| 0-U2 Docs consistency + broken links                           | 1-2              | 1              | -0.5 vs midpoint | Fewer link issues than expected                                  | valid             | Reduce simple docs-fix budget to 1 where scoped                        | 2026-04-16   |
+| 1-U1 Summary runtime orchestration extraction (L0-L1)          | 2-3              | 2              | -0.5 vs midpoint | Helper-module boundary + build validation kept scope tight       | valid             | Keep summary refactors in helper slices with same-session build checks | 2026-04-16   |
+| 1-U2 Chunk control/event extraction (L0-L1)                    | 2-4              | 3              | +0.0 vs midpoint | Runtime loader pattern kept chunk-event and batch-handler splits stable | valid         | Keep chunk controls split into state/events/batch modules              | 2026-04-16   |
+| 2-U3 Modal navigation + summary fidelity hardening             | 2-3              | 3              | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort      | partially-valid   | Budget parity-sensitive UI units at upper bound                        | 2026-04-16   |
+| 2-U4 Extension bridge framework baseline (BetterFiction-first) | 1-2              | 2              | +0.5 vs midpoint | Introduced reusable adapter path across content and handler      | valid             | Keep initial bridge work at 2 prompts when touching two runtimes       | 2026-04-16   |
+| 8-U3 Mobile modal UX parity (touch targets + swipe dismiss)    | 2-3              | 2              | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost          | valid             | Prefer shared helpers before per-surface edits                         | 2026-04-16   |
+| 8-U3a Mobile bottom navigation baseline (L0-L1)                | 1-2              | 1              | -0.5 vs midpoint | Existing view-state logic enabled low-cost nav extension         | valid             | Keep mobile nav baseline as a thin UI layer over existing handlers     | 2026-04-16   |
+| 9-U1 Store publish script + workflow                           | 2-3              | 2              | -0.5 vs midpoint | Existing release scripts lowered integration complexity          | valid             | Keep automation baseline budget at 2 prompts                           | 2026-04-16   |
+| 9-U2 Follow-up release automation polish                       | 1-2              | 1              | -0.5 vs midpoint | Small scoped polish with no major regressions                    | valid             | Keep follow-up polish as single-prompt unit                            | 2026-04-16   |
+| 9-U3 Modular store gating + manual channel reporting           | 1-2              | 1              | -0.5 vs midpoint | Mode-based store flow avoided credential-blocked failures        | valid             | Keep modular publish polish scoped to one prompt when isolated         | 2026-04-16   |
 
 ### Budget Overrun and Assumption Recalibration Protocol
 
@@ -428,10 +428,10 @@ Reduce manual store publishing work and release drift.
 
 ### Unit breakdown and prompt budget
 
-| Unit | Scope                                        | Target Prompts | Exit Criteria                                             |
-| ---- | -------------------------------------------- | -------------- | --------------------------------------------------------- |
-| 9-U1 | Implement workflow + publish script baseline | 2-3            | CI builds, packages, and calls publish entrypoint         |
-| 9-U2 | Secret validation + modular store gating     | 1-2            | Optional stores skip cleanly; required stores fail clearly |
+| Unit | Scope                                        | Target Prompts | Exit Criteria                                                 |
+| ---- | -------------------------------------------- | -------------- | ------------------------------------------------------------- |
+| 9-U1 | Implement workflow + publish script baseline | 2-3            | CI builds, packages, and calls publish entrypoint             |
+| 9-U2 | Secret validation + modular store gating     | 1-2            | Optional stores skip cleanly; required stores fail clearly    |
 | 9-U3 | Manual-channel reporting + release docs      | 1-2            | Manual channels are reported and release flow is reproducible |
 
 ## Product Evolution Track (Non-blocking)

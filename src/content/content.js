@@ -3271,113 +3271,34 @@ if (window.__RGInitDone) {
 	 * Toggle all chunks between original and enhanced
 	 */
 	function handleToggleAllChunks() {
-		const mainBanner = document.querySelector(".gemini-master-banner");
-		const toggleBtn = mainBanner?.querySelector(
-			".gemini-master-toggle-all-btn",
-		);
-		if (!toggleBtn) return;
-
-		const isShowingEnhanced =
-			toggleBtn.getAttribute("data-showing") !== "original";
-		const allChunkContents = document.querySelectorAll(
-			".gemini-chunk-content",
-		);
-		const allChunkToggleBtns = document.querySelectorAll(
-			".gemini-chunk-toggle-btn",
-		);
-
-		allChunkContents.forEach((chunkContent, _idx) => {
-			if (chunkContent.getAttribute("data-chunk-enhanced") !== "true")
-				return;
-
-			const originalHtml = chunkContent.getAttribute(
-				"data-original-chunk-html",
-			);
-			const originalContent = chunkContent.getAttribute(
-				"data-original-chunk-content",
-			);
-			// eslint-disable-next-line no-unused-vars
-			const enhancedContent =
-				chunkContent.getAttribute("data-enhanced-chunk-content") ||
-				chunkContent.innerHTML;
-
-			if (isShowingEnhanced) {
-				chunkContent.setAttribute(
-					"data-enhanced-chunk-content",
-					chunkContent.innerHTML,
-				);
-				if (originalHtml) {
-					chunkContent.innerHTML = originalHtml;
-				} else {
-					chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
-				}
-			} else {
-				const savedEnhanced = chunkContent.getAttribute(
-					"data-enhanced-chunk-content",
-				);
-				if (savedEnhanced) {
-					chunkContent.innerHTML = savedEnhanced;
-				}
-			}
-		});
-
-		// Update all individual toggle buttons
-		allChunkToggleBtns.forEach((btn) => {
-			if (isShowingEnhanced) {
-				btn.textContent = "✨ Show Enhanced";
-				btn.setAttribute("data-showing", "original");
-			} else {
-				btn.textContent = "👁 Show Original";
-				btn.setAttribute("data-showing", "enhanced");
-			}
-		});
-
-		// Update main toggle button
-		if (isShowingEnhanced) {
-			toggleBtn.textContent = "✨ Show All Enhanced";
-			toggleBtn.setAttribute("data-showing", "original");
-		} else {
-			toggleBtn.textContent = "👁 Show All Original";
-			toggleBtn.setAttribute("data-showing", "enhanced");
-		}
+		void (async () => {
+			const batch = await loadChunkBatchModule();
+			if (!batch?.toggleAllChunksRuntime) return;
+			batch.toggleAllChunksRuntime({
+				documentRef: document,
+				escapeHtml,
+			});
+		})();
 	}
 
 	/**
 	 * Delete all cached chunk data and revert to original
 	 */
 	async function handleDeleteAllChunks() {
-		const contentArea = findContentArea();
-		if (!contentArea) return;
+		const batch = await loadChunkBatchModule();
+		if (!batch?.deleteAllChunksRuntime) return;
 
-		const originalHtml = contentArea.getAttribute("data-original-html");
-		if (originalHtml) {
-			contentArea.innerHTML = originalHtml;
-			contentArea.removeAttribute("data-original-html");
-			contentArea.removeAttribute("data-original-text");
-			contentArea.removeAttribute("data-total-chunks");
-		}
-
-		// Clear both chunk cache and single-content cache
-		const chunking = await loadChunkingSystem();
-		if (chunking) {
-			await chunking.cache.deleteAllChunksForUrl(window.location.href);
-		}
-		if (storageManager) {
-			await storageManager.removeEnhancedContent(window.location.href);
-		}
-
-		isCachedContent = false;
-		hasCachedContent = false;
-		showStatusMessage(
-			"All enhanced content deleted. Reverted to original.",
-			"info",
-			3000,
-		);
-
-		// Reset enhance button
-		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "✨ Enhance with Gemini";
-			btn.disabled = false;
+		await batch.deleteAllChunksRuntime({
+			findContentArea,
+			loadChunkingSystem,
+			storageManager,
+			windowRef: window,
+			documentRef: document,
+			showStatusMessage,
+			onResetCacheFlags: () => {
+				isCachedContent = false;
+				hasCachedContent = false;
+			},
 		});
 	}
 
@@ -4090,6 +4011,7 @@ if (window.__RGInitDone) {
 	let summaryServiceModule = null;
 	let summaryRuntimeModule = null;
 	let chunkEventsModule = null;
+	let chunkBatchModule = null;
 
 	async function loadChunkEventsModule() {
 		if (chunkEventsModule) return chunkEventsModule;
@@ -4101,6 +4023,20 @@ if (window.__RGInitDone) {
 			return chunkEventsModule;
 		} catch (error) {
 			debugError("Error loading chunk events module:", error);
+			return null;
+		}
+	}
+
+	async function loadChunkBatchModule() {
+		if (chunkBatchModule) return chunkBatchModule;
+		try {
+			const batchUrl = browser.runtime.getURL(
+				"content/modules/chunk-batch.js",
+			);
+			chunkBatchModule = await import(batchUrl);
+			return chunkBatchModule;
+		} catch (error) {
+			debugError("Error loading chunk batch module:", error);
 			return null;
 		}
 	}
@@ -4130,34 +4066,110 @@ if (window.__RGInitDone) {
 			debugError,
 			initContext: {
 				sendMessageWithRetry,
-					const events = await loadChunkEventsModule();
-					if (!events?.toggleChunkViewRuntime) return;
+				wakeUpBackgroundWorker,
+				extractContent,
+				findContentArea,
+				stripHtmlTags,
+				extractParagraphsFromHtml,
+				showStatusMessage,
+				logNotification,
+				resolveNovelDataForNotification,
+				loadChunkingSystem,
+				debugLog,
+				debugError,
+				getCurrentFontSize: () => currentFontSize,
+			},
+		});
 
-					await events.toggleChunkViewRuntime({
-						chunkIndex,
-						documentRef: document,
-						applyCollapsibleSections,
-						findContentArea,
-						enableCopyOnContentArea,
-						escapeHtml,
-					});
-		// Generate options from constants
+		return summaryServiceModule;
+	}
+
+	// Clear old chunk cache format once per page load
+	(async function initChunkCacheMigration() {
+		try {
+			const chunking = await loadChunkingSystem();
+			if (chunking?.cache?.clearOldCache) {
+				await chunking.cache.clearOldCache();
+			}
+		} catch (error) {
+			debugError("Chunk cache migration failed:", error);
+		}
+	})();
+
+	/**
+	 * Generate reading status dropdown options from READING_STATUS_INFO
+	 * @returns {Array} Array of {value, label} objects
+	 */
+	function getReadingStatusOptions() {
+		if (!READING_STATUS || !READING_STATUS_INFO) {
+			return [
+				{ value: "reading", label: "Reading" },
+				{ value: "completed", label: "Completed" },
+				{ value: "plan-to-read", label: "Plan to Read" },
+				{ value: "on-hold", label: "On Hold" },
+				{ value: "dropped", label: "Dropped" },
+			];
+		}
+
 		return Object.entries(READING_STATUS_INFO)
 			.filter(([value]) => value !== "re-reading")
-					const events = await loadChunkEventsModule();
-					if (!events?.deleteChunkEnhancementRuntime) return;
+			.map(([value, info]) => ({
+				value,
+				label: info.label,
+			}));
+	}
 
-					await events.deleteChunkEnhancementRuntime({
-						chunkIndex,
-						windowRef: window,
-						documentRef: document,
-						loadChunkingSystem,
-						showStatusMessage,
-						escapeHtml,
-						buildChunkBanner,
-						chunkBehaviorConfig,
-						onEnhance: () => handleReenhanceChunk(chunkIndex),
-					});
+	// Add novel to library when content is enhanced
+	async function addToNovelLibrary(context) {
+		if (!currentHandler || !currentHandler.isChapterPage?.()) {
+			debugLog(
+				"Skipping library add: Not a chapter page or no valid handler",
+			);
+			return;
+		}
+
+		if (isIncognitoActive()) {
+			debugLog(
+				"Incognito mode active - skipping automatic library registration",
+			);
+			return;
+		}
+
+		if (!novelLibrary) {
+			await loadNovelLibrary();
+		}
+
+		if (!novelLibrary) {
+			console.warn("Novel library not available");
+			return;
+		}
+
+		try {
+			const novelData = novelLibrary.createNovelFromContext(
+				context,
+				currentHandler,
+			);
+
+			if (!novelData) {
+				debugLog("Could not create novel data from context");
+				return;
+			}
+
+			novelData.readingStatus = READING_STATUS.READING;
+
+			await novelLibrary.addOrUpdateNovel(novelData);
+
+			const metadata = currentHandler.extractNovelMetadata?.() || {};
+			if (metadata && Object.keys(metadata).length > 0) {
+				await novelLibrary.updateNovelMetadata(novelData.id, metadata);
+			}
+
+			const enhancedChunkEls = document.querySelectorAll(
+				'.gemini-chunk-content[data-chunk-enhanced="true"]',
+			);
+			const totalChunkEls = document.querySelectorAll(
+				".gemini-chunk-content",
+			);
 			await novelLibrary.updateChapter(novelData.id, {
 				chapterNumber: context.chapterNumber || 1,
 				title: context.chapterTitle || document.title,
@@ -4169,7 +4181,7 @@ if (window.__RGInitDone) {
 				readAt: Date.now(),
 			});
 
-			debugLog("📚 Novel and chapter added to library:", novelData.title);
+			debugLog("Novel and chapter added to library:", novelData.title);
 		} catch (error) {
 			debugError("Error adding to novel library:", error);
 		}
