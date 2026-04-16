@@ -17,7 +17,7 @@
 <br/>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-4.6.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
+[![Version](https://img.shields.io/badge/version-4.7.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls)
 [![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
@@ -47,7 +47,7 @@
 - **Chapter Summarization**: Generates concise or detailed summaries for long chapters without leaving the page.
 - **Multi-Site Support**: Works on `ranobes.top`, `fanfiction.net` (desktop + mobile), `archiveofourown.org` (AO3), `scribblehub.com`, and more.
 - **Novel Library**: Track novels across all supported sites with shelf-aware metadata, reading status, characters, relationships, genres, and tags.
-- **Shareable Library Deep Links**: Open and share direct modal links like `library.html?novel=<id>&openModal=1` (including per-site shelf pages).
+- **Shareable Library Deep Links**: Open and share direct modal links like `library.html?novel=<id>&openModal=1` with context-aware prev/next modal navigation on the library and per-site shelf pages.
 - **Missing-ID Recovery Flow**: If a shared modal link points to a novel not yet in your library, Ranobe Gemini can regenerate the source URL, open it, and auto-add the entry.
 - **Reading Lists & Badges**: Apply list badges independent of status (`🔁 Rereading`, `⭐ Favourites`, plus custom labels like `R18`).
 - **Unified Status Dropdown**: Manage primary status and toggle reading-list membership directly from each novel card dropdown.
@@ -165,6 +165,10 @@ npm run update-domains
 # Development watch mode
 npm run watch
 ```
+
+### Store Publishing
+
+For release automation, use `npm run publish:stores` after the build artifacts are ready. The workflow publishes Firefox through the AMO API and Chrome through the Chrome Web Store API. Edge Add-ons still needs a manual Partner Center upload, so the Chromium package is kept as the upload-ready artifact.
 
 ## Usage
 

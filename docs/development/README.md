@@ -127,6 +127,7 @@ Function-level landing page audit and docs-parity checks.
 | **Package Chromium** | `npm run package-chromium` | Create distributable .zip                               |
 | **Package Source**   | `npm run package-source`   | Create source code archive                              |
 | **Package All**      | `npm run package`          | Refresh domains + build all                             |
+| **Publish Stores**   | `npm run publish:stores`   | Publish supported store updates from CI or local env    |
 | **Update Domains**   | `npm run update-domains`   | Regenerate manifest domains                             |
 | **All Commits**      | `npm run commits:all`      | Print all commit messages                               |
 | **Version Commits**  | `npm run commits:versions` | Print commits mentioning versions (`2.x`, `3.x`, `4.x`) |
@@ -326,6 +327,12 @@ localStorage.setItem('rg_debug', 'true');
 ---
 
 ## 📦 Release Process
+
+Use `npm run publish:stores` to automate store submissions when the required secrets are available:
+
+- Firefox uses `web-ext sign` with the AMO API key and secret.
+- Chrome uses the Chrome Web Store API with OAuth refresh credentials.
+- Edge still needs Partner Center upload today, so the Chromium package is kept as a ready-to-submit artifact.
 
 ### Creating a Release
 

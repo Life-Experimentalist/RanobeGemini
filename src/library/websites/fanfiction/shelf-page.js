@@ -23,7 +23,10 @@ import {
 	setupThemeListener,
 } from "../../../utils/theme-config.js";
 import { getAllStatuses } from "../../status-machine.js";
-import { recoverMissingNovelById } from "../../shared-shelf-helpers.js";
+import {
+	createModalNavigationController,
+	recoverMissingNovelById,
+} from "../../shared-shelf-helpers.js";
 
 const CANONICAL_LABELS = new Map();
 
@@ -61,6 +64,22 @@ const MAX_CHARACTERS = 4;
 // State for filtering and rendering
 let allNovels = [];
 let filteredNovels = [];
+
+const modalNavigation = createModalNavigationController({
+	getContextIds: (novelId) => {
+		const visibleNovels = filteredNovels.length > 0 ? filteredNovels : allNovels;
+		const visibleIds = visibleNovels.map((novel) => novel.id);
+		if (novelId && visibleIds.includes(novelId)) return visibleIds;
+		const allIds = allNovels.map((novel) => novel.id);
+		if (novelId && allIds.includes(novelId)) return allIds;
+		return visibleIds.length > 0 ? visibleIds : allIds;
+	},
+	findNovelById: (novelId) =>
+		filteredNovels.find((novel) => novel.id === novelId) ||
+		allNovels.find((novel) => novel.id === novelId) ||
+		null,
+	onOpenNovel: (novel, options) => showNovelModal(novel, options),
+});
 
 const FILTER_STORAGE_KEY = "rg_ff_filters_fanfiction";
 const DEFAULT_FILTERS = {
@@ -600,9 +619,11 @@ function renderNovels(novels = filteredNovels) {
 	});
 }
 
-async function showNovelModal(novel) {
+async function showNovelModal(novel, options = {}) {
 	const modal = document.getElementById("novel-modal");
 	if (!modal) return;
+
+	modalNavigation.syncContext(novel.id, options.contextIds);
 
 	// Keep a shareable deep-link URL for this modal.
 	try {
@@ -2027,6 +2048,7 @@ async function initializeFanFictionShelf() {
 		setupFandomFilter();
 		setupInsightClicks();
 		applyFiltersAndSort();
+		modalNavigation.bind();
 		openNovelFromQuery();
 	} catch (error) {
 		console.error(

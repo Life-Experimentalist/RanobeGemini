@@ -3,6 +3,9 @@
 This file is the authoritative technical roadmap for evolving Ranobe Gemini.
 It is written as an execution guide for contributors and AI agents.
 
+> **Last Updated:** 2026-04-16
+> **Current Version:** 4.7.0
+
 ## Current State (Verified)
 
 - Runtime is already organized under `src/`.
@@ -104,6 +107,9 @@ Make handler/provider extension truly modular and contributor-friendly.
 - Define clear handler capability contracts (required exports + optional hooks).
 - Document handler publishing/packaging path for community modules.
 - Keep registry/discovery workflow deterministic.
+- Add context-aware modal navigation to library and shelf pages so modal traversal respects the active filtered set.
+- Harden site handlers such as AO3 so non-work routes do not get treated as importable novels.
+- Preserve full-length summaries in stored metadata and only control presentation in the UI layer.
 
 ### Acceptance criteria
 
@@ -200,6 +206,7 @@ Allow first-party landing pages to detect extension presence safely.
 - Add `externally_connectable` with `*://ranobe.vkrishna04.me/*`.
 - Add background listener for `EXTERNAL_PING`.
 - Return install status and extension version in response payload.
+- This will work for both Temporary Addons or store installed versions.
 
 ### Acceptance criteria
 
@@ -230,15 +237,17 @@ Reduce manual store publishing work and release drift.
 
 ### Required workflow
 
-- Add `.github/workflows/publish.yml` for tag-based release publishing.
-- Build extension artifacts and submit to:
+- Add `.github/workflows/publish-addons.yml` for tag-based release publishing.
+- Build extension artifacts and submit automatically to:
   - AMO (Firefox)
-  - Edge Add-ons Store
+  - Chrome Web Store
+- Package a Chromium/Edge-ready artifact for Partner Center upload when a public Edge submission API is unavailable.
 
 ### Acceptance criteria
 
 - Tag push triggers build, package, and publish workflow.
-- Secrets are sourced from GitHub Actions secrets only.
+- Supported store uploads run from GitHub Actions secrets only.
+- Edge packaging remains artifact-assisted until Microsoft exposes a public programmatic publish path.
 
 ## Product Evolution Track (Non-blocking)
 

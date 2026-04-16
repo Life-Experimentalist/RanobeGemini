@@ -1518,6 +1518,12 @@ body {
 	background: var(--bg-card-hover);
 }
 
+.modal-nav-btn[disabled] {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
 /* Novel Detail Modal */
 .novel-detail {
 	padding: var(--spacing-xl);

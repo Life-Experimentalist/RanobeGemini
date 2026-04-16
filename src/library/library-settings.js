@@ -1421,7 +1421,9 @@ function filterSupportedUrls(urls) {
 			if (
 				(parsed.hostname.includes("archiveofourown.org") ||
 					parsed.hostname.includes("ao3.org")) &&
-				/^\/series\/\d+/.test(parsed.pathname || "")
+				!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(
+					parsed.pathname || "",
+				)
 			) {
 				return false;
 			}

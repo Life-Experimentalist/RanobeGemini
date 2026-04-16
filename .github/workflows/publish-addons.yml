@@ -1,0 +1,56 @@
+name: Publish Add-ons
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension packages
+        run: npm run package
+
+      - name: Package source archive
+        run: npm run package:source
+
+      - name: Publish Firefox, Chrome, and Edge artifacts
+        env:
+          PUBLISH_FIREFOX: "true"
+          PUBLISH_CHROME: "true"
+          PUBLISH_EDGE_MANUAL: "true"
+          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
+          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+          AMO_METADATA_FILE: ${{ secrets.AMO_METADATA_FILE }}
+          AMO_UPLOAD_SOURCE_CODE: ${{ secrets.AMO_UPLOAD_SOURCE_CODE }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: npm run publish:stores
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: addon-packages
+          path: |
+            releases/**/*.zip
+          if-no-files-found: error

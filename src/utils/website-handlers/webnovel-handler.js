@@ -274,7 +274,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 			".det-abt, .book-intro, .g_thumb_intro",
 		);
 		if (descEl) {
-			metadata.description = descEl.textContent.trim().substring(0, 500);
+			metadata.description = descEl.textContent.trim();
 		}
 
 		// Genres/Tags
@@ -318,8 +318,8 @@ When enhancing, improve readability and grammar while respecting the author's or
 	extractPageMetadata() {
 		const context = {
 			author: null,
-			title: null,
-			genres: [],
+		if (descEl) {
+			metadata.description = descEl.textContent.trim();
 			tags: [],
 			status: null,
 			description: null,

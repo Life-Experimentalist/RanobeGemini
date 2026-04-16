@@ -694,11 +694,13 @@ export class NovelLibrary {
 	getNovelIdentityFromUrl(url) {
 		try {
 			const parsed = new URL(url);
-			// AO3 series lists are not single importable novels.
+			// AO3 imports must be concrete works/chapters only.
 			if (
 				(parsed.hostname.includes("archiveofourown.org") ||
 					parsed.hostname.includes("ao3.org")) &&
-				/^\/series\/\d+/.test(parsed.pathname || "")
+				!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(
+					parsed.pathname || "",
+				)
 			) {
 				return null;
 			}

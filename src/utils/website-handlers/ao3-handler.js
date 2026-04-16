@@ -122,11 +122,14 @@ When enhancing, improve readability while fully respecting the author's original
 			window.location.hostname.includes("ao3.org");
 		if (!hostMatch) return false;
 
-		// Ignore AO3 series list pages for now (not a single importable novel unit).
+		// Only handle importable AO3 work/chapter pages.
+		// This prevents treating homepage/search/tag listing pages as novels.
 		const path = window.location.pathname || "";
-		if (/^\/series\/\d+/.test(path)) return false;
+		if (!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(path)) {
+			return false;
+		}
 
-		return true;
+		return this.isChapterPage();
 	}
 
 	/**
@@ -136,13 +139,16 @@ When enhancing, improve readability while fully respecting the author's original
 	 */
 	isChapterPage() {
 		const url = window.location.pathname;
-		// Work or chapter pages
-		const isWork = /^\/works\/\d+/.test(url);
+		// Strictly require canonical AO3 work/chapter routes.
+		const isWork = /^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(url);
 		// Check for chapter content on page
 		const hasContent = !!document.querySelector(
-			'div.userstuff.module[role="article"], #chapters .userstuff.module, .userstuff.module',
+			'div.userstuff.module[role="article"], #chapters .userstuff.module',
 		);
-		return isWork && hasContent;
+		const hasWorkMeta =
+			!!document.querySelector("dl.work.meta") ||
+			!!document.querySelector("dl.stats");
+		return isWork && hasContent && hasWorkMeta;
 	}
 
 	/**
@@ -344,6 +350,11 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @returns {Object} Novel metadata
 	 */
 	extractNovelMetadata() {
+		if (!this.isChapterPage() && !this.isSingleChapterWork()) {
+			debugLog("AO3: Skipping metadata extraction for non-work page");
+			return null;
+		}
+
 		const metadata = {
 			title: null,
 			author: null,
@@ -405,13 +416,8 @@ When enhancing, improve readability while fully respecting the author's original
 			"#workskin .summary blockquote.userstuff, #workskin .summary .userstuff, .summary .userstuff blockquote, .summary .userstuff, blockquote.userstuff",
 		);
 		if (summaryEl) {
-			metadata.description = summaryEl.textContent
-				.trim()
-				.substring(0, 500);
+			metadata.description = summaryEl.textContent.trim();
 		}
-
-		// ==========================================
-		// Extract from work meta dl (rating, warnings, etc.)
 		// ==========================================
 		const workMeta = document.querySelector(
 			"dl.work.meta, dl.work.meta.group",

@@ -161,10 +161,7 @@ function injectBuildSecrets(platformDist) {
 		if (!envValue) continue;
 
 		const escaped = JSON.stringify(envValue);
-		const re = new RegExp(
-			`export const ${item.constName} = "[^"]*";`,
-			"m",
-		);
+		const re = new RegExp(`export const ${item.constName} = "[^"]*";`, "m");
 		if (!re.test(content)) continue;
 
 		content = content.replace(

@@ -323,3 +323,110 @@ export function ensureRandomSelectButton(
 	// Insert before the search input so the button appears to its left
 	container.insertBefore(button, searchInput);
 }
+
+/**
+ * Create a modal navigation controller for shelf pages.
+ * Keeps prev/next traversal scoped to the current visible novel set.
+ *
+ * @param {Object} options
+ * @param {Function} options.getContextIds - Returns ordered novel IDs for the current modal context.
+ * @param {Function} options.findNovelById - Resolves a novel object by ID.
+ * @param {Function} options.onOpenNovel - Opens the modal for a novel.
+ * @param {string} [options.prevButtonId='modal-prev-btn'] - Previous button element ID.
+ * @param {string} [options.nextButtonId='modal-next-btn'] - Next button element ID.
+ * @returns {Object} Controller with bind/update/sync helpers.
+ */
+export function createModalNavigationController({
+	getContextIds,
+	findNovelById,
+	onOpenNovel,
+	prevButtonId = "modal-prev-btn",
+	nextButtonId = "modal-next-btn",
+}) {
+	let currentContextIds = [];
+	let currentContextIndex = -1;
+
+	function updateButtons() {
+		const prevBtn = document.getElementById(prevButtonId);
+		const nextBtn = document.getElementById(nextButtonId);
+		const hasContext =
+			currentContextIds.length > 1 && currentContextIndex >= 0;
+
+		if (prevBtn) {
+			prevBtn.disabled = !hasContext || currentContextIndex <= 0;
+			prevBtn.style.display = hasContext ? "" : "none";
+		}
+		if (nextBtn) {
+			nextBtn.disabled =
+				!hasContext || currentContextIndex >= currentContextIds.length - 1;
+			nextBtn.style.display = hasContext ? "" : "none";
+		}
+	}
+
+	function syncContext(novelId, explicitContextIds = null) {
+		const resolvedIds = Array.isArray(explicitContextIds)
+			? explicitContextIds.filter(Boolean)
+			: (typeof getContextIds === "function" ? getContextIds(novelId) : [])
+				.filter(Boolean);
+
+		currentContextIds = resolvedIds;
+		currentContextIndex = novelId ? currentContextIds.indexOf(novelId) : -1;
+
+		if (currentContextIndex < 0 && novelId && currentContextIds.length) {
+			const resolvedIndex = currentContextIds.indexOf(novelId);
+			if (resolvedIndex >= 0) {
+				currentContextIndex = resolvedIndex;
+			}
+		}
+
+		updateButtons();
+	}
+
+	async function navigate(offset) {
+		if (!currentContextIds.length || currentContextIndex < 0) return;
+
+		const targetIndex = currentContextIndex + offset;
+		if (targetIndex < 0 || targetIndex >= currentContextIds.length) return;
+
+		const targetId = currentContextIds[targetIndex];
+		if (!targetId || typeof findNovelById !== "function") return;
+
+		const targetNovel = findNovelById(targetId);
+		if (!targetNovel || typeof onOpenNovel !== "function") return;
+
+		await onOpenNovel(targetNovel, {
+			contextIds: currentContextIds,
+			index: targetIndex,
+			source: "modal-nav",
+		});
+	}
+
+	function bind() {
+		const prevBtn = document.getElementById(prevButtonId);
+		const nextBtn = document.getElementById(nextButtonId);
+
+		if (prevBtn && !prevBtn.dataset.rgModalNavBound) {
+			prevBtn.dataset.rgModalNavBound = "1";
+			prevBtn.addEventListener("click", () => {
+				void navigate(-1);
+			});
+		}
+		if (nextBtn && !nextBtn.dataset.rgModalNavBound) {
+			nextBtn.dataset.rgModalNavBound = "1";
+			nextBtn.addEventListener("click", () => {
+				void navigate(1);
+			});
+		}
+
+		updateButtons();
+	}
+
+	return {
+		bind,
+		navigate,
+		syncContext,
+		updateButtons,
+		getContextIds: () => [...currentContextIds],
+		getContextIndex: () => currentContextIndex,
+	};
+}

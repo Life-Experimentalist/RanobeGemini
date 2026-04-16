@@ -672,19 +672,13 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				const descMeta = document.querySelector(
 					'meta[name="description"]',
 				);
-				if (descMeta) {
-					let desc = descMeta.getAttribute("content")?.trim();
-					// Clean up chapter-specific description pattern
+				if (descMeta?.getAttribute("content")) {
+					let desc = descMeta.getAttribute("content").trim();
 					if (desc) {
 						// Remove "Novel Title #Chapter X" pattern from start
-						desc = desc
-							.replace(/^.+?#Chapter\s*\d+\s*/i, "")
-							.trim();
+						desc = desc.replace(/^.+?#Chapter\s*\d+\s*/i, "").trim();
 						if (desc && desc.length > 20) {
-							metadata.description =
-								desc.length > 500
-									? desc.substring(0, 500) + "..."
-									: desc;
+							metadata.description = desc;
 						}
 					}
 				}
@@ -728,10 +722,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						.replace(/Collapse\s*$/i, "")
 						.replace(/Read more\s*$/i, "")
 						.trim();
-					metadata.description =
-						desc.length > 1000
-							? desc.substring(0, 1000) + "..."
-							: desc;
+					metadata.description = desc;
 				} else {
 					// Fallback to meta description
 					const descMeta = document.querySelector(
