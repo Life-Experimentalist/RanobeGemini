@@ -42,6 +42,7 @@ let extensionBridgesModule = null; // Extension bridge helpers
 let readAloudUiModule = null; // Read-aloud UI helper module
 let enhancementBannersModule = null; // Enhancement banner helpers
 let notificationRuntimeModule = null; // Status / notification helpers
+let enhancementToggleBannerModule = null; // Enhancement banner refresh helpers
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -239,17 +240,34 @@ if (window.__RGInitDone) {
 			if (!notificationModule?.createNotificationRuntime) {
 				return null;
 			}
-			notificationRuntimeModule = notificationModule.createNotificationRuntime(
-				{
+			notificationRuntimeModule =
+				notificationModule.createNotificationRuntime({
 					documentRef: document,
 					browserRef: browser,
 					windowRef: window,
 					getNovelLibrary: () => novelLibrary,
-				},
-			);
+				});
 			return notificationRuntimeModule;
 		} catch (error) {
 			debugError("Error loading notification runtime module:", error);
+			return null;
+		}
+	}
+
+	async function loadEnhancementToggleBannerModule() {
+		if (enhancementToggleBannerModule) return enhancementToggleBannerModule;
+		try {
+			const toggleUrl = browser.runtime.getURL(
+				"content/modules/enhancement-toggle-banner.js",
+			);
+			const toggleModule = await import(toggleUrl);
+			if (!toggleModule?.refreshToggleBannerRuntime) {
+				return null;
+			}
+			enhancementToggleBannerModule = toggleModule;
+			return enhancementToggleBannerModule;
+		} catch (error) {
+			debugError("Error loading enhancement toggle banner module:", error);
 			return null;
 		}
 	}
@@ -4442,6 +4460,7 @@ if (window.__RGInitDone) {
 		extensionBridgesModule = await loadExtensionBridgesModule();
 		chunkControlRuntime = await loadChunkControlRuntime();
 		notificationRuntimeModule = await loadNotificationRuntimeModule();
+			enhancementToggleBannerModule = await loadEnhancementToggleBannerModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -8940,50 +8959,30 @@ if (window.__RGInitDone) {
 		insertBeforeNode = null,
 		wireDeleteCache = false,
 	}) {
-		if (!contentArea || typeof createBanner !== "function") return null;
-
-		const refreshedBanner = createBanner();
-		if (!refreshedBanner) return null;
-
-		const refreshedToggleButton =
-			refreshedBanner.querySelector(".gemini-toggle-btn");
-		if (refreshedToggleButton) {
-			refreshedToggleButton.textContent = toggleLabel;
-			if (typeof onToggleClick === "function") {
-				refreshedToggleButton.addEventListener("click", onToggleClick);
-			}
-		}
-
-		if (wireDeleteCache) {
-			attachDeleteCacheButtonHandler(refreshedBanner);
-		}
-
-		if (insertBeforeNode) {
-			contentArea.insertBefore(refreshedBanner, insertBeforeNode);
-		} else {
-			insertNodeAtContentTop(contentArea, refreshedBanner);
-		}
-
-		return refreshedBanner;
+		return enhancementToggleBannerModule?.refreshToggleBannerRuntime?.({
+			contentArea,
+			createBanner,
+			toggleLabel,
+			onToggleClick,
+			insertBeforeNode,
+			wireDeleteCache,
+			documentRef: document,
+			windowRef: window,
+			storageManager,
+			showStatusMessage,
+			insertNodeAtContentTop,
+		}) || null;
 	}
 
 	function attachDeleteCacheButtonHandler(banner) {
-		const deleteButton = banner?.querySelector(".gemini-delete-cache-btn");
-		if (!deleteButton) return;
-
-		deleteButton.addEventListener("click", async () => {
-			if (!confirm("Delete cached enhanced content for this page?")) {
-				return;
-			}
-			if (!storageManager) return;
-
-			await storageManager.removeEnhancedContent(window.location.href);
-			isCachedContent = false;
-			showStatusMessage(
-				"Cached content deleted. Reloading page...",
-				"info",
-			);
-			setTimeout(() => location.reload(), 1000);
+		enhancementToggleBannerModule?.attachDeleteCacheButtonHandlerRuntime?.({
+			banner,
+			storageManager,
+			windowRef: window,
+			showStatusMessage,
+			onDeleted: () => {
+				isCachedContent = false;
+			},
 		});
 	}
 
@@ -9300,7 +9299,9 @@ if (window.__RGInitDone) {
 
 	function normalizeNotificationType(type) {
 		if (notificationRuntimeModule?.normalizeNotificationTypeRuntime) {
-			return notificationRuntimeModule.normalizeNotificationTypeRuntime(type);
+			return notificationRuntimeModule.normalizeNotificationTypeRuntime(
+				type,
+			);
 		}
 		switch (type) {
 			case "success":
@@ -9349,7 +9350,9 @@ if (window.__RGInitDone) {
 	}
 
 	function getLastKnownNovelData() {
-		return notificationRuntimeModule?.getLastKnownNovelDataRuntime?.() || null;
+		return (
+			notificationRuntimeModule?.getLastKnownNovelDataRuntime?.() || null
+		);
 	}
 
 	async function resolveNovelDataForNotification() {
