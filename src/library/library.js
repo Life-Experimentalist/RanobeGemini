@@ -1184,6 +1184,13 @@ async function init() {
 
 	// Load telemetry settings
 	await loadTelemetrySettings();
+	// Prompt for explicit telemetry consent on first library open.
+	await checkFirstRunConsentRuntime({
+		isFirstRun,
+		getTelemetryConfig,
+		elements,
+		debugError,
+	});
 
 	// Load backup settings
 	await loadBackupCheckboxSettings();
@@ -1209,14 +1216,6 @@ async function init() {
 	// Load library data
 	await loadLibrary();
 	await openNovelFromQueryParams();
-
-	// Check for first run telemetry consent
-	await checkFirstRunConsentRuntime({
-		isFirstRun,
-		getTelemetryConfig,
-		elements,
-		debugError,
-	});
 
 	// Wire up the non-intrusive PWA install banner buttons
 	initPwaInstallBanner();

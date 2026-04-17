@@ -4,12 +4,12 @@ Use this checklist to complete the remaining manual parity verification across e
 
 ## Test Matrix
 
-| Surface | Browser | Status | Tester | Date | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Extension runtime | Firefox Desktop | ☐ Pending |  |  |  |
-| Extension runtime | Chromium Desktop | ☐ Pending |  |  |  |
-| Extension runtime | Firefox Android | ☐ Pending |  |  |  |
-| Landing/PWA entry | Chromium Mobile | ☐ Pending |  |  |  |
+| Surface           | Browser          | Status    | Tester | Date | Notes |
+| ----------------- | ---------------- | --------- | ------ | ---- | ----- |
+| Extension runtime | Firefox Desktop  | ☐ Pending |        |      |       |
+| Extension runtime | Chromium Desktop | ☐ Pending |        |      |       |
+| Extension runtime | Firefox Android  | ☐ Pending |        |      |       |
+| Landing/PWA entry | Chromium Mobile  | ☐ Pending |        |      |       |
 
 ## Preconditions
 

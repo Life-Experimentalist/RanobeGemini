@@ -12,7 +12,9 @@
 
 ---
 
-## A Cross-Platform browser extension that enhances web novel translations using Google's Gemini AI. It improves readability, fixes grammar, and can summarize chapters, supporting multiple web novel platforms
+## Cross-platform AI reading companion for web novels and fanfiction
+
+Ranobe Gemini is a local-first browser extension that enhances chapter readability, generates summaries, and manages a full reading library across multiple sites.
 
 <br/>
 
@@ -29,22 +31,20 @@
 [![MV3](https://img.shields.io/badge/Manifest-V3-orange?style=flat)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-4285F4?style=flat&logo=google)](https://ai.google.dev/)
 [![Edge Add-on](https://img.shields.io/badge/Microsoft%20Edge-Add--on-0078d7?style=flat&logo=microsoftedge)](https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn)
-<!-- Optional store badges (enable when store listing is live) -->
-<!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID?style=flat&logo=googlechrome&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
-<!-- [![Chrome Users](https://img.shields.io/chrome-web-store/users/YOUR_EXTENSION_ID?style=flat&logo=googlechrome&label=Chrome%20Users)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
-<!-- [![Opera Add-ons](https://img.shields.io/badge/Opera-Addons-ff1b2d?style=flat&logo=opera)](https://addons.opera.com/extensions/details/YOUR_EXTENSION_SLUG/) -->
-<!-- [![Brave Compatible](https://img.shields.io/badge/Brave-Compatible-fb542b?style=flat&logo=brave)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
-<!-- [![Vivaldi Compatible](https://img.shields.io/badge/Vivaldi-Compatible-ef3939?style=flat&logo=vivaldi)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
-<!-- [![Arc Compatible](https://img.shields.io/badge/Arc-Compatible-000000?style=flat)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID) -->
-[![vkrishna04-portfolio](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio/badge?style=flat-square&color=blue&label=vkrishna04-portfolio)](https://counter.vkrishna04.me/api/views/vkrishna04-portfolio)
 [![ranobe-startup](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup/badge?style=flat-square&color=brightgreen&label=rg-startup)](https://counter.vkrishna04.me/api/views/ranobe-gemini-startup)
 [![rg-update](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update/badge?style=flat-square&color=orange&label=rg-update)](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_update)
 [![rg-install](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install/badge?style=flat-square&color=purple&label=rg-install)](https://counter.vkrishna04.me/api/views/ranobe-gemini-extension_install)
 [![rg-feature-usage](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage/badge?style=flat-square&color=teal&label=rg-feature-usage)](https://counter.vkrishna04.me/api/views/ranobe-gemini-feature_usage)
-[![Eldritchify](https://counter.vkrishna04.me/api/views/Eldritchify/badge?style=flat-square&color=red&label=Eldritchify)](https://counter.vkrishna04.me/api/views/Eldritchify)
-[![rg-opt-out](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out/badge?style=flat-square&color=yellow&label=rg-opt-out)](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_out)
+[![rg-opt-in](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_in/badge?style=flat-square&color=00b894&label=rg-opt-in)](https://counter.vkrishna04.me/api/views/ranobe-gemini-opt_in)
 
 </div>
+
+## Privacy-safe impact metrics
+
+- Metrics are collected only after explicit consent on first Library open.
+- Telemetry records anonymous event counts only (startup/install/feature usage/opt-in/out).
+- No chapter text, reading history payloads, API keys, OAuth tokens, or personal identifiers are sent.
+- Public counters are visible on the landing page: https://ranobe.vkrishna04.me/#impact
 
 <!-- GitHub Topics: browser-extension firefox-extension chrome-extension edge-extension gemini-ai web-novel fanfiction ao3 ranobes scribblehub reading-tracker novel-library javascript manifest-v3 google-ai ai-enhancement -->
 

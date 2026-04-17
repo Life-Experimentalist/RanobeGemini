@@ -18,6 +18,10 @@ const FIRST_RUN_KEY = "rg_first_run_complete";
 const CFLAIR_API_BASE = "https://counter.vkrishna04.me";
 const PROJECT_NAME = "ranobe-gemini";
 
+function buildProjectKey(suffix = "") {
+	return suffix ? `${PROJECT_NAME}-${suffix}` : PROJECT_NAME;
+}
+
 /**
  * Default telemetry configuration
  * NOTE: Disabled by default (opt-in model)
@@ -102,6 +106,9 @@ function generateInstallId() {
  */
 export async function initializeTelemetry() {
 	const config = await getTelemetryConfig();
+	if (!config.enabled) {
+		return config;
+	}
 
 	// Generate install ID if not exists
 	if (!config.installId) {
@@ -126,8 +133,15 @@ export async function sendTelemetryPing(eventType, data = {}) {
 			return false;
 		}
 
+		if (!config.installId) {
+			const initialized = await initializeTelemetry();
+			if (!initialized?.installId) {
+				return false;
+			}
+		}
+
 		// Send view to CFlair-Counter
-		const projectKey = `${PROJECT_NAME}-${eventType}`;
+		const projectKey = buildProjectKey(eventType);
 		const response = await fetch(
 			`${CFLAIR_API_BASE}/api/views/${projectKey}`,
 			{
@@ -135,6 +149,13 @@ export async function sendTelemetryPing(eventType, data = {}) {
 				headers: {
 					"Content-Type": "application/json",
 				},
+				body: JSON.stringify({
+					eventType,
+					version:
+						browser.runtime.getManifest?.()?.version || "unknown",
+					browser: detectBrowser(),
+					...sanitizeContext(data),
+				}),
 			},
 		);
 
@@ -266,6 +287,8 @@ export async function optInTelemetry(customWebhookUrl = "") {
 		sendErrorReports: true,
 	});
 
+	await initializeTelemetry();
+
 	// Send initial ping
 	await sendTelemetryPing("opt_in", {});
 }
@@ -292,7 +315,7 @@ export async function optOutTelemetry() {
 export async function getViewStats() {
 	try {
 		const response = await fetch(
-			`${CFLAIR_API_BASE}/api/views/${PROJECT_NAME}`,
+			`${CFLAIR_API_BASE}/api/views/${buildProjectKey()}`,
 		);
 		if (!response.ok) {
 			return null;
@@ -310,7 +333,44 @@ export async function getViewStats() {
  * @param {string} label - Badge label
  */
 export function getBadgeUrl(color = "purple", label = "users") {
-	return `${CFLAIR_API_BASE}/api/views/${PROJECT_NAME}/badge?color=${color}&label=${label}`;
+	return `${CFLAIR_API_BASE}/api/views/${buildProjectKey()}/badge?color=${color}&label=${label}`;
+}
+
+/**
+ * Get view statistics for a specific event/project suffix.
+ */
+export async function getProjectViewStats(projectSuffix) {
+	try {
+		if (!projectSuffix) {
+			return null;
+		}
+		const response = await fetch(
+			`${CFLAIR_API_BASE}/api/views/${buildProjectKey(projectSuffix)}`,
+		);
+		if (!response.ok) {
+			return null;
+		}
+		return await response.json();
+	} catch (error) {
+		debugError("Failed to get project view stats:", error);
+		return null;
+	}
+}
+
+/**
+ * Get global CFlair-Counter stats.
+ */
+export async function getGlobalTelemetryStats() {
+	try {
+		const response = await fetch(`${CFLAIR_API_BASE}/api/stats`);
+		if (!response.ok) {
+			return null;
+		}
+		return await response.json();
+	} catch (error) {
+		debugError("Failed to get global telemetry stats:", error);
+		return null;
+	}
 }
 
 /**

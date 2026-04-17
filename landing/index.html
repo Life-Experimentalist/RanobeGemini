@@ -69,6 +69,7 @@
 				aria-label="Toggle navigation">☰</button>
 			<nav class="nav" id="main-nav">
 				<!-- Section anchors on this page -->
+				<a href="#impact">Impact</a>
 				<a href="#features">Features</a>
 				<a href="#how">How it works</a>
 				<a href="#docs">Docs</a>
@@ -154,6 +155,42 @@
 				</div>
 			</section>
 
+			<section id="impact" class="section fade-slide">
+				<div class="section-head">
+					<p class="eyebrow">Live impact metrics</p>
+					<h2>Public counters with explicit user consent</h2>
+					<p class="lede">
+						These numbers come from opt-in anonymous events only.
+						No chapter text, API keys, account IDs, or personal reading data are collected.
+					</p>
+				</div>
+				<div class="grid metrics-grid" id="metrics-grid">
+					<article class="metric-card">
+						<p class="metric-label">Startup Events</p>
+						<p class="metric-value" id="metric-startup">--</p>
+						<p class="metric-help">Extension background launches from opted-in users.</p>
+					</article>
+					<article class="metric-card">
+						<p class="metric-label">Install Events</p>
+						<p class="metric-value" id="metric-install">--</p>
+						<p class="metric-help">New installs recorded after explicit consent.</p>
+					</article>
+					<article class="metric-card">
+						<p class="metric-label">Feature Usage Events</p>
+						<p class="metric-value" id="metric-feature">--</p>
+						<p class="metric-help">Anonymous counts for major library actions.</p>
+					</article>
+					<article class="metric-card">
+						<p class="metric-label">Telemetry Opt-in Ratio</p>
+						<p class="metric-value" id="metric-optin-ratio">--</p>
+						<p class="metric-help">Computed from opt-in vs opt-out events.</p>
+					</article>
+				</div>
+				<p class="micro" id="metrics-source-note">
+					Source: CFlair-Counter public API. Metrics are refreshed on page load.
+				</p>
+			</section>
+
 			<section id="features" class="section fade-slide">
 				<div class="section-head">
 					<p class="eyebrow">Why readers choose Ranobe Gemini</p>
@@ -210,8 +247,8 @@
 						<div class="icon">🔐</div>
 						<h3>Privacy-first</h3>
 						<p>
-							No account required. Everything runs locally;
-							nothing is uploaded without you exporting it.
+							No account required. Core reading data stays local;
+							anonymous quality metrics are strictly opt-in.
 						</p>
 					</div>
 					<div class="feature">

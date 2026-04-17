@@ -113,6 +113,103 @@ const SITES = [
 	},
 ];
 
+const CFLAIR_COUNTER_BASE_URL = "https://counter.vkrishna04.me";
+const TELEMETRY_PROJECTS = {
+	startup: "ranobe-gemini-startup",
+	install: "ranobe-gemini-extension_install",
+	feature: "ranobe-gemini-feature_usage",
+	optIn: "ranobe-gemini-opt_in",
+	optOut: "ranobe-gemini-opt_out",
+};
+
+function parseCounterValue(payload) {
+	if (!payload || typeof payload !== "object") {
+		return null;
+	}
+	const candidates = [
+		payload.views,
+		payload.totalViews,
+		payload.count,
+		payload.value,
+	];
+	for (const candidate of candidates) {
+		if (typeof candidate === "number" && Number.isFinite(candidate)) {
+			return candidate;
+		}
+	}
+	return null;
+}
+
+function formatMetricCount(value) {
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		return "--";
+	}
+	return new Intl.NumberFormat("en-US").format(Math.max(0, value));
+}
+
+function setMetricValue(id, value) {
+	const element = document.getElementById(id);
+	if (!element) return;
+	element.textContent = value;
+}
+
+async function fetchCounterJson(pathname) {
+	const response = await fetch(`${CFLAIR_COUNTER_BASE_URL}${pathname}`);
+	if (!response.ok) {
+		throw new Error(`Counter API request failed (${response.status})`);
+	}
+	return response.json();
+}
+
+async function loadImpactMetrics() {
+	try {
+		const [
+			startupStats,
+			installStats,
+			featureStats,
+			optInStats,
+			optOutStats,
+		] = await Promise.all([
+			fetchCounterJson(`/api/views/${TELEMETRY_PROJECTS.startup}`),
+			fetchCounterJson(`/api/views/${TELEMETRY_PROJECTS.install}`),
+			fetchCounterJson(`/api/views/${TELEMETRY_PROJECTS.feature}`),
+			fetchCounterJson(`/api/views/${TELEMETRY_PROJECTS.optIn}`),
+			fetchCounterJson(`/api/views/${TELEMETRY_PROJECTS.optOut}`),
+		]);
+
+		const startupCount = parseCounterValue(startupStats);
+		const installCount = parseCounterValue(installStats);
+		const featureCount = parseCounterValue(featureStats);
+		const optInCount = parseCounterValue(optInStats);
+		const optOutCount = parseCounterValue(optOutStats);
+
+		setMetricValue("metric-startup", formatMetricCount(startupCount));
+		setMetricValue("metric-install", formatMetricCount(installCount));
+		setMetricValue("metric-feature", formatMetricCount(featureCount));
+
+		if (
+			typeof optInCount === "number" &&
+			typeof optOutCount === "number" &&
+			optInCount + optOutCount > 0
+		) {
+			const ratio = (optInCount / (optInCount + optOutCount)) * 100;
+			setMetricValue("metric-optin-ratio", `${ratio.toFixed(1)}%`);
+		} else {
+			setMetricValue("metric-optin-ratio", "--");
+		}
+	} catch (_error) {
+		setMetricValue("metric-startup", "--");
+		setMetricValue("metric-install", "--");
+		setMetricValue("metric-feature", "--");
+		setMetricValue("metric-optin-ratio", "--");
+		const sourceNote = document.getElementById("metrics-source-note");
+		if (sourceNote) {
+			sourceNote.textContent =
+				"Live metrics are temporarily unavailable. Privacy guarantees remain unchanged (opt-in only, anonymous counts).";
+		}
+	}
+}
+
 function createStatusBadge(status) {
 	const badge = document.createElement("span");
 	badge.className = `status-badge ${status === "ready" ? "ready" : ""}`;
@@ -637,5 +734,6 @@ links.forEach((link) => {
 // Initial render
 renderBrowsers();
 renderSites();
+loadImpactMetrics();
 initPwaSupport();
 detectExtension();

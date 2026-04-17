@@ -234,6 +234,47 @@ h3 {
 	border: 1px solid var(--border);
 }
 
+.metrics-grid {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.metric-card {
+	padding: 18px;
+	border-radius: var(--radius);
+	background: linear-gradient(180deg,
+			rgba(255, 255, 255, 0.09),
+			rgba(255, 255, 255, 0.03));
+	border: 1px solid var(--border);
+	box-shadow: var(--shadow);
+	min-height: 190px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.metric-label {
+	margin: 0;
+	font-size: 13px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #9ad2ff;
+}
+
+.metric-value {
+	margin: 8px 0;
+	font-size: clamp(28px, 4vw, 40px);
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--accent-strong);
+}
+
+.metric-help {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--muted);
+}
+
 .micro {
 	font-size: 13px;
 	line-height: 1.45;
