@@ -102,9 +102,9 @@ Track both planned and actual effort per unit.
 | 0: Baseline Alignment                | 2          | 2-4            | 5        | in-progress |
 | 1: Content Runtime Modularization    | 5          | 10-16          | 20       | in-progress |
 | 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | in-progress |
-| 3: AI Provider Modularization        | 4          | 8-12           | 14       | pending     |
-| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | pending     |
-| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | pending     |
+| 3: AI Provider Modularization        | 4          | 8-12           | 14       | in-progress |
+| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | in-progress |
+| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | in-progress |
 | 6: OAuth Reliability                 | 3          | 4-6            | 8        | in-progress |
 | 7: Landing Awareness                 | 2          | 3-5            | 6        | in-progress |
 | 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | in-progress |
@@ -143,6 +143,7 @@ Track both planned and actual effort per unit.
 | 8-U1 Compatibility contract + migration policy (L0)            | 1-2              | 1              | -0.5 vs midpoint | Added shared cross-surface contract/migration policy anchored to backup format v3.0 and linked the policy in backup docs                        | valid             | Continue to 8-U2 restore/load parity validation across local and Drive paths      | 2026-04-18   |
 | 8-U2 Backup parity validator + fixture checks (L0)             | 2-3              | 1              | -1.5 vs midpoint | Added scripted cross-surface contract parity checks (runtime format, canonical schema envelope, landing schema proxy, sample fixture envelope)  | partially-valid   | Complete manual Firefox/Chromium restore-path smoke checks and continue to 8-U3   | 2026-04-18   |
 | 8-U3 Cross-device UX parity checklist + owners (L0)            | 2-3              | 1              | -1.5 vs midpoint | Added mobile/desktop parity matrix with explicit flow ownership, known incompatibilities, and manual smoke checklist for sign-off                 | valid             | Close remaining manual 8-U2 restore-path checks to complete Phase 8               | 2026-04-18   |
+| 8-U2a Manual restore-path smoke checklist artifact (L0)        | 1-2              | 1              | -0.5 vs midpoint | Added execution checklist for Firefox/Chromium desktop/mobile restore parity, including local replace/merge and Drive latest/continuous flows    | valid             | Execute checklist in real browser runtimes and record results                     | 2026-04-18   |
 | 2-U3 Modal navigation + summary fidelity hardening             | 2-3              | 3              | +0.5 vs midpoint | Cross-surface parity and regression checks increased effort                                                                                     | partially-valid   | Budget parity-sensitive UI units at upper bound                                   | 2026-04-16   |
 | 2-U4 Extension bridge framework baseline (BetterFiction-first) | 1-2              | 2              | +0.5 vs midpoint | Introduced reusable adapter path across content and handler                                                                                     | valid             | Keep initial bridge work at 2 prompts when touching two runtimes                  | 2026-04-16   |
 | 8-U3 Mobile modal UX parity (touch targets + swipe dismiss)    | 2-3              | 2              | -0.5 vs midpoint | Reusable helper reduced per-surface implementation cost                                                                                         | valid             | Prefer shared helpers before per-surface edits                                    | 2026-04-16   |

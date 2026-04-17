@@ -80,3 +80,7 @@ Automation command:
 Related UX parity checklist:
 
 - `docs/ux/CROSS_DEVICE_PARITY_CHECKLIST.md`
+
+Manual restore parity execution checklist:
+
+- `docs/backup/RESTORE_SMOKE_CHECKLIST.md`
