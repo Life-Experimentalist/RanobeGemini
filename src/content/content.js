@@ -43,6 +43,7 @@ let readAloudUiModule = null; // Read-aloud UI helper module
 let enhancementBannersModule = null; // Enhancement banner helpers
 let notificationRuntimeModule = null; // Status / notification helpers
 let enhancementToggleBannerModule = null; // Enhancement banner refresh helpers
+let enhancedContentBannerModule = null; // Enhanced content banner UI helpers
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -267,7 +268,28 @@ if (window.__RGInitDone) {
 			enhancementToggleBannerModule = toggleModule;
 			return enhancementToggleBannerModule;
 		} catch (error) {
-			debugError("Error loading enhancement toggle banner module:", error);
+			debugError(
+				"Error loading enhancement toggle banner module:",
+				error,
+			);
+			return null;
+		}
+	}
+
+	async function loadEnhancedContentBannerModule() {
+		if (enhancedContentBannerModule) return enhancedContentBannerModule;
+		try {
+			const bannerUrl = browser.runtime.getURL(
+				"content/modules/enhanced-content-banner.js",
+			);
+			const bannerModule = await import(bannerUrl);
+			if (!bannerModule?.createEnhancedBannerRuntime) {
+				return null;
+			}
+			enhancedContentBannerModule = bannerModule;
+			return enhancedContentBannerModule;
+		} catch (error) {
+			debugError("Error loading enhanced content banner module:", error);
 			return null;
 		}
 	}
@@ -913,116 +935,24 @@ if (window.__RGInitDone) {
 		showDeleteButton = false,
 		cacheInfo = null,
 	) {
-		// Calculate word counts
-		const originalWordCount = countWords(originalContent);
-		const enhancedWordCount = countWords(enhancedContent);
-
-		// Calculate percentage change
-		const wordDifference = enhancedWordCount - originalWordCount;
-		const percentChange =
-			originalWordCount > 0
-				? Math.round((wordDifference / originalWordCount) * 100)
-				: 0;
-
-		// Determine if it's an increase or decrease
-		const changeSymbol = wordDifference >= 0 ? "+" : "-";
-
-		// Get model name and provider from modelInfo if available
-		const modelName = modelInfo?.name || "AI";
-		const modelProvider = modelInfo?.provider || "Ranobe Gemini";
-
-		// Cache status display
-		const isFromCache = cacheInfo?.fromCache === true;
-		const cacheTimestamp = cacheInfo?.timestamp;
-		let cacheLabel = "";
-		let cacheIcon = "";
-
-		if (isFromCache && cacheTimestamp) {
-			const age = Date.now() - cacheTimestamp;
-			const hours = Math.floor(age / (1000 * 60 * 60));
-			const days = Math.floor(hours / 24);
-			const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
-			cacheLabel = ` • Cached ${timeAgo}`;
-			cacheIcon = "✓ ";
+		if (enhancedContentBannerModule?.createEnhancedBannerRuntime) {
+			return enhancedContentBannerModule.createEnhancedBannerRuntime({
+				originalContent,
+				enhancedContent,
+				modelInfo,
+				showDeleteButton,
+				cacheInfo,
+				documentRef: document,
+				windowRef: window,
+				countWords,
+			});
 		}
 
-		const modelDisplay = `${cacheIcon}Enhanced with ${modelProvider}${
-			modelName !== "AI" ? ` (${modelName})` : ""
-		}${cacheLabel}`;
-
-		const banner = document.createElement("div");
-		banner.className = "gemini-enhanced-banner";
-
-		// Base styling
-		let bannerBg = "#f7f7f7";
-		let bannerBorder = "#ddd";
-		let bannerColor = "inherit";
-
-		// Dark mode detection
-		const isDark =
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
-			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-		if (isDark) {
-			bannerBg = "#2c2c2c";
-			bannerBorder = "#444";
-			bannerColor = "#e0e0e0";
-		}
-
-		// Cache status styling - subtle green tint
-		if (isFromCache) {
-			if (isDark) {
-				bannerBg = "#1e3a1e"; // Dark green tint
-				bannerBorder = "#2e7d32"; // Green border
-			} else {
-				bannerBg = "#f1f8f4"; // Light green tint
-				bannerBorder = "#4caf50"; // Green border
-			}
-		}
-
-		banner.style.cssText = `
-        margin: 15px 0;
-        padding: 15px;
-        background-color: ${bannerBg};
-        border-radius: 8px;
-        border: 2px solid ${bannerBorder};
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        color: ${bannerColor};
-    `;
-
-		const deleteButtonHtml = showDeleteButton
-			? '<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>'
-			: "";
-
-		banner.innerHTML = `
-        <div style="display: flex; flex-direction: column; width: 100%;">
-			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center;">
-                        <span style="font-size: 18px; margin-right: 5px;">✨</span>
-                        <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="gemini-toggle-btn">Show Original</button>
-                        ${deleteButtonHtml}
-                    </div>
-                </div>
-            <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
-                <span style="font-family: monospace;">
-                    Words: ${originalWordCount.toLocaleString()} → ${enhancedWordCount.toLocaleString()}
-                    <span style="color: ${
-						wordDifference >= 0 ? "#28a745" : "#dc3545"
-					}; font-weight: bold;">
-                        (${changeSymbol}${wordDifference.toLocaleString()}, ${changeSymbol}${Math.abs(
-							percentChange,
-						)}%)
-                    </span>
-                </span>
-            </div>
-        </div>
-    `;
-
-		return banner;
+		// Safety fallback if dynamic module loading failed.
+		const fallback = document.createElement("div");
+		fallback.className = "gemini-enhanced-banner";
+		fallback.textContent = "✨ Content enhanced with Ranobe Gemini";
+		return fallback;
 	}
 
 	function escapeHtml(str) {
@@ -4460,7 +4390,9 @@ if (window.__RGInitDone) {
 		extensionBridgesModule = await loadExtensionBridgesModule();
 		chunkControlRuntime = await loadChunkControlRuntime();
 		notificationRuntimeModule = await loadNotificationRuntimeModule();
-			enhancementToggleBannerModule = await loadEnhancementToggleBannerModule();
+		enhancementToggleBannerModule =
+			await loadEnhancementToggleBannerModule();
+		enhancedContentBannerModule = await loadEnhancedContentBannerModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -8959,19 +8891,21 @@ if (window.__RGInitDone) {
 		insertBeforeNode = null,
 		wireDeleteCache = false,
 	}) {
-		return enhancementToggleBannerModule?.refreshToggleBannerRuntime?.({
-			contentArea,
-			createBanner,
-			toggleLabel,
-			onToggleClick,
-			insertBeforeNode,
-			wireDeleteCache,
-			documentRef: document,
-			windowRef: window,
-			storageManager,
-			showStatusMessage,
-			insertNodeAtContentTop,
-		}) || null;
+		return (
+			enhancementToggleBannerModule?.refreshToggleBannerRuntime?.({
+				contentArea,
+				createBanner,
+				toggleLabel,
+				onToggleClick,
+				insertBeforeNode,
+				wireDeleteCache,
+				documentRef: document,
+				windowRef: window,
+				storageManager,
+				showStatusMessage,
+				insertNodeAtContentTop,
+			}) || null
+		);
 	}
 
 	function attachDeleteCacheButtonHandler(banner) {
