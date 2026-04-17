@@ -201,11 +201,12 @@ Follow the comprehensive guide: [Adding New Websites](../guides/ADDING_NEW_WEBSI
 
 **Quick checklist:**
 - [ ] Create handler class extending `BaseWebsiteHandler`
-- [ ] Implement required methods (`canHandle`, `extractContent`, etc.)
+- [ ] Implement required contract methods (`canHandle`, `extractTitle`) and extraction flow (`extractContent`)
 - [ ] Add `SUPPORTED_DOMAINS` static property
 - [ ] Add `SHELF_METADATA` static property
 - [ ] Register in `handler-manager.js`
 - [ ] Add domains to `domain-constants.js`
+- [ ] Run `npm run build` and fix any handler contract validation errors (fail-fast in build pipeline)
 - [ ] Run `npm run update-domains`
 - [ ] Test extraction and enhancement
 - [ ] Update documentation

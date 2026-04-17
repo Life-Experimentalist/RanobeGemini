@@ -135,6 +135,7 @@ async function initializePopup() {
 	const getKeyLink = document.getElementById("getKeyLink");
 	const statusDiv = document.getElementById("status");
 	const modelSelect = document.getElementById("modelSelect");
+	const aiProviderSelect = document.getElementById("aiProviderSelect");
 	const backupModelSelect = document.getElementById("backupModelSelect");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const resetPromptBtn = document.getElementById("resetPrompt");
@@ -419,6 +420,7 @@ async function initializePopup() {
 	);
 	const driveSyncNowBtn = document.getElementById("driveSyncNowBtn");
 	const driveOAuthDetails = document.getElementById("driveOAuthDetails");
+	const syncProviderSelect = document.getElementById("syncProviderSelect");
 
 	// Declare variables for elements still used but previously undeclared (strict mode requires declaration)
 	let currentSiteShelfId = null;
@@ -862,9 +864,10 @@ async function initializePopup() {
 		clearTimeout(autosaveTimeout);
 		autosaveTimeout = setTimeout(async () => {
 			try {
+				const activeProvider = aiProviderSelect?.value || "gemini";
 				const apiKey = apiKeys[0] || "";
-				if (!apiKey) {
-					// Skip autosave if no API key is set
+				if (!apiKey && activeProvider !== "ollama") {
+					// Skip autosave for providers that require API keys
 					return;
 				}
 
@@ -899,6 +902,7 @@ async function initializePopup() {
 
 				// Collect all settings
 				const updates = {
+					aiProvider: activeProvider,
 					apiKey: apiKey,
 					selectedModelId: selectedModelId,
 					modelEndpoint: modelEndpoint,
@@ -954,6 +958,9 @@ async function initializePopup() {
 	}
 
 	// Attach autosave to all relevant inputs
+	if (aiProviderSelect) {
+		aiProviderSelect.addEventListener("change", autosaveSettings);
+	}
 	if (modelSelect) {
 		modelSelect.addEventListener("change", autosaveSettings);
 	}
@@ -1320,6 +1327,10 @@ async function initializePopup() {
 			}
 		}
 
+		if (aiProviderSelect) {
+			aiProviderSelect.value = data.aiProvider || "gemini";
+		}
+
 		// Always set the prompt template - this fixes the empty box issue
 		if (promptTemplate && !promptTemplate.value) {
 			promptTemplate.value = data.defaultPrompt || DEFAULT_PROMPT;
@@ -1527,6 +1538,7 @@ async function initializePopup() {
 
 	// Save all basic settings
 	saveSettingsBtn.addEventListener("click", async () => {
+		const activeProvider = aiProviderSelect?.value || "gemini";
 		const apiKey = apiKeys[0] || "";
 		const selectedModelId = modelSelect.value;
 		const useEmojiCheckbox = document.getElementById("useEmoji");
@@ -1536,8 +1548,11 @@ async function initializePopup() {
 			? parseFloat(temperatureSlider.value)
 			: 0.7;
 
-		if (!apiKey) {
-			showStatus("Please add an API key", "error");
+		if (!apiKey && activeProvider !== "ollama") {
+			showStatus(
+				"Please add an API key for the selected provider",
+				"error",
+			);
 			return;
 		}
 
@@ -1563,6 +1578,7 @@ async function initializePopup() {
 			}
 
 			const updates = {
+				aiProvider: activeProvider,
 				apiKey: apiKey,
 				selectedModelId: selectedModelId,
 				modelEndpoint: modelEndpoint,
@@ -1836,6 +1852,13 @@ async function initializePopup() {
 	const refreshModelsBtn = document.getElementById("refreshModels");
 	if (refreshModelsBtn) {
 		refreshModelsBtn.addEventListener("click", async () => {
+			if ((aiProviderSelect?.value || "gemini") !== "gemini") {
+				showStatus(
+					"Model refresh is currently available for Gemini provider only",
+					"info",
+				);
+				return;
+			}
 			const apiKey = apiKeys[0] || "";
 			if (!apiKey) {
 				showStatus("Please add an API key first", "error");
@@ -1861,6 +1884,9 @@ async function initializePopup() {
 
 	// Add auto-refresh of models list when dropdown is clicked
 	modelSelect.addEventListener("mousedown", async function (e) {
+		if ((aiProviderSelect?.value || "gemini") !== "gemini") {
+			return;
+		}
 		// Only check if we haven't refreshed models recently
 		const data = await browser.storage.local.get([
 			"modelsLastFetched",
@@ -4303,8 +4329,13 @@ async function initializePopup() {
 				const prefs = await browser.storage.local.get([
 					"backupMode",
 					"continuousBackupCheckIntervalMinutes",
+					"activeSync",
 				]);
 				const mode = prefs.backupMode || "both";
+				if (syncProviderSelect) {
+					syncProviderSelect.value =
+						prefs.activeSync || "google-drive";
+				}
 				const modeRadio = document.querySelector(
 					`input[name="driveBackupMode"][value="${mode}"]`,
 				);
@@ -5038,6 +5069,17 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 		}
 	}
 
+	async function handleSyncProviderChange(e) {
+		try {
+			const providerId = e.target.value || "google-drive";
+			await browser.storage.local.set({ activeSync: providerId });
+			showStatus(`Sync provider set to: ${providerId}`, "success");
+		} catch (err) {
+			debugError("Failed to update sync provider", err);
+			showStatus("Failed to update sync provider", "error");
+		}
+	}
+
 	/**
 	 * Handle manual backup creation
 	 */
@@ -5250,6 +5292,9 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 			"change",
 			handleDriveAutoRestoreToggle,
 		);
+	}
+	if (syncProviderSelect) {
+		syncProviderSelect.addEventListener("change", handleSyncProviderChange);
 	}
 	if (driveSyncNowBtn) {
 		driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);

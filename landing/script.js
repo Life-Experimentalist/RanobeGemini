@@ -234,6 +234,7 @@ const pwaInstallBtn = document.getElementById("pwa-install-btn");
 const pwaInstallNote = document.getElementById("pwa-install-note");
 let extensionDetected = false;
 let libraryUrl = null;
+let detectedExtensionVersion = null;
 let deferredInstallPrompt = null;
 let hasReloadedForSwUpdate = false;
 
@@ -256,8 +257,9 @@ function showLibraryButton() {
 	libraryBtn.classList.add("primarysecondary");
 	libraryBtn.textContent = "Open Library";
 	if (libraryNote) {
-		libraryNote.textContent =
-			"Extension detected — open your library directly.";
+		libraryNote.textContent = detectedExtensionVersion
+			? `Extension detected securely (v${detectedExtensionVersion}) — open your library directly.`
+			: "Extension detected securely — open your library directly.";
 	}
 }
 
@@ -275,6 +277,16 @@ function updateLibraryButton() {
 		return;
 	}
 	showLibraryButton();
+}
+
+function getExtensionMessageRuntime() {
+	if (window.chrome?.runtime?.sendMessage) {
+		return window.chrome.runtime;
+	}
+	if (window.browser?.runtime?.sendMessage) {
+		return window.browser.runtime;
+	}
+	return null;
 }
 
 function updatePwaNote(message) {
@@ -395,26 +407,51 @@ async function initPwaSupport() {
 
 function pingExtension() {
 	return new Promise((resolve) => {
+		const runtimeApi = getExtensionMessageRuntime();
+		if (!runtimeApi) {
+			resolve(false);
+			return;
+		}
+
 		let settled = false;
-		const handler = (event) => {
-			const data = event?.data || {};
-			if (data?.type === "RG_PONG") {
-				settled = true;
-				extensionDetected = true;
-				libraryUrl = data.libraryUrl || data.url || null;
-				window.removeEventListener("message", handler);
-				updateLibraryButton();
-				resolve(true);
-			}
-		};
-		window.addEventListener("message", handler);
-		window.postMessage({ source: "ranobe-landing", type: "RG_PING" }, "*");
-		setTimeout(() => {
-			if (!settled) {
-				window.removeEventListener("message", handler);
+		const candidateIds = [
+			...new Set(EXTENSION_IDS.chromium.concat(EXTENSION_IDS.firefox)),
+		];
+
+		const tryNext = async (index) => {
+			if (settled) return;
+			if (index >= candidateIds.length) {
 				resolve(false);
+				return;
 			}
-		}, 900);
+
+			const extensionId = candidateIds[index];
+			if (!extensionId) {
+				return tryNext(index + 1);
+			}
+
+			try {
+				const response = await runtimeApi.sendMessage(extensionId, {
+					type: "EXTERNAL_PING",
+					pageUrl: window.location.href,
+				});
+				if (!settled && response?.installed) {
+					settled = true;
+					extensionDetected = true;
+					detectedExtensionVersion = response.version || null;
+					libraryUrl = response.libraryUrl || response.url || null;
+					updateLibraryButton();
+					resolve(true);
+					return;
+				}
+			} catch (_err) {
+				// Try the next candidate ID.
+			}
+
+			return tryNext(index + 1);
+		};
+
+		tryNext(0);
 	});
 }
 
@@ -457,6 +494,9 @@ function probeExtensionById(extensionId) {
 
 async function detectExtension() {
 	hideLibraryButton();
+	if (libraryNote) {
+		libraryNote.textContent = "Checking for installed extension...";
+	}
 
 	const pinged = await pingExtension();
 	if (pinged) {

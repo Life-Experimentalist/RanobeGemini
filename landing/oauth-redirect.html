@@ -10,26 +10,37 @@
 	<body>
 		<script>
 			(function () {
-				const params = new URLSearchParams(window.location.hash.slice(1));
-				const accessToken = params.get("access_token");
-				const expiresIn = Number(params.get("expires_in") || 0);
+				const queryParams = new URLSearchParams(window.location.search);
+				const hashParams = new URLSearchParams(window.location.hash.slice(1));
+				const accessToken = queryParams.get("access_token") || hashParams.get("access_token");
+				const authorizationCode = queryParams.get("code") || hashParams.get("code");
+				const state = queryParams.get("state") || hashParams.get("state");
+				const expiresIn = Number(queryParams.get("expires_in") || hashParams.get("expires_in") || 0);
 
-				if (!accessToken) {
-					document.body.innerText = "OAuth failed. No access token received.";
+				if (!accessToken && !authorizationCode) {
+					document.body.innerText = "OAuth failed. No authorization response was received.";
 					return;
 				}
 
-				const expiresAt = Date.now() + expiresIn * 1000;
-				window.opener?.postMessage(
-					{
-						source: "ranobe-gemini-oauth",
-						accessToken,
-						expiresAt,
-					},
-					"*",
-				);
+				const payload = { source: "ranobe-gemini-oauth" };
+				if (state) payload.state = state;
+				if (accessToken) {
+					payload.accessToken = accessToken;
+					payload.expiresAt = Date.now() + expiresIn * 1000;
+				}
+				if (authorizationCode) {
+					payload.authorizationCode = authorizationCode;
+				}
+
+				window.opener?.postMessage(payload, "*");
 
 				document.body.innerText = "Login successful. You may close this tab.";
+
+				// When this page is the actual OAuth callback, stop here so the
+				// auth flow can resolve cleanly without a secondary navigation.
+				if (accessToken || authorizationCode) {
+					return;
+				}
 
 				const EXT_IDS = {
 					firefox: "33b0347d-8e94-40d6-a169-249716997cc6",

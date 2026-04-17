@@ -520,8 +520,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				const authorLink = document.querySelector(
 					".chp_byauthor a[href*='/profile/']",
 				);
-			if (descEl) {
-				metadata.description = descEl.textContent.trim();
+				if (authorLink) {
+					metadata.author = authorLink.textContent.trim();
 				}
 
 				if (!metadata.author) {

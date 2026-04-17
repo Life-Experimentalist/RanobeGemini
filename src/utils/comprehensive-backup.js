@@ -525,30 +525,32 @@ export function validateRedirectUris(uris) {
 		return results;
 	}
 
-	// Check for matching URI
+	// Prefer the canonical web redirect URI used by the current auth flow.
+	let legacyMatch = null;
 	for (const uri of uris) {
-		if (browser === "chrome" || browser === "edge") {
-			if (expectedPatterns.chrome.test(uri)) {
-				results.valid = true;
-				results.matchingUri = uri;
-				break;
-			}
-		} else if (browser === "firefox") {
-			if (expectedPatterns.firefox.test(uri)) {
-				results.valid = true;
-				results.matchingUri = uri;
-				break;
-			}
-		}
-
-		// Also accept web redirect for all browsers
 		if (expectedPatterns.web.test(uri)) {
 			results.valid = true;
 			results.matchingUri = uri;
-			results.warnings.push(
-				"Using web redirect URI. Extension-native redirect may be faster.",
-			);
+			break;
 		}
+
+		if (browser === "chrome" || browser === "edge") {
+			if (expectedPatterns.chrome.test(uri)) {
+				legacyMatch = legacyMatch || uri;
+			}
+		} else if (browser === "firefox") {
+			if (expectedPatterns.firefox.test(uri)) {
+				legacyMatch = legacyMatch || uri;
+			}
+		}
+	}
+
+	if (!results.valid && legacyMatch) {
+		results.valid = true;
+		results.matchingUri = legacyMatch;
+		results.warnings.push(
+			"Legacy extension redirect URI detected. Add https://ranobe.vkrishna04.me/oauth-redirect.html as the preferred redirect URI.",
+		);
 	}
 
 	if (!results.valid) {

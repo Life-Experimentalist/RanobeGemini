@@ -1,5 +1,7 @@
 # Quick Reference: Novels Tab & Library Backup
 
+Related compatibility policy: [Cross-Surface Compatibility Contract](./CROSS_SURFACE_COMPATIBILITY.md)
+
 ## Table of Contents
 
 - [Quick Reference: Novels Tab \& Library Backup](#quick-reference-novels-tab--library-backup)

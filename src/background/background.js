@@ -11,16 +11,7 @@ import {
 	NOVEL_CHAPTER_CHECK_ALARM_NAME,
 } from "../utils/constants.js";
 import chunkingSystem from "../utils/chunking/index.js";
-import {
-	ensureDriveAccessToken,
-	revokeDriveTokens,
-	uploadLogsToDriveWithAdapter,
-	uploadLibraryBackupToDrive,
-	listDriveBackups,
-	downloadDriveBackup,
-	getContinuousDriveBackup,
-	getLatestDriveBackup,
-} from "../utils/drive.js";
+import { uploadLogsToDriveWithAdapter } from "../utils/drive.js";
 import {
 	createRollingBackup,
 	listRollingBackups,
@@ -37,6 +28,12 @@ import {
 	setupNovelUpdateAlarm,
 	handleNovelUpdateAlarm,
 } from "./novel-updater.js";
+import { createProviderRegistry } from "./ai/provider-registry.js";
+import { createGeminiProviderAdapter } from "./ai/providers/gemini-provider.js";
+import { createOpenAICompatibleProviderAdapter } from "./ai/providers/openai-compatible-provider.js";
+import { createOllamaProviderAdapter } from "./ai/providers/ollama-provider.js";
+import { createStorageSyncOrchestrator } from "./storage/storage-orchestrator.js";
+import { createGoogleDriveStorageAdapter } from "./storage/adapters/google-drive-storage.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -53,6 +50,39 @@ if (typeof browser === "undefined") {
 	const api = typeof browser !== "undefined" ? browser : chrome;
 
 	debugLog("Ranobe Gemini: Background script loaded");
+	const storageSync = createStorageSyncOrchestrator({
+		browserRef: browser,
+		defaultProvider: "google-drive",
+		adapters: {
+			"google-drive": createGoogleDriveStorageAdapter(),
+		},
+	});
+
+	if (browser.runtime?.onMessageExternal?.addListener) {
+		browser.runtime.onMessageExternal.addListener(
+			(request, sender, sendResponse) => {
+				if (request?.type !== "EXTERNAL_PING") return;
+
+				const senderUrl = sender?.url || sender?.origin || "";
+				if (
+					senderUrl &&
+					!senderUrl.startsWith("https://ranobe.vkrishna04.me/") &&
+					!senderUrl.startsWith("http://ranobe.vkrishna04.me/")
+				) {
+					return;
+				}
+
+				const manifest = browser.runtime.getManifest();
+				sendResponse({
+					installed: true,
+					version: manifest.version,
+					extensionId: browser.runtime.id,
+					libraryUrl: browser.runtime.getURL("library/library.html"),
+				});
+				return true;
+			},
+		);
+	}
 
 	const updateNotificationBadge = () => {
 		try {
@@ -370,10 +400,11 @@ if (typeof browser === "undefined") {
 			type: "application/json",
 		});
 
-		const uploadResult = await uploadLibraryBackupToDrive(blob, {
+		const uploadResultResponse = await storageSync.uploadBackup(blob, {
 			folderId,
 			variant: variant === "continuous" ? "continuous" : "versioned",
 		});
+		const uploadResult = uploadResultResponse;
 
 		const filename = uploadResult.name;
 
@@ -547,16 +578,20 @@ if (typeof browser === "undefined") {
 
 		let latestFile = null;
 		if (backupMode === "continuous") {
-			latestFile = await getContinuousDriveBackup();
+			const result = await storageSync.getContinuousBackup();
+			latestFile = result.file;
 		} else if (backupMode === "both") {
 			// Prefer the rolling file in both mode, but fall back to the latest
 			// versioned backup when continuous does not exist yet.
-			latestFile = await getContinuousDriveBackup();
+			const continuousResult = await storageSync.getContinuousBackup();
+			latestFile = continuousResult.file;
 			if (!latestFile?.id) {
-				latestFile = await getLatestDriveBackup();
+				const latestResult = await storageSync.getLatestBackup();
+				latestFile = latestResult.file;
 			}
 		} else {
-			latestFile = await getLatestDriveBackup();
+			const latestResult = await storageSync.getLatestBackup();
+			latestFile = latestResult.file;
 		}
 
 		if (!latestFile?.id) {
@@ -574,7 +609,8 @@ if (typeof browser === "undefined") {
 			return { success: false, skipped: true, reason: "up-to-date" };
 		}
 
-		const backupData = await downloadDriveBackup(latestFile.id);
+		const backupResult = await storageSync.downloadBackup(latestFile.id);
+		const backupData = backupResult.data;
 		if (!backupData?.library || !backupData?.version) {
 			return { success: false, skipped: true, reason: "invalid-backup" };
 		}
@@ -815,6 +851,7 @@ if (typeof browser === "undefined") {
 
 	// Global configuration
 	let currentConfig = null;
+	let aiProviderRegistry = null;
 
 	// Cancellation flag for chunk processing
 	let isCancellationRequested = false;
@@ -825,6 +862,16 @@ if (typeof browser === "undefined") {
 			// Get settings directly from storage
 			const data = await browser.storage.local.get();
 			return {
+				aiProvider: data.aiProvider || "gemini",
+				openAiEndpoint:
+					data.openAiEndpoint ||
+					"https://api.openai.com/v1/chat/completions",
+				openAiModel: data.openAiModel || "gpt-4o-mini",
+				openAiApiKey: data.openAiApiKey || "",
+				ollamaEndpoint:
+					data.ollamaEndpoint ||
+					"http://localhost:11434/api/generate",
+				ollamaModel: data.ollamaModel || "llama3.1:8b",
 				apiKey: data.apiKey || "",
 				backupApiKeys: data.backupApiKeys || [], // Array of backup API keys
 				apiKeyRotation: data.apiKeyRotation || "failover", // "failover" or "round-robin"
@@ -855,6 +902,12 @@ if (typeof browser === "undefined") {
 		} catch (error) {
 			debugError("Error loading configuration:", error);
 			return {
+				aiProvider: "gemini",
+				openAiEndpoint: "https://api.openai.com/v1/chat/completions",
+				openAiModel: "gpt-4o-mini",
+				openAiApiKey: "",
+				ollamaEndpoint: "http://localhost:11434/api/generate",
+				ollamaModel: "llama3.1:8b",
 				apiKey: "",
 				backupApiKeys: [],
 				apiKeyRotation: "failover",
@@ -878,6 +931,60 @@ if (typeof browser === "undefined") {
 				fontSize: 100,
 			};
 		}
+	}
+
+	function ensureProviderRegistry() {
+		if (aiProviderRegistry) return aiProviderRegistry;
+
+		aiProviderRegistry = createProviderRegistry({
+			defaultProviderId: "gemini",
+			debugLog,
+			debugError,
+		});
+
+		aiProviderRegistry.registerProvider(
+			"gemini",
+			createGeminiProviderAdapter({
+				initConfig,
+				processContentWithGemini,
+				summarizeContentWithGemini,
+			}),
+		);
+
+		aiProviderRegistry.registerProvider(
+			"openai-compatible",
+			createOpenAICompatibleProviderAdapter({
+				initConfig,
+				combinePrompts,
+			}),
+		);
+
+		aiProviderRegistry.registerProvider(
+			"ollama",
+			createOllamaProviderAdapter({
+				initConfig,
+				combinePrompts,
+			}),
+		);
+
+		return aiProviderRegistry;
+	}
+
+	async function getActiveProviderAdapter() {
+		const config = await initConfig();
+		const providerId = String(config.aiProvider || "gemini").toLowerCase();
+		const registry = ensureProviderRegistry();
+		return registry.getProvider(providerId);
+	}
+
+	async function processContentWithProvider(payload) {
+		const provider = await getActiveProviderAdapter();
+		return provider.generateEnhancement(payload);
+	}
+
+	async function summarizeContentWithProvider(payload) {
+		const provider = await getActiveProviderAdapter();
+		return provider.generateSummary(payload);
 	}
 
 	// Get the current API key based on rotation strategy
@@ -1284,8 +1391,9 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "listDriveBackups") {
-			listDriveBackups()
-				.then(async (backups) => {
+			storageSync
+				.listBackups()
+				.then(async ({ backups }) => {
 					await reconcileDriveBackupHistoryWithLiveFiles(backups);
 					sendResponse({ success: true, backups });
 				})
@@ -1300,8 +1408,9 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "downloadDriveBackup") {
-			downloadDriveBackup(message.fileId)
-				.then((data) => sendResponse({ success: true, data }))
+			storageSync
+				.downloadBackup(message.fileId)
+				.then(({ data }) => sendResponse({ success: true, data }))
 				.catch((error) =>
 					sendResponse({
 						success: false,
@@ -1314,9 +1423,10 @@ if (typeof browser === "undefined") {
 		if (message.action === "restoreFromDrive") {
 			(async () => {
 				try {
-					const backupData = await downloadDriveBackup(
+					const backupResult = await storageSync.downloadBackup(
 						message.fileId,
 					);
+					const backupData = backupResult.data;
 					if (!backupData?.library || !backupData?.version) {
 						sendResponse({
 							success: false,
@@ -1370,7 +1480,8 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "ensureDriveAuth") {
-			ensureDriveAccessToken({ interactive: true })
+			storageSync
+				.ensureAuth({ interactive: true })
 				.then(() => sendResponse({ success: true }))
 				.catch((error) =>
 					sendResponse({
@@ -1382,7 +1493,8 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "resetDriveAuth") {
-			revokeDriveTokens()
+			storageSync
+				.resetAuth()
 				.then(() => sendResponse({ success: true }))
 				.catch((error) =>
 					sendResponse({
@@ -1789,15 +1901,16 @@ if (typeof browser === "undefined") {
 								message.content?.length || 0
 							} is under chunk size ${chunkSize}, processing as single piece`,
 						);
-						processContentWithGemini(
-							message.title,
-							message.content,
-							message.isPart,
-							message.partInfo,
-							message.useEmoji,
-							null,
-							message.siteSpecificPrompt || "",
-						)
+						processContentWithProvider({
+							title: message.title,
+							content: message.content,
+							isPart: message.isPart,
+							partInfo: message.partInfo,
+							useEmoji: message.useEmoji,
+							conversationHistory: null,
+							siteSpecificPrompt:
+								message.siteSpecificPrompt || "",
+						})
 							.then((result) => {
 								sendResponse({
 									success: true,
@@ -1875,13 +1988,15 @@ if (typeof browser === "undefined") {
 							};
 
 							// Process this chunk
-							const result = await processContentWithGemini(
-								message.title,
-								chunk,
-								true,
+							const result = await processContentWithProvider({
+								title: message.title,
+								content: chunk,
+								isPart: true,
 								partInfo,
-								message.useEmoji,
-							);
+								useEmoji: message.useEmoji,
+								conversationHistory: null,
+								siteSpecificPrompt: "",
+							});
 
 							// Store and send the result immediately
 							results.push({
@@ -2060,15 +2175,15 @@ if (typeof browser === "undefined") {
 					};
 
 					// Process this single chunk
-					const result = await processContentWithGemini(
-						message.title || "Content",
-						message.content,
-						true, // isPart
+					const result = await processContentWithProvider({
+						title: message.title || "Content",
+						content: message.content,
+						isPart: true,
 						partInfo,
-						message.useEmoji || false,
-						null,
-						message.siteSpecificPrompt || "",
-					);
+						useEmoji: message.useEmoji || false,
+						conversationHistory: null,
+						siteSpecificPrompt: message.siteSpecificPrompt || "",
+					});
 
 					sendResponse({
 						success: true,
@@ -2095,13 +2210,13 @@ if (typeof browser === "undefined") {
 		}
 
 		if (message.action === "summarizeWithGemini") {
-			summarizeContentWithGemini(
-				message.title,
-				message.content,
-				message.isPart,
-				message.partInfo,
-				false, // isShort = false for long summaries
-			)
+			summarizeContentWithProvider({
+				title: message.title,
+				content: message.content,
+				isPart: message.isPart,
+				partInfo: message.partInfo,
+				isShort: false,
+			})
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
 				})
@@ -2119,13 +2234,13 @@ if (typeof browser === "undefined") {
 
 		// Handle short summary requests
 		if (message.action === "shortSummarizeWithGemini") {
-			summarizeContentWithGemini(
-				message.title,
-				message.content,
-				message.isPart,
-				message.partInfo,
-				true, // isShort = true for short summaries
-			)
+			summarizeContentWithProvider({
+				title: message.title,
+				content: message.content,
+				isPart: message.isPart,
+				partInfo: message.partInfo,
+				isShort: true,
+			})
 				.then((summary) => {
 					sendResponse({ success: true, summary: summary });
 				})
@@ -2345,15 +2460,15 @@ if (typeof browser === "undefined") {
 				debugLog(
 					"[processContentInChunks] Chunking is DISABLED. Processing content as a single piece.",
 				);
-				return await processContentWithGemini(
+				return await processContentWithProvider({
 					title,
 					content,
-					false,
-					null,
+					isPart: false,
+					partInfo: null,
 					useEmoji,
-					null,
+					conversationHistory: null,
 					siteSpecificPrompt,
-				);
+				});
 			}
 
 			// Get model info to determine appropriate chunk size
@@ -2412,15 +2527,15 @@ if (typeof browser === "undefined") {
 				debugLog(
 					`[processContentInChunks] Content (${content.length}) <= effectiveChunkSize (${effectiveChunkSizeChars}), processing as single piece.`,
 				);
-				return await processContentWithGemini(
+				return await processContentWithProvider({
 					title,
 					content,
-					false,
-					null,
+					isPart: false,
+					partInfo: null,
 					useEmoji,
-					null,
+					conversationHistory: null,
 					siteSpecificPrompt,
-				);
+				});
 			}
 
 			// When forceChunking is true, the content script already created DOM wrappers
@@ -2607,15 +2722,16 @@ if (typeof browser === "undefined") {
 
 						// Process with Gemini, passing conversation history for context
 						// NOTE: For first chunk, don't pass conversation history to avoid pollution
-						const result = await processContentWithGemini(
+						const result = await processContentWithProvider({
 							title,
-							chunk,
-							true,
+							content: chunk,
+							isPart: true,
 							partInfo,
 							useEmoji,
-							i === 0 ? null : conversationHistory, // First chunk always starts fresh
+							conversationHistory:
+								i === 0 ? null : conversationHistory,
 							siteSpecificPrompt,
-						);
+						});
 
 						// Guard against excessive shortening (avoid accidental summaries)
 						const originalWordCount = chunkingSystem?.core

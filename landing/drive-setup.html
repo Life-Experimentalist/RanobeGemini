@@ -207,29 +207,22 @@
 
 					<div class="step-card">
 						<div class="step-num">5</div>
-						<h4>Add Redirect URIs</h4>
-						<p>Click the ✏️ edit icon next to your OAuth client. Under <strong>Authorised redirect
-								URIs</strong>, add these URLs for your browser:</p>
+						<h4>Add the Web Redirect URI</h4>
+						<p>Click the ✏️ edit icon next to your OAuth client. Under <strong>Authorized redirect
+								URIs</strong>, add this exact URL once:</p>
 						<div class="uri-boxes">
 							<div class="uri-box">
 								<span class="uri-icon">🌐</span>
 								<div>
-									<strong>Chrome / Edge:</strong>
-									<code id="chromiumRedirect">Loading…</code>
-								</div>
-							</div>
-							<div class="uri-box">
-								<span class="uri-icon">🦊</span>
-								<div>
-									<strong>Firefox:</strong>
-									<code id="firefoxRedirect">Loading…</code>
+									<strong>Canonical redirect:</strong>
+									<code id="oauthRedirect">Loading…</code>
 								</div>
 							</div>
 						</div>
-						<div class="step-tip">📌 Temporary/sideload install? Use your own assigned extension ID.
-							Generate URI in <a href="./install-guide.html#oauth-ids">Install Guide</a>.</div>
-						<p style="margin-top: 12px; font-size: 12px;">You can add both even if you only use one browser.
-						</p>
+						<div class="step-tip">This is the same redirect used by Firefox, Chromium, and Edge. Register it
+							exactly as shown in Google Cloud Console.</div>
+						<p style="margin-top: 12px; font-size: 12px;">Temporary or sideloaded installs still use the
+							same web redirect; no browser-specific extension ID is required.</p>
 					</div>
 
 					<div class="step-card">

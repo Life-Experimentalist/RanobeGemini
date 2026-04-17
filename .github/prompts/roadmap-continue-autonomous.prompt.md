@@ -10,10 +10,10 @@ Continue roadmap-driven work until the current cycle is complete or a genuine bl
 
 - Follow `docs/overview/TECHNICAL_ROADMAP.md` first.
 - Then follow repo instructions, especially:
-  - `.github/copilot-instructions.md`
-  - `docs/development/README.md`
-  - `docs/guides/PLUGIN_HANDLER_PUBLISHING.md`
-  - `docs/guides/ADDING_NEW_WEBSITES.md`
+    - `.github/copilot-instructions.md`
+    - `docs/development/README.md`
+    - `docs/guides/PLUGIN_HANDLER_PUBLISHING.md`
+    - `docs/guides/ADDING_NEW_WEBSITES.md`
 - Treat `package.json` as the version source of truth.
 - Respect the current branch state and only merge when the cycle is actually complete.
 
@@ -23,12 +23,13 @@ Continue roadmap-driven work until the current cycle is complete or a genuine bl
 2. Check what is already implemented before editing anything.
 3. Make the smallest useful change set for that unit.
 4. Validate the change with build/lint/tests as applicable.
+    - Mandatory per cycle: run `npm run lint` and fix all newly introduced lint errors before proceeding.
 5. Update docs only when the implementation changes user-visible behavior or the roadmap/docs are out of sync.
 6. If the unit is finished, immediately continue with the next roadmap unit or subtask.
 7. Repeat until:
-   - the requested branch of work is complete,
-   - the next step is blocked by a real dependency, or
-   - a user decision is genuinely required.
+    - the requested branch of work is complete,
+    - the next step is blocked by a real dependency, or
+    - a user decision is genuinely required.
 
 ## Question Policy
 
@@ -55,6 +56,8 @@ Continue roadmap-driven work until the current cycle is complete or a genuine bl
 ## Validation Rules
 
 - Run build/package/lint/tests that match the change.
+- In every implementation cycle, run `npm run lint` before considering the unit complete.
+- Resolve lint issues introduced by the current changes in the same cycle.
 - Fix newly introduced errors before moving on.
 - If a build fails because of an environment issue, record the blocker and continue with other safe roadmap work if possible.
 

@@ -83,11 +83,17 @@ export async function deleteChunkEnhancementRuntime({
 	);
 
 	if (!originalContent && !originalHtml) {
-		showStatusMessage("Original content not available for this chunk.", "error");
+		showStatusMessage(
+			"Original content not available for this chunk.",
+			"error",
+		);
 		return;
 	}
 
-	await chunking.cache.deleteChunkFromCache(windowRef.location.href, chunkIndex);
+	await chunking.cache.deleteChunkFromCache(
+		windowRef.location.href,
+		chunkIndex,
+	);
 
 	if (originalHtml) {
 		chunkContent.innerHTML = originalHtml;
@@ -116,5 +122,9 @@ export async function deleteChunkEnhancementRuntime({
 		banner.replaceWith(newBanner);
 	}
 
-	showStatusMessage(`Chunk ${chunkIndex + 1} reverted to original.`, "info", 2000);
+	showStatusMessage(
+		`Chunk ${chunkIndex + 1} reverted to original.`,
+		"info",
+		2000,
+	);
 }

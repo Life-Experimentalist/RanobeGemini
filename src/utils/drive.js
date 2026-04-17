@@ -6,6 +6,7 @@ import {
 	DEFAULT_DRIVE_CLIENT_ID,
 	DRIVE_BACKUP_PREFIX,
 	DRIVE_CONTINUOUS_BACKUP_BASENAME,
+	OAUTH_REDIRECT_URIS,
 	GOOGLE_OAUTH_SCOPES,
 } from "./constants.js";
 
@@ -17,6 +18,10 @@ const FOLDER_ID_KEY = "driveFolderId";
 const SCOPES = GOOGLE_OAUTH_SCOPES;
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
+
+function getDriveRedirectUri() {
+	return OAUTH_REDIRECT_URIS.web;
+}
 
 function getRandomString(length = 64) {
 	const array = new Uint8Array(length);
@@ -173,6 +178,50 @@ async function refreshAccessToken({ refreshToken, clientId, clientSecret }) {
 	return resp.json();
 }
 
+function getIdentityApi() {
+	if (typeof chrome !== "undefined" && chrome.identity?.launchWebAuthFlow) {
+		return chrome.identity;
+	}
+
+	if (typeof browser !== "undefined" && browser.identity?.launchWebAuthFlow) {
+		return browser.identity;
+	}
+
+	throw new Error("Web auth flow is not available in this browser.");
+}
+
+function parseOAuthRedirectUrl(redirectUrl) {
+	const parsedUrl = new URL(redirectUrl);
+	const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+	return {
+		code: parsedUrl.searchParams.get("code") || hashParams.get("code"),
+		state: parsedUrl.searchParams.get("state") || hashParams.get("state"),
+		accessToken:
+			parsedUrl.searchParams.get("access_token") ||
+			hashParams.get("access_token"),
+		expiresIn: Number(
+			parsedUrl.searchParams.get("expires_in") ||
+				hashParams.get("expires_in") ||
+				0,
+		),
+	};
+}
+
+function getDriveAuthTroubleshootingHint() {
+	return "If this keeps happening, confirm https://ranobe.vkrishna04.me/oauth-redirect.html is registered as an authorized redirect URI in Google Cloud Console, then reconnect.";
+}
+
+function createDriveAuthError(message) {
+	return new Error(`${message} ${getDriveAuthTroubleshootingHint()}`);
+}
+
+async function launchDriveWebAuthFlow(authUrl) {
+	return getIdentityApi().launchWebAuthFlow({
+		url: authUrl,
+		interactive: true,
+	});
+}
+
 export async function revokeDriveTokens() {
 	await setStored({ [TOKEN_KEY]: null });
 	await clearAuthError();
@@ -183,7 +232,7 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 	if (!clientId) throw new Error("Drive client ID missing");
 	const clientSecret = (await getDriveClientSecret())?.trim();
 
-	const redirectUri = browser.identity.getRedirectURL("drive");
+	const redirectUri = getDriveRedirectUri();
 	let tokens = await getTokens();
 	if (isTokenValid(tokens)) return tokens.access_token;
 
@@ -212,14 +261,14 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 				// User explicitly revoked access - must re-authenticate
 				await revokeDriveTokens();
 				await setAuthError(
-					new Error(
+					createDriveAuthError(
 						"Google Drive access was revoked. Please reconnect in Library Settings.",
 					),
 				);
 			} else {
 				// Network or temporary error - keep tokens, set error for UI display
 				await setAuthError(
-					new Error(
+					createDriveAuthError(
 						`Temporary Drive error: ${err.message}. Will retry automatically.`,
 					),
 				);
@@ -243,21 +292,33 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 		code_challenge_method: "S256",
 	});
 	const authUrl = `${AUTH_ENDPOINT}?${params.toString()}`;
-	const redirectUrl = await browser.identity.launchWebAuthFlow({
-		url: authUrl,
-		interactive: true,
-	});
-	const parsed = new URL(redirectUrl);
-	if (parsed.searchParams.get("state") !== state) {
-		const err = new Error("State mismatch during Drive auth");
+	let redirectUrl;
+	try {
+		redirectUrl = await launchDriveWebAuthFlow(authUrl);
+	} catch (err) {
+		const authErr = createDriveAuthError(
+			`Google Drive sign-in was interrupted or the redirect URI was rejected: ${err.message}.`,
+		);
+		await setAuthError(authErr);
+		throw authErr;
+	}
+	const parsed = parseOAuthRedirectUrl(redirectUrl);
+	if (parsed.state !== state) {
+		const err = createDriveAuthError("State mismatch during Drive auth.");
 		await setAuthError(err);
 		throw err;
 	}
-	const code = parsed.searchParams.get("code");
+	const code = parsed.code;
 	if (!code) {
-		const err = new Error("No auth code returned from Drive");
+		const err = createDriveAuthError("No auth code returned from Drive.");
 		await setAuthError(err);
 		throw err;
+	}
+	if (parsed.accessToken && parsed.expiresIn > 0) {
+		await storeTokens({
+			access_token: parsed.accessToken,
+			expires_in: parsed.expiresIn,
+		});
 	}
 	let exchanged;
 	try {
@@ -269,8 +330,11 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 			clientSecret,
 		});
 	} catch (err) {
-		await setAuthError(err);
-		throw err;
+		const authErr = createDriveAuthError(
+			`Google Drive token exchange failed: ${err.message}.`,
+		);
+		await setAuthError(authErr);
+		throw authErr;
 	}
 	await storeTokens(exchanged);
 	await clearAuthError();

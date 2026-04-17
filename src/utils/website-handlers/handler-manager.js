@@ -4,6 +4,7 @@
  */
 
 import { BaseWebsiteHandler } from "./base-handler.js";
+import { validateHandlerContractRuntime } from "./handler-contract.js";
 import { HANDLER_MODULES } from "./handler-registry.js";
 import { debugLog } from "../logger.js";
 import {
@@ -96,7 +97,27 @@ export class HandlerManager {
 						}
 					}
 
-					loadedHandlers.push(...uniqueByName.values());
+					for (const handler of uniqueByName.values()) {
+						const handlerName =
+							handler?.constructor?.name || modulePath;
+						const contract =
+							validateHandlerContractRuntime(handler);
+
+						if (!contract.isValid) {
+							console.warn(
+								`HandlerManager: skipping ${handlerName}. Missing required contract fields: ${contract.missingRequired.join(", ")}`,
+							);
+							continue;
+						}
+
+						if (contract.warnings.length > 0) {
+							console.warn(
+								`HandlerManager: ${handlerName} optional capability notes: ${contract.warnings.join("; ")}`,
+							);
+						}
+
+						loadedHandlers.push(handler);
+					}
 				} catch (importError) {
 					console.warn(
 						`HandlerManager: failed to load ${modulePath}:`,

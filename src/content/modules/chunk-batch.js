@@ -4,18 +4,29 @@
 
 export function toggleAllChunksRuntime({ documentRef = document, escapeHtml }) {
 	const mainBanner = documentRef.querySelector(".gemini-master-banner");
-	const toggleBtn = mainBanner?.querySelector(".gemini-master-toggle-all-btn");
+	const toggleBtn = mainBanner?.querySelector(
+		".gemini-master-toggle-all-btn",
+	);
 	if (!toggleBtn) return;
 
-	const isShowingEnhanced = toggleBtn.getAttribute("data-showing") !== "original";
-	const allChunkContents = documentRef.querySelectorAll(".gemini-chunk-content");
-	const allChunkToggleBtns = documentRef.querySelectorAll(".gemini-chunk-toggle-btn");
+	const isShowingEnhanced =
+		toggleBtn.getAttribute("data-showing") !== "original";
+	const allChunkContents = documentRef.querySelectorAll(
+		".gemini-chunk-content",
+	);
+	const allChunkToggleBtns = documentRef.querySelectorAll(
+		".gemini-chunk-toggle-btn",
+	);
 
 	allChunkContents.forEach((chunkContent) => {
 		if (chunkContent.getAttribute("data-chunk-enhanced") !== "true") return;
 
-		const originalHtml = chunkContent.getAttribute("data-original-chunk-html");
-		const originalContent = chunkContent.getAttribute("data-original-chunk-content");
+		const originalHtml = chunkContent.getAttribute(
+			"data-original-chunk-html",
+		);
+		const originalContent = chunkContent.getAttribute(
+			"data-original-chunk-content",
+		);
 
 		if (isShowingEnhanced) {
 			chunkContent.setAttribute(
@@ -30,7 +41,9 @@ export function toggleAllChunksRuntime({ documentRef = document, escapeHtml }) {
 			return;
 		}
 
-		const savedEnhanced = chunkContent.getAttribute("data-enhanced-chunk-content");
+		const savedEnhanced = chunkContent.getAttribute(
+			"data-enhanced-chunk-content",
+		);
 		if (savedEnhanced) {
 			chunkContent.innerHTML = savedEnhanced;
 		}

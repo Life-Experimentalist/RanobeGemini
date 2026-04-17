@@ -143,6 +143,32 @@ classDiagram
 - Enforces consistent interface across all handlers
 - Enables the Handler Manager to work with any handler uniformly
 
+### Runtime-Validated Handler Contract
+
+Handler loading now validates contract shape in `src/utils/website-handlers/handler-manager.js` via `src/utils/website-handlers/handler-contract.js`.
+
+Required contract fields (handler is skipped if missing):
+
+| Contract Field      | Type                     | Notes                                           |
+| ------------------- | ------------------------ | ----------------------------------------------- |
+| `canHandle()`       | instance method override | Must be implemented by each concrete handler    |
+| `extractTitle()`    | instance method override | Must be implemented by each concrete handler    |
+| `SUPPORTED_DOMAINS` | static non-empty array   | Used for deterministic domain matching fallback |
+
+Optional capability hooks (discovered at runtime, warning-only when absent):
+
+| Optional Hook                   | Purpose                                           |
+| ------------------------------- | ------------------------------------------------- |
+| `supportsTextOnlyEnhancement()` | Enables text-only enhancement path when supported |
+| `formatAfterEnhancement()`      | Site-specific post-enhancement formatting         |
+| `extractNovelMetadata()`        | Rich metadata extraction for library/update flows |
+| `getMetadataSourceUrl()`        | Dedicated metadata source page support            |
+| `processRemoteMetadata()`       | Normalize remote metadata payloads                |
+| `getProposedLibrarySettings()`  | Site-level library settings schema                |
+| `getChapterUIConfig()`          | Chapter UI customization hooks                    |
+| `getCustomButtons()`            | Additional control buttons                        |
+| `injectCustomUI()`              | Post-render UI injection                          |
+
 Here's a template for your new handler:
 
 ```javascript

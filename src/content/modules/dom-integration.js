@@ -7,7 +7,11 @@ export function ensureMasterBannerRuntime({
 	contentArea,
 	chunking,
 	totalChunks,
+	originalWords,
+	enhancedWords,
+	isCached = false,
 	lastChunkModelInfo,
+	cacheMeta = null,
 	shouldBannersBeHidden,
 	onToggleAll,
 	onDeleteAll,
@@ -19,30 +23,38 @@ export function ensureMasterBannerRuntime({
 	if (existingMaster) return false;
 
 	const allChunkEls = documentRef.querySelectorAll(".gemini-chunk-content");
-	const originalWords = Array.from(allChunkEls).reduce((sum, chunk) => {
-		return (
-			sum +
-			chunking.core.countWords(
-				chunk.getAttribute("data-original-chunk-content") || "",
-			)
-		);
-	}, 0);
-	const enhancedWords = Array.from(allChunkEls).reduce((sum, chunkContent) => {
-		return sum + chunking.core.countWords(chunkContent.innerHTML);
-	}, 0);
+	const resolvedOriginalWords = Number.isFinite(originalWords)
+		? originalWords
+		: Array.from(allChunkEls).reduce((sum, chunk) => {
+				return (
+					sum +
+					chunking.core.countWords(
+						chunk.getAttribute("data-original-chunk-content") || "",
+					)
+				);
+			}, 0);
+	const resolvedEnhancedWords = Number.isFinite(enhancedWords)
+		? enhancedWords
+		: Array.from(allChunkEls).reduce((sum, chunkContent) => {
+				return sum + chunking.core.countWords(chunkContent.innerHTML);
+			}, 0);
 
 	const resolvedTotalChunks =
-		totalChunks && Number.isFinite(totalChunks) ? totalChunks : allChunkEls.length;
+		totalChunks && Number.isFinite(totalChunks)
+			? totalChunks
+			: allChunkEls.length;
 	const masterBanner = chunking.ui.createMasterBanner(
-		originalWords,
-		enhancedWords,
+		resolvedOriginalWords,
+		resolvedEnhancedWords,
 		resolvedTotalChunks,
-		false,
+		isCached,
 		lastChunkModelInfo,
-		null,
+		cacheMeta,
 	);
 
-	const toggleAllBtn = masterBanner.querySelector(".gemini-master-toggle-all-btn");
+	const toggleAllBtn = masterBanner.querySelector(
+		".gemini-master-toggle-all-btn",
+	);
 	if (toggleAllBtn) {
 		toggleAllBtn.setAttribute("data-showing", "enhanced");
 		toggleAllBtn.addEventListener("click", (e) => {
@@ -51,7 +63,9 @@ export function ensureMasterBannerRuntime({
 		});
 	}
 
-	const deleteAllBtn = masterBanner.querySelector(".gemini-master-delete-all-btn");
+	const deleteAllBtn = masterBanner.querySelector(
+		".gemini-master-delete-all-btn",
+	);
 	if (deleteAllBtn) {
 		deleteAllBtn.addEventListener("click", async (e) => {
 			e.preventDefault();
@@ -89,12 +103,152 @@ export function upsertWorkInProgressBannerRuntime({
 	const contentArea = findContentArea?.();
 	if (!contentArea) return false;
 
-	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	const chunkedContainer = documentRef.getElementById(
+		"gemini-chunked-content",
+	);
 	if (chunkedContainer) {
 		contentArea.insertBefore(newBanner, chunkedContainer);
 		return true;
 	}
 
 	contentArea.insertBefore(newBanner, contentArea.firstChild);
+	return true;
+}
+
+export function clearTransientEnhancementBannersRuntime({
+	documentRef = document,
+	removeErrorBanner = false,
+}) {
+	const wipBanner = documentRef.querySelector(".gemini-wip-banner");
+	if (wipBanner) {
+		wipBanner.remove();
+	}
+
+	if (!removeErrorBanner) return;
+
+	const errorBanner = documentRef.querySelector(".gemini-error-banner");
+	if (errorBanner) {
+		errorBanner.remove();
+	}
+}
+
+export function insertMainUiBlocksRuntime({
+	insertionPoint,
+	insertionPosition = "before",
+	controlsContainer,
+	mainSummaryGroup = null,
+	siteEnhancementsContainer = null,
+	versionSwitcherContainer = null,
+}) {
+	if (!insertionPoint || !controlsContainer) return false;
+
+	if (insertionPosition === "before" || insertionPosition === "beforebegin") {
+		if (!insertionPoint.parentNode) return false;
+		if (siteEnhancementsContainer) {
+			insertionPoint.parentNode.insertBefore(
+				siteEnhancementsContainer,
+				insertionPoint,
+			);
+		}
+		insertionPoint.parentNode.insertBefore(
+			controlsContainer,
+			insertionPoint,
+		);
+		if (mainSummaryGroup) {
+			insertionPoint.parentNode.insertBefore(
+				mainSummaryGroup,
+				insertionPoint,
+			);
+		}
+		return true;
+	}
+
+	if (insertionPosition === "after" || insertionPosition === "afterend") {
+		if (!insertionPoint.parentNode) return false;
+		if (siteEnhancementsContainer) {
+			insertionPoint.parentNode.insertBefore(
+				siteEnhancementsContainer,
+				insertionPoint.nextSibling,
+			);
+		}
+		insertionPoint.parentNode.insertBefore(
+			controlsContainer,
+			siteEnhancementsContainer
+				? siteEnhancementsContainer.nextSibling
+				: insertionPoint.nextSibling,
+		);
+		if (mainSummaryGroup) {
+			insertionPoint.parentNode.insertBefore(
+				mainSummaryGroup,
+				controlsContainer.nextSibling,
+			);
+		}
+		return true;
+	}
+
+	if (insertionPosition === "prepend" || insertionPosition === "afterbegin") {
+		if (versionSwitcherContainer) {
+			insertionPoint.prepend(versionSwitcherContainer);
+		}
+		insertionPoint.prepend(controlsContainer);
+		if (mainSummaryGroup) {
+			insertionPoint.insertBefore(
+				mainSummaryGroup,
+				controlsContainer.nextSibling,
+			);
+		}
+		return true;
+	}
+
+	if (insertionPosition === "append" || insertionPosition === "beforeend") {
+		if (versionSwitcherContainer) {
+			insertionPoint.appendChild(versionSwitcherContainer);
+		}
+		insertionPoint.appendChild(controlsContainer);
+		if (mainSummaryGroup) {
+			insertionPoint.appendChild(mainSummaryGroup);
+		}
+		return true;
+	}
+
+	if (!insertionPoint.parentNode) return false;
+	insertionPoint.parentNode.insertBefore(controlsContainer, insertionPoint);
+	if (mainSummaryGroup) {
+		insertionPoint.parentNode.insertBefore(
+			mainSummaryGroup,
+			insertionPoint,
+		);
+	}
+	return true;
+}
+
+export function insertAfterControlsOrTopRuntime({
+	documentRef = document,
+	contentArea,
+	node,
+	controlsSelector = "#gemini-controls",
+}) {
+	if (!contentArea || !node) return false;
+
+	const controlsContainer = documentRef.querySelector(controlsSelector);
+	if (controlsContainer?.parentNode) {
+		controlsContainer.parentNode.insertBefore(
+			node,
+			controlsContainer.nextSibling,
+		);
+		return true;
+	}
+
+	contentArea.insertBefore(node, contentArea.firstChild);
+	return true;
+}
+
+export function insertAtContentTopRuntime({ contentArea, node }) {
+	if (!contentArea || !node) return false;
+	if (contentArea.firstChild) {
+		contentArea.insertBefore(node, contentArea.firstChild);
+	} else {
+		contentArea.appendChild(node);
+	}
 	return true;
 }

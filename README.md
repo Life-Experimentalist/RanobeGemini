@@ -67,9 +67,10 @@
 - **Canvas Background Animations**: Five animation types (particles, snow, rain, falling leaves, fireflies) for library pages, color-synced to your theme.
 - **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
 - **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
-- **Google Drive Sync**: Optional OAuth-based backup to Google Drive with configurable retention.
-- **True Web PWA Entry**: Installable landing web app (Android/Windows supported browsers) with library hub and extension handoff.
+- **Google Drive Sync**: Optional OAuth-based backup to Google Drive with configurable retention, using the canonical web redirect flow.
+- **True Web PWA Entry**: Installable landing web app (Android/Windows supported browsers) with secure extension presence detection and library handoff.
 - **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
+- **Provider Selection**: Switch the active AI provider in popup settings (`Gemini`, `OpenAI-compatible`, `Ollama`) without changing core workflows.
 - **Multiple Gemini Models**: Gemini 2.0 Flash (recommended), 2.5 Flash (fastest), 2.5 Pro (highest quality), with backup key rotation.
 - **Export Templates**: Configurable filename templates for novel copy/download operations.
 - **FicHub Integration**: One-click download button for EPUB/MOBI via FicHub.
@@ -103,9 +104,11 @@
 - Firefox (published): https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/
 - Chrome / Brave / Opera / Vivaldi / Ulaa / Arc: temporary/sideload install from the latest Chromium package.
 
-For full browser-specific steps and Google Drive OAuth redirect ID guidance, use:
+For the canonical Google Drive OAuth redirect URI setup, use:
 
 - Landing install guide: https://ranobe.vkrishna04.me/install-guide.html
+
+The landing page checks for an installed extension through a safe external ping before showing the direct library button.
 
 ## Build Instructions (For AMO Reviewers)
 
@@ -217,7 +220,7 @@ Until a stable automated path is enabled in this repo, `PUBLISH_EDGE_MANUAL` kee
 
 ## Usage
 
-1. **Configure API Key**: Click the Ranobe Gemini icon in your Firefox toolbar. Go to the "Settings" tab and enter your Gemini API key. You can get a free key from [Google AI Studio](https://makersuite.google.com/app/apikey).
+1. **Configure Provider**: Click the Ranobe Gemini icon in your Firefox toolbar. In popup settings, select your AI provider and configure credentials (Gemini API key, OpenAI-compatible key/endpoint, or local Ollama runtime as needed).
 2. **Navigate**: Go to a chapter page on any supported website (Ranobes, FanFiction.net, AO3, or WebNovel).
 3. **Enhance/Summarize**: Click the "Enhance with Gemini" or "Summarize Chapter" buttons that appear near the chapter content.
 4. **View Results**: Wait for the processing to complete. The enhanced text will replace the original, or the summary will appear.
@@ -228,6 +231,8 @@ Until a stable automated path is enabled in this repo, `PUBLISH_EDGE_MANUAL` kee
 Access the extension's settings via the toolbar icon:
 
 - **API Key**: Essential for the extension to function.
+- **AI Provider**: Select `Gemini`, `OpenAI-compatible`, or `Ollama` as the active runtime provider.
+- **Sync Provider**: Select the active storage sync backend (`Google Drive` baseline via `activeSync`).
 - **Gemini Model**: Select the desired AI model.
 - **Prompts**: Customize the Enhancement, Summary, and Permanent prompts.
 - **Chunking**: Enable/disable automatic splitting of large chapters.
@@ -280,7 +285,7 @@ Copyright 2025 VKrishna04
 
 - Powered by the [Google Gemini API](https://ai.google.dev/)
 - EPUB/MOBI downloads via [FicHub](https://fichub.net/)
-- OAuth backup support for [Google Drive](https://drive.google.com/)
+- OAuth backup support for [Google Drive](https://drive.google.com/) via the canonical `ranobe.vkrishna04.me/oauth-redirect.html` flow
 
 ---
 

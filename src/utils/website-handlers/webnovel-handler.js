@@ -318,8 +318,8 @@ When enhancing, improve readability and grammar while respecting the author's or
 	extractPageMetadata() {
 		const context = {
 			author: null,
-		if (descEl) {
-			metadata.description = descEl.textContent.trim();
+			title: null,
+			genres: [],
 			tags: [],
 			status: null,
 			description: null,
@@ -342,6 +342,24 @@ When enhancing, improve readability and grammar while respecting the author's or
 			if (titleEl) {
 				context.title = titleEl.textContent.trim();
 			}
+
+			// Description
+			const descEl = document.querySelector(
+				".cha-words, .book-intro, .det-abt",
+			);
+			if (descEl) {
+				context.description = descEl.textContent.trim();
+			}
+
+			// Tags/genres if present
+			const tagEls = document.querySelectorAll(
+				".det-hd-detail .g_grey, .tag-item, .genre-item",
+			);
+			tagEls.forEach((el) => {
+				const text = el.textContent.trim();
+				if (!text) return;
+				context.tags.push(text);
+			});
 		} catch (error) {
 			debugError("WebNovel: Error extracting page metadata:", error);
 		}

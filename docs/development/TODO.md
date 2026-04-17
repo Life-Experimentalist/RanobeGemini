@@ -133,6 +133,7 @@ graph TB
 - [x] Cross-browser build (Firefox + Chromium + Edge)
 - [x] Manifest V3 with service-worker background script
 - [x] Google Drive OAuth PKCE backup
+- [x] Canonical web redirect OAuth flow for Google Drive
 - [x] Rolling backup retention (3 backups)
 - [x] Canvas particle animations for popup
 - [x] FicHub integration for novel search

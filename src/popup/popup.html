@@ -104,6 +104,17 @@
 					<h3 class="config-section-title">🤖 Model Settings</h3>
 					<div class="config-section-content">
 						<div class="config-item">
+							<label for="aiProviderSelect">AI Provider</label>
+							<select id="aiProviderSelect" style="width: 100%">
+								<option value="gemini">Google Gemini</option>
+								<option value="openai-compatible">OpenAI-Compatible</option>
+								<option value="ollama">Ollama (Local)</option>
+							</select>
+							<div class="description" style="margin-top: 4px">Select the active AI provider used by
+								enhancement and summary flows</div>
+						</div>
+
+						<div class="config-item">
 							<label for="modelSelect">Gemini Model</label>
 							<div style="display: flex; gap: 6px">
 								<select id="modelSelect" style="flex: 1">
@@ -209,6 +220,17 @@
 
 						<!-- Drive Connected Section -->
 						<div id="driveConnected" style="display: none;">
+							<div class="config-item" style="margin-bottom: 12px;">
+								<label for="syncProviderSelect"
+									style="font-size: 11px; font-weight: 500; margin-bottom: 6px; display: block;">Sync
+									Provider</label>
+								<select id="syncProviderSelect" style="width: 100%; font-size: 11px;">
+									<option value="google-drive">Google Drive</option>
+								</select>
+								<div class="description" style="margin-top: 4px;">Active storage sync provider used by
+									backup/sync runtime</div>
+							</div>
+
 							<!-- Backup Mode Selection -->
 							<div class="config-item" style="margin-bottom: 12px;">
 								<label

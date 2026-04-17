@@ -43,6 +43,14 @@
 		"downloads",
 		"identity"
 	],
+	"externally_connectable": {
+		"ids": [
+			"*"
+		],
+		"matches": [
+			"*://ranobe.vkrishna04.me/*"
+		]
+	},
 	"host_permissions": [
 		"https://www.googleapis.com/*",
 		"https://accounts.google.com/*"

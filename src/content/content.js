@@ -2030,8 +2030,7 @@ if (window.__RGInitDone) {
 					// Add master banner if not already present (individual chunk enhance path)
 					const contentAreaForMaster = findContentArea();
 					if (contentAreaForMaster && chunking?.ui) {
-						const domIntegration =
-							await loadDomIntegrationModule();
+						const domIntegration = await loadDomIntegrationModule();
 						domIntegration?.ensureMasterBannerRuntime?.({
 							documentRef: document,
 							contentArea: contentAreaForMaster,
@@ -2949,7 +2948,10 @@ if (window.__RGInitDone) {
 
 			const existingBanner = document.querySelector(".gemini-wip-banner");
 			if (existingBanner && existingBanner.parentNode) {
-				existingBanner.parentNode.replaceChild(newBanner, existingBanner);
+				existingBanner.parentNode.replaceChild(
+					newBanner,
+					existingBanner,
+				);
 				return;
 			}
 
@@ -3329,25 +3331,7 @@ if (window.__RGInitDone) {
 			isCachedContent,
 		);
 
-		// Add delete button handler if present
-		const deleteButton = banner.querySelector(".gemini-delete-cache-btn");
-		if (deleteButton) {
-			deleteButton.addEventListener("click", async () => {
-				if (confirm("Delete cached enhanced content for this page?")) {
-					if (storageManager) {
-						await storageManager.removeEnhancedContent(
-							window.location.href,
-						);
-						isCachedContent = false;
-						showStatusMessage(
-							"Cached content deleted. Reloading page...",
-							"info",
-						);
-						setTimeout(() => location.reload(), 1000);
-					}
-				}
-			});
-		}
+		attachDeleteCacheButtonHandler(banner);
 
 		// Get the toggle button from the banner
 		const toggleButton = banner.querySelector(".gemini-toggle-btn");
@@ -3356,7 +3340,6 @@ if (window.__RGInitDone) {
 				const isShowingEnhanced =
 					contentArea.getAttribute("data-showing-enhanced") ===
 					"true";
-				let newBanner;
 				if (isShowingEnhanced) {
 					// Switch to original
 					contentArea.innerHTML = originalContent;
@@ -3364,48 +3347,20 @@ if (window.__RGInitDone) {
 					showStatusMessage(
 						"Showing original content. Click 'Show Enhanced' to view the improved version.",
 					);
-					// Re-create banner for original view
-					newBanner = createEnhancedBanner(
-						originalText,
-						enhancedText,
-						modelInfo,
-						isCachedContent,
-					);
-					const newToggleButton =
-						newBanner.querySelector(".gemini-toggle-btn");
-					if (newToggleButton) {
-						newToggleButton.textContent = "Show Enhanced";
-						newToggleButton.addEventListener(
-							"click",
-							toggleContent,
-						);
-					}
-					// Re-attach delete button handler
-					const newDeleteButton = newBanner.querySelector(
-						".gemini-delete-cache-btn",
-					);
-					if (newDeleteButton) {
-						newDeleteButton.addEventListener("click", async () => {
-							if (
-								confirm(
-									"Delete cached enhanced content for this page?",
-								)
-							) {
-								if (storageManager) {
-									await storageManager.removeEnhancedContent(
-										window.location.href,
-									);
-									isCachedContent = false;
-									showStatusMessage(
-										"Cached content deleted. Reloading page...",
-										"info",
-									);
-									setTimeout(() => location.reload(), 1000);
-								}
-							}
-						});
-					}
-					contentArea.insertBefore(newBanner, contentArea.firstChild);
+					refreshToggleBanner({
+						contentArea,
+						createBanner: () =>
+							createEnhancedBanner(
+								originalText,
+								enhancedText,
+								modelInfo,
+								isCachedContent,
+							),
+						toggleLabel: "Show Enhanced",
+						onToggleClick: toggleContent,
+						insertBeforeNode: contentArea.firstChild,
+						wireDeleteCache: true,
+					});
 				} else {
 					// Switch back to enhanced
 					contentArea.innerHTML = "";
@@ -3414,48 +3369,20 @@ if (window.__RGInitDone) {
 					showStatusMessage(
 						"Showing enhanced content. Click 'Show Original' to view the original version.",
 					);
-					// Re-create banner for enhanced view
-					newBanner = createEnhancedBanner(
-						originalText,
-						enhancedText,
-						modelInfo,
-						isCachedContent,
-					);
-					const newToggleButton =
-						newBanner.querySelector(".gemini-toggle-btn");
-					if (newToggleButton) {
-						newToggleButton.textContent = "Show Original";
-						newToggleButton.addEventListener(
-							"click",
-							toggleContent,
-						);
-					}
-					// Re-attach delete button handler
-					const newDeleteButton = newBanner.querySelector(
-						".gemini-delete-cache-btn",
-					);
-					if (newDeleteButton) {
-						newDeleteButton.addEventListener("click", async () => {
-							if (
-								confirm(
-									"Delete cached enhanced content for this page?",
-								)
-							) {
-								if (storageManager) {
-									await storageManager.removeEnhancedContent(
-										window.location.href,
-									);
-									isCachedContent = false;
-									showStatusMessage(
-										"Cached content deleted. Reloading page...",
-										"info",
-									);
-									setTimeout(() => location.reload(), 1000);
-								}
-							}
-						});
-					}
-					contentArea.insertBefore(newBanner, enhancedContainer);
+					refreshToggleBanner({
+						contentArea,
+						createBanner: () =>
+							createEnhancedBanner(
+								originalText,
+								enhancedText,
+								modelInfo,
+								isCachedContent,
+							),
+						toggleLabel: "Show Original",
+						onToggleClick: toggleContent,
+						insertBeforeNode: enhancedContainer,
+						wireDeleteCache: true,
+					});
 				}
 			};
 			toggleButton.addEventListener("click", toggleContent);
@@ -3480,16 +3407,22 @@ if (window.__RGInitDone) {
 		// Store state for toggling (individual chunks handle their own toggle)
 		contentArea.setAttribute("data-showing-enhanced", "true");
 
-		// Remove any existing WIP banner
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) {
-			wipBanner.remove();
-		}
+		if (domIntegrationModule?.clearTransientEnhancementBannersRuntime) {
+			domIntegrationModule.clearTransientEnhancementBannersRuntime({
+				documentRef: document,
+				removeErrorBanner: true,
+			});
+		} else {
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
 
-		// Remove any existing error banners since we're done
-		const errorBanner = document.querySelector(".gemini-error-banner");
-		if (errorBanner) {
-			errorBanner.remove();
+			// Remove any existing error banners since we're done
+			const errorBanner = document.querySelector(".gemini-error-banner");
+			if (errorBanner) {
+				errorBanner.remove();
+			}
 		}
 
 		// Add a class to indicate processing is complete
@@ -3900,23 +3833,8 @@ if (window.__RGInitDone) {
 	// ── Summary service (unified summary pipeline) ──────────────
 	let summaryServiceModule = null;
 	let summaryRuntimeModule = null;
-	let chunkEventsModule = null;
 	let chunkBatchModule = null;
 	let domIntegrationModule = null;
-
-	async function loadChunkEventsModule() {
-		if (chunkEventsModule) return chunkEventsModule;
-		try {
-			const eventsUrl = browser.runtime.getURL(
-				"content/modules/chunk-events.js",
-			);
-			chunkEventsModule = await import(eventsUrl);
-			return chunkEventsModule;
-		} catch (error) {
-			debugError("Error loading chunk events module:", error);
-			return null;
-		}
-	}
 
 	async function loadChunkBatchModule() {
 		if (chunkBatchModule) return chunkBatchModule;
@@ -4383,55 +4301,39 @@ if (window.__RGInitDone) {
 					sum + chunking.core.countWords(chunk?.enhancedContent || "")
 				);
 			}, 0);
-			const masterBanner = chunking.ui.createMasterBanner(
+			const domIntegration = await loadDomIntegrationModule();
+			domIntegration?.ensureMasterBannerRuntime?.({
+				documentRef: document,
+				contentArea,
+				chunking,
+				totalChunks,
 				originalWords,
 				enhancedWords,
-				totalChunks,
-				true,
-				modelInfo,
-				cacheTimestamp ? { timestamp: cacheTimestamp } : null,
-			);
-
-			const toggleAllBtn = masterBanner.querySelector(
-				".gemini-master-toggle-all-btn",
-			);
-			if (toggleAllBtn) {
-				toggleAllBtn.setAttribute("data-showing", "enhanced");
-				toggleAllBtn.addEventListener("click", (e) => {
-					e.preventDefault();
-					handleToggleAllChunks();
-				});
-			}
-			const deleteAllBtn = masterBanner.querySelector(
-				".gemini-master-delete-all-btn",
-			);
-			if (deleteAllBtn) {
-				deleteAllBtn.addEventListener("click", async (e) => {
-					e.preventDefault();
-					if (
-						confirm(
-							"Delete all cached enhanced content for this chapter?",
-						)
-					) {
-						await handleDeleteAllChunks();
-					}
-				});
-			}
-
-			// Apply current visibility state to master banner
-			if (shouldBannersBeHidden()) {
-				masterBanner.style.display = "none";
-			}
-
-			contentArea.insertBefore(masterBanner, contentArea.firstChild);
+				isCached: true,
+				lastChunkModelInfo: modelInfo,
+				cacheMeta: cacheTimestamp
+					? { timestamp: cacheTimestamp }
+					: null,
+				shouldBannersBeHidden,
+				onToggleAll: handleToggleAllChunks,
+				onDeleteAll: handleDeleteAllChunks,
+				confirmFn: confirm,
+			});
 		}
 
 		isCachedContent = true;
 		hasCachedContent = true;
 		contentArea.setAttribute("data-showing-enhanced", "true");
 
-		const wipBanner = document.querySelector(".gemini-wip-banner");
-		if (wipBanner) wipBanner.remove();
+		const domIntegration = await loadDomIntegrationModule();
+		if (domIntegration?.clearTransientEnhancementBannersRuntime) {
+			domIntegration.clearTransientEnhancementBannersRuntime({
+				documentRef: document,
+			});
+		} else {
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) wipBanner.remove();
+		}
 
 		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
 			btn.textContent = "♻ Regenerate with Gemini";
@@ -6362,20 +6264,7 @@ if (window.__RGInitDone) {
 		<strong>  Word Count:</strong> ${wordCount} words
 	`;
 
-		// Insert right after the controls container
-		const controlsContainer = document.getElementById("gemini-controls");
-		if (controlsContainer) {
-			controlsContainer.parentNode.insertBefore(
-				wordCountContainer,
-				controlsContainer.nextSibling,
-			);
-		} else {
-			// Fallback: insert at the top of the content area
-			contentArea.insertBefore(
-				wordCountContainer,
-				contentArea.firstChild,
-			);
-		}
+		insertAfterControlsOrTop(contentArea, wordCountContainer);
 	}
 
 	/**
@@ -7851,76 +7740,17 @@ if (window.__RGInitDone) {
 			insertionPosition = uiInfo.position || "before";
 		}
 
-		// Insert elements based on the recommended position
-		if (
-			insertionPosition === "before" ||
-			insertionPosition === "beforebegin"
-		) {
-			if (siteEnhancementsContainer) {
-				insertionPoint.parentNode.insertBefore(
-					siteEnhancementsContainer,
-					insertionPoint,
-				);
-			}
-			insertionPoint.parentNode.insertBefore(
-				controlsContainer,
+		const domIntegration = await loadDomIntegrationModule();
+		if (domIntegration?.insertMainUiBlocksRuntime) {
+			domIntegration.insertMainUiBlocksRuntime({
 				insertionPoint,
-			);
-			if (mainSummaryGroup) {
-				insertionPoint.parentNode.insertBefore(
-					mainSummaryGroup,
-					insertionPoint,
-				);
-			}
-		} else if (
-			insertionPosition === "after" ||
-			insertionPosition === "afterend"
-		) {
-			if (siteEnhancementsContainer) {
-				insertionPoint.parentNode.insertBefore(
-					siteEnhancementsContainer,
-					insertionPoint.nextSibling,
-				);
-			}
-			insertionPoint.parentNode.insertBefore(
+				insertionPosition,
 				controlsContainer,
-				siteEnhancementsContainer
-					? siteEnhancementsContainer.nextSibling
-					: insertionPoint.nextSibling,
-			);
-			if (mainSummaryGroup) {
-				insertionPoint.parentNode.insertBefore(
-					mainSummaryGroup,
-					controlsContainer.nextSibling,
-				);
-			}
-		} else if (
-			insertionPosition === "prepend" ||
-			insertionPosition === "afterbegin"
-		) {
-			if (versionSwitcherContainer) {
-				insertionPoint.prepend(versionSwitcherContainer);
-			}
-			insertionPoint.prepend(controlsContainer);
-			if (mainSummaryGroup) {
-				insertionPoint.insertBefore(
-					mainSummaryGroup,
-					controlsContainer.nextSibling,
-				);
-			}
-		} else if (
-			insertionPosition === "append" ||
-			insertionPosition === "beforeend"
-		) {
-			if (versionSwitcherContainer) {
-				insertionPoint.appendChild(versionSwitcherContainer);
-			}
-			insertionPoint.appendChild(controlsContainer);
-			if (mainSummaryGroup) {
-				insertionPoint.appendChild(mainSummaryGroup);
-			}
-		} else {
-			// Default fallback to before
+				mainSummaryGroup,
+				siteEnhancementsContainer,
+				versionSwitcherContainer,
+			});
+		} else if (insertionPoint?.parentNode) {
 			insertionPoint.parentNode.insertBefore(
 				controlsContainer,
 				insertionPoint,
@@ -8906,11 +8736,7 @@ if (window.__RGInitDone) {
 				}
 
 				// Handler-driven enhancement selection
-				const supportsTextOnly =
-					currentHandler &&
-					typeof currentHandler.supportsTextOnlyEnhancement ===
-						"function" &&
-					currentHandler.supportsTextOnlyEnhancement();
+				const supportsTextOnly = shouldUseTextOnlyEnhancement();
 
 				let newContent;
 
@@ -8966,14 +8792,7 @@ if (window.__RGInitDone) {
 						contentArea.innerText || contentArea.textContent;
 				}
 
-				if (
-					currentHandler &&
-					typeof currentHandler.formatAfterEnhancement === "function"
-				) {
-					currentHandler.formatAfterEnhancement(contentArea);
-				} else {
-					applyDefaultFormatting(contentArea);
-				}
+				applyPostEnhancementFormatting(contentArea);
 
 				// Apply font size setting to enhanced content
 				if (currentFontSize && currentFontSize !== 100) {
@@ -9023,163 +8842,117 @@ if (window.__RGInitDone) {
 					);
 					existingBanners.forEach((b) => b.remove());
 
-					// Create new banner
-					const newBanner = createEnhancedBanner(
-						originalText,
-						newContent,
-						modelInfo,
-						isCachedContent,
-						cacheInfo,
+					debugLog(
+						"Toggle button found, attaching click handler. showingEnhanced:",
+						showingEnhanced,
 					);
 
-					// Update toggle button text based on current state
-					const newToggleButton =
-						newBanner.querySelector(".gemini-toggle-btn");
-					if (newToggleButton) {
-						newToggleButton.textContent = showingEnhanced
-							? "Show Original"
-							: "Show Enhanced";
+					const onToggleBannerClick = function (e) {
+						debugLog("Toggle button clicked!");
+						e.preventDefault();
+						e.stopPropagation();
+
+						const currentlyShowingEnhanced =
+							contentArea.getAttribute(
+								"data-showing-enhanced",
+							) === "true";
 						debugLog(
-							"Toggle button found, attaching click handler. showingEnhanced:",
-							showingEnhanced,
+							"currentlyShowingEnhanced:",
+							currentlyShowingEnhanced,
 						);
-						newToggleButton.addEventListener("click", function (e) {
-							debugLog("Toggle button clicked!");
-							e.preventDefault();
-							e.stopPropagation();
 
-							const currentlyShowingEnhanced =
-								contentArea.getAttribute(
+						if (currentlyShowingEnhanced) {
+							// Switch to original - restore original HTML
+							const storedOriginal = contentArea.getAttribute(
+								"data-original-content",
+							);
+							debugLog(
+								"Switching to original. storedOriginal length:",
+								storedOriginal ? storedOriginal.length : 0,
+								"Has <p> tags:",
+								storedOriginal
+									? /<p[\s>]/i.test(storedOriginal)
+									: false,
+							);
+							debugLog(
+								"Restoring HTML preview:",
+								storedOriginal
+									? storedOriginal.substring(0, 500)
+									: "null",
+							);
+							if (storedOriginal) {
+								contentArea.innerHTML =
+									sanitizeHTML(storedOriginal);
+								contentArea.setAttribute(
 									"data-showing-enhanced",
-								) === "true";
-							debugLog(
-								"currentlyShowingEnhanced:",
-								currentlyShowingEnhanced,
-							);
-
-							if (currentlyShowingEnhanced) {
-								// Switch to original - restore original HTML
-								const storedOriginal = contentArea.getAttribute(
-									"data-original-content",
+									"false",
 								);
 								debugLog(
-									"Switching to original. storedOriginal length:",
-									storedOriginal ? storedOriginal.length : 0,
-									"Has <p> tags:",
-									storedOriginal
-										? /<p[\s>]/i.test(storedOriginal)
-										: false,
+									"Switched to original content. Actual innerHTML has <p> tags:",
+									/<p[\s>]/i.test(contentArea.innerHTML),
 								);
-								debugLog(
-									"Restoring HTML preview:",
-									storedOriginal
-										? storedOriginal.substring(0, 500)
-										: "null",
-								);
-								if (storedOriginal) {
-									contentArea.innerHTML =
-										sanitizeHTML(storedOriginal);
-									contentArea.setAttribute(
-										"data-showing-enhanced",
-										"false",
-									);
-									debugLog(
-										"Switched to original content. Actual innerHTML has <p> tags:",
-										/<p[\s>]/i.test(contentArea.innerHTML),
-									);
-								} else {
-									debugError(
-										"No stored original content found!",
-									);
-								}
 							} else {
-								// Switch to enhanced - restore enhanced HTML
-								const storedEnhanced = contentArea.getAttribute(
-									"data-enhanced-content",
-								);
-								debugLog(
-									"Switching to enhanced. storedEnhanced length:",
-									storedEnhanced ? storedEnhanced.length : 0,
-								);
-								if (storedEnhanced) {
-									contentArea.innerHTML =
-										sanitizeHTML(storedEnhanced);
-									contentArea.setAttribute(
-										"data-showing-enhanced",
-										"true",
-									);
-
-									// Reapply formatting
-									if (
-										currentHandler &&
-										typeof currentHandler.formatAfterEnhancement ===
-											"function"
-									) {
-										currentHandler.formatAfterEnhancement(
-											contentArea,
-										);
-									} else {
-										applyDefaultFormatting(contentArea);
-									}
-									// Re-enable copy on the freshly set content
-									enableCopyOnContentArea(contentArea);
-									debugLog("Switched to enhanced content");
-								} else {
-									debugError(
-										"No stored enhanced content found!",
-									);
-								}
+								debugError("No stored original content found!");
 							}
-
-							// Recursively setup the banner for the new state
-							debugLog(
-								"Setting up toggle banner for state:",
-								!currentlyShowingEnhanced,
+						} else {
+							// Switch to enhanced - restore enhanced HTML
+							const storedEnhanced = contentArea.getAttribute(
+								"data-enhanced-content",
 							);
-							setupToggleBanner(!currentlyShowingEnhanced);
-						});
-					}
+							debugLog(
+								"Switching to enhanced. storedEnhanced length:",
+								storedEnhanced ? storedEnhanced.length : 0,
+							);
+							if (storedEnhanced) {
+								contentArea.innerHTML =
+									sanitizeHTML(storedEnhanced);
+								contentArea.setAttribute(
+									"data-showing-enhanced",
+									"true",
+								);
 
-					// Setup delete button handler if present
-					const newDeleteButton = newBanner.querySelector(
-						".gemini-delete-cache-btn",
-					);
-					if (newDeleteButton) {
-						newDeleteButton.addEventListener("click", async () => {
-							if (
-								confirm(
-									"Delete cached enhanced content for this page?",
-								)
-							) {
-								if (storageManager) {
-									await storageManager.removeEnhancedContent(
-										window.location.href,
-									);
-									isCachedContent = false;
-									showStatusMessage(
-										"Cached content deleted. Reloading page...",
-										"info",
-									);
-									setTimeout(() => location.reload(), 1000);
-								}
+								// Reapply formatting
+								applyPostEnhancementFormatting(contentArea);
+								// Re-enable copy on the freshly set content
+								enableCopyOnContentArea(contentArea);
+								debugLog("Switched to enhanced content");
+							} else {
+								debugError("No stored enhanced content found!");
 							}
-						});
-					}
+						}
 
-					// Insert banner at the top
-					if (contentArea.firstChild) {
-						contentArea.insertBefore(
-							newBanner,
-							contentArea.firstChild,
+						// Recursively setup the banner for the new state
+						debugLog(
+							"Setting up toggle banner for state:",
+							!currentlyShowingEnhanced,
 						);
-					} else {
-						contentArea.appendChild(newBanner);
-					}
+						setupToggleBanner(!currentlyShowingEnhanced);
+					};
+
+					const newBanner = refreshToggleBanner({
+						contentArea,
+						createBanner: () =>
+							createEnhancedBanner(
+								originalText,
+								newContent,
+								modelInfo,
+								isCachedContent,
+								cacheInfo,
+							),
+						toggleLabel: showingEnhanced
+							? "Show Original"
+							: "Show Enhanced",
+						onToggleClick: onToggleBannerClick,
+						wireDeleteCache: true,
+					});
+
 					debugLog(
 						"Banner inserted. contentArea:",
 						contentArea.id,
 						"Banner parent:",
-						newBanner.parentNode ? newBanner.parentNode.id : "null",
+						newBanner?.parentNode
+							? newBanner.parentNode.id
+							: "null",
 					);
 				};
 
@@ -9250,6 +9023,119 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	function insertNodeAtContentTop(contentArea, node) {
+		if (!contentArea || !node) return false;
+		if (domIntegrationModule?.insertAtContentTopRuntime) {
+			return domIntegrationModule.insertAtContentTopRuntime({
+				contentArea,
+				node,
+			});
+		}
+		if (contentArea.firstChild) {
+			contentArea.insertBefore(node, contentArea.firstChild);
+		} else {
+			contentArea.appendChild(node);
+		}
+		return true;
+	}
+
+	function insertAfterControlsOrTop(contentArea, node) {
+		if (!contentArea || !node) return false;
+		if (domIntegrationModule?.insertAfterControlsOrTopRuntime) {
+			return domIntegrationModule.insertAfterControlsOrTopRuntime({
+				documentRef: document,
+				contentArea,
+				node,
+			});
+		}
+
+		const controlsContainer = document.getElementById("gemini-controls");
+		if (controlsContainer?.parentNode) {
+			controlsContainer.parentNode.insertBefore(
+				node,
+				controlsContainer.nextSibling,
+			);
+			return true;
+		}
+
+		return insertNodeAtContentTop(contentArea, node);
+	}
+
+	function refreshToggleBanner({
+		contentArea,
+		createBanner,
+		toggleLabel,
+		onToggleClick,
+		insertBeforeNode = null,
+		wireDeleteCache = false,
+	}) {
+		if (!contentArea || typeof createBanner !== "function") return null;
+
+		const refreshedBanner = createBanner();
+		if (!refreshedBanner) return null;
+
+		const refreshedToggleButton =
+			refreshedBanner.querySelector(".gemini-toggle-btn");
+		if (refreshedToggleButton) {
+			refreshedToggleButton.textContent = toggleLabel;
+			if (typeof onToggleClick === "function") {
+				refreshedToggleButton.addEventListener("click", onToggleClick);
+			}
+		}
+
+		if (wireDeleteCache) {
+			attachDeleteCacheButtonHandler(refreshedBanner);
+		}
+
+		if (insertBeforeNode) {
+			contentArea.insertBefore(refreshedBanner, insertBeforeNode);
+		} else {
+			insertNodeAtContentTop(contentArea, refreshedBanner);
+		}
+
+		return refreshedBanner;
+	}
+
+	function attachDeleteCacheButtonHandler(banner) {
+		const deleteButton = banner?.querySelector(".gemini-delete-cache-btn");
+		if (!deleteButton) return;
+
+		deleteButton.addEventListener("click", async () => {
+			if (!confirm("Delete cached enhanced content for this page?")) {
+				return;
+			}
+			if (!storageManager) return;
+
+			await storageManager.removeEnhancedContent(window.location.href);
+			isCachedContent = false;
+			showStatusMessage(
+				"Cached content deleted. Reloading page...",
+				"info",
+			);
+			setTimeout(() => location.reload(), 1000);
+		});
+	}
+
+	function shouldUseTextOnlyEnhancement() {
+		return Boolean(
+			currentHandler &&
+			typeof currentHandler.supportsTextOnlyEnhancement === "function" &&
+			currentHandler.supportsTextOnlyEnhancement(),
+		);
+	}
+
+	function applyPostEnhancementFormatting(contentArea) {
+		if (!contentArea) return;
+		if (
+			currentHandler &&
+			typeof currentHandler.formatAfterEnhancement === "function"
+		) {
+			currentHandler.formatAfterEnhancement(contentArea);
+			return;
+		}
+		applyDefaultFormatting(contentArea);
+	}
+
 	// Function to display enhanced content with toggle ability
 	// eslint-disable-next-line no-unused-vars
 	function displayEnhancedContent(originalContent, enhancedContent) {
@@ -9276,11 +9162,7 @@ if (window.__RGInitDone) {
 			contentArea.setAttribute("data-showing-enhanced", "true");
 
 			// Handler-based enhancement selection for modularity
-			const supportsTextOnly =
-				currentHandler &&
-				typeof currentHandler.supportsTextOnlyEnhancement ===
-					"function" &&
-				currentHandler.supportsTextOnlyEnhancement();
+			const supportsTextOnly = shouldUseTextOnlyEnhancement();
 
 			if (
 				supportsTextOnly &&
@@ -9301,15 +9183,7 @@ if (window.__RGInitDone) {
 			}
 
 			// Apply site-specific formatting if needed
-			if (
-				currentHandler &&
-				typeof currentHandler.formatAfterEnhancement === "function"
-			) {
-				currentHandler.formatAfterEnhancement(contentArea);
-			} else {
-				// Default formatting for all sites
-				applyDefaultFormatting(contentArea);
-			}
+			applyPostEnhancementFormatting(contentArea);
 
 			// Create enhanced banner with word count comparison
 			const banner = createEnhancedBanner(
@@ -9327,7 +9201,6 @@ if (window.__RGInitDone) {
 					const isShowingEnhanced =
 						contentArea.getAttribute("data-showing-enhanced") ===
 						"true";
-					let newBanner;
 					if (isShowingEnhanced) {
 						// Switch to original
 						contentArea.innerHTML = sanitizeHTML(originalContent);
@@ -9335,28 +9208,16 @@ if (window.__RGInitDone) {
 							"data-showing-enhanced",
 							"false",
 						);
-						// Re-create banner for original view
-						newBanner = createEnhancedBanner(
-							originalContent,
-							enhancedContent,
-						);
-						const newToggleButton =
-							newBanner.querySelector(".gemini-toggle-btn");
-						if (newToggleButton) {
-							newToggleButton.textContent = "Show Enhanced";
-							newToggleButton.addEventListener(
-								"click",
-								toggleContent,
-							);
-						}
-						if (contentArea.firstChild) {
-							contentArea.insertBefore(
-								newBanner,
-								contentArea.firstChild,
-							);
-						} else {
-							contentArea.appendChild(newBanner);
-						}
+						refreshToggleBanner({
+							contentArea,
+							createBanner: () =>
+								createEnhancedBanner(
+									originalContent,
+									enhancedContent,
+								),
+							toggleLabel: "Show Enhanced",
+							onToggleClick: toggleContent,
+						});
 					} else {
 						// Switch to enhanced
 						contentArea.innerHTML = sanitizeHTML(enhancedContent);
@@ -9366,39 +9227,19 @@ if (window.__RGInitDone) {
 						);
 
 						// Reapply formatting
-						if (
-							currentHandler &&
-							typeof currentHandler.formatAfterEnhancement ===
-								"function"
-						) {
-							currentHandler.formatAfterEnhancement(contentArea);
-						} else {
-							applyDefaultFormatting(contentArea);
-						}
+						applyPostEnhancementFormatting(contentArea);
 						// Re-enable copy after innerHTML switch
 						enableCopyOnContentArea(contentArea);
-						// Re-create banner for enhanced view
-						newBanner = createEnhancedBanner(
-							originalContent,
-							enhancedContent,
-						);
-						const newToggleButton =
-							newBanner.querySelector(".gemini-toggle-btn");
-						if (newToggleButton) {
-							newToggleButton.textContent = "Show Original";
-							newToggleButton.addEventListener(
-								"click",
-								toggleContent,
-							);
-						}
-						if (contentArea.firstChild) {
-							contentArea.insertBefore(
-								newBanner,
-								contentArea.firstChild,
-							);
-						} else {
-							contentArea.appendChild(newBanner);
-						}
+						refreshToggleBanner({
+							contentArea,
+							createBanner: () =>
+								createEnhancedBanner(
+									originalContent,
+									enhancedContent,
+								),
+							toggleLabel: "Show Original",
+							onToggleClick: toggleContent,
+						});
 					}
 				};
 				toggleButton.addEventListener("click", toggleContent);
@@ -9413,11 +9254,7 @@ if (window.__RGInitDone) {
 			}
 
 			// Add banner to the top of content area
-			if (contentArea.firstChild) {
-				contentArea.insertBefore(banner, contentArea.firstChild);
-			} else {
-				contentArea.appendChild(banner);
-			}
+			insertNodeAtContentTop(contentArea, banner);
 
 			// Ensure text can be selected/copied from enhanced content
 			enableCopyOnContentArea(contentArea);
@@ -9463,11 +9300,7 @@ if (window.__RGInitDone) {
     `;
 
 		// Insert at the beginning of content area
-		if (contentArea.firstChild) {
-			contentArea.insertBefore(errorBox, contentArea.firstChild);
-		} else {
-			contentArea.appendChild(errorBox);
-		}
+		insertNodeAtContentTop(contentArea, errorBox);
 	}
 
 	// Remove the initial word count display (called after enhancement replaces content)
@@ -9535,20 +9368,7 @@ if (window.__RGInitDone) {
 		<strong>  Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
 	`;
 
-		// Insert right after the controls container
-		const controlsContainer = document.getElementById("gemini-controls");
-		if (controlsContainer) {
-			controlsContainer.parentNode.insertBefore(
-				wordCountContainer,
-				controlsContainer.nextSibling,
-			);
-		} else {
-			// Fallback: insert at the top of the content area
-			contentArea.insertBefore(
-				wordCountContainer,
-				contentArea.firstChild,
-			);
-		}
+		insertAfterControlsOrTop(contentArea, wordCountContainer);
 	}
 
 	// Default formatting to apply after enhancement
@@ -9604,8 +9424,7 @@ if (window.__RGInitDone) {
 		});
 		noticeContainer.appendChild(restoreButton);
 
-		// Insert at the beginning of the content area
-		contentArea.insertBefore(noticeContainer, contentArea.firstChild);
+		insertNodeAtContentTop(contentArea, noticeContainer);
 	}
 
 	function normalizeNotificationType(type) {
@@ -10053,9 +9872,15 @@ if (window.__RGInitDone) {
 				"info",
 			);
 
-			const wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				wipBanner.remove();
+			if (domIntegrationModule?.clearTransientEnhancementBannersRuntime) {
+				domIntegrationModule.clearTransientEnhancementBannersRuntime({
+					documentRef: document,
+				});
+			} else {
+				const wipBanner = document.querySelector(".gemini-wip-banner");
+				if (wipBanner) {
+					wipBanner.remove();
+				}
 			}
 			if (cancelEnhanceButton) {
 				cancelEnhanceButton.style.display = "none";

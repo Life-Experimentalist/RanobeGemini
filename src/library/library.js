@@ -91,6 +91,10 @@ import {
 	resolveExportTemplate,
 	formatExportFilename,
 } from "../utils/novel-copy-format.js";
+import {
+	bindTelemetryConsentHandlers,
+	checkFirstRunConsentRuntime,
+} from "./telemetry-consent.js";
 // import { getCardRenderer } from "./websites/novel-card-base.js";
 
 // Modal renderer cache
@@ -1207,7 +1211,12 @@ async function init() {
 	await openNovelFromQueryParams();
 
 	// Check for first run telemetry consent
-	await checkFirstRunConsent();
+	await checkFirstRunConsentRuntime({
+		isFirstRun,
+		getTelemetryConfig,
+		elements,
+		debugError,
+	});
 
 	// Wire up the non-intrusive PWA install banner buttons
 	initPwaInstallBanner();
@@ -1944,27 +1953,6 @@ function renderLibraryBackupKeys() {
 				showNotification("✅ Backup key removed", "success");
 			});
 		});
-}
-
-/**
- * Check for first run and show telemetry consent modal
- */
-async function checkFirstRunConsent() {
-	try {
-		const firstRun = await isFirstRun();
-		const config = await getTelemetryConfig();
-
-		// Only show banner on first run if consent hasn't been shown yet
-		if (firstRun && !config.consentShown) {
-			if (elements.telemetryBanner) {
-				elements.telemetryBanner.classList.remove("hidden");
-			}
-		} else if (elements.telemetryBanner) {
-			elements.telemetryBanner.classList.add("hidden");
-		}
-	} catch (error) {
-		debugError("Failed to check first run consent:", error);
-	}
 }
 
 /**
@@ -4011,71 +3999,15 @@ function setupEventListeners() {
 		);
 	}
 
-	// Telemetry consent modal (opt-out notification)
-	if (elements.telemetryAcceptBtn) {
-		elements.telemetryAcceptBtn.addEventListener("click", async () => {
-			await optInTelemetry();
-			await markFirstRunComplete();
-			closeModal(elements.telemetryConsentModal);
-			showNotification(
-				"Thank you for helping improve Ranobe Gemini!",
-				"success",
-			);
-		});
-	}
-	if (elements.telemetryDeclineBtn) {
-		elements.telemetryDeclineBtn.addEventListener("click", async () => {
-			await optOutTelemetry();
-			await markFirstRunComplete();
-			closeModal(elements.telemetryConsentModal);
-			// Update UI
-			if (elements.telemetryToggle) {
-				elements.telemetryToggle.checked = false;
-			}
-			showNotification(
-				"Analytics disabled. You can re-enable anytime in Settings.",
-				"info",
-			);
-		});
-	}
-
-	// Telemetry opt-out banner
-	if (elements.telemetryBannerDisable) {
-		elements.telemetryBannerDisable.addEventListener("click", async () => {
-			await optOutTelemetry();
-			await saveTelemetryConfig({
-				consentShown: true,
-				consentDate: Date.now(),
-			});
-			await markFirstRunComplete();
-			if (elements.telemetryToggle) {
-				elements.telemetryToggle.checked = false;
-			}
-			if (elements.telemetryBanner) {
-				elements.telemetryBanner.classList.add("hidden");
-			}
-			showNotification(
-				"Analytics disabled. You can re-enable anytime in Settings.",
-				"info",
-			);
-		});
-	}
-	if (elements.telemetryBannerKeep) {
-		elements.telemetryBannerKeep.addEventListener("click", async () => {
-			await optInTelemetry();
-			await markFirstRunComplete();
-			if (elements.telemetryToggle) {
-				elements.telemetryToggle.checked = true;
-			}
-			if (elements.telemetryBanner) {
-				elements.telemetryBanner.classList.add("hidden");
-			}
-			showNotification(
-				"Thanks for helping improve Ranobe Gemini!",
-				"success",
-			);
-		});
-	}
+	bindTelemetryConsentHandlers({
+		elements,
+		optInTelemetry,
+		optOutTelemetry,
+		saveTelemetryConfig,
+		markFirstRunComplete,
+		closeModal,
+		showNotification,
+	});
 
 	// Carousel controls
 	elements.carouselPlayPause.addEventListener(

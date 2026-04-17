@@ -73,6 +73,14 @@ npm run watch
 
 # In another terminal, make changes to src/
 # Files will automatically rebuild on save
+### Secret/env inventory
+- Secret/env inventory: [SECRET_ENV_MAP.md](./SECRET_ENV_MAP.md)
+
+### Secret setup quickstart
+
+- Local development: keep `.env` optional; run `npm run build` without strict secret enforcement.
+- Release/CI builds: set required secret keys in CI secret storage and set `RG_REQUIRED_BUILD_SECRETS` to enforce fail-fast validation.
+- Build behavior: `dev/build.js` injects known keys into dist constants only when env values are provided.
 ```
 
 #### For Release
