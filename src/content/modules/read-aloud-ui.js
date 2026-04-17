@@ -125,7 +125,10 @@ export function createReadAloudUiRuntime({
 			try {
 				readAloudUiObserver.disconnect();
 			} catch (error) {
-				debugError("Error disconnecting read-aloud UI observer:", error);
+				debugError(
+					"Error disconnecting read-aloud UI observer:",
+					error,
+				);
 			}
 			readAloudUiObserver = null;
 		}

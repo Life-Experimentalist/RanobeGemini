@@ -39,7 +39,8 @@ let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let extensionBridgesModule = null; // Extension bridge helpers
-	let readAloudUiModule = null; // Read-aloud UI helper module
+let readAloudUiModule = null; // Read-aloud UI helper module
+	let enhancementBannersModule = null; // Enhancement banner helpers
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
@@ -186,29 +187,47 @@ if (window.__RGInitDone) {
 
 	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
 	const __rgOriginalLog = debugLog.bind(console);
-		async function loadReadAloudUiModule() {
-			if (readAloudUiModule) return readAloudUiModule;
-			try {
-				const readAloudUrl = browser.runtime.getURL(
-					"content/modules/read-aloud-ui.js",
-				);
-				const readAloudModule = await import(readAloudUrl);
-				if (!readAloudModule?.createReadAloudUiRuntime) {
-					return null;
-				}
-				readAloudUiModule = readAloudModule.createReadAloudUiRuntime({
-					documentRef: document,
-					browserRef: browser,
-					libraryUiA11yConfig,
-					debugLog,
-					debugError,
-				});
-				return readAloudUiModule;
-			} catch (error) {
-				debugError("Error loading read-aloud UI module:", error);
+	async function loadReadAloudUiModule() {
+		if (readAloudUiModule) return readAloudUiModule;
+		try {
+			const readAloudUrl = browser.runtime.getURL(
+				"content/modules/read-aloud-ui.js",
+			);
+			const readAloudModule = await import(readAloudUrl);
+			if (!readAloudModule?.createReadAloudUiRuntime) {
 				return null;
 			}
+			readAloudUiModule = readAloudModule.createReadAloudUiRuntime({
+				documentRef: document,
+				browserRef: browser,
+				libraryUiA11yConfig,
+				debugLog,
+				debugError,
+			});
+			return readAloudUiModule;
+		} catch (error) {
+			debugError("Error loading read-aloud UI module:", error);
+			return null;
 		}
+	}
+
+	async function loadEnhancementBannersModule() {
+		if (enhancementBannersModule) return enhancementBannersModule;
+		try {
+			const bannersUrl = browser.runtime.getURL(
+				"content/modules/enhancement-banners.js",
+			);
+			const bannersModule = await import(bannersUrl);
+			if (!bannersModule?.toggleEnhancedBannersRuntime) {
+				return null;
+			}
+			enhancementBannersModule = bannersModule;
+			return enhancementBannersModule;
+		} catch (error) {
+			debugError("Error loading enhancement banner module:", error);
+			return null;
+		}
+	}
 
 	const __rgOriginalError = debugError.bind(console);
 
@@ -1042,147 +1061,39 @@ if (window.__RGInitDone) {
 		);
 	}
 
-	// Check if banners should be hidden based on toggle button state
-	// Returns true if banners are currently hidden (button shows "Show Banners")
-	function shouldBannersBeHidden() {
-		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
-		if (!toggleBtn) {
-			// No toggle button yet - check handler default
+		async function shouldBannersBeHidden() {
+			const mod = await loadEnhancementBannersModule();
 			return (
-				currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
+				mod?.shouldBannersBeHiddenRuntime?.({
+					documentRef: document,
+					currentHandler,
+				}) ?? false
 			);
 		}
-		// Check button text to determine current state
-		return toggleBtn.textContent.includes("Show");
-	}
 
-	// Toggle visibility of enhancement banners (WIP, chunk banners, master banner, summary groups)
-	function handleToggleBannersVisibility() {
-		const toggleBtn = document.querySelector(".gemini-toggle-banners-btn");
-		if (!toggleBtn) return;
-
-		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
-		);
-		if (banners.length === 0) {
-			showStatusMessage("No enhancement banners to show/hide.", "info");
-			return;
+		async function handleToggleBannersVisibility() {
+			const mod = await loadEnhancementBannersModule();
+			mod?.toggleEnhancedBannersRuntime?.({
+				documentRef: document,
+				currentHandler,
+				showStatusMessage,
+			});
 		}
-
-		// Track state with a body attribute so it survives multiple calls
-		const isHidden =
-			document.body.getAttribute("data-rg-ui-hidden") === "true";
-
-		// Toggle all banners using save/restore pattern
-		banners.forEach((banner) => {
-			if (isHidden) {
-				// Restore saved display value (or clear inline style)
-				const saved = banner.dataset.rgSavedDisplay;
-				banner.style.display = saved !== undefined ? saved : "";
-				delete banner.dataset.rgSavedDisplay;
-			} else {
-				// Save current inline display then hide
-				banner.dataset.rgSavedDisplay = banner.style.display;
-				banner.style.display = "none";
-			}
-		});
-
-		if (isHidden) {
-			document.body.removeAttribute("data-rg-ui-hidden");
-		} else {
-			document.body.setAttribute("data-rg-ui-hidden", "true");
-		}
-
-		// Update button text
-		toggleBtn.innerHTML = isHidden
-			? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
-			: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
-
-		// Sync the chapter controls toggle button if present
-		const chapterToggleBtn = document.querySelector(
-			".gemini-chapter-toggle-btn",
-		);
-		if (chapterToggleBtn) {
-			chapterToggleBtn.innerHTML = isHidden
-				? "⚡ Hide Gemini UI"
-				: "⚡ Show Gemini UI";
-		}
-
-		showStatusMessage(
-			isHidden
-				? "Showing Ranobe Gemini UI..."
-				: "Ranobe Gemini UI hidden.",
-			"info",
-			2000,
-		);
-	}
 
 	/**
 	 * Dedicated toggle function for Show/Hide button in chapter novel controls
 	 * ONLY hides enhancement banners, NEVER hides the controls container itself.
 	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
 	 */
-	function handleChapterControlsToggleBanners(callerBtn = null) {
-		// IMPORTANT: Only target ENHANCEMENT banners, NOT the controls container or content boxes
-		const banners = document.querySelectorAll(
-			".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container",
-		);
-		if (banners.length === 0) {
-			showStatusMessage("No enhancement banners to show/hide.", "info");
-			return;
+		async function handleChapterControlsToggleBanners(callerBtn = null) {
+			const mod = await loadEnhancementBannersModule();
+			mod?.toggleEnhancedBannersRuntime?.({
+				documentRef: document,
+				currentHandler,
+				showStatusMessage,
+				callerBtn,
+			});
 		}
-
-		// Track state with a body attribute so it survives multiple calls
-		const isHidden =
-			document.body.getAttribute("data-rg-ui-hidden") === "true";
-
-		// Toggle all enhancement banners
-		banners.forEach((banner) => {
-			if (isHidden) {
-				// Restore saved display value (or clear inline style)
-				const saved = banner.dataset.rgSavedDisplay;
-				banner.style.display = saved !== undefined ? saved : "";
-				delete banner.dataset.rgSavedDisplay;
-			} else {
-				// Save current inline display then hide
-				banner.dataset.rgSavedDisplay = banner.style.display;
-				banner.style.display = "none";
-			}
-		});
-
-		if (isHidden) {
-			document.body.removeAttribute("data-rg-ui-hidden");
-		} else {
-			document.body.setAttribute("data-rg-ui-hidden", "true");
-		}
-
-		// Update chapter controls toggle button text
-		const toggleBtn =
-			callerBtn || document.querySelector(".gemini-chapter-toggle-btn");
-		if (toggleBtn) {
-			toggleBtn.innerHTML = isHidden
-				? "⚡ Hide Gemini UI"
-				: "⚡ Show Gemini UI";
-		}
-
-		// Sync the main standalone toggle button if present
-		const mainToggleBtn = document.querySelector(
-			".gemini-toggle-banners-btn",
-		);
-		if (mainToggleBtn) {
-			mainToggleBtn.innerHTML = isHidden
-				? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
-				: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
-		}
-
-		showStatusMessage(
-			isHidden
-				? "Showing Ranobe Gemini UI..."
-				: "Ranobe Gemini UI hidden.",
-			"info",
-			2000,
-		);
-	}
 
 	function buildChunkBanner(
 		chunking,
