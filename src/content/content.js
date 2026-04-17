@@ -39,6 +39,7 @@ let currentFontSize = 100; // Font size percentage (default 100%)
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let extensionBridgesModule = null; // Extension bridge helpers
+	let readAloudUiModule = null; // Read-aloud UI helper module
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
@@ -103,119 +104,27 @@ if (window.__RGInitDone) {
 		}
 		return true;
 	}
-	let readAloudUiObserver = null;
-	const READ_ALOUD_UI_SELECTOR =
-		".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-enhanced-banner";
-
-	// eslint-disable-next-line no-inner-declarations
-	function releaseAriaHiddenForInteraction(container) {
-		if (!container) return;
-		container.removeAttribute("aria-hidden");
-	}
-
-	// eslint-disable-next-line no-inner-declarations
-	function restoreAriaHiddenAfterInteraction(container) {
-		if (!container || !libraryUiA11yConfig.hideGeminiUiFromReadAloud) {
-			return;
-		}
-		if (!container.contains(document.activeElement)) {
-			container.setAttribute("aria-hidden", "true");
-		}
-	}
-
-	// eslint-disable-next-line no-inner-declarations
-	function applyReadAloudHidingToElement(container) {
-		if (!container || !(container instanceof HTMLElement)) return;
-
-		if (!libraryUiA11yConfig.hideGeminiUiFromReadAloud) {
-			container.removeAttribute("aria-hidden");
-			return;
-		}
-
-		container.setAttribute("aria-hidden", "true");
-
-		if (container.dataset.rgReadAloudBound === "1") {
-			return;
-		}
-		container.dataset.rgReadAloudBound = "1";
-
-		container.addEventListener(
-			"pointerdown",
-			() => releaseAriaHiddenForInteraction(container),
-			true,
-		);
-		container.addEventListener("focusin", () =>
-			releaseAriaHiddenForInteraction(container),
-		);
-		container.addEventListener("focusout", () => {
-			setTimeout(() => {
-				restoreAriaHiddenAfterInteraction(container);
-			}, 0);
-		});
-		container.addEventListener(
-			"click",
-			() => {
-				setTimeout(() => {
-					restoreAriaHiddenAfterInteraction(container);
-				}, 0);
-			},
-			true,
-		);
-	}
-
 	// eslint-disable-next-line no-inner-declarations
 	function applyReadAloudHiding(root = document) {
-		if (!root) return;
-
-		if (
-			root instanceof HTMLElement &&
-			root.matches(READ_ALOUD_UI_SELECTOR)
-		) {
-			applyReadAloudHidingToElement(root);
-		}
-
-		if (typeof root.querySelectorAll !== "function") return;
-		root.querySelectorAll(READ_ALOUD_UI_SELECTOR).forEach((el) => {
-			applyReadAloudHidingToElement(el);
-		});
+		loadReadAloudUiModule()
+			.then((mod) => mod?.applyReadAloudHiding?.(root))
+			.catch(() => {});
 	}
 
 	// eslint-disable-next-line no-inner-declarations
 	async function loadReadAloudUiSetting() {
-		try {
-			const result = await browser.storage.local.get(
-				"rg_library_settings",
-			);
-			const settingValue =
-				result?.rg_library_settings?.hideGeminiUiFromReadAloud;
-			libraryUiA11yConfig.hideGeminiUiFromReadAloud =
-				settingValue !== false;
-		} catch (_err) {
-			libraryUiA11yConfig.hideGeminiUiFromReadAloud = true;
+		const mod = await loadReadAloudUiModule();
+		if (mod?.loadReadAloudUiSetting) {
+			return mod.loadReadAloudUiSetting();
 		}
-
-		applyReadAloudHiding(document);
+		return null;
 	}
 
 	// eslint-disable-next-line no-inner-declarations
 	function initReadAloudUiObserver() {
-		if (readAloudUiObserver || !document.documentElement) return;
-
-		readAloudUiObserver = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				for (const node of mutation.addedNodes) {
-					if (!(node instanceof HTMLElement)) continue;
-					applyReadAloudHiding(node);
-				}
-			}
-		});
-
-		readAloudUiObserver.observe(document.documentElement, {
-			childList: true,
-			subtree: true,
-		});
-
-		applyReadAloudHiding(document);
+		loadReadAloudUiModule()
+			.then((mod) => mod?.initReadAloudUiObserver?.())
+			.catch(() => {});
 	}
 
 	// Load shared constants for keep-alive tuning and banner durations when available
@@ -277,6 +186,30 @@ if (window.__RGInitDone) {
 
 	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
 	const __rgOriginalLog = debugLog.bind(console);
+		async function loadReadAloudUiModule() {
+			if (readAloudUiModule) return readAloudUiModule;
+			try {
+				const readAloudUrl = browser.runtime.getURL(
+					"content/modules/read-aloud-ui.js",
+				);
+				const readAloudModule = await import(readAloudUrl);
+				if (!readAloudModule?.createReadAloudUiRuntime) {
+					return null;
+				}
+				readAloudUiModule = readAloudModule.createReadAloudUiRuntime({
+					documentRef: document,
+					browserRef: browser,
+					libraryUiA11yConfig,
+					debugLog,
+					debugError,
+				});
+				return readAloudUiModule;
+			} catch (error) {
+				debugError("Error loading read-aloud UI module:", error);
+				return null;
+			}
+		}
+
 	const __rgOriginalError = debugError.bind(console);
 
 	// eslint-disable-next-line no-inner-declarations
