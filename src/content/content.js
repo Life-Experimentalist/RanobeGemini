@@ -40,9 +40,9 @@ let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let extensionBridgesModule = null; // Extension bridge helpers
 let readAloudUiModule = null; // Read-aloud UI helper module
-	let enhancementBannersModule = null; // Enhancement banner helpers
+let enhancementBannersModule = null; // Enhancement banner helpers
+let notificationRuntimeModule = null; // Status / notification helpers
 let chunkControlRuntime = null; // Chunk control state/helpers
-let lastKnownNovelData = null; // Cached novel data for notifications
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
@@ -225,6 +225,31 @@ if (window.__RGInitDone) {
 			return enhancementBannersModule;
 		} catch (error) {
 			debugError("Error loading enhancement banner module:", error);
+			return null;
+		}
+	}
+
+	async function loadNotificationRuntimeModule() {
+		if (notificationRuntimeModule) return notificationRuntimeModule;
+		try {
+			const notificationUrl = browser.runtime.getURL(
+				"content/modules/notification-runtime.js",
+			);
+			const notificationModule = await import(notificationUrl);
+			if (!notificationModule?.createNotificationRuntime) {
+				return null;
+			}
+			notificationRuntimeModule = notificationModule.createNotificationRuntime(
+				{
+					documentRef: document,
+					browserRef: browser,
+					windowRef: window,
+					getNovelLibrary: () => novelLibrary,
+				},
+			);
+			return notificationRuntimeModule;
+		} catch (error) {
+			debugError("Error loading notification runtime module:", error);
 			return null;
 		}
 	}
@@ -1061,39 +1086,39 @@ if (window.__RGInitDone) {
 		);
 	}
 
-		async function shouldBannersBeHidden() {
-			const mod = await loadEnhancementBannersModule();
-			return (
-				mod?.shouldBannersBeHiddenRuntime?.({
-					documentRef: document,
-					currentHandler,
-				}) ?? false
-			);
-		}
-
-		async function handleToggleBannersVisibility() {
-			const mod = await loadEnhancementBannersModule();
-			mod?.toggleEnhancedBannersRuntime?.({
+	async function shouldBannersBeHidden() {
+		const mod = await loadEnhancementBannersModule();
+		return (
+			mod?.shouldBannersBeHiddenRuntime?.({
 				documentRef: document,
 				currentHandler,
-				showStatusMessage,
-			});
-		}
+			}) ?? false
+		);
+	}
+
+	async function handleToggleBannersVisibility() {
+		const mod = await loadEnhancementBannersModule();
+		mod?.toggleEnhancedBannersRuntime?.({
+			documentRef: document,
+			currentHandler,
+			showStatusMessage,
+		});
+	}
 
 	/**
 	 * Dedicated toggle function for Show/Hide button in chapter novel controls
 	 * ONLY hides enhancement banners, NEVER hides the controls container itself.
 	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
 	 */
-		async function handleChapterControlsToggleBanners(callerBtn = null) {
-			const mod = await loadEnhancementBannersModule();
-			mod?.toggleEnhancedBannersRuntime?.({
-				documentRef: document,
-				currentHandler,
-				showStatusMessage,
-				callerBtn,
-			});
-		}
+	async function handleChapterControlsToggleBanners(callerBtn = null) {
+		const mod = await loadEnhancementBannersModule();
+		mod?.toggleEnhancedBannersRuntime?.({
+			documentRef: document,
+			currentHandler,
+			showStatusMessage,
+			callerBtn,
+		});
+	}
 
 	function buildChunkBanner(
 		chunking,
@@ -2356,7 +2381,7 @@ if (window.__RGInitDone) {
 			pendingKey: PENDING_SUMMARY_REVIEW_KEY,
 			isShort,
 			chunkIndices,
-			lastKnownNovelData,
+			lastKnownNovelData: getLastKnownNovelData(),
 			documentRef: document,
 			windowRef: window,
 		});
@@ -2568,8 +2593,9 @@ if (window.__RGInitDone) {
 			});
 			// Track chapter as summarized in the library
 			try {
-				const novelId = lastKnownNovelData?.id;
-				const chapterNumber = lastKnownNovelData?.currentChapter;
+				const cachedNovelData = getLastKnownNovelData();
+				const novelId = cachedNovelData?.id;
+				const chapterNumber = cachedNovelData?.currentChapter;
 				if (novelId && chapterNumber != null) {
 					if (!novelLibrary) await loadNovelLibrary();
 					if (novelLibrary) {
@@ -4415,6 +4441,7 @@ if (window.__RGInitDone) {
 		}
 		extensionBridgesModule = await loadExtensionBridgesModule();
 		chunkControlRuntime = await loadChunkControlRuntime();
+		notificationRuntimeModule = await loadNotificationRuntimeModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -9272,6 +9299,9 @@ if (window.__RGInitDone) {
 	}
 
 	function normalizeNotificationType(type) {
+		if (notificationRuntimeModule?.normalizeNotificationTypeRuntime) {
+			return notificationRuntimeModule.normalizeNotificationTypeRuntime(type);
+		}
 		switch (type) {
 			case "success":
 				return "success";
@@ -9290,6 +9320,11 @@ if (window.__RGInitDone) {
 	}
 
 	function buildNovelDataFromMetadata(metadata) {
+		if (notificationRuntimeModule?.buildNovelDataFromMetadataRuntime) {
+			return notificationRuntimeModule.buildNovelDataFromMetadataRuntime(
+				metadata,
+			);
+		}
 		if (!metadata) return null;
 		return {
 			id: metadata.id,
@@ -9307,37 +9342,19 @@ if (window.__RGInitDone) {
 	}
 
 	function cacheNovelData(novelData) {
-		if (!novelData) return lastKnownNovelData;
-		const cached = {
-			id: novelData.id,
-			novelId: novelData.novelId || novelData.id,
-			shelfId: novelData.shelfId,
-			bookTitle: novelData.bookTitle || novelData.title,
-			title: novelData.title,
-			author: novelData.author,
-			currentChapter: novelData.currentChapter,
-			totalChapters: novelData.totalChapters,
-			source: novelData.source,
-			sourceUrl: novelData.sourceUrl,
-			mainNovelUrl: novelData.mainNovelUrl,
-		};
-		lastKnownNovelData = cached;
-		return cached;
+		if (notificationRuntimeModule?.cacheNovelDataRuntime) {
+			return notificationRuntimeModule.cacheNovelDataRuntime(novelData);
+		}
+		return novelData;
+	}
+
+	function getLastKnownNovelData() {
+		return notificationRuntimeModule?.getLastKnownNovelDataRuntime?.() || null;
 	}
 
 	async function resolveNovelDataForNotification() {
-		if (lastKnownNovelData) return lastKnownNovelData;
-		if (novelLibrary && typeof novelLibrary.getNovelByUrl === "function") {
-			try {
-				const novel = await novelLibrary.getNovelByUrl(
-					window.location.href,
-				);
-				if (novel) {
-					return cacheNovelData(novel);
-				}
-			} catch (_err) {
-				// ignore lookup failures
-			}
+		if (notificationRuntimeModule?.resolveNovelDataForNotificationRuntime) {
+			return notificationRuntimeModule.resolveNovelDataForNotificationRuntime();
 		}
 		return null;
 	}
@@ -9350,6 +9367,16 @@ if (window.__RGInitDone) {
 		metadata,
 		source,
 	}) {
+		if (notificationRuntimeModule?.logNotificationRuntime) {
+			return notificationRuntimeModule.logNotificationRuntime({
+				type,
+				message,
+				title,
+				novelData,
+				metadata,
+				source,
+			});
+		}
 		try {
 			await browser.runtime.sendMessage({
 				action: "logNotification",
