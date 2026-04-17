@@ -108,7 +108,7 @@ Track both planned and actual effort per unit.
 | 6: OAuth Reliability                 | 3          | 4-6            | 8        | in-progress |
 | 7: Landing Awareness                 | 3          | 4-7            | 8        | in-progress |
 | 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | in-progress |
-| 9: Deployment Automation             | 3          | 4-7            | 8        | in-progress |
+| 9: Deployment Automation             | 3          | 4-7            | 8        | completed   |
 
 ### Rolling Prompt Tracker
 
