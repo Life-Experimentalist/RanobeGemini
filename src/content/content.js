@@ -2665,22 +2665,19 @@ if (window.__RGInitDone) {
 		state = "processing",
 		wordCounts = null,
 	) {
-		if (wipBannerModule?.createWorkInProgressBannerRuntime) {
-			return wipBannerModule.createWorkInProgressBannerRuntime({
-				completedChunks,
-				totalChunks,
-				state,
-				wordCounts,
-				documentRef: document,
-				handleCancelEnhancement,
-				handleToggleAllChunks,
-			});
+		if (!wipBannerModule?.createWorkInProgressBannerRuntime) {
+			return null;
 		}
 
-		const fallback = document.createElement("div");
-		fallback.className = "gemini-wip-banner";
-		fallback.textContent = "Enhancing content...";
-		return fallback;
+		return wipBannerModule.createWorkInProgressBannerRuntime({
+			completedChunks,
+			totalChunks,
+			state,
+			wordCounts,
+			documentRef: document,
+			handleCancelEnhancement,
+			handleToggleAllChunks,
+		});
 	}
 
 	function showWorkInProgressBanner(
@@ -2689,29 +2686,20 @@ if (window.__RGInitDone) {
 		state = "processing",
 		wordCounts = null,
 	) {
-		if (wipBannerModule?.showWorkInProgressBannerRuntime) {
-			void wipBannerModule.showWorkInProgressBannerRuntime({
-				completedChunks,
-				totalChunks,
-				state,
-				wordCounts,
-				documentRef: document,
-				findContentArea,
-				loadDomIntegrationModule,
-				createWorkInProgressBanner,
-			});
+		if (!wipBannerModule?.showWorkInProgressBannerRuntime) {
 			return;
 		}
 
-		const fallbackBanner = createWorkInProgressBanner(
+		void wipBannerModule.showWorkInProgressBannerRuntime({
 			completedChunks,
 			totalChunks,
 			state,
 			wordCounts,
-		);
-		const contentArea = findContentArea();
-		if (!contentArea) return;
-		contentArea.insertBefore(fallbackBanner, contentArea.firstChild);
+			documentRef: document,
+			findContentArea,
+			loadDomIntegrationModule,
+			createWorkInProgressBanner,
+		});
 	}
 
 	/**
