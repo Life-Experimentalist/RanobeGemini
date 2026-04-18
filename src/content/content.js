@@ -51,6 +51,7 @@ let enhancementAttributionModule = null; // Model attribution helper runtime
 let mainSummaryBannerModule = null; // Main summary banner runtime
 let allChunksProcessedModule = null; // All-chunks processed runtime
 let finalizePrefixModule = null; // Finalize prefix enhanced content runtime
+let chunkErrorModule = null; // Chunk error handling runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -423,6 +424,24 @@ if (window.__RGInitDone) {
 			return finalizePrefixModule;
 		} catch (error) {
 			debugError("Error loading finalize-prefix module:", error);
+			return null;
+		}
+	}
+
+	async function loadChunkErrorModule() {
+		if (chunkErrorModule) return chunkErrorModule;
+		try {
+			const moduleUrl = browser.runtime.getURL(
+				"content/modules/chunk-error-runtime.js",
+			);
+			const moduleRef = await import(moduleUrl);
+			if (!moduleRef?.handleChunkErrorRuntime) {
+				return null;
+			}
+			chunkErrorModule = moduleRef;
+			return chunkErrorModule;
+		} catch (error) {
+			debugError("Error loading chunk-error module:", error);
 			return null;
 		}
 	}
@@ -2320,59 +2339,18 @@ if (window.__RGInitDone) {
 	}
 
 	async function handleChunkError(message) {
-		const chunking = await loadChunkingSystem();
-		if (!chunking) return;
-
-		const chunkIndex = message.chunkIndex;
-		const totalChunks = message.totalChunks;
-
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content",
-		);
-		if (!chunkedContainer) return;
-
-		const chunkWrapper = chunkedContainer.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
-		);
-		if (!chunkWrapper) return;
-
-		// Guard: if this chunk has already been successfully enhanced (e.g. a
-		// stale or late-arriving error message from the batch run that arrived
-		// after a manual re-enhance succeeded), do NOT replace the completed
-		// banner with an error banner.
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content",
-		);
-		if (chunkContent?.getAttribute("data-chunk-enhanced") === "true") {
-			debugLog(
-				`[handleChunkError] Chunk ${chunkIndex} is already enhanced ΓÇö ignoring late error: ${message.error}`,
-			);
+		if (!chunkErrorModule?.handleChunkErrorRuntime) {
 			return;
 		}
 
-		const existingBanner = chunkWrapper.querySelector(
-			".gemini-chunk-banner",
-		);
-		if (existingBanner) {
-			// Use the actual DOM wrapper count so nav arrows reflect reality
-			// (message.totalChunks can be stale/off-by-one when batches overlap)
-			const actualTotalChunks =
-				chunkedContainer.querySelectorAll(".gemini-chunk-wrapper")
-					.length || totalChunks;
-			const errorBanner = buildChunkBanner(
-				chunking,
-				chunkIndex,
-				actualTotalChunks,
-				"error",
-				message.error,
-			);
-			existingBanner.replaceWith(errorBanner);
-		}
-
-		showStatusMessage(
-			`Error processing chunk ${chunkIndex + 1}: ${message.error}`,
-			"error",
-		);
+		await chunkErrorModule.handleChunkErrorRuntime({
+			message,
+			loadChunkingSystem,
+			buildChunkBanner,
+			showStatusMessage,
+			debugLog,
+			documentRef: document,
+		});
 	}
 
 	// eslint-disable-next-line no-unused-vars
@@ -4005,6 +3983,7 @@ if (window.__RGInitDone) {
 		mainSummaryBannerModule = await loadMainSummaryBannerModule();
 		allChunksProcessedModule = await loadAllChunksProcessedModule();
 		finalizePrefixModule = await loadFinalizePrefixModule();
+		chunkErrorModule = await loadChunkErrorModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
