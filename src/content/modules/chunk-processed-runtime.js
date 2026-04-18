@@ -49,7 +49,9 @@ export async function handleChunkProcessedRuntime({
 		onChunkModelInfo?.(chunkModelInfo);
 	}
 
-	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	const chunkedContainer = documentRef.getElementById(
+		"gemini-chunked-content",
+	);
 	if (!chunkedContainer) return;
 
 	const chunkWrapper = chunkedContainer.querySelector(
@@ -64,39 +66,59 @@ export async function handleChunkProcessedRuntime({
 			const completedInDom = documentRef.querySelectorAll(
 				'.gemini-chunk-content[data-chunk-enhanced="true"]',
 			).length;
-			showWorkInProgressBanner?.(completedInDom, totalChunks, "complete", null);
+			showWorkInProgressBanner?.(
+				completedInDom,
+				totalChunks,
+				"complete",
+				null,
+			);
 			if (cancelEnhanceButton) {
 				cancelEnhanceButton.style.display = "none";
 			}
-			documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-				btn.textContent = "≡ƒöä Re-enhance with Gemini";
-				btn.disabled = false;
-				btn.classList.remove("loading");
-			});
+			documentRef
+				.querySelectorAll(".gemini-enhance-btn")
+				.forEach((btn) => {
+					btn.textContent = "≡ƒöä Re-enhance with Gemini";
+					btn.disabled = false;
+					btn.classList.remove("loading");
+				});
 		}
 		return;
 	}
 
 	if (chunkResult && chunkResult.enhancedContent) {
-		const chunkContent = chunkWrapper.querySelector(".gemini-chunk-content");
+		const chunkContent = chunkWrapper.querySelector(
+			".gemini-chunk-content",
+		);
 		if (chunkContent) {
 			const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
 			chunkContent.innerHTML = sanitizedContent;
 			chunkContent.setAttribute("data-chunk-enhanced", "true");
-			chunkContent.setAttribute("data-enhanced-chunk-content", sanitizedContent);
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				sanitizedContent,
+			);
 		}
 
-		await chunking.cache.saveChunkToCache(windowRef.location.href, chunkIndex, {
-			originalContent: chunkResult.originalContent || "",
-			enhancedContent: chunkResult.enhancedContent,
-			wordCount: chunkResult.wordCount || 0,
-			timestamp: Date.now(),
-			totalChunks,
-			modelInfo: chunkModelInfo,
-		});
-		const existingBanner = chunkWrapper.querySelector(".gemini-chunk-banner");
+		await chunking.cache.saveChunkToCache(
+			windowRef.location.href,
+			chunkIndex,
+			{
+				originalContent: chunkResult.originalContent || "",
+				enhancedContent: chunkResult.enhancedContent,
+				wordCount: chunkResult.wordCount || 0,
+				timestamp: Date.now(),
+				totalChunks,
+				modelInfo: chunkModelInfo,
+			},
+		);
+		const existingBanner = chunkWrapper.querySelector(
+			".gemini-chunk-banner",
+		);
 		if (existingBanner) {
-			const chunkContent = chunkWrapper.querySelector(".gemini-chunk-content");
+			const chunkContent = chunkWrapper.querySelector(
+				".gemini-chunk-content",
+			);
 			const originalContent =
 				chunkContent?.getAttribute("data-original-chunk-content") || "";
 			const enhancedContent = chunkContent?.innerHTML || "";
@@ -127,14 +149,17 @@ export async function handleChunkProcessedRuntime({
 
 	let wordCounts = null;
 	if (chunking?.core?.countWords) {
-		const allChunks = chunkedContainer.querySelectorAll(".gemini-chunk-content");
+		const allChunks = chunkedContainer.querySelectorAll(
+			".gemini-chunk-content",
+		);
 		let totalOriginalWords = 0;
 		let totalEnhancedWords = 0;
 
 		allChunks.forEach((chunk) => {
 			const originalContent =
 				chunk.getAttribute("data-original-chunk-content") || "";
-			const isEnhanced = chunk.getAttribute("data-chunk-enhanced") === "true";
+			const isEnhanced =
+				chunk.getAttribute("data-chunk-enhanced") === "true";
 			const content = isEnhanced ? chunk.innerHTML : originalContent;
 
 			totalOriginalWords += chunking.core.countWords(originalContent);
@@ -149,10 +174,20 @@ export async function handleChunkProcessedRuntime({
 		};
 	}
 
-	showWorkInProgressBanner?.(completedChunks, totalChunks, "processing", wordCounts);
+	showWorkInProgressBanner?.(
+		completedChunks,
+		totalChunks,
+		"processing",
+		wordCounts,
+	);
 
 	if (message.isComplete) {
-		showWorkInProgressBanner?.(totalChunks, totalChunks, "complete", wordCounts);
+		showWorkInProgressBanner?.(
+			totalChunks,
+			totalChunks,
+			"complete",
+			wordCounts,
+		);
 		if (cancelEnhanceButton) {
 			cancelEnhanceButton.style.display = "none";
 		}
@@ -181,7 +216,10 @@ export async function handleChunkProcessedRuntime({
 				".gemini-main-summary-text",
 			);
 			if (mainSummaryText) {
-				mainSummaryText.setAttribute("data-group-end", String(totalChunks - 1));
+				mainSummaryText.setAttribute(
+					"data-group-end",
+					String(totalChunks - 1),
+				);
 			}
 		}
 
