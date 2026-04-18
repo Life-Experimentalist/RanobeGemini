@@ -46,6 +46,8 @@ let enhancementToggleBannerModule = null; // Enhancement banner refresh helpers
 let enhancedContentBannerModule = null; // Enhanced content banner UI helpers
 let enhancementDisplayModule = null; // Enhancement display helper runtime
 let enhancementCancelModule = null; // Enhancement cancel runtime
+let wipBannerModule = null; // Work-in-progress banner runtime
+let enhancementAttributionModule = null; // Model attribution helper runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -346,6 +348,24 @@ if (window.__RGInitDone) {
 			return wipBannerModule;
 		} catch (error) {
 			debugError("Error loading WIP banner module:", error);
+			return null;
+		}
+	}
+
+	async function loadEnhancementAttributionModule() {
+		if (enhancementAttributionModule) return enhancementAttributionModule;
+		try {
+			const attributionUrl = browser.runtime.getURL(
+				"content/modules/enhancement-attribution.js",
+			);
+			const attributionModule = await import(attributionUrl);
+			if (!attributionModule?.addModelAttributionRuntime) {
+				return null;
+			}
+			enhancementAttributionModule = attributionModule;
+			return enhancementAttributionModule;
+		} catch (error) {
+			debugError("Error loading enhancement attribution module:", error);
 			return null;
 		}
 	}
@@ -2662,6 +2682,17 @@ if (window.__RGInitDone) {
 	 */
 	// eslint-disable-next-line no-unused-vars
 	function addModelAttribution(modelInfo) {
+		if (enhancementAttributionModule?.addModelAttributionRuntime) {
+			enhancementAttributionModule.addModelAttributionRuntime({
+				modelInfo,
+				documentRef: document,
+				windowRef: window,
+				findContentArea,
+				escapeHtml,
+			});
+			return;
+		}
+
 		if (!modelInfo) return;
 
 		const contentArea = findContentArea();
@@ -4264,6 +4295,8 @@ if (window.__RGInitDone) {
 		enhancementDisplayModule = await loadEnhancementDisplayModule();
 		enhancementCancelModule = await loadEnhancementCancelModule();
 		wipBannerModule = await loadWipBannerModule();
+		enhancementAttributionModule =
+			await loadEnhancementAttributionModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
