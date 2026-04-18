@@ -44,6 +44,7 @@ let enhancementBannersModule = null; // Enhancement banner helpers
 let notificationRuntimeModule = null; // Status / notification helpers
 let enhancementToggleBannerModule = null; // Enhancement banner refresh helpers
 let enhancedContentBannerModule = null; // Enhanced content banner UI helpers
+let enhancementDisplayModule = null; // Enhancement display helper runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -290,6 +291,24 @@ if (window.__RGInitDone) {
 			return enhancedContentBannerModule;
 		} catch (error) {
 			debugError("Error loading enhanced content banner module:", error);
+			return null;
+		}
+	}
+
+	async function loadEnhancementDisplayModule() {
+		if (enhancementDisplayModule) return enhancementDisplayModule;
+		try {
+			const displayUrl = browser.runtime.getURL(
+				"content/modules/enhancement-display.js",
+			);
+			const displayModule = await import(displayUrl);
+			if (!displayModule?.addWordCountDisplayRuntime) {
+				return null;
+			}
+			enhancementDisplayModule = displayModule;
+			return enhancementDisplayModule;
+		} catch (error) {
+			debugError("Error loading enhancement display module:", error);
 			return null;
 		}
 	}
@@ -4393,6 +4412,7 @@ if (window.__RGInitDone) {
 		enhancementToggleBannerModule =
 			await loadEnhancementToggleBannerModule();
 		enhancedContentBannerModule = await loadEnhancedContentBannerModule();
+		enhancementDisplayModule = await loadEnhancementDisplayModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -9080,6 +9100,17 @@ if (window.__RGInitDone) {
 	// Function to display an error message when processing fails
 	// eslint-disable-next-line no-unused-vars
 	function showProcessingError(errorMessage) {
+		if (enhancementDisplayModule?.showProcessingErrorRuntime) {
+			enhancementDisplayModule.showProcessingErrorRuntime({
+				errorMessage,
+				documentRef: document,
+				findContentArea,
+				insertNodeAtContentTop,
+				debugError,
+			});
+			return;
+		}
+
 		debugError("Processing error:", errorMessage);
 
 		const contentArea = findContentArea();
@@ -9109,6 +9140,13 @@ if (window.__RGInitDone) {
 
 	// Remove the initial word count display (called after enhancement replaces content)
 	function removeOriginalWordCount() {
+		if (enhancementDisplayModule?.removeOriginalWordCountRuntime) {
+			enhancementDisplayModule.removeOriginalWordCountRuntime({
+				documentRef: document,
+			});
+			return;
+		}
+
 		const existingWordCount = document.querySelector(".gemini-word-count");
 		if (existingWordCount) {
 			existingWordCount.remove();
@@ -9128,6 +9166,17 @@ if (window.__RGInitDone) {
 	// Function to add word count display to the content
 	// eslint-disable-next-line no-unused-vars
 	function addWordCountDisplay(contentArea, originalCount, newCount) {
+		if (enhancementDisplayModule?.addWordCountDisplayRuntime) {
+			enhancementDisplayModule.addWordCountDisplayRuntime({
+				contentArea,
+				originalCount,
+				newCount,
+				documentRef: document,
+				insertAfterControlsOrTop,
+			});
+			return;
+		}
+
 		// Check if there's already a word count display and update it
 		const existingWordCount = document.querySelector(".gemini-word-count");
 		if (existingWordCount) {
@@ -9177,6 +9226,14 @@ if (window.__RGInitDone) {
 
 	// Default formatting to apply after enhancement
 	function applyDefaultFormatting(contentArea) {
+		if (enhancementDisplayModule?.applyDefaultFormattingRuntime) {
+			enhancementDisplayModule.applyDefaultFormattingRuntime({
+				contentArea,
+				formattingOptions,
+			});
+			return;
+		}
+
 		if (!contentArea) return;
 
 		// Center scene headings/dividers when enabled
