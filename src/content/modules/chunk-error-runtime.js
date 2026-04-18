@@ -16,7 +16,9 @@ export async function handleChunkErrorRuntime({
 	const chunkIndex = message.chunkIndex;
 	const totalChunks = message.totalChunks;
 
-	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	const chunkedContainer = documentRef.getElementById(
+		"gemini-chunked-content",
+	);
 	if (!chunkedContainer) return;
 
 	const chunkWrapper = chunkedContainer.querySelector(
