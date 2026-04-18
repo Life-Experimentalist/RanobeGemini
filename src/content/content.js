@@ -50,6 +50,7 @@ let wipBannerModule = null; // Work-in-progress banner runtime
 let enhancementAttributionModule = null; // Model attribution helper runtime
 let mainSummaryBannerModule = null; // Main summary banner runtime
 let allChunksProcessedModule = null; // All-chunks processed runtime
+let finalizePrefixModule = null; // Finalize prefix enhanced content runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -404,6 +405,24 @@ if (window.__RGInitDone) {
 			return allChunksProcessedModule;
 		} catch (error) {
 			debugError("Error loading all-chunks-processed module:", error);
+			return null;
+		}
+	}
+
+	async function loadFinalizePrefixModule() {
+		if (finalizePrefixModule) return finalizePrefixModule;
+		try {
+			const moduleUrl = browser.runtime.getURL(
+				"content/modules/finalize-prefix.js",
+			);
+			const moduleRef = await import(moduleUrl);
+			if (!moduleRef?.finalizePrefixEnhancedContentRuntime) {
+				return null;
+			}
+			finalizePrefixModule = moduleRef;
+			return finalizePrefixModule;
+		} catch (error) {
+			debugError("Error loading finalize-prefix module:", error);
 			return null;
 		}
 	}
@@ -2805,163 +2824,32 @@ if (window.__RGInitDone) {
 	// Helper function to finalize the progressive content display
 	// eslint-disable-next-line no-unused-vars
 	async function finalizePrefixEnhancedContent(modelInfo) {
-		const contentArea = findContentArea();
-		if (!contentArea) return;
-
-		// Get the enhanced container (where chunks were added)
-		const enhancedContainer = document.getElementById(
-			"gemini-enhanced-container",
-		);
-		if (!enhancedContainer) {
-			debugError("No enhanced container found for finalization");
+		if (!finalizePrefixModule?.finalizePrefixEnhancedContentRuntime) {
 			return;
 		}
 
-		// Get original content from stored attribute
-		const originalContent =
-			contentArea.getAttribute("data-original-html") ||
-			contentArea.getAttribute("data-original-content") ||
-			document.getElementById("gemini-original-content")?.innerHTML ||
-			"";
-
-		const originalText = stripHtmlTags(originalContent);
-		const enhancedContent = enhancedContainer.innerHTML;
-		const enhancedText = stripHtmlTags(enhancedContent);
-
-		// Save to cache so it persists on reload (always overwrite with latest)
-		if (storageManager && enhancedContent) {
-			try {
-				await storageManager.saveEnhancedContent(window.location.href, {
-					title: document.title,
-					originalContent: originalContent,
-					enhancedContent: enhancedContent,
-					modelInfo: modelInfo,
-					timestamp: Date.now(),
-					isChunked: true,
-				});
-				isCachedContent = true;
-				debugLog("Chunked enhanced content saved to cache");
-			} catch (saveError) {
-				debugError(
-					"Failed to save chunked content to cache:",
-					saveError,
-				);
-			}
-		}
-
-		// Add novel to library and update chapter progression
-		try {
-			const novelContext = extractNovelContext();
-			await addToNovelLibrary(novelContext);
-			await updateChapterProgression();
-		} catch (libraryError) {
-			debugError("Failed to update novel library:", libraryError);
-		}
-
-		// Create enhanced banner with word count statistics and model info
-		const banner = createEnhancedBanner(
-			originalText,
-			enhancedText,
+		await finalizePrefixModule.finalizePrefixEnhancedContentRuntime({
 			modelInfo,
-			isCachedContent,
-		);
-
-		attachDeleteCacheButtonHandler(banner);
-
-		// Get the toggle button from the banner
-		const toggleButton = banner.querySelector(".gemini-toggle-btn");
-		if (toggleButton) {
-			const toggleContent = function () {
-				const isShowingEnhanced =
-					contentArea.getAttribute("data-showing-enhanced") ===
-					"true";
-				if (isShowingEnhanced) {
-					// Switch to original
-					contentArea.innerHTML = originalContent;
-					contentArea.setAttribute("data-showing-enhanced", "false");
-					showStatusMessage(
-						"Showing original content. Click 'Show Enhanced' to view the improved version.",
-					);
-					refreshToggleBanner({
-						contentArea,
-						createBanner: () =>
-							createEnhancedBanner(
-								originalText,
-								enhancedText,
-								modelInfo,
-								isCachedContent,
-							),
-						toggleLabel: "Show Enhanced",
-						onToggleClick: toggleContent,
-						insertBeforeNode: contentArea.firstChild,
-						wireDeleteCache: true,
-					});
-				} else {
-					// Switch back to enhanced
-					contentArea.innerHTML = "";
-					contentArea.appendChild(enhancedContainer);
-					contentArea.setAttribute("data-showing-enhanced", "true");
-					showStatusMessage(
-						"Showing enhanced content. Click 'Show Original' to view the original version.",
-					);
-					refreshToggleBanner({
-						contentArea,
-						createBanner: () =>
-							createEnhancedBanner(
-								originalText,
-								enhancedText,
-								modelInfo,
-								isCachedContent,
-							),
-						toggleLabel: "Show Original",
-						onToggleClick: toggleContent,
-						insertBeforeNode: enhancedContainer,
-						wireDeleteCache: true,
-					});
-				}
-			};
-			toggleButton.addEventListener("click", toggleContent);
-		}
-
-		// Store state for toggling
-		contentArea.setAttribute("data-showing-enhanced", "true");
-
-		// Remove any existing enhanced banner before inserting a new one
-		const existingBanner = contentArea.querySelector(
-			".gemini-enhanced-banner",
-		);
-		if (existingBanner) {
-			existingBanner.remove();
-		}
-
-		// Add banner to the top of content area
-		contentArea.insertBefore(banner, enhancedContainer);
-		// For chunked content, skip the main enhanced banner since each chunk has its own banner
-		// Just clean up WIP/error banners and mark processing as complete
-
-		// Store state for toggling (individual chunks handle their own toggle)
-		contentArea.setAttribute("data-showing-enhanced", "true");
-
-		if (domIntegrationModule?.clearTransientEnhancementBannersRuntime) {
-			domIntegrationModule.clearTransientEnhancementBannersRuntime({
-				documentRef: document,
-				removeErrorBanner: true,
-			});
-		} else {
-			const wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) {
-				wipBanner.remove();
-			}
-
-			// Remove any existing error banners since we're done
-			const errorBanner = document.querySelector(".gemini-error-banner");
-			if (errorBanner) {
-				errorBanner.remove();
-			}
-		}
-
-		// Add a class to indicate processing is complete
-		enhancedContainer.classList.add("gemini-processing-complete");
+			findContentArea,
+			stripHtmlTags,
+			storageManager,
+			windowRef: window,
+			documentRef: document,
+			debugLog,
+			debugError,
+			extractNovelContext,
+			addToNovelLibrary,
+			updateChapterProgression,
+			createEnhancedBanner,
+			attachDeleteCacheButtonHandler,
+			showStatusMessage,
+			refreshToggleBanner,
+			domIntegrationModule,
+			getIsCachedContent: () => isCachedContent,
+			onCachedContentSaved: () => {
+				isCachedContent = true;
+			},
+		});
 	}
 
 	// Initialize when DOM is fully loaded
@@ -4116,6 +4004,7 @@ if (window.__RGInitDone) {
 		enhancementAttributionModule = await loadEnhancementAttributionModule();
 		mainSummaryBannerModule = await loadMainSummaryBannerModule();
 		allChunksProcessedModule = await loadAllChunksProcessedModule();
+		finalizePrefixModule = await loadFinalizePrefixModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
