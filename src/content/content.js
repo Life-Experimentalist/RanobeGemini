@@ -2720,50 +2720,20 @@ if (window.__RGInitDone) {
 	 */
 	// eslint-disable-next-line no-unused-vars
 	function addModelAttribution(modelInfo) {
-		if (enhancementAttributionModule?.addModelAttributionRuntime) {
-			enhancementAttributionModule.addModelAttributionRuntime({
-				modelInfo,
-				documentRef: document,
-				windowRef: window,
-				findContentArea,
-				escapeHtml,
-			});
+		if (
+			!enhancementAttributionModule?.addModelAttributionRuntime ||
+			!modelInfo
+		) {
 			return;
 		}
 
-		if (!modelInfo) return;
-
-		const contentArea = findContentArea();
-		if (!contentArea) return;
-
-		// Check if attribution already exists
-		if (document.querySelector(".gemini-model-attribution")) return;
-
-		const isDarkMode =
-			document.querySelector(
-				'.dark-theme, [data-theme="dark"], .dark-mode, .reading_fullwidth',
-			) || window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-		const attribution = document.createElement("div");
-		attribution.className = "gemini-model-attribution";
-		attribution.style.cssText = `
-			margin: 1.5em 0;
-			padding: 8px 12px;
-			background: ${isDarkMode ? "#2a2a2a" : "#f5f5f5"};
-			border-radius: 6px;
-			font-size: 12px;
-			color: ${isDarkMode ? "#999" : "#666"};
-			text-align: center;
-		`;
-
-		const modelName = modelInfo.name || modelInfo.modelId || "Gemini AI";
-		attribution.innerHTML = `
-			<span style="opacity: 0.7;">Enhanced by</span>
-			<span style="font-weight: 600;">${escapeHtml(modelName)}</span>
-			<span style="opacity: 0.7;">via Ranobe Gemini</span>
-		`;
-
-		contentArea.appendChild(attribution);
+		enhancementAttributionModule.addModelAttributionRuntime({
+			modelInfo,
+			documentRef: document,
+			windowRef: window,
+			findContentArea,
+			escapeHtml,
+		});
 	}
 
 	/**
