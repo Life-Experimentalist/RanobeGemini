@@ -45,6 +45,7 @@ let notificationRuntimeModule = null; // Status / notification helpers
 let enhancementToggleBannerModule = null; // Enhancement banner refresh helpers
 let enhancedContentBannerModule = null; // Enhanced content banner UI helpers
 let enhancementDisplayModule = null; // Enhancement display helper runtime
+let enhancementCancelModule = null; // Enhancement cancel runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -309,6 +310,24 @@ if (window.__RGInitDone) {
 			return enhancementDisplayModule;
 		} catch (error) {
 			debugError("Error loading enhancement display module:", error);
+			return null;
+		}
+	}
+
+	async function loadEnhancementCancelModule() {
+		if (enhancementCancelModule) return enhancementCancelModule;
+		try {
+			const cancelUrl = browser.runtime.getURL(
+				"content/modules/enhancement-cancel.js",
+			);
+			const cancelModule = await import(cancelUrl);
+			if (!cancelModule?.handleCancelEnhancementRuntime) {
+				return null;
+			}
+			enhancementCancelModule = cancelModule;
+			return enhancementCancelModule;
+		} catch (error) {
+			debugError("Error loading enhancement cancel module:", error);
 			return null;
 		}
 	}
@@ -985,71 +1004,28 @@ if (window.__RGInitDone) {
 	}
 
 	function handleCancelEnhancement() {
-		debugLog("Cancelling enhancement process...");
+		if (enhancementCancelModule?.handleCancelEnhancementRuntime) {
+			enhancementCancelModule.handleCancelEnhancementRuntime({
+				documentRef: document,
+				windowRef: window,
+				debugLog,
+				debugError,
+				sendMessageWithRetry,
+				showStatusMessage,
+				cancelEnhanceButton,
+				setEnhancementCancelRequested: (value) => {
+					enhancementCancelRequested = value;
+				},
+				showWorkInProgressBanner,
+			});
+			return;
+		}
+
+		// Safety fallback when cancel runtime is unavailable.
 		enhancementCancelRequested = true;
-
-		sendMessageWithRetry({ action: "cancelEnhancement" }).catch((error) => {
-			debugError("Failed to send cancel request:", error);
-		});
-
 		showStatusMessage(
 			"Cancelling enhancement... processed chunks will be kept.",
 			"info",
-		);
-
-		// Reset button states
-		if (cancelEnhanceButton) {
-			cancelEnhanceButton.style.display = "none";
-		}
-
-		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "⚡ Enhance Chapter";
-			btn.disabled = false;
-			btn.classList.remove("loading");
-		});
-
-		// Update WIP banner to paused state
-		const chunkedContainer = document.getElementById(
-			"gemini-chunked-content",
-		);
-		const totalChunks = chunkedContainer
-			? chunkedContainer.querySelectorAll(".gemini-chunk-content").length
-			: 1;
-		const completedChunks = chunkedContainer
-			? chunkedContainer.querySelectorAll(
-					'.gemini-chunk-content[data-chunk-enhanced="true"]',
-				).length
-			: 0;
-
-		// Calculate word counts for paused state
-		let wordCounts = null;
-		const chunking = window.chunkingSystemCache;
-		if (chunkedContainer && chunking?.core?.countWords) {
-			const allChunks = chunkedContainer.querySelectorAll(
-				".gemini-chunk-content",
-			);
-			let totalOriginalWords = 0;
-			let totalEnhancedWords = 0;
-
-			allChunks.forEach((chunk) => {
-				const originalContent =
-					chunk.getAttribute("data-original-chunk-content") || "";
-				const enhancedContent = chunk.innerHTML;
-				totalOriginalWords += chunking.core.countWords(originalContent);
-				totalEnhancedWords += chunking.core.countWords(enhancedContent);
-			});
-
-			wordCounts = {
-				original: totalOriginalWords,
-				enhanced: totalEnhancedWords,
-			};
-		}
-
-		showWorkInProgressBanner(
-			completedChunks,
-			totalChunks,
-			"paused",
-			wordCounts,
 		);
 	}
 
@@ -4413,6 +4389,7 @@ if (window.__RGInitDone) {
 			await loadEnhancementToggleBannerModule();
 		enhancedContentBannerModule = await loadEnhancedContentBannerModule();
 		enhancementDisplayModule = await loadEnhancementDisplayModule();
+		enhancementCancelModule = await loadEnhancementCancelModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
