@@ -23,7 +23,8 @@ export function createMainSummaryBannerRuntime({
 	);
 	allChunkContents.forEach((chunk) => {
 		const enhancedContent =
-			chunk.getAttribute("data-enhanced-chunk-content") || chunk.innerHTML;
+			chunk.getAttribute("data-enhanced-chunk-content") ||
+			chunk.innerHTML;
 		totalEnhancedWords += countWords(enhancedContent);
 	});
 
