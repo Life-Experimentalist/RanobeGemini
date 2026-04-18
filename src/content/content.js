@@ -53,6 +53,7 @@ let allChunksProcessedModule = null; // All-chunks processed runtime
 let finalizePrefixModule = null; // Finalize prefix enhanced content runtime
 let chunkErrorModule = null; // Chunk error handling runtime
 let chunkProcessedModule = null; // Chunk processed handling runtime
+let chunkEventsModule = null; // Chunk action handlers runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -461,6 +462,24 @@ if (window.__RGInitDone) {
 			return chunkProcessedModule;
 		} catch (error) {
 			debugError("Error loading chunk-processed module:", error);
+			return null;
+		}
+	}
+
+	async function loadChunkEventsModule() {
+		if (chunkEventsModule) return chunkEventsModule;
+		try {
+			const eventsUrl = browser.runtime.getURL(
+				"content/modules/chunk-events.js",
+			);
+			const eventsModule = await import(eventsUrl);
+			if (!eventsModule?.toggleChunkViewRuntime) {
+				return null;
+			}
+			chunkEventsModule = eventsModule;
+			return chunkEventsModule;
+		} catch (error) {
+			debugError("Error loading chunk events module:", error);
 			return null;
 		}
 	}
@@ -1361,272 +1380,80 @@ if (window.__RGInitDone) {
 	}
 
 	async function handleChunkToggle(chunkIndex) {
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content",
-		);
-		const toggleBtn = chunkWrapper.querySelector(
-			".gemini-chunk-toggle-btn",
-		);
-		if (!chunkContent || !toggleBtn) return;
-
-		const isShowingEnhanced =
-			toggleBtn.getAttribute("data-showing") === "enhanced";
-		const originalHtml = chunkContent.getAttribute(
-			"data-original-chunk-html",
-		);
-		const originalContent = chunkContent.getAttribute(
-			"data-original-chunk-content",
-		);
-		const enhancedContent =
-			chunkContent.getAttribute("data-enhanced-chunk-content") ||
-			chunkContent.innerHTML;
-
-		if (isShowingEnhanced) {
-			chunkContent.setAttribute(
-				"data-enhanced-chunk-content",
-				chunkContent.innerHTML,
-			);
-			if (originalHtml) {
-				chunkContent.innerHTML = originalHtml;
-			} else {
-				chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
-			}
-			toggleBtn.textContent = "Γ£¿ Show Enhanced";
-			toggleBtn.setAttribute("data-showing", "original");
-		} else {
-			chunkContent.innerHTML = enhancedContent;
-			applyCollapsibleSections(chunkContent);
-			toggleBtn.textContent = "≡ƒæü Show Original";
-			toggleBtn.setAttribute("data-showing", "enhanced");
-			// Re-enable text selection after switching to enhanced view
-			const caForToggle = findContentArea();
-			if (caForToggle) enableCopyOnContentArea(caForToggle);
-		}
+		if (!chunkEventsModule?.toggleChunkViewRuntime) return;
+		await chunkEventsModule.toggleChunkViewRuntime({
+			chunkIndex,
+			documentRef: document,
+			applyCollapsibleSections,
+			findContentArea,
+			enableCopyOnContentArea,
+			escapeHtml,
+		});
 	}
 
 	async function handleChunkDelete(chunkIndex) {
-		const chunking = await loadChunkingSystem();
-		if (!chunking) return;
-
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content",
-		);
-		if (!chunkContent) return;
-
-		const originalHtml = chunkContent.getAttribute(
-			"data-original-chunk-html",
-		);
-		const originalContent = chunkContent.getAttribute(
-			"data-original-chunk-content",
-		);
-
-		if (!originalContent && !originalHtml) {
-			showStatusMessage(
-				"Original content not available for this chunk.",
-				"error",
-			);
-			return;
-		}
-
-		await chunking.cache.deleteChunkFromCache(
-			window.location.href,
+		if (!chunkEventsModule?.deleteChunkEnhancementRuntime) return;
+		await chunkEventsModule.deleteChunkEnhancementRuntime({
 			chunkIndex,
-		);
-
-		if (originalHtml) {
-			chunkContent.innerHTML = originalHtml;
-		} else {
-			chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent)}</div>`;
-		}
-		chunkContent.removeAttribute("data-chunk-enhanced");
-		chunkContent.removeAttribute("data-enhanced-chunk-content");
-
-		const banner = chunkWrapper.querySelector(".gemini-chunk-banner");
-		if (banner) {
-			const totalChunks = document.querySelectorAll(
-				".gemini-chunk-banner",
-			).length;
-			const newBanner = buildChunkBanner(
-				chunking,
-				chunkIndex,
-				totalChunks,
-				"pending",
-				null,
-				null,
-				null,
-				chunkBehaviorConfig.wordCountThreshold,
-				() => handleReenhanceChunk(chunkIndex),
-			);
-			banner.replaceWith(newBanner);
-		}
-
-		showStatusMessage(
-			`Chunk ${chunkIndex + 1} reverted to original.`,
-			"info",
-			2000,
-		);
+			windowRef: window,
+			documentRef: document,
+			loadChunkingSystem,
+			showStatusMessage,
+			escapeHtml,
+			buildChunkBanner,
+			chunkBehaviorConfig,
+			onEnhance: () => handleReenhanceChunk(chunkIndex),
+		});
 	}
 
 	// ΓöÇΓöÇ Skip / Pause helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 	function handleSkipChunk(chunkIndex) {
-		chunkControlRuntime?.markSkip(chunkIndex);
-		debugLog(
-			`Chunk ${chunkIndex} marked for skip ΓÇö will discard result on arrival.`,
-		);
+		chunkEventsModule?.handleSkipChunkRuntime?.({
+			chunkIndex,
+			chunkControlRuntime,
+			debugLog,
+		});
 	}
 
 	function handlePauseChunk(chunkIndex) {
-		chunkControlRuntime?.markPause(chunkIndex);
-		debugLog(
-			`Chunk ${chunkIndex} marked for pause ΓÇö will store result without applying.`,
-		);
+		chunkEventsModule?.handlePauseChunkRuntime?.({
+			chunkIndex,
+			chunkControlRuntime,
+			debugLog,
+		});
 	}
 
 	async function handleShowEnhancedChunk(chunkIndex) {
-		const chunking = await loadChunkingSystem();
-		if (!chunking) return;
-
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content",
-		);
-		if (!chunkContent) return;
-
-		const enhancedContent = chunkContent.getAttribute(
-			"data-enhanced-chunk-content",
-		);
-		if (!enhancedContent) {
-			showStatusMessage(
-				`No pending enhanced content for chunk ${chunkIndex + 1}.`,
-				"error",
-			);
-			return;
-		}
-
-		// Apply the held-back enhanced content
-		chunkContent.innerHTML = enhancedContent;
-		applyCollapsibleSections(chunkContent);
-		chunkContent.setAttribute("data-chunk-enhanced", "true");
-		chunkControlRuntime?.clearPause(chunkIndex);
-
-		// Build a completed banner with word counts
-		const nTotalChunks = document.querySelectorAll(
-			".gemini-chunk-banner",
-		).length;
-		const settingsData = await browser.storage.local.get([
-			"wordCountThreshold",
-		]);
-		const wct =
-			settingsData.wordCountThreshold !== undefined
-				? settingsData.wordCountThreshold
-				: chunkBehaviorConfig.wordCountThreshold;
-		const originalText =
-			chunkContent.getAttribute("data-original-chunk-content") || "";
-		const origWords = chunking.core.countWords(originalText);
-		const enhWords = chunking.core.countWords(enhancedContent);
-		const completedBanner = buildChunkBanner(
-			chunking,
+		if (!chunkEventsModule?.handleShowEnhancedChunkRuntime) return;
+		await chunkEventsModule.handleShowEnhancedChunkRuntime({
 			chunkIndex,
-			nTotalChunks,
-			"completed",
-			null,
-			null,
-			{ original: origWords, enhanced: enhWords },
-			wct,
-		);
-		const freshBanner = document.querySelector(
-			`.chunk-banner-${chunkIndex}`,
-		);
-		if (freshBanner) freshBanner.replaceWith(completedBanner);
-
-		// Check if all chunks are now done
-		const allChunkEls = document.querySelectorAll(".gemini-chunk-content");
-		const doneEls = document.querySelectorAll(
-			'.gemini-chunk-content[data-chunk-enhanced="true"]',
-		);
-		const allDone =
-			doneEls.length === allChunkEls.length && allChunkEls.length > 0;
-
-		if (allDone) {
-			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-				btn.textContent = "≡ƒöä Re-enhance with Gemini";
-				btn.disabled = false;
-				btn.classList.remove("loading");
-			});
-			if (cancelEnhanceButton) cancelEnhanceButton.style.display = "none";
-		}
-
-		const contentAreaForCopy = findContentArea();
-		if (contentAreaForCopy) {
-			contentAreaForCopy.setAttribute("data-showing-enhanced", "true");
-			enableCopyOnContentArea(contentAreaForCopy);
-		}
-
-		showStatusMessage(
-			`Chunk ${chunkIndex + 1} enhancement applied! Γ£¿`,
-			"success",
-			2000,
-		);
+			loadChunkingSystem,
+			showStatusMessage,
+			applyCollapsibleSections,
+			chunkControlRuntime,
+			buildChunkBanner,
+			chunkBehaviorConfig,
+			findContentArea,
+			enableCopyOnContentArea,
+			cancelEnhanceButton,
+			documentRef: document,
+			browserRef: browser,
+		});
 	}
 
 	async function handleDiscardPausedChunk(chunkIndex) {
-		const chunking = await loadChunkingSystem();
-		if (!chunking) return;
-
-		const chunkWrapper = document.querySelector(
-			`.gemini-chunk-wrapper[data-chunk-index="${chunkIndex}"]`,
-		);
-		if (!chunkWrapper) return;
-
-		const chunkContent = chunkWrapper.querySelector(
-			".gemini-chunk-content",
-		);
-		if (!chunkContent) return;
-
-		// Clear the stored (but un-applied) enhanced content
-		chunkContent.removeAttribute("data-enhanced-chunk-content");
-		chunkControlRuntime?.clearPause(chunkIndex);
-
-		// Reset banner back to pending so the user can re-enhance later
-		const nTotalChunks = document.querySelectorAll(
-			".gemini-chunk-banner",
-		).length;
-		const pendingBanner = buildChunkBanner(
-			chunking,
+		if (!chunkEventsModule?.handleDiscardPausedChunkRuntime) return;
+		await chunkEventsModule.handleDiscardPausedChunkRuntime({
 			chunkIndex,
-			nTotalChunks,
-			"pending",
-			null,
-			null,
-			null,
-			chunkBehaviorConfig.wordCountThreshold,
-			() => handleReenhanceChunk(chunkIndex),
-		);
-		const freshBanner = document.querySelector(
-			`.chunk-banner-${chunkIndex}`,
-		);
-		if (freshBanner) freshBanner.replaceWith(pendingBanner);
-
-		showStatusMessage(
-			`Chunk ${chunkIndex + 1} enhancement discarded.`,
-			"info",
-			2000,
-		);
+			loadChunkingSystem,
+			buildChunkBanner,
+			chunkBehaviorConfig,
+			chunkControlRuntime,
+			showStatusMessage,
+			handleReenhanceChunk,
+			documentRef: document,
+		});
 	}
 
 	// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -3815,6 +3642,7 @@ if (window.__RGInitDone) {
 		finalizePrefixModule = await loadFinalizePrefixModule();
 		chunkErrorModule = await loadChunkErrorModule();
 		chunkProcessedModule = await loadChunkProcessedModule();
+		chunkEventsModule = await loadChunkEventsModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
