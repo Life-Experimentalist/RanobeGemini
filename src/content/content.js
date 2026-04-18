@@ -49,6 +49,7 @@ let enhancementCancelModule = null; // Enhancement cancel runtime
 let wipBannerModule = null; // Work-in-progress banner runtime
 let enhancementAttributionModule = null; // Model attribution helper runtime
 let mainSummaryBannerModule = null; // Main summary banner runtime
+let allChunksProcessedModule = null; // All-chunks processed runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -385,6 +386,24 @@ if (window.__RGInitDone) {
 			return mainSummaryBannerModule;
 		} catch (error) {
 			debugError("Error loading main summary banner module:", error);
+			return null;
+		}
+	}
+
+	async function loadAllChunksProcessedModule() {
+		if (allChunksProcessedModule) return allChunksProcessedModule;
+		try {
+			const moduleUrl = browser.runtime.getURL(
+				"content/modules/all-chunks-processed.js",
+			);
+			const moduleRef = await import(moduleUrl);
+			if (!moduleRef?.handleAllChunksProcessedRuntime) {
+				return null;
+			}
+			allChunksProcessedModule = moduleRef;
+			return allChunksProcessedModule;
+		} catch (error) {
+			debugError("Error loading all-chunks-processed module:", error);
 			return null;
 		}
 	}
@@ -2811,75 +2830,18 @@ if (window.__RGInitDone) {
 
 	// Handler for all chunks processed notification
 	function handleAllChunksProcessed(message) {
-		debugLog(
-			`All chunks processed: ${message.totalProcessed}/${message.totalChunks} successful`,
-		);
-
-		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "≡ƒöä Re-enhance with Gemini";
-			btn.disabled = false;
-			btn.classList.remove("loading");
-		});
-
-		if (message.failedChunks && message.failedChunks.length > 0) {
-			// Race-condition guard: a stale allChunksProcessed message can arrive
-			// after the user has already manually re-enhanced those chunks.
-			// Filter to only the chunks that are *actually* still unenhanced.
-			const actuallyStillFailed = message.failedChunks.filter((i) => {
-				const cc = document.querySelector(
-					`.gemini-chunk-content[data-chunk-index="${i}"]`,
-				);
-				return cc?.getAttribute("data-chunk-enhanced") !== "true";
-			});
-
-			if (actuallyStillFailed.length === 0) {
-				// Every "failed" chunk has since been re-enhanced ΓÇö check if
-				// the whole chapter is now complete and show that state instead.
-				const allChunkEls = document.querySelectorAll(
-					".gemini-chunk-content",
-				);
-				const doneEls = document.querySelectorAll(
-					'.gemini-chunk-content[data-chunk-enhanced="true"]',
-				);
-				if (
-					doneEls.length === allChunkEls.length &&
-					allChunkEls.length > 0
-				) {
-					showWorkInProgressBanner(
-						doneEls.length,
-						allChunkEls.length,
-						"complete",
-						null,
-					);
-					return;
-				}
-			}
-
-			// Update WIP banner to paused state so it no longer shows "Enhancing..."
-			const completedInDom = document.querySelectorAll(
-				'.gemini-chunk-content[data-chunk-enhanced="true"]',
-			).length;
-			showWorkInProgressBanner(
-				completedInDom,
-				message.totalChunks,
-				"paused",
-				null,
-			);
-			if (cancelEnhanceButton) cancelEnhanceButton.style.display = "none";
-			const successPercentage = Math.round(
-				(message.totalProcessed / message.totalChunks) * 100,
-			);
-			showStatusMessage(
-				`Partially enhanced ${message.totalProcessed} of ${message.totalChunks} chunks (${successPercentage}% complete). You can re-enhance failed chunks.`,
-				"warning",
-			);
+		if (!allChunksProcessedModule?.handleAllChunksProcessedRuntime) {
 			return;
 		}
 
-		showStatusMessage(
-			`Content successfully enhanced with Gemini! (${message.totalProcessed} chunks processed)`,
-			"success",
-		);
+		allChunksProcessedModule.handleAllChunksProcessedRuntime({
+			message,
+			debugLog,
+			showWorkInProgressBanner,
+			showStatusMessage,
+			cancelEnhanceButton,
+			documentRef: document,
+		});
 	}
 
 	// Helper function to finalize the progressive content display
@@ -4195,6 +4157,7 @@ if (window.__RGInitDone) {
 		wipBannerModule = await loadWipBannerModule();
 		enhancementAttributionModule = await loadEnhancementAttributionModule();
 		mainSummaryBannerModule = await loadMainSummaryBannerModule();
+		allChunksProcessedModule = await loadAllChunksProcessedModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
