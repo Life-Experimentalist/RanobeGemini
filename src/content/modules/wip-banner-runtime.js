@@ -11,8 +11,12 @@ export function createWorkInProgressBannerRuntime({
 	handleCancelEnhancement,
 	handleToggleAllChunks,
 }) {
-	const safeTotal = Number.isFinite(totalChunks) && totalChunks > 0 ? totalChunks : 1;
-	const clampedCompleted = Math.max(0, Math.min(completedChunks || 0, safeTotal));
+	const safeTotal =
+		Number.isFinite(totalChunks) && totalChunks > 0 ? totalChunks : 1;
+	const clampedCompleted = Math.max(
+		0,
+		Math.min(completedChunks || 0, safeTotal),
+	);
 	const progressPercent = Math.round((clampedCompleted / safeTotal) * 100);
 
 	const isComplete = state === "complete" || clampedCompleted >= safeTotal;
@@ -41,7 +45,8 @@ export function createWorkInProgressBannerRuntime({
 			wordCounts.original > 0
 				? Math.round((diff / wordCounts.original) * 100)
 				: 0;
-		const diffColor = diff > 0 ? "#4ade80" : diff < 0 ? "#f87171" : "#94a3b8";
+		const diffColor =
+			diff > 0 ? "#4ade80" : diff < 0 ? "#f87171" : "#94a3b8";
 		const diffSign = diff > 0 ? "+" : "";
 
 		wordCountHTML = `
@@ -133,7 +138,8 @@ export function createWorkInProgressBannerRuntime({
 			const masterToggle = documentRef.querySelector(
 				".gemini-master-toggle-all-btn",
 			);
-			const isNowOriginal = masterToggle?.getAttribute("data-showing") === "original";
+			const isNowOriginal =
+				masterToggle?.getAttribute("data-showing") === "original";
 			showOrigBtn.textContent = isNowOriginal
 				? "✨ Show Enhanced"
 				: "👁 Show Original";
@@ -179,7 +185,9 @@ export async function showWorkInProgressBannerRuntime({
 	const contentArea = findContentArea?.();
 	if (!contentArea) return;
 
-	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	const chunkedContainer = documentRef.getElementById(
+		"gemini-chunked-content",
+	);
 	if (chunkedContainer) {
 		contentArea.insertBefore(newBanner, chunkedContainer);
 		return;

@@ -39,7 +39,9 @@ export function handleCancelEnhancementRuntime({
 		btn.classList.remove("loading");
 	});
 
-	const chunkedContainer = documentRef.getElementById("gemini-chunked-content");
+	const chunkedContainer = documentRef.getElementById(
+		"gemini-chunked-content",
+	);
 	const totalChunks = chunkedContainer
 		? chunkedContainer.querySelectorAll(".gemini-chunk-content").length
 		: 1;

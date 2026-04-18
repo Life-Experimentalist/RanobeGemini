@@ -53,7 +53,10 @@ export function addWordCountDisplayRuntime({
 }) {
 	const existingWordCount = documentRef.querySelector(".gemini-word-count");
 	if (existingWordCount) {
-		const percentChange = (((newCount - originalCount) / originalCount) * 100).toFixed(1);
+		const percentChange = (
+			((newCount - originalCount) / originalCount) *
+			100
+		).toFixed(1);
 		const changeText =
 			percentChange >= 0
 				? `+${percentChange}% increase`
@@ -74,7 +77,10 @@ export function addWordCountDisplayRuntime({
 		text-align: left;
 	`;
 
-	const percentChange = (((newCount - originalCount) / originalCount) * 100).toFixed(1);
+	const percentChange = (
+		((newCount - originalCount) / originalCount) *
+		100
+	).toFixed(1);
 	const changeText =
 		percentChange >= 0
 			? `+${percentChange}% increase`

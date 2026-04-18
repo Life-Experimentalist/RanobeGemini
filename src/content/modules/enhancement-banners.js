@@ -6,7 +6,10 @@ function getBannerSelector() {
 	return ".gemini-chunk-banner, .gemini-master-banner, .gemini-wip-banner, .gemini-main-summary-group, .gemini-chunk-summary-group, .gemini-summary-text-container";
 }
 
-export function shouldBannersBeHiddenRuntime({ documentRef = document, currentHandler }) {
+export function shouldBannersBeHiddenRuntime({
+	documentRef = document,
+	currentHandler,
+}) {
 	const toggleBtn = documentRef.querySelector(".gemini-toggle-banners-btn");
 	if (!toggleBtn) {
 		return currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false;
@@ -34,7 +37,9 @@ function toggleBannerNodes(documentRef, isHidden) {
 }
 
 function syncToggleButtons(documentRef, isHidden, callerBtn = null) {
-	const nextChapterLabel = isHidden ? "⚡ Hide Gemini UI" : "⚡ Show Gemini UI";
+	const nextChapterLabel = isHidden
+		? "⚡ Hide Gemini UI"
+		: "⚡ Show Gemini UI";
 	const nextMainLabel = isHidden
 		? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
 		: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
@@ -63,7 +68,10 @@ export function toggleEnhancedBannersRuntime({
 		return false;
 	}
 
-	const isHidden = shouldBannersBeHiddenRuntime({ documentRef, currentHandler });
+	const isHidden = shouldBannersBeHiddenRuntime({
+		documentRef,
+		currentHandler,
+	});
 	toggleBannerNodes(documentRef, isHidden);
 
 	if (isHidden) {

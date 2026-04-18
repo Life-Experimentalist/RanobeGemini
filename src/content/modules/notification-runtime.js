@@ -102,7 +102,8 @@ export function createNotificationRuntime({
 				title: title || documentRef.title,
 				url: windowRef.location.href,
 				novelData:
-					novelData || (await resolveNovelDataForNotificationRuntime()),
+					novelData ||
+					(await resolveNovelDataForNotificationRuntime()),
 				metadata,
 				source: source || "content",
 			});

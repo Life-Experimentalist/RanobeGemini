@@ -4295,8 +4295,7 @@ if (window.__RGInitDone) {
 		enhancementDisplayModule = await loadEnhancementDisplayModule();
 		enhancementCancelModule = await loadEnhancementCancelModule();
 		wipBannerModule = await loadWipBannerModule();
-		enhancementAttributionModule =
-			await loadEnhancementAttributionModule();
+		enhancementAttributionModule = await loadEnhancementAttributionModule();
 
 		// Fetch font size setting from background script
 		// Using sendMessageWithRetry to handle service worker sleep issues
@@ -5374,7 +5373,10 @@ if (window.__RGInitDone) {
 					};
 
 					await novelLibrary.addOrUpdateNovel(novelData);
-					debugLog("≡ƒôÜ Auto-added novel to library:", metadata.title);
+					debugLog(
+						"≡ƒôÜ Auto-added novel to library:",
+						metadata.title,
+					);
 					showTimedBanner(
 						`Added to library: ${metadata.title}`,
 						"success",
@@ -6274,14 +6276,19 @@ if (window.__RGInitDone) {
 		}
 
 		// Open Library button ΓÇö pass novel ID so the library auto-opens the modal
-		const libraryBtn = createButton("Open Library", "≡ƒôÜ", "#7b1fa2", () => {
-			const base = browser.runtime.getURL("library/library.html");
-			const novelId = existingNovel?.id ?? null;
-			const libraryUrl = novelId
-				? `${base}?novel=${encodeURIComponent(novelId)}`
-				: base;
-			window.open(libraryUrl, "_blank");
-		});
+		const libraryBtn = createButton(
+			"Open Library",
+			"≡ƒôÜ",
+			"#7b1fa2",
+			() => {
+				const base = browser.runtime.getURL("library/library.html");
+				const novelId = existingNovel?.id ?? null;
+				const libraryUrl = novelId
+					? `${base}?novel=${encodeURIComponent(novelId)}`
+					: base;
+				window.open(libraryUrl, "_blank");
+			},
+		);
 		buttonRow.appendChild(libraryBtn);
 
 		// Handler-supplied extra buttons (after defaults)

@@ -47,9 +47,8 @@ export function refreshToggleBannerRuntime({
 	const refreshedBanner = createBanner();
 	if (!refreshedBanner) return null;
 
-	const refreshedToggleButton = refreshedBanner.querySelector(
-		".gemini-toggle-btn",
-	);
+	const refreshedToggleButton =
+		refreshedBanner.querySelector(".gemini-toggle-btn");
 	if (refreshedToggleButton) {
 		refreshedToggleButton.textContent = toggleLabel;
 		if (typeof onToggleClick === "function") {
