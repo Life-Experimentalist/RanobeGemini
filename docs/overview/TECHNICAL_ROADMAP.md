@@ -106,18 +106,18 @@ Track both planned and actual effort per unit.
 
 ### Phase Unit Budget Summary
 
-| Phase                                | Unit Count | Target Prompts | Hard Cap | Status      |
-| ------------------------------------ | ---------- | -------------- | -------- | ----------- |
-| 0: Baseline Alignment                | 2          | 2-4            | 5        | completed   |
-| 1: Content Runtime Modularization    | 5          | 10-16          | 20       | completed   |
-| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | completed   |
-| 3: AI Provider Modularization        | 4          | 8-12           | 14       | completed   |
-| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | completed   |
-| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | completed   |
-| 6: OAuth Reliability                 | 3          | 4-6            | 8        | completed   |
-| 7: Landing Awareness                 | 3          | 4-7            | 8        | completed   |
-| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | completed   |
-| 9: Deployment Automation             | 3          | 4-7            | 8        | completed   |
+| Phase                                | Unit Count | Target Prompts | Hard Cap | Status    |
+| ------------------------------------ | ---------- | -------------- | -------- | --------- |
+| 0: Baseline Alignment                | 2          | 2-4            | 5        | completed |
+| 1: Content Runtime Modularization    | 5          | 10-16          | 20       | completed |
+| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | completed |
+| 3: AI Provider Modularization        | 4          | 8-12           | 14       | completed |
+| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | completed |
+| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | completed |
+| 6: OAuth Reliability                 | 3          | 4-6            | 8        | completed |
+| 7: Landing Awareness                 | 3          | 4-7            | 8        | completed |
+| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | completed |
+| 9: Deployment Automation             | 3          | 4-7            | 8        | completed |
 
 ### Rolling Prompt Tracker
 
@@ -522,3 +522,41 @@ When an AI agent works on this roadmap:
   - `docs/release/RELEASE_NOTES_*.md`
   - `docs/release/commit-history.md`
 - Update file dates only for files actually modified in the release task.
+## Phase 10: Continued Content Orchestrator Thinning
+### Objective
+Reduce src/content/content.js from 7k lines down to a thin orchestrator by aggressively extracting UI logic, API payload building, and DOM event bindings into discrete modules.
+
+| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
+| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
+| 10-U1| Extract remaining summary text pipeline and novel context extraction| 2-3            | content.js size reduced reliably.         |
+| 10-U2| Extract UI DOM generation (banners, buttons, modals)               | 2-3            | All UI generation resides in UI modules.    |
+| 10-U3| Final parity test and orchestrator minimization                    | 1-2            | content.js is merely event binding & glue.|
+
+## Phase 11: Comprehensive UI & Filter System Refactor
+### Objective
+Ensure the Library page styling (.filters-section) is responsive and perfectly aligned on both mobile and desktop. Make AI and Storage provider settings completely granular and modular, so each provider has its own cohesive settings sub-page/tab.
+
+| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
+| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
+| 11-U1| Refactor .filters-section CSS & layout                           | 1-2            | Responsive, aligned filters for all sizes.  |
+| 11-U2| Implement Library UI Settings & Options                            | 1-2            | Settings panel controls filter visibility.  |
+| 11-U3| Abstract Settings UI for AI Providers & Storage Providers          | 2-3            | Nested, tabbed settings configuration UI.   |
+
+## Phase 12: Swipe & Gesture Navigation
+### Objective
+Implement swipe gestures (touch) and dragging (desktop) to seamlessly switch between novel modals within the Library.
+
+| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
+| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
+| 12-U1| Baseline Swipe/Drag event listeners                               | 2-3            | Pointer/touch events detect direction.      |
+| 12-U2| Modal transition animation and state syncing                      | 2-3            | Navigates adjacent novels seamlessly.       |
+
+## Phase 13: Storage Adapter Expansion & Multi-Sync
+### Objective
+Add OneDrive, Dropbox, and WebDAV (NAS) sync methods to the storage system. Enable multi-sync capability (backing up to multiple destinations simultaneously) and user-configurable custom save paths.
+
+| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
+| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
+| 13-U1| Update Storage registry to support multi-sync and custom paths     | 2-3            | Storage manager handles N destinations.     |
+| 13-U2| Implement WebDAV (NAS) Storage Adapter                             | 2-3            | WebDAV adapter works and validates.         |
+| 13-U3| Implement OneDrive & Dropbox Storage Adapters                      | 3-4            | Full OAuth/upload flow for both providers.  |
