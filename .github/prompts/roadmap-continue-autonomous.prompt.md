@@ -1,84 +1,29 @@
 # Roadmap Continue Autonomous Prompt (Ranobe Gemini)
 
-Use this prompt when you want Copilot to continue implementation work in this repository without re-prompting after every subtask.
+Use this prompt to resume autonomous roadmap execution. It enforces continuous, non-destructive progress that heavily optimizes for prompt and token conservation.
 
-## Purpose
+## Directives
 
-Continue roadmap-driven work until the current cycle is complete or a genuine blocker is reached.
+- **Target:** `docs/overview/TECHNICAL_ROADMAP.md`
+- **Active Batches:** Read the Rolling Prompt Tracker. Identify the current Phase-Unit that is in-progress. If not already on an isolated branch, create one (`git checkout -b feature/phase-unit`).
+- **Maximize Trajectory:** Group small, related tasks and complete solid functional blocks in a single pass to save tokens and avoid excessive back-and-forth. Balance velocity with stability.
+- **Commit Continually:** Run `git add` and `git commit` as sub-units stabilize.
+- **Validation-Driven:** Every code modification MUST be followed by `npm run lint` and `npm run build`. You must autonomously fix any linting or build errors you introduce before proceeding.
+- **Continuous Momentum:** Do not ask for permission to proceed. If the batched unit passes validation, immediately begin executing the next part of the roadmap.
+- **Journaling & Graphify Check:** When completing a unit, mark it as `Done` in `TECHNICAL_ROADMAP.md` along with a very brief sentence explaining what was done. Also refresh `graphify-out/GRAPH_REPORT.md` by directly executing `npm run docs:graphify` before closing the cycle to reflect real-world code architecture. Update any outdated lists like `TODO.md` accordingly.
 
-## Source of Truth
+## Strict Guidelines
 
-- Follow `docs/overview/TECHNICAL_ROADMAP.md` first.
-- Then follow repo instructions, especially:
-    - `.github/copilot-instructions.md`
-    - `docs/development/README.md`
-    - `docs/guides/PLUGIN_HANDLER_PUBLISHING.md`
-    - `docs/guides/ADDING_NEW_WEBSITES.md`
-- Treat `package.json` as the version source of truth.
-- Respect the current branch state and only merge when the cycle is actually complete.
+- **Backwards Compatibility:** Any new modularization (especially out of content.js) must preserve exact existing behavior and feature flags.
+- **Safe but Fast Iteration:** You are trusted to do comprehensive functional chunks. Aim for speed and accuracy without introducing breaking rewrites.
+- **Zero-Drift Documentation**: Update architecture and landing docs in the same cycle if a feature changes. **You MUST mark tasks in `docs/overview/TECHNICAL_ROADMAP.md` as Done immediately.** Never alter historical RELEASE_NOTES\*.md files.
+- **Graphify Reporting**: Whenever you add or change files/functions, you must run `npm run docs:graphify` to continuously sync `graphify-out/GRAPH_REPORT.md` so it accurately maps your changes.
+- **Tracker Hygiene:** Update docs/overview/TECHNICAL_ROADMAP.md after each validated prompt cycle so the rolling tracker stays current.
 
-## Autonomous Work Loop
+## Output Reporting
 
-1. Read the roadmap and identify the next concrete unit or subtask.
-2. Check what is already implemented before editing anything.
-3. Make the smallest useful change set for that unit.
-4. Validate the change with build/lint/tests as applicable.
-    - Mandatory per cycle: run `npm run lint` and fix all newly introduced lint errors before proceeding.
-5. Update docs only when the implementation changes user-visible behavior or the roadmap/docs are out of sync.
-6. If the unit is finished, immediately continue with the next roadmap unit or subtask.
-7. Repeat until:
-    - the requested branch of work is complete,
-    - the next step is blocked by a real dependency, or
-    - a user decision is genuinely required.
+When pausing is unavoidable or a cycle completes:
 
-## Question Policy
-
-- If questions are needed, ask them all at once.
-- Do not ask one question at a time unless the answer to the first question determines the rest.
-- If work can proceed safely with a reasonable assumption, proceed and note the assumption.
-
-## Merge and Continuation Rules
-
-- If the current branch is complete and clean, merge it back to `main` when appropriate.
-- After merging, start the next roadmap cycle without waiting for a new prompt if the roadmap already identifies the next unit.
-- Do not stop after a successful build if there is clear next work in the roadmap.
-- Do not rewrite unrelated completed work just to keep moving.
-
-## Implementation Rules
-
-- Prefer phase-scoped, incremental changes over broad rewrites.
-- Keep `src/content/content.js` modularization moving first when it is still a hotspot.
-- Keep extensions, handlers, providers, and storage adapters modular and plugin-friendly.
-- Keep local-first behavior intact.
-- Preserve existing user-facing behavior unless the roadmap explicitly requires a change.
-- Use feature flags, settings toggles, or adapter boundaries when adding experimental integrations.
-
-## Validation Rules
-
-- Run build/package/lint/tests that match the change.
-- In every implementation cycle, run `npm run lint` before considering the unit complete.
-- Resolve lint issues introduced by the current changes in the same cycle.
-- Fix newly introduced errors before moving on.
-- If a build fails because of an environment issue, record the blocker and continue with other safe roadmap work if possible.
-
-## Documentation Rules
-
-- Update all relevant docs in the same change when a user-visible feature changes.
-- Keep release notes historical files untouched unless explicitly requested.
-- Keep roadmap and TODO files synchronized with actual implementation status.
-
-## Output Expectations
-
-When responding, give:
-
-1. What was completed in this cycle
-2. What was validated
-3. What remains next in the roadmap
-4. Any blockers or assumptions
-
-## Operating Style
-
-- Continue proactively.
-- Prefer action over discussion.
-- Re-check the roadmap after each completed unit.
-- Keep going until the current cycle is genuinely done.
+1. **Units Cleared:** [List of batched roadmap units completed]
+2. **Validation State:** [Lint/Build status]
+3. **Active/Next Unit:** [What is currently being worked on]

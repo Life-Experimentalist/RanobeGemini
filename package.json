@@ -16,6 +16,7 @@
 		"watch": "npm run build && node dev/watch.js",
 		"validate:backup-contract": "node dev/validate-backup-compat.js",
 		"docs:visualize": "node dev/generate-doc-visualizers.js",
+		"docs:graphify": "python -m graphify update .",
 		"commits:all": "node dev/commit-history.js --all",
 		"commits:write": "node dev/commit-history.js --all --output docs/release/commit-history.md",
 		"commits:versions": "node dev/commit-history.js --versions",

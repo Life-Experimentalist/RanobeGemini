@@ -1,49 +1,29 @@
 # Roadmap Implementation Prompt (Ranobe Gemini)
 
-Use this prompt when implementing roadmap work in this repository.
+Use this prompt for laser-focused implementation of roadmap units, aggressively optimized for token efficiency, batching, and speed.
 
-## Source of Truth
+## Implementation Protocol
 
-- Follow `docs/overview/TECHNICAL_ROADMAP.md` as the authoritative technical roadmap.
-- Implement only the requested roadmap phase/sub-scope.
+1. **Scope Lock & Batching:** Read docs/overview/TECHNICAL_ROADMAP.md. Identify remaining gaps. Group logically related gaps and small fixes into a single comprehensive implementation step to save tokens.
+2. **Current State Assessment:** Audit the target files (e.g., src/content/content.js). Determine what is already done vs. what remains.
+3. **Optimized Refactor:** Write standard, backwards-compatible code in substantial logical groupings.
+    - Expose clear extension points (interfaces/adapters).
+    - Maintain default constants in src/utils/constants.js.
+4. **Autonomous Validation:** You must run
+   pm run lint. If errors arise, fix them immediately. Do not prompt the user to fix your lint errors.
+5. **Auto-Transition:** If the implementation is successful and validated, aggressively queue and start the next logical scope.
+6. **Graphify Review:** For topology-heavy refactors, use graphify-out/GRAPH_REPORT.md to confirm the new structure still matches the intended module boundaries.
 
-## Execution Rules
+## Golden Rules
 
-1. Confirm current phase and acceptance criteria from `docs/overview/TECHNICAL_ROADMAP.md`.
-2. Start with a current-state check: identify what is already done and what still remains.
-3. Propose a minimal change set only for remaining gaps in that phase.
-4. Implement code changes with no unrelated refactors.
-5. Prioritize modularization of active bottlenecks (especially `src/content/content.js`) over reworking already-completed migrations.
-6. Run validation steps (build/test/lint as applicable).
-7. Update docs touched by implementation.
-8. Report what was intentionally not changed.
+- **Conserve Tokens:** Do not make artificially tiny changes just to be safe. Get as much correct and stable work done in a single pass as possible.
+- **Non-Destructive:** Existing features MUST continue to work.
+- **Local-First:** Honor the core tenet: no backend services, rely on user-device execution and user APIs.
+- **No Omitted Lines:** Do not use // ...existing code... when writing files if it breaks the build. Ensure complete, functional file structures.
 
-## Documentation Rules
+## Final Report Structure
 
-- Do not use global replacement scripts for version updates.
-- Update version-sensitive docs only if mismatched to `package.json` version.
-- Keep contributor docs practical for handler/provider/plugin authoring and publishing.
-- Do not edit historical release files unless explicitly asked:
-    - `docs/release/RELEASE_NOTES_*.md`
-    - `docs/release/commit-history.md`
-
-## Architecture Rules
-
-- Preserve local-first design (no mandatory backend dependency).
-- Assume user-owned API keys/cloud credentials and optional anonymized telemetry with explicit consent on first library open.
-- Use `src/utils/constants.js` as global default configuration source of truth.
-- Keep AI integration provider-modular through adapters (do not hard-wire core flow to one provider).
-- Keep build-time secret injection via `.env`/build pipeline, never by hardcoding source secrets.
-
-## Required Output
-
-1. Scope completed (phase/sub-scope)
-2. Files changed and why
-3. Validation results
-4. Risks / follow-up tasks
-
-## Done Criteria
-
-- Acceptance criteria for the selected phase are met.
-- No unrelated files were modified.
-- Build and runtime behavior remain stable.
+- **Scope Satisfied:** [Phase/Sub-scope batched]
+- **Files Modified:** [List and brief why]
+- **Validation:** [Lint/Build success confirmation]
+- **Onward:** [Next target in the roadmap]

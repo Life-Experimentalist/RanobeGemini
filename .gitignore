@@ -25,3 +25,4 @@ dev/emoji-report.txt
 .venv/
 INSTRUCTIONS.md
 gcm-diagnose.log
+graphify-out/

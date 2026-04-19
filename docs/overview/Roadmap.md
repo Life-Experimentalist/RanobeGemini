@@ -1,107 +1,90 @@
 ## Roadmap
 
-> Last updated: 2025-07-01 — Current version: **4.4.0**
+> Last updated: 2026-04-19 — Current version: **4.7.0**
 
 ---
 
-### 🗺️ Version Timeline
+### Version Timeline
 
 ```mermaid
 graph TD
-    v1["v1.x — Foundation\nGemini API, basic translation"]
-    v2["v2.x — Content Extraction\nMulti-site handlers, chunking"]
-    v3["v3.x — Library & Backup\nEPUB export, Google Drive"]
-    v40["v4.0 — Cross-browser MV3\nFirefox + Chromium, PKCE"]
-    v41["v4.1 — Themes & Progress\n5 themes, reading progress bar"]
-    v42["v4.2 — Library UX\nCustom content boxes, status buttons"]
-    v43["✅ v4.3 — Privacy & Collapse\nIncognito Mode, collapsible sections"]
-    v44["🚀 v4.4 — UX Polish  ← CURRENT\nTypography, mobile nav, shortcuts"]
-    v45["🔮 v4.5 — Advanced AI Controls\nPrompt presets, enhancement styles"]
-    v50["🔮 v5.0 — Platform Expansion\nPlugin system, React migration"]
+    v1["v1.x Foundation\nGemini baseline + core enhancement"]
+    v2["v2.x Content Extraction\nMulti-site handlers + chunking"]
+    v3["v3.x Library and Backup\nEPUB + Drive backup"]
+    v40["v4.0 Cross-browser MV3\nFirefox + Chromium architecture"]
+    v43["v4.3 Privacy and Collapse\nIncognito + collapsible sections"]
+    v44["v4.4 UX polish\nReading-list model + mobile UX work"]
+    v46["v4.6 Modularity acceleration\nRuntime/module boundary expansion"]
+    v47["v4.7 Current\nProvider/storage adapters + reliability + deployment automation"]
+    v50["v5.0 Planned\nPlugin ecosystem + wider platform expansion"]
 
-    v1 --> v2 --> v3 --> v40 --> v41 --> v42 --> v43 --> v44 --> v45 --> v50
+    v1 --> v2 --> v3 --> v40 --> v43 --> v44 --> v46 --> v47 --> v50
 
-    style v43 fill:#152635,stroke:#4a6a9a,stroke-width:2px,color:#e8eef7
-    style v44 fill:#1a3a2a,stroke:#4caf50,stroke-width:3px,color:#e8eef7
-    style v45 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
+    style v47 fill:#1a3a2a,stroke:#4caf50,stroke-width:3px,color:#e8eef7
     style v50 fill:#151f2e,stroke:#4a6a9a,stroke-dasharray:6 4,color:#9fb3c8
 ```
 
-**Diagram elements:**
+Diagram elements:
 
-- `v1` Foundation baseline (Gemini + initial enhancement workflow)
-- `v2` Content extraction and chunking stabilization
-- `v3` Library/export/backup maturation
-- `v4.0` MV3 cross-browser architecture
-- `v4.1` Theme and reading-progress UX improvements
-- `v4.2` Library UX and metadata quality improvements
-- `v4.3` Privacy/collapsible milestone currently released
-- `v4.4` Active sprint for UX polish and reading-list model cleanup
-- `v4.5` Planned advanced AI controls
-- `v5.0` Planned platform expansion and plugin foundation
-
----
-
-### ✅ Completed
-
-1. **Chunking system** — chapters auto-split by configurable `Chunk_Size`; each chunk has its own regenerate, cache, show-original, and per-chunk enhance buttons. Summary buttons repeat every `Chunk_Summary_Count` chunks.
-
-2. **Modularity**
-   - Website handlers: `src/utils/website-handlers/`  (`*-handler.js`, auto-registered)
-   - Library website pages: `src/library/websites/`
-   - AI model adapters placeholder: `src/utils/model-handlers/` (future)
-   - Build pipeline auto-generates `handler-registry.js` and manifest domain lists
-
-3. **Library & export** — EPUB export with per-novel metadata; word-count column in export template; novel completion status; character / relationship section separation.
-
-4. **Backup system** — Google Drive OAuth PKCE; rolling 3-backup retention; backup model selector; continuous backup scheduling.
-
-5. **Cross-browser (MV3)** — Firefox + Chromium (Edge) via unified service-worker background. Dynamic build separates manifests.
-
-6. **Theme system** — 5 new themes (v4.1.0); auto schedule by time-of-day and sunrise / sunset.
-
-7. **Incognito Mode** (v4.3.0) — auto-expiry no-trace reading sessions.
-
-8. **Collapsible sections** (v4.3.0) — fight scenes, R18, author notes.
-
-9. **Canvas animations** — particle / ember system on popup load.
-
-10. **FicHub integration** — novel search and metadata import.
+- v1: Foundation baseline for Gemini enhancement.
+- v2: Content extraction/chunking maturation.
+- v3: Library/export/backup feature set.
+- v4.0: Cross-browser MV3 runtime baseline.
+- v4.3: Privacy/collapsible feature milestone.
+- v4.4: UX-focused release branch.
+- v4.6: Stronger runtime modularization phase.
+- v4.7: Current architecture and reliability baseline.
+- v5.0: Planned plugin/platform expansion.
 
 ---
 
-### 🚀 Active (v4.4.0)
+### Current Source of Truth
 
-- Fix summary typography parity (inherit page font across all sites)
-- Harden summary truncation flow (`isLowQualityLongSummary` + `getSummaryOutputBudget`)
-- Fix summarize keyboard shortcut wiring end-to-end
-- Redesign mobile nav UX (bottom bar, larger tap targets)
-- BetterFiction toggle bridge end-to-end verification
-- Reading-list model (`rereading` as list/state badge, not primary status)
+- Detailed execution plan and unit tracking: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md)
+- This file is a concise status view for contributors.
 
 ---
 
-### 🔮 Future
+### Completed Through v4.7.x
 
-1. **React migration** — Popup and library converted to React for better reuse.
-2. **v5.0.0 Plugin system** — Custom handler plugins; REST API for third-party integrations.
-3. **Cross-device sync** — Firefox Sync integration; conflict resolution.
-4. **More reading services** — FBReader sync, Dropbox / OneDrive backup adapters.
-5. **New handlers** — Wattpad, Royal Road.
-6. **Notification centre** — Grouped notifications page in library + popup.
-7. **AI preset library** — Genre-based enhancement style presets.
-8. **Accessibility pass** — Full keyboard navigation; ARIA labels; screen-reader support.
+1. Chunking runtime with per-chunk controls, cache, and summary groups.
+2. Handler ecosystem formalization and deterministic build-time registration validation.
+3. AI provider adapter pattern in place (Gemini + OpenAI-compatible + Ollama baseline adapters).
+4. Storage adapter boundary in place with active sync provider wiring.
+5. Build-time secret validation and documented env mapping.
+6. OAuth reliability hardening across desktop/mobile callback paths.
+7. Landing to extension awareness contract (`EXTERNAL_PING`) and compatibility integration.
+8. Cross-surface compatibility artifacts and parity check scaffolding.
+9. Deployment automation track marked completed (store workflow gating/reporting path).
 
 ---
 
-**Navigation:** [Main Docs](../README.md) | [TODO.md](../development/TODO.md) | [CHANGELOG](../release/CHANGELOG.md)
+### Active Now (High Priority)
 
-10. Improve the performance of the extension by optimizing the code and reducing the memory usage (ongoing)
+1. **Phase 8 completion follow-through**:
+- Manual restore-path parity execution/checklist completion in real browser runtimes.
 
-11. Add more websites to the supported list by creating new handlers (ongoing)
+2. **Runtime hotspot watch**:
+- `src/content/content.js` remains a watchlisted hotspot, but Phase 1 is closed and the remaining work is follow-on maintenance rather than the primary blocker.
 
-12. Improve the testing coverage of the extension by adding more unit and integration tests (ongoing)
+---
 
-13. Improve the documentation of the extension by adding more examples and tutorials (ongoing)
+### Planned Next
 
-14. Gather user feedback and suggestions to improve the extension (ongoing)
+1. Continue contributor-focused modular contracts and docs where implementation changes require updates.
+2. Prepare v5.0 plugin-friendly expansion path without regressing local-first behavior.
+3. Refresh graphify-out/GRAPH_REPORT.md when large structural refactors change module boundaries.
+
+---
+
+### Ongoing Themes
+
+1. Performance and memory optimizations in runtime hotspots.
+2. New supported websites via additional handlers.
+3. Improved testing coverage (unit and integration).
+4. Documentation quality and contributor onboarding clarity.
+5. User feedback collection and UX iteration.
+
+---
+
+Navigation: [Main Docs](../README.md) | [Technical Roadmap](./TECHNICAL_ROADMAP.md) | [Development TODO](../development/TODO.md)
