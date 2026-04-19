@@ -108,15 +108,15 @@ Track both planned and actual effort per unit.
 
 | Phase                                | Unit Count | Target Prompts | Hard Cap | Status      |
 | ------------------------------------ | ---------- | -------------- | -------- | ----------- |
-| 0: Baseline Alignment                | 2          | 2-4            | 5        | in-progress |
+| 0: Baseline Alignment                | 2          | 2-4            | 5        | completed   |
 | 1: Content Runtime Modularization    | 5          | 10-16          | 20       | completed   |
-| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | in-progress |
-| 3: AI Provider Modularization        | 4          | 8-12           | 14       | in-progress |
-| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | in-progress |
-| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | in-progress |
-| 6: OAuth Reliability                 | 3          | 4-6            | 8        | in-progress |
-| 7: Landing Awareness                 | 3          | 4-7            | 8        | in-progress |
-| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | in-progress |
+| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | completed   |
+| 3: AI Provider Modularization        | 4          | 8-12           | 14       | completed   |
+| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | completed   |
+| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | completed   |
+| 6: OAuth Reliability                 | 3          | 4-6            | 8        | completed   |
+| 7: Landing Awareness                 | 3          | 4-7            | 8        | completed   |
+| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | completed   |
 | 9: Deployment Automation             | 3          | 4-7            | 8        | completed   |
 
 ### Rolling Prompt Tracker
