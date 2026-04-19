@@ -26,3 +26,4 @@ dev/emoji-report.txt
 INSTRUCTIONS.md
 gcm-diagnose.log
 graphify-out/
+.tmp/
