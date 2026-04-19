@@ -1,5 +1,5 @@
 /**
- * Summary Service — Unified content-summary pipeline for Ranobe Gemini
+ * Summary Service \u{2014} Unified content-summary pipeline for Ranobe Gemini
  *
  * Single entry point for both pre-enhancement (raw page) and post-enhancement
  * (chunked) summaries.  Replaces the two divergent code paths that previously
@@ -33,9 +33,9 @@
  *   summaryService.summarize(chunkIndices, isShort);
  */
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Private state (set once via init)
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 let deps = null;
 const inFlightSummaryRequests = new Map();
@@ -126,9 +126,9 @@ function splitOversizedTextParts(parts, maxCharsPerPart) {
 	return normalizedParts.filter(Boolean);
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Init
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Inject all content-script-level dependencies.
@@ -140,9 +140,9 @@ function init(d) {
 	deps = d;
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Content Collection
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Collect text content for summarisation from the best available source.
@@ -202,9 +202,9 @@ function collectContent(chunkIndices) {
 	};
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Container lookup
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Find the `.gemini-summary-text-container` whose data-group-start/end
@@ -221,7 +221,7 @@ function findSummaryContainer(startIdx, endIdx) {
 		const ge = parseInt(el.getAttribute("data-group-end"), 10);
 		if (gs === startIdx && ge === endIdx) return el;
 	}
-	// Fallback — use the main summary container
+	// Fallback \u{2014} use the main summary container
 	return (
 		document.querySelector(".gemini-main-summary-text") ||
 		document.querySelector(
@@ -231,9 +231,9 @@ function findSummaryContainer(startIdx, endIdx) {
 	);
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Rendering
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Render a summary string (potentially containing HTML paragraphs) into a container.
@@ -307,9 +307,9 @@ function renderSummaryInContainer(container, summary, summaryType) {
 	container.appendChild(contentDiv);
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Large-content splitting
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * When content exceeds the model context window, split into parts, summarise
@@ -334,12 +334,12 @@ async function summariseLargeContent(
 
 	const summaryType = isShort ? "short" : "long";
 	debugLog(
-		`Content is large, creating ${summaryType} summary in multiple parts…`,
+		`Content is large, creating ${summaryType} summary in multiple parts\u{2026}`,
 	);
 
 	if (statusDiv) {
 		statusDiv.textContent =
-			"Content is large, summarising in multiple parts…";
+			"Content is large, summarising in multiple parts\u{2026}";
 	}
 
 	const charsPerPart = Math.floor(maxContextSize * 0.6 * 4);
@@ -363,7 +363,7 @@ async function summariseLargeContent(
 
 	for (const part of parts) {
 		if (statusDiv) {
-			statusDiv.textContent = `Summarising part ${idx} of ${parts.length}…`;
+			statusDiv.textContent = `Summarising part ${idx} of ${parts.length}\u{2026}`;
 		}
 
 		try {
@@ -391,7 +391,7 @@ async function summariseLargeContent(
 
 	// Combine multiple part summaries
 	try {
-		if (statusDiv) statusDiv.textContent = "Combining part summaries…";
+		if (statusDiv) statusDiv.textContent = "Combining part summaries\u{2026}";
 
 		const finalResp = await sendMessageWithRetry({
 			action: "combinePartialSummaries",
@@ -412,16 +412,16 @@ async function summariseLargeContent(
 	return `Complete summary of "${title}":\n\n` + partSummaries.join("\n\n");
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Main entry point
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
- * Unified summary function — works for both chunked and non-chunked pages,
+ * Unified summary function \u{2014} works for both chunked and non-chunked pages,
  * pre- and post-enhancement.
  *
  * @param {number[]} chunkIndices - chunk indices to summarise
- * @param {boolean}  isShort      - true → short summary, false → long summary
+ * @param {boolean}  isShort      - true \u{2192} short summary, false \u{2192} long summary
  */
 async function summarize(chunkIndices, isShort) {
 	const requestKey = buildSummaryRequestKey(chunkIndices, isShort);
@@ -470,9 +470,9 @@ async function summarize(chunkIndices, isShort) {
 			// Wake up background worker
 			if (btn) {
 				btn.disabled = true;
-				btn.textContent = "Waking up AI…";
+				btn.textContent = "Waking up AI\u{2026}";
 			}
-			if (statusDiv) statusDiv.textContent = "Waking up AI service…";
+			if (statusDiv) statusDiv.textContent = "Waking up AI service\u{2026}";
 
 			const isReady = await wakeUpBackgroundWorker();
 			if (!isReady) {
@@ -482,13 +482,13 @@ async function summarize(chunkIndices, isShort) {
 			}
 
 			// Collect content
-			if (btn) btn.textContent = "Extracting content…";
+			if (btn) btn.textContent = "Extracting content\u{2026}";
 			if (statusDiv) {
-				statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary…`;
+				statusDiv.textContent = `Extracting content for ${summaryType.toLowerCase()} summary\u{2026}`;
 			}
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary\u{2026}`;
 			}
 
 			const collected = collectContent(chunkIndices);
@@ -509,9 +509,9 @@ async function summarize(chunkIndices, isShort) {
 			);
 
 			// Get model info for context-window logic
-			if (btn) btn.textContent = "Summarising…";
+			if (btn) btn.textContent = "Summarising\u{2026}";
 			if (statusDiv) {
-				statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summary…`;
+				statusDiv.textContent = `Sending content to Gemini for ${summaryType.toLowerCase()} summary\u{2026}`;
 			}
 
 			const modelInfo = await sendMessageWithRetry({
@@ -550,7 +550,7 @@ async function summarize(chunkIndices, isShort) {
 						response?.error || "Failed to generate summary.";
 					if (errMsg.includes("API key is missing")) {
 						showStatusMessage(
-							"API key is missing. Opening settings page…",
+							"API key is missing. Opening settings page\u{2026}",
 							"error",
 						);
 						// eslint-disable-next-line no-undef
@@ -645,9 +645,9 @@ async function summarize(chunkIndices, isShort) {
 	}
 }
 
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 // Exports
-// ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export default {
 	init,

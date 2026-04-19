@@ -109,7 +109,7 @@ function buildModalHTML(novel, handlerFields) {
 			<div class="edit-modal-panel">
 				<div class="edit-modal-header">
 					<h2 class="edit-modal-title">Edit Novel</h2>
-					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">✕</button>
+					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">\u{2715}</button>
 				</div>
 				<div class="edit-modal-body">
 					${coverHtml}
@@ -311,7 +311,7 @@ function buildTagsSection(id, label, initialTags = [], placeholder = "") {
 			</div>
 			<div class="tags-input-row">
 				<input type="text" class="edit-input tags-input" id="tags-input-${id}"
-					placeholder="${escapeAttr(placeholder || "Add tag…")}" />
+					placeholder="${escapeAttr(placeholder || "Add tag\u{2026}")}" />
 				<button type="button" class="btn btn-secondary tags-add-btn" data-target="${id}">+</button>
 			</div>
 			<input type="hidden" id="${id}" name="${id}" value="${tagsJson}" />
@@ -382,7 +382,7 @@ function renderTagChips(fieldId, tags) {
 			(tag, i) =>
 				`<span class="tag-chip">
 					${escapeHtml(tag)}
-					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">×</button>
+					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">\u{D7}</button>
 				</span>`,
 		)
 		.join("");
@@ -454,7 +454,7 @@ async function handleSave(novel, handlerFields, form, container, opts) {
 	const saveBtn = form.querySelector("[type=submit]");
 	if (saveBtn) {
 		saveBtn.disabled = true;
-		saveBtn.textContent = "Saving…";
+		saveBtn.textContent = "Saving\u{2026}";
 	}
 
 	try {
@@ -519,7 +519,7 @@ function collectFormValues(novel, handlerFields, form) {
 		tags: getTags("tags") ?? novel.tags ?? [],
 	};
 
-	// Handler-specific fields → merged into updates.metadata
+	// Handler-specific fields \u{2192} merged into updates.metadata
 	const metadataUpdates = { ...(novel.metadata || {}) };
 	for (const field of handlerFields) {
 		const domId = `hf_${field.key}`;

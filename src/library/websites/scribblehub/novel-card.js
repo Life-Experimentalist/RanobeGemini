@@ -35,7 +35,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			id: "scribblehub",
 			name: "ScribbleHub",
 			icon: "https://www.scribblehub.com/favicon.ico",
-			emoji: "✨",
+			emoji: "\u{2728}",
 			color: "#6c5ce7",
 		};
 	}
@@ -344,7 +344,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const fallbackCover = this.getFallbackCover(config);
 		const coverMarkup = coverUrl
 			? `<img class="novel-cover-img" src="${this.escapeHtml(coverUrl)}" alt="${this.escapeHtml(novel.title)}" data-fallback="${this.escapeHtml(fallbackCover)}" loading="lazy">`
-			: `<div class="novel-cover-placeholder">${config.emoji || "✨"}</div>`;
+			: `<div class="novel-cover-placeholder">${config.emoji || "\u{2728}"}</div>`;
 
 		// Essential metadata
 		const rating = getVal("rating");
@@ -383,23 +383,23 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		// Build stats
 		const stats = [];
 		if (chapters)
-			stats.push({ icon: "📖", label: "Chapters", value: chapters });
-		if (words) stats.push({ icon: "📝", label: "Words", value: words });
+			stats.push({ icon: "\u{1F4D6}", label: "Chapters", value: chapters });
+		if (words) stats.push({ icon: "\u{1F4DD}", label: "Words", value: words });
 		if (favorites)
-			stats.push({ icon: "⭐", label: "Favs", value: favorites });
+			stats.push({ icon: "\u{2B50}", label: "Favs", value: favorites });
 		if (follows)
-			stats.push({ icon: "👥", label: "Follows", value: follows });
-		if (views) stats.push({ icon: "👁️", label: "Views", value: views });
+			stats.push({ icon: "\u{1F465}", label: "Follows", value: follows });
+		if (views) stats.push({ icon: "\u{1F441}\u{FE0F}", label: "Views", value: views });
 		if (publishedDate)
 			stats.push({
-				icon: "📅",
+				icon: "\u{1F4C5}",
 				label: "Published",
 				value: this.formatDateShort(publishedDate),
 				raw: true,
 			});
 		if (updatedDate)
 			stats.push({
-				icon: "🔄",
+				icon: "\u{1F504}",
 				label: "Updated",
 				value: this.formatDateShort(updatedDate),
 				raw: true,
@@ -475,7 +475,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 						<div class="progress-bar-slim">
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
-						<span class="enhancement-text">📖 <strong>${this.formatNumber(safeCurrent)}${chapters ? ` / ${this.formatNumber(chapters)}` : ""}</strong> • ✨ ${this.formatNumber(enhanced)} enhanced</span>
+						<span class="enhancement-text">\u{1F4D6} <strong>${this.formatNumber(safeCurrent)}${chapters ? ` / ${this.formatNumber(chapters)}` : ""}</strong> \u{2022} \u{2728} ${this.formatNumber(enhanced)} enhanced</span>
 					</div>
 
 					${statMarkup ? `<div class="card-stats-bar">${statMarkup}</div>` : ""}
@@ -489,7 +489,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 							<span class="status-pill-small" style="background: ${statusInfo.color};">${statusInfo.label}</span>
 							${
 								novel.sourceUrl
-									? `<a class="action-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer">Open ↗</a>`
+									? `<a class="action-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer">Open \u{2197}</a>`
 									: ""
 							}
 						</div>
@@ -586,12 +586,12 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		};
 		const parts = [];
 		const enhanced = novel.enhancedChaptersCount ?? 0;
-		parts.push(`✨ ${this.formatNumber(enhanced)} enhanced`);
+		parts.push(`\u{2728} ${this.formatNumber(enhanced)} enhanced`);
 
 		const chapters =
 			getVal("totalChapters") || getVal("chapterCount") || null;
 		if (chapters) {
-			parts.push(`📖 ${this.formatNumber(chapters)} ch`);
+			parts.push(`\u{1F4D6} ${this.formatNumber(chapters)} ch`);
 		}
 
 		const words = getVal("words", 0);
@@ -599,12 +599,12 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const follows = getVal("follows", 0);
 		const reviews = getVal("reviews", 0);
 
-		if (words) parts.push(`📝 ${this.formatNumber(words)} words`);
-		if (favorites) parts.push(`⭐ ${this.formatNumber(favorites)} favs`);
-		if (follows) parts.push(`👥 ${this.formatNumber(follows)} follows`);
-		if (reviews) parts.push(`💬 ${this.formatNumber(reviews)} reviews`);
+		if (words) parts.push(`\u{1F4DD} ${this.formatNumber(words)} words`);
+		if (favorites) parts.push(`\u{2B50} ${this.formatNumber(favorites)} favs`);
+		if (follows) parts.push(`\u{1F465} ${this.formatNumber(follows)} follows`);
+		if (reviews) parts.push(`\u{1F4AC} ${this.formatNumber(reviews)} reviews`);
 
-		return parts.slice(0, 4).join(" • ");
+		return parts.slice(0, 4).join(" \u{2022} ");
 	}
 
 	static renderCardTags(novel) {
@@ -730,13 +730,13 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 				<div class="site-modal-section scribblehub-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
 					<div class="site-stats-grid scribblehub-stats-grid">
-						${renderStat("Chapters", this.formatNumber(chapters), "📖")}
-						${renderStat("Readers", this.formatNumber(readers), "👥")}
-						${renderStat("Views", this.formatNumber(views), "👁️")}
-						${renderStat("Favorites", this.formatNumber(favorites), "⭐")}
-						${renderStat("Reviews", this.formatNumber(reviews), "💬")}
-						${publishedDate ? renderStat("Published", new Date(publishedDate).toLocaleDateString(), "📅") : ""}
-						${updatedDate ? renderStat("Updated", new Date(updatedDate).toLocaleDateString(), "🔄") : ""}
+						${renderStat("Chapters", this.formatNumber(chapters), "\u{1F4D6}")}
+						${renderStat("Readers", this.formatNumber(readers), "\u{1F465}")}
+						${renderStat("Views", this.formatNumber(views), "\u{1F441}\u{FE0F}")}
+						${renderStat("Favorites", this.formatNumber(favorites), "\u{2B50}")}
+						${renderStat("Reviews", this.formatNumber(reviews), "\u{1F4AC}")}
+						${publishedDate ? renderStat("Published", new Date(publishedDate).toLocaleDateString(), "\u{1F4C5}") : ""}
+						${updatedDate ? renderStat("Updated", new Date(updatedDate).toLocaleDateString(), "\u{1F504}") : ""}
 					</div>
 				</div>
 
@@ -986,7 +986,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 	 */
 	static truncateText(text, maxLength) {
 		if (!text || text.length <= maxLength) return text;
-		return text.substring(0, maxLength - 1) + "…";
+		return text.substring(0, maxLength - 1) + "\u{2026}";
 	}
 }
 

@@ -25,7 +25,7 @@ import { NovelLibrary, READING_STATUS } from "../utils/novel-library.js";
 const novelLibrary = new NovelLibrary();
 
 // ---------------------------------------------------------------------------
-// Storage helpers — read user-configurable settings
+// Storage helpers \u{2014} read user-configurable settings
 // ---------------------------------------------------------------------------
 
 const browserAPI =
@@ -87,7 +87,7 @@ export async function setupNovelUpdateAlarm(alarmApi) {
 		try {
 			await alarmApi?.clear?.(NOVEL_CHAPTER_CHECK_ALARM_NAME);
 		} catch (clearErr) {
-			// Ignore – alarm may not exist yet
+			// Ignore \u{2013} alarm may not exist yet
 			debugLog(`[NovelUpdater] Alarm clear skipped: ${clearErr.message}`);
 		}
 		return;
@@ -134,7 +134,7 @@ export async function handleNovelUpdateAlarm() {
 	const { enabled } = await getUserUpdateSettings();
 	if (!enabled) return;
 
-	debugLog("[NovelUpdater] Running periodic chapter-count check…");
+	debugLog("[NovelUpdater] Running periodic chapter-count check\u{2026}");
 
 	try {
 		await checkUpToDateNovels();
@@ -167,14 +167,14 @@ async function checkUpToDateNovels() {
 		return;
 	}
 
-	debugLog(`[NovelUpdater] Checking ${upToDate.length} UP_TO_DATE novel(s)…`);
+	debugLog(`[NovelUpdater] Checking ${upToDate.length} UP_TO_DATE novel(s)\u{2026}`);
 
 	const stalenessMs = intervalDays * 24 * 60 * 60 * 1000; // user-configured interval in days
 	const now = Date.now();
 	let updatedCount = 0;
 
 	for (const novel of upToDate) {
-		// Respect staleness window – skip if checked recently
+		// Respect staleness window \u{2013} skip if checked recently
 		const lastChecked = novel.metadata?.lastChapterCheckAt || 0;
 		if (now - lastChecked < stalenessMs) {
 			debugLog(
@@ -234,7 +234,7 @@ async function fetchFreshChapterCount(novel) {
 			"dedicated_page";
 
 		debugLog(
-			`[NovelUpdater] Fetching metadata for "${novel.title}" via ${handlerType}…`,
+			`[NovelUpdater] Fetching metadata for "${novel.title}" via ${handlerType}\u{2026}`,
 		);
 
 		const metadata = await MetadataFetcher.fetchMetadata(
@@ -284,7 +284,7 @@ async function processChapterCountResult(novel, result) {
 
 	if (freshChapters > storedChapters) {
 		debugLog(
-			`[NovelUpdater] New chapters for "${novel.title}": ${storedChapters} → ${freshChapters}`,
+			`[NovelUpdater] New chapters for "${novel.title}": ${storedChapters} \u{2192} ${freshChapters}`,
 		);
 
 		await novelLibrary.addOrUpdateNovel(
@@ -301,7 +301,7 @@ async function processChapterCountResult(novel, result) {
 		return true;
 	}
 
-	// No new chapters – just update the check timestamp
+	// No new chapters \u{2013} just update the check timestamp
 	await novelLibrary.addOrUpdateNovel(
 		{
 			...novel,

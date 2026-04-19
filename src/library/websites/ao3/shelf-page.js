@@ -222,12 +222,12 @@ function renderActiveFilters() {
 
 	const minWords = parseInt(filterState.wordCountMin, 10);
 	if (!Number.isNaN(minWords) && minWords > 0) {
-		addChip("wordCountMin", `Words ≥ ${minWords.toLocaleString()}`);
+		addChip("wordCountMin", `Words \u{2265} ${minWords.toLocaleString()}`);
 	}
 
 	const maxWords = parseInt(filterState.wordCountMax, 10);
 	if (!Number.isNaN(maxWords) && maxWords > 0) {
-		addChip("wordCountMax", `Words ≤ ${maxWords.toLocaleString()}`);
+		addChip("wordCountMax", `Words \u{2264} ${maxWords.toLocaleString()}`);
 	}
 
 	(filterState.tags || []).forEach((tag) => {
@@ -246,7 +246,7 @@ function renderActiveFilters() {
 			chip.label,
 		)}</strong> <button aria-label="Clear filter" data-key="${
 			chip.key
-		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
+		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">\u{D7}</button>`;
 		container.appendChild(el);
 	});
 
@@ -735,7 +735,7 @@ function showNovelModal(novel, options = {}) {
 		};
 	}
 
-	// "All Libraries" button — opens main library.html with this novel's detail panel
+	// "All Libraries" button \u{2014} opens main library.html with this novel's detail panel
 	const openLibraryBtn = document.getElementById("modal-open-library-btn");
 	if (openLibraryBtn) {
 		openLibraryBtn.onclick = () => {
@@ -746,7 +746,7 @@ function showNovelModal(novel, options = {}) {
 		};
 	}
 
-	// Header library button (top-right of modal) — same as "All Libraries"
+	// Header library button (top-right of modal) \u{2014} same as "All Libraries"
 	const openLibraryHeaderBtn = document.getElementById(
 		"modal-open-library-header-btn",
 	);
@@ -812,14 +812,14 @@ function showNovelModal(novel, options = {}) {
 				);
 				const text = formatExportFilename(novel, template);
 				await navigator.clipboard.writeText(text);
-				copyInfoBtn.textContent = "✅ Copied!";
+				copyInfoBtn.textContent = "\u{2705} Copied!";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy";
+					copyInfoBtn.textContent = "\u{1F4CB} Copy";
 				}, 2000);
 			} catch (err) {
-				copyInfoBtn.textContent = "❌ Failed";
+				copyInfoBtn.textContent = "\u{274C} Failed";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy";
+					copyInfoBtn.textContent = "\u{1F4CB} Copy";
 				}, 2000);
 			}
 		};
@@ -837,7 +837,7 @@ function showNovelModal(novel, options = {}) {
 			novel.metadata?.words ??
 			0;
 		const wordStr =
-			wordCount > 0 ? ` · ~${wordCount.toLocaleString()} words` : "";
+			wordCount > 0 ? ` \u{B7} ~${wordCount.toLocaleString()} words` : "";
 		const fill = document.getElementById("modal-progress-fill");
 		const text = document.getElementById("modal-progress-text");
 		if (fill) fill.style.width = pct + "%";
@@ -1306,10 +1306,10 @@ function setupFandomNav(novels) {
 				<div class="fandom-view-toggle" role="group" aria-label="Fandom view">
 					<button type="button" class="view-toggle-btn ${
 						viewMode === "dropdown" ? "active" : ""
-					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">☰</button>
+					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">\u{2630}</button>
 					<button type="button" class="view-toggle-btn ${
 						viewMode === "grid" ? "active" : ""
-					}" data-view="grid" aria-label="Grid view" title="Grid view">▦</button>
+					}" data-view="grid" aria-label="Grid view" title="Grid view">\u{25A6}</button>
 				</div>
 				<button id="clear-fandoms" class="clear-fandoms-btn" style="display: none;">Clear Selection</button>
 			</div>
@@ -1773,7 +1773,7 @@ function renderReadingStatusChart(buckets = {}, total = 0) {
 	const plantoreadCount =
 		buckets[READING_STATUS.PLAN_TO_READ] || buckets["plan-to-read"] || 0;
 
-	summary.textContent = `${plantoreadCount} Plan to Read • ${readingCount} Reading • ${completedCount} Completed`;
+	summary.textContent = `${plantoreadCount} Plan to Read \u{2022} ${readingCount} Reading \u{2022} ${completedCount} Completed`;
 }
 
 function formatNumber(num) {
@@ -1976,7 +1976,7 @@ function ensureRandomSelectButton() {
 	button.type = "button";
 	button.id = "random-select-btn";
 	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "🎲 Random";
+	button.textContent = "\u{1F3B2} Random";
 	button.title = "Pick a random novel from current filters";
 
 	button.addEventListener("click", () => {

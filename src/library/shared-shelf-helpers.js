@@ -304,7 +304,7 @@ export function ensureRandomSelectButton(
 	button.type = "button";
 	button.id = "random-select-btn";
 	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "🎲 Random";
+	button.textContent = "\u{1F3B2} Random";
 	button.title = "Pick a random novel from current filters";
 
 	button.addEventListener("click", () => {

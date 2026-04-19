@@ -88,7 +88,7 @@ export function createWorkInProgressBannerRuntime({
 
 	banner.innerHTML = `
 			<div style="display: flex; align-items: center; margin-bottom: 8px;">
-				<span style="font-size: 18px; margin-right: 10px;">${isComplete ? "✅" : isPaused ? "⏸️" : "⏳"}</span>
+				<span style="font-size: 18px; margin-right: 10px;">${isComplete ? "\u{2705}" : isPaused ? "\u{23F8}\u{FE0F}" : "\u{23F3}"}</span>
 				<span style="font-weight: bold; font-size: 16px;">${titleText}</span>
 			</div>
 			<div style="width: 100%; margin: 10px 0; background: #475569; height: 10px; border-radius: 5px; overflow: hidden;">
@@ -111,7 +111,7 @@ export function createWorkInProgressBannerRuntime({
 				isComplete || isPaused
 					? `
 				<button class="gemini-wip-show-original-btn" style="margin-top: 10px; padding: 8px 14px; background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; min-height: 40px; max-width: 100%;">
-					👁 Show Original
+					\u{1F441} Show Original
 				</button>
 			`
 					: ""
@@ -141,8 +141,8 @@ export function createWorkInProgressBannerRuntime({
 			const isNowOriginal =
 				masterToggle?.getAttribute("data-showing") === "original";
 			showOrigBtn.textContent = isNowOriginal
-				? "✨ Show Enhanced"
-				: "👁 Show Original";
+				? "\u{2728} Show Enhanced"
+				: "\u{1F441} Show Original";
 		});
 	}
 

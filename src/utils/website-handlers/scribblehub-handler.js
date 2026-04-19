@@ -31,7 +31,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		name: "ScribbleHub",
 		icon: "https://www.scribblehub.com/favicon.ico",
 		invertIconInDarkMode: true,
-		emoji: "✨",
+		emoji: "\u{2728}",
 		color: "#6c5ce7",
 		novelIdPattern: /\/series\/(\d+)\/|\/read\/(\d+)-/,
 		primaryDomain: "www.scribblehub.com",

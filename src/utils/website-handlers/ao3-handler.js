@@ -39,7 +39,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "Archive of Our Own",
 		icon: "https://archiveofourown.org/images/ao3_logos/logo_42.png",
-		emoji: "📚",
+		emoji: "\u{1F4DA}",
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
@@ -65,8 +65,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			// ── Enhancement ────────────────────────────────────────────────
-			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
+			// \u{2500}\u{2500} Enhancement \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -75,7 +75,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 				description:
 					"Automatically run Enhance when an AO3 chapter loads.",
 			},
-			{ key: "_bridges", type: "section", label: "🔌 Extension Bridges" },
+			{ key: "_bridges", type: "section", label: "\u{1F50C} Extension Bridges" },
 			{
 				key: "experimentalAo3BridgeEnabled",
 				label: "Enable experimental AO3 bridge adapter",
@@ -100,8 +100,8 @@ Please maintain:
 **AO3-Specific Formatting Rules:**
 - **Author Notes / End Notes** ("Author's Note", "A/N:", AO3 sub-headings labelled "Notes" or "End Notes"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Summarise if lengthy; keep only plot-relevant context.
 - **Epigraphs, Poems & Song Lyrics**: Wrap any chapter-opening or closing verse, poem, or quoted lyric in \`<div class="rg-quote-box">\`, preserving line breaks exactly.
-- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "— x years earlier —", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
-- **Game / System Content** (crossover fics with game mechanics): Full stat windows → \`<div class="game-stats-box">\`; short system messages → \`<div class="rg-system-msg">\`; individual skill cards → \`<div class="rg-skill-box">\`.
+- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "\u{2014} x years earlier \u{2014}", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
+- **Game / System Content** (crossover fics with game mechanics): Full stat windows \u{2192} \`<div class="game-stats-box">\`; short system messages \u{2192} \`<div class="rg-system-msg">\`; individual skill cards \u{2192} \`<div class="rg-skill-box">\`.
 
 When enhancing, improve readability while fully respecting the author's original style and the work's creative intent.`;
 
@@ -314,7 +314,7 @@ When enhancing, improve readability while fully respecting the author's original
 		return [
 			{
 				text: "Copy",
-				emoji: "📋",
+				emoji: "\u{1F4CB}",
 				color: "#10b981",
 				onClick: async () => {
 					try {
@@ -455,7 +455,7 @@ When enhancing, improve readability while fully respecting the author's original
 				metadata.tags.push(`Category: ${category}`);
 			});
 
-			// Fandoms — stored in metadata.fandoms and tags but NOT merged into genres
+			// Fandoms \u{2014} stored in metadata.fandoms and tags but NOT merged into genres
 			const fandomEls = workMeta.querySelectorAll("dd.fandom a.tag");
 			fandomEls.forEach((el) => {
 				const fandom = el.textContent.trim();

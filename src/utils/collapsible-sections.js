@@ -4,8 +4,8 @@
  * that can be collapsed/expanded in the enhanced chapter view.
  *
  * TTS / Read-Aloud integration:
- *   - Collapsed section  → reads the summary text only
- *   - Expanded section   → reads full content text (skips summary block)
+ *   - Collapsed section  \u{2192} reads the summary text only
+ *   - Expanded section   \u{2192} reads full content text (skips summary block)
  *
  * Gemini produces sections using:
  *   <div class="rg-collapsible-section" data-type="fight|r18|author-note|custom"
@@ -19,12 +19,12 @@
  *   </div>
  */
 
-// ─── Built-in type definitions ─────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Built-in type definitions \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export const BUILT_IN_SECTION_TYPES = {
 	fight: {
 		label: "Fight Scene",
-		icon: "⚔️",
+		icon: "\u{2694}\u{FE0F}",
 		description: "Combat / action sequence",
 		color: "rgba(200,60,60,0.7)",
 		bgColor: "rgba(60,15,15,0.85)",
@@ -32,7 +32,7 @@ export const BUILT_IN_SECTION_TYPES = {
 	},
 	r18: {
 		label: "Mature Content",
-		icon: "🔞",
+		icon: "\u{1F51E}",
 		description: "Adult / explicit content",
 		color: "rgba(180,100,200,0.8)",
 		bgColor: "rgba(40,15,55,0.9)",
@@ -40,7 +40,7 @@ export const BUILT_IN_SECTION_TYPES = {
 	},
 	"author-note": {
 		label: "Author's Note",
-		icon: "📝",
+		icon: "\u{1F4DD}",
 		description: "Author / translator / editor note",
 		color: "rgba(220,175,70,0.85)",
 		bgColor: "rgba(45,35,10,0.92)",
@@ -48,7 +48,7 @@ export const BUILT_IN_SECTION_TYPES = {
 	},
 };
 
-// ─── Default settings ───────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Default settings \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export const DEFAULT_CONTENT_FILTER_SETTINGS = {
 	fight: { enabled: true, defaultCollapsed: true },
@@ -58,10 +58,10 @@ export const DEFAULT_CONTENT_FILTER_SETTINGS = {
 	custom: [],
 };
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
- * Resolve section type settings, mapping "author-note" → settings.authorNote.
+ * Resolve section type settings, mapping "author-note" \u{2192} settings.authorNote.
  * Falls back to DEFAULT_CONTENT_FILTER_SETTINGS for unknown types.
  * @param {Object} settings
  * @param {string} type
@@ -111,14 +111,14 @@ function resolveTypeMeta(type, section, settings) {
 	);
 	return {
 		label: customEntry?.name || dataName || type,
-		icon: customEntry?.icon || "📄",
+		icon: customEntry?.icon || "\u{1F4C4}",
 		color: "rgba(120,180,255,0.8)",
 		bgColor: "rgba(10,20,40,0.88)",
 		borderColor: "rgba(80,130,220,0.45)",
 	};
 }
 
-// ─── DOM builder ────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} DOM builder \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Build a fully-wired collapsible wrapper element.
@@ -140,7 +140,7 @@ function buildCollapsibleWrapper(
 	wrapper.className = `rg-collapsible-wrapper rg-collapsible-${type} ${startCollapsed ? "rg-collapsed" : "rg-expanded"}`;
 	wrapper.setAttribute("data-rg-collapsible-type", type);
 
-	// Header — always visible, aria-hidden so screen readers / TTS skip it (we expose content directly)
+	// Header \u{2014} always visible, aria-hidden so screen readers / TTS skip it (we expose content directly)
 	const header = document.createElement("div");
 	header.className = "rg-collapsible-header";
 	header.setAttribute("aria-hidden", "true");
@@ -187,13 +187,13 @@ function buildCollapsibleWrapper(
 		"white-space:nowrap",
 		"flex-shrink:0",
 	].join(";");
-	toggleBtn.textContent = startCollapsed ? "▼ Read" : "▲ Collapse";
+	toggleBtn.textContent = startCollapsed ? "\u{25BC} Read" : "\u{25B2} Collapse";
 
 	header.appendChild(badge);
 	header.appendChild(inlineSummary);
 	header.appendChild(toggleBtn);
 
-	// Summary block — visible only when collapsed.
+	// Summary block \u{2014} visible only when collapsed.
 	// For TTS, content.js reads this when the section is collapsed.
 	const summaryBlock = document.createElement("div");
 	summaryBlock.className = "rg-collapsible-summary-block";
@@ -212,7 +212,7 @@ function buildCollapsibleWrapper(
 	].join(";");
 	summaryBlock.textContent = summary;
 
-	// Content block — visible only when expanded.
+	// Content block \u{2014} visible only when expanded.
 	const contentBlock = document.createElement("div");
 	contentBlock.className = "rg-collapsible-content";
 	contentBlock.style.cssText =
@@ -225,7 +225,7 @@ function buildCollapsibleWrapper(
 	wrapper.appendChild(summaryBlock);
 	wrapper.appendChild(contentBlock);
 
-	// ── Toggle logic ──────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Toggle logic \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 	function toggle() {
 		const isCollapsed = wrapper.classList.contains("rg-collapsed");
@@ -234,13 +234,13 @@ function buildCollapsibleWrapper(
 			wrapper.classList.add("rg-expanded");
 			contentBlock.style.display = "block";
 			summaryBlock.style.display = "none";
-			toggleBtn.textContent = "▲ Collapse";
+			toggleBtn.textContent = "\u{25B2} Collapse";
 		} else {
 			wrapper.classList.remove("rg-expanded");
 			wrapper.classList.add("rg-collapsed");
 			contentBlock.style.display = "none";
 			summaryBlock.style.display = "block";
-			toggleBtn.textContent = "▼ Read";
+			toggleBtn.textContent = "\u{25BC} Read";
 		}
 	}
 
@@ -249,15 +249,15 @@ function buildCollapsibleWrapper(
 	return wrapper;
 }
 
-// ─── Public API ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Public API \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Process all collapsible section elements in a container and render them as
  * interactive collapse/expand widgets.
  *
  * Handles two element types:
- *   1. `.rg-collapsible-section[data-type]` — produced by Gemini for fight/R18/author-note/custom
- *   2. `.rg-author-note[data-collapse="true"]` — long/off-topic author notes flagged by Gemini
+ *   1. `.rg-collapsible-section[data-type]` \u{2014} produced by Gemini for fight/R18/author-note/custom
+ *   2. `.rg-author-note[data-collapse="true"]` \u{2014} long/off-topic author notes flagged by Gemini
  *
  * @param {Element} container - DOM element containing rendered enhanced HTML
  * @param {Object} [settings={}] - contentFilterSettings from storage
@@ -282,7 +282,7 @@ export function renderCollapsibleSections(container, settings = {}) {
 		custom: settings.custom || DEFAULT_CONTENT_FILTER_SETTINGS.custom,
 	};
 
-	// ── 1. Process .rg-collapsible-section elements ──────────────────────
+	// \u{2500}\u{2500} 1. Process .rg-collapsible-section elements \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const sections = Array.from(
 		container.querySelectorAll(".rg-collapsible-section"),
 	);
@@ -321,7 +321,7 @@ export function renderCollapsibleSections(container, settings = {}) {
 		section.replaceWith(wrapper);
 	}
 
-	// ── 2. Process long/off-topic rg-author-note elements ────────────────
+	// \u{2500}\u{2500} 2. Process long/off-topic rg-author-note elements \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const authorNoteSettings = resolveTypeSettings(
 		mergedSettings,
 		"author-note",
@@ -353,10 +353,10 @@ export function renderCollapsibleSections(container, settings = {}) {
  * Extract plain text suitable for TTS / read-aloud, honoring collapsed/expanded state.
  *
  * Rules:
- *   - Collapsed `.rg-collapsible-wrapper` → reads the `.rg-collapsible-summary-block` text
- *   - Expanded  `.rg-collapsible-wrapper` → reads the `.rg-collapsible-content` text
- *   - `[aria-hidden="true"]` elements      → skipped entirely
- *   - Everything else                      → read normally
+ *   - Collapsed `.rg-collapsible-wrapper` \u{2192} reads the `.rg-collapsible-summary-block` text
+ *   - Expanded  `.rg-collapsible-wrapper` \u{2192} reads the `.rg-collapsible-content` text
+ *   - `[aria-hidden="true"]` elements      \u{2192} skipped entirely
+ *   - Everything else                      \u{2192} read normally
  *
  * @param {Element} container
  * @returns {string} Plain text for TTS

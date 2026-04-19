@@ -53,34 +53,34 @@ Please enhance this novel chapter translation with the following improvements:
 7. Streamline overly verbose sections while preserving important details
 8. Ensure proper transitioning between scenes and ideas
 9. Add bold section headings at scene changes, POV shifts, or topic transitions. If the original text already has section headings, incorporate them seamlessly and consistently. Make sure that the section headings are not too long, and do not use any special characters or symbols in the headings. Use only standard English letters and numbers.
-10. **IMPORTANT — Structured Content Boxes:** Use these specific HTML classes to mark different types of special content. Do NOT use markdown for any of these:
+10. **IMPORTANT \u{2014} Structured Content Boxes:** Use these specific HTML classes to mark different types of special content. Do NOT use markdown for any of these:
 
-    **a) Full Stat Sheets** → \`<div class="game-stats-box">\`: Multi-line character status windows, player sheets, inventory lists, attribute tables, or any block of tabular RPG data (≥3 lines, mostly name:value pairs). Preserve all line breaks exactly. Example:
+    **a) Full Stat Sheets** \u{2192} \`<div class="game-stats-box">\`: Multi-line character status windows, player sheets, inventory lists, attribute tables, or any block of tabular RPG data (\u{2265}3 lines, mostly name:value pairs). Preserve all line breaks exactly. Example:
     <div class="game-stats-box">
     Player: Mike
-    Level: 5 → Warrior
+    Level: 5 \u{2192} Warrior
     HP: 120/120  MP: 60/60
     Skills: [Iron Skin] [War Cry]
     </div>
 
-    **b) System Notifications** → \`<div class="rg-system-msg">\`: Short in-world pop-ups, level-up banners, quest notifications, achievement unlocks, skill acquisition announcements, and other brief "System:" or "[…]" style messages (typically 1–5 lines). These read like UI toasts, not full stat sheets. Example:
+    **b) System Notifications** \u{2192} \`<div class="rg-system-msg">\`: Short in-world pop-ups, level-up banners, quest notifications, achievement unlocks, skill acquisition announcements, and other brief "System:" or "[\u{2026}]" style messages (typically 1\u{2013}5 lines). These read like UI toasts, not full stat sheets. Example:
     <div class="rg-system-msg">[Achievement Unlocked: First Kill!]
-    +500 EXP · Title acquired: Rookie Hunter</div>
+    +500 EXP \u{B7} Title acquired: Rookie Hunter</div>
 
-    **c) Skill / Ability Cards** → \`<div class="rg-skill-box">\`: Individual skill, spell, technique, or ability descriptions that have a name and a block of descriptive text. Use when a single named ability is being described in detail rather than a full stat list. Example:
-    <div class="rg-skill-box">【Fireball — Rank C】
+    **c) Skill / Ability Cards** \u{2192} \`<div class="rg-skill-box">\`: Individual skill, spell, technique, or ability descriptions that have a name and a block of descriptive text. Use when a single named ability is being described in detail rather than a full stat list. Example:
+    <div class="rg-skill-box">\u{3010}Fireball \u{2014} Rank C\u{3011}
     Launches a compressed sphere of fire. Deals 80 fire damage on impact.
-    Cooldown: 8 s  ·  MP Cost: 30</div>
+    Cooldown: 8 s  \u{B7}  MP Cost: 30</div>
 
-    For \`[ square bracket ]\` system text: classify as stat-sheet (→ \`game-stats-box\`), short notification (→ \`rg-system-msg\`), or skill card (→ \`rg-skill-box\`) based on length and structure. Merge consecutive same-type blocks into one div.
+    For \`[ square bracket ]\` system text: classify as stat-sheet (\u{2192} \`game-stats-box\`), short notification (\u{2192} \`rg-system-msg\`), or skill card (\u{2192} \`rg-skill-box\`) based on length and structure. Merge consecutive same-type blocks into one div.
 11. Remove any advertising code snippets or irrelevant promotional content
 12. **Author Notes / Translator Notes / Editor Notes:** Identify A/N:, AN:, T/N:, TN:, E/N:, "Author's Note", "Translator's Note", or any meta-commentary not part of the story. Two cases:
-    - **Short notes (≤150 words) that contain plot-relevant info** (world-building clarifications, character name explanations, translation notes about the story) → Format as \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after.
-    - **Long notes (>150 words) OR notes primarily about release schedules, Patreon, social media, personal life, or other off-topic content** → Use \`<div class="rg-author-note" data-collapse="true" data-summary="[1-sentence story-relevant extract, or 'Off-topic author note']">[full note content]</div>\` with \`<hr class="section-divider">\` before and after. Extract any story-relevant parts into data-summary.
-13. **Poetry, Song Lyrics & Epigraphs:** Wrap any in-text poem, song lyric, incantation, chapter-opening quote, or verse in \`<div class="rg-quote-box">\`. Preserve all original line breaks exactly. Do not alter the wording. Example: a stanza at the top of the chapter → \`<div class="rg-quote-box">Verse line 1\nVerse line 2</div>\`.
-14. **Flashback & Memory Scenes:** When a clearly marked flashback or memory scene spans one or more paragraphs — identified by markers like "— Flashback —", "Memory:", "Three Years Ago", italicised past-tense inserts within a present-tense narrative, or explicit scene breaks introducing a recalled event — wrap the entire flashback block in \`<div class="rg-flashback">\` so it is visually distinct from the main narrative.
-15. **Fight / Action Scenes:** When a fight, battle, duel, or extended action sequence spans 3 or more paragraphs, wrap the ENTIRE fight block (from first strike to scene resolution) in: \`<div class="rg-collapsible-section" data-type="fight" data-summary="[1–2 sentences: who fought, key moments, outcome]">[full fight content HTML]</div>\`. The data-summary must be a clear, spoiler-inclusive description. Do NOT split a single fight across multiple wrappers.
-16. **Mature / R-18 Content:** When explicit sexual content or graphic adult material is present, wrap each distinct scene in: \`<div class="rg-collapsible-section" data-type="r18" data-summary="[1 sentence describing the scene without explicit details]">[full scene HTML]</div>\`. Use tasteful, non-graphic language in the summary. Apply this only to explicitly sexual or highly graphic violent scenes — not to romance, mild violence, or suggestive content.
+    - **Short notes (\u{2264}150 words) that contain plot-relevant info** (world-building clarifications, character name explanations, translation notes about the story) \u{2192} Format as \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after.
+    - **Long notes (>150 words) OR notes primarily about release schedules, Patreon, social media, personal life, or other off-topic content** \u{2192} Use \`<div class="rg-author-note" data-collapse="true" data-summary="[1-sentence story-relevant extract, or 'Off-topic author note']">[full note content]</div>\` with \`<hr class="section-divider">\` before and after. Extract any story-relevant parts into data-summary.
+13. **Poetry, Song Lyrics & Epigraphs:** Wrap any in-text poem, song lyric, incantation, chapter-opening quote, or verse in \`<div class="rg-quote-box">\`. Preserve all original line breaks exactly. Do not alter the wording. Example: a stanza at the top of the chapter \u{2192} \`<div class="rg-quote-box">Verse line 1\nVerse line 2</div>\`.
+14. **Flashback & Memory Scenes:** When a clearly marked flashback or memory scene spans one or more paragraphs \u{2014} identified by markers like "\u{2014} Flashback \u{2014}", "Memory:", "Three Years Ago", italicised past-tense inserts within a present-tense narrative, or explicit scene breaks introducing a recalled event \u{2014} wrap the entire flashback block in \`<div class="rg-flashback">\` so it is visually distinct from the main narrative.
+15. **Fight / Action Scenes:** When a fight, battle, duel, or extended action sequence spans 3 or more paragraphs, wrap the ENTIRE fight block (from first strike to scene resolution) in: \`<div class="rg-collapsible-section" data-type="fight" data-summary="[1\u{2013}2 sentences: who fought, key moments, outcome]">[full fight content HTML]</div>\`. The data-summary must be a clear, spoiler-inclusive description. Do NOT split a single fight across multiple wrappers.
+16. **Mature / R-18 Content:** When explicit sexual content or graphic adult material is present, wrap each distinct scene in: \`<div class="rg-collapsible-section" data-type="r18" data-summary="[1 sentence describing the scene without explicit details]">[full scene HTML]</div>\`. Use tasteful, non-graphic language in the summary. Apply this only to explicitly sexual or highly graphic violent scenes \u{2014} not to romance, mild violence, or suggestive content.
 
 Keep the core meaning of the original text intact while making it feel like a professionally translated novel. Preserve all original story elements including character names, locations, and plot points precisely.
 
@@ -121,19 +121,19 @@ Keep the summary brief but informative. Focus only on the most essential plot po
 
 // Default permanent prompt
 export const DEFAULT_PERMANENT_PROMPT =
-	"Ensure body text is wrapped in HTML paragraph tags (<p>) for each paragraph. For special content (stat blocks, system notifications, skill cards, author notes, quotes, flashbacks) use the designated div classes as specified in the main prompt — do NOT wrap those in <p> tags. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
+	"Ensure body text is wrapped in HTML paragraph tags (<p>) for each paragraph. For special content (stat blocks, system notifications, skill cards, author notes, quotes, flashbacks) use the designated div classes as specified in the main prompt \u{2014} do NOT wrap those in <p> tags. Handle dialogue formatting with appropriate punctuation and paragraph breaks. Do not use markdown formatting in your response.";
 
 // Default model ID
 export const DEFAULT_MODEL_ID = "gemini-2.5-flash";
 
-// Default backup / fallback model ID ─ used when the primary model is overloaded
+// Default backup / fallback model ID \u{2500} used when the primary model is overloaded
 export const DEFAULT_BACKUP_MODEL_ID = "gemini-2.0-flash";
 
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
 
 // New word-based chunking configuration
-// Default chunk size in words (3200 words ≈ 15-20k characters)
+// Default chunk size in words (3200 words \u{2248} 15-20k characters)
 export const DEFAULT_CHUNK_SIZE_WORDS = 3200;
 
 // Default number of chunks after which summary buttons repeat
@@ -209,7 +209,7 @@ export const TELEMETRY_ENABLED_DEFAULT = false;
 
 // Default settings for collapsible content sections (fight scenes, R18, author notes, custom)
 export const DEFAULT_CONTENT_FILTER_SETTINGS = {
-	/** Fight / action scenes: wrap ≥3-paragraph battles in a collapsible block */
+	/** Fight / action scenes: wrap \u{2265}3-paragraph battles in a collapsible block */
 	fight: { enabled: true, defaultCollapsed: true },
 	/** R-18 / explicit adult content: wrap in a collapsible block */
 	r18: { enabled: true, defaultCollapsed: true },
@@ -281,78 +281,78 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 
 // Emotion emoji mapping for enhancing text with emotional indicators
 export const EMOTION_EMOJIS = {
-	happy: "😊",
-	sad: "😢",
-	angry: "😠",
-	confused: "😕",
-	surprised: "😲",
-	shocked: "😱",
-	crying: "😭",
-	laugh: "😄",
-	laughing: "😄",
-	smile: "🙂",
-	smiling: "😊",
-	grin: "😁",
-	sigh: "😔",
-	worried: "😟",
-	nervous: "😰",
-	fear: "😨",
-	scared: "😨",
-	excited: "😃",
-	bored: "😒",
-	tired: "😴",
-	sleepy: "😪",
-	annoyed: "😤",
-	frustrated: "😤",
-	calm: "😌",
-	relief: "😌",
-	wink: "😉",
-	love: "❤️",
-	heart: "❤️",
-	thinking: "🤔",
-	thoughtful: "🤔",
-	suspicious: "🤨",
-	proud: "😌",
-	embarrassed: "😳",
-	blush: "😊",
-	blushing: "😊",
-	shy: "😳",
-	confident: "😎",
-	cool: "😎",
-	serious: "😐",
-	neutral: "😐",
-	meh: "😒",
-	satisfied: "😌",
-	pleased: "😌",
-	disappointed: "😞",
-	regretful: "😔",
-	hopeful: "🙏",
-	praying: "🙏",
-	determined: "😤",
-	mad: "😡",
-	furious: "🤬",
-	rage: "😡",
-	eyeroll: "🙄",
-	teasing: "😏",
-	smirk: "😏",
-	sneer: "😏",
-	contempt: "😒",
-	disgust: "🤢",
-	distaste: "😖",
-	chuckle: "😏",
-	giggle: "🤭",
-	ecstatic: "😆",
-	joyful: "😄",
-	cheerful: "😄",
-	depressed: "😞",
-	upset: "😢",
-	hurt: "😢",
-	doubtful: "🤔",
-	uncertain: "😕",
-	puzzled: "🤔",
-	anxious: "😰",
-	terrified: "😱",
-	horrified: "😱",
-	trembling: "😨",
-	shaking: "😨",
+	happy: "\u{1F60A}",
+	sad: "\u{1F622}",
+	angry: "\u{1F620}",
+	confused: "\u{1F615}",
+	surprised: "\u{1F632}",
+	shocked: "\u{1F631}",
+	crying: "\u{1F62D}",
+	laugh: "\u{1F604}",
+	laughing: "\u{1F604}",
+	smile: "\u{1F642}",
+	smiling: "\u{1F60A}",
+	grin: "\u{1F601}",
+	sigh: "\u{1F614}",
+	worried: "\u{1F61F}",
+	nervous: "\u{1F630}",
+	fear: "\u{1F628}",
+	scared: "\u{1F628}",
+	excited: "\u{1F603}",
+	bored: "\u{1F612}",
+	tired: "\u{1F634}",
+	sleepy: "\u{1F62A}",
+	annoyed: "\u{1F624}",
+	frustrated: "\u{1F624}",
+	calm: "\u{1F60C}",
+	relief: "\u{1F60C}",
+	wink: "\u{1F609}",
+	love: "\u{2764}\u{FE0F}",
+	heart: "\u{2764}\u{FE0F}",
+	thinking: "\u{1F914}",
+	thoughtful: "\u{1F914}",
+	suspicious: "\u{1F928}",
+	proud: "\u{1F60C}",
+	embarrassed: "\u{1F633}",
+	blush: "\u{1F60A}",
+	blushing: "\u{1F60A}",
+	shy: "\u{1F633}",
+	confident: "\u{1F60E}",
+	cool: "\u{1F60E}",
+	serious: "\u{1F610}",
+	neutral: "\u{1F610}",
+	meh: "\u{1F612}",
+	satisfied: "\u{1F60C}",
+	pleased: "\u{1F60C}",
+	disappointed: "\u{1F61E}",
+	regretful: "\u{1F614}",
+	hopeful: "\u{1F64F}",
+	praying: "\u{1F64F}",
+	determined: "\u{1F624}",
+	mad: "\u{1F621}",
+	furious: "\u{1F92C}",
+	rage: "\u{1F621}",
+	eyeroll: "\u{1F644}",
+	teasing: "\u{1F60F}",
+	smirk: "\u{1F60F}",
+	sneer: "\u{1F60F}",
+	contempt: "\u{1F612}",
+	disgust: "\u{1F922}",
+	distaste: "\u{1F616}",
+	chuckle: "\u{1F60F}",
+	giggle: "\u{1F92D}",
+	ecstatic: "\u{1F606}",
+	joyful: "\u{1F604}",
+	cheerful: "\u{1F604}",
+	depressed: "\u{1F61E}",
+	upset: "\u{1F622}",
+	hurt: "\u{1F622}",
+	doubtful: "\u{1F914}",
+	uncertain: "\u{1F615}",
+	puzzled: "\u{1F914}",
+	anxious: "\u{1F630}",
+	terrified: "\u{1F631}",
+	horrified: "\u{1F631}",
+	trembling: "\u{1F628}",
+	shaking: "\u{1F628}",
 };

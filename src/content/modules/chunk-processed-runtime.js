@@ -78,7 +78,7 @@ export async function handleChunkProcessedRuntime({
 			documentRef
 				.querySelectorAll(".gemini-enhance-btn")
 				.forEach((btn) => {
-					btn.textContent = "≡ƒöä Re-enhance with Gemini";
+					btn.textContent = "\u{2261}\u{192}\u{F6}\u{E4} Re-enhance with Gemini";
 					btn.disabled = false;
 					btn.classList.remove("loading");
 				});
@@ -193,7 +193,7 @@ export async function handleChunkProcessedRuntime({
 		}
 
 		documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "≡ƒöä Re-enhance with Gemini";
+			btn.textContent = "\u{2261}\u{192}\u{F6}\u{E4} Re-enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});

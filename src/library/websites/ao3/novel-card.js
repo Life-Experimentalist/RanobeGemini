@@ -26,8 +26,8 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		return {
 			id: "ao3",
 			name: "Archive of Our Own",
-			icon: "🏛️",
-			emoji: "🏛️",
+			icon: "\u{1F3DB}\u{FE0F}",
+			emoji: "\u{1F3DB}\u{FE0F}",
 			color: "#990000",
 		};
 	}
@@ -127,14 +127,14 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				}
 				${
 					words
-						? `<span class="meta-item" title="Word count">📝 ${this.formatNumber(
+						? `<span class="meta-item" title="Word count">\u{1F4DD} ${this.formatNumber(
 								words,
 							)}</span>`
 						: ""
 				}
 				${
 					kudos
-						? `<span class="meta-item" title="Kudos">❤️ ${this.formatNumber(
+						? `<span class="meta-item" title="Kudos">\u{2764}\u{FE0F} ${this.formatNumber(
 								kudos,
 							)}</span>`
 						: ""
@@ -246,13 +246,13 @@ export class AO3CardRenderer extends NovelCardRenderer {
 	 */
 	static getCategoryIcon(category) {
 		const cat = (category || "").toUpperCase();
-		if (cat.includes("M/M")) return "♂♂";
-		if (cat.includes("F/F")) return "♀♀";
-		if (cat.includes("F/M") || cat.includes("M/F")) return "♀♂";
-		if (cat.includes("GEN")) return "✦";
-		if (cat.includes("MULTI")) return "⚭";
-		if (cat.includes("OTHER")) return "◇";
-		return "📖";
+		if (cat.includes("M/M")) return "\u{2642}\u{2642}";
+		if (cat.includes("F/F")) return "\u{2640}\u{2640}";
+		if (cat.includes("F/M") || cat.includes("M/F")) return "\u{2640}\u{2642}";
+		if (cat.includes("GEN")) return "\u{2726}";
+		if (cat.includes("MULTI")) return "\u{26AD}";
+		if (cat.includes("OTHER")) return "\u{25C7}";
+		return "\u{1F4D6}";
 	}
 
 	/**
@@ -349,7 +349,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 		const statsHTML =
 			statsText.length > 0
-				? `<div class="ao3-stats-text">${statsText.join(" • ")}</div>`
+				? `<div class="ao3-stats-text">${statsText.join(" \u{2022} ")}</div>`
 				: "";
 
 		// Fandom display
@@ -359,14 +359,14 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 		// Progress display
 		const progressLabel = chapters
-			? `📖 ${this.formatNumber(safeCurrent)} / ${this.formatNumber(chapters)}`
-			: `📖 ${this.formatNumber(safeCurrent)}`;
+			? `\u{1F4D6} ${this.formatNumber(safeCurrent)} / ${this.formatNumber(chapters)}`
+			: `\u{1F4D6} ${this.formatNumber(safeCurrent)}`;
 		const progressHTML =
 			chapters > 0 || safeCurrent > 0 || enhanced > 0
 				? `
 					<div class="ao3-progress-bar"><div class="ao3-progress-fill" style="width: ${progressPercent}%;"></div></div>
 					<div class="ao3-progress-text">${progressLabel}</div>
-					<div class="ao3-progress-subtext">✨ ${this.formatNumber(enhanced)} enhanced</div>
+					<div class="ao3-progress-subtext">\u{2728} ${this.formatNumber(enhanced)} enhanced</div>
 				`
 				: "";
 
@@ -409,7 +409,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 				<div class="ao3-card-status">
 					<span class="ao3-reading-status" style="background-color: ${statusInfo.color};">${statusInfo.label}</span>
-					${novel.sourceUrl ? `<a class="ao3-link-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer" title="Open on AO3">↗</a>` : ""}
+					${novel.sourceUrl ? `<a class="ao3-link-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer" title="Open on AO3">\u{2197}</a>` : ""}
 				</div>
 			</div>
 		`;
@@ -433,7 +433,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 	 */
 	static truncateText(text, maxLength) {
 		if (!text || text.length <= maxLength) return text;
-		return text.substring(0, maxLength - 1) + "…";
+		return text.substring(0, maxLength - 1) + "\u{2026}";
 	}
 
 	/**
@@ -592,15 +592,15 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				<div class="site-modal-section ao3-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
 					<div class="site-stats-grid ao3-stats-grid-large">
-						${renderStat("Chapters", this.formatNumber(chapters), "📖")}
-						${renderStat("Words", this.formatNumber(words), "📝")}
-						${renderStat("Kudos", this.formatNumber(kudos), "❤️")}
-						${renderStat("Hits", this.formatNumber(hits), "👁️")}
-						${renderStat("Comments", this.formatNumber(comments), "💬")}
-						${renderStat("Bookmarks", this.formatNumber(bookmarks), "🔖")}
-						${renderStat("Published", formatDate(publishedDate), "📅")}
-						${renderStat("Updated", formatDate(updatedDate), "🔄")}
-						${renderStat("Work ID", workId, "🆔")}
+						${renderStat("Chapters", this.formatNumber(chapters), "\u{1F4D6}")}
+						${renderStat("Words", this.formatNumber(words), "\u{1F4DD}")}
+						${renderStat("Kudos", this.formatNumber(kudos), "\u{2764}\u{FE0F}")}
+						${renderStat("Hits", this.formatNumber(hits), "\u{1F441}\u{FE0F}")}
+						${renderStat("Comments", this.formatNumber(comments), "\u{1F4AC}")}
+						${renderStat("Bookmarks", this.formatNumber(bookmarks), "\u{1F516}")}
+						${renderStat("Published", formatDate(publishedDate), "\u{1F4C5}")}
+						${renderStat("Updated", formatDate(updatedDate), "\u{1F504}")}
+						${renderStat("Work ID", workId, "\u{1F194}")}
 					</div>
 				</div>
 

@@ -40,7 +40,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 		isPrimary: true, // This is the primary handler for this shelf
 		name: "FanFiction.net",
 		icon: "https://www.fanfiction.net/static/icons3/ff-icon-192.png",
-		emoji: "✍️",
+		emoji: "\u{270D}\u{FE0F}",
 		color: "#2a4b8d",
 		novelIdPattern: /\/s\/(\d+)\//,
 		primaryDomain: "www.fanfiction.net",
@@ -69,8 +69,8 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			// ── Navigation ────────────────────────────────────────────────────
-			{ key: "_nav", type: "section", label: "🔀 Navigation" },
+			// \u{2500}\u{2500} Navigation \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+			{ key: "_nav", type: "section", label: "\u{1F500} Navigation" },
 			{
 				key: "domainPreference",
 				label: "Domain Preference",
@@ -97,14 +97,14 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 			},
 			{
 				key: "showVersionSwitcher",
-				label: "Show Mobile ⇔ Desktop switcher",
+				label: "Show Mobile \u{21D4} Desktop switcher",
 				type: "toggle",
 				defaultValue: true,
 				description:
 					"Show a quick-switch button in chapter controls to jump between mobile and desktop views.",
 			},
-			// ── Enhancement ────────────────────────────────────────────────
-			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
+			// \u{2500}\u{2500} Enhancement \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -113,11 +113,11 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				description:
 					"Automatically run Enhance when a FanFiction.net chapter loads.",
 			},
-			// ── Download & Export ────────────────────────────────────────
+			// \u{2500}\u{2500} Download & Export \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			{
 				key: "_download",
 				type: "section",
-				label: "⬇️ Download & Export",
+				label: "\u{2B07}\u{FE0F} Download & Export",
 			},
 			{
 				key: "downloadEnabled",
@@ -133,7 +133,7 @@ export class FanfictionHandler extends BaseWebsiteHandler {
 				type: "toggle",
 				defaultValue: true,
 				description:
-					"Show a 📋 Copy button that copies the formatted filename using the global export template.",
+					"Show a \u{1F4CB} Copy button that copies the formatted filename using the global export template.",
 			},
 			{
 				key: "betterFictionSyncEnabled",
@@ -165,8 +165,8 @@ Please maintain:
 **FanFiction-Specific Formatting Rules:**
 - **Author Notes** (A/N:, AN:, T/N:, E/N:, "Author's Note", "Translator's Note"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Keep only plot-relevant context; remove disclaimers, Patreon prompts, update notices, and social-media links.
 - **Chapter Epigraphs, Quotes & Lyrics**: Wrap any opening/closing poem, song lyric, or chapter quote in \`<div class="rg-quote-box">\`, preserving all line breaks exactly.
-- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows → \`<div class="game-stats-box">\`; brief level-up/quest pop-ups → \`<div class="rg-system-msg">\`; individual skill/ability cards → \`<div class="rg-skill-box">\`.
-- **Flashback Scenes**: When a flashback is clearly marked ("— Flashback —", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
+- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows \u{2192} \`<div class="game-stats-box">\`; brief level-up/quest pop-ups \u{2192} \`<div class="rg-system-msg">\`; individual skill/ability cards \u{2192} \`<div class="rg-skill-box">\`.
+- **Flashback Scenes**: When a flashback is clearly marked ("\u{2014} Flashback \u{2014}", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
 
 When enhancing, improve readability while fully respecting the author's creative voice and the source material's original intent.`;
 
@@ -479,11 +479,11 @@ When enhancing, improve readability while fully respecting the author's creative
 
 		const buttons = [];
 
-		// ── Version switcher (on by default) ──────────────────────────────────
+		// \u{2500}\u{2500} Version switcher (on by default) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 		if (siteConf.showVersionSwitcher !== false) {
 			buttons.push({
 				text: isMobile ? "Desktop" : "Mobile",
-				emoji: isMobile ? "🖥️" : "📱",
+				emoji: isMobile ? "\u{1F5A5}\u{FE0F}" : "\u{1F4F1}",
 				color: "#5a9fd4",
 				onClick: async () => {
 					const url = new URL(window.location.href);
@@ -497,12 +497,12 @@ When enhancing, improve readability while fully respecting the author's creative
 			});
 		}
 
-		// ── Copy button (badge style — copies formatted name) ────────────────
+		// \u{2500}\u{2500} Copy button (badge style \u{2014} copies formatted name) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 		if (siteConf.showCopyButton !== false) {
 			const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1] || "";
 			buttons.push({
 				text: "Copy",
-				emoji: "📋",
+				emoji: "\u{1F4CB}",
 				color: "#10b981",
 				badgeStyle: true,
 				onClick: async () => {
@@ -526,11 +526,11 @@ When enhancing, improve readability while fully respecting the author's creative
 			});
 		}
 
-		// ── Download button (opens FicHub for epub/mobi/etc) ───────────────
+		// \u{2500}\u{2500} Download button (opens FicHub for epub/mobi/etc) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 		if (siteConf.downloadEnabled !== false) {
 			buttons.push({
 				text: "Download",
-				emoji: "⬇️",
+				emoji: "\u{2B07}\u{FE0F}",
 				color: "#ff6b6b",
 				onClick: async () => {
 					if (siteConf.enableClipboardCopyOnDownload !== false) {
@@ -1508,7 +1508,7 @@ When enhancing, improve readability while fully respecting the author's creative
 						.filter((s) => s.length > 0);
 					debugLog("FanFiction: Metadata segments:", segments);
 
-					// Extract rating from segment 0 (e.g., "Rated: Fiction T") — only if not already set by enhanced
+					// Extract rating from segment 0 (e.g., "Rated: Fiction T") \u{2014} only if not already set by enhanced
 					if (segments.length > 0 && !metadata.metadata.rating) {
 						const ratingMatch = segments[0].match(
 							/Rated:\s*(?:Fiction\s+)?([A-Z](?:\+)?)/i,
@@ -1526,7 +1526,7 @@ When enhancing, improve readability while fully respecting the author's creative
 					// Segment 2 typically contains genres (e.g., "Romance/Adventure")
 					// Remaining segments contain characters, chapters, words, etc.
 
-					// Extract language from segment 1 (usually just the language name) — only if not already set by enhanced
+					// Extract language from segment 1 (usually just the language name) \u{2014} only if not already set by enhanced
 					if (segments.length > 1 && !metadata.metadata.language) {
 						const langSegment = segments[1];
 						// Language is usually a single word like "English", "Spanish", etc.
@@ -1541,7 +1541,7 @@ When enhancing, improve readability while fully respecting the author's creative
 								metadata.metadata.language,
 							);
 						}
-					} // Extract genres from segment[2] ONLY — always "Genre1/Genre2" format.
+					} // Extract genres from segment[2] ONLY \u{2014} always "Genre1/Genre2" format.
 					// Segment[3] onwards is the character list, not more genres.
 					// Only extract genres if not already set by enhanced metadata
 					if (
@@ -1576,14 +1576,14 @@ When enhancing, improve readability while fully respecting the author's creative
 								);
 							}
 						} else if (looksLikeCharList) {
-							// No genres present — segment[2] is already the character list
+							// No genres present \u{2014} segment[2] is already the character list
 							debugLog(
 								"FanFiction: No genre segment detected; segment[2] looks like characters.",
 							);
 						}
 					}
 
-					// Extract chapters - first try from metadata text — only if not already set by enhanced
+					// Extract chapters - first try from metadata text \u{2014} only if not already set by enhanced
 					if (
 						!metadata.totalChapters ||
 						metadata.totalChapters === 0
@@ -1631,7 +1631,7 @@ When enhancing, improve readability while fully respecting the author's creative
 							}
 						}
 
-						// Extract words — only if not already set by enhanced
+						// Extract words \u{2014} only if not already set by enhanced
 						if (
 							!metadata.metadata.words ||
 							metadata.metadata.words === 0
@@ -1755,7 +1755,7 @@ When enhancing, improve readability while fully respecting the author's creative
 							}
 						}
 
-						// Detect status — only if not already set by enhanced
+						// Detect status \u{2014} only if not already set by enhanced
 						if (!metadata.status || metadata.status === "unknown") {
 							if (infoText.toLowerCase().includes("complete")) {
 								metadata.status = "completed";
@@ -1764,7 +1764,7 @@ When enhancing, improve readability while fully respecting the author's creative
 							}
 						}
 
-						// Extract characters from the metadata text — only if not already set by enhanced
+						// Extract characters from the metadata text \u{2014} only if not already set by enhanced
 						// FanFiction format varies but characters typically appear:
 						// 1. After Published date: "Published: Apr 19, 2021 Ben T., Izuku M., Momo Y., 1-A Studentsid: 13865360"
 						// 2. Or between genres and stats: "Adventure/Sci-Fi - Harry P., OC - Chapters:"
@@ -1931,7 +1931,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			updatedDate: metadata.updatedDate,
 		};
 
-		// Surface useful tags for card/modal rendering — genres + characters only;
+		// Surface useful tags for card/modal rendering \u{2014} genres + characters only;
 		// fandoms are kept in metadata.metadata.fandoms and shown separately.
 		const combinedTags = new Set();
 		(metadata.genres || []).forEach((g) => combinedTags.add(g));

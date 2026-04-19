@@ -68,7 +68,7 @@ export class StorageManager {
 				[cacheKey]: cacheEntry,
 			});
 
-			debugLog("✓ Enhanced content cached for:", url);
+			debugLog("\u{2713} Enhanced content cached for:", url);
 			return true;
 		} catch (error) {
 			debugError("Failed to save enhanced content:", error);
@@ -98,7 +98,7 @@ export class StorageManager {
 					return null;
 				}
 
-				debugLog("✓ Loaded cached enhanced content for:", url);
+				debugLog("\u{2713} Loaded cached enhanced content for:", url);
 				return entry;
 			}
 
@@ -118,7 +118,7 @@ export class StorageManager {
 		try {
 			const cacheKey = this.generateCacheKey(url);
 			await browser.storage.local.remove(cacheKey);
-			debugLog("✓ Removed cached content for:", url);
+			debugLog("\u{2713} Removed cached content for:", url);
 			return true;
 		} catch (error) {
 			debugError("Failed to remove cached content:", error);
@@ -158,7 +158,7 @@ export class StorageManager {
 			}
 
 			if (removedCount > 0) {
-				debugLog(`✓ Cleaned up ${removedCount} expired cache entries`);
+				debugLog(`\u{2713} Cleaned up ${removedCount} expired cache entries`);
 			}
 
 			return removedCount;
@@ -243,7 +243,7 @@ export class StorageManager {
 
 			if (keysToRemove.length > 0) {
 				await browser.storage.local.remove(keysToRemove);
-				debugLog(`✓ Cleared ${keysToRemove.length} cached entries`);
+				debugLog(`\u{2713} Cleared ${keysToRemove.length} cached entries`);
 			}
 
 			return true;

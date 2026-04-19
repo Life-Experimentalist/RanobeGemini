@@ -38,11 +38,11 @@ function toggleBannerNodes(documentRef, isHidden) {
 
 function syncToggleButtons(documentRef, isHidden, callerBtn = null) {
 	const nextChapterLabel = isHidden
-		? "⚡ Hide Gemini UI"
-		: "⚡ Show Gemini UI";
+		? "\u{26A1} Hide Gemini UI"
+		: "\u{26A1} Show Gemini UI";
 	const nextMainLabel = isHidden
-		? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
-		: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+		? '<span style="font-size: 20px;">\u{26A1}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
+		: '<span style="font-size: 20px;">\u{26A1}</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 
 	const toggleBtn = documentRef.querySelector(".gemini-toggle-banners-btn");
 	if (toggleBtn) {

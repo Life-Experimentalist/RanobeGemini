@@ -49,8 +49,8 @@ Please maintain:
 **FanFiction-Specific Formatting Rules:**
 - **Author Notes** (A/N:, AN:, T/N:, E/N:, "Author's Note", "Translator's Note"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Keep only plot-relevant context; remove disclaimers, Patreon prompts, update notices, and social-media links.
 - **Chapter Epigraphs, Quotes & Lyrics**: Wrap any opening/closing poem, song lyric, or chapter quote in \`<div class="rg-quote-box">\`, preserving all line breaks exactly.
-- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows → \`<div class="game-stats-box">\`; brief level-up/quest pop-ups → \`<div class="rg-system-msg">\`; individual skill/ability cards → \`<div class="rg-skill-box">\`.
-- **Flashback Scenes**: When a flashback is clearly marked ("— Flashback —", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
+- **Crossover / Game-mechanic Content** (e.g. SAO, LitRPG, RPG-mechanic crossovers): Full multi-line stat windows \u{2192} \`<div class="game-stats-box">\`; brief level-up/quest pop-ups \u{2192} \`<div class="rg-system-msg">\`; individual skill/ability cards \u{2192} \`<div class="rg-skill-box">\`.
+- **Flashback Scenes**: When a flashback is clearly marked ("\u{2014} Flashback \u{2014}", "X Years Ago", italicised memory inserts), wrap the full block in \`<div class="rg-flashback">\`.
 
 When enhancing, improve readability while fully respecting the author's creative voice and the source material's original intent.`;
 
@@ -453,7 +453,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			try {
 				const contentDiv = document.getElementById("content");
 				if (contentDiv) {
-					// Look for fandom links like: Books › Harry Potter
+					// Look for fandom links like: Books \u{203A} Harry Potter
 					const breadcrumbs = Array.from(
 						contentDiv.querySelectorAll(
 							"a[href*='/book/'], a[href*='/anime/'], a[href*='/tv/']",
@@ -650,7 +650,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @returns {{ element: HTMLElement, position: string }}
 	 */
 	getUIInsertionPoint(contentArea) {
-		// Fire-and-forget — non-critical, never blocks rendering
+		// Fire-and-forget \u{2014} non-critical, never blocks rendering
 		this._injectSummaryBanner().catch(() => {});
 
 		const storyContent =
@@ -699,7 +699,7 @@ When enhancing, improve readability while fully respecting the author's creative
 
 		let description = null;
 
-		// 1. Fast path — library storage
+		// 1. Fast path \u{2014} library storage
 		try {
 			const stored = await browser.storage.local.get("rg_novel_library");
 			const novels = stored?.rg_novel_library?.novels ?? {};
@@ -708,7 +708,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			/* non-critical */
 		}
 
-		// 2. Slow path — fetch desktop page
+		// 2. Slow path \u{2014} fetch desktop page
 		if (!description) {
 			try {
 				const resp = await fetch(
@@ -732,11 +732,11 @@ When enhancing, improve readability while fully respecting the author's creative
 			return;
 		}
 
-		// Render — use textContent for the body to prevent XSS
+		// Render \u{2014} use textContent for the body to prevent XSS
 		const label = document.createElement("strong");
 		label.style.cssText =
 			"display:block;margin-bottom:4px;color:#5F99C9;font-size:0.82em;text-transform:uppercase;letter-spacing:0.04em";
-		label.textContent = "📖 Summary";
+		label.textContent = "\u{1F4D6} Summary";
 
 		const body = document.createElement("span");
 		body.textContent = description;
@@ -972,7 +972,7 @@ When enhancing, improve readability while fully respecting the author's creative
 
 			// Build metadata display
 			let html =
-				'<div style="margin-bottom: 10px; font-weight: bold; color: #88bbff; border-bottom: 1px solid #3a5a7a; padding-bottom: 8px;">📖 Story Details</div>';
+				'<div style="margin-bottom: 10px; font-weight: bold; color: #88bbff; border-bottom: 1px solid #3a5a7a; padding-bottom: 8px;">\u{1F4D6} Story Details</div>';
 
 			if (metadata.description) {
 				html += `<div style="margin: 10px 0;"><strong>Summary:</strong><br/>${metadata.description}</div>`;

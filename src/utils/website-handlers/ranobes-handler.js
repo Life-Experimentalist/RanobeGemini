@@ -30,14 +30,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "Ranobes",
 		icon: "https://ranobes.top/favicon.ico",
-		emoji: "🍃",
+		emoji: "\u{1F343}",
 		color: "#4a7c4e",
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
-		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html → captures 1206917
-		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html → captures 1206917
+		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html \u{2192} captures 1206917
+		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html \u{2192} captures 1206917
 
-		// Read page: /read-1206917.html → captures 1206917
-		// Chapters list: /chapters/1206917/ → captures 1206917
+		// Read page: /read-1206917.html \u{2192} captures 1206917
+		// Chapters list: /chapters/1206917/ \u{2192} captures 1206917
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
@@ -388,7 +388,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		chapterText = this.removeAdRelatedText(chapterText);
 
 		// Additional cleaning - check the first few lines for titles
-		const titleParts = chapterTitle.split(/[:\-–—]/);
+		const titleParts = chapterTitle.split(/[:\-\u{2013}\u{2014}]/);
 		const lines = chapterText.split("\n");
 		const headLines = lines.slice(0, 5); // Only look at first 5 lines
 		const filteredHeadLines = headLines.filter((line) => {
@@ -693,7 +693,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						titleEl.childNodes[0]?.textContent?.trim();
 					metadata.title = titleText || titleEl.textContent.trim();
 					// Remove subtitle if present
-					metadata.title = metadata.title.split("•")[0].trim();
+					metadata.title = metadata.title.split("\u{2022}")[0].trim();
 				}
 
 				// Fallback title selectors

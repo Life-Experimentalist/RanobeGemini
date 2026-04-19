@@ -552,7 +552,7 @@ async function enforceBackupLimit(folderId) {
 	);
 
 	debugLog(
-		`📦 Google Drive backups: ${manualBackups.length} manual backups found (max: ${MAX_MANUAL_BACKUPS})`,
+		`\u{1F4E6} Google Drive backups: ${manualBackups.length} manual backups found (max: ${MAX_MANUAL_BACKUPS})`,
 	);
 
 	// If we're within the limit, no cleanup needed
@@ -561,7 +561,7 @@ async function enforceBackupLimit(folderId) {
 	// Delete oldest manual backups exceeding the quota
 	const toDelete = manualBackups.slice(MAX_MANUAL_BACKUPS);
 	debugLog(
-		`🗑️ Deleting ${toDelete.length} old backup(s) to enforce quota (4 manual per account)`,
+		`\u{1F5D1}\u{FE0F} Deleting ${toDelete.length} old backup(s) to enforce quota (4 manual per account)`,
 	);
 
 	for (const file of toDelete) {
@@ -573,7 +573,7 @@ async function enforceBackupLimit(folderId) {
 					headers: { Authorization: `Bearer ${accessToken}` },
 				},
 			);
-			debugLog(`✅ Deleted old backup: ${file.name}`);
+			debugLog(`\u{2705} Deleted old backup: ${file.name}`);
 		} catch (delErr) {
 			debugError(`Failed to delete old backup ${file.id}`, delErr);
 		}

@@ -127,7 +127,7 @@ export async function createComprehensiveBackup(options = {}) {
 			},
 		};
 
-		debugLog("✓ Comprehensive backup created:", backup.metadata);
+		debugLog("\u{2713} Comprehensive backup created:", backup.metadata);
 		return backup;
 	} catch (error) {
 		debugError("Failed to create comprehensive backup:", error);
@@ -258,7 +258,7 @@ export async function restoreComprehensiveBackup(backup, options = {}) {
 			);
 		}
 
-		debugLog("✓ Comprehensive backup restored:", results);
+		debugLog("\u{2713} Comprehensive backup restored:", results);
 		return results;
 	} catch (error) {
 		debugError("Failed to restore comprehensive backup:", error);
@@ -358,7 +358,7 @@ export async function createRollingBackup(reason = "auto") {
 			[ROLLING_BACKUP_METADATA_KEY]: toKeep,
 		});
 
-		debugLog(`✓ Rolling backup created (${reason}):`, backupKey);
+		debugLog(`\u{2713} Rolling backup created (${reason}):`, backupKey);
 		return { key: backupKey, backup };
 	} catch (error) {
 		debugError("Failed to create rolling backup:", error);
@@ -417,7 +417,7 @@ export async function deleteRollingBackup(key) {
 			[ROLLING_BACKUP_METADATA_KEY]: metadata,
 		});
 
-		debugLog("✓ Rolling backup deleted:", key);
+		debugLog("\u{2713} Rolling backup deleted:", key);
 		return true;
 	} catch (error) {
 		debugError("Failed to delete rolling backup:", error);
@@ -600,7 +600,7 @@ export function downloadBackupAsFile(backup, filename = null) {
 	a.click();
 
 	URL.revokeObjectURL(url);
-	debugLog("✓ Backup downloaded:", name);
+	debugLog("\u{2713} Backup downloaded:", name);
 }
 
 /**

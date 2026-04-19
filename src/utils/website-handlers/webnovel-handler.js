@@ -32,7 +32,7 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "WebNovel",
 		icon: "https://www.yueimg.com/en/favicon/favicon.d3f6a.ico",
-		emoji: "🌎",
+		emoji: "\u{1F30E}",
 		color: "#ff6600",
 		novelIdPattern: /\/book\/(\d+)/,
 		primaryDomain: "www.webnovel.com",
@@ -454,7 +454,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Create enhance button
 		const enhanceBtn = document.createElement("button");
 		enhanceBtn.className = "gemini-enhance-btn";
-		enhanceBtn.textContent = "✨ Enhance Chapter";
+		enhanceBtn.textContent = "\u{2728} Enhance Chapter";
 		enhanceBtn.setAttribute("data-chapter-id", chapterId);
 		enhanceBtn.style.cssText = `
 			flex: 1;
@@ -484,7 +484,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Create summarize button
 		const summarizeBtn = document.createElement("button");
 		summarizeBtn.className = "gemini-summarize-btn";
-		summarizeBtn.textContent = "📝 Summarize Chapter";
+		summarizeBtn.textContent = "\u{1F4DD} Summarize Chapter";
 		summarizeBtn.setAttribute("data-chapter-id", chapterId);
 		summarizeBtn.style.cssText = `
 			flex: 1;

@@ -38,7 +38,7 @@ export function createDebugPanel() {
 	// Create toggle button
 	const toggleButton = document.createElement("div");
 	toggleButton.className = "debug-panel-toggle";
-	toggleButton.innerHTML = "🔍";
+	toggleButton.innerHTML = "\u{1F50D}";
 	toggleButton.style.cssText = `
         font-size: 20px;
         display: flex;
@@ -77,7 +77,7 @@ export function createDebugPanel() {
     `;
 
 	const closeButton = document.createElement("button");
-	closeButton.textContent = "×";
+	closeButton.textContent = "\u{D7}";
 	closeButton.style.cssText = `
         background: none;
         border: none;
@@ -153,7 +153,7 @@ export function createDebugPanel() {
             <li><strong>Trace:</strong> Shows step-by-step processing with timing</li>
             <li><strong>State:</strong> Shows current processing state and settings</li>
         </ul>
-        <p>Click the 🔍 button to toggle this panel.</p>
+        <p>Click the \u{1F50D} button to toggle this panel.</p>
     `;
 
 	// Add initial trace content
