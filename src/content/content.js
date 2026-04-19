@@ -54,6 +54,7 @@ let finalizePrefixModule = null; // Finalize prefix enhanced content runtime
 let chunkErrorModule = null; // Chunk error handling runtime
 let chunkProcessedModule = null; // Chunk processed handling runtime
 let chunkEventsModule = null; // Chunk action handlers runtime
+let popupLibraryRuntimeModule = null; // Popup/library actions runtime
 let chunkControlRuntime = null; // Chunk control state/helpers
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
@@ -1461,533 +1462,60 @@ if (window.__RGInitDone) {
 	// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 	async function handleReenhanceChunk(chunkIndex) {
-		if (chunkEventsModule?.handleReenhanceChunkRuntime) {
-			await chunkEventsModule.handleReenhanceChunkRuntime({
-				chunkIndex,
-				loadChunkingSystem,
-				debugLog,
-				debugError,
-				showStatusMessage,
-				buildChunkBanner,
-				showWorkInProgressBanner,
-				wakeUpBackgroundWorker,
-				sendMessageWithRetry,
-				browserRef: browser,
-				documentRef: document,
-				windowRef: window,
-				stripHtmlTags,
-				buildCombinedPrompt,
-				chunkBehaviorConfig,
-				chunkControlRuntime,
-				loadDomIntegrationModule,
-				shouldBannersBeHidden,
-				handleToggleAllChunks,
-				handleDeleteAllChunks,
-				extractNovelContext,
-				addToNovelLibrary,
-				findContentArea,
-				enableCopyOnContentArea,
-				sanitizeHTML,
-				applyCollapsibleSections,
-				cancelEnhanceButton,
-				confirmFn: confirm,
-				getFormattingOptions: () => formattingOptions,
-				setFormattingOptions: (next) => {
-					formattingOptions = next;
-				},
-				getLastChunkModelInfo: () => lastChunkModelInfo,
-				setLastChunkModelInfo: (value) => {
-					lastChunkModelInfo = value;
-				},
-				setHasCachedContent: (value) => {
-					hasCachedContent = value;
-				},
-			});
-			return;
+		let eventsRuntime = chunkEventsModule;
+		if (!eventsRuntime?.handleReenhanceChunkRuntime) {
+			eventsRuntime = await loadChunkEventsModule();
 		}
 
-		const chunking = await loadChunkingSystem();
-		if (!chunking) return;
-
-		debugLog(`Re-enhancing chunk ${chunkIndex}...`);
-
-		const chunkContent = document.querySelector(
-			`.gemini-chunk-content[data-chunk-index="${chunkIndex}"]`,
-		);
-
-		// Prefer the original HTML (preserves formatting); fall back to plain text
-		const contentForEnhancement =
-			chunkContent?.getAttribute("data-original-chunk-html") ||
-			chunkContent?.getAttribute("data-original-chunk-content");
-		// Plain text used only for word counting
-		const originalText =
-			chunkContent?.getAttribute("data-original-chunk-content") ||
-			stripHtmlTags(contentForEnhancement || "");
-
-		if (!contentForEnhancement) {
-			debugError("No original content found for chunk", chunkIndex);
+		if (!eventsRuntime?.handleReenhanceChunkRuntime) {
 			showStatusMessage(
-				`Cannot re-enhance chunk ${
-					chunkIndex + 1
-				}: Original content not found`,
+				"Chunk enhancement runtime unavailable. Please reload and try again.",
 				"error",
 			);
 			return;
 		}
 
-		// Immediately show processing state so the user gets visual feedback
-		const nTotalChunksNow =
-			document.querySelectorAll(".gemini-chunk-banner").length || 1;
-
-		// Detect whether the Enhance Chapter button was already locked by an outer batch loop.
-		// When called standalone (ΓÜí Enhance Chunk click), we own the button and must release it;
-		// when called from the continue-loop in handleEnhanceClick, we must leave it alone.
-		// Must be calculated BEFORE we build the banner so isBatchMode is available.
-		const wasBtnAlreadyDisabled = Array.from(
-			document.querySelectorAll(".gemini-enhance-btn"),
-		).some((btn) => btn.disabled);
-
-		const processingBanner = buildChunkBanner(
-			chunking,
+		await eventsRuntime.handleReenhanceChunkRuntime({
 			chunkIndex,
-			nTotalChunksNow,
-			"processing",
-			null,
-			null,
-			null,
-			chunkBehaviorConfig.wordCountThreshold,
-			null,
-			wasBtnAlreadyDisabled, // isBatchMode ΓÇö shows Skip in batch, Pause in single mode
-		);
-		const existingBannerPre = document.querySelector(
-			`.chunk-banner-${chunkIndex}`,
-		);
-		if (existingBannerPre) {
-			existingBannerPre.replaceWith(processingBanner);
-		}
-
-		if (!wasBtnAlreadyDisabled) {
-			// Standalone individual enhance ΓÇö lock the top button so the user can't
-			// accidentally fire a concurrent batch enhancement.
-			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-				btn.disabled = true;
-				btn.classList.add("loading");
-			});
-		}
-
-		// Show / update the WIP banner immediately so the user sees live progress.
-		const doneAtStart = document.querySelectorAll(
-			'.gemini-chunk-content[data-chunk-enhanced="true"]',
-		).length;
-		const totalForWip =
-			document.querySelectorAll(".gemini-chunk-content").length ||
-			nTotalChunksNow;
-		showWorkInProgressBanner(doneAtStart, totalForWip, "processing", null);
-
-		try {
-			await wakeUpBackgroundWorker();
-
-			const settings = await browser.storage.local.get([
-				"useEmoji",
-				"formatGameStats",
-				"centerSceneHeadings",
-			]);
-			const useEmoji = settings.useEmoji === true;
-			formattingOptions.useEmoji = useEmoji;
-			formattingOptions.formatGameStats =
-				settings.formatGameStats !== false;
-			formattingOptions.centerSceneHeadings =
-				settings.centerSceneHeadings !== false;
-
-			const combinedPrompt = await buildCombinedPrompt();
-
-			const response = await sendMessageWithRetry({
-				action: "reenhanceChunk",
-				chunkIndex: chunkIndex,
-				content: contentForEnhancement,
-				title: document.title,
-				siteSpecificPrompt: combinedPrompt,
-				useEmoji: useEmoji,
-			});
-
-			if (response && response.success && response.result) {
-				const modelInfo = response.result?.modelInfo || null;
-				if (modelInfo) {
-					lastChunkModelInfo = modelInfo;
-				}
-
-				// Check if user pressed Skip while this chunk was processing
-				if (chunkControlRuntime?.consumeSkip(chunkIndex)) {
-					debugLog(
-						`Chunk ${chunkIndex} was skipped ΓÇö discarding result.`,
-					);
-					// Reset banner to pending so user can enhance it later
-					const nTotalForSkip = document.querySelectorAll(
-						".gemini-chunk-banner",
-					).length;
-					const pendingBanner = buildChunkBanner(
-						chunking,
-						chunkIndex,
-						nTotalForSkip,
-						"pending",
-						null,
-						null,
-						null,
-						chunkBehaviorConfig.wordCountThreshold,
-						() => handleReenhanceChunk(chunkIndex),
-					);
-					const skippedBannerEl = document.querySelector(
-						`.chunk-banner-${chunkIndex}`,
-					);
-					if (skippedBannerEl)
-						skippedBannerEl.replaceWith(pendingBanner);
-					// Update WIP banner and release button if standalone
-					const allForSkip =
-						document.querySelectorAll(".gemini-chunk-content")
-							.length || nTotalForSkip;
-					const doneForSkip = document.querySelectorAll(
-						'.gemini-chunk-content[data-chunk-enhanced="true"]',
-					).length;
-					showWorkInProgressBanner(
-						doneForSkip,
-						allForSkip,
-						"paused",
-						null,
-					);
-					if (!wasBtnAlreadyDisabled) {
-						document
-							.querySelectorAll(".gemini-enhance-btn")
-							.forEach((btn) => {
-								btn.textContent = "Γ£¿ Enhance with Gemini";
-								btn.disabled = false;
-								btn.classList.remove("loading");
-							});
-					}
-					showStatusMessage(
-						`Chunk ${chunkIndex + 1} skipped.`,
-						"info",
-						2000,
-					);
-					return;
-				}
-
-				if (chunkContent) {
-					const sanitizedContent = sanitizeHTML(
-						response.result.enhancedContent,
-					);
-
-					// Check if user pressed Pause while this chunk was processing
-					if (chunkControlRuntime?.consumePause(chunkIndex)) {
-						// Store enhanced content but don't apply it ΓÇö user uses "Show Enhanced"
-						chunkContent.setAttribute(
-							"data-enhanced-chunk-content",
-							sanitizedContent,
-						);
-						const nTotalForPause = document.querySelectorAll(
-							".gemini-chunk-banner",
-						).length;
-						const pausedBanner = buildChunkBanner(
-							chunking,
-							chunkIndex,
-							nTotalForPause,
-							"paused",
-						);
-						const pausedBannerEl = document.querySelector(
-							`.chunk-banner-${chunkIndex}`,
-						);
-						if (pausedBannerEl)
-							pausedBannerEl.replaceWith(pausedBanner);
-						// Update WIP banner (chunk not yet fully applied)
-						const allForPause =
-							document.querySelectorAll(".gemini-chunk-content")
-								.length || nTotalForPause;
-						const doneForPause = document.querySelectorAll(
-							'.gemini-chunk-content[data-chunk-enhanced="true"]',
-						).length;
-						showWorkInProgressBanner(
-							doneForPause,
-							allForPause,
-							"paused",
-							null,
-						);
-						if (!wasBtnAlreadyDisabled) {
-							document
-								.querySelectorAll(".gemini-enhance-btn")
-								.forEach((btn) => {
-									btn.textContent = "Γ£¿ Enhance with Gemini";
-									btn.disabled = false;
-									btn.classList.remove("loading");
-								});
-						}
-						showStatusMessage(
-							`Chunk ${chunkIndex + 1} enhancement ready ΓÇö click "Γ£¿ Show Enhanced" to apply.`,
-							"info",
-							4000,
-						);
-						return;
-					}
-
-					chunkContent.innerHTML = sanitizedContent;
-					applyCollapsibleSections(chunkContent);
-					chunkContent.setAttribute("data-chunk-enhanced", "true");
-					// Store enhanced content so toggle can restore it later
-					chunkContent.setAttribute(
-						"data-enhanced-chunk-content",
-						sanitizedContent,
-					);
-
-					// Update the banner to "completed" state.
-					// The await below yields execution, so we query the banner
-					// AFTER the await (fresh reference) to avoid a stale-node
-					// situation where the banner was replaced during the yield.
-					const nTotalChunks = document.querySelectorAll(
-						".gemini-chunk-banner",
-					).length;
-					const settingsData = await browser.storage.local.get([
-						"wordCountThreshold",
-					]);
-					const wct =
-						settingsData.wordCountThreshold !== undefined
-							? settingsData.wordCountThreshold
-							: chunkBehaviorConfig.wordCountThreshold;
-					const origWords = chunking.core.countWords(
-						originalText || "",
-					);
-					const enhWords = chunking.core.countWords(sanitizedContent);
-					const completedBanner = buildChunkBanner(
-						chunking,
-						chunkIndex,
-						nTotalChunks,
-						"completed",
-						null,
-						null,
-						{ original: origWords, enhanced: enhWords },
-						wct,
-					);
-					// Re-query after the await so we hold a live DOM reference
-					const freshBanner = document.querySelector(
-						`.chunk-banner-${chunkIndex}`,
-					);
-					if (freshBanner) {
-						freshBanner.replaceWith(completedBanner);
-					}
-				}
-
-				const nWrappers = document.querySelectorAll(
-					".gemini-chunk-wrapper",
-				).length;
-				// Re-declare to avoid shadowing issues with the outer totalChunks var
-				totalChunks = nWrappers;
-				await chunking.cache.saveChunkToCache(
-					window.location.href,
-					chunkIndex,
-					{
-						originalContent: contentForEnhancement,
-						enhancedContent: response.result.enhancedContent,
-						wordCount: response.result.wordCount || 0,
-						timestamp: Date.now(),
-						totalChunks: nWrappers || undefined,
-						modelInfo: modelInfo,
-					},
-				);
-
-				// ΓöÇΓöÇ Update overall chapter UI state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-				const allChunkEls = document.querySelectorAll(
-					".gemini-chunk-content",
-				);
-				const doneEls = document.querySelectorAll(
-					'.gemini-chunk-content[data-chunk-enhanced="true"]',
-				);
-				const allDoneNow =
-					doneEls.length === allChunkEls.length &&
-					allChunkEls.length > 0;
-
-				// Recalculate word counts across all chunks
-				const chunkWordCounts = chunking.core?.countWords
-					? {
-							original: Array.from(allChunkEls).reduce(
-								(s, c) =>
-									s +
-									chunking.core.countWords(
-										c.getAttribute(
-											"data-original-chunk-content",
-										) || "",
-									),
-								0,
-							),
-							enhanced: Array.from(doneEls).reduce(
-								(s, c) =>
-									s + chunking.core.countWords(c.innerHTML),
-								0,
-							),
-						}
-					: null;
-
-				// Update the WIP banner to reflect current completion
-				showWorkInProgressBanner(
-					doneEls.length,
-					allChunkEls.length,
-					allDoneNow ? "complete" : "paused",
-					chunkWordCounts,
-				);
-
-				// Mark the chapter as having cached content so the top button is sensible
-				hasCachedContent = true;
-
-				if (allDoneNow) {
-					// All chunks are now enhanced ΓÇö update the top Enhance Chapter button
-					document
-						.querySelectorAll(".gemini-enhance-btn")
-						.forEach((btn) => {
-							btn.textContent = "≡ƒöä Re-enhance with Gemini";
-							btn.disabled = false;
-							btn.classList.remove("loading");
-						});
-					if (cancelEnhanceButton)
-						cancelEnhanceButton.style.display = "none";
-
-					// Add master banner if not already present (individual chunk enhance path)
-					const contentAreaForMaster = findContentArea();
-					if (contentAreaForMaster && chunking?.ui) {
-						const domIntegration = await loadDomIntegrationModule();
-						domIntegration?.ensureMasterBannerRuntime?.({
-							documentRef: document,
-							contentArea: contentAreaForMaster,
-							chunking,
-							totalChunks: null,
-							lastChunkModelInfo,
-							shouldBannersBeHidden,
-							onToggleAll: handleToggleAllChunks,
-							onDeleteAll: handleDeleteAllChunks,
-							confirmFn: confirm,
-						});
-					}
-
-					// Update novel library now that all chunks are individually complete
-					try {
-						const novelContext = extractNovelContext();
-						await addToNovelLibrary(novelContext);
-					} catch (libraryError) {
-						debugError(
-							"Failed to update novel library after all chunks done:",
-							libraryError,
-						);
-					}
-					showStatusMessage(
-						"Content fully enhanced with Gemini! Γ£¿",
-						"success",
-					);
-				} else {
-					// Some chunks still unenhanced.
-					// Only release the Enhance Chapter button if WE acquired it
-					// (standalone individual enhancement). When called from the
-					// batch continue-loop the outer loop owns the button state.
-					if (!wasBtnAlreadyDisabled) {
-						document
-							.querySelectorAll(".gemini-enhance-btn")
-							.forEach((btn) => {
-								btn.textContent = "Γ£¿ Enhance with Gemini";
-								btn.disabled = false;
-								btn.classList.remove("loading");
-							});
-					}
-					showStatusMessage(
-						`Chunk ${chunkIndex + 1} re-enhanced successfully!`,
-						"success",
-					);
-				}
-
-				// Ensure the content area is marked as enhanced and text is selectable
-				const contentAreaForCopy = findContentArea();
-				if (contentAreaForCopy) {
-					contentAreaForCopy.setAttribute(
-						"data-showing-enhanced",
-						"true",
-					);
-					enableCopyOnContentArea(contentAreaForCopy);
-				}
-				// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-			} else {
-				const errorMsg = response?.error || "Unknown error";
-				const existingBanner = document.querySelector(
-					`.chunk-banner-${chunkIndex}`,
-				);
-				if (existingBanner) {
-					const totalChunks = document.querySelectorAll(
-						".gemini-chunk-banner",
-					).length;
-					const errorBanner = buildChunkBanner(
-						chunking,
-						chunkIndex,
-						totalChunks,
-						"error",
-						errorMsg,
-					);
-					existingBanner.replaceWith(errorBanner);
-				}
-				// Update WIP banner to show paused state (API returned error)
-				const allChErr =
-					document.querySelectorAll(".gemini-chunk-content").length ||
-					nTotalChunksNow;
-				const doneChErr = document.querySelectorAll(
-					'.gemini-chunk-content[data-chunk-enhanced="true"]',
-				).length;
-				showWorkInProgressBanner(doneChErr, allChErr, "paused", null);
-				if (!wasBtnAlreadyDisabled) {
-					document
-						.querySelectorAll(".gemini-enhance-btn")
-						.forEach((btn) => {
-							btn.textContent = "Γ£¿ Enhance with Gemini";
-							btn.disabled = false;
-							btn.classList.remove("loading");
-						});
-				}
-				showStatusMessage(
-					`Failed to re-enhance chunk ${chunkIndex + 1}: ${errorMsg}`,
-					"error",
-				);
-			}
-		} catch (error) {
-			// Restore banner to error state so the user can retry
-			const existingBanner = document.querySelector(
-				`.chunk-banner-${chunkIndex}`,
-			);
-			if (existingBanner) {
-				const totalChunks = document.querySelectorAll(
-					".gemini-chunk-banner",
-				).length;
-				const errorBanner = buildChunkBanner(
-					chunking,
-					chunkIndex,
-					totalChunks,
-					"error",
-					error.message || "Unknown error",
-				);
-				existingBanner.replaceWith(errorBanner);
-			}
-			// Update WIP banner to show paused state (exception thrown)
-			const allChCatch =
-				document.querySelectorAll(".gemini-chunk-content").length ||
-				nTotalChunksNow;
-			const doneChCatch = document.querySelectorAll(
-				'.gemini-chunk-content[data-chunk-enhanced="true"]',
-			).length;
-			showWorkInProgressBanner(doneChCatch, allChCatch, "paused", null);
-			if (!wasBtnAlreadyDisabled) {
-				document
-					.querySelectorAll(".gemini-enhance-btn")
-					.forEach((btn) => {
-						btn.textContent = "Γ£¿ Enhance with Gemini";
-						btn.disabled = false;
-						btn.classList.remove("loading");
-					});
-			}
-			debugError("Error re-enhancing chunk:", error);
-			showStatusMessage(
-				`Error re-enhancing chunk ${chunkIndex + 1}: ${error.message}`,
-				"error",
-			);
-		}
+			loadChunkingSystem,
+			debugLog,
+			debugError,
+			showStatusMessage,
+			buildChunkBanner,
+			showWorkInProgressBanner,
+			wakeUpBackgroundWorker,
+			sendMessageWithRetry,
+			browserRef: browser,
+			documentRef: document,
+			windowRef: window,
+			stripHtmlTags,
+			buildCombinedPrompt,
+			chunkBehaviorConfig,
+			chunkControlRuntime,
+			loadDomIntegrationModule,
+			shouldBannersBeHidden,
+			handleToggleAllChunks,
+			handleDeleteAllChunks,
+			extractNovelContext,
+			addToNovelLibrary,
+			findContentArea,
+			enableCopyOnContentArea,
+			sanitizeHTML,
+			applyCollapsibleSections,
+			cancelEnhanceButton,
+			confirmFn: confirm,
+			getFormattingOptions: () => formattingOptions,
+			setFormattingOptions: (next) => {
+				formattingOptions = next;
+			},
+			getLastChunkModelInfo: () => lastChunkModelInfo,
+			setLastChunkModelInfo: (value) => {
+				lastChunkModelInfo = value;
+			},
+			setHasCachedContent: (value) => {
+				hasCachedContent = value;
+			},
+		});
 	}
 
 	/**
@@ -3005,6 +2533,20 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	async function loadPopupLibraryRuntimeModule() {
+		if (popupLibraryRuntimeModule) return popupLibraryRuntimeModule;
+		try {
+			const runtimeUrl = browser.runtime.getURL(
+				"content/modules/popup-library-runtime.js",
+			);
+			popupLibraryRuntimeModule = await import(runtimeUrl);
+			return popupLibraryRuntimeModule;
+		} catch (error) {
+			debugError("Error loading popup-library runtime module:", error);
+			return null;
+		}
+	}
+
 	async function loadSummaryService() {
 		if (summaryServiceModule) return summaryServiceModule;
 		const runtime = await loadSummaryRuntimeModule();
@@ -3254,226 +2796,41 @@ if (window.__RGInitDone) {
 		return true;
 	}
 
-	function getChunkCacheTimestamp(metadata, chunks) {
-		if (metadata?.lastUpdated) return metadata.lastUpdated;
-		const timestamps = (chunks || [])
-			.map((chunk) => chunk?.timestamp)
-			.filter((ts) => Number.isFinite(ts));
-		if (timestamps.length === 0) return null;
-		return Math.max(...timestamps);
-	}
-
-	function getChunkCacheModelInfo(metadata, chunks) {
-		if (metadata?.modelInfo) return metadata.modelInfo;
-		const withModel = (chunks || []).find((chunk) => chunk?.modelInfo);
-		return withModel?.modelInfo || null;
-	}
-
 	async function restoreChunkedContentFromCache(chunking, chunks, metadata) {
-		const contentArea = findContentArea();
-		if (!contentArea) return false;
-
-		// Get word count threshold for chunk warnings
-		const settingsData = await browser.storage.local.get([
-			"wordCountThreshold",
-		]);
-		const wordCountThreshold =
-			settingsData.wordCountThreshold !== undefined
-				? settingsData.wordCountThreshold
-				: chunkBehaviorConfig.wordCountThreshold;
-
-		const totalChunks = Number.isInteger(metadata?.totalChunks)
-			? metadata.totalChunks
-			: chunks.length;
-		const cacheTimestamp = getChunkCacheTimestamp(metadata, chunks);
-		const modelInfo = getChunkCacheModelInfo(metadata, chunks);
-		if (modelInfo) {
-			lastChunkModelInfo = modelInfo;
+		const chunkBatchModule = await loadChunkBatchModule();
+		if (!chunkBatchModule?.restoreChunkedContentFromCacheRuntime) {
+			return false;
 		}
 
-		const originalHtmlSnapshot = contentArea.innerHTML;
-		const originalText = chunks
-			.map((chunk) => stripHtmlTags(chunk?.originalContent || ""))
-			.join("\n\n");
-
-		contentArea.setAttribute("data-original-html", originalHtmlSnapshot);
-		contentArea.setAttribute("data-original-text", originalText);
-		contentArea.setAttribute("data-total-chunks", totalChunks);
-
-		const chunkedContentContainer = document.createElement("div");
-		chunkedContentContainer.id = "gemini-chunked-content";
-		chunkedContentContainer.style.width = "100%";
-
-		const sortedChunks = [...chunks].sort(
-			(a, b) => (a.chunkIndex || 0) - (b.chunkIndex || 0),
-		);
-
-		sortedChunks.forEach((chunk, fallbackIndex) => {
-			const chunkIndex = Number.isInteger(chunk.chunkIndex)
-				? chunk.chunkIndex
-				: fallbackIndex;
-			const chunkWrapper = document.createElement("div");
-			chunkWrapper.className = "gemini-chunk-wrapper";
-			chunkWrapper.setAttribute("data-chunk-index", chunkIndex);
-
-			const chunkTimestamp = chunk?.timestamp || cacheTimestamp;
-			const cacheInfo = chunkTimestamp
-				? { fromCache: true, timestamp: chunkTimestamp }
-				: { fromCache: true };
-
-			// Calculate word counts from content
-			const originalContent = chunk?.originalContent || "";
-			const enhancedContent = chunk?.enhancedContent || "";
-			const originalWords = stripHtmlTags(originalContent)
-				.split(/\s+/)
-				.filter((w) => w).length;
-			const enhancedWords = stripHtmlTags(enhancedContent)
-				.split(/\s+/)
-				.filter((w) => w).length;
-			const wordCounts = {
-				original: originalWords,
-				enhanced: enhancedWords,
-			};
-
-			const banner = buildChunkBanner(
-				chunking,
-				chunkIndex,
-				totalChunks,
-				"cached",
-				null,
-				cacheInfo,
-				wordCounts,
-				wordCountThreshold,
-			);
-			chunkWrapper.appendChild(banner);
-
-			const chunkContent = document.createElement("div");
-			chunkContent.className = "gemini-chunk-content";
-			chunkContent.setAttribute("data-chunk-index", chunkIndex);
-			chunkContent.setAttribute(
-				"data-original-chunk-content",
-				chunk?.originalContent || "",
-			);
-			if (/<[^>]+>/.test(chunk?.originalContent || "")) {
-				chunkContent.setAttribute(
-					"data-original-chunk-html",
-					chunk.originalContent,
-				);
-			}
-
-			const sanitizedContent = sanitizeHTML(chunk?.enhancedContent || "");
-			chunkContent.innerHTML = sanitizedContent;
-			chunkContent.setAttribute("data-chunk-enhanced", "true");
-			chunkContent.setAttribute("data-showing", "enhanced");
-			chunkContent.setAttribute(
-				"data-enhanced-chunk-content",
-				sanitizedContent,
-			);
-			chunkWrapper.appendChild(chunkContent);
-
-			chunkedContentContainer.appendChild(chunkWrapper);
+		return chunkBatchModule.restoreChunkedContentFromCacheRuntime({
+			chunking,
+			chunks,
+			metadata,
+			findContentArea,
+			browserRef: browser,
+			chunkBehaviorConfig,
+			stripHtmlTags,
+			sanitizeHTML,
+			buildChunkBanner,
+			summarizeChunkRange,
+			shouldBannersBeHidden,
+			handleToggleAllChunks,
+			handleDeleteAllChunks,
+			loadDomIntegrationModule,
+			documentRef: document,
+			windowRef: window,
+			confirmFn: confirm,
+			onSetLastChunkModelInfo: (info) => {
+				lastChunkModelInfo = info;
+			},
+			onSetCachedFlags: () => {
+				isCachedContent = true;
+				hasCachedContent = true;
+			},
+			enableCopyOnContentArea,
+			showStatusMessage,
+			debugLog,
 		});
-
-		contentArea.innerHTML = "";
-		contentArea.appendChild(chunkedContentContainer);
-
-		const chunkWrappers = Array.from(
-			chunkedContentContainer.querySelectorAll(".gemini-chunk-wrapper"),
-		);
-		if (chunking?.summaryUI) {
-			const summarySettings = await browser.storage.local.get([
-				"chunkSummaryCount",
-			]);
-			const chunkSummaryCount =
-				summarySettings.chunkSummaryCount ||
-				chunking?.config?.DEFAULT_CHUNK_SUMMARY_COUNT ||
-				2;
-
-			// Remove any existing placeholder mainSummaryGroup (created upfront in
-			// createChapterPageNovelControls with totalChunks=1 before chunk count was known).
-			document
-				.querySelectorAll(".gemini-main-summary-group")
-				.forEach((el) => el.remove());
-
-			const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
-				totalChunks,
-				(indices) => summarizeChunkRange(indices, false),
-				(indices) => summarizeChunkRange(indices, true),
-			);
-
-			// Apply current visibility state
-			if (shouldBannersBeHidden()) {
-				mainSummaryGroup.style.display = "none";
-			}
-
-			contentArea.insertBefore(mainSummaryGroup, chunkedContentContainer);
-
-			if (totalChunks > 1) {
-				chunking.summaryUI.insertSummaryGroups(
-					chunkedContentContainer,
-					chunkWrappers,
-					chunkSummaryCount,
-					(indices) => summarizeChunkRange(indices, false),
-					(indices) => summarizeChunkRange(indices, true),
-				);
-
-				// Chunk summary groups are always visible for easy access to summaries
-			}
-		}
-
-		if (chunking?.ui) {
-			const originalWords = chunking.core.countWords(originalText);
-			const enhancedWords = sortedChunks.reduce((sum, chunk) => {
-				return (
-					sum + chunking.core.countWords(chunk?.enhancedContent || "")
-				);
-			}, 0);
-			const domIntegration = await loadDomIntegrationModule();
-			domIntegration?.ensureMasterBannerRuntime?.({
-				documentRef: document,
-				contentArea,
-				chunking,
-				totalChunks,
-				originalWords,
-				enhancedWords,
-				isCached: true,
-				lastChunkModelInfo: modelInfo,
-				cacheMeta: cacheTimestamp
-					? { timestamp: cacheTimestamp }
-					: null,
-				shouldBannersBeHidden,
-				onToggleAll: handleToggleAllChunks,
-				onDeleteAll: handleDeleteAllChunks,
-				confirmFn: confirm,
-			});
-		}
-
-		isCachedContent = true;
-		hasCachedContent = true;
-		contentArea.setAttribute("data-showing-enhanced", "true");
-
-		const domIntegration = await loadDomIntegrationModule();
-		if (domIntegration?.clearTransientEnhancementBannersRuntime) {
-			domIntegration.clearTransientEnhancementBannersRuntime({
-				documentRef: document,
-			});
-		} else {
-			const wipBanner = document.querySelector(".gemini-wip-banner");
-			if (wipBanner) wipBanner.remove();
-		}
-
-		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "ΓÖ╗ Regenerate with Gemini";
-			btn.disabled = false;
-			btn.classList.remove("loading");
-		});
-
-		// Re-enable text selection on restored cached content
-		enableCopyOnContentArea(contentArea);
-
-		showStatusMessage("Loaded cached enhanced content.", "success", 3000);
-
-		return true;
 	}
 
 	async function tryRestoreChunkedCache() {
@@ -3919,206 +3276,25 @@ if (window.__RGInitDone) {
 		duration = null,
 		options = {},
 	) {
-		// Resolve duration from config if not specified
-		if (duration === null) {
-			duration = bannerConfig.defaultMs;
-		}
-
-		// Remove any existing banner
-		const existingBanner = document.getElementById(
-			"rg-notification-banner",
-		);
-		if (existingBanner) {
-			existingBanner.remove();
-		}
-
-		const banner = document.createElement("div");
-		banner.id = "rg-notification-banner";
-		banner.className = `rg-banner rg-banner-${type}`;
-
-		// Protect from Dark Reader and other theme extensions
-		protectFromThemeExtensions(banner);
-
-		// Banner styles
-		const colors = {
-			info: { bg: "#1a237e", border: "#3949ab", icon: "≡ƒôÜ" },
-			success: { bg: "#1b5e20", border: "#43a047", icon: "Γ£à" },
-			warning: { bg: "#e65100", border: "#ff9800", icon: "ΓÜá∩╕Å" },
-			action: { bg: "#4a148c", border: "#7b1fa2", icon: "≡ƒöù" },
-			updating: { bg: "#00695c", border: "#26a69a", icon: "≡ƒöä" },
-		};
-
-		const color = colors[type] || colors.info;
-
-		banner.style.cssText = `
-			position: fixed;
-			top: 20px;
-			right: 20px;
-			background: ${color.bg};
-			border: 2px solid ${color.border};
-			border-radius: 8px;
-			padding: 12px 20px;
-			color: white;
-			font-family: system-ui, -apple-system, sans-serif;
-			font-size: 14px;
-			z-index: 999999;
-			box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-			display: flex;
-			align-items: center;
-			gap: 12px;
-			max-width: 400px;
-			animation: rg-slide-in 0.3s ease-out;
-		`;
-
-		// Add animation keyframes if not already added
-		if (!document.getElementById("rg-banner-styles")) {
-			const styleSheet = document.createElement("style");
-			styleSheet.id = "rg-banner-styles";
-			styleSheet.textContent = `
-				@keyframes rg-slide-in {
-					from { transform: translateX(100%); opacity: 0; }
-					to { transform: translateX(0); opacity: 1; }
-				}
-				@keyframes rg-slide-out {
-					from { transform: translateX(0); opacity: 1; }
-					to { transform: translateX(100%); opacity: 0; }
-				}
-				@keyframes rg-spin {
-					from { transform: rotate(0deg); }
-					to { transform: rotate(360deg); }
-				}
-				.rg-banner-updating .rg-banner-icon {
-					animation: rg-spin 1s linear infinite;
-				}
-
-				/* Mobile responsive styles */
-				@media (max-width: ${bannerConfig.mobileBreakpointPx}px) {
-					#rg-notification-banner {
-						top: 10px !important;
-						right: 10px !important;
-						left: 10px !important;
-						max-width: none !important;
-						font-size: 13px !important;
-					}
-					.gemini-main-summary-group {
-						flex-direction: column !important;
-						align-items: stretch !important;
-						gap: 8px !important;
-					}
-					.gemini-main-summary-group button {
-						min-height: 44px !important;
-						font-size: 14px !important;
-					}
-					.gemini-chunk-banner {
-						flex-wrap: wrap !important;
-						gap: 6px !important;
-						padding: 8px !important;
-					}
-					.gemini-chunk-banner button {
-						min-height: 40px !important;
-						flex: 1 1 calc(50% - 4px) !important;
-					}
-				}
-			`;
-			document.head.appendChild(styleSheet);
-		}
-
-		// Icon
-		const iconSpan = document.createElement("span");
-		iconSpan.className = "rg-banner-icon";
-		iconSpan.textContent = color.icon;
-		iconSpan.style.fontSize = "18px";
-		banner.appendChild(iconSpan);
-
-		// Message container
-		const msgContainer = document.createElement("div");
-		msgContainer.style.flex = "1";
-
-		const msgText = document.createElement("div");
-		msgText.textContent = message;
-		msgContainer.appendChild(msgText);
-
-		// Field being updated (for updating banners)
-		if (options.field) {
-			const fieldText = document.createElement("div");
-			fieldText.style.cssText =
-				"font-size: 12px; opacity: 0.8; margin-top: 4px;";
-			fieldText.textContent = `Updating: ${options.field}`;
-			msgContainer.appendChild(fieldText);
-		}
-
-		banner.appendChild(msgContainer);
-
-		// Action button (for DEDICATED_PAGE-type sites)
-		if (options.actionButton) {
-			const actionBtn = document.createElement("button");
-			actionBtn.textContent = options.actionButton.text;
-			actionBtn.style.cssText = `
-				background: white;
-				color: ${color.bg};
-				border: none;
-				padding: 6px 12px;
-				border-radius: 4px;
-				cursor: pointer;
-				font-weight: bold;
-				font-size: 12px;
-				white-space: nowrap;
-			`;
-			actionBtn.addEventListener("click", () => {
-				if (options.actionButton.url) {
-					window.open(options.actionButton.url, "_blank");
-				} else if (options.actionButton.onClick) {
-					options.actionButton.onClick();
-				}
-				banner.remove();
-			});
-			banner.appendChild(actionBtn);
-		}
-
-		// Close button
-		const closeBtn = document.createElement("button");
-		closeBtn.textContent = "├ù";
-		closeBtn.style.cssText = `
-			background: transparent;
-			border: none;
-			color: white;
-			font-size: 20px;
-			cursor: pointer;
-			padding: 0 4px;
-			opacity: 0.7;
-		`;
-		closeBtn.addEventListener("click", () => banner.remove());
-		banner.appendChild(closeBtn);
-
-		document.body.appendChild(banner);
-
-		logNotification({
-			type,
-			message,
-			title: options.title,
-			novelData: options.novelData,
-			metadata: {
-				bannerType: type,
+		if (notificationRuntimeModule?.showTimedBannerRuntime) {
+			return notificationRuntimeModule.showTimedBannerRuntime({
+				message,
+				type,
 				duration,
-				field: options.field,
-				actionText: options.actionButton?.text || null,
-				actionUrl: options.actionButton?.url || null,
-			},
-			source: options.source || "content",
-		});
-
-		// Auto-dismiss after duration (if not 0)
-		if (duration > 0) {
-			setTimeout(() => {
-				if (banner.parentElement) {
-					banner.style.animation =
-						"rg-slide-out 0.3s ease-in forwards";
-					setTimeout(() => banner.remove(), 300);
-				}
-			}, duration);
+				options,
+				documentRef: document,
+				windowRef: window,
+				bannerConfig,
+				protectFromThemeExtensions,
+				onLogNotification: logNotification,
+			});
 		}
 
-		return banner;
+		const normalizedType = type === "updating" ? "info" : type;
+		const fallbackDuration =
+			duration === null ? bannerConfig.defaultMs : duration;
+		showStatusMessage(message, normalizedType, fallbackDuration, options);
+		return null;
 	}
 
 	/**
@@ -4127,6 +3303,14 @@ if (window.__RGInitDone) {
 	 */
 	// eslint-disable-next-line no-unused-vars
 	function updateBannerField(field) {
+		if (notificationRuntimeModule?.updateBannerFieldRuntime) {
+			notificationRuntimeModule.updateBannerFieldRuntime({
+				field,
+				documentRef: document,
+			});
+			return;
+		}
+
 		const banner = document.getElementById("rg-notification-banner");
 		if (banner) {
 			const fieldText = banner.querySelector("div > div:nth-child(2)");
@@ -7811,51 +6995,23 @@ if (window.__RGInitDone) {
 		duration = 5000,
 		options = {},
 	) {
-		const bgColor = type === "error" ? "#622020" : "#2c494f";
-		const textColor = "#bab9a0";
-
-		let host = document.getElementById("rg-status-host");
-		let root = host && host.shadowRoot ? host.shadowRoot : null;
-
-		if (!host) {
-			host = document.createElement("div");
-			host.id = "rg-status-host";
-			host.style.cssText =
-				"position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2147483647; pointer-events: none;";
-			try {
-				root = host.attachShadow({ mode: "open" });
-			} catch (_err) {
-				root = host;
-			}
-			document.documentElement.appendChild(host);
+		if (notificationRuntimeModule?.showStatusMessageRuntime) {
+			notificationRuntimeModule.showStatusMessageRuntime({
+				message,
+				type,
+				duration,
+				options,
+				documentRef: document,
+				onLogNotification: logNotification,
+			});
+			return;
 		}
 
 		const messageDiv = document.createElement("div");
 		messageDiv.textContent = message;
-		messageDiv.classList.add("extraction-message");
-		messageDiv.style.cssText = `
-    all: initial;
-    display: block;
-    background-color: ${bgColor};
-    color: ${textColor};
-    padding: 14px 18px;
-    margin: 0;
-    border-radius: 6px;
-    font-weight: 700;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    font-size: 14px;
-    text-align: center;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-    max-width: 80vw;
-    border: 1px solid #ffffff21;
-    pointer-events: none;
-  `;
-
-		if (root) {
-			root.appendChild(messageDiv);
-		} else {
-			document.documentElement.appendChild(messageDiv);
-		}
+		messageDiv.style.cssText =
+			"position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2147483647; background: #2c494f; color: #bab9a0; padding: 12px 16px; border-radius: 6px; font: 700 14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; pointer-events: none;";
+		document.documentElement.appendChild(messageDiv);
 
 		logNotification({
 			type,
@@ -7866,11 +7022,7 @@ if (window.__RGInitDone) {
 			source: options.source || "content",
 		});
 
-		setTimeout(() => {
-			if (messageDiv.parentNode) {
-				messageDiv.parentNode.removeChild(messageDiv);
-			}
-		}, duration);
+		setTimeout(() => messageDiv.remove(), duration);
 	}
 
 	/**
@@ -7878,6 +7030,18 @@ if (window.__RGInitDone) {
 	 * @returns {Promise<Object>} Novel info response
 	 */
 	async function handleGetNovelInfo() {
+		const popupLibraryModule = await loadPopupLibraryRuntimeModule();
+		if (popupLibraryModule?.getNovelInfoRuntime) {
+			return popupLibraryModule.getNovelInfoRuntime({
+				currentHandler,
+				browserRef: browser,
+				windowRef: window,
+				cacheNovelData,
+				debugLog,
+				debugError,
+			});
+		}
+
 		try {
 			if (!currentHandler) {
 				debugLog("≡ƒôÜ getNovelInfo: No handler available");
@@ -7994,6 +7158,18 @@ if (window.__RGInitDone) {
 	 * @returns {Promise<Object>} Add result
 	 */
 	async function handleAddToLibrary() {
+		const popupLibraryModule = await loadPopupLibraryRuntimeModule();
+		if (popupLibraryModule?.addCurrentNovelToLibraryRuntime) {
+			return popupLibraryModule.addCurrentNovelToLibraryRuntime({
+				currentHandler,
+				browserRef: browser,
+				windowRef: window,
+				cacheNovelData,
+				logNotification,
+				debugError,
+			});
+		}
+
 		try {
 			if (!currentHandler) {
 				return {
@@ -8082,6 +7258,192 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	async function handleUpdateNovelReadingStatus(novelId, readingStatus) {
+		const popupLibraryModule = await loadPopupLibraryRuntimeModule();
+		if (popupLibraryModule?.updateNovelReadingStatusRuntime) {
+			return popupLibraryModule.updateNovelReadingStatusRuntime({
+				novelId,
+				readingStatus,
+				browserRef: browser,
+				debugError,
+			});
+		}
+
+		try {
+			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
+			const { novelLibrary } = await import(libraryUrl);
+			const result = await novelLibrary.updateNovel(novelId, {
+				readingStatus,
+			});
+			return { success: true, result };
+		} catch (error) {
+			debugError("Error updating reading status:", error);
+			return {
+				success: false,
+				error: error.message || "Failed to update reading status",
+			};
+		}
+	}
+
+	async function handleGetSiteHandlerInfo() {
+		const popupLibraryModule = await loadPopupLibraryRuntimeModule();
+		if (popupLibraryModule?.getSiteHandlerInfoRuntime) {
+			return popupLibraryModule.getSiteHandlerInfoRuntime({
+				currentHandler,
+			});
+		}
+
+		const response = { success: true, hasHandler: false };
+		if (currentHandler) {
+			response.hasHandler = true;
+			response.siteIdentifier = currentHandler.getSiteIdentifier();
+			response.defaultPrompt = currentHandler.getDefaultPrompt();
+			response.siteSpecificPrompt =
+				currentHandler.getSiteSpecificPrompt();
+		}
+		return response;
+	}
+
+	async function handleTestExtraction() {
+		const popupLibraryModule = await loadPopupLibraryRuntimeModule();
+		if (popupLibraryModule?.testExtractionRuntime) {
+			return popupLibraryModule.testExtractionRuntime({
+				extractContent,
+			});
+		}
+
+		const result = extractContent();
+		return {
+			success: true,
+			foundContent: result.found,
+			title: result.title,
+			text: result.text.substring(0, 100) + "...",
+		};
+	}
+
+	function handleProcessingCancelledMessage(message) {
+		if (enhancementCancelModule?.handleProcessingCancelledMessageRuntime) {
+			enhancementCancelModule.handleProcessingCancelledMessageRuntime({
+				message,
+				documentRef: document,
+				debugLog,
+				showStatusMessage,
+				cancelEnhanceButton,
+				clearTransientEnhancementBanners: () => {
+					if (
+						domIntegrationModule?.clearTransientEnhancementBannersRuntime
+					) {
+						domIntegrationModule.clearTransientEnhancementBannersRuntime(
+							{
+								documentRef: document,
+							},
+						);
+						return;
+					}
+					const wipBanner =
+						document.querySelector(".gemini-wip-banner");
+					if (wipBanner) {
+						wipBanner.remove();
+					}
+				},
+				continueLabel: "⚡ Continue Enhancement",
+			});
+			return;
+		}
+
+		debugLog(
+			`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`,
+		);
+		showStatusMessage(
+			`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
+			"info",
+		);
+
+		if (domIntegrationModule?.clearTransientEnhancementBannersRuntime) {
+			domIntegrationModule.clearTransientEnhancementBannersRuntime({
+				documentRef: document,
+			});
+		} else {
+			const wipBanner = document.querySelector(".gemini-wip-banner");
+			if (wipBanner) {
+				wipBanner.remove();
+			}
+		}
+		if (cancelEnhanceButton) {
+			cancelEnhanceButton.style.display = "none";
+		}
+
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "⚡ Continue Enhancement";
+			btn.disabled = false;
+			btn.classList.remove("loading");
+		});
+	}
+
+	function handleApiKeyMissingMessage() {
+		if (enhancementCancelModule?.handleApiKeyMissingRuntime) {
+			enhancementCancelModule.handleApiKeyMissingRuntime({
+				documentRef: document,
+				debugError,
+				showStatusMessage,
+				messageText:
+					"ΓÜá∩╕Å API key is missing. Please configure it in the extension popup.",
+				openPopup: () => {
+					browser.runtime
+						.sendMessage({ action: "openPopup" })
+						.catch((err) => {
+							console.warn("Could not open popup:", err);
+						});
+				},
+				buttonLabel: "Γ£¿ Enhance with Gemini",
+			});
+			return;
+		}
+
+		debugError("[Content] API key is missing, halting processing");
+		showStatusMessage(
+			"ΓÜá∩╕Å API key is missing. Please configure it in the extension popup.",
+			"error",
+			10000,
+		);
+
+		try {
+			browser.runtime
+				.sendMessage({ action: "openPopup" })
+				.catch((err) => {
+					console.warn("Could not open popup:", err);
+				});
+		} catch (err) {
+			console.warn("Could not send openPopup message:", err);
+		}
+
+		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+			btn.textContent = "Γ£¿ Enhance with Gemini";
+			btn.disabled = false;
+			btn.classList.remove("loading");
+		});
+	}
+
+	function respondFromAsyncAction({
+		task,
+		sendResponse,
+		onSuccess = (result) => result,
+		fallbackError,
+	}) {
+		Promise.resolve()
+			.then(task)
+			.then((result) => {
+				sendResponse(onSuccess(result));
+			})
+			.catch((error) => {
+				sendResponse({
+					success: false,
+					error: error.message || fallbackError,
+				});
+			});
+		return true;
+	}
+
 	// Listen for messages from the extension popup or background
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		debugLog("Content script received message:", message);
@@ -8093,31 +7455,7 @@ if (window.__RGInitDone) {
 
 		// Handle API key missing message - stop everything immediately
 		if (message.action === "apiKeyMissing") {
-			debugError("[Content] API key is missing, halting processing");
-			showStatusMessage(
-				"ΓÜá∩╕Å API key is missing. Please configure it in the extension popup.",
-				"error",
-				10000,
-			);
-
-			// Try to open the popup
-			try {
-				browser.runtime
-					.sendMessage({ action: "openPopup" })
-					.catch((err) => {
-						console.warn("Could not open popup:", err);
-					});
-			} catch (err) {
-				console.warn("Could not send openPopup message:", err);
-			}
-
-			// Reset UI state
-			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-				btn.textContent = "Γ£¿ Enhance with Gemini";
-				btn.disabled = false;
-				btn.classList.remove("loading");
-			});
-
+			handleApiKeyMissingMessage();
 			sendResponse({ success: true });
 			return true;
 		}
@@ -8145,55 +7483,37 @@ if (window.__RGInitDone) {
 
 		// Handle processing cancellation
 		if (message.action === "processingCancelled") {
-			debugLog(
-				`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`,
-			);
-			showStatusMessage(
-				`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
-				"info",
-			);
-
-			if (domIntegrationModule?.clearTransientEnhancementBannersRuntime) {
-				domIntegrationModule.clearTransientEnhancementBannersRuntime({
-					documentRef: document,
-				});
-			} else {
-				const wipBanner = document.querySelector(".gemini-wip-banner");
-				if (wipBanner) {
-					wipBanner.remove();
-				}
-			}
-			if (cancelEnhanceButton) {
-				cancelEnhanceButton.style.display = "none";
-			}
-
-			// Reset button state
-			document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-				btn.textContent = "≡ƒöä Continue Enhancement";
-				btn.disabled = false;
-				btn.classList.remove("loading");
-			});
-
+			handleProcessingCancelledMessage(message);
 			sendResponse({ success: true });
 			return true;
+		}
+
+		if (message.action === "getSiteHandlerInfo") {
+			return respondFromAsyncAction({
+				task: () => handleGetSiteHandlerInfo(),
+				sendResponse,
+				fallbackError: "Failed to get site handler info",
+			});
+		}
+
+		if (message.action === "testExtraction") {
+			return respondFromAsyncAction({
+				task: () => handleTestExtraction(),
+				sendResponse,
+				fallbackError: "Failed to test extraction",
+			});
 		}
 
 		if (
 			message.action === "processWithGemini" ||
 			message.action === "enhanceChapter"
 		) {
-			handleEnhanceClick()
-				.then(() => {
-					sendResponse({ success: true });
-				})
-				.catch((error) => {
-					sendResponse({
-						success: false,
-						error:
-							error.message || "Unknown error processing content",
-					});
-				});
-			return true;
+			return respondFromAsyncAction({
+				task: () => handleEnhanceClick(),
+				sendResponse,
+				onSuccess: () => ({ success: true }),
+				fallbackError: "Unknown error processing content",
+			});
 		}
 
 		if (message.action === "settingsUpdated") {
@@ -8207,76 +7527,43 @@ if (window.__RGInitDone) {
 			message.action === "summarizeWithGemini" ||
 			message.action === "summarizeChapter"
 		) {
-			handleSummarizeClick()
-				.then(() => {
-					sendResponse({ success: true });
-				})
-				.catch((error) => {
-					sendResponse({
-						success: false,
-						error:
-							error.message ||
-							"Unknown error summarizing content",
-					});
-				});
-			return true;
+			return respondFromAsyncAction({
+				task: () => handleSummarizeClick(),
+				sendResponse,
+				onSuccess: () => ({ success: true }),
+				fallbackError: "Unknown error summarizing content",
+			});
 		}
 
 		// Get novel info for popup display
 		if (message.action === "getNovelInfo") {
-			handleGetNovelInfo()
-				.then((result) => {
-					sendResponse(result);
-				})
-				.catch((error) => {
-					sendResponse({
-						success: false,
-						error: error.message || "Failed to get novel info",
-					});
-				});
-			return true;
+			return respondFromAsyncAction({
+				task: () => handleGetNovelInfo(),
+				sendResponse,
+				fallbackError: "Failed to get novel info",
+			});
 		}
 
 		// Add current novel to library
 		if (message.action === "addToLibrary") {
-			handleAddToLibrary()
-				.then((result) => {
-					sendResponse(result);
-				})
-				.catch((error) => {
-					sendResponse({
-						success: false,
-						error: error.message || "Failed to add to library",
-					});
-				});
-			return true;
+			return respondFromAsyncAction({
+				task: () => handleAddToLibrary(),
+				sendResponse,
+				fallbackError: "Failed to add to library",
+			});
 		}
 
 		// Update novel reading status
 		if (message.action === "updateNovelReadingStatus") {
-			(async () => {
-				try {
-					const libraryUrl = browser.runtime.getURL(
-						"utils/novel-library.js",
-					);
-					const { novelLibrary } = await import(libraryUrl);
-					const result = await novelLibrary.updateNovel(
+			return respondFromAsyncAction({
+				task: () =>
+					handleUpdateNovelReadingStatus(
 						message.novelId,
-						{
-							readingStatus: message.readingStatus,
-						},
-					);
-					sendResponse({ success: true, result });
-				} catch (error) {
-					debugError("Error updating reading status:", error);
-					sendResponse({
-						success: false,
-						error:
-							error.message || "Failed to update reading status",
-					});
-				}
-			})();
-			return true;
+						message.readingStatus,
+					),
+				sendResponse,
+				fallbackError: "Failed to update reading status",
+			});
 		}
 
 		return false;

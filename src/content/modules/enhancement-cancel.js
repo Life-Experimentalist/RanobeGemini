@@ -84,6 +84,69 @@ export function handleCancelEnhancementRuntime({
 	}
 }
 
+export function handleProcessingCancelledMessageRuntime({
+	message,
+	documentRef = document,
+	debugLog = () => {},
+	showStatusMessage,
+	cancelEnhanceButton,
+	clearTransientEnhancementBanners,
+	continueLabel = "⚡ Continue Enhancement",
+}) {
+	debugLog(
+		`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`,
+	);
+	showStatusMessage?.(
+		`Enhancement cancelled. ${message.processedChunks} of ${message.totalChunks} chunks were enhanced.`,
+		"info",
+	);
+
+	if (typeof clearTransientEnhancementBanners === "function") {
+		clearTransientEnhancementBanners();
+	} else {
+		const wipBanner = documentRef.querySelector(".gemini-wip-banner");
+		if (wipBanner) {
+			wipBanner.remove();
+		}
+	}
+
+	if (cancelEnhanceButton) {
+		cancelEnhanceButton.style.display = "none";
+	}
+
+	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+		btn.textContent = continueLabel;
+		btn.disabled = false;
+		btn.classList.remove("loading");
+	});
+}
+
+export function handleApiKeyMissingRuntime({
+	documentRef = document,
+	debugError = () => {},
+	showStatusMessage,
+	openPopup,
+	messageText = "⚠️ API key is missing. Please configure it in the extension popup.",
+	buttonLabel = "⚡ Enhance Chapter",
+}) {
+	debugError("[Content] API key is missing, halting processing");
+	showStatusMessage?.(messageText, "error", 10000);
+
+	try {
+		openPopup?.();
+	} catch (error) {
+		debugError("Could not trigger openPopup:", error);
+	}
+
+	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
+		btn.textContent = buttonLabel;
+		btn.disabled = false;
+		btn.classList.remove("loading");
+	});
+}
+
 export default {
 	handleCancelEnhancementRuntime,
+	handleProcessingCancelledMessageRuntime,
+	handleApiKeyMissingRuntime,
 };
