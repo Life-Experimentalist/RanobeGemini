@@ -3,8 +3,8 @@
 This file is the authoritative technical roadmap for evolving Ranobe Gemini.
 It is written as an execution guide for contributors and AI agents.
 
-> **Last Updated:** 2026-04-19
-> **Current Version:** 4.7.0
+> **Last Updated:** 2026-04-20
+> **Current Version:** 5.0.0
 
 ## Current State (Verified)
 
@@ -106,18 +106,23 @@ Track both planned and actual effort per unit.
 
 ### Phase Unit Budget Summary
 
-| Phase                                | Unit Count | Target Prompts | Hard Cap | Status    |
-| ------------------------------------ | ---------- | -------------- | -------- | --------- |
-| 0: Baseline Alignment                | 2          | 2-4            | 5        | completed |
-| 1: Content Runtime Modularization    | 5          | 10-16          | 20       | completed |
-| 2: Handler Ecosystem Maturity        | 5          | 8-12           | 14       | completed |
-| 3: AI Provider Modularization        | 4          | 8-12           | 14       | completed |
-| 4: Storage Adapter Pattern           | 3          | 5-8            | 10       | completed |
-| 5: Secret Injection & Config Hygiene | 3          | 4-7            | 8        | completed |
-| 6: OAuth Reliability                 | 3          | 4-6            | 8        | completed |
-| 7: Landing Awareness                 | 3          | 4-7            | 8        | completed |
-| 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | completed |
-| 9: Deployment Automation             | 3          | 4-7            | 8        | completed |
+| Phase                                    | Unit Count | Target Prompts | Hard Cap | Status      |
+| ---------------------------------------- | ---------- | -------------- | -------- | ----------- |
+| 0: Baseline Alignment                    | 2          | 2-4            | 5        | completed   |
+| 1: Content Runtime Modularization        | 5          | 10-16          | 20       | completed   |
+| 2: Handler Ecosystem Maturity            | 5          | 8-12           | 14       | completed   |
+| 3: AI Provider Modularization            | 4          | 8-12           | 14       | completed   |
+| 4: Storage Adapter Pattern               | 3          | 5-8            | 10       | completed   |
+| 5: Secret Injection & Config Hygiene     | 3          | 4-7            | 8        | completed   |
+| 6: OAuth Reliability                     | 3          | 4-6            | 8        | completed   |
+| 7: Landing Awareness                     | 3          | 4-7            | 8        | completed   |
+| 8: Cross-Device Compatibility            | 3          | 5-8            | 10       | completed   |
+| 9: Deployment Automation                 | 3          | 4-7            | 8        | completed   |
+| 10: Content Orchestrator Thinning        | 3          | 5-8            | 10       | in-progress |
+| 11: UI & Filter System Refactor          | 3          | 4-7            | 9        | queued      |
+| 12: Swipe & Gesture Navigation           | 2          | 4-6            | 8        | queued      |
+| 13: Storage Adapter Expansion            | 3          | 7-10           | 14       | queued      |
+| 14: Popup UI Overhaul                    | 3          | 5-8            | 10       | completed   |
 
 ### Rolling Prompt Tracker
 
@@ -179,6 +184,7 @@ Track both planned and actual effort per unit.
 | 14-U1 Audit and redesign popup layout                                   | 2-3              | 2              | -0.5 vs midpoint | Standard layout refactor with no complex data migrations needed                                                                                               | valid             | Kept Phase 14 to straightforward UI edits                                                            | 2026-04-20   |
 | 14-U2 Sync popup actions with library features                          | 2-3              | 2              | -0.5 vs midpoint | Actions synchronized well by re-using library config links and minimal inline toggles                                                                         | valid             | Kept complex settings delegated to library                                                           | 2026-04-20   |
 | 14-U3 Polish visual parity with main web app                            | 1-2              | 1              | -0.5 vs midpoint | Re-used library.css CSS variables natively                                                                                                                    | valid             | Single source of truth styling is highly effective                                                   | 2026-04-20   |
+| 10-U1 Novel context extraction to novel-context.js (L0-L1)              | 2-3              | 2              | -0.5 vs midpoint | 12 functions extracted (863 lines removed); zero lint errors; delegators wired; module loader injected into initialize()                                      | valid             | Continue 10-U2 UI DOM generation extractions next                                                    | 2026-04-20   |
 
 ### Budget Overrun and Assumption Recalibration Protocol
 
@@ -529,43 +535,43 @@ When an AI agent works on this roadmap:
 ### Objective
 Reduce src/content/content.js from 7k lines down to a thin orchestrator by aggressively extracting UI logic, API payload building, and DOM event bindings into discrete modules.
 
-| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
-| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
-| 10-U1| Extract remaining summary text pipeline and novel context extraction| 2-3            | content.js size reduced reliably.         |
-| 10-U2| Extract UI DOM generation (banners, buttons, modals)               | 2-3            | All UI generation resides in UI modules.    |
-| 10-U3| Final parity test and orchestrator minimization                    | 1-2            | content.js is merely event binding & glue.|
+| Unit  | Scope                                                                    | Target Prompts | Status      | Exit Criteria                                              |
+| ----- | ------------------------------------------------------------------------ | -------------- | ----------- | ---------------------------------------------------------- |
+| 10-U1 | Summary pipeline thin + novel context extraction → `novel-context.js`   | 2-3            | ✅ complete  | 12 fns extracted; content.js −863 lines; 0 lint errors     |
+| 10-U2 | Extract UI DOM generation (banners, buttons, modals) → UI modules        | 2-3            | 🔄 next      | All UI generation resides in dedicated UI modules          |
+| 10-U3 | Final parity test and orchestrator minimization                          | 1-2            | ⏳ queued    | content.js is merely event binding & glue                  |
 
 ## Phase 11: Comprehensive UI & Filter System Refactor
 ### Objective
 Ensure the Library page styling (.filters-section) is responsive and perfectly aligned on both mobile and desktop. Make AI and Storage provider settings completely granular and modular, so each provider has its own cohesive settings sub-page/tab.
 
-| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
-| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
-| 11-U1| Refactor .filters-section CSS & layout                           | 1-2            | Responsive, aligned filters for all sizes.  |
-| 11-U2| Implement Library UI Settings & Options                            | 1-2            | Settings panel controls filter visibility.  |
-| 11-U3| Abstract Settings UI for AI Providers & Storage Providers          | 2-3            | Nested, tabbed settings configuration UI.   |
+| Unit  | Scope                                                              | Target Prompts | Status    | Exit Criteria                               |
+| ----- | ------------------------------------------------------------------ | -------------- | --------- | ------------------------------------------- |
+| 11-U1 | Refactor .filters-section CSS & layout                             | 1-2            | ⏳ queued  | Responsive, aligned filters for all sizes.  |
+| 11-U2 | Implement Library UI Settings & Options                            | 1-2            | ⏳ queued  | Settings panel controls filter visibility.  |
+| 11-U3 | Abstract Settings UI for AI Providers & Storage Providers          | 2-3            | ⏳ queued  | Nested, tabbed settings configuration UI.   |
 
 ## Phase 12: Swipe & Gesture Navigation
 ### Objective
 Implement swipe gestures (touch) and dragging (desktop) to seamlessly switch between novel modals within the Library.
 
-| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
-| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
-| 12-U1| Baseline Swipe/Drag event listeners                               | 2-3            | Pointer/touch events detect direction.      |
-| 12-U2| Modal transition animation and state syncing                      | 2-3            | Navigates adjacent novels seamlessly.       |
+| Unit  | Scope                                                  | Target Prompts | Status    | Exit Criteria                           |
+| ----- | ------------------------------------------------------ | -------------- | --------- | --------------------------------------- |
+| 12-U1 | Baseline Swipe/Drag event listeners                    | 2-3            | ⏳ queued  | Pointer/touch events detect direction.  |
+| 12-U2 | Modal transition animation and state syncing           | 2-3            | ⏳ queued  | Navigates adjacent novels seamlessly.   |
 
 ## Phase 13: Storage Adapter Expansion & Multi-Sync
 ### Objective
 Add OneDrive, Dropbox, and WebDAV (NAS) sync methods to the storage system. Enable multi-sync capability (backing up to multiple destinations simultaneously) and user-configurable custom save paths.
 
-| Unit | Scope                                                              | Target Prompts | Exit Criteria                               |
-| ---- | ------------------------------------------------------------------ | -------------- | ------------------------------------------- |
-| 13-U1| Update Storage registry to support multi-sync and custom paths     | 2-3            | Storage manager handles N destinations.     |
-| 13-U2| Implement WebDAV (NAS) Storage Adapter                             | 2-3            | WebDAV adapter works and validates.         |
-| 13-U3| Implement OneDrive & Dropbox Storage Adapters                      | 3-4            | Full OAuth/upload flow for both providers.  |
+| Unit  | Scope                                                          | Target Prompts | Status    | Exit Criteria                               |
+| ----- | -------------------------------------------------------------- | -------------- | --------- | ------------------------------------------- |
+| 13-U1 | Update Storage registry to support multi-sync and custom paths | 2-3            | ⏳ queued  | Storage manager handles N destinations.     |
+| 13-U2 | Implement WebDAV (NAS) Storage Adapter                         | 2-3            | ⏳ queued  | WebDAV adapter works and validates.         |
+| 13-U3 | Implement OneDrive & Dropbox Storage Adapters                  | 3-4            | ⏳ queued  | Full OAuth/upload flow for both providers.  |
 
-## Phase 14: Popup UI Overhaul
+## Phase 14: Popup UI Overhaul ✅
 ### Objective
 Modernize and redesign the extension popup menu so that it accurately reflects the latest library settings and library page features.
 
-*Details have been modularized.* Please see [POPUP_OVERHAUL.md](./POPUP_OVERHAUL.md) for the tracking metrics, task units, and exit criteria.
+**Status: Completed in v5.0.0.** See [POPUP_OVERHAUL.md](./POPUP_OVERHAUL.md) for full tracking metrics, task units, and exit criteria.
