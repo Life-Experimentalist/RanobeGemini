@@ -995,7 +995,78 @@ textarea {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   15. Responsive
+   15. AI Provider Panel — per-slot cards
+───────────────────────────────────────────────────────────────────────── */
+
+/* Model slot card — extends .ls-section */
+.ls-model-slot {
+	position: relative;
+}
+
+.ls-model-slot-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.ls-model-slot-badge {
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+/* Provider-specific config block */
+.ls-provider-config {
+	margin-top: 14px;
+	animation: ls-fade-in 0.15s ease;
+}
+
+.ls-provider-config.ls-hidden {
+	display: none;
+}
+
+@keyframes ls-fade-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Legacy tab classes — kept in case old HTML paths still reference them */
+.ls-ai-provider-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.ls-ai-provider-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	border: 1px solid var(--border-color, #374151);
+	border-radius: 99px;
+	background: var(--bg-tertiary, #1f2937);
+	color: var(--text-secondary);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background var(--ls-transition), color var(--ls-transition),
+		border-color var(--ls-transition);
+}
+
+.ls-ai-provider-tab.active,
+.ls-ai-provider-tab:hover {
+	border-color: #6366f1;
+	color: var(--text-primary);
+}
+
+.ls-ai-provider-tab.active {
+	background: rgba(99, 102, 241, 0.15);
+	box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   16. Responsive
 ───────────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 720px) {

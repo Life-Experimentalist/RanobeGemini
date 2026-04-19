@@ -137,19 +137,11 @@ async function initializePopup() {
 	const modelSelect = document.getElementById("modelSelect");
 	const aiProviderSelect = document.getElementById("aiProviderSelect");
 	const backupModelSelect = document.getElementById("backupModelSelect");
-	const promptTemplate = document.getElementById("promptTemplate");
-	const resetPromptBtn = document.getElementById("resetPrompt");
-	const summaryPrompt = document.getElementById("summaryPrompt");
-	const resetSummaryPromptBtn = document.getElementById("resetSummaryPrompt");
-	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt");
-	const resetShortSummaryPromptBtn = document.getElementById(
-		"resetShortSummaryPrompt",
-	);
-	const permanentPrompt = document.getElementById("permanentPrompt");
-	const resetPermanentPromptBtn = document.getElementById(
-		"resetPermanentPrompt",
-	);
 	const debugModeCheckbox = document.getElementById("debugMode");
+	const promptTemplate = document.getElementById("promptTemplate");
+	const summaryPrompt = document.getElementById("summaryPrompt");
+	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt");
+	const permanentPrompt = document.getElementById("permanentPrompt");
 
 	// Incognito mode elements
 	const incognitoEnabledCheckbox =
@@ -206,17 +198,18 @@ async function initializePopup() {
 	if (incognitoEnabledCheckbox) {
 		incognitoEnabledCheckbox.addEventListener("change", async () => {
 			const enabled = incognitoEnabledCheckbox.checked;
-			const minutes = parseInt(incognitoDurationSelect?.value || "0", 10);
-			await saveIncognitoMode(enabled, enabled ? minutes : 0);
+			await browser.storage.local.set({ incognitoEnabled: enabled });
+			if (incognitoDurationSelect) {
+				incognitoDurationSelect.disabled = !enabled;
+			}
 		});
 	}
 
 	if (incognitoDurationSelect) {
 		incognitoDurationSelect.addEventListener("change", async () => {
-			if (incognitoEnabledCheckbox?.checked) {
-				const minutes = parseInt(incognitoDurationSelect.value, 10);
-				await saveIncognitoMode(true, minutes);
-			}
+			await browser.storage.local.set({
+				incognitoDuration: parseInt(incognitoDurationSelect.value),
+			});
 		});
 	}
 
@@ -242,24 +235,17 @@ async function initializePopup() {
 		"buttons found",
 	);
 
-	const setActiveTab = (tabId) => {
-		// Remove active class from all buttons and contents
+	// Set active tab early to prevent blank screen
+	window.setActiveTab = (tabId) => {
+		if (!tabButtons || !tabContents) return;
 		tabButtons.forEach((btn) => btn.classList.remove("active"));
 		tabContents.forEach((content) => content.classList.remove("active"));
 
-		// Add active class to clicked button
-		const activeButton = document.querySelector(
-			`.tab-btn[data-tab="${tabId}"]`,
-		);
-		if (activeButton) {
-			activeButton.classList.add("active");
-		}
+		const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+		if (activeButton) activeButton.classList.add("active");
 
-		// Show corresponding content
 		const targetContent = document.getElementById(tabId);
-		if (targetContent) {
-			targetContent.classList.add("active");
-		}
+		if (targetContent) targetContent.classList.add("active");
 	};
 
 	if (tabButtons.length > 0 && tabContents.length > 0) {
@@ -271,20 +257,28 @@ async function initializePopup() {
 				if (tabId === "novels" && typeof loadNovelsTab === "function") {
 					await loadNovelsTab();
 				}
-				if (
-					tabId === "notifications" &&
-					typeof initNotificationsTab === "function"
-				) {
+				if (tabId === "notifications" && typeof initNotificationsTab === "function") {
 					await initNotificationsTab();
 				}
 			});
 		});
-		console.log("Tab switching setup complete!");
-	} else {
-		console.error("Tab switching failed - buttons or contents not found!");
+		debugLog("Tab switching setup complete!");
 	}
+
+	// Determine and set initial tab immediately
+	try {
+		const stored = await browser.storage.local.get(["apiKey", "backupApiKeys"]);
+		const hasKey = !!stored.apiKey || (Array.isArray(stored.backupApiKeys) && stored.backupApiKeys.length > 0);
+		setActiveTab(hasKey ? "novels" : "config");
+		if (hasKey) loadNovelsTab().catch(err => debugError("Initial loadNovelsTab failed", err));
+	} catch (err) {
+		debugError("Failed to set initial tab", err);
+		setActiveTab("config"); // Fallback
+	}
+
 	// ===== END CRITICAL SECTION =====
 
+	// Obsolete elements (moved to Library Settings)
 	const topPSlider = document.getElementById("topPSlider");
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
@@ -292,20 +286,7 @@ async function initializePopup() {
 	const fontSizeSlider = document.getElementById("fontSizeSlider");
 	const fontSizeValue = document.getElementById("fontSizeValue");
 	const customEndpointInput = document.getElementById("customEndpoint");
-	const saveAdvancedSettingsBtn = document.getElementById(
-		"saveAdvancedSettings",
-	);
-	const resetAllAdvancedBtn = document.getElementById("resetAllAdvanced");
-	const toggleAdvancedParamsBtn = document.getElementById(
-		"toggleAdvancedParams",
-	);
-	const advancedParamsContent = document.getElementById(
-		"advancedParamsContent",
-	);
 	const siteToggleList = document.getElementById("siteToggleList");
-	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
-
-	// API Keys elements
 	const apiKeyRotationSelect = document.getElementById("apiKeyRotation");
 
 	// Novels tab elements
@@ -624,16 +605,19 @@ async function initializePopup() {
 
 	// Add change event listeners to backup checkboxes
 	if (backupIncludeApiKeys) {
-		backupIncludeApiKeys.addEventListener(
-			"change",
-			saveBackupCheckboxSettings,
-		);
+		backupIncludeApiKeys.addEventListener("change", () => {
+			browser.storage.local.set({
+				backupIncludeApiKeys: backupIncludeApiKeys.checked,
+			});
+		});
 	}
+
 	if (backupIncludeCredentials) {
-		backupIncludeCredentials.addEventListener(
-			"change",
-			saveBackupCheckboxSettings,
-		);
+		backupIncludeCredentials.addEventListener("change", () => {
+			browser.storage.local.set({
+				backupIncludeCredentials: backupIncludeCredentials.checked,
+			});
+		});
 	}
 
 	const AUTO_ADD_STATUS_OPTIONS = [
@@ -795,9 +779,9 @@ async function initializePopup() {
 	}
 
 	// Add API key handler
-	if (addApiKeyBtn && newApiKeyInput) {
+	if (addApiKeyBtn) {
 		addApiKeyBtn.addEventListener("click", async () => {
-			const newKey = newApiKeyInput.value.trim();
+			const newKey = newApiKeyInput?.value.trim();
 			if (!newKey) {
 				showStatus("Please enter a valid API key", "error");
 				return;
@@ -813,7 +797,7 @@ async function initializePopup() {
 				apiKey: apiKeys[0],
 				backupApiKeys: apiKeys.slice(1),
 			});
-			newApiKeyInput.value = "";
+			if (newApiKeyInput) newApiKeyInput.value = "";
 			renderApiKeys();
 			showStatus("API key added successfully", "success");
 		});
@@ -830,28 +814,29 @@ async function initializePopup() {
 	}
 
 	// Initialize sliders
-	if (temperatureSlider && temperatureValue) {
+	if (temperatureSlider) {
 		temperatureSlider.addEventListener("input", () => {
-			temperatureValue.textContent = temperatureSlider.value;
+			if (temperatureValue)
+				temperatureValue.textContent = temperatureSlider.value;
 		});
 	}
 
-	if (topPSlider && topPValue) {
+	if (topPSlider) {
 		topPSlider.addEventListener("input", () => {
-			topPValue.textContent = topPSlider.value;
+			if (topPValue) topPValue.textContent = topPSlider.value;
 		});
 	}
 
-	if (topKSlider && topKValue) {
+	if (topKSlider) {
 		topKSlider.addEventListener("input", () => {
-			topKValue.textContent = topKSlider.value;
+			if (topKValue) topKValue.textContent = topKSlider.value;
 		});
 	}
 
 	// Initialize font size slider
-	if (fontSizeSlider && fontSizeValue) {
+	if (fontSizeSlider) {
 		fontSizeSlider.addEventListener("input", () => {
-			fontSizeValue.textContent = fontSizeSlider.value + "%";
+			if (fontSizeValue) fontSizeValue.textContent = fontSizeSlider.value + "%";
 		});
 	}
 
@@ -1081,12 +1066,16 @@ async function initializePopup() {
 	}
 
 	// Enable resizing of the popup
-	
-	const openLibrarySettingsLink = document.getElementById("openLibrarySettingsLink");
+
+	const openLibrarySettingsLink = document.getElementById(
+		"openLibrarySettingsLink",
+	);
 	if (openLibrarySettingsLink) {
 		openLibrarySettingsLink.addEventListener("click", (e) => {
 			e.preventDefault();
-			browser.tabs.create({ url: browser.runtime.getURL("src/library/library-settings.html") });
+			browser.tabs.create({
+				url: browser.runtime.getURL("/library/library-settings.html"),
+			});
 		});
 	}
 
@@ -1146,6 +1135,7 @@ async function initializePopup() {
 
 	// Format model name for display
 	function formatModelName(modelId) {
+		if (!modelId) return "Unknown Model";
 		// Convert model IDs like "gemini-2.5-flash" to "Gemini 2.5 Flash"
 		return modelId
 			.replace("gemini-", "Gemini ")
@@ -1155,6 +1145,7 @@ async function initializePopup() {
 
 	// Update model selector with available models
 	async function updateModelSelector(apiKey) {
+		if (!modelSelect) return;
 		try {
 			debugLog(
 				"updateModelSelector called with apiKey:",
@@ -1505,7 +1496,8 @@ async function initializePopup() {
 	}
 
 	// Test API key and update models list
-	testApiKeyBtn.addEventListener("click", async () => {
+	if (testApiKeyBtn) {
+		testApiKeyBtn.addEventListener("click", async () => {
 		const apiKey = apiKeys[0] || "";
 
 		if (!apiKey) {
@@ -1546,10 +1538,11 @@ async function initializePopup() {
 	});
 
 	// Save all basic settings
-	saveSettingsBtn.addEventListener("click", async () => {
+	if (saveSettingsBtn) {
+		saveSettingsBtn.addEventListener("click", async () => {
 		const activeProvider = aiProviderSelect?.value || "gemini";
 		const apiKey = apiKeys[0] || "";
-		const selectedModelId = modelSelect?.value || '';
+		const selectedModelId = modelSelect?.value || "";
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		const stored = await browser.storage.local.get("maxOutputTokens");
 		const maxTokens = stored?.maxOutputTokens || 8192;
@@ -5219,9 +5212,9 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 
 	// Handle Novel Tab View Toggle (List/Grid)
 	const novelViewBtns = document.querySelectorAll(".novel-view-btn");
-	const novelsList = document.getElementById("novelsList");
+	// novelsList redeclaration removed - using outer-scope novelsListContainer instead
 
-	if (novelViewBtns.length > 0 && novelsList) {
+	if (novelViewBtns.length > 0 && novelsListContainer) {
 		novelViewBtns.forEach((btn) => {
 			btn.addEventListener("click", () => {
 				const view = btn.getAttribute("data-view");
@@ -5229,9 +5222,10 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				btn.classList.add("active");
 
 				if (view === "grid") {
-					novelsList.style.gridTemplateColumns = "repeat(3, 1fr)";
+					novelsListContainer.style.gridTemplateColumns =
+						"repeat(3, 1fr)";
 				} else {
-					novelsList.style.gridTemplateColumns = "1fr";
+					novelsListContainer.style.gridTemplateColumns = "1fr";
 				}
 			});
 		});
@@ -5784,45 +5778,9 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 	loadRollingBackups();
 
 	// Load backups and novels on popup open
-	(async () => {
-		await libraryBackupManager.initializeConfig();
-		const config = await libraryBackupManager.getConfig();
-
-		if (autoBackupCheckbox) {
-			autoBackupCheckbox.checked = config.autoBackupEnabled || false;
-		}
-
-		document
-			.querySelectorAll('input[name="mergeMode"]')
-			.forEach((radio) => {
-				if (radio.value === (config.mergeMode || "merge")) {
-					radio.checked = true;
-				}
-			});
-
-		await loadBackupHistory();
-		// Update Google Drive UI on popup open
-		await updateDriveUI();
-		// Update notification badge on popup open (so it shows before clicking tab)
-		await updateNotificationBadge();
-
-		// Default tab selection: go to Novels after API key is set
-		try {
-			const stored = await browser.storage.local.get([
-				"apiKey",
-				"backupApiKeys",
-			]);
-			const hasKey =
-				!!stored.apiKey ||
-				(Array.isArray(stored.backupApiKeys) &&
-					stored.backupApiKeys.length > 0);
-			setActiveTab(hasKey ? "novels" : "config");
-			if (hasKey) {
-				await loadNovelsTab();
-			}
-		} catch (err) {
-			debugError("Failed to select default tab", err);
-		}
+		// UI updates moved to separate calls or handled by storage change listeners
+		updateDriveUI().catch(e => debugError("Error updating Drive UI", e));
+		updateNotificationBadge().catch(e => debugError("Error updating notification badge", e));
 	})();
 
 	// Notifications tab is now a proper tab handled by tab switching above

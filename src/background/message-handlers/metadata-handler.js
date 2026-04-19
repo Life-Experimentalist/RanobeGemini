@@ -30,6 +30,9 @@
 
 import { debugLog, debugError } from "../../utils/logger.js";
 
+import MetadataFetcher from "../../utils/metadata-fetcher.js";
+import { handlerRegistry } from "../../utils/website-handlers/handler-registry.js";
+
 /**
  * Handle fetchNovelMetadata message
  * @param {Object} message - Message from content script
@@ -50,13 +53,6 @@ export async function handleFetchMetadata(message, sendResponse) {
 		debugLog(
 			`[MetadataHandler] Processing metadata fetch for ${message.handlerDomain}`,
 		);
-
-		// Import MetadataFetcher and handler registry
-		const MetadataFetcher = (
-			await import("../../utils/metadata-fetcher.js")
-		).default;
-		const { handlerRegistry } =
-			await import("../../utils/website-handlers/handler-registry.js");
 
 		const { url, handlerDomain, handlerType } = message;
 

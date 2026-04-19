@@ -38,6 +38,9 @@
 
 import { debugLog, debugError } from "../../utils/logger.js";
 
+import HandlerSettings from "../../utils/handler-settings.js";
+import { handlerRegistry } from "../../utils/website-handlers/handler-registry.js";
+
 /**
  * Handle getHandlerSettings message
  * @param {Object} message - Message from content script/UI
@@ -47,12 +50,6 @@ import { debugLog, debugError } from "../../utils/logger.js";
 export async function handleGetSettings(message, sendResponse) {
 	try {
 		debugLog("[SettingsHandler] Processing handler settings request");
-
-		const HandlerSettings = (
-			await import("../../utils/handler-settings.js")
-		).default;
-		const { handlerRegistry } =
-			await import("../../utils/website-handlers/handler-registry.js");
 
 		const { handlerDomain, includeAllHandlers, userSettings } = message;
 

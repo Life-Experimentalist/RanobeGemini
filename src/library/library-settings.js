@@ -77,6 +77,12 @@ import {
 // ── Navigation tabs definition ────────────────────────────────────────────────
 const SETTINGS_TABS = [
 	{ id: "general", icon: "💾", label: "General", panelId: "panel-general" },
+	{
+		id: "ai-providers",
+		icon: "🤖",
+		label: "AI Providers",
+		panelId: "panel-ai-providers",
+	},
 	{ id: "backups", icon: "☁️", label: "Backups", panelId: "panel-backups" },
 	{
 		id: "automation",
@@ -236,6 +242,43 @@ function activateTabFromUrl() {
 	const tab = params.get("tab");
 	const found = SETTINGS_TABS.find((t) => t.id === tab);
 	activateTab(found ? found.id : SETTINGS_TABS[0].id);
+}
+
+// Expose activateTab globally so inline onclick="activateTab(...)" in HTML works
+window.activateTab = activateTab;
+
+// ── AI Provider per-slot switcher ─────────────────────────────────────────────
+function initAiProviderTabs() {
+	// Wire each provider <select> to show/hide its provider-specific config block
+	document.querySelectorAll(".ls-provider-select").forEach((sel) => {
+		const slot = sel.dataset.slot; // "primary" | "fallback"
+		sel.addEventListener("change", () => switchProviderConfig(slot, sel.value));
+	});
+
+	// Wire the fallback enable/disable toggle
+	const fallbackToggle = $("fallback-model-enabled");
+	const fallbackConfig = $("fallback-model-config");
+	if (fallbackToggle && fallbackConfig) {
+		fallbackToggle.addEventListener("change", () => {
+			fallbackConfig.classList.toggle("ls-hidden", !fallbackToggle.checked);
+		});
+	}
+}
+
+/** Show the correct provider config block for a given slot and hide the others. */
+function switchProviderConfig(slot, provider) {
+	["gemini", "openai", "ollama"].forEach((p) => {
+		const el = $(`${slot}-${p}-config`);
+		if (el) el.classList.toggle("ls-hidden", p !== provider);
+	});
+	// Update the badge on the primary slot
+	if (slot === "primary") {
+		const badge = $("primary-provider-badge");
+		if (badge) {
+			const labels = { gemini: "Gemini", openai: "OpenAI", ollama: "Ollama" };
+			badge.textContent = labels[provider] ?? provider;
+		}
+	}
 }
 
 // ── Version badge ─────────────────────────────────────────────────────────────
@@ -467,9 +510,12 @@ async function fetchLibraryModels(apiKey) {
 	}
 }
 
-async function updateLibraryModelSelector(apiKey) {
-	const sel = $("library-model-select");
+async function updateLibraryModelSelector(apiKey, slot = "primary") {
+	const selId =
+		slot === "primary" ? "library-model-select" : "fallback-gemini-model";
+	const sel = $(selId);
 	if (!sel) return;
+
 	try {
 		sel.innerHTML = '<option value="">Loading models…</option>';
 		sel.disabled = true;
@@ -488,46 +534,41 @@ async function updateLibraryModelSelector(apiKey) {
 			return a.displayName.localeCompare(b.displayName);
 		});
 
+		const key =
+			slot === "primary" ? "primaryModelConfig" : "fallbackModelConfig";
 		const stored = await browser.storage.local.get([
-			"selectedModelId",
-			"modelEndpoint",
+			key,
+			"selectedModelId", // legacy
 		]);
-		let selectedModelId = stored.selectedModelId || "";
+		let savedModelId = stored[key]?.modelId || "";
+		if (!savedModelId && slot === "primary")
+			savedModelId = stored.selectedModelId || "";
 
 		sel.innerHTML = "";
 		models.forEach((model) => {
 			const opt = document.createElement("option");
 			opt.value = model.id;
 			opt.textContent = model.displayName;
-			if (!selectedModelId && model.id === DEFAULT_MODEL_ID)
-				selectedModelId = model.id;
+			if (!savedModelId && model.id === DEFAULT_MODEL_ID)
+				savedModelId = model.id;
 			sel.appendChild(opt);
 		});
 
-		if (selectedModelId) sel.value = selectedModelId;
-		else if (stored.modelEndpoint) {
-			const mid = stored.modelEndpoint.split("/").pop().split(":")[0];
-			if (mid && sel.querySelector(`option[value="${mid}"]`))
-				sel.value = mid;
+		if (savedModelId) sel.value = savedModelId;
+
+		if (slot === "primary") {
+			const selectedModel = models.find((m) => m.id === sel.value);
+			setLibraryModelEndpoint(
+				selectedModel?.endpoint ||
+					(sel.value
+						? `https://generativelanguage.googleapis.com/v1beta/models/${sel.value}:generateContent`
+						: ""),
+			);
 		}
-
-		const selectedModel = models.find((m) => m.id === sel.value);
-		setLibraryModelEndpoint(
-			selectedModel?.endpoint ||
-				(sel.value
-					? `https://generativelanguage.googleapis.com/v1beta/models/${sel.value}:generateContent`
-					: ""),
-		);
-
-		await browser.storage.local.set({
-			availableModels: models,
-			selectedModelId: sel.value,
-			modelsLastFetched: Date.now(),
-		});
 	} catch (err) {
-		debugError("Error updating model selector:", err);
+		debugError(`Error updating ${slot} model selector:`, err);
 		sel.innerHTML = `
-			<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+			<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
 			<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
 			<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
 		`;
@@ -541,28 +582,105 @@ async function loadLibraryModelSettings() {
 		const data = await browser.storage.local.get([
 			"apiKey",
 			"backupApiKeys",
-			"selectedModelId",
-			"modelEndpoint",
+			"primaryModelConfig",
+			"fallbackModelConfig",
+			"fallbackModelEnabled",
+			"selectedModelId", // legacy
+			"modelEndpoint", // legacy
 		]);
 
 		const allKeys = [data.apiKey, ...(data.backupApiKeys || [])].filter(
 			Boolean,
 		);
 
-		if (allKeys.length > 0) {
-			await updateLibraryModelSelector(allKeys[0]);
-		} else {
-			const sel = $("library-model-select");
-			if (sel) {
-				sel.innerHTML = `
-					<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
-					<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-					<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
-				`;
-				if (data.selectedModelId) sel.value = data.selectedModelId;
-			}
+		// ── Primary Slot ──
+		const primaryConfig = data.primaryModelConfig || {
+			provider: "gemini",
+			modelId: data.selectedModelId || "gemini-2.5-flash",
+		};
+		const primaryProviderSel = $("primary-provider-select");
+		if (primaryProviderSel) {
+			primaryProviderSel.value = primaryConfig.provider || "gemini";
+			switchProviderConfig("primary", primaryProviderSel.value);
 		}
 
+		if (primaryConfig.provider === "gemini") {
+			if (allKeys.length > 0) {
+				await updateLibraryModelSelector(allKeys[0], "primary");
+			} else {
+				const sel = $("library-model-select");
+				if (sel) {
+					sel.innerHTML = `
+						<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+						<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+						<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+					`;
+					sel.value = primaryConfig.modelId;
+				}
+			}
+		} else if (primaryConfig.provider === "openai") {
+			if ($("primary-openai-base-url"))
+				$("primary-openai-base-url").value = primaryConfig.baseUrl || "";
+			if ($("primary-openai-model"))
+				$("primary-openai-model").value = primaryConfig.modelId || "";
+			if ($("primary-openai-key"))
+				$("primary-openai-key").value = primaryConfig.apiKey || "";
+		} else if (primaryConfig.provider === "ollama") {
+			if ($("primary-ollama-url"))
+				$("primary-ollama-url").value = primaryConfig.baseUrl || "";
+			if ($("primary-ollama-model"))
+				$("primary-ollama-model").value = primaryConfig.modelId || "";
+		}
+
+		// ── Fallback Slot ──
+		const fallbackEnabled = !!data.fallbackModelEnabled;
+		const fallbackTog = $("fallback-model-enabled");
+		if (fallbackTog) {
+			fallbackTog.checked = fallbackEnabled;
+			const configBlock = $("fallback-model-config");
+			if (configBlock)
+				configBlock.classList.toggle("ls-hidden", !fallbackEnabled);
+		}
+
+		const fallbackConfig = data.fallbackModelConfig || {
+			provider: "gemini",
+			modelId: "gemini-2.0-flash",
+		};
+		const fallbackProviderSel = $("fallback-provider-select");
+		if (fallbackProviderSel) {
+			fallbackProviderSel.value = fallbackConfig.provider || "gemini";
+			switchProviderConfig("fallback", fallbackProviderSel.value);
+		}
+
+		if (fallbackConfig.provider === "gemini") {
+			if (allKeys.length > 0) {
+				await updateLibraryModelSelector(allKeys[0], "fallback");
+			} else {
+				const sel = $("fallback-gemini-model");
+				if (sel) {
+					sel.innerHTML = `
+						<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+						<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+						<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+					`;
+					sel.value = fallbackConfig.modelId;
+				}
+			}
+		} else if (fallbackConfig.provider === "openai") {
+			if ($("fallback-openai-base-url"))
+				$("fallback-openai-base-url").value = fallbackConfig.baseUrl || "";
+			if ($("fallback-openai-model"))
+				$("fallback-openai-model").value = fallbackConfig.modelId || "";
+			if ($("fallback-openai-key"))
+				$("fallback-openai-key").value = fallbackConfig.apiKey || "";
+		} else if (fallbackConfig.provider === "ollama") {
+			if ($("fallback-ollama-url"))
+				$("fallback-ollama-url").value = fallbackConfig.baseUrl || "";
+			if ($("fallback-ollama-model"))
+				$("fallback-ollama-model").value = fallbackConfig.modelId || "";
+		}
+
+		// Update legacy endpoint if needed
 		const selectedModelId =
 			$("library-model-select")?.value || data.selectedModelId || "";
 		const endpoint =
@@ -1990,6 +2108,12 @@ function setupEventListeners() {
 		});
 	});
 
+	// AI Provider Shortcuts (CSP compliant)
+	const goToAiBtn = $("go-to-ai-providers");
+	if (goToAiBtn) {
+		goToAiBtn.addEventListener("click", () => activateTab("ai-providers"));
+	}
+
 	function readCurrentThemeFromUI() {
 		const bgPrimary =
 			$("library-backgroundColorPicker")?.value || defaultTheme.bgColor;
@@ -2503,6 +2627,69 @@ function setupEventListeners() {
 	if (rotSel) {
 		rotSel.addEventListener("change", async () => {
 			await browser.storage.local.set({ apiKeyRotation: rotSel.value });
+		});
+	}
+
+	// ── Save AI Settings (AI Providers panel header action) ─────────────────────
+	const saveAiBtn = $("library-save-ai-settings");
+	if (saveAiBtn) {
+		saveAiBtn.addEventListener("click", async () => {
+			try {
+				const tempSlider = $("library-temperature-slider");
+				const updates = {};
+
+				// Temperature (shared)
+				if (tempSlider) updates.customTemperature = parseFloat(tempSlider.value);
+
+				// ── Primary slot ──
+				const primaryProvider = $("primary-provider-select")?.value ?? "gemini";
+				let primaryConfig = { provider: primaryProvider };
+				if (primaryProvider === "gemini") {
+					const sel = $("library-model-select");
+					const ep = $("library-model-endpoint");
+					primaryConfig.modelId = sel?.value ?? "gemini-2.5-flash";
+					primaryConfig.endpoint = ep?.value || `https://generativelanguage.googleapis.com/v1beta/models/${primaryConfig.modelId}:generateContent`;
+					// Keep legacy keys in sync for existing code
+					updates.selectedModelId = primaryConfig.modelId;
+					updates.modelEndpoint = primaryConfig.endpoint;
+				} else if (primaryProvider === "openai") {
+					primaryConfig.baseUrl = $("primary-openai-base-url")?.value ?? "";
+					primaryConfig.modelId = $("primary-openai-model")?.value ?? "";
+					primaryConfig.apiKey = $("primary-openai-key")?.value ?? "";
+				} else if (primaryProvider === "ollama") {
+					primaryConfig.baseUrl = $("primary-ollama-url")?.value ?? "http://localhost:11434";
+					primaryConfig.modelId = $("primary-ollama-model")?.value ?? "";
+				}
+				updates.primaryModelConfig = primaryConfig;
+
+				// ── Fallback slot ──
+				const fallbackEnabled = $("fallback-model-enabled")?.checked ?? false;
+				updates.fallbackModelEnabled = fallbackEnabled;
+				if (fallbackEnabled) {
+					const fallbackProvider = $("fallback-provider-select")?.value ?? "gemini";
+					let fallbackConfig = { provider: fallbackProvider };
+					if (fallbackProvider === "gemini") {
+						fallbackConfig.modelId = $("fallback-gemini-model")?.value ?? "gemini-2.0-flash";
+						// Keep legacy backupModelId in sync
+						updates.backupModelId = fallbackConfig.modelId;
+					} else if (fallbackProvider === "openai") {
+						fallbackConfig.baseUrl = $("fallback-openai-base-url")?.value ?? "";
+						fallbackConfig.modelId = $("fallback-openai-model")?.value ?? "";
+						fallbackConfig.apiKey = $("fallback-openai-key")?.value ?? "";
+					} else if (fallbackProvider === "ollama") {
+						fallbackConfig.baseUrl = $("fallback-ollama-url")?.value ?? "http://localhost:11434";
+						fallbackConfig.modelId = $("fallback-ollama-model")?.value ?? "";
+					}
+					updates.fallbackModelConfig = fallbackConfig;
+				} else {
+					updates.fallbackModelConfig = null;
+				}
+
+				await browser.storage.local.set(updates);
+				showToast("✅ AI settings saved!", "success");
+			} catch (err) {
+				showToast("❌ Failed to save: " + err.message, "error");
+			}
 		});
 	}
 
@@ -4370,6 +4557,7 @@ async function init() {
 	// Build navigation
 	renderNav();
 	activateTabFromUrl();
+	initAiProviderTabs(); // Wire up provider switcher in AI Providers panel
 
 	// Apply theme ASAP to prevent flash
 	await applyTheme();

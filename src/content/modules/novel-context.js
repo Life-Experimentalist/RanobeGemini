@@ -34,6 +34,9 @@ export function initNovelContextModule(ctx) {
         removeActionOverlay = () => {},
         showStatusOverlay = () => {},
         hideStatusOverlay = () => {},
+        removeChapterNovelControlsFromDOM = () => {},
+        createChapterPageNovelControls = async () => {},
+        placeChapterNovelControls = () => {},
     } = ctx;
     const window  = windowRef  ?? globalThis.window;
     const document = documentRef ?? globalThis.document;

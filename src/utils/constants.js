@@ -132,6 +132,12 @@ export const DEFAULT_BACKUP_MODEL_ID = "gemini-2.0-flash";
 // Default model endpoint
 export const DEFAULT_MODEL_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL_ID}:generateContent`;
 
+// AI Provider slot defaults
+// Each slot config: { provider: "gemini"|"openai"|"ollama", modelId?, baseUrl?, endpoint?, apiKey? }
+export const DEFAULT_PRIMARY_PROVIDER = "gemini";
+export const DEFAULT_FALLBACK_PROVIDER = "gemini";
+export const DEFAULT_FALLBACK_MODEL_ENABLED = false;
+
 // New word-based chunking configuration
 // Default chunk size in words (3200 words ≈ 15-20k characters)
 export const DEFAULT_CHUNK_SIZE_WORDS = 3200;
@@ -277,6 +283,10 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"novelUpdateIntervalDays", // Periodic novel update interval (days)
 	"contentFilterSettings", // Collapsible content sections settings
 	"rg_custom_box_types", // User-defined custom content box types
+	// AI provider slot configs (v5.0.0+)
+	"primaryModelConfig", // Primary model slot { provider, modelId, baseUrl?, apiKey?, endpoint? }
+	"fallbackModelConfig", // Fallback model slot (null = disabled)
+	"fallbackModelEnabled", // Whether fallback slot is active
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators
