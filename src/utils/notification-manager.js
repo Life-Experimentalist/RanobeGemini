@@ -89,6 +89,38 @@ class NotificationManager {
 			read: false,
 		};
 
+		// Prevent spam: Aggregate repetitive tracking/updating logs for the same novel
+		if (this.isGroupableNotification(notification)) {
+			const novelId = this.extractNovelId(notification);
+			if (novelId) {
+				// Find existing groupable notification for this novel in the last hour
+				const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+				const existingIndex = this.notifications.findIndex((n) => {
+					return (
+						this.extractNovelId(n) === novelId &&
+						this.isGroupableNotification(n) &&
+						new Date(n.timestamp) > oneHourAgo
+					);
+				});
+
+				if (existingIndex !== -1) {
+					// Upsert the existing notification instead of adding a new one
+					const existing = this.notifications[existingIndex];
+					existing.message = notification.message;
+					existing.timestamp = notification.timestamp;
+					existing.read = false; // Mark unread so it resurfaces
+
+					// Move it to the top of the list
+					this.notifications.splice(existingIndex, 1);
+					this.notifications.unshift(existing);
+
+					await this.save();
+					debugLog("Notification aggregated:", existing);
+					return existing.id;
+				}
+			}
+		}
+
 		this.notifications.unshift(notification); // Add to beginning
 
 		// Trim to max size

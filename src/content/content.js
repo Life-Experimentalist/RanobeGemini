@@ -5564,8 +5564,9 @@ if (window.__RGInitDone) {
 			protectFromThemeExtensions(controlsContainer);
 			controlsContainer.style.cssText = `
 			display: flex;
-			flex-wrap: nowrap;
+			flex-wrap: wrap;
 			align-items: center;
+			justify-content: center;
 			gap: 6px;
 			padding: 8px 10px;
 			margin: 10px 0;
@@ -5573,15 +5574,12 @@ if (window.__RGInitDone) {
 			border: 1px solid #2a4b8d;
 			border-radius: 6px;
 			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-			overflow-x: auto;
 			-webkit-overflow-scrolling: touch;
 			scrollbar-width: none;
 		`;
 
 			if (controlsConfig.wrapInDefinitionList) {
-				controlsContainer.style.justifyContent = "center";
 				controlsContainer.style.width = "100%";
-				controlsContainer.style.textAlign = "center";
 			}
 
 			// Allow handler to customize styling (e.g., AO3/FanFiction specific palettes)

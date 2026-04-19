@@ -176,6 +176,9 @@ Track both planned and actual effort per unit.
 | 9-U1 Store publish script + workflow                                    | 2-3              | 2              | -0.5 vs midpoint | Existing release scripts lowered integration complexity                                                                                                       | valid             | Keep automation baseline budget at 2 prompts                                                         | 2026-04-16   |
 | 9-U2 Follow-up release automation polish                                | 1-2              | 1              | -0.5 vs midpoint | Small scoped polish with no major regressions                                                                                                                 | valid             | Keep follow-up polish as single-prompt unit                                                          | 2026-04-16   |
 | 9-U3 Modular store gating + manual channel reporting                    | 1-2              | 1              | -0.5 vs midpoint | Mode-based store flow avoided credential-blocked failures                                                                                                     | valid             | Keep modular publish polish scoped to one prompt when isolated                                       | 2026-04-16   |
+| 14-U1 Audit and redesign popup layout                                   | 2-3              | 2              | -0.5 vs midpoint | Standard layout refactor with no complex data migrations needed                                                                                               | valid             | Kept Phase 14 to straightforward UI edits                                                            | 2026-04-20   |
+| 14-U2 Sync popup actions with library features                          | 2-3              | 2              | -0.5 vs midpoint | Actions synchronized well by re-using library config links and minimal inline toggles                                                                         | valid             | Kept complex settings delegated to library                                                           | 2026-04-20   |
+| 14-U3 Polish visual parity with main web app                            | 1-2              | 1              | -0.5 vs midpoint | Re-used library.css CSS variables natively                                                                                                                    | valid             | Single source of truth styling is highly effective                                                   | 2026-04-20   |
 
 ### Budget Overrun and Assumption Recalibration Protocol
 
@@ -560,3 +563,9 @@ Add OneDrive, Dropbox, and WebDAV (NAS) sync methods to the storage system. Enab
 | 13-U1| Update Storage registry to support multi-sync and custom paths     | 2-3            | Storage manager handles N destinations.     |
 | 13-U2| Implement WebDAV (NAS) Storage Adapter                             | 2-3            | WebDAV adapter works and validates.         |
 | 13-U3| Implement OneDrive & Dropbox Storage Adapters                      | 3-4            | Full OAuth/upload flow for both providers.  |
+
+## Phase 14: Popup UI Overhaul
+### Objective
+Modernize and redesign the extension popup menu so that it accurately reflects the latest library settings and library page features.
+
+*Details have been modularized.* Please see [POPUP_OVERHAUL.md](./POPUP_OVERHAUL.md) for the tracking metrics, task units, and exit criteria.

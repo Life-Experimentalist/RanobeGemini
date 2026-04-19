@@ -17,6 +17,8 @@
 		"validate:backup-contract": "node dev/validate-backup-compat.js",
 		"docs:visualize": "node dev/generate-doc-visualizers.js",
 		"docs:graphify": "python -m graphify update .",
+		"emoji:scan": "node dev/emoji-tools.js scan",
+		"emoji:repair": "node dev/emoji-tools.js repair",
 		"commits:all": "node dev/commit-history.js --all",
 		"commits:write": "node dev/commit-history.js --all --output docs/release/commit-history.md",
 		"commits:versions": "node dev/commit-history.js --versions",

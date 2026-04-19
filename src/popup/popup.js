@@ -1081,6 +1081,15 @@ async function initializePopup() {
 	}
 
 	// Enable resizing of the popup
+	
+	const openLibrarySettingsLink = document.getElementById("openLibrarySettingsLink");
+	if (openLibrarySettingsLink) {
+		openLibrarySettingsLink.addEventListener("click", (e) => {
+			e.preventDefault();
+			browser.tabs.create({ url: browser.runtime.getURL("src/library/library-settings.html") });
+		});
+	}
+
 	setupResizing();
 
 	// Function to fetch available Gemini models
@@ -1540,7 +1549,7 @@ async function initializePopup() {
 	saveSettingsBtn.addEventListener("click", async () => {
 		const activeProvider = aiProviderSelect?.value || "gemini";
 		const apiKey = apiKeys[0] || "";
-		const selectedModelId = modelSelect.value;
+		const selectedModelId = modelSelect?.value || '';
 		const useEmojiCheckbox = document.getElementById("useEmoji");
 		const stored = await browser.storage.local.get("maxOutputTokens");
 		const maxTokens = stored?.maxOutputTokens || 8192;

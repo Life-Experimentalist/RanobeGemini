@@ -1,50 +1,62 @@
 /* Ranobe Gemini Popup Styles */
 
-/* Theme Variables */
+/* Theme Variables (Synced with library.css) */
 :root {
-	/* Dark Mode Colors (Default) */
-	--bg-gradient-start: #0f172a;
-	--bg-gradient-end: #111827;
-	--container-bg: #1f2937;
+	/* Color palette (Dark default) */
+	--primary-color: #4b5563;
+	--primary-hover: #6b7280;
+	--secondary-color: #9ca3af;
+	--danger-color: #ef4444;
+	--success-color: #22c55e;
+
+	/* Background colors */
+	--bg-primary: #0f172a;
+	--bg-secondary: #111827;
+	--bg-tertiary: #1f2937;
+	--bg-card: #1f2937;
+	--bg-card-hover: #2b3544;
+
+	/* Text colors */
 	--text-primary: #e5e7eb;
 	--text-secondary: #9ca3af;
-	--accent-primary: #4b5563;
-	--accent-secondary: #6b7280;
-	--border-color: #374151;
-	--setting-bg: #111827;
-	--input-bg: #0b1220;
-	--input-border: #2f3644;
-	--hover-bg: rgba(107, 114, 128, 0.2);
-	--shadow-color: rgba(0, 0, 0, 0.45);
-	--success-color: #34a853;
-	--error-color: #db4437;
-	--warning-color: #fbbc04;
-	--tab-inactive: #9ca3af;
-	--scrollbar-track: #111827;
-	--scrollbar-thumb: #374151;
+	--text-muted: #6b7280;
+
+	/* Border colors */
+	--border-color: #2f3644;
+	--border-light: #3b4454;
+
+	/* Legacy popup variables mapped to new library variables */
+	--bg-gradient-start: var(--bg-primary);
+	--bg-gradient-end: var(--bg-secondary);
+	--container-bg: var(--bg-secondary);
+	--accent-primary: var(--primary-color);
+	--accent-secondary: var(--primary-hover);
+	--setting-bg: var(--bg-tertiary);
+	--input-bg: var(--bg-primary);
+	--input-border: var(--border-color);
+	--hover-bg: var(--bg-card-hover);
+	--shadow-color: rgba(0, 0, 0, 0.35);
+	--tab-inactive: var(--text-secondary);
+	--scrollbar-track: var(--bg-primary);
+	--scrollbar-thumb: var(--border-light);
 }
 
 /* Light Mode Override */
 :root[data-theme="light"] {
-	--bg-gradient-start: #e5e7eb;
-	--bg-gradient-end: #d1d5db;
-	--container-bg: #f9fafb;
+	--bg-primary: #f3f4f6;
+	--bg-secondary: #ffffff;
+	--bg-tertiary: #e5e7eb;
+	--bg-card: #ffffff;
+	--bg-card-hover: #f3f4f6;
+
 	--text-primary: #111827;
-	--text-secondary: #4b5563;
-	--accent-primary: #4b5563;
-	--accent-secondary: #6b7280;
+	--text-secondary: #374151;
+	--text-muted: #6b7280;
+
 	--border-color: #e5e7eb;
-	--setting-bg: #ffffff;
-	--input-bg: #ffffff;
-	--input-border: #d1d5db;
-	--hover-bg: rgba(75, 85, 99, 0.1);
-	--shadow-color: rgba(0, 0, 0, 0.08);
-	--success-color: #34a853;
-	--error-color: #db4437;
-	--warning-color: #fbbc04;
-	--tab-inactive: #6b7280;
-	--scrollbar-track: #f3f4f6;
-	--scrollbar-thumb: #d1d5db;
+	--border-light: #d1d5db;
+
+	--shadow-color: rgba(0, 0, 0, 0.12);
 }
 
 /* Base Styles */

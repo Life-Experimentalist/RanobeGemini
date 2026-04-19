@@ -117,6 +117,10 @@ function parseArgs(argv) {
 	return args;
 }
 
+function toUnicodeEscape(codePoint) {
+	return `\\u{${codePoint.toString(16).toUpperCase()}}`;
+}
+
 function toByte(ch) {
 	const cp = ch.codePointAt(0);
 	if (cp <= 0xff) return cp;
@@ -251,8 +255,21 @@ function collectFiles(roots) {
 	return files;
 }
 
+function collectTargetFiles(args) {
+	if (args.file) {
+		return fs.existsSync(args.file) ? [args.file] : [];
+	}
+
+	return collectFiles(args.roots);
+}
+
 function runRepair(args) {
-	const files = collectFiles(args.roots);
+	const files = collectTargetFiles(args);
+	if (args.file && files.length === 0) {
+		console.error(`File not found: ${args.file}`);
+		return 1;
+	}
+
 	let changed = 0;
 
 	for (const file of files) {
@@ -275,6 +292,52 @@ function runRepair(args) {
 
 	console.log(
 		`Done. Files ${args.dryRun ? "to repair" : "repaired"}: ${changed}`,
+	);
+	return 0;
+}
+
+function runEncode(args) {
+	const files = collectTargetFiles(args);
+	if (args.file && files.length === 0) {
+		console.error(`File not found: ${args.file}`);
+		return 1;
+	}
+
+	let changed = 0;
+
+	for (const file of files) {
+		let original;
+		try {
+			original = fs.readFileSync(file, "utf8");
+		} catch {
+			continue;
+		}
+
+		let mutated = false;
+		let encoded = "";
+
+		for (const ch of original) {
+			const cp = ch.codePointAt(0);
+			if (cp > 127) {
+				encoded += toUnicodeEscape(cp);
+				mutated = true;
+				continue;
+			}
+			encoded += ch;
+		}
+
+		if (!mutated) continue;
+
+		if (!args.dryRun) {
+			fs.writeFileSync(file, encoded, "utf8");
+		}
+
+		changed += 1;
+		console.log(`${args.dryRun ? "Would encode" : "Encoded"}: ${file}`);
+	}
+
+	console.log(
+		`Done. Files ${args.dryRun ? "to encode" : "encoded"}: ${changed}`,
 	);
 	return 0;
 }
@@ -365,10 +428,12 @@ function printHelp() {
 Commands:
   scan                Find suspicious mojibake tokens.
   repair              Repair text encoding issues in source files.
+	encode              Encode non-ASCII characters as \\u{...} escapes.
   report --file=PATH  Write non-ASCII byte report to dev/emoji-report.txt.
 
 Options:
   --roots=src,landing,docs   Override scan/repair roots.
+	--file=PATH                 Target a single file for repair/encode/report.
   --dry-run                  Show planned repair changes only.
   --limit=N                  Limit scan output (default: 200).
 `);
@@ -384,6 +449,9 @@ function main() {
 		case "repair":
 			process.exitCode = runRepair(args);
 			break;
+			case "encode":
+				process.exitCode = runEncode(args);
+				break;
 		case "report":
 			process.exitCode = runReport(args);
 			break;

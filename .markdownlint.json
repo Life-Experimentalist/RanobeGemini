@@ -8,5 +8,7 @@
 	"ul-indent": false,
 	"no-hard-tabs": false,
 	"first-line-h1": false,
-	"single-trailing-newline": false
+	"single-trailing-newline": false,
+	"blanks-around-headings": false,
+	"ol-prefix": false
 }
