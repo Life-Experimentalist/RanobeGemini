@@ -1,4 +1,4 @@
-\u{FEFF}// Lightweight logger bootstrap for content scripts (no top-level imports allowed here)
+// Lightweight logger bootstrap for content scripts (no top-level imports allowed here)
 let debugLog = console.log.bind(console);
 let debugError = console.error.bind(console);
 (async () => {
@@ -896,16 +896,16 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Remove copy-blocking applied by sites (e.g. .nocopy class on FF.net).
-	 * Idempotent \u{393}\u{C7}\u{F6} safe to call multiple times.
+	 * Idempotent — safe to call multiple times.
 	 * @param {Element} contentArea
 	 */
 	function enableCopyOnContentArea(contentArea) {
 		if (!contentArea) return;
-		// Always re-apply \u{393}\u{C7}\u{F6} site scripts may have re-added blocking handlers since last call
+		// Always re-apply — site scripts may have re-added blocking handlers since last call
 		// (e.g. after innerHTML replacement or toggle back to enhanced view).
 		contentArea.dataset.rgCopyEnabled = "true";
 		// Walk up ancestors to remove inline copy-blocking handlers, nocopy class,
-		// and any user-select:none \u{393}\u{C7}\u{F6} unconditionally force text on every ancestor
+		// and any user-select:none — unconditionally force text on every ancestor
 		// (FanFiction sets user-select:none inline on the #storytext parent; checking
 		// only === "none" is unreliable across browsers due to vendor-prefix normalisation)
 		let el = contentArea;
@@ -936,7 +936,7 @@ if (window.__RGInitDone) {
 				);
 			}
 		}
-		// Clear document/window level inline handlers \u{393}\u{C7}\u{F6} the most common anti-copy pattern
+		// Clear document/window level inline handlers — the most common anti-copy pattern
 		document.onselectstart = null;
 		document.oncopy = null;
 		window.onselectstart = null;
@@ -1144,7 +1144,7 @@ if (window.__RGInitDone) {
 		// Safety fallback if dynamic module loading failed.
 		const fallback = document.createElement("div");
 		fallback.className = "gemini-enhanced-banner";
-		fallback.textContent = "\u{393}\u{A3}\u{BF} Content enhanced with Ranobe Gemini";
+		fallback.textContent = "✨ Content enhanced with Ranobe Gemini";
 		return fallback;
 	}
 
@@ -1409,7 +1409,7 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7} Skip / Pause helpers \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+	// ── Skip / Pause helpers ────────────────────────────────────────────────────
 
 	function handleSkipChunk(chunkIndex) {
 		chunkEventsModule?.handleSkipChunkRuntime?.({
@@ -1459,7 +1459,7 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+	// ───────────────────────────────────────────────────────────────────────────
 
 	async function handleReenhanceChunk(chunkIndex) {
 		let eventsRuntime = chunkEventsModule;
@@ -1530,7 +1530,7 @@ if (window.__RGInitDone) {
 	// 	}
 
 	// 	showStatusMessage(
-	// 		`Chunks ${startIndex + 1}\u{393}\u{C7}\u{F4}${endIndex + 1} enhanced successfully`,
+	// 		`Chunks ${startIndex + 1}-${endIndex + 1} enhanced successfully`,
 	// 		"success",
 	// 		3000,
 	// 	);
@@ -1667,7 +1667,7 @@ if (window.__RGInitDone) {
 			const svc = await loadSummaryService();
 			if (svc) {
 				debugLog(
-					`Summary service loaded \u{393}\u{C7}\u{F6} delegating ${isShort ? "short" : "long"} summary for chunks`,
+					`Summary service loaded — delegating ${isShort ? "short" : "long"} summary for chunks`,
 					chunkIndices,
 				);
 				const result = await svc.summarize(chunkIndices, isShort);
@@ -1681,9 +1681,9 @@ if (window.__RGInitDone) {
 			debugError("Summary service threw during summarize:", svcErr);
 		}
 
-		// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7} Inline fallback \u{393}\u{C7}\u{F6} runs when the ES-module import fails \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+		// ── Inline fallback — runs when the ES-module import fails ──
 		debugLog(
-			"Summary service unavailable \u{393}\u{C7}\u{F6} using inline fallback for",
+			"Summary service unavailable — using inline fallback for",
 			isShort ? "short" : "long",
 			"summary",
 		);
@@ -1736,9 +1736,9 @@ if (window.__RGInitDone) {
 			// 1. Wake up background
 			if (btn) {
 				btn.disabled = true;
-				btn.textContent = "Waking up AI\u{393}\u{C7}\u{AA}";
+				btn.textContent = "Waking up AI…";
 			}
-			if (statusDiv) statusDiv.textContent = "Waking up AI service\u{393}\u{C7}\u{AA}";
+			if (statusDiv) statusDiv.textContent = "Waking up AI service…";
 
 			const isReady = await wakeUpBackgroundWorker();
 			if (!isReady) {
@@ -1748,11 +1748,11 @@ if (window.__RGInitDone) {
 			}
 
 			// 2. Collect content (three-tier fallback)
-			if (btn) btn.textContent = "Extracting content\u{393}\u{C7}\u{AA}";
-			if (statusDiv) statusDiv.textContent = "Extracting content\u{393}\u{C7}\u{AA}";
+			if (btn) btn.textContent = "Extracting content…";
+			if (statusDiv) statusDiv.textContent = "Extracting content…";
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary\u{393}\u{C7}\u{AA}`;
+				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
 			}
 
 			let contentText = null;
@@ -1817,9 +1817,9 @@ if (window.__RGInitDone) {
 			);
 
 			// 3. Send to background for summarisation
-			if (btn) btn.textContent = "Summarising\u{393}\u{C7}\u{AA}";
+			if (btn) btn.textContent = "Summarising…";
 			if (statusDiv) {
-				statusDiv.textContent = `Sending to Gemini for ${summaryType.toLowerCase()} summary\u{393}\u{C7}\u{AA}`;
+				statusDiv.textContent = `Sending to Gemini for ${summaryType.toLowerCase()} summary…`;
 			}
 
 			const action = isShort
@@ -1835,7 +1835,7 @@ if (window.__RGInitDone) {
 				const errMsg = response?.error || "Failed to generate summary.";
 				if (errMsg.includes("API key is missing")) {
 					showStatusMessage(
-						"API key is missing. Opening settings page\u{393}\u{C7}\u{AA}",
+						"API key is missing. Opening settings page…",
 						"error",
 					);
 					browser.runtime.sendMessage({ action: "openPopup" });
@@ -2327,7 +2327,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7} Custom box type CSS injection \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+	// ── Custom box type CSS injection ──────────────────────────────────────────
 	let customBoxTypesModule = null;
 
 	async function loadCustomBoxTypesModule() {
@@ -2343,7 +2343,7 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Inject (or refresh) a <style> tag for user-defined custom content box types.
-	 * Idempotent \u{393}\u{C7}\u{F6} updates the existing tag on subsequent calls.
+	 * Idempotent — updates the existing tag on subsequent calls.
 	 */
 	async function injectCustomBoxCSS() {
 		try {
@@ -2400,7 +2400,7 @@ if (window.__RGInitDone) {
 				}
 			}
 		} catch (_err) {
-			// non-critical \u{393}\u{C7}\u{F6} fall back to prompt without custom boxes
+			// non-critical — fall back to prompt without custom boxes
 		}
 		return prompt;
 	}
@@ -2440,7 +2440,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7} Collapsible sections module \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+	// ── Collapsible sections module ──────────────────────────────
 	let collapsibleSectionsModule = null;
 
 	async function loadCollapsibleSectionsModule() {
@@ -2485,7 +2485,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7} Summary service (unified summary pipeline) \u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}\u{393}\u{F6}\u{C7}
+	// ── Summary service (unified summary pipeline) ──────────────
 	let summaryServiceModule = null;
 	let summaryRuntimeModule = null;
 	let chunkBatchModule = null;
@@ -2837,7 +2837,7 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 		if (!contentArea) {
 			debugLog(
-				"[Cache Restore] No content area found \u{393}\u{C7}\u{F6} scheduling retry.",
+				"[Cache Restore] No content area found — scheduling retry.",
 			);
 			// Content area may not be ready yet (DOM still loading).
 			// Schedule one retry so chunked cache is still restored reliably.
@@ -2863,7 +2863,7 @@ if (window.__RGInitDone) {
 		}
 		if (document.getElementById("gemini-chunked-content")) {
 			debugLog(
-				"[Cache Restore] Chunked content container already exists \u{393}\u{C7}\u{F6} skipping.",
+				"[Cache Restore] Chunked content container already exists — skipping.",
 			);
 			return false;
 		}
@@ -2871,7 +2871,7 @@ if (window.__RGInitDone) {
 		const chunking = await loadChunkingSystem();
 		if (!chunking?.cache?.hasChunksInCache) {
 			debugLog(
-				"[Cache Restore] Chunking system or cache unavailable \u{393}\u{C7}\u{F6} skipping.",
+				"[Cache Restore] Chunking system or cache unavailable — skipping.",
 			);
 			return false;
 		}
@@ -2899,14 +2899,14 @@ if (window.__RGInitDone) {
 		const isComplete = isChunkCacheComplete(chunks, metadata?.totalChunks);
 		if (!isComplete) {
 			debugLog(
-				`[Cache Restore] Chunk cache incomplete \u{393}\u{C7}\u{F6} have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
+				`[Cache Restore] Chunk cache incomplete — have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
 			);
 			return false;
 		}
 
 		// Validate cached chunk count against a fresh split of the current page content.
 		// A stale cache (e.g. from a previous buggy run that produced duplicate chunks)
-		// can have more entries than the corrected splitter would produce \u{393}\u{C7}\u{F6} trim them.
+		// can have more entries than the corrected splitter would produce — trim them.
 		if (
 			chunking.core?.splitContentByWords &&
 			chunking.config?.getChunkConfig
@@ -2920,7 +2920,7 @@ if (window.__RGInitDone) {
 				);
 				if (freshChunks.length < chunks.length) {
 					debugLog(
-						`[Cache Restore] Stale cache detected \u{393}\u{C7}\u{F6} cached ${chunks.length} chunks but fresh split gives ${freshChunks.length}. Trimming extras.`,
+						`[Cache Restore] Stale cache detected — cached ${chunks.length} chunks but fresh split gives ${freshChunks.length}. Trimming extras.`,
 					);
 					const extraChunks = chunks.slice(freshChunks.length);
 					for (const extraChunk of extraChunks) {
@@ -2935,7 +2935,7 @@ if (window.__RGInitDone) {
 					if (metadata) metadata.totalChunks = freshChunks.length;
 					if (chunks.length === 0) {
 						debugLog(
-							"[Cache Restore] All chunks trimmed \u{393}\u{C7}\u{F6} nothing to restore.",
+							"[Cache Restore] All chunks trimmed — nothing to restore.",
 						);
 						return false;
 					}
@@ -2944,7 +2944,7 @@ if (window.__RGInitDone) {
 					// but never updates totalChunks, so the next page load would
 					// see chunkIndices.length (3) !== totalChunks (4) and refuse to
 					// restore. Re-saving the first remaining chunk causes
-					// saveChunkToCache \u{393}\u{E5}\u{C6} updateChunkMetadata("add", {totalChunks: N})
+					// saveChunkToCache → updateChunkMetadata("add", {totalChunks: N})
 					// which writes the correct value to storage.
 					const firstChunk = chunks[0];
 					await chunking.cache.saveChunkToCache(
@@ -2969,7 +2969,7 @@ if (window.__RGInitDone) {
 		);
 		if (!allEnhanced) {
 			debugLog(
-				"[Cache Restore] One or more chunks missing enhanced content \u{393}\u{C7}\u{F6} skipping.",
+				"[Cache Restore] One or more chunks missing enhanced content — skipping.",
 			);
 			return false;
 		}
@@ -3407,10 +3407,10 @@ if (window.__RGInitDone) {
 		const titleEl = document.createElement("div");
 		titleEl.style.cssText =
 			"font-weight:700;font-size:13px;color:#818cf8;flex:1;";
-		titleEl.textContent = "\u{2261}\u{192}\u{F4}\u{FB} Reading Progress";
+		titleEl.textContent = "📖 Reading Progress";
 
 		const closeBtn = document.createElement("button");
-		closeBtn.textContent = "\u{251C}\u{F9}";
+		closeBtn.textContent = "×";
 		closeBtn.style.cssText =
 			"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 		closeBtn.addEventListener("click", () => banner.remove());
@@ -3560,10 +3560,10 @@ if (window.__RGInitDone) {
 		const titleEl = document.createElement("div");
 		titleEl.style.cssText =
 			"font-weight:700;font-size:13px;color:#c084fc;flex:1;";
-		titleEl.textContent = "\u{2261}\u{192}\u{F6}\u{FC} Re-reading Detected";
+		titleEl.textContent = "🔁 Re-reading Detected";
 
 		const closeBtn = document.createElement("button");
-		closeBtn.textContent = "\u{251C}\u{F9}";
+		closeBtn.textContent = "×";
 		closeBtn.style.cssText =
 			"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 		closeBtn.addEventListener("click", () => banner.remove());
@@ -3591,9 +3591,9 @@ if (window.__RGInitDone) {
 		const actions = document.createElement("div");
 		actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
 
-		// "Start Re-reading" button \u{393}\u{C7}\u{F6} sets overlay flag
+		// "Start Re-reading" button — sets overlay flag
 		const rereadBtn = document.createElement("button");
-		rereadBtn.textContent = "\u{2261}\u{192}\u{F6}\u{FC} Start Re-reading";
+		rereadBtn.textContent = "🔁 Start Re-reading";
 		rereadBtn.style.cssText =
 			"background:#9c27b0;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
 		rereadBtn.addEventListener("mouseover", () => {
@@ -3606,7 +3606,7 @@ if (window.__RGInitDone) {
 			try {
 				await novelLibrary.toggleNovelReadingList(novelId, "rereading");
 				showTimedBanner(
-					"\u{2261}\u{192}\u{F4}\u{FB} Re-reading mode started",
+					"📖 Re-reading mode started",
 					"success",
 					bannerConfig.quickMs,
 				);
@@ -3622,7 +3622,7 @@ if (window.__RGInitDone) {
 			}
 		});
 
-		// "Continue to Ch. X" button \u{393}\u{C7}\u{F6} navigate to last-read URL
+		// "Continue to Ch. X" button — navigate to last-read URL
 		const continueBtn = document.createElement("button");
 		continueBtn.textContent = `Continue to Ch. ${lastReadChapter}`;
 		continueBtn.style.cssText =
@@ -3646,9 +3646,9 @@ if (window.__RGInitDone) {
 			}
 		});
 
-		// "Start from Here" button \u{393}\u{C7}\u{F6} resets progress to current chapter, no re-reading overlay
+		// "Start from Here" button — resets progress to current chapter, no re-reading overlay
 		const startHereBtn = document.createElement("button");
-		startHereBtn.textContent = `\u{2261}\u{192}\u{F4}\u{EC} Start from Ch. ${currentChapter}`;
+		startHereBtn.textContent = `📍 Start from Ch. ${currentChapter}`;
 		startHereBtn.style.cssText =
 			"background:#0e7490;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
 		startHereBtn.addEventListener("mouseover", () => {
@@ -3666,7 +3666,7 @@ if (window.__RGInitDone) {
 					{},
 				);
 				showTimedBanner(
-					`\u{2261}\u{192}\u{F4}\u{EC} Progress reset to Chapter ${currentChapter}`,
+					`📍 Progress reset to Chapter ${currentChapter}`,
 					"success",
 					bannerConfig.quickMs,
 				);
@@ -3710,10 +3710,10 @@ if (window.__RGInitDone) {
 	async function autoUpdateNovelOnVisit() {
 		if (!currentHandler) return;
 
-		// Incognito mode \u{393}\u{C7}\u{F6} suppress all automatic tracking
+		// Incognito mode — suppress all automatic tracking
 		if (isIncognitoActive()) {
 			debugLog(
-				"\u{2261}\u{192}\u{F2}\u{2561}\u{2229}\u{2555}\u{C5} Incognito mode active \u{393}\u{C7}\u{F6} skipping autoUpdateNovelOnVisit",
+				"🕵️ Incognito mode active — skipping autoUpdateNovelOnVisit",
 			);
 			return;
 		}
@@ -3756,7 +3756,7 @@ if (window.__RGInitDone) {
 							8000,
 							{
 								actionButton: {
-									text: "\u{2261}\u{192}\u{F4}\u{FB} View Novel Details",
+									text: "📖 View Novel Details",
 									url: novelPageUrl,
 								},
 							},
@@ -3832,7 +3832,7 @@ if (window.__RGInitDone) {
 					);
 					if (Object.keys(changes).length > 0) {
 						debugLog(
-							`\u{2261}\u{192}\u{F4}\u{DC} Auto-updating ${Object.keys(changes).length} metadata fields for ${existingNovel.title}`,
+							`📚 Auto-updating ${Object.keys(changes).length} metadata fields for ${existingNovel.title}`,
 						);
 						const updatedData =
 							buildNovelDataFromMetadata(metadata);
@@ -3852,7 +3852,7 @@ if (window.__RGInitDone) {
 							totalChapterCount > existingNovel.totalChapters)
 					) {
 						debugLog(
-							`\u{2261}\u{192}\u{F4}\u{DC} Auto-updating total chapters to ${totalChapterCount}`,
+							`📚 Auto-updating total chapters to ${totalChapterCount}`,
 						);
 						await novelLibrary.updateNovel(novelId, {
 							totalChapters: totalChapterCount,
@@ -3885,7 +3885,7 @@ if (window.__RGInitDone) {
 						currentChapterNum > storedChapter ||
 						!existingNovel.lastReadUrl
 					) {
-						// Chapter progressed, or URL not yet recorded \u{393}\u{C7}\u{F6} update reading progress
+						// Chapter progressed, or URL not yet recorded — update reading progress
 						await novelLibrary.updateReadingProgress(
 							novelId,
 							currentChapterNum,
@@ -3973,10 +3973,7 @@ if (window.__RGInitDone) {
 					};
 
 					await novelLibrary.addOrUpdateNovel(novelData);
-					debugLog(
-						"\u{2261}\u{192}\u{F4}\u{DC} Auto-added novel to library:",
-						metadata.title,
-					);
+					debugLog("📚 Auto-added novel to library:", metadata.title);
 					showTimedBanner(
 						`Added to library: ${metadata.title}`,
 						"success",
@@ -3991,18 +3988,18 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Show "Check for Updates" banner for existing novels.
-	 * Auto-dismisses after updateNotifyMs \u{393}\u{C7}\u{F6} user does NOT need to interact.
+	 * Auto-dismisses after updateNotifyMs — user does NOT need to interact.
 	 * The "Update" button in the chapter controls handles manual updates.
 	 */
 	function showUpdateAvailableBanner(existingNovel, currentMetadata) {
 		showTimedBanner(
-			`\u{2261}\u{192}\u{F6}\u{F9} Updates may be available for "${existingNovel.title}"`,
+			`🔗 Updates may be available for "${existingNovel.title}"`,
 			"info",
 			bannerConfig.updateNotifyMs || 8000,
 			{
 				title: "Novel Update Available",
 				actionButton: {
-					text: "\u{2261}\u{192}\u{F6}\u{E4} Update Now",
+					text: "🔄 Update Now",
 					onClick: () => {
 						manuallyCheckAndUpdateNovel(
 							existingNovel,
@@ -4034,17 +4031,17 @@ if (window.__RGInitDone) {
 			if (Object.keys(changes).length === 0) {
 				// No changes detected
 				showTimedBanner(
-					"\u{393}\u{A3}\u{F4} No updates available (metadata is current)",
+					"✅ No updates available (metadata is current)",
 					"success",
 					4000,
 				);
-				debugLog("\u{2261}\u{192}\u{F4}\u{DC} No metadata changes detected");
+				debugLog("📚 No metadata changes detected");
 				return;
 			}
 
 			// Show "Updating..." message
 			showTimedBanner(
-				`\u{2261}\u{192}\u{F6}\u{E4} Checking: ${existingNovel.title}`,
+				`🔄 Checking: ${existingNovel.title}`,
 				"updating",
 				1500,
 			);
@@ -4053,14 +4050,14 @@ if (window.__RGInitDone) {
 			const updatedData = buildNovelDataFromMetadata(currentMetadata);
 			await novelLibrary.updateNovelMetadata(novelId, updatedData);
 
-			debugLog("\u{2261}\u{192}\u{F4}\u{DC} Manually updated novel, changes:", changes);
+			debugLog("📚 Manually updated novel, changes:", changes);
 
 			// Display what changed
 			displayChangeSummary(existingNovel.title, changes);
 		} catch (error) {
 			debugError("Error in manual update:", error);
 			showTimedBanner(
-				`\u{393}\u{A5}\u{EE} Error updating: ${error.message}`,
+				`❌ Error updating: ${error.message}`,
 				"error",
 				5000,
 			);
@@ -4165,7 +4162,7 @@ if (window.__RGInitDone) {
 
 		// Title
 		const title = document.createElement("h3");
-		title.textContent = `\u{393}\u{A3}\u{BF} Updated: ${novelTitle}`;
+		title.textContent = `✨ Updated: ${novelTitle}`;
 		title.style.cssText =
 			"margin-top: 0; margin-bottom: 16px; color: #88bbff;";
 		modal.appendChild(title);
@@ -4194,7 +4191,7 @@ if (window.__RGInitDone) {
 				color: #cc6666;
 				text-decoration: line-through;
 			`;
-			oldValue.textContent = `\u{393}\u{E5}\u{DC} ${change.old}`;
+			oldValue.textContent = `↚ ${change.old}`;
 			fieldDiv.appendChild(oldValue);
 
 			const newValue = document.createElement("div");
@@ -4203,7 +4200,7 @@ if (window.__RGInitDone) {
 				font-size: 0.9em;
 				color: #66dd66;
 			`;
-			newValue.textContent = `\u{393}\u{E5}\u{AA} ${change.new}`;
+			newValue.textContent = `↦ ${change.new}`;
 			fieldDiv.appendChild(newValue);
 
 			changesDiv.appendChild(fieldDiv);
@@ -4224,7 +4221,7 @@ if (window.__RGInitDone) {
 
 		// Close button
 		const closeBtn = document.createElement("button");
-		closeBtn.textContent = "\u{393}\u{A3}\u{F4} Got it";
+		closeBtn.textContent = "✅ Got it";
 		closeBtn.style.cssText = `
 			margin-top: 16px;
 			width: 100%;
@@ -4310,7 +4307,7 @@ if (window.__RGInitDone) {
 				margin-bottom: 12px;
 				color: #ffbb88;
 			`;
-			title.textContent = "\u{393}\u{DC}\u{E1}\u{2229}\u{2555}\u{C5} Chapter Regression Detected";
+			title.textContent = "⚠️ Chapter Regression Detected";
 			modal.appendChild(title);
 
 			// Info message
@@ -4336,7 +4333,7 @@ if (window.__RGInitDone) {
 
 			// Keep button
 			const keepBtn = document.createElement("button");
-			keepBtn.textContent = `\u{393}\u{E5}\u{2310}\u{2229}\u{2555}\u{C5} Keep Reading Ch. ${currentChapter}`;
+			keepBtn.textContent = `↩️ Keep Reading Ch. ${currentChapter}`;
 			keepBtn.style.cssText = `
 				flex: 1;
 				padding: 12px;
@@ -4350,9 +4347,9 @@ if (window.__RGInitDone) {
 			`;
 			keepBtn.addEventListener("click", async () => {
 				debugLog(
-					`\u{2261}\u{192}\u{C6}\u{255B} Keeping chapter ${currentChapter} for ${novelTitle}`,
+					`💾 Keeping chapter ${currentChapter} for ${novelTitle}`,
 				);
-				// User is choosing to read from this (earlier) chapter \u{393}\u{C7}\u{F6} update progress to here
+				// User is choosing to read from this (earlier) chapter — update progress to here
 				await novelLibrary.updateReadingProgress(
 					novelId,
 					currentChapter,
@@ -4372,7 +4369,7 @@ if (window.__RGInitDone) {
 
 			// Resume button
 			const resumeBtn = document.createElement("button");
-			resumeBtn.textContent = `\u{2261}\u{192}\u{F4}\u{FB} Go Back to Ch. ${storedChapter}`;
+			resumeBtn.textContent = `📖 Go Back to Ch. ${storedChapter}`;
 			resumeBtn.style.cssText = `
 				flex: 1;
 				padding: 12px;
@@ -4386,7 +4383,7 @@ if (window.__RGInitDone) {
 			`;
 			resumeBtn.addEventListener("click", async () => {
 				debugLog(
-					`\u{393}\u{E5}\u{2310}\u{2229}\u{2555}\u{C5} Resuming chapter ${storedChapter} for ${novelTitle}`,
+					`↩️ Resuming chapter ${storedChapter} for ${novelTitle}`,
 				);
 
 				if (lastReadUrl) {
@@ -4478,7 +4475,7 @@ if (window.__RGInitDone) {
 		const toggleButton = document.createElement("button");
 		toggleButton.className = "gemini-toggle-banners-btn";
 		toggleButton.innerHTML =
-			'<span style="font-size: 20px;">\u{393}\u{DC}\u{ED}</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+			'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 		toggleButton.title =
 			"Toggle visibility of Ranobe Gemini enhancement UI";
 
@@ -4543,7 +4540,7 @@ if (window.__RGInitDone) {
 		const btn = document.createElement("button");
 		btn.className = "gemini-enhance-btn";
 		btn.innerHTML =
-			'<span style="font-size: 20px;">\u{393}\u{DC}\u{ED}</span> <span style="font-weight: 600;">Enhance with Gemini</span>';
+			'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Enhance with Gemini</span>';
 		btn.title = "Enhance chapter text with Gemini AI";
 		btn.style.cssText = `
         display: flex;
@@ -4671,7 +4668,7 @@ if (window.__RGInitDone) {
 		`;
 
 		const logo = document.createElement("span");
-		logo.textContent = "\u{2261}\u{192}\u{F4}\u{DC}";
+		logo.textContent = "📚";
 		logo.style.fontSize = "24px";
 
 		const title = document.createElement("span");
@@ -4685,8 +4682,8 @@ if (window.__RGInitDone) {
 		const status = document.createElement("span");
 		status.id = "rg-novel-status";
 		status.textContent = existingNovel
-			? "\u{393}\u{A3}\u{E0} In Library"
-			: "\u{2261}\u{192}\u{F4}\u{FB} Not in Library";
+			? "✅ In Library"
+			: "📖 Not in Library";
 		status.style.cssText = `
 			margin-left: auto;
 			padding: 4px 10px;
@@ -4744,7 +4741,7 @@ if (window.__RGInitDone) {
 		// Add/Update button
 		const addUpdateBtn = createButton(
 			existingNovel ? "Update Novel" : "Add to Library",
-			existingNovel ? "\u{2261}\u{192}\u{F6}\u{E4}" : "\u{393}\u{20A7}\u{F2}",
+			existingNovel ? "🔄" : "➕",
 			existingNovel ? "#00695c" : "#1976d2",
 			async () => {
 				if (existingNovel) {
@@ -4789,10 +4786,10 @@ if (window.__RGInitDone) {
 					"success",
 					2000,
 				);
-				debugLog(`\u{2261}\u{192}\u{F4}\u{FB} Reading status changed to: ${newStatus}`);
+				debugLog(`📖 Reading status changed to: ${newStatus}`);
 
 				// Always refresh the UI so the dropdown reflects the saved status.
-				// Do NOT gate this on finding the element \u{393}\u{C7}\u{F4} the element may have
+				// Do NOT gate this on finding the element – the element may have
 				// been temporarily absent during the async storage round-trip.
 				const controls = document.getElementById("rg-novel-controls");
 				if (controls) controls.remove();
@@ -4866,7 +4863,7 @@ if (window.__RGInitDone) {
 			// Delete button
 			const deleteBtn = createButton(
 				"Remove",
-				"\u{2261}\u{192}\u{F9}\u{E6}\u{2229}\u{2555}\u{C5}",
+				"🗑️",
 				"#c62828",
 				async () => {
 					await handleNovelDelete();
@@ -4875,20 +4872,15 @@ if (window.__RGInitDone) {
 			buttonRow.appendChild(deleteBtn);
 		}
 
-		// Open Library button \u{393}\u{C7}\u{F6} pass novel ID so the library auto-opens the modal
-		const libraryBtn = createButton(
-			"Open Library",
-			"\u{2261}\u{192}\u{F4}\u{DC}",
-			"#7b1fa2",
-			() => {
-				const base = browser.runtime.getURL("library/library.html");
-				const novelId = existingNovel?.id ?? null;
-				const libraryUrl = novelId
-					? `${base}?novel=${encodeURIComponent(novelId)}`
-					: base;
-				window.open(libraryUrl, "_blank");
-			},
-		);
+		// Open Library button — pass novel ID so the library auto-opens the modal
+		const libraryBtn = createButton("Open Library", "📚", "#7b1fa2", () => {
+			const base = browser.runtime.getURL("library/library.html");
+			const novelId = existingNovel?.id ?? null;
+			const libraryUrl = novelId
+				? `${base}?novel=${encodeURIComponent(novelId)}`
+				: base;
+			window.open(libraryUrl, "_blank");
+		});
 		buttonRow.appendChild(libraryBtn);
 
 		// Handler-supplied extra buttons (after defaults)
@@ -5080,10 +5072,10 @@ if (window.__RGInitDone) {
 	async function updateChapterProgression() {
 		if (!novelLibrary || !currentHandler) return;
 
-		// Incognito mode \u{393}\u{C7}\u{F6} skip automatic progress tracking
+		// Incognito mode — skip automatic progress tracking
 		if (isIncognitoActive()) {
 			debugLog(
-				"\u{2261}\u{192}\u{F2}\u{2561}\u{2229}\u{2555}\u{C5} Incognito mode active \u{393}\u{C7}\u{F6} skipping updateChapterProgression",
+				"🕵️ Incognito mode active — skipping updateChapterProgression",
 			);
 			return;
 		}
@@ -5123,7 +5115,7 @@ if (window.__RGInitDone) {
 					},
 				);
 				debugLog(
-					`\u{2261}\u{192}\u{F4}\u{FB} Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
+					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
 				);
 				showTimedBanner(
 					`Progress saved: Chapter ${chapterNav.currentChapter}`,
@@ -5134,7 +5126,7 @@ if (window.__RGInitDone) {
 				novel.lastReadChapter &&
 				chapterNav.currentChapter < novel.lastReadChapter
 			) {
-				// User is reading an earlier chapter \u{393}\u{C7}\u{F6} offer re-reading prompt
+				// User is reading an earlier chapter — offer re-reading prompt
 				await showRereadingBanner({
 					novelId,
 					currentChapter: chapterNav.currentChapter,
@@ -5228,7 +5220,7 @@ if (window.__RGInitDone) {
 				3000,
 			);
 
-			// Refresh the controls \u{393}\u{C7}\u{F4} remove first so the DOM guard allows re-creation.
+			// Refresh the controls – remove first so the DOM guard allows re-creation.
 			removeChapterNovelControlsFromDOM();
 			const config = currentHandler?.getNovelControlsConfig?.() || {};
 			const newControls = await createChapterPageNovelControls(config);
@@ -5483,7 +5475,7 @@ if (window.__RGInitDone) {
 		);
 		if (existingDOMControls?.isConnected) {
 			debugLog(
-				"Chapter novel controls already exist in DOM \u{393}\u{C7}\u{F4} skipping creation to prevent duplicates.",
+				"Chapter novel controls already exist in DOM – skipping creation to prevent duplicates.",
 			);
 			__rgCreatingChapterControls = false;
 			return null;
@@ -5530,9 +5522,9 @@ if (window.__RGInitDone) {
 						"success",
 						2000,
 					);
-					debugLog(`\u{2261}\u{192}\u{F4}\u{FB} Reading status changed to: ${newStatus}`);
+					debugLog(`📖 Reading status changed to: ${newStatus}`);
 
-					// Always refresh controls \u{393}\u{C7}\u{F4} remove-then-recreate pattern.
+					// Always refresh controls – remove-then-recreate pattern.
 					// removeChapterNovelControlsFromDOM also cleans up the DT/DD
 					// wrapper so no orphaned shells are left in the page.
 					removeChapterNovelControlsFromDOM();
@@ -5558,7 +5550,7 @@ if (window.__RGInitDone) {
 						3000,
 					);
 
-					// Refresh controls \u{393}\u{C7}\u{F4} also strips the DT/DD wrapper to prevent orphaned shells.
+					// Refresh controls – also strips the DT/DD wrapper to prevent orphaned shells.
 					removeChapterNovelControlsFromDOM();
 				} catch (error) {
 					debugError("Error removing novel:", error);
@@ -5611,13 +5603,13 @@ if (window.__RGInitDone) {
 			font-weight: 600;
 		`;
 			statusBadge.textContent = existingNovel
-				? "\u{2261}\u{192}\u{F4}\u{DC} In Library"
-				: "\u{2261}\u{192}\u{F4}\u{FB} Not Saved";
+				? "📚 In Library"
+				: "📖 Not Saved";
 			controlsContainer.appendChild(statusBadge);
 
 			// Separator
 			const separator = document.createElement("span");
-			separator.textContent = "\u{393}\u{C7}\u{F3}";
+			separator.textContent = "·";
 			separator.style.cssText = "color: #666; margin: 0 4px;";
 			controlsContainer.appendChild(separator);
 
@@ -5656,7 +5648,7 @@ if (window.__RGInitDone) {
 			// Add/Update button
 			const addUpdateBtn = createCompactButton(
 				existingNovel ? "Update" : "Add to Library",
-				existingNovel ? "\u{2261}\u{192}\u{F6}\u{E4}" : "\u{393}\u{20A7}\u{F2}",
+				existingNovel ? "🔄" : "➕",
 				existingNovel ? "#00695c" : "#1976d2",
 				async () => {
 					if (existingNovel) {
@@ -5734,7 +5726,7 @@ if (window.__RGInitDone) {
 				// Remove button
 				const removeBtn = createCompactButton(
 					"Remove",
-					"\u{2261}\u{192}\u{F9}\u{E6}\u{2229}\u{2555}\u{C5}",
+					"🗑️",
 					"#c62828",
 					async () => {
 						// Confirm deletion
@@ -5749,8 +5741,14 @@ if (window.__RGInitDone) {
 				// --- Reading Lists Dropdown ---
 				const readingLists = new Set(existingNovel.readingLists || []);
 				const readingListBadgeDefs = [
-					{ id: "rereading", label: "\u{2261}\u{192}\u{F6}\u{FC} Rereading" },
-					{ id: "favourites", label: "\u{393}\u{A1}\u{C9} Favourites" },
+					{
+						id: "rereading",
+						label: "🔁 Rereading",
+					},
+					{
+						id: "favourites",
+						label: "❤️ Favourites",
+					},
 				];
 
 				const readingListSelect = document.createElement("select");
@@ -5794,7 +5792,7 @@ if (window.__RGInitDone) {
 				// Default/Prompt Option
 				const defaultOpt = document.createElement("option");
 				defaultOpt.value = "";
-				defaultOpt.textContent = "\u{2261}\u{192}\u{F4}\u{E6} Add to List...";
+				defaultOpt.textContent = "📑 Add to List...";
 				defaultOpt.disabled = true;
 				defaultOpt.selected = true;
 				readingListSelect.appendChild(defaultOpt);
@@ -5805,7 +5803,7 @@ if (window.__RGInitDone) {
 					const option = document.createElement("option");
 					option.value = listDef.id;
 					option.textContent =
-						(isActive ? "\u{393}\u{A3}\u{F4} " : "  ") + listDef.label;
+						(isActive ? "✅ " : "  ") + listDef.label;
 					readingListSelect.appendChild(option);
 				}
 
@@ -5853,10 +5851,10 @@ if (window.__RGInitDone) {
 				controlsContainer.appendChild(readingListSelect);
 			}
 
-			// Open Library button \u{393}\u{C7}\u{F6} pass novel ID so the library auto-opens the modal
+			// Open Library button — pass novel ID so the library auto-opens the modal
 			const libraryBtn = createCompactButton(
 				"Library",
-				"\u{2261}\u{192}\u{F4}\u{DC}",
+				"📚",
 				"#7b1fa2",
 				() => {
 					const base = browser.runtime.getURL("library/library.html");
@@ -5869,16 +5867,16 @@ if (window.__RGInitDone) {
 			);
 			controlsContainer.appendChild(libraryBtn);
 
-			// Incognito mode badge \u{393}\u{C7}\u{F6} shown when incognito is active
+			// Incognito mode badge — shown when incognito is active
 			if (isIncognitoActive()) {
 				const incogBadge = document.createElement("span");
 				const expiresAt = incognitoMode.expiresAt;
 				const timeLabel = expiresAt
 					? ` until ${new Date(expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
 					: " (indefinite)";
-				incogBadge.innerHTML = `\u{2261}\u{192}\u{F2}\u{2561}\u{2229}\u{2555}\u{C5} Incognito${timeLabel}`;
+				incogBadge.innerHTML = `🕵️ Incognito${timeLabel}`;
 				incogBadge.title =
-					"Incognito mode is active \u{393}\u{C7}\u{F6} library tracking is paused";
+					"Incognito mode is active — library tracking is paused";
 				incogBadge.style.cssText = `
 					padding: 4px 8px;
 					background: #37474f;
@@ -5901,7 +5899,7 @@ if (window.__RGInitDone) {
 					: "Hide Gemini UI";
 				const toggleBannersBtn = createCompactButton(
 					toggleBannersBtnLabel,
-					"\u{393}\u{DC}\u{ED}",
+					"👁",
 					"#ff9800",
 					() => {
 						handleChapterControlsToggleBanners(toggleBannersBtn);
@@ -5947,7 +5945,7 @@ if (window.__RGInitDone) {
 								const origText = badge.innerHTML;
 								badge.addEventListener("click", async () => {
 									await btnSpec.onClick();
-									badge.innerHTML = "\u{393}\u{A3}\u{E0} Copied!";
+									badge.innerHTML = "✅ Copied!";
 									setTimeout(() => {
 										badge.innerHTML = origText;
 									}, 2000);
@@ -6030,7 +6028,7 @@ if (window.__RGInitDone) {
 		statusDiv.style.marginTop = "5px";
 
 		// For chapter_embedded handlers ALL three controls (toggle/enhance/cancel) live
-		// inside #rg-chapter-novel-controls and the chunk banners already \u{393}\u{C7}\u{F6} #gemini-controls
+		// inside #rg-chapter-novel-controls and the chunk banners already — #gemini-controls
 		// would duplicate them.  dedicated_page (and any future) handlers keep all three here.
 		if (getHandlerType() !== HANDLER_TYPES.CHAPTER_EMBEDDED) {
 			controlsContainer.appendChild(toggleBannersButton);
@@ -6112,10 +6110,10 @@ if (window.__RGInitDone) {
 			currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
 		) {
 			toggleBtn.innerHTML =
-				'<span style="font-size: 20px;">\u{393}\u{DC}\u{ED}</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+				'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 		} else if (toggleBtn) {
 			toggleBtn.innerHTML =
-				'<span style="font-size: 20px;">\u{393}\u{DC}\u{ED}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
+				'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
 		}
 
 		// Add novel controls for CHAPTER_EMBEDDED type sites (like FanFiction.net)
@@ -6221,7 +6219,7 @@ if (window.__RGInitDone) {
 
 						if (shouldAutoEnhance) {
 							debugLog(
-								"\u{2261}\u{192}\u{DC}\u{C7} Auto-enhance enabled for this novel, starting enhancement...",
+								"🚀 Auto-enhance enabled for this novel, starting enhancement...",
 							);
 							// Wait a bit for page to stabilize
 							setTimeout(() => {
@@ -6309,7 +6307,7 @@ if (window.__RGInitDone) {
 	// Handle click event for Summarize button (used by message handler for non-chunked content)
 	// Delegates to the unified summary service which handles both chunked and non-chunked pages.
 	async function handleSummarizeClick(isShort = false) {
-		// Use [0] as a single-chunk placeholder \u{393}\u{C7}\u{F6} the summary service's collectContent()
+		// Use [0] as a single-chunk placeholder — the summary service's collectContent()
 		// correctly falls through to live extraction when no chunk DOM elements exist.
 		return summarizeChunkRange([0], isShort);
 	}
@@ -6471,7 +6469,7 @@ if (window.__RGInitDone) {
 				showStatusMessage,
 				documentRef: document,
 				cancelEnhanceButton,
-				buttonText: "\u{393}\u{A3}\u{BF} Enhance with Gemini",
+				buttonText: "✨ Enhance with Gemini",
 			});
 		}
 	}
@@ -6791,7 +6789,7 @@ if (window.__RGInitDone) {
 					: `${percentChange}% decrease`;
 
 			existingWordCount.innerHTML = `
-			<strong>  Word Count:</strong> ${originalCount} \u{393}\u{E5}\u{C6} ${newCount} (${changeText})
+			<strong>  Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
 		`;
 			return;
 		}
@@ -6818,7 +6816,7 @@ if (window.__RGInitDone) {
 				: `${percentChange}% decrease`;
 
 		wordCountContainer.innerHTML = `
-		<strong>  Word Count:</strong> ${originalCount} \u{393}\u{E5}\u{C6} ${newCount} (${changeText})
+		<strong>  Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
 	`;
 
 		insertAfterControlsOrTop(contentArea, wordCountContainer);
@@ -7044,7 +7042,7 @@ if (window.__RGInitDone) {
 
 		try {
 			if (!currentHandler) {
-				debugLog("\u{2261}\u{192}\u{F4}\u{DC} getNovelInfo: No handler available");
+				debugLog("📚 getNovelInfo: No handler available");
 				return {
 					success: false,
 					error: "No handler available for this page",
@@ -7052,12 +7050,12 @@ if (window.__RGInitDone) {
 			}
 
 			// Get novel metadata from handler
-			debugLog("\u{2261}\u{192}\u{F4}\u{DC} getNovelInfo: Extracting metadata...");
+			debugLog("📚 getNovelInfo: Extracting metadata...");
 			const metadata = await currentHandler.extractNovelMetadata();
-			debugLog("\u{2261}\u{192}\u{F4}\u{DC} getNovelInfo: Raw metadata:", metadata);
+			debugLog("📚 getNovelInfo: Raw metadata:", metadata);
 
 			if (!metadata || !metadata.title) {
-				debugLog("\u{2261}\u{192}\u{F4}\u{DC} getNovelInfo: No valid metadata found");
+				debugLog("📚 getNovelInfo: No valid metadata found");
 				return {
 					success: false,
 					error: "Could not extract novel metadata",
@@ -7141,7 +7139,7 @@ if (window.__RGInitDone) {
 						}),
 			};
 
-			debugLog("\u{2261}\u{192}\u{F4}\u{DC} getNovelInfo: Returning novelInfo:", novelInfo);
+			debugLog("📚 getNovelInfo: Returning novelInfo:", novelInfo);
 			cacheNovelData(novelInfo);
 			return {
 				success: true,
@@ -7346,7 +7344,7 @@ if (window.__RGInitDone) {
 						wipBanner.remove();
 					}
 				},
-				continueLabel: "\u{26A1} Continue Enhancement",
+				continueLabel: "⚡ Continue Enhancement",
 			});
 			return;
 		}
@@ -7374,7 +7372,7 @@ if (window.__RGInitDone) {
 		}
 
 		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "\u{26A1} Continue Enhancement";
+			btn.textContent = "⚡ Continue Enhancement";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});
@@ -7387,7 +7385,7 @@ if (window.__RGInitDone) {
 				debugError,
 				showStatusMessage,
 				messageText:
-					"\u{393}\u{DC}\u{E1}\u{2229}\u{2555}\u{C5} API key is missing. Please configure it in the extension popup.",
+					"⚠️ API key is missing. Please configure it in the extension popup.",
 				openPopup: () => {
 					browser.runtime
 						.sendMessage({ action: "openPopup" })
@@ -7395,14 +7393,14 @@ if (window.__RGInitDone) {
 							console.warn("Could not open popup:", err);
 						});
 				},
-				buttonLabel: "\u{393}\u{A3}\u{BF} Enhance with Gemini",
+				buttonLabel: "✨ Enhance with Gemini",
 			});
 			return;
 		}
 
 		debugError("[Content] API key is missing, halting processing");
 		showStatusMessage(
-			"\u{393}\u{DC}\u{E1}\u{2229}\u{2555}\u{C5} API key is missing. Please configure it in the extension popup.",
+			"⚠️ API key is missing. Please configure it in the extension popup.",
 			"error",
 			10000,
 		);
@@ -7418,7 +7416,7 @@ if (window.__RGInitDone) {
 		}
 
 		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "\u{393}\u{A3}\u{BF} Enhance with Gemini";
+			btn.textContent = "✨ Enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});
@@ -7601,7 +7599,7 @@ if (window.__RGInitDone) {
 				testContainer.innerHTML = `
 				<h3>Game Stats Box Test Results:</h3>
 				<p>Test completed. Game stats box preserved: ${
-					response.preservedGameStatsBox ? "\u{393}\u{A3}\u{E0} Yes" : "\u{393}\u{A5}\u{EE} No"
+					response.preservedGameStatsBox ? "✅ Yes" : "❌ No"
 				}</p>
 				<div style="margin-top: 20px;">
 					<h4>Processed Content:</h4>

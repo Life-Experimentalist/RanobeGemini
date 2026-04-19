@@ -51,20 +51,20 @@ export function toggleAllChunksRuntime({ documentRef = document, escapeHtml }) {
 
 	allChunkToggleBtns.forEach((btn) => {
 		if (isShowingEnhanced) {
-			btn.textContent = "\u{2728} Show Enhanced";
+			btn.textContent = "✨ Show Enhanced";
 			btn.setAttribute("data-showing", "original");
 			return;
 		}
-		btn.textContent = "\u{1F441} Show Original";
+		btn.textContent = "👁 Show Original";
 		btn.setAttribute("data-showing", "enhanced");
 	});
 
 	if (isShowingEnhanced) {
-		toggleBtn.textContent = "\u{2728} Show All Enhanced";
+		toggleBtn.textContent = "✨ Show All Enhanced";
 		toggleBtn.setAttribute("data-showing", "original");
 		return;
 	}
-	toggleBtn.textContent = "\u{1F441} Show All Original";
+	toggleBtn.textContent = "👁 Show All Original";
 	toggleBtn.setAttribute("data-showing", "enhanced");
 }
 
@@ -104,7 +104,7 @@ export async function deleteAllChunksRuntime({
 	);
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "\u{2728} Enhance with Gemini";
+		btn.textContent = "✨ Enhance with Gemini";
 		btn.disabled = false;
 	});
 }
@@ -176,8 +176,8 @@ export async function continueChunkEnhancementRuntime({
 			const allCompleted =
 				doneNow.length === allNow.length && allNow.length > 0;
 			btn.textContent = allCompleted
-				? "\u{2261}\u{192}\u{F6}\u{E4} Re-enhance with Gemini"
-				: "\u{393}\u{A3}\u{BF} Enhance with Gemini";
+				? "🔄 Re-enhance with Gemini"
+				: "✨ Enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		}
@@ -199,7 +199,7 @@ export async function prepareFreshEnhancementFromChunkCacheRuntime({
 		enhancedChunkEls.length === allChunkEls.length
 	) {
 		showStatusMessage(
-			"All chunks already enhanced \u{393}\u{C7}\u{F6} re-enhancing from scratch...",
+			"All chunks already enhanced — re-enhancing from scratch...",
 			"info",
 			3000,
 		);
@@ -235,7 +235,7 @@ export async function prepareRegenerationFromCachedContentRuntime({
 	onResetCacheFlags?.();
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "\u{393}\u{A3}\u{BF} Enhance with Gemini";
+		btn.textContent = "✨ Enhance with Gemini";
 	});
 
 	const contentArea = findContentArea?.();
@@ -545,7 +545,7 @@ export function handleEnhancementCancelledRuntime({
 
 	const cancelButton = documentRef.querySelector(".gemini-enhance-btn");
 	if (cancelButton) {
-		cancelButton.textContent = "\u{393}\u{A3}\u{BF} Enhance with Gemini";
+		cancelButton.textContent = "✨ Enhance with Gemini";
 		cancelButton.disabled = false;
 		cancelButton.classList.remove("loading");
 	}
@@ -600,7 +600,7 @@ export async function handleEnhancementResponseRuntime({
 	const errorMessage = response?.error || "Unknown error";
 	if (response?.needsApiKey || errorMessage.includes("API key is missing")) {
 		showStatusMessage?.(
-			"\u{393}\u{DC}\u{E1}\u{2229}\u{2555}\u{C5} API key is missing. Please configure it in the extension popup.",
+			"⚠️ API key is missing. Please configure it in the extension popup.",
 			"error",
 		);
 		try {
@@ -608,7 +608,7 @@ export async function handleEnhancementResponseRuntime({
 		} catch (popupError) {
 			consoleWarn("Could not open popup automatically:", popupError);
 			showStatusMessage?.(
-				"\u{393}\u{DC}\u{E1}\u{2229}\u{2555}\u{C5} API key is missing. Please click the extension icon to configure it.",
+				"⚠️ API key is missing. Please click the extension icon to configure it.",
 				"error",
 				10000,
 			);
@@ -624,7 +624,7 @@ export async function handleEnhancementResponseRuntime({
 
 export function resetEnhanceButtonsOnErrorRuntime({
 	documentRef = document,
-	buttonText = "\u{393}\u{A3}\u{BF} Enhance with Gemini",
+	buttonText = "✨ Enhance with Gemini",
 }) {
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
 		if (btn.disabled || btn.classList.contains("loading")) {
@@ -1009,7 +1009,7 @@ export function handleEnhancementLifecycleErrorRuntime({
 	showStatusMessage,
 	documentRef = document,
 	cancelEnhanceButton,
-	buttonText = "\u{393}\u{A3}\u{BF} Enhance with Gemini",
+	buttonText = "✨ Enhance with Gemini",
 }) {
 	debugError("Error in handleEnhanceClick:", error);
 	showStatusMessage?.(`Error: ${error.message}`, "error");
@@ -1296,7 +1296,7 @@ export async function restoreChunkedContentFromCacheRuntime({
 	}
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "\u{393}\u{D6}\u{2557} Regenerate with Gemini";
+		btn.textContent = "🔄 Regenerate with Gemini";
 		btn.disabled = false;
 		btn.classList.remove("loading");
 	});

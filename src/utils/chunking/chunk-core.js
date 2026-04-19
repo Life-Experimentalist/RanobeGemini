@@ -46,7 +46,7 @@ function isHTML(content) {
 function extractParagraphs(htmlContent) {
 	if (!htmlContent) return [];
 
-	// \u{2500}\u{2500} Primary: DOMParser (browser / extension service-worker context) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Primary: DOMParser (browser / extension service-worker context) ───────
 	if (typeof DOMParser !== "undefined") {
 		try {
 			const parser = new DOMParser();
@@ -87,7 +87,7 @@ function extractParagraphs(htmlContent) {
 		}
 	}
 
-	// \u{2500}\u{2500} Fallback: regex-based extraction \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Fallback: regex-based extraction ─────────────────────────────────────
 	// NOTE: this regex cannot see through nesting, so a wrapper <div> will
 	// consume all inner <p> tags.  It is kept only as a best-effort fallback.
 	const paragraphs = [];
@@ -215,7 +215,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 			.reduce((sum, p) => sum + p.wordCount, 0);
 
 		// If adding this paragraph would exceed chunk size AND either (a) there
-		// is more content after it, or (b) the paragraph itself is oversized \u{2014}
+		// is more content after it, or (b) the paragraph itself is oversized —
 		// in the latter case we must still flush the accumulated content so the
 		// big paragraph can be post-processed into sub-chunks.
 		if (
@@ -424,9 +424,9 @@ function splitPlainTextByWords(text, chunkSizeWords) {
  * Automatically detects HTML and splits on paragraph boundaries
  *
  * Rules:
- * 1. If chapter size < chunk_size \u{2192} single chunk
- * 2. If chapter size < 2 * chunk_size \u{2192} split into 2 roughly equal chunks
- * 3. If chapter size > chunk_size \u{2192} split into chunks, but last two chunks are balanced
+ * 1. If chapter size < chunk_size → single chunk
+ * 2. If chapter size < 2 * chunk_size → split into 2 roughly equal chunks
+ * 3. If chapter size > chunk_size → split into chunks, but last two chunks are balanced
  *
  * HTML Content: Splits on <p>, <div>, <h1-6>, <li>, <blockquote> boundaries
  * Plain Text: Splits on word boundaries

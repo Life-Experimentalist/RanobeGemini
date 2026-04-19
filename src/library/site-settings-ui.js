@@ -3,7 +3,7 @@
  *
  * Settings are auto-discovered from each handler's static SETTINGS_DEFINITION
  * property. To add settings for a new site, simply add SETTINGS_DEFINITION to
- * its handler class \u{2014} no changes needed here.
+ * its handler class — no changes needed here.
  */
 
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -40,7 +40,7 @@ export const WEBSITE_SETTINGS_DEFINITIONS = ALL_HANDLERS.filter(
 		label: meta.name,
 		icon: meta.icon || null, // website favicon/logo URL
 		invertIconInDarkMode: meta.invertIconInDarkMode || false,
-		emoji: meta.emoji || "\u{1F310}", // fallback emoji if icon fails or is absent
+		emoji: meta.emoji || "🌐", // fallback emoji if icon fails or is absent
 		description: `Site-specific settings for ${meta.name}.`,
 		fields: H.SETTINGS_DEFINITION.fields,
 	};
@@ -147,7 +147,7 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 				${iconHtml}
 				<span class="ls-handler-panel-title">${definition.label}</span>
 				<span class="ls-handler-panel-badge">${fieldCount} setting${fieldCount !== 1 ? "s" : ""}</span>
-				<span class="ls-handler-panel-chevron">\u{25BE}</span>
+				<span class="ls-handler-panel-chevron">▾</span>
 			</summary>
 			<div class="ls-handler-panel-body">
 				<p class="ls-hint" style="margin-bottom:14px;">${definition.description}</p>

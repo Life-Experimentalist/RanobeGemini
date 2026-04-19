@@ -152,11 +152,11 @@ export function showTimedBannerRuntime({
 	protectFromThemeExtensions?.(banner);
 
 	const colors = {
-		info: { bg: "#1a237e", border: "#3949ab", icon: "\u{2139}\u{FE0F}" },
-		success: { bg: "#1b5e20", border: "#43a047", icon: "\u{2705}" },
-		warning: { bg: "#e65100", border: "#ff9800", icon: "\u{26A0}\u{FE0F}" },
-		action: { bg: "#4a148c", border: "#7b1fa2", icon: "\u{1F4D9}" },
-		updating: { bg: "#00695c", border: "#26a69a", icon: "\u{1F504}" },
+		info: { bg: "#1a237e", border: "#3949ab", icon: "ℹ️" },
+		success: { bg: "#1b5e20", border: "#43a047", icon: "✅" },
+		warning: { bg: "#e65100", border: "#ff9800", icon: "⚠️" },
+		action: { bg: "#4a148c", border: "#7b1fa2", icon: "📙" },
+		updating: { bg: "#00695c", border: "#26a69a", icon: "🔄" },
 	};
 
 	const color = colors[type] || colors.info;
@@ -281,7 +281,7 @@ export function showTimedBannerRuntime({
 	}
 
 	const closeBtn = documentRef.createElement("button");
-	closeBtn.textContent = "\u{D7}";
+	closeBtn.textContent = "×";
 	closeBtn.style.cssText = `
 		background: transparent;
 		border: none;

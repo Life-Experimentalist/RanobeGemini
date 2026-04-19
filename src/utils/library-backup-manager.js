@@ -119,7 +119,7 @@ export class LibraryBackupManager {
 				await this._rotateBackups();
 			}
 
-			debugLog("\u{2713} Backup created:", backupId);
+			debugLog("✓ Backup created:", backupId);
 			return {
 				id: backupId,
 				timestamp,
@@ -189,7 +189,7 @@ export class LibraryBackupManager {
 				mergedData = this._smartMerge(currentData, backupData.data);
 			}
 
-			debugLog(`\u{2713} Backup restored with ${mergeMode} mode:`, backupId);
+			debugLog(`✓ Backup restored with ${mergeMode} mode:`, backupId);
 			return mergedData;
 		} catch (error) {
 			debugError("Failed to restore backup:", error);
@@ -215,7 +215,7 @@ export class LibraryBackupManager {
 				[BACKUP_METADATA_KEY]: metadata,
 			});
 
-			debugLog("\u{2713} Backup deleted:", backupId);
+			debugLog("✓ Backup deleted:", backupId);
 			return true;
 		} catch (error) {
 			debugError("Failed to delete backup:", error);
@@ -244,7 +244,7 @@ export class LibraryBackupManager {
 				backup: backupData,
 			};
 
-			debugLog("\u{2713} Backup exported for download:", fileName);
+			debugLog("✓ Backup exported for download:", fileName);
 			return {
 				filename: fileName,
 				content: JSON.stringify(fileContent, null, 2),
@@ -278,7 +278,7 @@ export class LibraryBackupManager {
 
 			await this._updateBackupMetadata(backupId, backupData);
 
-			debugLog("\u{2713} Backup imported from file:", backupId);
+			debugLog("✓ Backup imported from file:", backupId);
 			return true;
 		} catch (error) {
 			debugError("Failed to import backup from file:", error);

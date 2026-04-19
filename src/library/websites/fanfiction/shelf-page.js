@@ -265,12 +265,12 @@ function renderActiveFilters() {
 
 	const minWords = parseInt(filterState.wordCountMin, 10);
 	if (!Number.isNaN(minWords) && minWords > 0) {
-		addChip("wordCountMin", `Words \u{2265} ${minWords.toLocaleString()}`);
+		addChip("wordCountMin", `Words ≥ ${minWords.toLocaleString()}`);
 	}
 
 	const maxWords = parseInt(filterState.wordCountMax, 10);
 	if (!Number.isNaN(maxWords) && maxWords > 0) {
-		addChip("wordCountMax", `Words \u{2264} ${maxWords.toLocaleString()}`);
+		addChip("wordCountMax", `Words ≤ ${maxWords.toLocaleString()}`);
 	}
 
 	(filterState.tags || []).forEach((tag) => {
@@ -289,7 +289,7 @@ function renderActiveFilters() {
 			chip.label,
 		)}</strong> <button aria-label="Clear filter" data-key="${
 			chip.key
-		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">\u{D7}</button>`;
+		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
 		container.appendChild(el);
 	});
 
@@ -640,7 +640,7 @@ async function showNovelModal(novel, options = {}) {
 		// non-critical
 	}
 
-	// \u{2500}\u{2500} Close mechanism \u{2014} set up first so buttons wired below work, and use
+	// ── Close mechanism — set up first so buttons wired below work, and use
 	// onclick (not addEventListener) to prevent listener accumulation on repeat opens.
 	function closeModal() {
 		modal.style.display = "none";
@@ -676,7 +676,7 @@ async function showNovelModal(novel, options = {}) {
 	modal._escListener = closeOnEscape;
 	document.addEventListener("keydown", closeOnEscape);
 
-	// \u{2500}\u{2500} Synchronous content setup \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Synchronous content setup ─────────────────────────────────────────────
 
 	const titleEl = document.getElementById("modal-title");
 	if (titleEl) titleEl.textContent = novel.title || "";
@@ -794,7 +794,7 @@ async function showNovelModal(novel, options = {}) {
 		};
 	}
 
-	// "All Libraries" button \u{2014} opens main library.html with this novel's detail panel
+	// "All Libraries" button — opens main library.html with this novel's detail panel
 	const openLibraryBtn = document.getElementById("modal-open-library-btn");
 	if (openLibraryBtn) {
 		openLibraryBtn.onclick = () => {
@@ -805,7 +805,7 @@ async function showNovelModal(novel, options = {}) {
 		};
 	}
 
-	// Header library button (top-right of modal) \u{2014} same as "All Libraries"
+	// Header library button (top-right of modal) — same as "All Libraries"
 	const openLibraryHeaderBtn = document.getElementById(
 		"modal-open-library-header-btn",
 	);
@@ -830,14 +830,14 @@ async function showNovelModal(novel, options = {}) {
 				);
 				const text = formatExportFilename(novel, template);
 				await navigator.clipboard.writeText(text);
-				copyInfoBtn.textContent = "\u{2705} Copied!";
+				copyInfoBtn.textContent = "✅ Copied!";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "\u{1F4CB} Copy";
+					copyInfoBtn.textContent = "📋 Copy";
 				}, 2000);
 			} catch {
-				copyInfoBtn.textContent = "\u{274C} Failed";
+				copyInfoBtn.textContent = "❌ Failed";
 				setTimeout(() => {
-					copyInfoBtn.textContent = "\u{1F4CB} Copy";
+					copyInfoBtn.textContent = "📋 Copy";
 				}, 2000);
 			}
 		};
@@ -855,7 +855,7 @@ async function showNovelModal(novel, options = {}) {
 			novel.metadata?.words ??
 			0;
 		const wordStr =
-			wordCount > 0 ? ` \u{B7} ~${wordCount.toLocaleString()} words` : "";
+			wordCount > 0 ? ` · ~${wordCount.toLocaleString()} words` : "";
 		const fill = document.getElementById("modal-progress-fill");
 		const text = document.getElementById("modal-progress-text");
 		if (fill) fill.style.width = pct + "%";
@@ -880,11 +880,11 @@ async function showNovelModal(novel, options = {}) {
 		}
 	}
 
-	// \u{2500}\u{2500} Show the modal immediately \u{2014} before any async work \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Show the modal immediately — before any async work ───────────────────
 	modal.style.display = "flex";
 	document.body.style.overflow = "hidden";
 
-	// \u{2500}\u{2500} Async: build reading-status buttons (non-blocking; modal already visible)
+	// ── Async: build reading-status buttons (non-blocking; modal already visible)
 	try {
 		const settings = await novelLibrary.getSettings();
 		const allStatuses = getAllStatuses(settings, READING_STATUS_INFO);
@@ -1275,10 +1275,10 @@ function setupFandomNav(novels) {
 				<div class="fandom-view-toggle" role="group" aria-label="Fandom view">
 					<button type="button" class="view-toggle-btn ${
 						viewMode === "dropdown" ? "active" : ""
-					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">\u{2630}</button>
+					}" data-view="dropdown" aria-label="Dropdown view" title="Dropdown view">☰</button>
 					<button type="button" class="view-toggle-btn ${
 						viewMode === "grid" ? "active" : ""
-					}" data-view="grid" aria-label="Grid view" title="Grid view">\u{25A6}</button>
+					}" data-view="grid" aria-label="Grid view" title="Grid view">▦</button>
 				</div>
 			</div>
 			<div class="fandom-grid-actions">
@@ -1300,7 +1300,7 @@ function setupFandomNav(novels) {
 				<button class="fandom-card single" data-fandom="${encodeURIComponent(
 					fandom,
 				)}" data-type="single">
-					<span class="fandom-icon">\u{1F4D6}</span>
+					<span class="fandom-icon">📖</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
 					<span class="fandom-count">${count} ${count === 1 ? "story" : "stories"}</span>
 				</button>
@@ -1317,7 +1317,7 @@ function setupFandomNav(novels) {
 				<button class="fandom-card crossover" data-fandom="${encodeURIComponent(
 					fandom,
 				)}" data-type="crossover">
-					<span class="fandom-icon">\u{1F500}</span>
+					<span class="fandom-icon">🔀</span>
 					<span class="fandom-name">${escapeHtml(fandom)}</span>
 					<span class="fandom-count">${otherFandoms.size} ${
 						otherFandoms.size === 1 ? "crossover" : "crossovers"
@@ -1336,14 +1336,14 @@ function setupFandomNav(novels) {
 	if (dropdownList) {
 		const dropdownItems = [];
 		singleFandoms.forEach((count, fandom) => {
-			dropdownItems.push({ fandom, count, type: "single", icon: "\u{1F4D6}" });
+			dropdownItems.push({ fandom, count, type: "single", icon: "📖" });
 		});
 		crossoverPairs.forEach((otherFandoms, fandom) => {
 			dropdownItems.push({
 				fandom,
 				count: otherFandoms.size,
 				type: "crossover",
-				icon: "\u{1F500}",
+				icon: "🔀",
 			});
 		});
 
@@ -1731,7 +1731,7 @@ function renderReadingStatusChart(buckets = {}, total = 0) {
 	const onHoldCount = buckets[onHoldKey] || buckets.onHold || 0;
 	const rereadingCount = buckets[rereadingKey] || buckets.rereading || 0;
 
-	summary.textContent = `${rereadingCount.toLocaleString()} Rereading \u{2022} ${plantoreadCount.toLocaleString()} Plan to Read \u{2022} ${completedCount.toLocaleString()} Completed \u{2022} ${readingCount.toLocaleString()} Reading \u{2022} ${onHoldCount.toLocaleString()} on Hold`;
+	summary.textContent = `${rereadingCount.toLocaleString()} Rereading • ${plantoreadCount.toLocaleString()} Plan to Read • ${completedCount.toLocaleString()} Completed • ${readingCount.toLocaleString()} Reading • ${onHoldCount.toLocaleString()} on Hold`;
 }
 
 function formatNumber(num) {
@@ -1983,7 +1983,7 @@ function ensureRandomSelectButton() {
 	button.type = "button";
 	button.id = "random-select-btn";
 	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "\u{1F3B2} Random";
+	button.textContent = "🎲 Random";
 	button.title = "Pick a random novel from current filters";
 
 	button.addEventListener("click", () => {

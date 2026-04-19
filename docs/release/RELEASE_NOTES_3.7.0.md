@@ -378,7 +378,7 @@ Found an issue? [Report it on GitHub](https://github.com/Life-Experimentalist/Ra
 
 ---
 
-Here’s a **short Firefox release note (≤2500 chars)**. I included the full version link on GitHub as requested.
+Here's a **short Firefox release note (≤2500 chars)**. I included the full version link on GitHub as requested.
 
 **Full version:** https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/RELEASE_NOTES_3.7.0.md
 
@@ -408,7 +408,7 @@ Here’s a **short Firefox release note (≤2500 chars)**. I included the full v
 ### Major Fixes
 
 - Popup UI reliability fixes: initialization, tabs, settings fields, prompt loading.
-- Google Drive OAuth error fixes (“client_secret missing”), improved refresh handling.
+- Google Drive OAuth error fixes ("client_secret missing"), improved refresh handling.
 - Website handlers: better detection, metadata extraction, and stability across sites (FanFiction.net, Ranobes.net, AO3, ScribbleHub).
 
 ### Notes

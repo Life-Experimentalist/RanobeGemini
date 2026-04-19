@@ -29,7 +29,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 			id: "ranobes",
 			name: "Ranobes",
 			icon: "https://ranobes.top/templates/Dark/images/favicon.ico?v=2",
-			emoji: "\u{1F343}",
+			emoji: "🍃",
 			color: "#4a7c4e",
 		};
 	}
@@ -309,7 +309,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				)}" alt="${this.escapeHtml(
 					novel.title,
 				)}" data-fallback="${fallbackCover}" loading="lazy">`
-			: "<div class=\"novel-cover-placeholder\">\u{1F4DA}</div>";
+			: "<div class=\"novel-cover-placeholder\">📚</div>";
 
 		const readingKeyRaw =
 			novel.readingStatus ||
@@ -374,25 +374,25 @@ export class RanobesNovelCard extends NovelCardRenderer {
 		// Build comprehensive stats display
 		const stats = [];
 		if (chapters)
-			stats.push({ icon: "\u{1F4D6}", label: "Chapters", value: chapters });
+			stats.push({ icon: "📖", label: "Chapters", value: chapters });
 
 		const words = getVal("words", 0);
 		const views = getVal("views", 0);
 		const publishedDate = getVal("publishedDate");
 		const updatedDate = getVal("updatedDate");
 
-		if (words) stats.push({ icon: "\u{1F4DD}", label: "Words", value: words });
-		if (views) stats.push({ icon: "\u{1F441}\u{FE0F}", label: "Views", value: views });
+		if (words) stats.push({ icon: "📝", label: "Words", value: words });
+		if (views) stats.push({ icon: "👁️", label: "Views", value: views });
 		if (publishedDate)
 			stats.push({
-				icon: "\u{1F4C5}",
+				icon: "📅",
 				label: "Published",
 				value: this.formatDateShort(publishedDate),
 				isDate: true,
 			});
 		if (updatedDate)
 			stats.push({
-				icon: "\u{1F504}",
+				icon: "🔄",
 				label: "Updated",
 				value: this.formatDateShort(updatedDate),
 				isDate: true,
@@ -483,9 +483,9 @@ export class RanobesNovelCard extends NovelCardRenderer {
 						<div class="progress-bar-slim">
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
-						<span class="enhancement-text">\u{1F4D6} <strong>${this.formatNumber(
+						<span class="enhancement-text">📖 <strong>${this.formatNumber(
 							safeCurrent,
-						)}${chapters ? ` / ${this.formatNumber(chapters)}` : ""}</strong> \u{2022} \u{2728} ${this.formatNumber(
+						)}${chapters ? ` / ${this.formatNumber(chapters)}` : ""}</strong> • ✨ ${this.formatNumber(
 							enhanced,
 						)} enhanced</span>
 					</div>
@@ -505,7 +505,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 								novel.sourceUrl
 									? `<a class="action-btn" href="${this.escapeHtml(
 											novel.sourceUrl,
-										)}" target="_blank" rel="noreferrer">Open \u{2197}</a>`
+										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""
 							}
 						</div>
@@ -611,21 +611,21 @@ export class RanobesNovelCard extends NovelCardRenderer {
 
 		const parts = [];
 		const enhanced = novel.enhancedChaptersCount ?? 0;
-		parts.push(`\u{2728} ${this.formatNumber(enhanced)} enhanced`);
+		parts.push(`✨ ${this.formatNumber(enhanced)} enhanced`);
 
 		const chapters =
 			getVal("totalChapters") || getVal("chapterCount") || null;
 		if (chapters) {
-			parts.push(`\u{1F4D6} ${this.formatNumber(chapters)} ch`);
+			parts.push(`📖 ${this.formatNumber(chapters)} ch`);
 		}
 
 		const words = getVal("words", 0);
 		const views = getVal("views", 0);
 
-		if (words) parts.push(`\u{1F4DD} ${this.formatNumber(words)} words`);
-		if (views) parts.push(`\u{1F441}\u{FE0F} ${this.formatNumber(views)} views`);
+		if (words) parts.push(`📝 ${this.formatNumber(words)} words`);
+		if (views) parts.push(`👁️ ${this.formatNumber(views)} views`);
 
-		return parts.slice(0, 4).join(" \u{2022} ");
+		return parts.slice(0, 4).join(" • ");
 	}
 
 	static renderCardTags(novel) {
@@ -777,11 +777,11 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				<div class="site-modal-section ranobes-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
 					<div class="site-stats-grid ranobes-stats-grid-large">
-						${renderStat("Chapters", this.formatNumber(totalChapters), "\u{1F4D6}")}
-						${renderStat("Words", this.formatNumber(words), "\u{1F4DD}")}
-						${renderStat("Views", this.formatNumber(views), "\u{1F441}\u{FE0F}")}
-						${renderStat("Published", formatDate(publishedDate), "\u{1F4C5}")}
-						${renderStat("Updated", formatDate(updatedDate), "\u{1F504}")}
+						${renderStat("Chapters", this.formatNumber(totalChapters), "📖")}
+						${renderStat("Words", this.formatNumber(words), "📝")}
+						${renderStat("Views", this.formatNumber(views), "👁️")}
+						${renderStat("Published", formatDate(publishedDate), "📅")}
+						${renderStat("Updated", formatDate(updatedDate), "🔄")}
 					</div>
 				</div>
 

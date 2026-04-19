@@ -198,7 +198,7 @@ body.reading_fullwidth .watermark-badge {
 }
 
 .gemini-processed-notice button {
-	/* Adjust button to be minimal â€“ matching native colors */
+	/* Adjust button to be minimal – matching native colors */
 	float: right;
 	background: transparent;
 	color: #bab9a0;
@@ -716,7 +716,7 @@ html[data-darkreader-mode] .section-divider {
 }
 
 .rg-author-note::before {
-	content: "ðŸ“ Author's Note";
+	content: "📝 Author's Note";
 	display: block;
 	font-style: normal;
 	font-weight: 700;

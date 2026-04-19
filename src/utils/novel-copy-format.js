@@ -23,9 +23,9 @@
  *
  * @example
  *   formatNovelInfo(novel, "{title} by {author} {wordCount}")
- *   // \u{2192} "Partners? by ReluctantSidekick 288578"
+ *   // → "Partners? by ReluctantSidekick 288578"
  *   formatExportFilename(novel, "{titleSafe} - {authorSafe}", "epub")
- *   // \u{2192} "Partners - ReluctantSidekick.epub"
+ *   // → "Partners - ReluctantSidekick.epub"
  */
 
 import {
@@ -160,7 +160,7 @@ export const PREVIEW_NOVEL = {
 	id: "site_id-novel_id",
 	sourceUrl: "https://example.com/works/novel_id",
 	description:
-		"novel_description \u{2014} add your novel to the library to preview with real data.",
+		"novel_description — add your novel to the library to preview with real data.",
 	stats: { wordCount: 123456 },
 };
 

@@ -158,9 +158,9 @@ body {
 .filters-section {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--spacing-md);
+	gap: var(--spacing-sm);
 	margin-bottom: var(--spacing-lg);
-	padding: var(--spacing-md);
+	padding: var(--spacing-sm) var(--spacing-md);
 	background: var(--bg-secondary);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border-color);
@@ -168,12 +168,31 @@ body {
 	top: var(--spacing-md);
 	z-index: 100;
 	box-shadow: var(--shadow-md);
+	align-items: center;
+	justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+	.filters-section {
+		flex-direction: column;
+		align-items: stretch;
+		gap: var(--spacing-md);
+	}
+}
+
+@media (max-width: 768px) {
+.filters-section {
+flex-direction: column;
+align-items: stretch;
+gap: var(--spacing-md);
+}
 }
 
 .filter-group {
 	display: flex;
 	align-items: center;
 	gap: var(--spacing-sm);
+	flex-wrap: wrap;
 }
 
 .filter-group label {
@@ -2489,12 +2508,35 @@ body {
 
 /* Ranobes page-specific filter layout */
 .ranobes-page .filters-section {
-	position: sticky;
-	top: 0;
-	z-index: 25;
-	backdrop-filter: blur(6px);
-	-webkit-backdrop-filter: blur(6px);
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+display: flex;
+flex-wrap: wrap;
+gap: var(--spacing-sm);
+margin-bottom: var(--spacing-lg);
+padding: var(--spacing-sm) var(--spacing-md);
+background: var(--bg-secondary);
+border-radius: var(--radius-md);
+border: 1px solid var(--border-color);
+position: sticky;
+top: var(--spacing-md);
+z-index: 100;
+box-shadow: var(--shadow-md);
+align-items: center;
+justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+.filters-section {
+flex-direction: column;
+align-items: stretch;
+gap: var(--spacing-md);
+}
+}
+
+.filter-group {
+display: flex;
+align-items: center;
+gap: var(--spacing-sm);
+flex-wrap: wrap;
 }
 
 .ranobes-page .filter-dropdown-container {

@@ -44,10 +44,10 @@ export const PRIMARY_READING_STATUSES = [
 ];
 
 export const BUILTIN_READING_LISTS = [
-	{ id: "rereading", label: "\u{1F501} Rereading", color: "#9c27b0", builtIn: true },
+	{ id: "rereading", label: "🔁 Rereading", color: "#9c27b0", builtIn: true },
 	{
 		id: "favourites",
-		label: "\u{2B50} Favourites",
+		label: "⭐ Favourites",
 		color: "#f59e0b",
 		builtIn: true,
 	},
@@ -57,18 +57,18 @@ export const BUILTIN_READING_LISTS = [
  * Reading status display info
  */
 export const READING_STATUS_INFO = {
-	[READING_STATUS.READING]: { label: "\u{1F4D6} Reading", color: "#4caf50" },
+	[READING_STATUS.READING]: { label: "📖 Reading", color: "#4caf50" },
 	[READING_STATUS.UP_TO_DATE]: {
-		label: "\u{2728} Up to Date",
+		label: "✨ Up to Date",
 		color: "#00bcd4",
 	},
-	[READING_STATUS.COMPLETED]: { label: "\u{2705} Completed", color: "#2196f3" },
+	[READING_STATUS.COMPLETED]: { label: "✅ Completed", color: "#2196f3" },
 	[READING_STATUS.PLAN_TO_READ]: {
-		label: "\u{1F4CB} Plan to Read",
+		label: "📋 Plan to Read",
 		color: "#ff9800",
 	},
-	[READING_STATUS.ON_HOLD]: { label: "\u{23F8}\u{FE0F} On Hold", color: "#9e9e9e" },
-	[READING_STATUS.DROPPED]: { label: "\u{274C} Dropped", color: "#f44336" },
+	[READING_STATUS.ON_HOLD]: { label: "⏸️ On Hold", color: "#9e9e9e" },
+	[READING_STATUS.DROPPED]: { label: "❌ Dropped", color: "#f44336" },
 };
 
 function normalizeReadingListId(rawId) {
@@ -114,7 +114,7 @@ function ensurePrimaryReadingStatus(status) {
  * {
  *   id: string,           // Unique shelf ID (e.g., "fanfiction")
  *   name: string,         // Display name (e.g., "FanFiction.net")
- *   icon: string,         // Emoji icon (e.g., "\u{1F4DA}")
+ *   icon: string,         // Emoji icon (e.g., "📚")
  *   color: string,        // Brand color hex (e.g., "#2a4b8d")
  *   domains: string[],    // All supported domains for this shelf
  *   novelIdPattern: RegExp, // Pattern to extract novel ID from URL
@@ -194,7 +194,7 @@ export class NovelLibrary {
 			novelCopyFormats: {
 				enabled: true,
 				globalTemplate: "{title} by {author} {wordCount}",
-				siteOverrides: {}, // map of shelfId \u{2192} template string
+				siteOverrides: {}, // map of shelfId → template string
 				exportTemplate: "{titleSafe} by {authorSafe} {words}",
 				exportExtension: "epub",
 			},
@@ -285,7 +285,7 @@ export class NovelLibrary {
 
 		const library = await this.getLibrary();
 		debugLog(
-			`\u{1F4DA} Novel Library initialized with ${
+			`📚 Novel Library initialized with ${
 				Object.keys(library.novels).length
 			} novels`,
 		);
@@ -341,7 +341,7 @@ export class NovelLibrary {
 
 			if (migrated > 0) {
 				await this.saveLibrary(library);
-				debugLog(`\u{1F4DA} Migrated ${migrated} novels from old ID format`);
+				debugLog(`📚 Migrated ${migrated} novels from old ID format`);
 			}
 		} catch (error) {
 			debugError("Error migrating old ID format:", error);
@@ -543,7 +543,7 @@ export class NovelLibrary {
 			});
 
 			const characterList = [];
-			// Only use actual character sources \u{2014} NOT tags or genres
+			// Only use actual character sources — NOT tags or genres
 			[...sourceCharacters].forEach((entry) => {
 				const cleaned = cleanName(entry);
 				if (isInvalidToken(cleaned)) return;
@@ -912,7 +912,7 @@ export class NovelLibrary {
 					editedFields[key]
 				) {
 					debugLog(
-						`\u{1F4DA} Skipping auto-update for manually edited field: ${key}`,
+						`📚 Skipping auto-update for manually edited field: ${key}`,
 					);
 					continue;
 				}
@@ -953,7 +953,7 @@ export class NovelLibrary {
 				} else if (isValidValue(existingNovel[key])) {
 					// Keep existing valid value
 					debugLog(
-						`\u{1F4DA} Preserving existing ${key}: ${existingNovel[key]}`,
+						`📚 Preserving existing ${key}: ${existingNovel[key]}`,
 					);
 				}
 			}
@@ -1008,7 +1008,7 @@ export class NovelLibrary {
 
 		await this.saveLibrary(library);
 
-		debugLog(`\u{1F4DA} Novel saved to library: ${novelData.title}`);
+		debugLog(`📚 Novel saved to library: ${novelData.title}`);
 		return library.novels[novelData.id];
 	}
 
@@ -1052,7 +1052,7 @@ export class NovelLibrary {
 			library.novels[novelId].lastAccessedAt = Date.now();
 
 			await this.saveLibrary(library);
-			debugLog(`\u{1F4DA} Updated novel: ${library.novels[novelId].title}`);
+			debugLog(`📚 Updated novel: ${library.novels[novelId].title}`);
 			return library.novels[novelId];
 		} catch (error) {
 			debugError("Error updating novel:", error);
@@ -1140,7 +1140,7 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 
 			debugLog(
-				`\u{1F4DA} Progress updated: Ch.${chapterNumber}/${totalChapters} - ${novel.title}`,
+				`📚 Progress updated: Ch.${chapterNumber}/${totalChapters} - ${novel.title}`,
 			);
 			return novel;
 		} catch (error) {
@@ -1206,7 +1206,7 @@ export class NovelLibrary {
 			await this.saveLibrary(library);
 
 			debugLog(
-				`\u{1F4CA} Status updated: ${novel.title} \u{2192} ${novel.readingStatus}${isRereadingOverlay ? " (rereading list)" : ""}`,
+				`📊 Status updated: ${novel.title} → ${novel.readingStatus}${isRereadingOverlay ? " (rereading list)" : ""}`,
 			);
 			return true;
 		} catch (error) {
@@ -1270,7 +1270,7 @@ export class NovelLibrary {
 
 			await this.saveLibrary(library);
 
-			debugLog(`\u{2705} Novel marked complete: ${novel.title}`);
+			debugLog(`✅ Novel marked complete: ${novel.title}`);
 			return true;
 		} catch (error) {
 			debugError("Error marking novel complete:", error);
@@ -1297,7 +1297,7 @@ export class NovelLibrary {
 
 			await this.saveLibrary(library);
 			debugLog(
-				`\u{1F4DD} Updated custom prompt for: ${library.novels[novelId].title}`,
+				`📝 Updated custom prompt for: ${library.novels[novelId].title}`,
 			);
 			return true;
 		} catch (error) {
@@ -1323,20 +1323,20 @@ export class NovelLibrary {
 			const novel = library.novels[novelId];
 
 			if (!novel.editedFields) {
-				debugLog(`\u{1F4DA} No edited fields to reset for: ${novel.title}`);
+				debugLog(`📚 No edited fields to reset for: ${novel.title}`);
 				return true;
 			}
 
 			if (fields === "all") {
 				novel.editedFields = {};
-				debugLog(`\u{1F4DA} Reset all edited fields for: ${novel.title}`);
+				debugLog(`📚 Reset all edited fields for: ${novel.title}`);
 			} else {
 				const fieldsToReset = Array.isArray(fields) ? fields : [fields];
 				for (const field of fieldsToReset) {
 					delete novel.editedFields[field];
 				}
 				debugLog(
-					`\u{1F4DA} Reset edited fields [${fieldsToReset.join(
+					`📚 Reset edited fields [${fieldsToReset.join(
 						", ",
 					)}] for: ${novel.title}`,
 				);
@@ -1462,7 +1462,7 @@ export class NovelLibrary {
 		}
 
 		await this.saveLibrary(library);
-		debugLog(`\u{1F4DA} Novel removed from library: ${novelId}`);
+		debugLog(`📚 Novel removed from library: ${novelId}`);
 		return true;
 	}
 
@@ -1590,7 +1590,7 @@ export class NovelLibrary {
 				if (newMetadata[field] !== undefined) {
 					// Skip if manually edited
 					if (editedFields[field]) {
-						debugLog(`\u{1F4DA} Skipping edited field: ${field}`);
+						debugLog(`📚 Skipping edited field: ${field}`);
 						continue;
 					}
 
@@ -1610,7 +1610,7 @@ export class NovelLibrary {
 						}
 						if (hasChanges) {
 							novel[field] = merged;
-							debugLog(`\u{1F4DA} Merging ${field}:`, novel[field]);
+							debugLog(`📚 Merging ${field}:`, novel[field]);
 							updated = true;
 						}
 						continue;
@@ -1653,13 +1653,13 @@ export class NovelLibrary {
 
 					if (shouldUpdate && hasValidNewValue) {
 						debugLog(
-							`\u{1F4DA} Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`,
+							`📚 Updating ${field}: ${novel[field]} -> ${newMetadata[field]}`,
 						);
 						novel[field] = newMetadata[field];
 						updated = true;
 					} else if (!hasValidNewValue && hasExistingValue) {
 						debugLog(
-							`\u{1F4DA} Preserving existing ${field}: ${novel[field]}`,
+							`📚 Preserving existing ${field}: ${novel[field]}`,
 						);
 					}
 				}
@@ -1673,7 +1673,7 @@ export class NovelLibrary {
 						novel.isStoryComplete = true;
 						updated = true;
 						debugLog(
-							"\u{1F4DA} Derived isStoryComplete=true from status:",
+							"📚 Derived isStoryComplete=true from status:",
 							novel.status,
 						);
 					}
@@ -2241,7 +2241,7 @@ export class NovelLibrary {
 			}
 
 			debugLog(
-				`\u{1F4DA} Library imported: ${imported} new, ${updated} updated, ${errors} errors`,
+				`📚 Library imported: ${imported} new, ${updated} updated, ${errors} errors`,
 			);
 			return { success: true, imported, updated, errors };
 		} catch (error) {
@@ -2273,7 +2273,7 @@ export class NovelLibrary {
 			}
 
 			await browser.storage.local.remove(keysToRemove);
-			debugLog("\u{1F4DA} Library cleared");
+			debugLog("📚 Library cleared");
 			return true;
 		} catch (error) {
 			debugError("Failed to clear library:", error);
@@ -2375,7 +2375,7 @@ export class NovelLibrary {
 			}
 		}
 
-		debugLog(`\u{1F4DA} Found ${duplicateGroups.length} duplicate groups`);
+		debugLog(`📚 Found ${duplicateGroups.length} duplicate groups`);
 		return duplicateGroups;
 	}
 
@@ -2552,7 +2552,7 @@ export class NovelLibrary {
 		await this.saveLibrary(library);
 
 		debugLog(
-			`\u{1F4DA} Merged ${removeIds.length} duplicates into ${novelToKeep.title}`,
+			`📚 Merged ${removeIds.length} duplicates into ${novelToKeep.title}`,
 		);
 		return {
 			success: true,
@@ -2571,7 +2571,7 @@ export class NovelLibrary {
 		const duplicateGroups = await this.findDuplicates(shelfId);
 
 		if (duplicateGroups.length === 0) {
-			debugLog("\u{1F4DA} No duplicates found");
+			debugLog("📚 No duplicates found");
 			return { success: true, mergedGroups: 0, totalRemoved: 0 };
 		}
 
@@ -2595,7 +2595,7 @@ export class NovelLibrary {
 		}
 
 		debugLog(
-			`\u{1F4DA} Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`,
+			`📚 Cleanup complete: ${mergedGroups} groups merged, ${totalRemoved} duplicates removed`,
 		);
 		return {
 			success: errors.length === 0,

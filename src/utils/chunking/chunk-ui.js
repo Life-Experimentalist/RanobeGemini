@@ -112,7 +112,7 @@ export function createChunkBanner(
 	const cacheTimestamp = cacheInfo?.timestamp;
 
 	// Status icon and text
-	let statusIcon = "\u{23F3}";
+	let statusIcon = "⏳";
 	let statusText = "Pending";
 
 	// Cache time display
@@ -127,33 +127,33 @@ export function createChunkBanner(
 
 	switch (status) {
 		case "processing":
-			statusIcon = "\u{23F3}";
+			statusIcon = "⏳";
 			statusText = "Processing...";
 			break;
 		case "completed":
-			statusIcon = isFromCache ? "\u{2713}" : "\u{2705}";
+			statusIcon = isFromCache ? "✓" : "✅";
 			statusText = isFromCache ? `Cached${cacheTimeText}` : "Complete";
 			break;
 		case "error":
-			statusIcon = "\u{274C}";
+			statusIcon = "❌";
 			statusText = errorMessage || "Error";
 			break;
 		case "cached":
-			statusIcon = "\u{2713}";
+			statusIcon = "✓";
 			statusText = `Cached${cacheTimeText}`;
 			break;
 		case "paused":
-			statusIcon = "\u{23F8}";
+			statusIcon = "⏸";
 			statusText = "Enhancement Ready";
 			break;
 		default:
 			// Show "Not Enhanced" with an enhance action when a callback is available
 			// (pre-enhancement state). Fall back to "Pending" when queued during processing.
 			if (callbacks?.onEnhance) {
-				statusIcon = "\u{1F4C4}";
+				statusIcon = "📄";
 				statusText = "Not Enhanced";
 			} else {
-				statusIcon = "\u{23F3}";
+				statusIcon = "⏳";
 				statusText = "Pending";
 			}
 	}
@@ -220,7 +220,7 @@ export function createChunkBanner(
 					font-size: 12px;
 					color: #fca5a5;
 				">
-					<span style="font-size: 16px;">\u{26A0}\u{FE0F}</span>
+					<span style="font-size: 16px;">⚠️</span>
 					<span>Word count change (${percentChange}%) exceeds threshold (${threshold}%)</span>
 				</div>
 			`;
@@ -228,7 +228,7 @@ export function createChunkBanner(
 
 		wordCountDisplay = `
 			<div style="display: flex; gap: 16px; align-items: center; font-size: 12px; color: ${colors.onSurfaceVariant};">
-				<span>\u{1F4C4} ${original} \u{2192} ${enhanced}</span>
+				<span>📄 ${original} → ${enhanced}</span>
 				<span style="color: ${diffColor}; font-weight: 600;">${diffSign}${diff} (${percentChange}%)</span>
 			</div>
 		`;
@@ -348,7 +348,7 @@ export function createChunkBanner(
 
 	// Add navigation buttons
 	const prevBtn = createMaterialButton(
-		"\u{2B06}\u{FE0F}",
+		"⬆️",
 		"gemini-chunk-prev-btn",
 		"Go to previous chunk",
 		"neutral",
@@ -379,7 +379,7 @@ export function createChunkBanner(
 	navigationContainer.appendChild(prevBtn);
 
 	const nextBtn = createMaterialButton(
-		"\u{2B07}\u{FE0F}",
+		"⬇️",
 		"gemini-chunk-next-btn",
 		"Go to next chunk",
 		"neutral",
@@ -413,7 +413,7 @@ export function createChunkBanner(
 	if (status === "processing") {
 		if (callbacks.isBatchMode) {
 			const skipBtn = createMaterialButton(
-				"\u{23ED} Skip",
+				"⏭ Skip",
 				"gemini-chunk-skip-btn",
 				"Skip this chunk and continue with the rest",
 				"neutral",
@@ -423,15 +423,15 @@ export function createChunkBanner(
 				e.stopPropagation();
 				skipBtn.disabled = true;
 				skipBtn.style.opacity = "0.5";
-				skipBtn.textContent = "\u{23ED} Skipping...";
+				skipBtn.textContent = "⏭ Skipping...";
 				if (callbacks.onSkip) callbacks.onSkip(chunkIndex);
 			});
 			controlsContainer.appendChild(skipBtn);
 		} else {
 			const pauseBtn = createMaterialButton(
-				"\u{23F8} Pause",
+				"⏸ Pause",
 				"gemini-chunk-pause-btn",
-				"Let enhancement finish but don't auto-apply \u{2014} you can reveal it with Show Enhanced",
+				"Let enhancement finish but don't auto-apply — you can reveal it with Show Enhanced",
 				"neutral",
 			);
 			pauseBtn.addEventListener("click", (e) => {
@@ -439,7 +439,7 @@ export function createChunkBanner(
 				e.stopPropagation();
 				pauseBtn.disabled = true;
 				pauseBtn.style.opacity = "0.5";
-				pauseBtn.textContent = "\u{23F8} Paused";
+				pauseBtn.textContent = "⏸ Paused";
 				if (callbacks.onPause) callbacks.onPause(chunkIndex);
 			});
 			controlsContainer.appendChild(pauseBtn);
@@ -449,7 +449,7 @@ export function createChunkBanner(
 	// For pre-enhancement pending state, add an Enhance button directly in the banner
 	if (status === "pending" && callbacks.onEnhance) {
 		const enhanceBtn = createMaterialButton(
-			"\u{26A1} Enhance Chunk",
+			"⚡ Enhance Chunk",
 			"gemini-chunk-enhance-btn",
 			"Enhance only this chunk with Gemini AI",
 			"primary",
@@ -466,7 +466,7 @@ export function createChunkBanner(
 	// Add regenerate button if completed or error
 	if (status === "completed" || status === "error" || status === "cached") {
 		const regenerateBtn = createMaterialButton(
-			"\u{1F504} Regenerate",
+			"🔄 Regenerate",
 			"gemini-chunk-regenerate-btn",
 			"Regenerate this chunk",
 			"primary",
@@ -484,7 +484,7 @@ export function createChunkBanner(
 	// Add toggle button if completed or cached
 	if (status === "completed" || status === "cached") {
 		const toggleBtn = createMaterialButton(
-			"\u{1F441} Show Original",
+			"👁 Show Original",
 			"gemini-chunk-toggle-btn",
 			"Toggle original/enhanced",
 			"neutral",
@@ -503,7 +503,7 @@ export function createChunkBanner(
 	// Add delete button if completed or cached
 	if (status === "completed" || status === "cached") {
 		const deleteBtn = createMaterialButton(
-			"\u{1F5D1} Delete",
+			"🗑 Delete",
 			"gemini-chunk-delete-btn",
 			"Delete cached data for this chunk",
 			"error",
@@ -518,10 +518,10 @@ export function createChunkBanner(
 		controlsContainer.appendChild(deleteBtn);
 	}
 
-	// Paused state: show enhanced content is ready \u{2014} user can reveal or discard it
+	// Paused state: show enhanced content is ready — user can reveal or discard it
 	if (status === "paused") {
 		const showEnhancedBtn = createMaterialButton(
-			"\u{2728} Show Enhanced",
+			"✨ Show Enhanced",
 			"gemini-chunk-toggle-btn",
 			"Apply the completed enhanced content to this chunk",
 			"primary",
@@ -536,7 +536,7 @@ export function createChunkBanner(
 		controlsContainer.appendChild(showEnhancedBtn);
 
 		const discardBtn = createMaterialButton(
-			"\u{1F5D1} Discard",
+			"🗑 Discard",
 			"gemini-chunk-discard-btn",
 			"Discard the enhanced content and revert to pending",
 			"error",
@@ -657,7 +657,7 @@ export function createWorkInProgressBanner(currentChunk, totalChunks) {
 	banner.innerHTML = `
 		<div style="display: flex; flex-direction: column; gap: 12px;">
 			<div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
-				<span style="font-size: 20px;">\u{23F3}</span>
+				<span style="font-size: 20px;">⏳</span>
 				<span style="font-weight: 600; font-size: 16px; color: ${colors.onSurface};">Processing Content</span>
 			</div>
 			<div style="font-size: 14px; color: ${colors.onSurfaceVariant};">
@@ -706,20 +706,20 @@ export function createMasterBanner(
 
 	const isIncrease = wordDiff > 0;
 	const changeColor = isIncrease ? colors.success : colors.error;
-	const changeIcon = isIncrease ? "\u{2191}" : "\u{2193}";
+	const changeIcon = isIncrease ? "↑" : "↓";
 
 	const modelName = modelInfo?.name || "AI";
 	const modelProvider = modelInfo?.provider || "Ranobe Gemini";
 	let cacheLabel = "";
 	let cacheIcon = "";
 	if (isFromCache) {
-		cacheIcon = "\u{2713} ";
+		cacheIcon = "✓ ";
 		if (cacheInfo?.timestamp) {
 			const age = Date.now() - cacheInfo.timestamp;
 			const hours = Math.floor(age / (1000 * 60 * 60));
 			const days = Math.floor(hours / 24);
 			const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
-			cacheLabel = ` \u{2022} Cached ${timeAgo}`;
+			cacheLabel = ` • Cached ${timeAgo}`;
 		}
 	}
 	const modelDisplay = `${cacheIcon}Enhanced with ${modelProvider}${
@@ -744,7 +744,7 @@ export function createMasterBanner(
 		<div style="display: flex; flex-direction: column; gap: 12px;">
 			<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
 				<div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 200px;">
-					<span style="font-size: 20px; flex-shrink: 0;">\u{2728}</span>
+					<span style="font-size: 20px; flex-shrink: 0;">✨</span>
 					<span style="font-weight: 600; font-size: 15px; overflow-wrap: break-word; word-break: break-word;">${modelDisplay}</span>
 				</div>
 				<div style="display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0;" class="master-controls">
@@ -760,7 +760,7 @@ export function createMasterBanner(
 						font-family: inherit;
 						min-height: 36px;
 						white-space: nowrap;
-					">\u{1F441} Show All Original</button>
+					">👁 Show All Original</button>
 					<button class="gemini-master-delete-all-btn" style="
 						padding: 6px 12px;
 						background: ${colors.error};
@@ -773,7 +773,7 @@ export function createMasterBanner(
 						font-family: inherit;
 						min-height: 36px;
 						white-space: nowrap;
-					">\u{1F5D1} Delete All</button>
+					">🗑 Delete All</button>
 				</div>
 			</div>
 			<div style="display: flex; gap: 16px; font-size: 13px; color: ${colors.onSurfaceVariant}; flex-wrap: wrap;">

@@ -1,13 +1,13 @@
 /**
- * Status Settings UI \u{2014} Ranobe Gemini
+ * Status Settings UI — Ranobe Gemini
  *
  * Renders a configurable panel inside the library settings modal with
  * four sub-sections:
  *
- *  1. Status Appearance    \u{2014} label & colour for every status
- *  2. Custom Statuses      \u{2014} add / delete user-defined statuses
- *  3. Re-reading Overlay   \u{2014} configure the re-reading checkbox feature
- *  4. Transition Rules     \u{2014} enable / disable / edit / add state-machine rules
+ *  1. Status Appearance    — label & colour for every status
+ *  2. Custom Statuses      — add / delete user-defined statuses
+ *  3. Re-reading Overlay   — configure the re-reading checkbox feature
+ *  4. Transition Rules     — enable / disable / edit / add state-machine rules
  *
  * Called from library.js:
  *   import { initStatusSettingsTab, applyStatusConfig } from "./status-settings-ui.js";
@@ -28,14 +28,14 @@ import {
 	getDefaultRereadingOverlay,
 } from "./status-machine.js";
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Public: apply saved status config to in-memory READING_STATUS_INFO
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Apply a saved statusConfig onto the in-memory READING_STATUS_INFO map
  * so that labels + colours take effect immediately across the UI.
- * @param {Object} statusConfig \u{2013} map of statusKey \u{2192} { label, color }
+ * @param {Object} statusConfig – map of statusKey → { label, color }
  */
 export function applyStatusConfig(statusConfig = {}) {
 	if (!statusConfig) return;
@@ -50,7 +50,7 @@ export function applyStatusConfig(statusConfig = {}) {
 /**
  * Merge saved statusConfig with built-in defaults.
  * @param {Object} saved
- * @returns {Object} full map of statusKey \u{2192} { label, color }
+ * @returns {Object} full map of statusKey → { label, color }
  */
 export function mergeStatusConfig(saved = {}) {
 	const merged = {};
@@ -63,15 +63,15 @@ export function mergeStatusConfig(saved = {}) {
 	return merged;
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // High-level init (entry point from library.js)
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Initialise the status settings tab inside #status-settings.
  * Re-renders whenever the tab container becomes visible.
- * @param {Function} getSettings  \u{2013} () => librarySettings (sync)
- * @param {Function} saveSettings \u{2013} async (patch) => void
+ * @param {Function} getSettings  – () => librarySettings (sync)
+ * @param {Function} saveSettings – async (patch) => void
  */
 export function initStatusSettingsTab(getSettings, saveSettings) {
 	const container = document.getElementById("status-settings");
@@ -91,9 +91,9 @@ export function initStatusSettingsTab(getSettings, saveSettings) {
 	observer.observe(modalBody, { attributes: true, subtree: true });
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Main render
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Render all four sections into the container element.
@@ -269,7 +269,7 @@ export function renderStatusSettingsTab(container, getSettings, saveSettings) {
 		<div class="status-settings-root" style="display:flex;flex-direction:column;gap:18px;">
 		<div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px;">
 		<button id="ssu-save-all-btn" class="btn btn-primary" style="font-size:13px;padding:7px 18px;">
-			\u{1F4BE} Save All Settings
+			💾 Save All Settings
 		</button>
 		</div>
 			${_renderAppearanceSection(statuses)}
@@ -283,9 +283,9 @@ export function renderStatusSettingsTab(container, getSettings, saveSettings) {
 	_wireAll(container, getSettings, saveSettings, statuses);
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Section renderers
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 function _renderAppearanceSection(statuses) {
 	const rows = statuses
@@ -297,7 +297,7 @@ function _renderAppearanceSection(statuses) {
 				style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}55;"
 			>${s.label}</span>
 			<span class="rg-count-badge ssu-count-badge" data-count-id="${s.id}"
-				title="Novels with this status">\u{2026}</span>
+				title="Novels with this status">…</span>
 			<input type="text" class="rg-input ssu-label-input" data-sid="${s.id}"
 				value="${_esc(s.label)}" placeholder="Status label"
 			/>
@@ -310,9 +310,9 @@ function _renderAppearanceSection(statuses) {
 			${
 				!s.builtIn
 					? `<button class="rg-action-btn danger ssu-delete-status-btn" data-sid="${s.id}"
-					title="Delete custom status">\u{2715}</button>`
+					title="Delete custom status">✕</button>`
 					: `<button class="rg-action-btn ssu-reset-btn" data-sid="${s.id}"
-					title="Reset to default">\u{21A9}</button>`
+					title="Reset to default">↩</button>`
 			}
 		</div>`,
 		)
@@ -320,7 +320,7 @@ function _renderAppearanceSection(statuses) {
 
 	return `
 	<div class="ssu-section" style="background:var(--bg-secondary,#1e293b);padding:16px;border-radius:8px;border-left:3px solid #a855f7;">
-		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#a855f7;">\u{1F4CB} Status Appearance</h3>
+		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#a855f7;">📋 Status Appearance</h3>
 		<p style="margin:0 0 12px;font-size:12px;color:var(--text-secondary,#9ca3af);">
 			Customise the label and badge colour for every reading status.
 		</p>
@@ -340,14 +340,14 @@ function _renderCustomStatusSection(customStatuses) {
 				>${_esc(cs.label)}</span>
 				<span style="flex:1;font-size:12px;color:var(--text-secondary);grid-column:span 2;">${_esc(cs.id)}</span>
 				<button class="rg-action-btn danger ssu-delete-custom-btn" data-csid="${cs.id}"
-					title="Delete this custom status">\u{2715} Delete</button>
+					title="Delete this custom status">✕ Delete</button>
 			</div>`,
 					)
 					.join("");
 
 	return `
 	<div class="ssu-section" style="background:var(--bg-secondary,#1e293b);padding:16px;border-radius:8px;border-left:3px solid #06b6d4;">
-		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#06b6d4;">\u{2728} Custom Statuses</h3>
+		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#06b6d4;">✨ Custom Statuses</h3>
 		<p style="margin:0 0 12px;font-size:12px;color:var(--text-secondary,#9ca3af);">
 			Add your own statuses (e.g. "Stalled", "Waiting for Translation"). They appear in filters and can be
 			used in transition rules. Deleting a custom status keeps the novels' data intact.
@@ -376,9 +376,9 @@ function _renderRereadingOverlaySection(overlay, statuses) {
 
 	return `
 	<div class="ssu-section" style="background:var(--bg-secondary,#1e293b);padding:16px;border-radius:8px;border-left:3px solid #9c27b0;">
-		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#9c27b0;">\u{1F501} Re-reading Overlay</h3>
+		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#9c27b0;">🔁 Re-reading Overlay</h3>
 		<p style="margin:0 0 12px;font-size:12px;color:var(--text-secondary,#9ca3af);">
-			Re-reading is a <em>checkbox overlay</em> that sits on top of any primary status \u{2014} a novel can be
+			Re-reading is a <em>checkbox overlay</em> that sits on top of any primary status — a novel can be
 			"On Hold" <em>and</em> re-reading at the same time. Toggle it on any novel card.
 		</p>
 		<div style="display:flex;flex-direction:column;gap:10px;">
@@ -424,10 +424,10 @@ function _renderRulesSection(rules, allStatusIds) {
 
 	return `
 	<div class="ssu-section" style="background:var(--bg-secondary,#1e293b);padding:16px;border-radius:8px;border-left:3px solid #22c55e;">
-		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#22c55e;">\u{2699}\u{FE0F} Transition Rules</h3>
+		<h3 style="margin:0 0 6px;font-size:15px;font-weight:600;color:#22c55e;">⚙️ Transition Rules</h3>
 		<p style="margin:0 0 12px;font-size:12px;color:var(--text-secondary,#9ca3af);">
 			Rules control how a novel's status changes automatically. Higher priority = evaluated first.
-			Built-in rules \u{1F512} can be disabled but not deleted. Ctrl+click for multiple "From" selections.
+			Built-in rules 🔒 can be disabled but not deleted. Ctrl+click for multiple "From" selections.
 		</p>
 		<div id="ssu-rules-list">${ruleRows}</div>
 		<button id="ssu-add-rule-btn" class="btn btn-secondary" style="font-size:12px;padding:6px 12px;margin-top:4px;">
@@ -458,7 +458,7 @@ function _renderRuleRow(rule, allStatusIds) {
 	// Built-in rules: name is read-only, trigger/from/to are disabled, only enable and priority editable
 	const nameField = isBuiltIn
 		? `<span style="flex:1;min-width:120px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--text-primary,#e5e7eb);"
-				title="Built-in rule \u{2014} name cannot be changed">${_esc(rule.name)}</span>`
+				title="Built-in rule — name cannot be changed">${_esc(rule.name)}</span>`
 		: `<input type="text" class="ssu-rule-name" data-rule-id="${rule.id}" value="${_esc(rule.name)}"
 				style="flex:1;min-width:120px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:13px;font-weight:600;"
@@ -494,9 +494,9 @@ function _renderRuleRow(rule, allStatusIds) {
 			/>
 			${
 				isBuiltIn
-					? `<span title="Built-in \u{2014} cannot be edited or deleted" style="font-size:18px;color:#9ca3af;">\u{1F512}</span>`
+					? `<span title="Built-in — cannot be edited or deleted" style="font-size:18px;color:#9ca3af;">🔒</span>`
 					: `<button class="ssu-delete-rule-btn btn btn-secondary" data-rule-id="${rule.id}"
-						style="font-size:11px;padding:4px 8px;color:#f87171;flex-shrink:0;">\u{2715}</button>`
+						style="font-size:11px;padding:4px 8px;color:#f87171;flex-shrink:0;">✕</button>`
 			}
 		</div>
 		<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;">
@@ -507,7 +507,7 @@ function _renderRuleRow(rule, allStatusIds) {
 					${isBuiltIn ? "pointer-events:none;opacity:0.7;" : ""}">
 				${fromOptions}
 			</select>
-			<span style="color:var(--text-secondary);">\u{2192} To:</span>
+			<span style="color:var(--text-secondary);">→ To:</span>
 			<select class="ssu-rule-to" data-rule-id="${rule.id}" ${disabledAttr}
 				style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;
@@ -529,21 +529,21 @@ function _renderConditions(rule, isBuiltIn = false) {
 		const c = rule.conditions || {};
 		return `
 		<label style="display:flex;align-items:center;gap:6px;">
-			Inactive \u{2265} <input type="number" class="ssu-cond-inactivityDays" data-rule-id="${rule.id}"
+			Inactive ≥ <input type="number" class="ssu-cond-inactivityDays" data-rule-id="${rule.id}"
 				value="${c.inactivityDays ?? 7}" min="1" max="365" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
 			/> days
 		</label>
 		<label style="display:flex;align-items:center;gap:6px;">
-			Chapters read \u{2265} <input type="number" class="ssu-cond-chaptersReadMin" data-rule-id="${rule.id}"
+			Chapters read ≥ <input type="number" class="ssu-cond-chaptersReadMin" data-rule-id="${rule.id}"
 				value="${c.chaptersReadMin ?? ""}" min="0" placeholder="any" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
 			/>
 		</label>
 		<label style="display:flex;align-items:center;gap:6px;">
-			Chapters read \u{2264} <input type="number" class="ssu-cond-chaptersReadMax" data-rule-id="${rule.id}"
+			Chapters read ≤ <input type="number" class="ssu-cond-chaptersReadMax" data-rule-id="${rule.id}"
 				value="${c.chaptersReadMax ?? ""}" min="0" placeholder="any" ${ro}
 				style="width:55px;padding:3px 6px;border-radius:4px;border:1px solid var(--border-color,#374151);
 					background:var(--bg-secondary,#1e293b);color:var(--text-primary,#e5e7eb);font-size:12px;${roStyle}"
@@ -591,12 +591,12 @@ function _renderConditions(rule, isBuiltIn = false) {
 	return "";
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Event wiring
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 function _wireAll(container, getSettings, saveSettings, statuses) {
-	// \u{2500}\u{2500} Appearance: live badge preview \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Appearance: live badge preview ───────────────────────────────────
 	container.querySelectorAll(".ssu-color-picker").forEach((picker) => {
 		const sid = picker.dataset.sid;
 		const tf = container.querySelector(
@@ -646,7 +646,7 @@ function _wireAll(container, getSettings, saveSettings, statuses) {
 		});
 	});
 
-	// \u{2500}\u{2500} Custom statuses \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Custom statuses ──────────────────────────────────────────────────
 	const addCustomBtn = container.querySelector("#ssu-add-custom-btn");
 	if (addCustomBtn) {
 		addCustomBtn.addEventListener("click", async () => {
@@ -697,7 +697,7 @@ function _wireAll(container, getSettings, saveSettings, statuses) {
 		});
 	});
 
-	// \u{2500}\u{2500} Re-reading overlay colour sync \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Re-reading overlay colour sync ───────────────────────────────────
 	const rrCP = container.querySelector("#ssu-rereading-color");
 	const rrCT = container.querySelector("#ssu-rereading-color-text");
 	if (rrCP && rrCT) {
@@ -710,7 +710,7 @@ function _wireAll(container, getSettings, saveSettings, statuses) {
 		});
 	}
 
-	// \u{2500}\u{2500} Rules: add custom rule \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Rules: add custom rule ───────────────────────────────────────────
 	const addRuleBtn = container.querySelector("#ssu-add-rule-btn");
 	if (addRuleBtn) {
 		addRuleBtn.addEventListener("click", async () => {
@@ -749,7 +749,7 @@ function _wireAll(container, getSettings, saveSettings, statuses) {
 		});
 	});
 
-	// \u{2500}\u{2500} Save All \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Save All ─────────────────────────────────────────────────────────
 	const saveAllBtn = container.querySelector("#ssu-save-all-btn");
 	if (saveAllBtn) {
 		saveAllBtn.addEventListener("click", () =>
@@ -758,9 +758,9 @@ function _wireAll(container, getSettings, saveSettings, statuses) {
 	}
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Save handler
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 	const feedback = container.querySelector("#ssu-feedback");
@@ -792,7 +792,7 @@ async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 			...getDefaultRereadingOverlay(),
 			...(settings.rereadingOverlay || {}),
 			enabled: rrEnabled?.checked ?? true,
-			label: rrLabel?.value?.trim() || "\u{1F501} Re-reading",
+			label: rrLabel?.value?.trim() || "🔁 Re-reading",
 			color: rrColor?.value || "#9c27b0",
 			autoClearOn: rrAutoClear
 				? Array.from(rrAutoClear.selectedOptions).map((o) => o.value)
@@ -813,7 +813,7 @@ async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 				10;
 
 			if (isBuiltIn) {
-				// Built-in rules: only save enabled & priority \u{2014} everything else comes from defaults
+				// Built-in rules: only save enabled & priority — everything else comes from defaults
 				stateMachineRules.push({
 					id: ruleId,
 					enabled,
@@ -888,7 +888,7 @@ async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 		applyStatusConfig(statusConfig);
 
 		if (feedback) {
-			feedback.textContent = "\u{2713} All status settings saved.";
+			feedback.textContent = "✓ All status settings saved.";
 			feedback.style.color = "#22c55e";
 			feedback.style.display = "block";
 			setTimeout(() => {
@@ -897,16 +897,16 @@ async function _handleSaveAll(container, getSettings, saveSettings, statuses) {
 		}
 	} catch (err) {
 		if (feedback) {
-			feedback.textContent = `\u{26A0}\u{FE0F} Failed to save: ${err.message}`;
+			feedback.textContent = `⚠️ Failed to save: ${err.message}`;
 			feedback.style.color = "#f87171";
 			feedback.style.display = "block";
 		}
 	}
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Count badge refresh
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 async function _refreshAllCounts(container) {
 	if (!container) return;
@@ -918,13 +918,13 @@ async function _refreshAllCounts(container) {
 			if (badge) badge.textContent = String(count);
 		}
 	} catch (_) {
-		// decorative \u{2014} ignore
+		// decorative — ignore
 	}
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 // Helpers
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────────────────
 
 function _refreshBadge(container, sid, label, color) {
 	const badge = container.querySelector(`[data-preview="${sid}"]`);

@@ -895,7 +895,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: data.chunkingEnabled !== false,
 				chunkSize: data.chunkSize || 20000, // Used for both threshold AND chunk size
 				chunkThreshold: data.chunkSize || 20000, // Same as chunkSize (simplified)
-				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size \u{2014} must match content script
+				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — must match content script
 				useEmoji: data.useEmoji || false,
 				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
 			};
@@ -926,7 +926,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: true,
 				chunkSize: 20000,
 				chunkThreshold: 20000,
-				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size \u{2014} fallback default
+				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — fallback default
 				useEmoji: false,
 				fontSize: 100,
 			};
@@ -2494,7 +2494,7 @@ if (typeof browser === "undefined") {
 			// NOTE: Default 3200 words MUST match content.js and other references for consistency
 			const configuredChunkSizeWords =
 				currentConfig.chunkSizeWords || 3200;
-			// Convert words to approximate character count for comparison (1 word \u{2248} 7 chars)
+			// Convert words to approximate character count for comparison (1 word ≈ 7 chars)
 			const configuredChunkSizeChars = configuredChunkSizeWords * 7;
 			const effectiveChunkSizeChars = Math.min(
 				configuredChunkSizeChars,
@@ -2549,7 +2549,7 @@ if (typeof browser === "undefined") {
 				"[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...",
 			);
 			debugLog(
-				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured \u{2014} matching content script" : "model-aware effective"})`,
+				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured — matching content script" : "model-aware effective"})`,
 			);
 			// Use new modular chunking system with paragraph awareness
 			const chunks = chunkingSystem.core.splitContentByWords(
@@ -2877,7 +2877,7 @@ if (typeof browser === "undefined") {
 							// Increment retry count and try again
 							retryCount++;
 						} else if (!error._nonRetryable && retryCount < 2) {
-							// For non-rate limit, retryable errors \u{2014} retry with exponential backoff
+							// For non-rate limit, retryable errors — retry with exponential backoff
 							const backoffTime = Math.pow(2, retryCount) * 3000;
 							debugLog(
 								`Error processing chunk. Retrying in ${
@@ -3057,7 +3057,7 @@ if (typeof browser === "undefined") {
 						).length,
 					}))
 					.filter(({ n }) => n > 0)
-					.map(({ cls, n }) => `${n}\u{D7}${cls}`)
+					.map(({ cls, n }) => `${n}x${cls}`)
 					.join(", ");
 				if (counts) debugLog(`Preserved boxes: ${counts}`);
 			}
@@ -3127,7 +3127,7 @@ if (typeof browser === "undefined") {
 			// Add emoji instructions if enabled
 			if (shouldUseEmoji) {
 				promptPrefix +=
-					"\n\nWhere the tone genuinely calls for it \u{2014} a tense standoff, a burst of laughter, a moment of wonder, a crushing defeat \u{2014} weave in a single emoji naturally within the prose. It can sit inside a paragraph, at the end of a line of dialogue or narration, or anywhere it feels organic. There is no fixed rule about placement: let the mood of the moment guide it. Use them sparingly \u{2014} only the most vivid or emotionally charged beats deserve one. A whole chapter may have just two or three, and that is perfectly fine.";
+					"\n\nWhere the tone genuinely calls for it — a tense standoff, a burst of laughter, a moment of wonder, a crushing defeat — weave in a single emoji naturally within the prose. It can sit inside a paragraph, at the end of a line of dialogue or narration, or anywhere it feels organic. There is no fixed rule about placement: let the mood of the moment guide it. Use them sparingly — only the most vivid or emotionally charged beats deserve one. A whole chapter may have just two or three, and that is perfectly fine.";
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
@@ -3325,7 +3325,7 @@ if (typeof browser === "undefined") {
 					throw err;
 				}
 
-				// Content detected as copyrighted \u{2014} retrying won't help
+				// Content detected as copyrighted — retrying won't help
 				if (finishReason === "RECITATION") {
 					debugError("Gemini RECITATION block:", candidate);
 					const err = new Error(
@@ -3337,7 +3337,7 @@ if (typeof browser === "undefined") {
 					throw err;
 				}
 
-				// Output cut off \u{2014} suggest increasing maxOutputTokens
+				// Output cut off — suggest increasing maxOutputTokens
 				if (
 					finishReason === "MAX_TOKENS" ||
 					finishReason === "LENGTH"
@@ -4046,7 +4046,7 @@ if (typeof browser === "undefined") {
 				// Add Novel Library shortcut
 				browser.contextMenus.create({
 					id: "openNovelLibrary",
-					title: "\u{1F4DA} Open Novel Library",
+					title: "📚 Open Novel Library",
 					contexts: ["action"], // Shows when right-clicking extension icon
 				});
 
@@ -4060,7 +4060,7 @@ if (typeof browser === "undefined") {
 				// Add quick settings access
 				browser.contextMenus.create({
 					id: "openSettings",
-					title: "\u{2699}\u{FE0F} Settings",
+					title: "⚙️ Settings",
 					contexts: ["action"],
 				});
 
