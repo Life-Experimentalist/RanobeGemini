@@ -39,7 +39,7 @@
 import { debugLog, debugError } from "../../utils/logger.js";
 
 import HandlerSettings from "../../utils/handler-settings.js";
-import { handlerRegistry } from "../../utils/website-handlers/handler-registry.js";
+import handlerManager from "../../utils/website-handlers/handler-manager.js";
 
 /**
  * Handle getHandlerSettings message
@@ -57,7 +57,7 @@ export async function handleGetSettings(message, sendResponse) {
 		if (includeAllHandlers) {
 			debugLog("[SettingsHandler] Retrieving settings for all handlers");
 
-			const handlers = handlerRegistry.getAllHandlers?.() || [];
+			const handlers = (await handlerManager.getAllHandlers()) || [];
 			const allSettings =
 				HandlerSettings.getAllProposedSettings(handlers);
 
@@ -85,7 +85,7 @@ export async function handleGetSettings(message, sendResponse) {
 		debugLog(`[SettingsHandler] Retrieving settings for ${handlerDomain}`);
 
 		// Get the handler instance
-		const handler = handlerRegistry.getHandlerByDomain(handlerDomain);
+		const handler = await handlerManager.getHandlerByDomain(handlerDomain);
 		if (!handler) {
 			debugError(
 				`[SettingsHandler] Handler not found for domain: ${handlerDomain}`,

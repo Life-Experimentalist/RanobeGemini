@@ -51,6 +51,19 @@ let enhancementAttributionModule = null; // Model attribution helper runtime
 let mainSummaryBannerModule = null; // Main summary banner runtime
 let allChunksProcessedModule = null; // All-chunks processed runtime
 let finalizePrefixModule = null; // Finalize prefix enhanced content runtime
+let aiRuntimeModule = null; // AI actions runtime (Enhance, Summarize)
+
+async function loadAiRuntimeModule() {
+	if (aiRuntimeModule) return aiRuntimeModule;
+	try {
+		const aiUrl = browser.runtime.getURL("content/modules/ai-runtime.js");
+		aiRuntimeModule = await import(aiUrl);
+		return aiRuntimeModule;
+	} catch (error) {
+		debugError("Error loading AI runtime module:", error);
+		return null;
+	}
+}
 let chunkErrorModule = null; // Chunk error handling runtime
 let chunkProcessedModule = null; // Chunk processed handling runtime
 let chunkEventsModule = null; // Chunk action handlers runtime
@@ -2332,7 +2345,7 @@ if (window.__RGInitDone) {
 	async function loadUIElementsRuntimeModule() {
 		try {
 			const url = browser.runtime.getURL(
-				"src/content/modules/ui-elements-runtime.js",
+				"content/modules/ui-elements-runtime.js",
 			);
 			return await import(url);
 		} catch (err) {
@@ -2669,7 +2682,7 @@ if (window.__RGInitDone) {
 	async function loadNovelContextModule() {
 		if (novelContextModule) return;
 		try {
-			const modUrl = browser.runtime.getURL("modules/novel-context.js");
+			const modUrl = browser.runtime.getURL("content/modules/novel-context.js");
 			const mod = await import(modUrl);
 			novelContextModule = mod.initNovelContextModule({
 				windowRef:   window,
@@ -4268,9 +4281,13 @@ if (window.__RGInitDone) {
 	// Handle click event for Summarize button (used by message handler for non-chunked content)
 	// Delegates to the unified summary service which handles both chunked and non-chunked pages.
 	async function handleSummarizeClick(isShort = false) {
-		// Use [0] as a single-chunk placeholder — the summary service's collectContent()
-		// correctly falls through to live extraction when no chunk DOM elements exist.
-		return summarizeChunkRange([0], isShort);
+		await loadAiRuntimeModule();
+		if (!aiRuntimeModule?.handleSummarizeClickRuntime) return;
+
+		return aiRuntimeModule.handleSummarizeClickRuntime({
+			isShort,
+			summarizeChunkRange,
+		});
 	}
 
 	// Helper: Get content area HTML without any Gemini UI elements
@@ -4293,40 +4310,28 @@ if (window.__RGInitDone) {
 
 	// Handle click event for Enhance button
 	async function handleEnhanceClick() {
-		// Prevent concurrent invocations (e.g. auto-enhance fires while user
-		// is already manually enhancing, or button clicked twice quickly).
-		const firstBtn = document.querySelector(".gemini-enhance-btn");
-		if (firstBtn?.disabled) return;
+		await loadAiRuntimeModule();
+		if (!aiRuntimeModule?.handleEnhanceClickRuntime) return;
 
-		enhancementCancelRequested = false;
-
-		// Check if there's a chunked container with individually-enhanced chunks that
-		// has NOT gone through the normal "Regenerate" path (hasCachedContent=true but
-		// isCachedContent=false means chunk-level cache only, not whole-page cache).
-		// Treat this the same as the Regenerate path: clear chunk caches and re-enhance.
-		const existingChunkedOnClick = document.getElementById(
-			"gemini-chunked-content",
-		);
-		const batch = await loadChunkBatchModule();
-		const precheckResult = await batch?.runEnhancementPrechecksRuntime?.({
-			existingChunkedOnClick,
-			isCachedContent,
-			hasCachedContent,
-			storageManager,
+		return aiRuntimeModule.handleEnhanceClickRuntime({
 			documentRef: document,
+			windowRef: window,
+			browserRef: browser,
+			loadChunkBatchModule,
+			loadChunkingSystem,
+			storageManager,
 			cancelEnhanceButton,
 			showStatusMessage,
 			showWorkInProgressBanner,
 			handleReenhanceChunk,
-			isEnhancementCancelled: () => enhancementCancelRequested,
-			loadChunkingSystem,
-			windowRef: window,
+			getEnhancementCancelRequested: () => enhancementCancelRequested,
+			setEnhancementCancelRequested: (val) => { enhancementCancelRequested = val; },
+			isCachedContent,
+			hasCachedContent,
 			onResetChunkCacheFlags: () => {
 				hasCachedContent = false;
 				isCachedContent = false;
 			},
-			findContentArea,
-			replaceContentWithEnhancedVersion,
 			onResetCacheFlags: () => {
 				isCachedContent = false;
 				hasCachedContent = false;
@@ -4338,101 +4343,26 @@ if (window.__RGInitDone) {
 			onCacheMiss: () => {
 				hasCachedContent = false;
 			},
+			findContentArea,
+			replaceContentWithEnhancedVersion,
+			extractContent,
+			wakeUpBackgroundWorker,
+			setFormattingOptions: (next) => {
+				formattingOptions = { ...formattingOptions, ...next };
+			},
+			debugLog,
+			debugError,
+			getCleanContentHTML,
+			buildChunkBanner,
+			stripHtmlTags,
+			summarizeChunkRange,
+			shouldBannersBeHidden,
+			enableCopyOnContentArea,
+			novelLibrary,
+			buildCombinedPrompt,
+			sendMessageWithRetry,
+			handleChunkProcessed,
 		});
-		if (precheckResult?.handled) {
-			return;
-		}
-
-		// Extract content
-		const extractedContent = extractContent();
-		if (!extractedContent.found) {
-			showStatusMessage("No content found to process", "error");
-			return;
-		}
-
-		try {
-			const startup = await batch?.prepareEnhancementStartupRuntime?.({
-				documentRef: document,
-				cancelEnhanceButton,
-				showStatusMessage,
-				wakeUpBackgroundWorker,
-				browserRef: browser,
-				loadChunkingSystem,
-				setFormattingOptions: (next) => {
-					formattingOptions = {
-						...formattingOptions,
-						...next,
-					};
-				},
-				debugLog,
-			});
-			const chunkingEnabled = startup?.chunkingEnabled !== false;
-			const chunking = startup?.chunking || null;
-			const useEmoji = startup?.useEmoji === true;
-
-			const chunkPrep = await batch?.prepareEnhancementChunkRuntime?.({
-				chunkingEnabled,
-				chunking,
-				extractedText: extractedContent.text,
-				findContentArea,
-				showStatusMessage,
-				debugLog,
-				debugError,
-				getCleanContentHTML,
-				documentRef: document,
-				buildChunkBanner,
-				stripHtmlTags,
-				onSummarizeLong: (indices) =>
-					summarizeChunkRange(indices, false),
-				onSummarizeShort: (indices) =>
-					summarizeChunkRange(indices, true),
-				shouldBannersBeHidden,
-				showWorkInProgressBanner,
-				enableCopyOnContentArea,
-			});
-			const shouldChunk = chunkPrep?.shouldChunk === true;
-			const chunks = chunkPrep?.chunks || [];
-			const contentToSend =
-				chunkPrep?.contentToSend ?? extractedContent.text;
-
-			const lifecycleResult =
-				await batch?.runEnhancementLifecycleRuntime?.({
-					novelLibrary,
-					locationHref: window.location.href,
-					debugLog,
-					buildCombinedPrompt,
-					shouldChunk,
-					showWorkInProgressBanner,
-					sendMessageWithRetry,
-					extractedTitle: extractedContent.title,
-					contentToSend,
-					useEmoji,
-					isEnhancementCancelled: () => enhancementCancelRequested,
-					documentRef: document,
-					cancelEnhanceButton,
-					showStatusMessage,
-					replaceContentWithEnhancedVersion,
-					loadChunkingSystem,
-					chunks,
-					handleChunkProcessed,
-					extractedContentText: extractedContent.text,
-					browserRef: browser,
-					consoleWarn: console.warn,
-				});
-			if (lifecycleResult?.cancelled) {
-				return;
-			}
-		} catch (error) {
-			const batch = await loadChunkBatchModule();
-			batch?.handleEnhancementLifecycleErrorRuntime?.({
-				error,
-				debugError,
-				showStatusMessage,
-				documentRef: document,
-				cancelEnhanceButton,
-				buttonText: "✨ Enhance with Gemini",
-			});
-		}
 	}
 
 	// Updated function to replace content with Gemini-enhanced version

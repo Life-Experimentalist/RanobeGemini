@@ -217,10 +217,11 @@ async function fetchFreshChapterCount(novel) {
 		// Dynamically import so the heavy handler code isn't loaded until needed
 		const MetadataFetcher = (await import("../utils/metadata-fetcher.js"))
 			.default;
-		const { handlerRegistry } =
-			await import("../utils/website-handlers/handler-registry.js");
-
-		const handler = handlerRegistry.getHandlerByDomain(
+		const handlerManager = (
+			await import("../utils/website-handlers/handler-manager.js")
+		).default;
+ 
+		const handler = await handlerManager.getHandlerByDomain(
 			new URL(novel.sourceUrl).hostname,
 		);
 		if (!handler) {

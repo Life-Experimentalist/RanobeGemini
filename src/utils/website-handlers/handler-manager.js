@@ -29,6 +29,10 @@ export class HandlerManager {
 		this.handlersPromise = null;
 	}
 
+	async getAllHandlers() {
+		return this.loadHandlers();
+	}
+
 	async loadHandlers() {
 		if (this.handlersPromise) return this.handlersPromise;
 
@@ -200,6 +204,32 @@ export class HandlerManager {
 			return null;
 		}
 		return new BaseWebsiteHandler();
+	}
+
+	/**
+	 * Determines which handler to use for a specific domain
+	 * @param {string} domain - The domain to find a handler for
+	 * @returns {Promise<Object|null>} The appropriate handler or null if none matches
+	 */
+	async getHandlerByDomain(domain) {
+		if (!domain) return null;
+		const handlers = await this.loadHandlers();
+
+		for (const handler of handlers) {
+			try {
+				const domains = handler?.constructor?.SUPPORTED_DOMAINS || [];
+				if (domains.some((d) => matchesHostname(domain, d))) {
+					return handler;
+				}
+			} catch (err) {
+				console.warn(
+					"HandlerManager: error matching domain for handler",
+					err,
+				);
+			}
+		}
+
+		return null;
 	}
 }
 

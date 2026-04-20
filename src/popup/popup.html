@@ -9,6 +9,10 @@
 	</head>
 
 	<body>
+		<div id="loadingOverlay" class="loading-overlay">
+			<div class="loader"></div>
+			<p>Initializing...</p>
+		</div>
 		<div class="container">
 			<div class="header">
 				<h1>
@@ -132,8 +136,18 @@
 												style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: 0%; transition: width 0.3s ease">
 											</div>
 										</div>
-										<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px"
-											id="current-novel-progress-text">0%</div>
+										<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px; display: flex; justify-content: space-between;">
+											<span id="current-novel-progress-text">0%</span>
+											<span id="current-novel-chapter-count" style="opacity: 0.8"></span>
+										</div>
+									</div>
+									<div class="current-novel-actions" style="display: flex; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px">
+										<button id="quickEnhanceBtn" class="quick-action-btn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
+											✨ Enhance
+										</button>
+										<button id="quickSummarizeBtn" class="quick-action-btn" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
+											📝 Summarize
+										</button>
 									</div>
 								</div>
 							</div>

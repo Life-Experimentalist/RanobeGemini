@@ -746,41 +746,20 @@ body {
 }
 
 .status-filter-btn.active {
-	background: var(--primary-color);
+	background: var(--status-color, var(--primary-color));
 	color: white;
-	border-color: var(--primary-color);
+	border-color: var(--status-color, var(--primary-color));
+	box-shadow: 0 4px 12px color-mix(in srgb, var(--status-color, var(--primary-color)) 30%, transparent);
+	transform: translateY(-1px);
 }
 
-/* Status badge colors */
-.status-filter-btn[data-status="reading"].active {
-	background: #4caf50;
-	border-color: #4caf50;
-}
-
-.status-filter-btn[data-status="completed"].active {
-	background: #2196f3;
-	border-color: #2196f3;
-}
-
-.status-filter-btn[data-status="plan-to-read"].active {
-	background: #ff9800;
-	border-color: #ff9800;
-}
-
-.status-filter-btn[data-status="on-hold"].active {
-	background: #9e9e9e;
-	border-color: #9e9e9e;
-}
-
-.status-filter-btn[data-status="dropped"].active {
-	background: #f44336;
-	border-color: #f44336;
-}
-
-.status-filter-btn[data-status="re-reading"].active {
-	background: #9c27b0;
-	border-color: #9c27b0;
-}
+/* Status badge colors - Keep as fallback but prefer CSS variables from JS */
+.status-filter-btn[data-status="reading"] { --status-color: #4caf50; }
+.status-filter-btn[data-status="completed"] { --status-color: #2196f3; }
+.status-filter-btn[data-status="plan-to-read"] { --status-color: #ff9800; }
+.status-filter-btn[data-status="on-hold"] { --status-color: #9e9e9e; }
+.status-filter-btn[data-status="dropped"] { --status-color: #f44336; }
+.status-filter-btn[data-status="_rereading"] { --status-color: #9c27b0; }
 
 /* Lists Stats */
 .lists-stats {
@@ -3466,14 +3445,25 @@ html.sidebar-mode .novel-detail-cover {
 	}
 
 	.reading-status-filter {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 		gap: var(--spacing-sm);
+		padding: var(--spacing-md);
+		margin: 0 calc(-1 * var(--spacing-md)) var(--spacing-lg);
+		border-radius: 0;
+		scrollbar-width: none;
+		mask-image: linear-gradient(to right, black 85%, transparent 100%);
+	}
+
+	.reading-status-filter::-webkit-scrollbar {
+		display: none;
 	}
 
 	.status-filter-btn {
-		width: 100%;
-		text-align: center;
+		flex: 0 0 auto;
+		padding: var(--spacing-sm) var(--spacing-lg);
 	}
 
 	/* Stats bar: 3-column grid instead of collapsing to column */
@@ -3612,17 +3602,13 @@ html.sidebar-mode .novel-detail-cover {
 	}
 
 	.reading-status-filter {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
+		padding: var(--spacing-sm) var(--spacing-md);
+		gap: 8px;
 	}
 
 	.status-filter-btn {
-		width: auto;
-		min-height: 34px;
-		padding: 6px 10px;
-		font-size: 0.75rem;
-		flex: 0 0 auto;
+		padding: 6px 12px;
+		font-size: 0.8rem;
 	}
 
 	.novel-card-status {

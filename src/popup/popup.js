@@ -11,6 +11,31 @@ import {
 	DEFAULT_CONTENT_FILTER_SETTINGS,
 } from "../utils/constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
+
+/** Loading State Management */
+function hideLoadingState() {
+	const overlay = document.getElementById("loadingOverlay");
+	if (overlay) {
+		overlay.classList.add("hidden");
+		// Allow some time for transition before removing from DOM
+		setTimeout(() => {
+			if (overlay && overlay.classList.contains("hidden")) {
+				overlay.style.display = "none";
+			}
+		}, 300);
+	}
+}
+
+function showLoadingState(text = "Initializing...") {
+	const overlay = document.getElementById("loadingOverlay");
+	if (overlay) {
+		overlay.style.display = "flex";
+		overlay.classList.remove("hidden");
+		const p = overlay.querySelector("p");
+		if (p) p.textContent = text;
+	}
+}
+
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import {
 	createComprehensiveBackup,
@@ -96,17 +121,25 @@ try {
 	});
 
 	const startPopup = async () => {
+		// Show loading immediately
+		showLoadingState("Starting...");
+
 		// Wrap initialization in try-catch
 		try {
 			await initializePopup();
+			// Initialization complete, hide loading (unless loadNovelsTab is still working,
+			// but we want the UI visible now)
+			hideLoadingState();
 		} catch (error) {
 			console.error("Fatal error initializing popup:", error);
+			hideLoadingState();
 			// Show error in UI
 			const statusDiv = document.getElementById("status");
 			if (statusDiv) {
 				statusDiv.textContent =
 					"Error loading popup. Please reload the extension.";
 				statusDiv.className = "error";
+				statusDiv.style.display = "block";
 			}
 		}
 	};
@@ -198,18 +231,18 @@ async function initializePopup() {
 	if (incognitoEnabledCheckbox) {
 		incognitoEnabledCheckbox.addEventListener("change", async () => {
 			const enabled = incognitoEnabledCheckbox.checked;
-			await browser.storage.local.set({ incognitoEnabled: enabled });
-			if (incognitoDurationSelect) {
-				incognitoDurationSelect.disabled = !enabled;
-			}
+			const duration = incognitoDurationSelect
+				? parseInt(incognitoDurationSelect.value)
+				: 0;
+			await saveIncognitoMode(enabled, duration);
 		});
 	}
 
 	if (incognitoDurationSelect) {
 		incognitoDurationSelect.addEventListener("change", async () => {
-			await browser.storage.local.set({
-				incognitoDuration: parseInt(incognitoDurationSelect.value),
-			});
+			const enabled = incognitoEnabledCheckbox?.checked || false;
+			const duration = parseInt(incognitoDurationSelect.value);
+			await saveIncognitoMode(enabled, duration);
 		});
 	}
 
@@ -241,7 +274,9 @@ async function initializePopup() {
 		tabButtons.forEach((btn) => btn.classList.remove("active"));
 		tabContents.forEach((content) => content.classList.remove("active"));
 
-		const activeButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+		const activeButton = document.querySelector(
+			`.tab-btn[data-tab="${tabId}"]`,
+		);
 		if (activeButton) activeButton.classList.add("active");
 
 		const targetContent = document.getElementById(tabId);
@@ -257,7 +292,10 @@ async function initializePopup() {
 				if (tabId === "novels" && typeof loadNovelsTab === "function") {
 					await loadNovelsTab();
 				}
-				if (tabId === "notifications" && typeof initNotificationsTab === "function") {
+				if (
+					tabId === "notifications" &&
+					typeof initNotificationsTab === "function"
+				) {
 					await initNotificationsTab();
 				}
 			});
@@ -267,16 +305,53 @@ async function initializePopup() {
 
 	// Determine and set initial tab immediately
 	try {
-		const stored = await browser.storage.local.get(["apiKey", "backupApiKeys"]);
-		const hasKey = !!stored.apiKey || (Array.isArray(stored.backupApiKeys) && stored.backupApiKeys.length > 0);
+		showLoadingState("Checking API status...");
+		const stored = await browser.storage.local.get([
+			"apiKey",
+			"backupApiKeys",
+		]);
+		const hasKey =
+			!!stored.apiKey ||
+			(Array.isArray(stored.backupApiKeys) &&
+				stored.backupApiKeys.length > 0);
+
+		debugLog(`Initializing with hasKey=${hasKey}`);
 		setActiveTab(hasKey ? "novels" : "config");
-		if (hasKey) loadNovelsTab().catch(err => debugError("Initial loadNovelsTab failed", err));
+
+		if (hasKey) {
+			showLoadingState("Loading novels...");
+			loadNovelsTab()
+				.catch((err) => {
+					debugError("Initial loadNovelsTab failed", err);
+					hideLoadingState();
+				})
+				.finally(() => {
+					hideLoadingState();
+				});
+		} else {
+			hideLoadingState();
+		}
 	} catch (err) {
 		debugError("Failed to set initial tab", err);
 		setActiveTab("config"); // Fallback
+		hideLoadingState();
 	}
 
 	// ===== END CRITICAL SECTION =====
+
+	// ===== GLOBAL NAVIGATION BUTTONS =====
+	// These must be wired up early, independent of which tab is active.
+
+	// "Open Full Library" link in the Novels tab
+	const openMainLibraryLink = document.getElementById("openMainLibrary");
+	if (openMainLibraryLink) {
+		openMainLibraryLink.addEventListener("click", (e) => {
+			e.preventDefault();
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
 
 	// Obsolete elements (moved to Library Settings)
 	const topPSlider = document.getElementById("topPSlider");
@@ -605,18 +680,14 @@ async function initializePopup() {
 
 	// Add change event listeners to backup checkboxes
 	if (backupIncludeApiKeys) {
-		backupIncludeApiKeys.addEventListener("change", () => {
-			browser.storage.local.set({
-				backupIncludeApiKeys: backupIncludeApiKeys.checked,
-			});
+		backupIncludeApiKeys.addEventListener("change", async () => {
+			await saveBackupCheckboxSettings();
 		});
 	}
 
 	if (backupIncludeCredentials) {
-		backupIncludeCredentials.addEventListener("change", () => {
-			browser.storage.local.set({
-				backupIncludeCredentials: backupIncludeCredentials.checked,
-			});
+		backupIncludeCredentials.addEventListener("change", async () => {
+			await saveBackupCheckboxSettings();
 		});
 	}
 
@@ -836,7 +907,8 @@ async function initializePopup() {
 	// Initialize font size slider
 	if (fontSizeSlider) {
 		fontSizeSlider.addEventListener("input", () => {
-			if (fontSizeValue) fontSizeValue.textContent = fontSizeSlider.value + "%";
+			if (fontSizeValue)
+				fontSizeValue.textContent = fontSizeSlider.value + "%";
 		});
 	}
 
@@ -1067,6 +1139,7 @@ async function initializePopup() {
 
 	// Enable resizing of the popup
 
+	// "Advanced Settings" link — opens library settings page
 	const openLibrarySettingsLink = document.getElementById(
 		"openLibrarySettingsLink",
 	);
@@ -1074,7 +1147,7 @@ async function initializePopup() {
 		openLibrarySettingsLink.addEventListener("click", (e) => {
 			e.preventDefault();
 			browser.tabs.create({
-				url: browser.runtime.getURL("/library/library-settings.html"),
+				url: browser.runtime.getURL("library/library-settings.html"),
 			});
 		});
 	}
@@ -1498,612 +1571,662 @@ async function initializePopup() {
 	// Test API key and update models list
 	if (testApiKeyBtn) {
 		testApiKeyBtn.addEventListener("click", async () => {
-		const apiKey = apiKeys[0] || "";
+			const apiKey = apiKeys[0] || "";
 
-		if (!apiKey) {
-			showStatus("Please enter an API key to test", "error");
-			return;
-		}
-
-		try {
-			showStatus("Testing API key and fetching models...", "info");
-			testApiKeyBtn.disabled = true;
-
-			// Fetch models first to validate API key
-			const models = await fetchAvailableModels(apiKey);
-
-			if (models && models.length > 0) {
-				// Update model dropdown
-				await updateModelSelector(apiKey);
-
-				// Auto-save the first key if valid
-				await browser.storage.local.set({
-					apiKey: apiKeys[0] || apiKey,
-					backupApiKeys: apiKeys.slice(1),
-				});
-
-				showStatus("API key is valid! Models loaded ✓", "success");
-			} else {
-				showStatus(
-					"API key appears invalid or no models available",
-					"error",
-				);
-			}
-		} catch (error) {
-			debugError("API key test error:", error);
-			showStatus(`Error testing API key: ${error.message}`, "error");
-		} finally {
-			testApiKeyBtn.disabled = false;
-		}
-	});
-
-	// Save all basic settings
-	if (saveSettingsBtn) {
-		saveSettingsBtn.addEventListener("click", async () => {
-		const activeProvider = aiProviderSelect?.value || "gemini";
-		const apiKey = apiKeys[0] || "";
-		const selectedModelId = modelSelect?.value || "";
-		const useEmojiCheckbox = document.getElementById("useEmoji");
-		const stored = await browser.storage.local.get("maxOutputTokens");
-		const maxTokens = stored?.maxOutputTokens || 8192;
-		const temperature = temperatureSlider
-			? parseFloat(temperatureSlider.value)
-			: 0.7;
-
-		if (!apiKey && activeProvider !== "ollama") {
-			showStatus(
-				"Please add an API key for the selected provider",
-				"error",
-			);
-			return;
-		}
-
-		try {
-			// Determine model endpoint based on selection
-			let modelEndpoint;
-
-			// Try to find the model endpoint from stored available models
-			const storedData =
-				await browser.storage.local.get("availableModels");
-			if (storedData.availableModels) {
-				const selectedModel = storedData.availableModels.find(
-					(m) => m.id === selectedModelId,
-				);
-				if (selectedModel) {
-					modelEndpoint = selectedModel.endpoint;
-				}
+			if (!apiKey) {
+				showStatus("Please enter an API key to test", "error");
+				return;
 			}
 
-			// Fallback to constructing the endpoint if not found
-			if (!modelEndpoint) {
-				modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
-			}
-
-			const updates = {
-				aiProvider: activeProvider,
-				apiKey: apiKey,
-				selectedModelId: selectedModelId,
-				modelEndpoint: modelEndpoint,
-				debugMode: debugModeCheckbox?.checked ?? false,
-				useEmoji: useEmojiCheckbox ? useEmojiCheckbox.checked : false,
-				formatGameStats: formatGameStatsInput?.checked !== false,
-				centerSceneHeadings:
-					centerSceneHeadingsInput?.checked !== false,
-				maxOutputTokens: maxTokens,
-				temperature: temperature,
-			};
-
-			if (chunkingEnabledInput) {
-				updates.chunkingEnabled =
-					chunkingEnabledInput.checked !== false;
-			}
-
-			if (chunkSizeInput) {
-				updates.chunkSize = Math.min(
-					Math.max(parseInt(chunkSizeInput.value, 10) || 20000, 5000),
-					50000,
-				);
-			}
-
-			await browser.storage.local.set(updates);
-
-			showStatus("Basic settings saved successfully!", "success");
-		} catch (error) {
-			debugError("Error saving settings:", error);
-			showStatus("Error saving settings: " + error.message, "error");
-		}
-	});
-
-	// Save advanced settings
-	if (saveAdvancedSettingsBtn) {
-		saveAdvancedSettingsBtn.addEventListener("click", async () => {
 			try {
-				const topP = parseFloat(topPSlider.value);
-				const topK = parseInt(topKSlider.value, 10);
-				const customEndpoint = customEndpointInput.value.trim();
-				const fontSize = fontSizeSlider
-					? parseInt(fontSizeSlider.value, 10)
-					: 100;
+				showStatus("Testing API key and fetching models...", "info");
+				testApiKeyBtn.disabled = true;
 
-				await browser.storage.local.set({
-					defaultPrompt: promptTemplate.value,
-					summaryPrompt: summaryPrompt.value,
-					permanentPrompt: permanentPrompt.value,
-					topP: topP,
-					topK: topK,
-					customEndpoint: customEndpoint,
-					fontSize: fontSize,
-				});
+				// Fetch models first to validate API key
+				const models = await fetchAvailableModels(apiKey);
 
-				await persistSiteToggleSettings();
-				showStatus("Advanced settings saved successfully!", "success");
+				if (models && models.length > 0) {
+					// Update model dropdown
+					await updateModelSelector(apiKey);
+
+					// Auto-save the first key if valid
+					await browser.storage.local.set({
+						apiKey: apiKeys[0] || apiKey,
+						backupApiKeys: apiKeys.slice(1),
+					});
+
+					showStatus("API key is valid! Models loaded ✓", "success");
+				} else {
+					showStatus(
+						"API key appears invalid or no models available",
+						"error",
+					);
+				}
 			} catch (error) {
-				debugError("Error saving advanced settings:", error);
-				showStatus(
-					"Error saving advanced settings: " + error.message,
-					"error",
-				);
+				debugError("API key test error:", error);
+				showStatus(`Error testing API key: ${error.message}`, "error");
+			} finally {
+				testApiKeyBtn.disabled = false;
 			}
 		});
 	}
 
-	// Reset all advanced settings
-	if (resetAllAdvancedBtn) {
-		resetAllAdvancedBtn.addEventListener("click", async () => {
-			try {
-				// Reset prompts
-				promptTemplate.value = DEFAULT_PROMPT;
-				summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
-				permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
+	// Save all basic settings
+	if (saveSettingsBtn) {
+		saveSettingsBtn.addEventListener("click", async () => {
+				const activeProvider = aiProviderSelect?.value || "gemini";
+				const apiKey = apiKeys[0] || "";
+				const selectedModelId = modelSelect?.value || "";
+				const useEmojiCheckbox = document.getElementById("useEmoji");
+				const stored =
+					await browser.storage.local.get("maxOutputTokens");
+				const maxTokens = stored?.maxOutputTokens || 8192;
+				const temperature = temperatureSlider
+					? parseFloat(temperatureSlider.value)
+					: 0.7;
 
-				// Reset sliders
-				if (topPSlider && topPValue) {
-					topPSlider.value = 0.95;
-					topPValue.textContent = "0.95";
+				if (!apiKey && activeProvider !== "ollama") {
+					showStatus(
+						"Please add an API key for the selected provider",
+						"error",
+					);
+					return;
 				}
 
-				if (topKSlider && topKValue) {
-					topKSlider.value = 40;
-					topKValue.textContent = "40";
-				}
+				try {
+					// Determine model endpoint based on selection
+					let modelEndpoint;
 
-				if (fontSizeSlider && fontSizeValue) {
-					fontSizeSlider.value = 100;
-					fontSizeValue.textContent = "100%";
-				}
+					// Try to find the model endpoint from stored available models
+					const storedData =
+						await browser.storage.local.get("availableModels");
+					if (storedData.availableModels) {
+						const selectedModel = storedData.availableModels.find(
+							(m) => m.id === selectedModelId,
+						);
+						if (selectedModel) {
+							modelEndpoint = selectedModel.endpoint;
+						}
+					}
 
-				if (customEndpointInput) {
-					customEndpointInput.value = "";
-				}
+					// Fallback to constructing the endpoint if not found
+					if (!modelEndpoint) {
+						modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+					}
 
-				if (siteToggleList) {
+					const updates = {
+						aiProvider: activeProvider,
+						apiKey: apiKey,
+						selectedModelId: selectedModelId,
+						modelEndpoint: modelEndpoint,
+						debugMode: debugModeCheckbox?.checked ?? false,
+						useEmoji: useEmojiCheckbox
+							? useEmojiCheckbox.checked
+							: false,
+						formatGameStats:
+							formatGameStatsInput?.checked !== false,
+						centerSceneHeadings:
+							centerSceneHeadingsInput?.checked !== false,
+						maxOutputTokens: maxTokens,
+						temperature: temperature,
+					};
+
+					if (chunkingEnabledInput) {
+						updates.chunkingEnabled =
+							chunkingEnabledInput.checked !== false;
+					}
+
+					if (chunkSizeInput) {
+						updates.chunkSize = Math.min(
+							Math.max(
+								parseInt(chunkSizeInput.value, 10) || 20000,
+								5000,
+							),
+							50000,
+						);
+					}
+
+					await browser.storage.local.set(updates);
+
+					showStatus("Basic settings saved successfully!", "success");
+				} catch (error) {
+					debugError("Error saving settings:", error);
+					showStatus(
+						"Error saving settings: " + error.message,
+						"error",
+					);
+				}
+			});
+		}
+
+	// Save advanced settings
+	if (saveAdvancedSettingsBtn) {
+		saveAdvancedSettingsBtn.addEventListener("click", async () => {
+					try {
+						const topP = parseFloat(topPSlider.value);
+						const topK = parseInt(topKSlider.value, 10);
+						const customEndpoint = customEndpointInput.value.trim();
+						const fontSize = fontSizeSlider
+							? parseInt(fontSizeSlider.value, 10)
+							: 100;
+
+						await browser.storage.local.set({
+							defaultPrompt: promptTemplate.value,
+							summaryPrompt: summaryPrompt.value,
+							permanentPrompt: permanentPrompt.value,
+							topP: topP,
+							topK: topK,
+							customEndpoint: customEndpoint,
+							fontSize: fontSize,
+						});
+
+						await persistSiteToggleSettings();
+						showStatus(
+							"Advanced settings saved successfully!",
+							"success",
+						);
+					} catch (error) {
+						debugError("Error saving advanced settings:", error);
+						showStatus(
+							"Error saving advanced settings: " + error.message,
+							"error",
+						);
+					}
+				});
+			}
+
+			// Reset all advanced settings
+			if (resetAllAdvancedBtn) {
+				resetAllAdvancedBtn.addEventListener("click", async () => {
+					try {
+						// Reset prompts
+						promptTemplate.value = DEFAULT_PROMPT;
+						summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
+						permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
+
+						// Reset sliders
+						if (topPSlider && topPValue) {
+							topPSlider.value = 0.95;
+							topPValue.textContent = "0.95";
+						}
+
+						if (topKSlider && topKValue) {
+							topKSlider.value = 40;
+							topKValue.textContent = "40";
+						}
+
+						if (fontSizeSlider && fontSizeValue) {
+							fontSizeSlider.value = 100;
+							fontSizeValue.textContent = "100%";
+						}
+
+						if (customEndpointInput) {
+							customEndpointInput.value = "";
+						}
+
+						if (siteToggleList) {
+							const depsOk = await ensureLibraryDeps();
+							if (depsOk && siteSettingsApi) {
+								siteSettings =
+									await siteSettingsApi.saveSiteSettings(
+										siteSettingsApi.getDefaultSiteSettings(),
+									);
+								renderSiteToggles();
+							}
+						}
+
+						// Save the reset values
+						await browser.storage.local.set({
+							defaultPrompt: DEFAULT_PROMPT,
+							summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+							permanentPrompt: DEFAULT_PERMANENT_PROMPT,
+							topP: 0.95,
+							topK: 40,
+							customEndpoint: "",
+							fontSize: 100,
+						});
+
+						showStatus(
+							"Advanced settings reset to defaults",
+							"info",
+						);
+					} catch (error) {
+						debugError("Error resetting advanced settings:", error);
+						showStatus(
+							"Error resetting settings: " + error.message,
+							"error",
+						);
+					}
+				});
+			}
+
+			if (resetSiteTogglesBtn) {
+				resetSiteTogglesBtn.addEventListener("click", async () => {
 					const depsOk = await ensureLibraryDeps();
 					if (depsOk && siteSettingsApi) {
 						siteSettings = await siteSettingsApi.saveSiteSettings(
 							siteSettingsApi.getDefaultSiteSettings(),
 						);
 						renderSiteToggles();
+						showStatus(
+							"Site toggles restored to defaults",
+							"success",
+						);
 					}
+				});
+			}
+
+			if (resetPromptBtn && promptTemplate) {
+				resetPromptBtn.addEventListener("click", () => {
+					promptTemplate.value = DEFAULT_PROMPT;
+					showStatus("Enhancement prompt reset to default", "info");
+				});
+			}
+
+			if (resetSummaryPromptBtn && summaryPrompt) {
+				resetSummaryPromptBtn.addEventListener("click", () => {
+					summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
+					showStatus("Summary prompt reset to default", "info");
+				});
+			}
+
+			if (resetShortSummaryPromptBtn && shortSummaryPrompt) {
+				resetShortSummaryPromptBtn.addEventListener("click", () => {
+					shortSummaryPrompt.value = DEFAULT_SHORT_SUMMARY_PROMPT;
+					showStatus("Short summary prompt reset to default", "info");
+				});
+			}
+
+			if (resetPermanentPromptBtn && permanentPrompt) {
+				resetPermanentPromptBtn.addEventListener("click", () => {
+					permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
+					showStatus("Permanent prompt reset to default", "info");
+				});
+			}
+
+			// Full Prompt Preview functionality
+			const fullPromptPreview =
+				document.getElementById("fullPromptPreview");
+			const refreshPromptPreviewBtn = document.getElementById(
+				"refreshPromptPreview",
+			);
+			const copyFullPromptBtn = document.getElementById("copyFullPrompt");
+
+			function generateFullPromptPreview() {
+				if (!fullPromptPreview) return;
+
+				const enhancementPrompt =
+					promptTemplate?.value || DEFAULT_PROMPT;
+				const permPrompt =
+					permanentPrompt?.value || DEFAULT_PERMANENT_PROMPT;
+
+				// Get site-specific prompts
+				let sitePrompts = "";
+				const sitePromptsContainer = document.getElementById(
+					"siteSpecificPromptsContainer",
+				);
+				if (sitePromptsContainer) {
+					const sitePromptItems =
+						sitePromptsContainer.querySelectorAll(
+							".site-prompt-item",
+						);
+					sitePromptItems.forEach((item) => {
+						const siteName =
+							item.querySelector(".site-name")?.value;
+						const sitePromptContent = item.querySelector(
+							".site-prompt-content",
+						)?.value;
+						if (siteName && sitePromptContent) {
+							sitePrompts += `\n--- ${siteName} ---\n${sitePromptContent}\n`;
+						}
+					});
 				}
 
-				// Save the reset values
-				await browser.storage.local.set({
-					defaultPrompt: DEFAULT_PROMPT,
-					summaryPrompt: DEFAULT_SUMMARY_PROMPT,
-					permanentPrompt: DEFAULT_PERMANENT_PROMPT,
-					topP: 0.95,
-					topK: 40,
-					customEndpoint: "",
-					fontSize: 100,
-				});
+				// Build the full prompt preview
+				let fullPrompt = "";
+				fullPrompt += "=== SYSTEM INSTRUCTION ===\n\n";
+				fullPrompt += enhancementPrompt;
 
-				showStatus("Advanced settings reset to defaults", "info");
-			} catch (error) {
-				debugError("Error resetting advanced settings:", error);
-				showStatus(
-					"Error resetting settings: " + error.message,
-					"error",
-				);
-			}
-		});
-	}
-
-	if (resetSiteTogglesBtn) {
-		resetSiteTogglesBtn.addEventListener("click", async () => {
-			const depsOk = await ensureLibraryDeps();
-			if (depsOk && siteSettingsApi) {
-				siteSettings = await siteSettingsApi.saveSiteSettings(
-					siteSettingsApi.getDefaultSiteSettings(),
-				);
-				renderSiteToggles();
-				showStatus("Site toggles restored to defaults", "success");
-			}
-		});
-	}
-
-	if (resetPromptBtn && promptTemplate) {
-		resetPromptBtn.addEventListener("click", () => {
-			promptTemplate.value = DEFAULT_PROMPT;
-			showStatus("Enhancement prompt reset to default", "info");
-		});
-	}
-
-	if (resetSummaryPromptBtn && summaryPrompt) {
-		resetSummaryPromptBtn.addEventListener("click", () => {
-			summaryPrompt.value = DEFAULT_SUMMARY_PROMPT;
-			showStatus("Summary prompt reset to default", "info");
-		});
-	}
-
-	if (resetShortSummaryPromptBtn && shortSummaryPrompt) {
-		resetShortSummaryPromptBtn.addEventListener("click", () => {
-			shortSummaryPrompt.value = DEFAULT_SHORT_SUMMARY_PROMPT;
-			showStatus("Short summary prompt reset to default", "info");
-		});
-	}
-
-	if (resetPermanentPromptBtn && permanentPrompt) {
-		resetPermanentPromptBtn.addEventListener("click", () => {
-			permanentPrompt.value = DEFAULT_PERMANENT_PROMPT;
-			showStatus("Permanent prompt reset to default", "info");
-		});
-	}
-
-	// Full Prompt Preview functionality
-	const fullPromptPreview = document.getElementById("fullPromptPreview");
-	const refreshPromptPreviewBtn = document.getElementById(
-		"refreshPromptPreview",
-	);
-	const copyFullPromptBtn = document.getElementById("copyFullPrompt");
-
-	function generateFullPromptPreview() {
-		if (!fullPromptPreview) return;
-
-		const enhancementPrompt = promptTemplate?.value || DEFAULT_PROMPT;
-		const permPrompt = permanentPrompt?.value || DEFAULT_PERMANENT_PROMPT;
-
-		// Get site-specific prompts
-		let sitePrompts = "";
-		const sitePromptsContainer = document.getElementById(
-			"siteSpecificPromptsContainer",
-		);
-		if (sitePromptsContainer) {
-			const sitePromptItems =
-				sitePromptsContainer.querySelectorAll(".site-prompt-item");
-			sitePromptItems.forEach((item) => {
-				const siteName = item.querySelector(".site-name")?.value;
-				const sitePromptContent = item.querySelector(
-					".site-prompt-content",
-				)?.value;
-				if (siteName && sitePromptContent) {
-					sitePrompts += `\n--- ${siteName} ---\n${sitePromptContent}\n`;
+				if (sitePrompts.trim()) {
+					fullPrompt += "\n\n=== SITE-SPECIFIC CONTEXT ===\n";
+					fullPrompt += sitePrompts;
 				}
-			});
-		}
 
-		// Build the full prompt preview
-		let fullPrompt = "";
-		fullPrompt += "=== SYSTEM INSTRUCTION ===\n\n";
-		fullPrompt += enhancementPrompt;
-
-		if (sitePrompts.trim()) {
-			fullPrompt += "\n\n=== SITE-SPECIFIC CONTEXT ===\n";
-			fullPrompt += sitePrompts;
-		}
-
-		if (permPrompt.trim()) {
-			fullPrompt += "\n\n=== PERMANENT INSTRUCTIONS ===\n";
-			fullPrompt += permPrompt;
-		}
-
-		fullPrompt += "\n\n=== TITLE ===\n";
-		fullPrompt += "[Chapter title from page]";
-
-		fullPrompt += "\n\n=== CONTENT TO ENHANCE ===\n";
-		fullPrompt += "[Chapter content from page]";
-
-		fullPromptPreview.textContent = fullPrompt;
-	}
-
-	if (refreshPromptPreviewBtn && fullPromptPreview) {
-		refreshPromptPreviewBtn.addEventListener(
-			"click",
-			generateFullPromptPreview,
-		);
-	}
-
-	if (copyFullPromptBtn && fullPromptPreview) {
-		copyFullPromptBtn.addEventListener("click", async () => {
-			generateFullPromptPreview();
-			try {
-				await navigator.clipboard.writeText(
-					fullPromptPreview.textContent,
-				);
-				showStatus("Full prompt copied to clipboard!", "success");
-			} catch (err) {
-				debugError("Failed to copy:", err);
-				showStatus("Failed to copy to clipboard", "error");
-			}
-		});
-	}
-
-	// Auto-generate preview when the details element is opened
-	const promptPreviewSection = document.querySelector(
-		".prompt-preview-section",
-	);
-	if (promptPreviewSection && fullPromptPreview) {
-		promptPreviewSection.addEventListener("toggle", (e) => {
-			if (e.target.open) {
-				generateFullPromptPreview();
-			}
-		});
-	}
-
-	// Enhance current page (button removed from popup HTML - enhancement is done from content script)
-	// enhancePageBtn handler removed
-
-	// Open Google AI Studio link to get API key
-	getKeyLink.addEventListener("click", (e) => {
-		e.preventDefault();
-		browser.tabs.create({
-			url: "https://aistudio.google.com/app/api-keys",
-		});
-	});
-
-	// Add refresh models button functionality
-	const refreshModelsBtn = document.getElementById("refreshModels");
-	if (refreshModelsBtn) {
-		refreshModelsBtn.addEventListener("click", async () => {
-			if ((aiProviderSelect?.value || "gemini") !== "gemini") {
-				showStatus(
-					"Model refresh is currently available for Gemini provider only",
-					"info",
-				);
-				return;
-			}
-			const apiKey = apiKeys[0] || "";
-			if (!apiKey) {
-				showStatus("Please add an API key first", "error");
-				return;
-			}
-
-			try {
-				refreshModelsBtn.disabled = true;
-				refreshModelsBtn.textContent = "⟳";
-				await updateModelSelector(apiKey);
-				showStatus("Models refreshed successfully", "success");
-			} catch (error) {
-				showStatus(
-					"Error refreshing models: " + error.message,
-					"error",
-				);
-			} finally {
-				refreshModelsBtn.disabled = false;
-				refreshModelsBtn.textContent = "↻";
-			}
-		});
-	}
-
-	// Add auto-refresh of models list when dropdown is clicked
-	modelSelect.addEventListener("mousedown", async function (e) {
-		if ((aiProviderSelect?.value || "gemini") !== "gemini") {
-			return;
-		}
-		// Only check if we haven't refreshed models recently
-		const data = await browser.storage.local.get([
-			"modelsLastFetched",
-			"apiKey",
-		]);
-		const lastFetched = data.modelsLastFetched || 0;
-		const now = Date.now();
-
-		// Refresh models if it's been more than 1 hour since last fetch
-		if (now - lastFetched > 3600000 && data.apiKey) {
-			e.preventDefault(); // Prevent default dropdown behavior
-			await updateModelSelector(data.apiKey);
-			// Now allow the dropdown to open
-			setTimeout(() => modelSelect.click(), 100);
-		}
-	});
-	// Model endpoint display removed: too advanced for popup
-	// Users can view/copy endpoint in Library Settings if needed
-
-	// Helper function to show status messages
-	async function showStatus(message, type, options = {}) {
-		if (statusDiv) {
-			statusDiv.textContent = message;
-			statusDiv.className = type || "";
-		}
-
-		// Auto clear success messages after 3 seconds
-		if (type === "success") {
-			setTimeout(() => {
-				if (statusDiv) {
-					statusDiv.textContent = "";
-					statusDiv.className = "";
+				if (permPrompt.trim()) {
+					fullPrompt += "\n\n=== PERMANENT INSTRUCTIONS ===\n";
+					fullPrompt += permPrompt;
 				}
-			}, 3000);
-		}
 
-		// Log to notification system
-		try {
-			const notificationType =
-				type === "success"
-					? NotificationType.SUCCESS
-					: type === "error"
-						? NotificationType.ERROR
-						: type === "info"
-							? NotificationType.INFO
-							: type === "warning"
-								? NotificationType.WARNING
-								: NotificationType.INFO;
+				fullPrompt += "\n\n=== TITLE ===\n";
+				fullPrompt += "[Chapter title from page]";
 
-			// Get current tab URL if available
-			let currentUrl = null;
-			try {
-				const tabs = await browser.tabs.query({
-					active: true,
-					currentWindow: true,
-				});
-				currentUrl = tabs[0]?.url || null;
-			} catch (e) {
-				// Ignore error getting tab URL
+				fullPrompt += "\n\n=== CONTENT TO ENHANCE ===\n";
+				fullPrompt += "[Chapter content from page]";
+
+				fullPromptPreview.textContent = fullPrompt;
 			}
 
-			try {
-				await browser.runtime.sendMessage({
-					action: "logNotification",
-					type: notificationType,
-					message,
-					url: currentUrl,
-					source: "popup",
-					...options,
-				});
-			} catch (_err) {
-				await notificationManager.add({
-					type: notificationType,
-					message,
-					url: currentUrl,
-					source: "popup",
-					...options,
+			if (refreshPromptPreviewBtn && fullPromptPreview) {
+				refreshPromptPreviewBtn.addEventListener(
+					"click",
+					generateFullPromptPreview,
+				);
+			}
+
+			if (copyFullPromptBtn && fullPromptPreview) {
+				copyFullPromptBtn.addEventListener("click", async () => {
+					generateFullPromptPreview();
+					try {
+						await navigator.clipboard.writeText(
+							fullPromptPreview.textContent,
+						);
+						showStatus(
+							"Full prompt copied to clipboard!",
+							"success",
+						);
+					} catch (err) {
+						debugError("Failed to copy:", err);
+						showStatus("Failed to copy to clipboard", "error");
+					}
 				});
 			}
 
-			// Update notification badge
-			updateNotificationBadge();
-		} catch (error) {
-			console.error("Failed to log notification:", error);
-		}
-	}
-
-	// Novels Tab Functionality
-
-	/**
-	 * Format a date string as a relative time (e.g., "2 days ago")
-	 * @param {string} dateStr - ISO date string
-	 * @returns {string} - Formatted relative time
-	 */
-	function formatRelativeTime(dateStr) {
-		const date = new Date(dateStr);
-		const now = new Date();
-		const diffTime = Math.abs(now - date);
-		const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-		const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-		const diffMinutes = Math.floor(diffTime / (1000 * 60));
-
-		if (diffDays > 30) {
-			const months = Math.floor(diffDays / 30);
-			return `${months} month${months > 1 ? "s" : ""} ago`;
-		} else if (diffDays > 0) {
-			return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-		} else if (diffHours > 0) {
-			return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-		} else {
-			return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
-		}
-	}
-
-	function attachLibraryListHandlers() {
-		document.querySelectorAll(".domain-toggle").forEach((toggle) => {
-			toggle.addEventListener("click", function (e) {
-				if (e.target.closest(".domain-expand-btn")) return;
-				const section = this.closest(".domain-section");
-				const novelsList = section.querySelector(".domain-novels");
-				novelsList.classList.toggle("collapsed");
-				const icon = this.querySelector(".toggle-icon");
-				if (icon) {
-					icon.textContent = novelsList.classList.contains(
-						"collapsed",
-					)
-						? "▶"
-						: "▼";
-				}
-			});
-		});
-
-		document.querySelectorAll(".domain-expand-btn").forEach((btn) => {
-			btn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				const section = btn.closest(".domain-section");
-				const hiddenItems = section.querySelectorAll(".collapsed-item");
-				const isExpanded = btn.dataset.expanded === "true";
-				hiddenItems.forEach((item) => {
-					item.style.display = isExpanded ? "none" : "block";
+			// Auto-generate preview when the details element is opened
+			const promptPreviewSection = document.querySelector(
+				".prompt-preview-section",
+			);
+			if (promptPreviewSection && fullPromptPreview) {
+				promptPreviewSection.addEventListener("toggle", (e) => {
+					if (e.target.open) {
+						generateFullPromptPreview();
+					}
 				});
-				btn.dataset.expanded = isExpanded ? "false" : "true";
-				btn.textContent = isExpanded ? "▶ Show all" : "▼ Show less";
-			});
-		});
+			}
 
-		document.querySelectorAll(".novel-view-library-btn").forEach((btn) => {
-			btn.addEventListener("click", async (e) => {
+			// Enhance current page (button removed from popup HTML - enhancement is done from content script)
+			// enhancePageBtn handler removed
+
+			// Open Google AI Studio link to get API key
+			getKeyLink.addEventListener("click", (e) => {
 				e.preventDefault();
-				const novelId = btn.dataset.novelId;
-				const shelfId = btn.dataset.shelfId;
-				await openNovelInLibrary(novelId, shelfId);
+				browser.tabs.create({
+					url: "https://aistudio.google.com/app/api-keys",
+				});
 			});
-		});
-	}
-	void attachLibraryListHandlers;
 
-	/**
-	 * Render a shelf/domain icon - supports emoji, URL strings
-	 * @param {string|Object} icon - Icon value (emoji string, URL string, or {url, fallback})
-	 * @param {string} className - Optional CSS class
-	 * @returns {string} HTML string for the icon
-	 */
-	function renderDomainIcon(icon, className = "") {
-		if (!icon) return `<span class="domain-icon ${className}">📖</span>`;
+			// Add refresh models button functionality
+			const refreshModelsBtn = document.getElementById("refreshModels");
+			if (refreshModelsBtn) {
+				refreshModelsBtn.addEventListener("click", async () => {
+					if ((aiProviderSelect?.value || "gemini") !== "gemini") {
+						showStatus(
+							"Model refresh is currently available for Gemini provider only",
+							"info",
+						);
+						return;
+					}
+					const apiKey = apiKeys[0] || "";
+					if (!apiKey) {
+						showStatus("Please add an API key first", "error");
+						return;
+					}
 
-		// If icon is a simple string
-		if (typeof icon === "string") {
-			// Check if it's a URL (starts with http:// or https://)
-			if (icon.startsWith("http://") || icon.startsWith("https://")) {
-				return `<span class="domain-icon domain-icon-img ${className}">
+					try {
+						refreshModelsBtn.disabled = true;
+						refreshModelsBtn.textContent = "⟳";
+						await updateModelSelector(apiKey);
+						showStatus("Models refreshed successfully", "success");
+					} catch (error) {
+						showStatus(
+							"Error refreshing models: " + error.message,
+							"error",
+						);
+					} finally {
+						refreshModelsBtn.disabled = false;
+						refreshModelsBtn.textContent = "↻";
+					}
+				});
+			}
+
+			// Add auto-refresh of models list when dropdown is clicked
+			modelSelect.addEventListener("mousedown", async function (e) {
+				if ((aiProviderSelect?.value || "gemini") !== "gemini") {
+					return;
+				}
+				// Only check if we haven't refreshed models recently
+				const data = await browser.storage.local.get([
+					"modelsLastFetched",
+					"apiKey",
+				]);
+				const lastFetched = data.modelsLastFetched || 0;
+				const now = Date.now();
+
+				// Refresh models if it's been more than 1 hour since last fetch
+				if (now - lastFetched > 3600000 && data.apiKey) {
+					e.preventDefault(); // Prevent default dropdown behavior
+					await updateModelSelector(data.apiKey);
+					// Now allow the dropdown to open
+					setTimeout(() => modelSelect.click(), 100);
+				}
+			});
+			// Model endpoint display removed: too advanced for popup
+			// Users can view/copy endpoint in Library Settings if needed
+
+			// Helper function to show status messages
+			async function showStatus(message, type, options = {}) {
+				if (statusDiv) {
+					statusDiv.textContent = message;
+					statusDiv.className = type || "";
+				}
+
+				// Auto clear success messages after 3 seconds
+				if (type === "success") {
+					setTimeout(() => {
+						if (statusDiv) {
+							statusDiv.textContent = "";
+							statusDiv.className = "";
+						}
+					}, 3000);
+				}
+
+				// Log to notification system
+				try {
+					const notificationType =
+						type === "success"
+							? NotificationType.SUCCESS
+							: type === "error"
+								? NotificationType.ERROR
+								: type === "info"
+									? NotificationType.INFO
+									: type === "warning"
+										? NotificationType.WARNING
+										: NotificationType.INFO;
+
+					// Get current tab URL if available
+					let currentUrl = null;
+					try {
+						const tabs = await browser.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
+						currentUrl = tabs[0]?.url || null;
+					} catch (e) {
+						// Ignore error getting tab URL
+					}
+
+					try {
+						await browser.runtime.sendMessage({
+							action: "logNotification",
+							type: notificationType,
+							message,
+							url: currentUrl,
+							source: "popup",
+							...options,
+						});
+					} catch (_err) {
+						await notificationManager.add({
+							type: notificationType,
+							message,
+							url: currentUrl,
+							source: "popup",
+							...options,
+						});
+					}
+
+					// Update notification badge
+					updateNotificationBadge();
+				} catch (error) {
+					console.error("Failed to log notification:", error);
+				}
+			}
+
+			// Novels Tab Functionality
+
+			/**
+			 * Format a date string as a relative time (e.g., "2 days ago")
+			 * @param {string} dateStr - ISO date string
+			 * @returns {string} - Formatted relative time
+			 */
+			function formatRelativeTime(dateStr) {
+				const date = new Date(dateStr);
+				const now = new Date();
+				const diffTime = Math.abs(now - date);
+				const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+				const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+				const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+				if (diffDays > 30) {
+					const months = Math.floor(diffDays / 30);
+					return `${months} month${months > 1 ? "s" : ""} ago`;
+				} else if (diffDays > 0) {
+					return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+				} else if (diffHours > 0) {
+					return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+				} else {
+					return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+				}
+			}
+
+			function attachLibraryListHandlers() {
+				document
+					.querySelectorAll(".domain-toggle")
+					.forEach((toggle) => {
+						toggle.addEventListener("click", function (e) {
+							if (e.target.closest(".domain-expand-btn")) return;
+							const section = this.closest(".domain-section");
+							const novelsList =
+								section.querySelector(".domain-novels");
+							novelsList.classList.toggle("collapsed");
+							const icon = this.querySelector(".toggle-icon");
+							if (icon) {
+								icon.textContent =
+									novelsList.classList.contains("collapsed")
+										? "▶"
+										: "▼";
+							}
+						});
+					});
+
+				document
+					.querySelectorAll(".domain-expand-btn")
+					.forEach((btn) => {
+						btn.addEventListener("click", (e) => {
+							e.stopPropagation();
+							const section = btn.closest(".domain-section");
+							const hiddenItems =
+								section.querySelectorAll(".collapsed-item");
+							const isExpanded = btn.dataset.expanded === "true";
+							hiddenItems.forEach((item) => {
+								item.style.display = isExpanded
+									? "none"
+									: "block";
+							});
+							btn.dataset.expanded = isExpanded
+								? "false"
+								: "true";
+							btn.textContent = isExpanded
+								? "▶ Show all"
+								: "▼ Show less";
+						});
+					});
+
+				document
+					.querySelectorAll(".novel-view-library-btn")
+					.forEach((btn) => {
+						btn.addEventListener("click", async (e) => {
+							e.preventDefault();
+							const novelId = btn.dataset.novelId;
+							const shelfId = btn.dataset.shelfId;
+							await openNovelInLibrary(novelId, shelfId);
+						});
+					});
+			}
+			void attachLibraryListHandlers;
+
+			/**
+			 * Render a shelf/domain icon - supports emoji, URL strings
+			 * @param {string|Object} icon - Icon value (emoji string, URL string, or {url, fallback})
+			 * @param {string} className - Optional CSS class
+			 * @returns {string} HTML string for the icon
+			 */
+			function renderDomainIcon(icon, className = "") {
+				if (!icon)
+					return `<span class="domain-icon ${className}">📖</span>`;
+
+				// If icon is a simple string
+				if (typeof icon === "string") {
+					// Check if it's a URL (starts with http:// or https://)
+					if (
+						icon.startsWith("http://") ||
+						icon.startsWith("https://")
+					) {
+						return `<span class="domain-icon domain-icon-img ${className}">
 					<img src="${escapeHtml(icon)}" alt=""
 						onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 						style="width: 16px; height: 16px; vertical-align: middle;">
 					<span class="icon-fallback" style="display: none;">📖</span>
 				</span>`;
-			}
-			// It's an emoji
-			return `<span class="domain-icon ${className}">${icon}</span>`;
-		}
+					}
+					// It's an emoji
+					return `<span class="domain-icon ${className}">${icon}</span>`;
+				}
 
-		// If icon is an object with url and fallback
-		if (typeof icon === "object" && icon.url) {
-			const fallback = icon.fallback || "📖";
-			return `<span class="domain-icon domain-icon-img ${className}">
+				// If icon is an object with url and fallback
+				if (typeof icon === "object" && icon.url) {
+					const fallback = icon.fallback || "📖";
+					return `<span class="domain-icon domain-icon-img ${className}">
 				<img src="${escapeHtml(icon.url)}" alt=""
 					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 					style="width: 16px; height: 16px; vertical-align: middle;">
 				<span class="icon-fallback" style="display: none;">${fallback}</span>
 			</span>`;
-		}
+				}
 
-		return `<span class="domain-icon ${className}">📖</span>`;
-	}
+				return `<span class="domain-icon ${className}">📖</span>`;
+			}
 
-	/**
-	 * Create a shelf section element
-	 * @param {string} shelfId - Shelf identifier
-	 * @param {Array} novels - Array of novel objects
-	 * @param {Object} options - Render options
-	 * @returns {HTMLElement} - The shelf section element
-	 */
-	function createDomainSection(shelfId, novels, options = {}) {
-		const section = document.createElement("div");
-		section.className = "domain-section";
+			/**
+			 * Create a shelf section element
+			 * @param {string} shelfId - Shelf identifier
+			 * @param {Array} novels - Array of novel objects
+			 * @param {Object} options - Render options
+			 * @returns {HTMLElement} - The shelf section element
+			 */
+			function createDomainSection(shelfId, novels, options = {}) {
+				const section = document.createElement("div");
+				section.className = "domain-section";
 
-		const shelf = Object.values(SHELVES).find((s) => s.id === shelfId);
-		const shelfIcon = shelf ? shelf.icon : "📖";
-		const shelfName = shelf ? shelf.name : shelfId;
-		const iconHtml = renderDomainIcon(shelfIcon);
-		const limit = options.limitPerShelf || 0;
+				const shelf = Object.values(SHELVES).find(
+					(s) => s.id === shelfId,
+				);
+				const shelfIcon = shelf ? shelf.icon : "📖";
+				const shelfName = shelf ? shelf.name : shelfId;
+				const iconHtml = renderDomainIcon(shelfIcon);
+				const limit = options.limitPerShelf || 0;
 
-		const header = document.createElement("div");
-		header.className = "domain-header domain-toggle";
-		header.innerHTML = `
+				const header = document.createElement("div");
+				header.className = "domain-header domain-toggle";
+				header.innerHTML = `
 			<span class="toggle-icon">▼</span>
 			${iconHtml}
 			<span class="domain-name">${escapeHtml(shelfName)}</span>
@@ -2112,69 +2235,74 @@ async function initializePopup() {
 			}</span>
 		`;
 
-		const novelsList = document.createElement("div");
-		novelsList.className = "domain-novels";
+				const novelsList = document.createElement("div");
+				novelsList.className = "domain-novels";
 
-		novels.forEach((novel, index) => {
-			const novelItem = createNovelItem(novel);
-			if (limit > 0 && index >= limit) {
-				novelItem.classList.add("collapsed-item");
-				novelItem.style.display = "none";
+				novels.forEach((novel, index) => {
+					const novelItem = createNovelItem(novel);
+					if (limit > 0 && index >= limit) {
+						novelItem.classList.add("collapsed-item");
+						novelItem.style.display = "none";
+					}
+					novelsList.appendChild(novelItem);
+				});
+
+				section.appendChild(header);
+				section.appendChild(novelsList);
+
+				return section;
 			}
-			novelsList.appendChild(novelItem);
-		});
+			void createDomainSection;
 
-		section.appendChild(header);
-		section.appendChild(novelsList);
+			/**
+			 * Create a novel item element
+			 * @param {string} novelId - Novel ID
+			 * @param {Object} novel - Novel data
+			 * @returns {HTMLElement} - The novel item element
+			 */
+			function createNovelItem(novel) {
+				const novelItem = document.createElement("div");
+				novelItem.className = "novel-item";
+				novelItem.dataset.novelId = novel.id;
+				novelItem.dataset.shelfId = novel.shelfId || "";
 
-		return section;
-	}
-	void createDomainSection;
+				const bookTitle =
+					novel.title || novel.bookTitle || "Unknown Title";
+				const author = novel.author || "Unknown Author";
+				const lastAccessed = novel.lastAccessedAt
+					? formatRelativeTime(
+							new Date(novel.lastAccessedAt).toISOString(),
+						)
+					: "Unknown";
+				const totalChapters =
+					novel.totalChapters || novel.chapterCount || "?";
+				const lastReadChapter =
+					novel.lastReadChapter || novel.currentChapter || null;
+				const readingStatus = novel.readingStatus || "Unknown";
+				const sourceUrl =
+					novel.sourceUrl || novel.mainNovelUrl || novel.url;
+				// Prefer the last-read chapter URL; fall back to the novel's main page
+				const continueUrl = novel.lastReadUrl || sourceUrl;
 
-	/**
-	 * Create a novel item element
-	 * @param {string} novelId - Novel ID
-	 * @param {Object} novel - Novel data
-	 * @returns {HTMLElement} - The novel item element
-	 */
-	function createNovelItem(novel) {
-		const novelItem = document.createElement("div");
-		novelItem.className = "novel-item";
-		novelItem.dataset.novelId = novel.id;
-		novelItem.dataset.shelfId = novel.shelfId || "";
+				const chips = [];
+				if (readingStatus)
+					chips.push(
+						`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
+					);
+				if (totalChapters)
+					chips.push(
+						`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
+					);
+				if (lastReadChapter)
+					chips.push(
+						`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
+					);
 
-		const bookTitle = novel.title || novel.bookTitle || "Unknown Title";
-		const author = novel.author || "Unknown Author";
-		const lastAccessed = novel.lastAccessedAt
-			? formatRelativeTime(new Date(novel.lastAccessedAt).toISOString())
-			: "Unknown";
-		const totalChapters = novel.totalChapters || novel.chapterCount || "?";
-		const lastReadChapter =
-			novel.lastReadChapter || novel.currentChapter || null;
-		const readingStatus = novel.readingStatus || "Unknown";
-		const sourceUrl = novel.sourceUrl || novel.mainNovelUrl || novel.url;
-		// Prefer the last-read chapter URL; fall back to the novel's main page
-		const continueUrl = novel.lastReadUrl || sourceUrl;
+				const coverImg = novel.coverImage
+					? `<img src="${escapeHtml(novel.coverImage)}" alt="${escapeHtml(bookTitle)}" class="novel-cover">`
+					: '<div class="novel-cover-placeholder">📖</div>';
 
-		const chips = [];
-		if (readingStatus)
-			chips.push(
-				`<span class="chip chip-primary">${escapeHtml(readingStatus)}</span>`,
-			);
-		if (totalChapters)
-			chips.push(
-				`<span class="chip chip-info">${escapeHtml(String(totalChapters))} chapters</span>`,
-			);
-		if (lastReadChapter)
-			chips.push(
-				`<span class="chip chip-warning">Ch. ${escapeHtml(String(lastReadChapter))}</span>`,
-			);
-
-		const coverImg = novel.coverImage
-			? `<img src="${escapeHtml(novel.coverImage)}" alt="${escapeHtml(bookTitle)}" class="novel-cover">`
-			: '<div class="novel-cover-placeholder">📖</div>';
-
-		novelItem.innerHTML = `
+				novelItem.innerHTML = `
 			<div class="novel-card-wrapper">
 				<div class="novel-cover-section">
 					${coverImg}
@@ -2210,643 +2338,702 @@ async function initializePopup() {
 			</div>
 		`;
 
-		return novelItem;
-	}
-
-	// Add event listener for quick library button in header
-	const quickLibraryBtn = document.getElementById("quickLibraryBtn");
-	if (quickLibraryBtn) {
-		quickLibraryBtn.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html"),
-			});
-		});
-	}
-
-	// ============================================
-	// LIBRARY TAB FUNCTIONS
-	// ============================================
-
-	/**
-	 * Initialize the Library tab
-	 */
-	async function initializeLibraryTab() {
-		// Show loading state
-		if (libraryLoading) libraryLoading.style.display = "flex";
-
-		try {
-			const depsOk = await ensureLibraryDeps();
-			if (!depsOk) {
-				showStatus("Library data unavailable in popup", "error");
-				return;
+				return novelItem;
 			}
 
-			// Load current page info first (determines site-specific filtering)
-			await loadCurrentPageInfo();
-
-			// Then load library data
-			await loadLibraryData();
-		} catch (error) {
-			debugError("Error initializing library tab:", error);
-		} finally {
-			// Hide loading state
-			if (libraryLoading) libraryLoading.style.display = "none";
-		}
-	}
-
-	// Helper: match hostname against wildcard pattern
-	function matchDomainPattern(hostname, pattern) {
-		const normalizedHost = hostname.toLowerCase();
-		const normalizedPattern = pattern.toLowerCase();
-
-		if (normalizedPattern.startsWith("*.")) {
-			const base = normalizedPattern.substring(2);
-			return (
-				normalizedHost === base || normalizedHost.endsWith(`.${base}`)
-			);
-		}
-
-		return normalizedHost === normalizedPattern;
-	}
-
-	// Helper: detect shelf from a URL
-	function getShelfFromUrl(url) {
-		try {
-			const { hostname } = new URL(url);
-			const shelf = Object.values(SHELVES).find((shelf) =>
-				(shelf.domains || []).some((pattern) =>
-					matchDomainPattern(hostname, pattern),
-				),
-			);
-			if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
-				return null;
-			}
-			return shelf;
-		} catch (e) {
-			return null;
-		}
-	}
-
-	/**
-	 * Helper: get the current active tab
-	 */
-	async function getCurrentTab() {
-		const tabs = await browser.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
-		return tabs[0] || null;
-	}
-
-	/**
-	 * Load and display current page novel information
-	 */
-	async function loadCurrentPageInfo() {
-		// Reset state
-		currentPageNovelData = null;
-		currentSiteShelfId = null;
-
-		// Reset UI
-		if (currentNovelCard) currentNovelCard.style.display = "none";
-		if (notSupportedMessage) notSupportedMessage.style.display = "none";
-		if (pageStatusBadge) {
-			pageStatusBadge.textContent = "Detecting...";
-			pageStatusBadge.className = "status-badge";
-		}
-
-		try {
-			const currentTab = await getCurrentTab();
-			if (!currentTab) {
-				showNotSupported("Could not determine current tab");
-				return;
+			// Add event listener for quick library button in header
+			const quickLibraryBtn = document.getElementById("quickLibraryBtn");
+			if (quickLibraryBtn) {
+				quickLibraryBtn.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL("library/library.html"),
+					});
+				});
 			}
 
-			const shelfForTab = getShelfFromUrl(currentTab.url);
-			const isExtensionPage = currentTab.url.startsWith(
-				browser.runtime.getURL(""),
-			);
+			// ============================================
+			// LIBRARY TAB FUNCTIONS
+			// ============================================
 
-			// If this is an extension page (library/popup), we don't attempt extraction
-			if (isExtensionPage) {
-				if (pageStatusBadge) {
-					pageStatusBadge.textContent = "Extension page";
-					pageStatusBadge.className = "status-badge site";
+			/**
+			 * Initialize the Library tab
+			 */
+			async function initializeLibraryTab() {
+				// Show loading state
+				if (libraryLoading) libraryLoading.style.display = "flex";
+
+				try {
+					const depsOk = await ensureLibraryDeps();
+					if (!depsOk) {
+						showStatus(
+							"Library data unavailable in popup",
+							"error",
+						);
+						return;
+					}
+
+					// Load current page info first (determines site-specific filtering)
+					await loadCurrentPageInfo();
+
+					// Then load library data
+					await loadLibraryData();
+				} catch (error) {
+					debugError("Error initializing library tab:", error);
+				} finally {
+					// Hide loading state
+					if (libraryLoading) libraryLoading.style.display = "none";
 				}
+			}
+
+			// Helper: match hostname against wildcard pattern
+			function matchDomainPattern(hostname, pattern) {
+				const normalizedHost = hostname.toLowerCase();
+				const normalizedPattern = pattern.toLowerCase();
+
+				if (normalizedPattern.startsWith("*.")) {
+					const base = normalizedPattern.substring(2);
+					return (
+						normalizedHost === base ||
+						normalizedHost.endsWith(`.${base}`)
+					);
+				}
+
+				return normalizedHost === normalizedPattern;
+			}
+
+			// Helper: detect shelf from a URL
+			function getShelfFromUrl(url) {
+				try {
+					const { hostname } = new URL(url);
+					const shelf = Object.values(SHELVES).find((shelf) =>
+						(shelf.domains || []).some((pattern) =>
+							matchDomainPattern(hostname, pattern),
+						),
+					);
+					if (shelf && !isSiteEnabledSafe(siteSettings, shelf.id)) {
+						return null;
+					}
+					return shelf;
+				} catch (e) {
+					return null;
+				}
+			}
+
+			/**
+			 * Helper: get the current active tab
+			 */
+			async function getCurrentTab() {
+				const tabs = await browser.tabs.query({
+					active: true,
+					currentWindow: true,
+				});
+				return tabs[0] || null;
+			}
+
+			/**
+			 * Load and display current page novel information
+			 */
+			async function loadCurrentPageInfo() {
+				// Reset state
+				currentPageNovelData = null;
+				currentSiteShelfId = null;
+
+				// Reset UI
+				if (currentNovelCard) currentNovelCard.style.display = "none";
 				if (notSupportedMessage)
 					notSupportedMessage.style.display = "none";
-				return;
-			}
-
-			// Try to communicate with content script
-			try {
-				const response = await browser.tabs.sendMessage(currentTab.id, {
-					action: "getNovelInfo",
-				});
-
-				debugLog("📚 Library: getNovelInfo response:", response);
-
-				if (response && response.success && response.novelInfo) {
-					currentPageNovelData = response.novelInfo;
-					currentSiteShelfId = response.novelInfo.shelfId || null;
-					displayCurrentPageNovel(response.novelInfo);
-				} else if (response && !response.success && shelfForTab) {
-					// Supported site but non-novel page: treat as site context only
-					currentSiteShelfId = shelfForTab.id;
-					if (currentNovelCard)
-						currentNovelCard.style.display = "none";
-					if (notSupportedMessage)
-						notSupportedMessage.style.display = "none";
-					if (pageStatusBadge) {
-						pageStatusBadge.textContent = `${shelfForTab.name} site`;
-						pageStatusBadge.className = "status-badge site";
-					}
-				} else if (response && !response.success) {
-					showNotSupported(
-						response.error || "Could not extract novel info",
-					);
-				} else if (!response && shelfForTab) {
-					// No response but domain matches a supported shelf
-					currentSiteShelfId = shelfForTab.id;
-					if (pageStatusBadge) {
-						pageStatusBadge.textContent = `${shelfForTab.name} site`;
-						pageStatusBadge.className = "status-badge site";
-					}
-					if (notSupportedMessage)
-						notSupportedMessage.style.display = "none";
-				} else {
-					showNotSupported("No novel info available");
-				}
-			} catch (error) {
-				debugLog(
-					"📚 Library: Error communicating with content script:",
-					error,
-				);
-				if (
-					(error.message?.includes(
-						"could not establish connection",
-					) ||
-						error.message?.includes(
-							"Receiving end does not exist",
-						)) &&
-					shelfForTab
-				) {
-					// Supported site but non-novel page
-					currentSiteShelfId = shelfForTab.id;
-					if (pageStatusBadge) {
-						pageStatusBadge.textContent = `${shelfForTab.name} site`;
-						pageStatusBadge.className = "status-badge site";
-					}
-					if (notSupportedMessage)
-						notSupportedMessage.style.display = "none";
-					return;
-				}
-				// Content script not available - page not supported
-				if (error.message?.includes("Receiving end does not exist")) {
-					showNotSupported("Not a supported novel site");
-				} else {
-					showNotSupported("Error: " + error.message);
-				}
-			}
-		} catch (error) {
-			debugError("Error loading current page info:", error);
-			showNotSupported("Error detecting page");
-		}
-	}
-
-	/**
-	 * Display the current page novel info
-	 */
-	function displayCurrentPageNovel(novelInfo) {
-		if (!currentNovelCard) return;
-
-		// Show the card, hide not supported message
-		currentNovelCard.style.display = "flex";
-		if (notSupportedMessage) notSupportedMessage.style.display = "none";
-
-		// Page type tag
-		if (currentPageTypeTag) {
-			if (novelInfo.isChapterPage) {
-				currentPageTypeTag.textContent = "📖 Chapter";
-				currentPageTypeTag.className = "tag tag-page-type chapter";
-				currentPageTypeTag.style.display = "inline-flex";
-			} else if (novelInfo.isNovelPage) {
-				currentPageTypeTag.textContent = "📚 Novel Page";
-				currentPageTypeTag.className = "tag tag-page-type novel";
-				currentPageTypeTag.style.display = "inline-flex";
-			} else {
-				currentPageTypeTag.style.display = "none";
-			}
-		}
-
-		// Status tag
-		if (currentStatusTag) {
-			const status = novelInfo.status;
-			if (status) {
-				const statusMap = {
-					completed: { text: "✅ Completed", class: "completed" },
-					ongoing: { text: "📝 Ongoing", class: "ongoing" },
-					hiatus: { text: "⏸️ Hiatus", class: "hiatus" },
-					dropped: { text: "❌ Dropped", class: "dropped" },
-				};
-				const statusInfo = statusMap[status.toLowerCase()] || {
-					text: status,
-					class: "",
-				};
-				currentStatusTag.textContent = statusInfo.text;
-				currentStatusTag.className = `tag tag-status ${statusInfo.class}`;
-				currentStatusTag.style.display = "inline-flex";
-			} else {
-				currentStatusTag.style.display = "none";
-			}
-		}
-
-		// Chapter info
-		if (currentChapterText) {
-			let chapterStr = "";
-			if (novelInfo.chapterTitle) {
-				chapterStr = novelInfo.chapterTitle;
-			} else if (novelInfo.currentChapter) {
-				chapterStr = novelInfo.totalChapters
-					? `Chapter ${novelInfo.currentChapter} of ${novelInfo.totalChapters}`
-					: `Chapter ${novelInfo.currentChapter}`;
-			} else if (novelInfo.totalChapters) {
-				chapterStr = `${novelInfo.totalChapters} chapters total`;
-			}
-			currentChapterText.textContent = chapterStr;
-			if (currentChapterInfo) {
-				currentChapterInfo.style.display = chapterStr ? "flex" : "none";
-			}
-		}
-
-		// Progress bar
-		if (
-			currentProgressBar &&
-			currentProgressFill &&
-			currentProgressPercent
-		) {
-			if (novelInfo.totalChapters && novelInfo.currentChapter) {
-				const progress = Math.min(
-					100,
-					Math.round(
-						(novelInfo.currentChapter / novelInfo.totalChapters) *
-							100,
-					),
-				);
-				currentProgressBar.style.display = "block";
-				currentProgressFill.style.width = `${progress}%`;
-				currentProgressPercent.textContent = `${progress}%`;
-				currentProgressPercent.style.display = "inline";
-			} else {
-				currentProgressBar.style.display = "none";
-				currentProgressPercent.style.display = "none";
-			}
-		}
-
-		// Library details (only if in library)
-		if (libraryDetails) {
-			if (novelInfo.isInLibrary) {
-				libraryDetails.style.display = "block";
-
-				// Reading status
-				if (readingStatusSelect) {
-					readingStatusSelect.value =
-						novelInfo.readingStatus || "reading";
-					readingStatusSelect.onchange = async () => {
-						await updateReadingStatus(
-							novelInfo.novelId,
-							readingStatusSelect.value,
-						);
-					};
-				}
-
-				// Enhanced count
-				if (enhancedCountValue && enhancedCountRow) {
-					const count = novelInfo.enhancedChapters || 0;
-					if (count > 0) {
-						enhancedCountValue.textContent = `${count} chapter${
-							count !== 1 ? "s" : ""
-						}`;
-						enhancedCountRow.style.display = "flex";
-					} else {
-						enhancedCountRow.style.display = "none";
-					}
-				}
-
-				// Genres
-				if (genresList && genresRow) {
-					const genres = novelInfo.genres || [];
-					if (genres.length > 0) {
-						const displayGenres = genres.slice(0, 3);
-						const moreCount = genres.length - 3;
-						genresList.innerHTML = displayGenres
-							.map(
-								(g) =>
-									`<span class="genre-tag">${escapeHtml(
-										g,
-									)}</span>`,
-							)
-							.join("");
-						if (moreCount > 0) {
-							genresList.innerHTML += `<span class="genre-tag more" title="${escapeHtml(
-								genres.slice(3).join(", "),
-							)}">+${moreCount}</span>`;
-						}
-						genresRow.style.display = "flex";
-					} else {
-						genresRow.style.display = "none";
-					}
-				}
-			} else {
-				libraryDetails.style.display = "none";
-			}
-		}
-
-		// Buttons
-		if (addToLibraryBtn) {
-			const btnText = addToLibraryBtn.querySelector(".btn-text");
-			if (btnText) {
-				btnText.textContent = novelInfo.isInLibrary
-					? "Update"
-					: "Add to Library";
-			}
-			addToLibraryBtn.onclick = () => addCurrentNovelToLibrary();
-		}
-
-		if (openNovelBtn) {
-			if (novelInfo.isInLibrary && novelInfo.lastReadUrl) {
-				openNovelBtn.style.display = "inline-flex";
-				openNovelBtn.onclick = () => {
-					browser.tabs.create({ url: novelInfo.lastReadUrl });
-				};
-			} else if (novelInfo.mainNovelUrl || novelInfo.sourceUrl) {
-				openNovelBtn.style.display = "inline-flex";
-				openNovelBtn.onclick = () => {
-					browser.tabs.create({
-						url: novelInfo.mainNovelUrl || novelInfo.sourceUrl,
-					});
-				};
-			} else {
-				openNovelBtn.style.display = "none";
-			}
-		}
-	}
-
-	/**
-	 * Show "not supported" message
-	 */
-	function showNotSupported(message) {
-		if (currentNovelCard) currentNovelCard.style.display = "none";
-		if (notSupportedMessage) {
-			notSupportedMessage.style.display = "flex";
-			if (notSupportedText) {
-				notSupportedText.textContent =
-					message || "Not a supported page";
-			}
-		}
-		if (pageStatusBadge) {
-			pageStatusBadge.textContent = "Not Supported";
-			pageStatusBadge.className = "status-badge not-supported";
-		}
-	}
-
-	/**
-	 * Add current novel to library
-	 */
-	async function addCurrentNovelToLibrary() {
-		try {
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (!tabs[0]) return;
-
-			const response = await browser.tabs.sendMessage(tabs[0].id, {
-				action: "addToLibrary",
-			});
-
-			if (response && response.success) {
-				showStatus(
-					currentPageNovelData?.isInLibrary
-						? "Novel updated!"
-						: "Novel added to library!",
-					"success",
-					{
-						title:
-							response?.novel?.title ||
-							currentPageNovelData?.title,
-						novelData: response?.novel || currentPageNovelData,
-						metadata: {
-							action: "library-save",
-						},
-					},
-				);
-
-				// Update UI
-				if (currentPageNovelData) {
-					currentPageNovelData.isInLibrary = true;
-				}
 				if (pageStatusBadge) {
-					pageStatusBadge.textContent = "✓ In Library";
-					pageStatusBadge.className = "status-badge in-library";
+					pageStatusBadge.textContent = "Detecting...";
+					pageStatusBadge.className = "status-badge";
 				}
+
+				try {
+					const currentTab = await getCurrentTab();
+					if (!currentTab) {
+						showNotSupported("Could not determine current tab");
+						return;
+					}
+
+					const shelfForTab = getShelfFromUrl(currentTab.url);
+					const isExtensionPage = currentTab.url.startsWith(
+						browser.runtime.getURL(""),
+					);
+
+					// If this is an extension page (library/popup), we don't attempt extraction
+					if (isExtensionPage) {
+						if (pageStatusBadge) {
+							pageStatusBadge.textContent = "Extension page";
+							pageStatusBadge.className = "status-badge site";
+						}
+						if (notSupportedMessage)
+							notSupportedMessage.style.display = "none";
+						return;
+					}
+
+					// Try to communicate with content script
+					try {
+						const response = await browser.tabs.sendMessage(
+							currentTab.id,
+							{
+								action: "getNovelInfo",
+							},
+						);
+
+						debugLog(
+							"📚 Library: getNovelInfo response:",
+							response,
+						);
+
+						if (
+							response &&
+							response.success &&
+							response.novelInfo
+						) {
+							currentPageNovelData = response.novelInfo;
+							currentSiteShelfId =
+								response.novelInfo.shelfId || null;
+							displayCurrentPageNovel(response.novelInfo);
+						} else if (
+							response &&
+							!response.success &&
+							shelfForTab
+						) {
+							// Supported site but non-novel page: treat as site context only
+							currentSiteShelfId = shelfForTab.id;
+							if (currentNovelCard)
+								currentNovelCard.style.display = "none";
+							if (notSupportedMessage)
+								notSupportedMessage.style.display = "none";
+							if (pageStatusBadge) {
+								pageStatusBadge.textContent = `${shelfForTab.name} site`;
+								pageStatusBadge.className = "status-badge site";
+							}
+						} else if (response && !response.success) {
+							showNotSupported(
+								response.error ||
+									"Could not extract novel info",
+							);
+						} else if (!response && shelfForTab) {
+							// No response but domain matches a supported shelf
+							currentSiteShelfId = shelfForTab.id;
+							if (pageStatusBadge) {
+								pageStatusBadge.textContent = `${shelfForTab.name} site`;
+								pageStatusBadge.className = "status-badge site";
+							}
+							if (notSupportedMessage)
+								notSupportedMessage.style.display = "none";
+						} else {
+							showNotSupported("No novel info available");
+						}
+					} catch (error) {
+						debugLog(
+							"📚 Library: Error communicating with content script:",
+							error,
+						);
+						if (
+							(error.message?.includes(
+								"could not establish connection",
+							) ||
+								error.message?.includes(
+									"Receiving end does not exist",
+								)) &&
+							shelfForTab
+						) {
+							// Supported site but non-novel page
+							currentSiteShelfId = shelfForTab.id;
+							if (pageStatusBadge) {
+								pageStatusBadge.textContent = `${shelfForTab.name} site`;
+								pageStatusBadge.className = "status-badge site";
+							}
+							if (notSupportedMessage)
+								notSupportedMessage.style.display = "none";
+							return;
+						}
+						// Content script not available - page not supported
+						if (
+							error.message?.includes(
+								"Receiving end does not exist",
+							)
+						) {
+							showNotSupported("Not a supported novel site");
+						} else {
+							showNotSupported("Error: " + error.message);
+						}
+					}
+				} catch (error) {
+					debugError("Error loading current page info:", error);
+					showNotSupported("Error detecting page");
+				}
+			}
+
+			/**
+			 * Display the current page novel info
+			 */
+			function displayCurrentPageNovel(novelInfo) {
+				if (!currentNovelCard) return;
+
+				// Show the card, hide not supported message
+				currentNovelCard.style.display = "flex";
+				if (notSupportedMessage)
+					notSupportedMessage.style.display = "none";
+
+				// Page type tag
+				if (currentPageTypeTag) {
+					if (novelInfo.isChapterPage) {
+						currentPageTypeTag.textContent = "📖 Chapter";
+						currentPageTypeTag.className =
+							"tag tag-page-type chapter";
+						currentPageTypeTag.style.display = "inline-flex";
+					} else if (novelInfo.isNovelPage) {
+						currentPageTypeTag.textContent = "📚 Novel Page";
+						currentPageTypeTag.className =
+							"tag tag-page-type novel";
+						currentPageTypeTag.style.display = "inline-flex";
+					} else {
+						currentPageTypeTag.style.display = "none";
+					}
+				}
+
+				// Status tag
+				if (currentStatusTag) {
+					const status = novelInfo.status;
+					if (status) {
+						const statusMap = {
+							completed: {
+								text: "✅ Completed",
+								class: "completed",
+							},
+							ongoing: { text: "📝 Ongoing", class: "ongoing" },
+							hiatus: { text: "⏸️ Hiatus", class: "hiatus" },
+							dropped: { text: "❌ Dropped", class: "dropped" },
+						};
+						const statusInfo = statusMap[status.toLowerCase()] || {
+							text: status,
+							class: "",
+						};
+						currentStatusTag.textContent = statusInfo.text;
+						currentStatusTag.className = `tag tag-status ${statusInfo.class}`;
+						currentStatusTag.style.display = "inline-flex";
+					} else {
+						currentStatusTag.style.display = "none";
+					}
+				}
+
+				// Chapter info
+				if (currentChapterText) {
+					let chapterStr = "";
+					if (novelInfo.chapterTitle) {
+						chapterStr = novelInfo.chapterTitle;
+					} else if (novelInfo.currentChapter) {
+						chapterStr = novelInfo.totalChapters
+							? `Chapter ${novelInfo.currentChapter} of ${novelInfo.totalChapters}`
+							: `Chapter ${novelInfo.currentChapter}`;
+					} else if (novelInfo.totalChapters) {
+						chapterStr = `${novelInfo.totalChapters} chapters total`;
+					}
+					currentChapterText.textContent = chapterStr;
+					if (currentChapterInfo) {
+						currentChapterInfo.style.display = chapterStr
+							? "flex"
+							: "none";
+					}
+				}
+
+				// Progress bar
+				if (
+					currentProgressBar &&
+					currentProgressFill &&
+					currentProgressPercent
+				) {
+					if (novelInfo.totalChapters && novelInfo.currentChapter) {
+						const progress = Math.min(
+							100,
+							Math.round(
+								(novelInfo.currentChapter /
+									novelInfo.totalChapters) *
+									100,
+							),
+						);
+						currentProgressBar.style.display = "block";
+						currentProgressFill.style.width = `${progress}%`;
+						currentProgressPercent.textContent = `${progress}%`;
+						currentProgressPercent.style.display = "inline";
+					} else {
+						currentProgressBar.style.display = "none";
+						currentProgressPercent.style.display = "none";
+					}
+				}
+
+				// Library details (only if in library)
+				if (libraryDetails) {
+					if (novelInfo.isInLibrary) {
+						libraryDetails.style.display = "block";
+
+						// Reading status
+						if (readingStatusSelect) {
+							readingStatusSelect.value =
+								novelInfo.readingStatus || "reading";
+							readingStatusSelect.onchange = async () => {
+								await updateReadingStatus(
+									novelInfo.novelId,
+									readingStatusSelect.value,
+								);
+							};
+						}
+
+						// Enhanced count
+						if (enhancedCountValue && enhancedCountRow) {
+							const count = novelInfo.enhancedChapters || 0;
+							if (count > 0) {
+								enhancedCountValue.textContent = `${count} chapter${
+									count !== 1 ? "s" : ""
+								}`;
+								enhancedCountRow.style.display = "flex";
+							} else {
+								enhancedCountRow.style.display = "none";
+							}
+						}
+
+						// Genres
+						if (genresList && genresRow) {
+							const genres = novelInfo.genres || [];
+							if (genres.length > 0) {
+								const displayGenres = genres.slice(0, 3);
+								const moreCount = genres.length - 3;
+								genresList.innerHTML = displayGenres
+									.map(
+										(g) =>
+											`<span class="genre-tag">${escapeHtml(
+												g,
+											)}</span>`,
+									)
+									.join("");
+								if (moreCount > 0) {
+									genresList.innerHTML += `<span class="genre-tag more" title="${escapeHtml(
+										genres.slice(3).join(", "),
+									)}">+${moreCount}</span>`;
+								}
+								genresRow.style.display = "flex";
+							} else {
+								genresRow.style.display = "none";
+							}
+						}
+					} else {
+						libraryDetails.style.display = "none";
+					}
+				}
+
+				// Buttons
 				if (addToLibraryBtn) {
 					const btnText = addToLibraryBtn.querySelector(".btn-text");
-					if (btnText) btnText.textContent = "Update";
-				}
-				if (libraryDetails) {
-					libraryDetails.style.display = "block";
+					if (btnText) {
+						btnText.textContent = novelInfo.isInLibrary
+							? "Update"
+							: "Add to Library";
+					}
+					addToLibraryBtn.onclick = () => addCurrentNovelToLibrary();
 				}
 
-				// Refresh library data
-				await loadLibraryData();
-			} else {
-				showStatus(
-					"Failed: " + (response?.error || "Unknown error"),
-					"error",
-					{
+				if (openNovelBtn) {
+					if (novelInfo.isInLibrary && novelInfo.lastReadUrl) {
+						openNovelBtn.style.display = "inline-flex";
+						openNovelBtn.onclick = () => {
+							browser.tabs.create({ url: novelInfo.lastReadUrl });
+						};
+					} else if (novelInfo.mainNovelUrl || novelInfo.sourceUrl) {
+						openNovelBtn.style.display = "inline-flex";
+						openNovelBtn.onclick = () => {
+							browser.tabs.create({
+								url:
+									novelInfo.mainNovelUrl ||
+									novelInfo.sourceUrl,
+							});
+						};
+					} else {
+						openNovelBtn.style.display = "none";
+					}
+				}
+			}
+
+			/**
+			 * Show "not supported" message
+			 */
+			function showNotSupported(message) {
+				if (currentNovelCard) currentNovelCard.style.display = "none";
+				if (notSupportedMessage) {
+					notSupportedMessage.style.display = "flex";
+					if (notSupportedText) {
+						notSupportedText.textContent =
+							message || "Not a supported page";
+					}
+				}
+				if (pageStatusBadge) {
+					pageStatusBadge.textContent = "Not Supported";
+					pageStatusBadge.className = "status-badge not-supported";
+				}
+			}
+
+			/**
+			 * Add current novel to library
+			 */
+			async function addCurrentNovelToLibrary() {
+				try {
+					const tabs = await browser.tabs.query({
+						active: true,
+						currentWindow: true,
+					});
+					if (!tabs[0]) return;
+
+					const response = await browser.tabs.sendMessage(
+						tabs[0].id,
+						{
+							action: "addToLibrary",
+						},
+					);
+
+					if (response && response.success) {
+						showStatus(
+							currentPageNovelData?.isInLibrary
+								? "Novel updated!"
+								: "Novel added to library!",
+							"success",
+							{
+								title:
+									response?.novel?.title ||
+									currentPageNovelData?.title,
+								novelData:
+									response?.novel || currentPageNovelData,
+								metadata: {
+									action: "library-save",
+								},
+							},
+						);
+
+						// Update UI
+						if (currentPageNovelData) {
+							currentPageNovelData.isInLibrary = true;
+						}
+						if (pageStatusBadge) {
+							pageStatusBadge.textContent = "✓ In Library";
+							pageStatusBadge.className =
+								"status-badge in-library";
+						}
+						if (addToLibraryBtn) {
+							const btnText =
+								addToLibraryBtn.querySelector(".btn-text");
+							if (btnText) btnText.textContent = "Update";
+						}
+						if (libraryDetails) {
+							libraryDetails.style.display = "block";
+						}
+
+						// Refresh library data
+						await loadLibraryData();
+					} else {
+						showStatus(
+							"Failed: " + (response?.error || "Unknown error"),
+							"error",
+							{
+								title: "Library save failed",
+								novelData: currentPageNovelData,
+								metadata: {
+									action: "library-save",
+								},
+							},
+						);
+					}
+				} catch (error) {
+					debugError("Error adding to library:", error);
+					showStatus("Error: " + error.message, "error", {
 						title: "Library save failed",
 						novelData: currentPageNovelData,
 						metadata: {
 							action: "library-save",
 						},
-					},
-				);
-			}
-		} catch (error) {
-			debugError("Error adding to library:", error);
-			showStatus("Error: " + error.message, "error", {
-				title: "Library save failed",
-				novelData: currentPageNovelData,
-				metadata: {
-					action: "library-save",
-				},
-			});
-		}
-	}
-
-	/**
-	 * Update reading status for a novel
-	 */
-	async function updateReadingStatus(novelId, status) {
-		try {
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (!tabs[0]) return;
-
-			const response = await browser.tabs.sendMessage(tabs[0].id, {
-				action: "updateNovelReadingStatus",
-				novelId: novelId,
-				readingStatus: status,
-			});
-
-			if (response && response.success) {
-				showStatus("Status updated!", "success", {
-					title: "Reading status updated",
-					novelData: currentPageNovelData,
-					metadata: {
-						status,
-					},
-				});
-			}
-		} catch (error) {
-			debugError("Error updating reading status:", error);
-		}
-	}
-
-	/**
-	 * Load library statistics and recent novels
-	 */
-	async function loadLibraryData() {
-		try {
-			const depsOk = await ensureLibraryDeps();
-			if (!depsOk || !novelLibrary) {
-				showStatus("Library data unavailable in popup", "error");
-				return;
-			}
-
-			// Get library stats
-			const stats = await novelLibrary.getStats();
-			const enabledShelves = new Set(
-				Object.values(SHELVES)
-					.filter((shelf) =>
-						isSiteEnabledSafe(siteSettings, shelf.id),
-					)
-					.map((shelf) => shelf.id),
-			);
-
-			// Update stats
-			if (statNovels) statNovels.textContent = stats.totalNovels || 0;
-			if (statChapters)
-				statChapters.textContent = stats.totalEnhancedChapters || 0;
-			if (statShelves) {
-				const activeCount = Object.entries(stats.shelves || {}).filter(
-					([id, s]) => enabledShelves.has(id) && s.novelCount > 0,
-				).length;
-				statShelves.textContent = activeCount;
-			}
-
-			// Get recent novels
-			const allRecentNovels = await novelLibrary.getRecentNovels(20);
-			const enabledRecentNovels = allRecentNovels.filter((novel) =>
-				enabledShelves.has(novel.shelfId),
-			);
-
-			// Filter by current site if applicable
-			let displayNovels = enabledRecentNovels;
-			let showingSiteSpecific = false;
-			let currentShelf = null;
-
-			if (currentSiteShelfId && enabledShelves.has(currentSiteShelfId)) {
-				currentShelf = Object.values(SHELVES).find(
-					(s) => s.id === currentSiteShelfId,
-				);
-				const siteNovels = allRecentNovels.filter(
-					(n) => n.shelfId === currentSiteShelfId,
-				);
-
-				if (siteNovels.length > 0) {
-					displayNovels = siteNovels;
-					showingSiteSpecific = true;
+					});
 				}
 			}
 
-			// Limit to 6 novels
-			displayNovels = displayNovels.slice(0, 6);
+			/**
+			 * Update reading status for a novel
+			 */
+			async function updateReadingStatus(novelId, status) {
+				try {
+					const tabs = await browser.tabs.query({
+						active: true,
+						currentWindow: true,
+					});
+					if (!tabs[0]) return;
 
-			// Update section title
-			if (recentSectionTitle) {
-				recentSectionTitle.textContent =
-					showingSiteSpecific && currentShelf
-						? `${currentShelf.name} Novels`
-						: "Recent Novels";
-			}
+					const response = await browser.tabs.sendMessage(
+						tabs[0].id,
+						{
+							action: "updateNovelReadingStatus",
+							novelId: novelId,
+							readingStatus: status,
+						},
+					);
 
-			// Update site indicator
-			if (siteIndicator) {
-				if (showingSiteSpecific && currentShelf) {
-					const iconHtml =
-						currentShelf.icon &&
-						currentShelf.icon.startsWith("http")
-							? `<img src="${escapeHtml(
-									currentShelf.icon,
-								)}" alt="" class="site-icon" onerror="this.outerHTML='${
-									currentShelf.emoji || "📖"
-								}'">`
-							: currentShelf.emoji || "📖";
-					siteIndicator.innerHTML = iconHtml;
-					siteIndicator.style.display = "inline-flex";
-				} else {
-					siteIndicator.style.display = "none";
-				}
-			}
-
-			// Render novels grid
-			if (recentNovelsGrid) {
-				if (displayNovels.length === 0) {
-					recentNovelsGrid.innerHTML = "";
-					if (emptyState) {
-						emptyState.querySelector(".empty-text").textContent =
-							showingSiteSpecific
-								? `No novels from ${
-										currentShelf?.name || "this site"
-									} yet. Start enhancing!`
-								: "No novels yet. Start enhancing chapters to build your library!";
-						emptyState.style.display = "flex";
+					if (response && response.success) {
+						showStatus("Status updated!", "success", {
+							title: "Reading status updated",
+							novelData: currentPageNovelData,
+							metadata: {
+								status,
+							},
+						});
 					}
-				} else {
-					if (emptyState) emptyState.style.display = "none";
+				} catch (error) {
+					debugError("Error updating reading status:", error);
+				}
+			}
 
-					recentNovelsGrid.innerHTML = displayNovels
-						.map((novel) => {
-							const shelf = Object.values(SHELVES).find(
-								(s) => s.id === novel.shelfId,
-							);
-							const shelfEmoji = shelf?.emoji || "📖";
-							const shelfIcon = shelf?.icon;
-							const shelfName = shelf?.name || "Unknown";
+			/**
+			 * Load library statistics and recent novels
+			 */
+			async function loadLibraryData() {
+				try {
+					const depsOk = await ensureLibraryDeps();
+					if (!depsOk || !novelLibrary) {
+						showStatus(
+							"Library data unavailable in popup",
+							"error",
+						);
+						return;
+					}
 
-							// Build cover HTML
-							let coverHtml;
-							if (novel.coverUrl) {
-								coverHtml = `<img src="${escapeHtml(
-									novel.coverUrl,
-								)}" alt="" class="novel-cover-img" onerror="this.outerHTML='<div class=\\'novel-cover-placeholder\\'>${shelfEmoji}</div>'">`;
-							} else {
-								const iconHtml =
-									shelfIcon && shelfIcon.startsWith("http")
-										? `<img src="${escapeHtml(
-												shelfIcon,
-											)}" alt="" class="novel-cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
-										: shelfEmoji;
-								coverHtml = `<div class="novel-cover-placeholder">${iconHtml}</div>`;
+					// Get library stats
+					const stats = await novelLibrary.getStats();
+					const enabledShelves = new Set(
+						Object.values(SHELVES)
+							.filter((shelf) =>
+								isSiteEnabledSafe(siteSettings, shelf.id),
+							)
+							.map((shelf) => shelf.id),
+					);
+
+					// Update stats
+					if (statNovels)
+						statNovels.textContent = stats.totalNovels || 0;
+					if (statChapters)
+						statChapters.textContent =
+							stats.totalEnhancedChapters || 0;
+					if (statShelves) {
+						const activeCount = Object.entries(
+							stats.shelves || {},
+						).filter(
+							([id, s]) =>
+								enabledShelves.has(id) && s.novelCount > 0,
+						).length;
+						statShelves.textContent = activeCount;
+					}
+
+					// Get recent novels
+					const allRecentNovels =
+						await novelLibrary.getRecentNovels(20);
+					const enabledRecentNovels = allRecentNovels.filter(
+						(novel) => enabledShelves.has(novel.shelfId),
+					);
+
+					// Filter by current site if applicable
+					let displayNovels = enabledRecentNovels;
+					let showingSiteSpecific = false;
+					let currentShelf = null;
+
+					if (
+						currentSiteShelfId &&
+						enabledShelves.has(currentSiteShelfId)
+					) {
+						currentShelf = Object.values(SHELVES).find(
+							(s) => s.id === currentSiteShelfId,
+						);
+						const siteNovels = allRecentNovels.filter(
+							(n) => n.shelfId === currentSiteShelfId,
+						);
+
+						if (siteNovels.length > 0) {
+							displayNovels = siteNovels;
+							showingSiteSpecific = true;
+						}
+					}
+
+					// Limit to 6 novels
+					displayNovels = displayNovels.slice(0, 6);
+
+					// Update section title
+					if (recentSectionTitle) {
+						recentSectionTitle.textContent =
+							showingSiteSpecific && currentShelf
+								? `${currentShelf.name} Novels`
+								: "Recent Novels";
+					}
+
+					// Update site indicator
+					if (siteIndicator) {
+						if (showingSiteSpecific && currentShelf) {
+							const iconHtml =
+								currentShelf.icon &&
+								currentShelf.icon.startsWith("http")
+									? `<img src="${escapeHtml(
+											currentShelf.icon,
+										)}" alt="" class="site-icon" onerror="this.outerHTML='${
+											currentShelf.emoji || "📖"
+										}'">`
+									: currentShelf.emoji || "📖";
+							siteIndicator.innerHTML = iconHtml;
+							siteIndicator.style.display = "inline-flex";
+						} else {
+							siteIndicator.style.display = "none";
+						}
+					}
+
+					// Render novels grid
+					if (recentNovelsGrid) {
+						if (displayNovels.length === 0) {
+							recentNovelsGrid.innerHTML = "";
+							if (emptyState) {
+								emptyState.querySelector(
+									".empty-text",
+								).textContent = showingSiteSpecific
+									? `No novels from ${
+											currentShelf?.name || "this site"
+										} yet. Start enhancing!`
+									: "No novels yet. Start enhancing chapters to build your library!";
+								emptyState.style.display = "flex";
 							}
+						} else {
+							if (emptyState) emptyState.style.display = "none";
 
-							// Site badge (only show if not filtering by site)
-							const siteBadgeHtml = showingSiteSpecific
-								? ""
-								: `
+							recentNovelsGrid.innerHTML = displayNovels
+								.map((novel) => {
+									const shelf = Object.values(SHELVES).find(
+										(s) => s.id === novel.shelfId,
+									);
+									const shelfEmoji = shelf?.emoji || "📖";
+									const shelfIcon = shelf?.icon;
+									const shelfName = shelf?.name || "Unknown";
+
+									// Build cover HTML
+									let coverHtml;
+									if (novel.coverUrl) {
+										coverHtml = `<img src="${escapeHtml(
+											novel.coverUrl,
+										)}" alt="" class="novel-cover-img" onerror="this.outerHTML='<div class=\\'novel-cover-placeholder\\'>${shelfEmoji}</div>'">`;
+									} else {
+										const iconHtml =
+											shelfIcon &&
+											shelfIcon.startsWith("http")
+												? `<img src="${escapeHtml(
+														shelfIcon,
+													)}" alt="" class="novel-cover-site-icon" onerror="this.outerHTML='${shelfEmoji}'">`
+												: shelfEmoji;
+										coverHtml = `<div class="novel-cover-placeholder">${iconHtml}</div>`;
+									}
+
+									// Site badge (only show if not filtering by site)
+									const siteBadgeHtml = showingSiteSpecific
+										? ""
+										: `
 							<span class="novel-site-badge" title="${shelfName}">
 								${
 									shelfIcon && shelfIcon.startsWith("http")
@@ -2857,7 +3044,7 @@ async function initializePopup() {
 								}
 							</span>`;
 
-							return `
+									return `
 							<div class="novel-grid-item" data-url="${escapeHtml(
 								novel.lastReadUrl || novel.sourceUrl,
 							)}" title="${escapeHtml(novel.title)}">
@@ -2877,545 +3064,706 @@ async function initializePopup() {
 								</div>
 							</div>
 						`;
-						})
-						.join("");
+								})
+								.join("");
 
-					// Add click handlers
-					recentNovelsGrid
-						.querySelectorAll(".novel-grid-item")
-						.forEach((item) => {
-							item.addEventListener("click", () => {
-								const url = item.dataset.url;
-								if (url) browser.tabs.create({ url });
-							});
-						});
+							// Add click handlers
+							recentNovelsGrid
+								.querySelectorAll(".novel-grid-item")
+								.forEach((item) => {
+									item.addEventListener("click", () => {
+										const url = item.dataset.url;
+										if (url) browser.tabs.create({ url });
+									});
+								});
+						}
+					}
+				} catch (error) {
+					debugError("Error loading library data:", error);
+					if (recentNovelsGrid) {
+						recentNovelsGrid.innerHTML = `<div class="error-message">Failed to load library. <button onclick="loadLibraryData()">Retry</button></div>`;
+					}
 				}
 			}
-		} catch (error) {
-			debugError("Error loading library data:", error);
-			if (recentNovelsGrid) {
-				recentNovelsGrid.innerHTML = `<div class="error-message">Failed to load library. <button onclick="loadLibraryData()">Retry</button></div>`;
-			}
-		}
-	}
 
-	// Backup helpers
-	function renderBackupHistory() {
-		if (!backupHistoryList) return;
-		if (!backupHistory || backupHistory.length === 0) {
-			backupHistoryList.innerHTML = "<li>No backups yet</li>";
-			return;
-		}
+			// Backup helpers
+			function renderBackupHistory() {
+				if (!backupHistoryList) return;
+				if (!backupHistory || backupHistory.length === 0) {
+					backupHistoryList.innerHTML = "<li>No backups yet</li>";
+					return;
+				}
 
-		backupHistoryList.innerHTML = backupHistory
-			.slice(0, BACKUP_RETENTION)
-			.map((entry) => {
-				const timestamp =
-					entry.createdAt ||
-					entry.exportedAt ||
-					entry.date ||
-					entry.timestamp ||
-					Date.now();
-				const date = new Date(timestamp);
-				const file = escapeHtml(entry.filename || "rg-backup.json");
-				return `<li>${date.toLocaleString()} — ${file}</li>`;
-			})
-			.join("");
-	}
-
-	async function persistBackupPrefs(extra = {}) {
-		const folderValue = (backupFolderInput?.value || "").trim();
-		const backupFolder = folderValue || "RanobeGeminiBackups";
-		const autoBackupEnabled = autoBackupCheckbox?.checked || false;
-		const storedPrefs = await browser.storage.local.get("backupMode");
-		const backupMode = extra.backupMode || storedPrefs.backupMode || "both";
-
-		backupHistory = (backupHistory || []).slice(0, BACKUP_RETENTION);
-
-		await browser.storage.local.set({
-			backupFolder,
-			autoBackupEnabled,
-			backupMode,
-			continuousBackupDelayMinutes: CONTINUOUS_BACKUP_DELAY_MINUTES,
-			continuousBackupCheckIntervalMinutes:
-				CONTINUOUS_BACKUP_CHECK_INTERVAL_MINUTES,
-			backupRetention: BACKUP_RETENTION,
-			backupIntervalDays: BACKUP_INTERVAL_DAYS,
-			backupHistory,
-			...extra,
-		});
-
-		// Inform background to reschedule auto backups if needed
-		try {
-			await browser.runtime.sendMessage({
-				action: "syncAutoBackups",
-			});
-		} catch (e) {
-			console.warn("Unable to sync auto backup schedule:", e?.message);
-		}
-	}
-
-	async function triggerManualBackup(saveAs = true) {
-		try {
-			createManualBackup?.classList.add("loading");
-
-			const folderValue = (backupFolderInput?.value || "").trim();
-			const backupFolder = folderValue || "RanobeGeminiBackups";
-
-			const response = await browser.runtime.sendMessage({
-				action: "createLibraryBackup",
-				folder: backupFolder,
-				saveAs,
-				retention: BACKUP_RETENTION,
-			});
-
-			if (!response?.success) {
-				throw new Error(response?.error || "Backup failed");
+				backupHistoryList.innerHTML = backupHistory
+					.slice(0, BACKUP_RETENTION)
+					.map((entry) => {
+						const timestamp =
+							entry.createdAt ||
+							entry.exportedAt ||
+							entry.date ||
+							entry.timestamp ||
+							Date.now();
+						const date = new Date(timestamp);
+						const file = escapeHtml(
+							entry.filename || "rg-backup.json",
+						);
+						return `<li>${date.toLocaleString()} — ${file}</li>`;
+					})
+					.join("");
 			}
 
-			const stored = await browser.storage.local.get("backupHistory");
-			backupHistory =
-				response.history || stored.backupHistory || backupHistory;
-			renderBackupHistory();
-			await persistBackupPrefs({
-				backupFolder,
-				backupHistory,
-				lastBackupAt: Date.now(),
-			});
+			async function persistBackupPrefs(extra = {}) {
+				const folderValue = (backupFolderInput?.value || "").trim();
+				const backupFolder = folderValue || "RanobeGeminiBackups";
+				const autoBackupEnabled = autoBackupCheckbox?.checked || false;
+				const storedPrefs =
+					await browser.storage.local.get("backupMode");
+				const backupMode =
+					extra.backupMode || storedPrefs.backupMode || "both";
 
-			showStatus(`Backup saved to ${response.filename}`, "success");
-		} catch (error) {
-			debugError("Backup failed:", error);
-			showStatus("Backup failed: " + error.message, "error");
-		} finally {
-			createManualBackup?.classList.remove("loading");
-		}
-	}
-
-	async function handleRestoreFromFile(file) {
-		if (!file) return;
-		try {
-			const text = await file.text();
-			const data = JSON.parse(text);
-
-			// Validate import data structure
-			if (!data.library || !data.version) {
-				throw new Error("Invalid library backup file format");
-			}
-
-			const novelCount = Object.keys(data.library.novels || {}).length;
-			const choice = confirm(
-				`Found ${novelCount} novels in backup file.\n\n` +
-					`Click OK to MERGE with your existing library (recommended)\n` +
-					`Click Cancel to REPLACE your entire library`,
-			);
-
-			const result = await novelLibrary.importLibrary(data, choice);
-
-			if (result.success) {
-				await initializeLibraryTab();
-				showStatus(
-					`Library ${
-						choice ? "merged" : "restored"
-					} successfully!\n\n` +
-						`• ${result.imported} new novels added\n` +
-						`• ${result.updated} existing novels updated` +
-						(result.errors > 0
-							? `\n• ${result.errors} errors occurred`
-							: ""),
-					"success",
+				backupHistory = (backupHistory || []).slice(
+					0,
+					BACKUP_RETENTION,
 				);
-			} else {
-				throw new Error(result.error || "Import failed");
-			}
-		} catch (error) {
-			debugError("Restore failed:", error);
-			showStatus(
-				`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`,
-				"error",
-			);
-		} finally {
-			if (restoreFileInput) restoreFileInput.value = "";
-		}
-	}
 
-	async function persistDriveConfig({ clientId, folderId } = {}) {
-		const payload = {};
-		if (clientId !== undefined) payload.driveClientId = clientId;
-		if (folderId !== undefined) payload.driveFolderId = folderId;
-		await browser.storage.local.set(payload);
-	}
+				await browser.storage.local.set({
+					backupFolder,
+					autoBackupEnabled,
+					backupMode,
+					continuousBackupDelayMinutes:
+						CONTINUOUS_BACKUP_DELAY_MINUTES,
+					continuousBackupCheckIntervalMinutes:
+						CONTINUOUS_BACKUP_CHECK_INTERVAL_MINUTES,
+					backupRetention: BACKUP_RETENTION,
+					backupIntervalDays: BACKUP_INTERVAL_DAYS,
+					backupHistory,
+					...extra,
+				});
 
-	// Setup Library Tab Event Listeners
-	if (openFullLibraryBtn) {
-		openFullLibraryBtn.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html"),
-			});
-		});
-	}
-
-	if (refreshLibraryBtn) {
-		refreshLibraryBtn.addEventListener("click", async () => {
-			refreshLibraryBtn.classList.add("spinning");
-			await initializeLibraryTab();
-			refreshLibraryBtn.classList.remove("spinning");
-		});
-	}
-
-	if (createManualBackup) {
-		createManualBackup.addEventListener("click", () =>
-			triggerManualBackup(true),
-		);
-	}
-
-	if (backupFolderInput) {
-		backupFolderInput.addEventListener("change", () => {
-			persistBackupPrefs();
-		});
-	}
-
-	if (autoBackupCheckbox) {
-		autoBackupCheckbox.addEventListener("change", async () => {
-			await persistBackupPrefs();
-			showStatus(
-				autoBackupCheckbox.checked
-					? "Auto backup enabled"
-					: "Auto backup disabled",
-				"success",
-			);
-		});
-	}
-
-	if (restoreBackupBtn && restoreFileInput) {
-		restoreBackupBtn.addEventListener("click", () =>
-			restoreFileInput.click(),
-		);
-		restoreFileInput.addEventListener("change", () => {
-			if (restoreFileInput.files && restoreFileInput.files[0]) {
-				handleRestoreFromFile(restoreFileInput.files[0]);
-			}
-		});
-	}
-
-	if (driveClientIdInput) {
-		driveClientIdInput.addEventListener("change", async () => {
-			const value = driveClientIdInput.value.trim();
-			await persistDriveConfig({ clientId: value });
-			showStatus("Drive client ID saved", "success");
-			try {
-				await browser.runtime.sendMessage({ action: "resetDriveAuth" });
-			} catch (err) {
-				debugError("Failed to reset Drive auth", err);
-			}
-		});
-	}
-
-	if (driveFolderIdInput) {
-		driveFolderIdInput.addEventListener("change", async () => {
-			const value = driveFolderIdInput.value.trim();
-			await persistDriveConfig({ folderId: value });
-			showStatus("Drive folder saved", "success");
-		});
-	}
-
-	/**
-	 * Collect current content-filter settings from the popup UI.
-	 */
-	function collectContentFilterSettings() {
-		return {
-			fight: {
-				enabled:
-					document.getElementById("cf-fight-enabled")?.checked !==
-					false,
-				defaultCollapsed:
-					document.getElementById("cf-fight-collapsed")?.checked !==
-					false,
-			},
-			r18: {
-				enabled:
-					document.getElementById("cf-r18-enabled")?.checked !==
-					false,
-				defaultCollapsed:
-					document.getElementById("cf-r18-collapsed")?.checked !==
-					false,
-			},
-			authorNote: {
-				enabled:
-					document.getElementById("cf-author-note-enabled")
-						?.checked !== false,
-				defaultCollapsed:
-					document.getElementById("cf-author-note-collapsed")
-						?.checked !== false,
-			},
-			custom: readCustomTypeRows(),
-		};
-	}
-
-	/**
-	 * Read custom type entries from the #cf-custom-list DOM.
-	 */
-	function readCustomTypeRows() {
-		const cfCustomList = document.getElementById("cf-custom-list");
-		if (!cfCustomList) return [];
-		return Array.from(cfCustomList.querySelectorAll(".cf-custom-item")).map(
-			(el) => ({
-				name: el.dataset.name || "",
-				icon: el.dataset.icon || "📌",
-				defaultCollapsed: el.dataset.collapsed === "true",
-			}),
-		);
-	}
-
-	/**
-	 * Render the list of custom section types into #cf-custom-list.
-	 */
-	function renderCustomTypesList(custom) {
-		const cfCustomList = document.getElementById("cf-custom-list");
-		if (!cfCustomList) return;
-		cfCustomList.innerHTML = "";
-		(custom || []).forEach((item) =>
-			appendCustomTypeRow(cfCustomList, item),
-		);
-	}
-
-	/**
-	 * Append a single custom-type row to the list container.
-	 */
-	function appendCustomTypeRow(container, item) {
-		const row = document.createElement("div");
-		row.className = "cf-custom-item";
-		row.dataset.name = item.name;
-		row.dataset.icon = item.icon || "📌";
-		row.dataset.collapsed = item.defaultCollapsed ? "true" : "false";
-		row.innerHTML = `<span class="cf-custom-icon">${escapeHtml(item.icon || "📌")}</span><span class="cf-custom-name">${escapeHtml(item.name)}</span><span class="cf-custom-state">${item.defaultCollapsed ? "Collapsed" : "Expanded"}</span><button class="cf-custom-remove btn btn-sm" title="Remove">✕</button>`;
-		row.querySelector(".cf-custom-remove").addEventListener("click", () => {
-			row.remove();
-			autosaveSettings();
-		});
-		container.appendChild(row);
-	}
-
-	/**
-	 * Escape HTML to prevent XSS
-	 */
-	function escapeHtml(text) {
-		if (!text) return "";
-		const div = document.createElement("div");
-		div.textContent = text;
-		return div.innerHTML;
-	}
-
-	// Improved resizing functionality
-	function setupResizing() {
-		const resizeHandle = document.getElementById("resize-handle");
-		const sizeIndicator = document.getElementById("sizeIndicator");
-
-		// Guard against missing elements
-		if (!resizeHandle || !sizeIndicator) {
-			return;
-		}
-		let isResizing = false;
-		let startX, startY, startWidth, startHeight;
-
-		// Default popup dimensions
-		const DEFAULT_WIDTH = 380;
-		const DEFAULT_HEIGHT = 500;
-		const MIN_WIDTH = 320;
-		const MIN_HEIGHT = 400;
-		const MAX_WIDTH = 800;
-		const MAX_HEIGHT = 900;
-
-		// Load saved dimensions on startup
-		browser.storage.local
-			.get(["popupWidth", "popupHeight"])
-			.then((result) => {
-				if (result.popupWidth && result.popupHeight) {
-					setSize(result.popupWidth, result.popupHeight);
-				} else {
-					// Set default size
-					setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+				// Inform background to reschedule auto backups if needed
+				try {
+					await browser.runtime.sendMessage({
+						action: "syncAutoBackups",
+					});
+				} catch (e) {
+					console.warn(
+						"Unable to sync auto backup schedule:",
+						e?.message,
+					);
 				}
-			});
-
-		// Handle resize start
-		resizeHandle.addEventListener("mousedown", (e) => {
-			isResizing = true;
-			startX = e.clientX;
-			startY = e.clientY;
-			startWidth = document.body.offsetWidth;
-			startHeight = document.body.offsetHeight;
-
-			// Display size indicator
-			updateSizeIndicator(startWidth, startHeight);
-			sizeIndicator.classList.add("visible");
-
-			// Add event listeners for tracking
-			document.addEventListener("mousemove", handleResize);
-			document.addEventListener("mouseup", stopResize);
-
-			// Prevent default behavior
-			e.preventDefault();
-		});
-
-		// Handle resizing
-		function handleResize(e) {
-			if (!isResizing) return;
-
-			// Calculate new dimensions
-			let newWidth = startWidth + (e.clientX - startX);
-			let newHeight = startHeight + (e.clientY - startY);
-
-			// Apply constraints
-			newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth));
-			newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, newHeight));
-
-			// Apply new size
-			setSize(newWidth, newHeight);
-
-			// Update size indicator
-			updateSizeIndicator(newWidth, newHeight);
-		}
-
-		// Stop resizing
-		function stopResize() {
-			if (isResizing) {
-				isResizing = false;
-
-				// Save current dimensions
-				browser.storage.local.set({
-					popupWidth: document.body.offsetWidth,
-					popupHeight: document.body.offsetHeight,
-				});
-
-				// Hide size indicator with a delay
-				setTimeout(() => {
-					sizeIndicator.classList.remove("visible");
-				}, 800);
-
-				// Remove event listeners
-				document.removeEventListener("mousemove", handleResize);
-				document.removeEventListener("mouseup", stopResize);
-			}
-		}
-
-		// Set size with safety checks
-		function setSize(width, height) {
-			document.body.style.width = width + "px";
-			document.body.style.height = height + "px";
-		}
-
-		// Update size indicator
-		function updateSizeIndicator(width, height) {
-			sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(
-				height,
-			)}`;
-		}
-
-		// Double-click to reset size
-		resizeHandle.addEventListener("dblclick", () => {
-			setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-			browser.storage.local.set({
-				popupWidth: DEFAULT_WIDTH,
-				popupHeight: DEFAULT_HEIGHT,
-			});
-			updateSizeIndicator(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-			sizeIndicator.classList.add("visible");
-			setTimeout(() => {
-				sizeIndicator.classList.remove("visible");
-			}, 800);
-		});
-	}
-
-	// Function to load site-specific prompts
-	async function loadSiteHandlerPrompts() {
-		try {
-			// Get active tab
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (!tabs || tabs.length === 0) {
-				debugLog("No active tab found");
-				return;
 			}
 
-			// Try to send message to content script
-			try {
-				// Send message to get site handler info
-				const response = await browser.tabs.sendMessage(tabs[0].id, {
-					action: "getSiteHandlerInfo",
+			async function triggerManualBackup(saveAs = true) {
+				try {
+					createManualBackup?.classList.add("loading");
+
+					const folderValue = (backupFolderInput?.value || "").trim();
+					const backupFolder = folderValue || "RanobeGeminiBackups";
+
+					const response = await browser.runtime.sendMessage({
+						action: "createLibraryBackup",
+						folder: backupFolder,
+						saveAs,
+						retention: BACKUP_RETENTION,
+					});
+
+					if (!response?.success) {
+						throw new Error(response?.error || "Backup failed");
+					}
+
+					const stored =
+						await browser.storage.local.get("backupHistory");
+					backupHistory =
+						response.history ||
+						stored.backupHistory ||
+						backupHistory;
+					renderBackupHistory();
+					await persistBackupPrefs({
+						backupFolder,
+						backupHistory,
+						lastBackupAt: Date.now(),
+					});
+
+					showStatus(
+						`Backup saved to ${response.filename}`,
+						"success",
+					);
+				} catch (error) {
+					debugError("Backup failed:", error);
+					showStatus("Backup failed: " + error.message, "error");
+				} finally {
+					createManualBackup?.classList.remove("loading");
+				}
+			}
+
+			async function handleRestoreFromFile(file) {
+				if (!file) return;
+				try {
+					const text = await file.text();
+					const data = JSON.parse(text);
+
+					// Validate import data structure
+					if (!data.library || !data.version) {
+						throw new Error("Invalid library backup file format");
+					}
+
+					const novelCount = Object.keys(
+						data.library.novels || {},
+					).length;
+					const choice = confirm(
+						`Found ${novelCount} novels in backup file.\n\n` +
+							`Click OK to MERGE with your existing library (recommended)\n` +
+							`Click Cancel to REPLACE your entire library`,
+					);
+
+					const result = await novelLibrary.importLibrary(
+						data,
+						choice,
+					);
+
+					if (result.success) {
+						await initializeLibraryTab();
+						showStatus(
+							`Library ${
+								choice ? "merged" : "restored"
+							} successfully!\n\n` +
+								`• ${result.imported} new novels added\n` +
+								`• ${result.updated} existing novels updated` +
+								(result.errors > 0
+									? `\n• ${result.errors} errors occurred`
+									: ""),
+							"success",
+						);
+					} else {
+						throw new Error(result.error || "Import failed");
+					}
+				} catch (error) {
+					debugError("Restore failed:", error);
+					showStatus(
+						`Failed to import library: ${error.message}\n\nMake sure the file is a valid Ranobe Gemini backup.`,
+						"error",
+					);
+				} finally {
+					if (restoreFileInput) restoreFileInput.value = "";
+				}
+			}
+
+			async function persistDriveConfig({ clientId, folderId } = {}) {
+				const payload = {};
+				if (clientId !== undefined) payload.driveClientId = clientId;
+				if (folderId !== undefined) payload.driveFolderId = folderId;
+				await browser.storage.local.set(payload);
+			}
+
+			// Setup Library Tab Event Listeners
+			if (openFullLibraryBtn) {
+				openFullLibraryBtn.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL("library/library.html"),
+					});
+				});
+			}
+
+			if (refreshLibraryBtn) {
+				refreshLibraryBtn.addEventListener("click", async () => {
+					refreshLibraryBtn.classList.add("spinning");
+					await initializeLibraryTab();
+					refreshLibraryBtn.classList.remove("spinning");
+				});
+			}
+
+			if (createManualBackup) {
+				createManualBackup.addEventListener("click", () =>
+					triggerManualBackup(true),
+				);
+			}
+
+			if (backupFolderInput) {
+				backupFolderInput.addEventListener("change", () => {
+					persistBackupPrefs();
+				});
+			}
+
+			if (autoBackupCheckbox) {
+				autoBackupCheckbox.addEventListener("change", async () => {
+					await persistBackupPrefs();
+					showStatus(
+						autoBackupCheckbox.checked
+							? "Auto backup enabled"
+							: "Auto backup disabled",
+						"success",
+					);
+				});
+			}
+
+			if (restoreBackupBtn && restoreFileInput) {
+				restoreBackupBtn.addEventListener("click", () =>
+					restoreFileInput.click(),
+				);
+				restoreFileInput.addEventListener("change", () => {
+					if (restoreFileInput.files && restoreFileInput.files[0]) {
+						handleRestoreFromFile(restoreFileInput.files[0]);
+					}
+				});
+			}
+
+			if (driveClientIdInput) {
+				driveClientIdInput.addEventListener("change", async () => {
+					const value = driveClientIdInput.value.trim();
+					await persistDriveConfig({ clientId: value });
+					showStatus("Drive client ID saved", "success");
+					try {
+						await browser.runtime.sendMessage({
+							action: "resetDriveAuth",
+						});
+					} catch (err) {
+						debugError("Failed to reset Drive auth", err);
+					}
+				});
+			}
+
+			if (driveFolderIdInput) {
+				driveFolderIdInput.addEventListener("change", async () => {
+					const value = driveFolderIdInput.value.trim();
+					await persistDriveConfig({ folderId: value });
+					showStatus("Drive folder saved", "success");
+				});
+			}
+
+			/**
+			 * Collect current content-filter settings from the popup UI.
+			 */
+			function collectContentFilterSettings() {
+				return {
+					fight: {
+						enabled:
+							document.getElementById("cf-fight-enabled")
+								?.checked !== false,
+						defaultCollapsed:
+							document.getElementById("cf-fight-collapsed")
+								?.checked !== false,
+					},
+					r18: {
+						enabled:
+							document.getElementById("cf-r18-enabled")
+								?.checked !== false,
+						defaultCollapsed:
+							document.getElementById("cf-r18-collapsed")
+								?.checked !== false,
+					},
+					authorNote: {
+						enabled:
+							document.getElementById("cf-author-note-enabled")
+								?.checked !== false,
+						defaultCollapsed:
+							document.getElementById("cf-author-note-collapsed")
+								?.checked !== false,
+					},
+					custom: readCustomTypeRows(),
+				};
+			}
+
+			/**
+			 * Read custom type entries from the #cf-custom-list DOM.
+			 */
+			function readCustomTypeRows() {
+				const cfCustomList = document.getElementById("cf-custom-list");
+				if (!cfCustomList) return [];
+				return Array.from(
+					cfCustomList.querySelectorAll(".cf-custom-item"),
+				).map((el) => ({
+					name: el.dataset.name || "",
+					icon: el.dataset.icon || "📌",
+					defaultCollapsed: el.dataset.collapsed === "true",
+				}));
+			}
+
+			/**
+			 * Render the list of custom section types into #cf-custom-list.
+			 */
+			function renderCustomTypesList(custom) {
+				const cfCustomList = document.getElementById("cf-custom-list");
+				if (!cfCustomList) return;
+				cfCustomList.innerHTML = "";
+				(custom || []).forEach((item) =>
+					appendCustomTypeRow(cfCustomList, item),
+				);
+			}
+
+			/**
+			 * Append a single custom-type row to the list container.
+			 */
+			function appendCustomTypeRow(container, item) {
+				const row = document.createElement("div");
+				row.className = "cf-custom-item";
+				row.dataset.name = item.name;
+				row.dataset.icon = item.icon || "📌";
+				row.dataset.collapsed = item.defaultCollapsed
+					? "true"
+					: "false";
+				row.innerHTML = `<span class="cf-custom-icon">${escapeHtml(item.icon || "📌")}</span><span class="cf-custom-name">${escapeHtml(item.name)}</span><span class="cf-custom-state">${item.defaultCollapsed ? "Collapsed" : "Expanded"}</span><button class="cf-custom-remove btn btn-sm" title="Remove">✕</button>`;
+				row.querySelector(".cf-custom-remove").addEventListener(
+					"click",
+					() => {
+						row.remove();
+						autosaveSettings();
+					},
+				);
+				container.appendChild(row);
+			}
+
+			/**
+			 * Escape HTML to prevent XSS
+			 */
+			function escapeHtml(text) {
+				if (!text) return "";
+				const div = document.createElement("div");
+				div.textContent = text;
+				return div.innerHTML;
+			}
+
+			// Improved resizing functionality
+			function setupResizing() {
+				const resizeHandle = document.getElementById("resize-handle");
+				const sizeIndicator = document.getElementById("sizeIndicator");
+
+				// Guard against missing elements
+				if (!resizeHandle || !sizeIndicator) {
+					return;
+				}
+				let isResizing = false;
+				let startX, startY, startWidth, startHeight;
+
+				// Default popup dimensions
+				const DEFAULT_WIDTH = 380;
+				const DEFAULT_HEIGHT = 500;
+				const MIN_WIDTH = 320;
+				const MIN_HEIGHT = 400;
+				const MAX_WIDTH = 800;
+				const MAX_HEIGHT = 900;
+
+				// Load saved dimensions on startup
+				browser.storage.local
+					.get(["popupWidth", "popupHeight"])
+					.then((result) => {
+						if (result.popupWidth && result.popupHeight) {
+							setSize(result.popupWidth, result.popupHeight);
+						} else {
+							// Set default size
+							setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+						}
+					});
+
+				// Handle resize start
+				resizeHandle.addEventListener("mousedown", (e) => {
+					isResizing = true;
+					startX = e.clientX;
+					startY = e.clientY;
+					startWidth = document.body.offsetWidth;
+					startHeight = document.body.offsetHeight;
+
+					// Display size indicator
+					updateSizeIndicator(startWidth, startHeight);
+					sizeIndicator.classList.add("visible");
+
+					// Add event listeners for tracking
+					document.addEventListener("mousemove", handleResize);
+					document.addEventListener("mouseup", stopResize);
+
+					// Prevent default behavior
+					e.preventDefault();
 				});
 
-				// Check if we got a valid response with a handler
-				if (response && response.success && response.hasHandler) {
-					debugLog("Found site handler:", response.siteIdentifier);
+				// Handle resizing
+				function handleResize(e) {
+					if (!isResizing) return;
 
-					// Update the site-specific prompts container
+					// Calculate new dimensions
+					let newWidth = startWidth + (e.clientX - startX);
+					let newHeight = startHeight + (e.clientY - startY);
+
+					// Apply constraints
+					newWidth = Math.min(
+						MAX_WIDTH,
+						Math.max(MIN_WIDTH, newWidth),
+					);
+					newHeight = Math.min(
+						MAX_HEIGHT,
+						Math.max(MIN_HEIGHT, newHeight),
+					);
+
+					// Apply new size
+					setSize(newWidth, newHeight);
+
+					// Update size indicator
+					updateSizeIndicator(newWidth, newHeight);
+				}
+
+				// Stop resizing
+				function stopResize() {
+					if (isResizing) {
+						isResizing = false;
+
+						// Save current dimensions
+						browser.storage.local.set({
+							popupWidth: document.body.offsetWidth,
+							popupHeight: document.body.offsetHeight,
+						});
+
+						// Hide size indicator with a delay
+						setTimeout(() => {
+							sizeIndicator.classList.remove("visible");
+						}, 800);
+
+						// Remove event listeners
+						document.removeEventListener("mousemove", handleResize);
+						document.removeEventListener("mouseup", stopResize);
+					}
+				}
+
+				// Set size with safety checks
+				function setSize(width, height) {
+					document.body.style.width = width + "px";
+					document.body.style.height = height + "px";
+				}
+
+				// Update size indicator
+				function updateSizeIndicator(width, height) {
+					sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(
+						height,
+					)}`;
+				}
+
+				// Double-click to reset size
+				resizeHandle.addEventListener("dblclick", () => {
+					setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+					browser.storage.local.set({
+						popupWidth: DEFAULT_WIDTH,
+						popupHeight: DEFAULT_HEIGHT,
+					});
+					updateSizeIndicator(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+					sizeIndicator.classList.add("visible");
+					setTimeout(() => {
+						sizeIndicator.classList.remove("visible");
+					}, 800);
+				});
+			}
+
+			// Function to load site-specific prompts
+			async function loadSiteHandlerPrompts() {
+				try {
+					// Get active tab
+					const tabs = await browser.tabs.query({
+						active: true,
+						currentWindow: true,
+					});
+					if (!tabs || tabs.length === 0) {
+						debugLog("No active tab found");
+						return;
+					}
+
+					// Try to send message to content script
+					try {
+						// Send message to get site handler info
+						const response = await browser.tabs.sendMessage(
+							tabs[0].id,
+							{
+								action: "getSiteHandlerInfo",
+							},
+						);
+
+						// Check if we got a valid response with a handler
+						if (
+							response &&
+							response.success &&
+							response.hasHandler
+						) {
+							debugLog(
+								"Found site handler:",
+								response.siteIdentifier,
+							);
+
+							// Update the site-specific prompts container
+							const container = document.getElementById(
+								"siteSpecificPromptsContainer",
+							);
+							const noPromptsElement =
+								document.getElementById("noSitePrompts");
+
+							if (container) {
+								// Hide the "no prompts" message
+								if (noPromptsElement) {
+									noPromptsElement.style.display = "none";
+								}
+
+								// Add or update the site-specific prompt
+								let sitePromptElement = container.querySelector(
+									`[data-site="${response.siteIdentifier}"]`,
+								);
+
+								if (!sitePromptElement) {
+									// Create new site prompt element from template
+									const template = document.querySelector(
+										".site-prompt-template",
+									);
+									if (template) {
+										// Clone the template
+										sitePromptElement = template
+											.querySelector(".site-prompt-item")
+											.cloneNode(true);
+										sitePromptElement.setAttribute(
+											"data-site",
+											response.siteIdentifier,
+										);
+
+										// Set site name
+										const siteNameElement =
+											sitePromptElement.querySelector(
+												".site-name",
+											);
+										if (siteNameElement) {
+											siteNameElement.textContent =
+												response.siteIdentifier;
+										}
+
+										// Set prompt content
+										const textarea =
+											sitePromptElement.querySelector(
+												".site-prompt-content",
+											);
+										if (textarea) {
+											textarea.value =
+												response.siteSpecificPrompt ||
+												response.defaultPrompt ||
+												"";
+										}
+
+										// Add remove button functionality
+										const removeButton =
+											sitePromptElement.querySelector(
+												".remove-site-prompt",
+											);
+										if (removeButton) {
+											removeButton.addEventListener(
+												"click",
+												function () {
+													sitePromptElement.remove();
+													if (
+														container.querySelectorAll(
+															".site-prompt-item",
+														).length === 0
+													) {
+														if (noPromptsElement) {
+															noPromptsElement.style.display =
+																"block";
+														}
+													}
+												},
+											);
+										}
+
+										container.appendChild(
+											sitePromptElement,
+										);
+									}
+								} else {
+									// Update existing site prompt
+									const textarea =
+										sitePromptElement.querySelector(
+											".site-prompt-content",
+										);
+									if (textarea) {
+										textarea.value =
+											response.siteSpecificPrompt ||
+											response.defaultPrompt ||
+											"";
+									}
+								}
+							}
+						} else {
+							debugLog("No site handler found for current page");
+						}
+					} catch (error) {
+						debugLog(
+							"Error communicating with content script:",
+							error,
+						);
+						// This might happen if the content script isn't loaded on this page
+						// Load any saved site-specific prompts instead
+						loadSavedSitePrompts();
+					}
+				} catch (error) {
+					debugError("Error loading site handler prompts:", error);
+				}
+			}
+
+			// Load saved site-specific prompts from localStorage
+			function loadSavedSitePrompts() {
+				try {
+					const savedPrompts = localStorage.getItem(
+						"siteSpecificPrompts",
+					);
+					if (!savedPrompts) return;
+
+					const promptsObj = JSON.parse(savedPrompts);
 					const container = document.getElementById(
 						"siteSpecificPromptsContainer",
 					);
 					const noPromptsElement =
 						document.getElementById("noSitePrompts");
 
-					if (container) {
+					if (container && Object.keys(promptsObj).length > 0) {
 						// Hide the "no prompts" message
 						if (noPromptsElement) {
 							noPromptsElement.style.display = "none";
 						}
 
-						// Add or update the site-specific prompt
-						let sitePromptElement = container.querySelector(
-							`[data-site="${response.siteIdentifier}"]`,
-						);
+						// Clear existing prompts
+						const existingPrompts =
+							container.querySelectorAll(".site-prompt-item");
+						existingPrompts.forEach((item) => {
+							if (!item.closest(".site-prompt-template")) {
+								item.remove();
+							}
+						});
 
-						if (!sitePromptElement) {
-							// Create new site prompt element from template
+						// Add each saved prompt
+						Object.entries(promptsObj).forEach(([site, prompt]) => {
 							const template = document.querySelector(
 								".site-prompt-template",
 							);
 							if (template) {
 								// Clone the template
-								sitePromptElement = template
+								const promptItem = template
 									.querySelector(".site-prompt-item")
 									.cloneNode(true);
-								sitePromptElement.setAttribute(
-									"data-site",
-									response.siteIdentifier,
-								);
+
+								promptItem.setAttribute("data-site", site);
 
 								// Set site name
 								const siteNameElement =
-									sitePromptElement.querySelector(
-										".site-name",
-									);
+									promptItem.querySelector(".site-name");
 								if (siteNameElement) {
-									siteNameElement.textContent =
-										response.siteIdentifier;
+									siteNameElement.textContent = site;
 								}
 
 								// Set prompt content
-								const textarea =
-									sitePromptElement.querySelector(
-										".site-prompt-content",
-									);
+								const textarea = promptItem.querySelector(
+									".site-prompt-content",
+								);
 								if (textarea) {
-									textarea.value =
-										response.siteSpecificPrompt ||
-										response.defaultPrompt ||
-										"";
+									textarea.value = prompt;
 								}
 
 								// Add remove button functionality
-								const removeButton =
-									sitePromptElement.querySelector(
-										".remove-site-prompt",
-									);
+								const removeButton = promptItem.querySelector(
+									".remove-site-prompt",
+								);
 								if (removeButton) {
 									removeButton.addEventListener(
 										"click",
 										function () {
-											sitePromptElement.remove();
+											promptItem.remove();
 											if (
 												container.querySelectorAll(
 													".site-prompt-item",
@@ -3430,97 +3778,54 @@ async function initializePopup() {
 									);
 								}
 
-								container.appendChild(sitePromptElement);
+								container.appendChild(promptItem);
 							}
-						} else {
-							// Update existing site prompt
-							const textarea = sitePromptElement.querySelector(
-								".site-prompt-content",
-							);
-							if (textarea) {
-								textarea.value =
-									response.siteSpecificPrompt ||
-									response.defaultPrompt ||
-									"";
-							}
-						}
+						});
 					}
-				} else {
-					debugLog("No site handler found for current page");
+				} catch (error) {
+					debugError("Error loading saved site prompts:", error);
 				}
-			} catch (error) {
-				debugLog("Error communicating with content script:", error);
-				// This might happen if the content script isn't loaded on this page
-				// Load any saved site-specific prompts instead
-				loadSavedSitePrompts();
 			}
-		} catch (error) {
-			debugError("Error loading site handler prompts:", error);
-		}
-	}
 
-	// Load saved site-specific prompts from localStorage
-	function loadSavedSitePrompts() {
-		try {
-			const savedPrompts = localStorage.getItem("siteSpecificPrompts");
-			if (!savedPrompts) return;
-
-			const promptsObj = JSON.parse(savedPrompts);
-			const container = document.getElementById(
-				"siteSpecificPromptsContainer",
-			);
-			const noPromptsElement = document.getElementById("noSitePrompts");
-
-			if (container && Object.keys(promptsObj).length > 0) {
-				// Hide the "no prompts" message
-				if (noPromptsElement) {
-					noPromptsElement.style.display = "none";
-				}
-
-				// Clear existing prompts
-				const existingPrompts =
-					container.querySelectorAll(".site-prompt-item");
-				existingPrompts.forEach((item) => {
-					if (!item.closest(".site-prompt-template")) {
-						item.remove();
-					}
-				});
-
-				// Add each saved prompt
-				Object.entries(promptsObj).forEach(([site, prompt]) => {
+			const addSitePromptButton =
+				document.getElementById("addSitePrompt");
+			if (addSitePromptButton) {
+				addSitePromptButton.addEventListener("click", function () {
+					const container = document.getElementById(
+						"siteSpecificPromptsContainer",
+					);
+					const noPromptsElement =
+						document.getElementById("noSitePrompts");
 					const template = document.querySelector(
 						".site-prompt-template",
 					);
-					if (template) {
+
+					if (container && template) {
+						// Hide the "no prompts" message
+						if (noPromptsElement) {
+							noPromptsElement.style.display = "none";
+						}
+
 						// Clone the template
-						const promptItem = template
+						const newPrompt = template
 							.querySelector(".site-prompt-item")
 							.cloneNode(true);
 
-						promptItem.setAttribute("data-site", site);
-
-						// Set site name
-						const siteNameElement =
-							promptItem.querySelector(".site-name");
-						if (siteNameElement) {
-							siteNameElement.textContent = site;
-						}
-
-						// Set prompt content
-						const textarea = promptItem.querySelector(
-							".site-prompt-content",
-						);
-						if (textarea) {
-							textarea.value = prompt;
+						// Make site name editable
+						const siteNameInput =
+							newPrompt.querySelector(".site-name");
+						if (siteNameInput) {
+							siteNameInput.contentEditable = "true";
+							siteNameInput.focus();
 						}
 
 						// Add remove button functionality
-						const removeButton = promptItem.querySelector(
+						const removeButton = newPrompt.querySelector(
 							".remove-site-prompt",
 						);
 						if (removeButton) {
 							removeButton.addEventListener("click", function () {
-								promptItem.remove();
+								newPrompt.remove();
 								if (
 									container.querySelectorAll(
 										".site-prompt-item",
@@ -3534,353 +3839,321 @@ async function initializePopup() {
 							});
 						}
 
-						container.appendChild(promptItem);
+						container.appendChild(newPrompt);
 					}
 				});
 			}
-		} catch (error) {
-			debugError("Error loading saved site prompts:", error);
-		}
-	}
 
-	const addSitePromptButton = document.getElementById("addSitePrompt");
-	if (addSitePromptButton) {
-		addSitePromptButton.addEventListener("click", function () {
-			const container = document.getElementById(
-				"siteSpecificPromptsContainer",
-			);
-			const noPromptsElement = document.getElementById("noSitePrompts");
-			const template = document.querySelector(".site-prompt-template");
+			const savePromptsButton = document.getElementById("savePrompts");
+			if (savePromptsButton) {
+				savePromptsButton.addEventListener("click", async function () {
+					const promptInput =
+						document.getElementById("promptTemplate");
+					const summaryInput =
+						document.getElementById("summaryPrompt");
+					const permanentInput =
+						document.getElementById("permanentPrompt");
+					if (!promptInput || !summaryInput || !permanentInput) {
+						showStatus("Prompts UI not available", "error");
+						return;
+					}
+					// Save enhancement prompt
+					const promptValue = promptInput.value;
+					localStorage.setItem("geminiPromptTemplate", promptValue);
 
-			if (container && template) {
-				// Hide the "no prompts" message
-				if (noPromptsElement) {
-					noPromptsElement.style.display = "none";
-				}
+					// Save summary prompt
+					const summaryValue = summaryInput.value;
+					localStorage.setItem("geminiSummaryPrompt", summaryValue);
 
-				// Clone the template
-				const newPrompt = template
-					.querySelector(".site-prompt-item")
-					.cloneNode(true);
+					// Save short summary prompt
+					const shortSummaryPromptEl =
+						document.getElementById("shortSummaryPrompt");
+					const shortSummaryValue = shortSummaryPromptEl
+						? shortSummaryPromptEl.value
+						: DEFAULT_SHORT_SUMMARY_PROMPT;
+					localStorage.setItem(
+						"geminiShortSummaryPrompt",
+						shortSummaryValue,
+					);
 
-				// Make site name editable
-				const siteNameInput = newPrompt.querySelector(".site-name");
-				if (siteNameInput) {
-					siteNameInput.contentEditable = "true";
-					siteNameInput.focus();
-				}
+					// Save permanent prompt
+					const permanentValue = permanentInput.value;
+					localStorage.setItem("permanentPrompt", permanentValue);
 
-				// Add remove button functionality
-				const removeButton = newPrompt.querySelector(
-					".remove-site-prompt",
-				);
-				if (removeButton) {
-					removeButton.addEventListener("click", function () {
-						newPrompt.remove();
-						if (
-							container.querySelectorAll(".site-prompt-item")
-								.length === 0
-						) {
-							if (noPromptsElement) {
-								noPromptsElement.style.display = "block";
+					// Also save to browser.storage.local for background script access
+					try {
+						await browser.storage.local.set({
+							defaultPrompt: promptValue,
+							summaryPrompt: summaryValue,
+							shortSummaryPrompt: shortSummaryValue,
+							permanentPrompt: permanentValue,
+						});
+					} catch (error) {
+						debugError(
+							"Error saving prompts to browser storage:",
+							error,
+						);
+					}
+
+					// Save site-specific prompts
+					saveSiteHandlerPrompts();
+
+					showStatus("Prompts saved successfully!", "success");
+
+					// Notify content script about updated prompts
+					browser.tabs
+						.query({ active: true, currentWindow: true })
+						.then((tabs) => {
+							if (tabs[0]) {
+								browser.tabs.sendMessage(tabs[0].id, {
+									action: "settingsUpdated",
+								});
 							}
+						});
+				});
+			}
+
+			// ========== NOVELS TAB HANDLERS ==========
+			/**
+			 * Load and display novels in the tab
+			 */
+			/**
+			 * Load randomized novel suggestions from enabled sites
+			 */
+			async function loadRandomizedSuggestions() {
+				try {
+					if (!suggestedNovelsList) {
+						debugLog("Suggested novels list element not found");
+						return;
+					}
+
+					const depsOk = await ensureLibraryDeps();
+					if (!depsOk) {
+						console.error("Library dependencies not available");
+						return;
+					}
+
+					// Get site settings to filter enabled sites
+					let currentSiteSettings = {};
+					try {
+						currentSiteSettings = siteSettingsApi
+							? await siteSettingsApi.getSiteSettings()
+							: {};
+					} catch (_err) {
+						currentSiteSettings =
+							siteSettingsApi?.getDefaultSiteSettings?.() || {};
+					}
+
+					const library = await novelLibrary.getLibrary();
+					const allNovels = Object.values(library.novels || {});
+
+					// Group novels by site (shelfId)
+					const novelsBySite = {};
+					allNovels.forEach((novel) => {
+						if (novel.shelfId) {
+							if (!novelsBySite[novel.shelfId]) {
+								novelsBySite[novel.shelfId] = [];
+							}
+							novelsBySite[novel.shelfId].push(novel);
 						}
 					});
-				}
 
-				container.appendChild(newPrompt);
-			}
-		});
-	}
+					// Filter sites: enabled and with 10+ novels
+					const eligibleSites = Object.entries(novelsBySite).filter(
+						([shelfId, novels]) => {
+							const isEnabled =
+								currentSiteSettings[shelfId]?.enabled !== false;
+							const hasEnoughNovels = novels.length >= 10;
+							return isEnabled && hasEnoughNovels;
+						},
+					);
 
-	const savePromptsButton = document.getElementById("savePrompts");
-	if (savePromptsButton) {
-		savePromptsButton.addEventListener("click", async function () {
-			const promptInput = document.getElementById("promptTemplate");
-			const summaryInput = document.getElementById("summaryPrompt");
-			const permanentInput = document.getElementById("permanentPrompt");
-			if (!promptInput || !summaryInput || !permanentInput) {
-				showStatus("Prompts UI not available", "error");
-				return;
-			}
-			// Save enhancement prompt
-			const promptValue = promptInput.value;
-			localStorage.setItem("geminiPromptTemplate", promptValue);
-
-			// Save summary prompt
-			const summaryValue = summaryInput.value;
-			localStorage.setItem("geminiSummaryPrompt", summaryValue);
-
-			// Save short summary prompt
-			const shortSummaryPromptEl =
-				document.getElementById("shortSummaryPrompt");
-			const shortSummaryValue = shortSummaryPromptEl
-				? shortSummaryPromptEl.value
-				: DEFAULT_SHORT_SUMMARY_PROMPT;
-			localStorage.setItem("geminiShortSummaryPrompt", shortSummaryValue);
-
-			// Save permanent prompt
-			const permanentValue = permanentInput.value;
-			localStorage.setItem("permanentPrompt", permanentValue);
-
-			// Also save to browser.storage.local for background script access
-			try {
-				await browser.storage.local.set({
-					defaultPrompt: promptValue,
-					summaryPrompt: summaryValue,
-					shortSummaryPrompt: shortSummaryValue,
-					permanentPrompt: permanentValue,
-				});
-			} catch (error) {
-				debugError("Error saving prompts to browser storage:", error);
-			}
-
-			// Save site-specific prompts
-			saveSiteHandlerPrompts();
-
-			showStatus("Prompts saved successfully!", "success");
-
-			// Notify content script about updated prompts
-			browser.tabs
-				.query({ active: true, currentWindow: true })
-				.then((tabs) => {
-					if (tabs[0]) {
-						browser.tabs.sendMessage(tabs[0].id, {
-							action: "settingsUpdated",
-						});
-					}
-				});
-		});
-	}
-
-	// ========== NOVELS TAB HANDLERS ==========
-	/**
-	 * Load and display novels in the tab
-	 */
-	/**
-	 * Load randomized novel suggestions from enabled sites
-	 */
-	async function loadRandomizedSuggestions() {
-		try {
-			if (!suggestedNovelsList) {
-				debugLog("Suggested novels list element not found");
-				return;
-			}
-
-			const depsOk = await ensureLibraryDeps();
-			if (!depsOk) {
-				console.error("Library dependencies not available");
-				return;
-			}
-
-			// Get site settings to filter enabled sites
-			let currentSiteSettings = {};
-			try {
-				currentSiteSettings = siteSettingsApi
-					? await siteSettingsApi.getSiteSettings()
-					: {};
-			} catch (_err) {
-				currentSiteSettings =
-					siteSettingsApi?.getDefaultSiteSettings?.() || {};
-			}
-
-			const library = await novelLibrary.getLibrary();
-			const allNovels = Object.values(library.novels || {});
-
-			// Group novels by site (shelfId)
-			const novelsBySite = {};
-			allNovels.forEach((novel) => {
-				if (novel.shelfId) {
-					if (!novelsBySite[novel.shelfId]) {
-						novelsBySite[novel.shelfId] = [];
-					}
-					novelsBySite[novel.shelfId].push(novel);
-				}
-			});
-
-			// Filter sites: enabled and with 10+ novels
-			const eligibleSites = Object.entries(novelsBySite).filter(
-				([shelfId, novels]) => {
-					const isEnabled =
-						currentSiteSettings[shelfId]?.enabled !== false;
-					const hasEnoughNovels = novels.length >= 10;
-					return isEnabled && hasEnoughNovels;
-				},
-			);
-
-			if (eligibleSites.length === 0) {
-				suggestedNovelsList.innerHTML = `
+					if (eligibleSites.length === 0) {
+						suggestedNovelsList.innerHTML = `
 					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #888;">
 						<p>Not enough novels to show suggestions.</p>
 						<p style="font-size: 12px; margin-top: 8px;">Add more novels to your library from enabled sites!</p>
 					</div>
 				`;
-				return;
-			}
+						return;
+					}
 
-			// Pick 1-2 random novels from each eligible site
-			const randomSuggestions = [];
-			eligibleSites.forEach(([_shelfId, novels]) => {
-				// Shuffle and take 1-2 novels
-				const shuffled = [...novels].sort(() => Math.random() - 0.5);
-				const count = Math.min(2, shuffled.length);
-				randomSuggestions.push(...shuffled.slice(0, count));
-			});
+					// Pick 1-2 random novels from each eligible site
+					const randomSuggestions = [];
+					eligibleSites.forEach(([_shelfId, novels]) => {
+						// Shuffle and take 1-2 novels
+						const shuffled = [...novels].sort(
+							() => Math.random() - 0.5,
+						);
+						const count = Math.min(2, shuffled.length);
+						randomSuggestions.push(...shuffled.slice(0, count));
+					});
 
-			// Shuffle the final list and limit to reasonable number (9-12)
-			const finalSuggestions = [...randomSuggestions]
-				.sort(() => Math.random() - 0.5)
-				.slice(0, 12);
+					// Shuffle the final list and limit to reasonable number (9-12)
+					const finalSuggestions = [...randomSuggestions]
+						.sort(() => Math.random() - 0.5)
+						.slice(0, 12);
 
-			// Render the suggestions
-			if (finalSuggestions.length === 0) {
-				suggestedNovelsList.innerHTML = `
+					// Render the suggestions
+					if (finalSuggestions.length === 0) {
+						suggestedNovelsList.innerHTML = `
 					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #888;">
 						No novels found for suggestions.
 					</div>
 				`;
-				return;
-			}
-
-			suggestedNovelsList.innerHTML = finalSuggestions
-				.map((novel) => renderSuggestedNovelCard(novel))
-				.join("");
-
-			// Add click handlers to open novels in library
-			const suggCards = suggestedNovelsList.querySelectorAll(
-				".suggested-novel-card",
-			);
-			suggCards.forEach((card) => {
-				card.addEventListener("click", async () => {
-					const novelId = card.getAttribute("data-novel-id");
-					const shelfId = card.getAttribute("data-shelf-id");
-					if (novelId) {
-						await openNovelInLibrary(novelId, shelfId);
+						return;
 					}
-				});
-			});
-		} catch (error) {
-			debugError("Error loading randomized suggestions:", error);
-			if (suggestedNovelsList) {
-				suggestedNovelsList.innerHTML = `
+
+					suggestedNovelsList.innerHTML = finalSuggestions
+						.map((novel) => renderSuggestedNovelCard(novel))
+						.join("");
+
+					// Add click handlers to open novels in library
+					const suggCards = suggestedNovelsList.querySelectorAll(
+						".suggested-novel-card",
+					);
+					suggCards.forEach((card) => {
+						card.addEventListener("click", async () => {
+							const novelId = card.getAttribute("data-novel-id");
+							const shelfId = card.getAttribute("data-shelf-id");
+							if (novelId) {
+								await openNovelInLibrary(novelId, shelfId);
+							}
+						});
+					});
+				} catch (error) {
+					debugError("Error loading randomized suggestions:", error);
+					if (suggestedNovelsList) {
+						suggestedNovelsList.innerHTML = `
 					<div class="no-novels" style="grid-column: 1/-1; text-align: center; padding: 20px; color: #f88;">
 						Error loading suggestions. Try again.
 					</div>
 				`;
+					}
+				}
 			}
-		}
-	}
 
-	async function loadNovelsTab() {
-		try {
-			if (!novelsListContainer || !currentNovelInfo) {
-				debugLog(
-					"Novels tab elements missing; skipping novels tab render.",
+			async function loadNovelsTab() {
+				try {
+					if (!novelsListContainer || !currentNovelInfo) {
+						debugLog(
+							"Novels tab elements missing; skipping novels tab render.",
+						);
+						return;
+					}
+
+					const depsOk = await ensureLibraryDeps();
+					if (!depsOk) {
+						showStatus(
+							"Novel history unavailable in popup",
+							"error",
+						);
+						return;
+					}
+
+					try {
+						siteSettings = siteSettingsApi
+							? await siteSettingsApi.getSiteSettings()
+							: {};
+					} catch (_err) {
+						siteSettings =
+							siteSettingsApi?.getDefaultSiteSettings?.() || {};
+					}
+
+					const library = await novelLibrary.getLibrary();
+					const novelArray = Object.values(
+						library.novels || {},
+					).slice(0, 50); // Limit to 50 most recent
+
+					// Update current novel info and display progress
+					await updateCurrentNovelInfo(novelArray);
+
+					// Render novels list in new card format
+					renderNovelsCardList(novelArray);
+
+					// Update novel count badge
+					const countBadge =
+						document.getElementById("novelCountBadge");
+					if (countBadge) {
+						countBadge.textContent = novelArray.length;
+					}
+				} catch (error) {
+					debugError("Error loading novels tab:", error);
+					if (novelsListContainer) {
+						novelsListContainer.innerHTML =
+							'<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px;">Error loading novels. Try refreshing.</div>';
+					}
+				}
+			}
+
+			function renderNovelsCardList(novels) {
+				if (!novelsList) return;
+
+				const filterBtn = document.querySelector(
+					".novel-filter-btn.active",
 				);
-				return;
-			}
+				const activeFilter = filterBtn
+					? filterBtn.getAttribute("data-filter")
+					: "all";
 
-			const depsOk = await ensureLibraryDeps();
-			if (!depsOk) {
-				showStatus("Novel history unavailable in popup", "error");
-				return;
-			}
+				novelsList.innerHTML = "";
 
-			try {
-				siteSettings = siteSettingsApi
-					? await siteSettingsApi.getSiteSettings()
-					: {};
-			} catch (_err) {
-				siteSettings =
-					siteSettingsApi?.getDefaultSiteSettings?.() || {};
-			}
+				if (!novels || novels.length === 0) {
+					novelsList.innerHTML =
+						'<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">📚 No novels in library<br><span style="font-size: 10px">Open full library to add novels</span></div>';
+					return;
+				}
 
-			const library = await novelLibrary.getLibrary();
-			const novelArray = Object.values(library.novels || {}).slice(0, 50); // Limit to 50 most recent
+				// Filter novels by status
+				let filtered = novels;
+				if (activeFilter !== "all") {
+					filtered = novels.filter((n) => {
+						const status = n.readingStatus || "reading";
+						if (activeFilter === "reading")
+							return status === "reading";
+						if (activeFilter === "completed")
+							return status === "completed";
+						if (activeFilter === "up-to-date")
+							return status === "up-to-date";
+						if (activeFilter === "on-hold")
+							return status === "on-hold";
+						return true;
+					});
+				}
 
-			// Update current novel info and display progress
-			await updateCurrentNovelInfo(novelArray);
-
-			// Render novels list in new card format
-			renderNovelsCardList(novelArray);
-
-			// Update novel count badge
-			const countBadge = document.getElementById("novelCountBadge");
-			if (countBadge) {
-				countBadge.textContent = novelArray.length;
-			}
-		} catch (error) {
-			debugError("Error loading novels tab:", error);
-			if (novelsListContainer) {
-				novelsListContainer.innerHTML =
-					'<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px;">Error loading novels. Try refreshing.</div>';
-			}
-		}
-	}
-
-	function renderNovelsCardList(novels) {
-		if (!novelsList) return;
-
-		const filterBtn = document.querySelector(".novel-filter-btn.active");
-		const activeFilter = filterBtn
-			? filterBtn.getAttribute("data-filter")
-			: "all";
-
-		novelsList.innerHTML = "";
-
-		if (!novels || novels.length === 0) {
-			novelsList.innerHTML =
-				'<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">📚 No novels in library<br><span style="font-size: 10px">Open full library to add novels</span></div>';
-			return;
-		}
-
-		// Filter novels by status
-		let filtered = novels;
-		if (activeFilter !== "all") {
-			filtered = novels.filter((n) => {
-				const status = n.readingStatus || "reading";
-				if (activeFilter === "reading") return status === "reading";
-				if (activeFilter === "completed") return status === "completed";
-				if (activeFilter === "up-to-date")
-					return status === "up-to-date";
-				if (activeFilter === "on-hold") return status === "on-hold";
-				return true;
-			});
-		}
-
-		if (filtered.length === 0) {
-			novelsList.innerHTML = `
+				if (filtered.length === 0) {
+					novelsList.innerHTML = `
 				<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
 					No novels with status: ${activeFilter}
 				</div>
 			`;
-			return;
-		}
+					return;
+				}
 
-		filtered.forEach((novel) => {
-			const readingStatus = novel.readingStatus || "reading";
-			const totalChapters = novel.totalChapters || 0;
-			const lastReadChapter =
-				novel.lastReadChapter || novel.currentChapter || 0;
-			const progress =
-				totalChapters > 0 ? lastReadChapter / totalChapters : 0;
+				filtered.forEach((novel) => {
+					const readingStatus = novel.readingStatus || "reading";
+					const totalChapters = novel.totalChapters || 0;
+					const lastReadChapter =
+						novel.lastReadChapter || novel.currentChapter || 0;
+					const progress =
+						totalChapters > 0 ? lastReadChapter / totalChapters : 0;
 
-			const statusMap = {
-				reading: "📖",
-				completed: "✅",
-				"on-hold": "⏸️",
-				"plan-to-read": "📋",
-				dropped: "❌",
-				"up-to-date": "✨",
-				"re-reading": "🔁",
-			};
+					const statusMap = {
+						reading: "📖",
+						completed: "✅",
+						"on-hold": "⏸️",
+						"plan-to-read": "📋",
+						dropped: "❌",
+						"up-to-date": "✨",
+						"re-reading": "🔁",
+					};
 
-			const statusEmoji = statusMap[readingStatus] || "📖";
+					const statusEmoji = statusMap[readingStatus] || "📖";
 
-			const card = document.createElement("div");
-			card.className = "novel-card";
-			card.style.cursor = "pointer";
-			card.style.cssText = `
+					const card = document.createElement("div");
+					card.className = "novel-card";
+					card.style.cursor = "pointer";
+					card.style.cssText = `
 				background: var(--setting-bg);
 				border: 1px solid var(--border-color);
 				border-radius: 6px;
@@ -3891,240 +4164,244 @@ async function initializePopup() {
 				align-items: flex-start;
 			`;
 
-			const cover = document.createElement("div");
-			cover.style.cssText =
-				"font-size: 24px; flex-shrink: 0; width: 40px; text-align: center";
-			cover.textContent = "📕";
+					const cover = document.createElement("div");
+					cover.style.cssText =
+						"font-size: 24px; flex-shrink: 0; width: 40px; text-align: center";
+					cover.textContent = "📕";
 
-			const info = document.createElement("div");
-			info.style.cssText = "flex: 1; min-width: 0";
+					const info = document.createElement("div");
+					info.style.cssText = "flex: 1; min-width: 0";
 
-			const titleEl = document.createElement("div");
-			titleEl.style.cssText =
-				"font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px";
-			titleEl.textContent = novel.title || "Unknown Novel";
+					const titleEl = document.createElement("div");
+					titleEl.style.cssText =
+						"font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px";
+					titleEl.textContent = novel.title || "Unknown Novel";
 
-			const metaEl = document.createElement("div");
-			metaEl.style.cssText =
-				"font-size: 10px; color: var(--text-secondary); margin-bottom: 6px";
-			metaEl.innerHTML = `<span>${statusEmoji} ${escapeHtml(readingStatus)}</span> • <span>${escapeHtml(novel.website || "Unknown")}</span>`;
+					const metaEl = document.createElement("div");
+					metaEl.style.cssText =
+						"font-size: 10px; color: var(--text-secondary); margin-bottom: 6px";
+					metaEl.innerHTML = `<span>${statusEmoji} ${escapeHtml(readingStatus)}</span> • <span>${escapeHtml(novel.website || "Unknown")}</span>`;
 
-			const progressContainer = document.createElement("div");
-			progressContainer.style.cssText =
-				"background: var(--bg-secondary); border-radius: 3px; height: 4px; overflow: hidden; margin-bottom: 2px";
-			const progressBar = document.createElement("div");
-			progressBar.style.cssText = `
+					const progressContainer = document.createElement("div");
+					progressContainer.style.cssText =
+						"background: var(--bg-secondary); border-radius: 3px; height: 4px; overflow: hidden; margin-bottom: 2px";
+					const progressBar = document.createElement("div");
+					progressBar.style.cssText = `
 				background: linear-gradient(90deg, #3b82f6, #8b5cf6);
 				height: 100%;
 				width: ${Math.min(progress * 100, 100)}%;
 				transition: width 0.3s ease;
 			`;
-			progressContainer.appendChild(progressBar);
+					progressContainer.appendChild(progressBar);
 
-			const progressText = document.createElement("div");
-			progressText.style.cssText =
-				"font-size: 9px; color: var(--text-secondary)";
-			progressText.textContent = `${lastReadChapter}/${totalChapters} chapters`;
+					const progressText = document.createElement("div");
+					progressText.style.cssText =
+						"font-size: 9px; color: var(--text-secondary)";
+					progressText.textContent = `${lastReadChapter}/${totalChapters} chapters`;
 
-			info.appendChild(titleEl);
-			info.appendChild(metaEl);
-			info.appendChild(progressContainer);
-			info.appendChild(progressText);
+					info.appendChild(titleEl);
+					info.appendChild(metaEl);
+					info.appendChild(progressContainer);
+					info.appendChild(progressText);
 
-			card.appendChild(cover);
-			card.appendChild(info);
+					card.appendChild(cover);
+					card.appendChild(info);
 
-			card.addEventListener("click", () => {
-				// Open library page with novel modal
-				const libraryUrl = browser.runtime.getURL(
-					`library/library.html?novel=${encodeURIComponent(novel.id)}`,
-				);
-				browser.tabs.create({ url: libraryUrl });
-			});
+					card.addEventListener("click", () => {
+						// Open library page with novel modal
+						const libraryUrl = browser.runtime.getURL(
+							`library/library.html?novel=${encodeURIComponent(novel.id)}`,
+						);
+						browser.tabs.create({ url: libraryUrl });
+					});
 
-			card.addEventListener("mouseenter", () => {
-				card.style.borderColor = "var(--accent-primary)";
-				card.style.background = "var(--hover-bg)";
-			});
+					card.addEventListener("mouseenter", () => {
+						card.style.borderColor = "var(--accent-primary)";
+						card.style.background = "var(--hover-bg)";
+					});
 
-			card.addEventListener("mouseleave", () => {
-				card.style.borderColor = "var(--border-color)";
-				card.style.background = "var(--setting-bg)";
-			});
+					card.addEventListener("mouseleave", () => {
+						card.style.borderColor = "var(--border-color)";
+						card.style.background = "var(--setting-bg)";
+					});
 
-			novelsList.appendChild(card);
-		});
-	}
-
-	/**
-	 * Update current novel info section
-	 */
-	async function updateCurrentNovelInfo(_allNovels = []) {
-		try {
-			if (!currentNovelInfo) {
-				return null;
+					novelsList.appendChild(card);
+				});
 			}
-			const tabs = await browser.tabs.query({
-				active: true,
-				currentWindow: true,
-			});
-			if (!tabs[0]) {
-				currentNovelInfo.innerHTML = `
+
+			/**
+			 * Update current novel info section
+			 */
+			async function updateCurrentNovelInfo(_allNovels = []) {
+				try {
+					if (!currentNovelInfo) {
+						return null;
+					}
+					const tabs = await browser.tabs.query({
+						active: true,
+						currentWindow: true,
+					});
+					if (!tabs[0]) {
+						currentNovelInfo.innerHTML = `
 					<div class="no-current-novel">
 						<p>No current novel detected.</p>
 						<p class="description">Visit a novel page and the extension will track your reading.</p>
 					</div>
 				`;
-				return null;
-			}
-
-			const currentUrl = tabs[0].url || "";
-			const currentShelf = getShelfFromUrl(currentUrl);
-			const currentNovel = await novelLibrary.getNovelByUrl(currentUrl);
-
-			if (currentNovel) {
-				renderCurrentNovelDetails(currentNovel);
-				return currentNovel;
-			}
-
-			const knownPageInfo = (() => {
-				try {
-					const libraryUrl = browser.runtime.getURL(
-						"library/library.html",
-					);
-					const popupUrl = browser.runtime.getURL("popup/popup.html");
-
-					if (currentUrl.startsWith(libraryUrl)) {
-						return {
-							title: "Library Page",
-							detail: "You're viewing your Ranobe Gemini Library.",
-						};
+						return null;
 					}
 
-					if (currentUrl.startsWith(popupUrl)) {
-						return {
-							title: "Extension Settings",
-							detail: "You're in Ranobe Gemini popup settings.",
-						};
+					const currentUrl = tabs[0].url || "";
+					const currentShelf = getShelfFromUrl(currentUrl);
+					const currentNovel =
+						await novelLibrary.getNovelByUrl(currentUrl);
+
+					if (currentNovel) {
+						renderCurrentNovelDetails(currentNovel);
+						return currentNovel;
 					}
 
-					if (currentUrl.includes("/library/websites/")) {
-						return {
-							title: "Website Library",
-							detail: "You're viewing a website-specific library page.",
-						};
-					}
+					const knownPageInfo = (() => {
+						try {
+							const libraryUrl = browser.runtime.getURL(
+								"library/library.html",
+							);
+							const popupUrl =
+								browser.runtime.getURL("popup/popup.html");
 
-					if (
-						currentUrl.startsWith("chrome://newtab") ||
-						currentUrl.startsWith("edge://newtab") ||
-						currentUrl.startsWith("about:newtab") ||
-						currentUrl.startsWith("about:home")
-					) {
-						return {
-							title: "New Tab",
-							detail: "You're on a new tab page.",
-						};
-					}
+							if (currentUrl.startsWith(libraryUrl)) {
+								return {
+									title: "Library Page",
+									detail: "You're viewing your Ranobe Gemini Library.",
+								};
+							}
 
-					if (
-						currentUrl.startsWith("chrome://extensions") ||
-						currentUrl.startsWith("edge://extensions") ||
-						currentUrl.startsWith("about:addons")
-					) {
-						return {
-							title: "Extensions Manager",
-							detail: "You're managing your browser extensions.",
-						};
-					}
+							if (currentUrl.startsWith(popupUrl)) {
+								return {
+									title: "Extension Settings",
+									detail: "You're in Ranobe Gemini popup settings.",
+								};
+							}
 
-					if (
-						currentUrl.includes("addons.mozilla.org") ||
-						currentUrl.includes(
-							"microsoftedge.microsoft.com/addons",
-						)
-					) {
-						return {
-							title: "Add-on Store",
-							detail: "You're viewing an add-on store page.",
-						};
-					}
+							if (currentUrl.includes("/library/websites/")) {
+								return {
+									title: "Website Library",
+									detail: "You're viewing a website-specific library page.",
+								};
+							}
 
-					const url = new URL(currentUrl);
-					if (
-						url.hostname === "vkrishna04.me" ||
-						url.hostname === "ranobe.vkrishna04.me"
-					) {
-						return {
-							title: "VKrishna04 Site",
-							detail: "You're on VKrishna04's website. Enjoy exploring!",
-						};
-					}
-				} catch (_err) {
-					return null;
-				}
-				return null;
-			})();
+							if (
+								currentUrl.startsWith("chrome://newtab") ||
+								currentUrl.startsWith("edge://newtab") ||
+								currentUrl.startsWith("about:newtab") ||
+								currentUrl.startsWith("about:home")
+							) {
+								return {
+									title: "New Tab",
+									detail: "You're on a new tab page.",
+								};
+							}
 
-			if (knownPageInfo) {
-				currentNovelInfo.innerHTML = `
+							if (
+								currentUrl.startsWith("chrome://extensions") ||
+								currentUrl.startsWith("edge://extensions") ||
+								currentUrl.startsWith("about:addons")
+							) {
+								return {
+									title: "Extensions Manager",
+									detail: "You're managing your browser extensions.",
+								};
+							}
+
+							if (
+								currentUrl.includes("addons.mozilla.org") ||
+								currentUrl.includes(
+									"microsoftedge.microsoft.com/addons",
+								)
+							) {
+								return {
+									title: "Add-on Store",
+									detail: "You're viewing an add-on store page.",
+								};
+							}
+
+							const url = new URL(currentUrl);
+							if (
+								url.hostname === "vkrishna04.me" ||
+								url.hostname === "ranobe.vkrishna04.me"
+							) {
+								return {
+									title: "VKrishna04 Site",
+									detail: "You're on VKrishna04's website. Enjoy exploring!",
+								};
+							}
+						} catch (_err) {
+							return null;
+						}
+						return null;
+					})();
+
+					if (knownPageInfo) {
+						currentNovelInfo.innerHTML = `
 					<div class="no-current-novel">
 						<p>${escapeHtml(knownPageInfo.title)}</p>
 						<p class="description">${escapeHtml(knownPageInfo.detail)}</p>
 					</div>
 				`;
-				return null;
-			}
+						return null;
+					}
 
-			if (!currentShelf) {
-				currentNovelInfo.innerHTML = `
+					if (!currentShelf) {
+						currentNovelInfo.innerHTML = `
 					<div class="no-current-novel">
 						<p>Unsupported website.</p>
 						<p class="description">Showing your full library below.</p>
 					</div>
 				`;
-				return null;
-			}
+						return null;
+					}
 
-			currentNovelInfo.innerHTML = `
+					currentNovelInfo.innerHTML = `
 				<div class="no-current-novel">
 					<p>No current novel detected.</p>
 					<p class="description">Visit a novel page to see details here.</p>
 				</div>
 			`;
-			return null;
-		} catch (error) {
-			debugError("Error updating current novel info:", error);
-			return null;
-		}
-	}
+					return null;
+				} catch (error) {
+					debugError("Error updating current novel info:", error);
+					return null;
+				}
+			}
 
-	function renderCurrentNovelDetails(novel) {
-		const title = novel.title || novel.bookTitle || "Unknown";
-		const site = novel.website || "Unknown Site";
-		const readingStatus = novel.readingStatus || "reading";
-		const totalChapters = novel.totalChapters || novel.chapterCount || 0;
-		const lastReadChapter =
-			novel.lastReadChapter || novel.currentChapter || 0;
-		const progress =
-			totalChapters > 0 ? lastReadChapter / totalChapters : 0;
+			function renderCurrentNovelDetails(novel) {
+				const title = novel.title || novel.bookTitle || "Unknown";
+				const site = novel.website || "Unknown Site";
+				const readingStatus = novel.readingStatus || "reading";
+				const totalChapters =
+					novel.totalChapters || novel.chapterCount || 0;
+				const lastReadChapter =
+					novel.lastReadChapter || novel.currentChapter || 0;
+				const progress =
+					totalChapters > 0 ? lastReadChapter / totalChapters : 0;
 
-		// Map status to emoji and label
-		const statusMap = {
-			reading: "📖 Reading",
-			completed: "✅ Completed",
-			"on-hold": "⏸️ On Hold",
-			"plan-to-read": "📋 Plan to Read",
-			dropped: "❌ Dropped",
-			"up-to-date": "✨ Up-to-Date",
-			"re-reading": "🔁 Re-reading",
-		};
+				// Map status to emoji and label
+				const statusMap = {
+					reading: "📖 Reading",
+					completed: "✅ Completed",
+					"on-hold": "⏸️ On Hold",
+					"plan-to-read": "📋 Plan to Read",
+					dropped: "❌ Dropped",
+					"up-to-date": "✨ Up-to-Date",
+					"re-reading": "🔁 Re-reading",
+				};
 
-		const statusLabel = statusMap[readingStatus] || statusMap.reading;
+				const statusLabel =
+					statusMap[readingStatus] || statusMap.reading;
 
-		// Display card
-		currentNovelInfo.innerHTML = `
-		<div class="current-novel-card">
+				// Display card
+				currentNovelInfo.innerHTML = `
+		<div class="current-novel-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px">
 			<div style="display: flex; gap: 10px">
 				<div style="font-size: 28px; flex-shrink: 0">📕</div>
 				<div style="flex: 1; min-width: 0">
@@ -4135,25 +4412,73 @@ async function initializePopup() {
 						<div style="background: var(--bg-secondary); border-radius: 3px; height: 5px; overflow: hidden">
 							<div id="current-novel-progress" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: ${Math.min(progress * 100, 100)}%; transition: width 0.3s ease"></div>
 						</div>
-						<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px" id="current-novel-progress-text">
-							${lastReadChapter}/${totalChapters} chapters
+						<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px; display: flex; justify-content: space-between;">
+							<span id="current-novel-progress-text">${Math.round(progress * 100)}%</span>
+							<span style="opacity: 0.8">${lastReadChapter}/${totalChapters}</span>
 						</div>
+					</div>
+					<div class="current-novel-actions" style="display: flex; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px">
+						<button id="quickEnhanceBtn" class="quick-action-btn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
+							✨ Enhance
+						</button>
+						<button id="quickSummarizeBtn" class="quick-action-btn" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
+							📝 Summarize
+						</button>
 					</div>
 				</div>
 			</div>
 		</div>
 	`;
-	}
 
-	function renderSuggestedNovelCard(novel) {
-		const status = novel.readingStatus || novel.status || "Reading";
-		const chapters = novel.totalChapters || novel.chapterCount || null;
-		const lastReadRaw = novel.lastRead || novel.lastAccessedAt || null;
-		const lastRead = lastReadRaw
-			? new Date(lastReadRaw).toLocaleDateString()
-			: "—";
+				// Add event listeners for quick actions
+				const enhanceBtn = document.getElementById("quickEnhanceBtn");
+				const summarizeBtn =
+					document.getElementById("quickSummarizeBtn");
 
-		return `
+				if (enhanceBtn) {
+					enhanceBtn.addEventListener("click", async () => {
+						const tabs = await browser.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
+						if (tabs[0]) {
+							showStatus("Sending Enhance command...", "info");
+							browser.tabs.sendMessage(tabs[0].id, {
+								action: "enhanceChapter",
+							});
+							window.close(); // Close popup to show progress on page
+						}
+					});
+				}
+
+				if (summarizeBtn) {
+					summarizeBtn.addEventListener("click", async () => {
+						const tabs = await browser.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
+						if (tabs[0]) {
+							showStatus("Sending Summarize command...", "info");
+							browser.tabs.sendMessage(tabs[0].id, {
+								action: "summarizeChapter",
+							});
+							window.close();
+						}
+					});
+				}
+			}
+
+			function renderSuggestedNovelCard(novel) {
+				const status = novel.readingStatus || novel.status || "Reading";
+				const chapters =
+					novel.totalChapters || novel.chapterCount || null;
+				const lastReadRaw =
+					novel.lastRead || novel.lastAccessedAt || null;
+				const lastRead = lastReadRaw
+					? new Date(lastReadRaw).toLocaleDateString()
+					: "—";
+
+				return `
 			<div class="suggested-novel-card" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
 				<div class="suggested-novel-cover">
 					${
@@ -4177,28 +4502,28 @@ async function initializePopup() {
 				</div>
 			</div>
 		`;
-	}
-
-	// ========== LIBRARY BACKUP HANDLERS ==========
-	/**
-	 * Load and display backup history
-	 */
-	async function loadBackupHistory() {
-		try {
-			if (!backupList) {
-				return;
-			}
-			const backups = await libraryBackupManager.listBackups();
-
-			if (backups.length === 0) {
-				backupList.innerHTML =
-					'<div class="no-backups" style="text-align: center; padding: 20px; color: #888;">No backups yet. Create your first backup!</div>';
-				return;
 			}
 
-			backupList.innerHTML = backups
-				.map(
-					(backup) => `
+			// ========== LIBRARY BACKUP HANDLERS ==========
+			/**
+			 * Load and display backup history
+			 */
+			async function loadBackupHistory() {
+				try {
+					if (!backupList) {
+						return;
+					}
+					const backups = await libraryBackupManager.listBackups();
+
+					if (backups.length === 0) {
+						backupList.innerHTML =
+							'<div class="no-backups" style="text-align: center; padding: 20px; color: #888;">No backups yet. Create your first backup!</div>';
+						return;
+					}
+
+					backupList.innerHTML = backups
+						.map(
+							(backup) => `
 				<div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
 					<div style="flex: 1;">
 						<div style="font-weight: 500; color: #e0e0e0; margin-bottom: 3px;">${
@@ -4226,652 +4551,697 @@ async function initializePopup() {
 					</div>
 				</div>
 			`,
-				)
-				.join("");
+						)
+						.join("");
 
-			// Add event listeners for restore and delete
-			document.querySelectorAll(".backup-restore-btn").forEach((btn) => {
-				btn.addEventListener("click", async function () {
-					const backupId = this.dataset.backupId;
-					const mergeMode =
-						document.querySelector(
-							'input[name="mergeMode"]:checked',
-						)?.value || "merge";
-					await handleRestoreBackup(backupId, mergeMode);
-				});
-			});
+					// Add event listeners for restore and delete
+					document
+						.querySelectorAll(".backup-restore-btn")
+						.forEach((btn) => {
+							btn.addEventListener("click", async function () {
+								const backupId = this.dataset.backupId;
+								const mergeMode =
+									document.querySelector(
+										'input[name="mergeMode"]:checked',
+									)?.value || "merge";
+								await handleRestoreBackup(backupId, mergeMode);
+							});
+						});
 
-			document.querySelectorAll(".backup-delete-btn").forEach((btn) => {
-				btn.addEventListener("click", async function () {
-					const backupId = this.dataset.backupId;
-					if (
-						confirm("Are you sure you want to delete this backup?")
-					) {
-						await libraryBackupManager.deleteBackup(backupId);
-						await loadBackupHistory();
-						showStatus("Backup deleted successfully!", "success");
-					}
-				});
-			});
-		} catch (error) {
-			debugError("Error loading backup history:", error);
-		}
-	}
-
-	/**
-	 * Handle restore backup
-	 */
-	async function handleRestoreBackup(backupId, mergeMode) {
-		try {
-			const restored = await libraryBackupManager.restoreBackup(
-				backupId,
-				mergeMode,
-			);
-
-			if (restored) {
-				await browser.storage.local.set({
-					novelHistory: restored,
-				});
-
-				showStatus(
-					`Backup restored successfully (${mergeMode} mode)!`,
-					"success",
-				);
-				await loadBackupHistory();
-				await loadNovelsTab();
-			}
-		} catch (error) {
-			debugError("Error restoring backup:", error);
-			showStatus("Failed to restore backup", "error");
-		}
-	}
-
-	/**
-	 * Update Google Drive backup UI based on connection status
-	 */
-	async function updateDriveUI() {
-		try {
-			if (!driveNotConnected || !driveConnected || !driveStatusSpan) {
-				debugError("Drive UI elements missing in popup");
-				return;
-			}
-
-			// Initially hide both sections to prevent flicker
-			driveNotConnected.style.display = "none";
-			driveConnected.style.display = "none";
-
-			const tokens = await browser.storage.local.get([
-				"driveAuthTokens",
-				"driveAuthError",
-			]);
-			const isConnected = !!tokens.driveAuthTokens?.access_token;
-
-			if (driveOAuthDetails) {
-				driveOAuthDetails.open = !isConnected;
-			}
-
-			if (isConnected) {
-				driveNotConnected.style.display = "none";
-				driveConnected.style.display = "block";
-				driveStatusSpan.textContent = "🟢 Connected";
-				driveStatusSpan.style.color = "#4CAF50";
-				if (connectDriveBtn) {
-					connectDriveBtn.textContent = "🔄 Reconnect Drive";
-					connectDriveBtn.disabled = false;
-				}
-				if (disconnectDriveBtn) {
-					disconnectDriveBtn.disabled = false;
-				}
-				if (driveAuthError) {
-					driveAuthError.style.display = "none";
-					driveAuthError.textContent = "";
-				}
-
-				// Load backup mode
-				const prefs = await browser.storage.local.get([
-					"backupMode",
-					"continuousBackupCheckIntervalMinutes",
-					"activeSync",
-				]);
-				const mode = prefs.backupMode || "both";
-				if (syncProviderSelect) {
-					syncProviderSelect.value =
-						prefs.activeSync || "google-drive";
-				}
-				const modeRadio = document.querySelector(
-					`input[name="driveBackupMode"][value="${mode}"]`,
-				);
-				if (modeRadio) modeRadio.checked = true;
-
-				// Load continuous backup check interval
-				const continuousCheckInterval =
-					prefs.continuousBackupCheckIntervalMinutes || 2;
-				const continuousCheckSlider = document.getElementById(
-					"continuousBackupCheckInterval",
-				);
-				const continuousCheckDisplay = document.getElementById(
-					"continuousCheckIntervalDisplay",
-				);
-				if (continuousCheckSlider) {
-					continuousCheckSlider.value = continuousCheckInterval;
-				}
-				if (continuousCheckDisplay) {
-					continuousCheckDisplay.textContent =
-						continuousCheckInterval;
-				}
-
-				// Show/hide continuous backup interval control
-				const continuousContainer = document.getElementById(
-					"continuousBackupCheckContainer",
-				);
-				if (continuousContainer) {
-					continuousContainer.style.display =
-						mode === "continuous" || mode === "both"
-							? "block"
-							: "none";
-				}
-
-				const restorePrefs = await browser.storage.local.get(
-					"driveAutoRestoreEnabled",
-				);
-				if (driveAutoRestoreEnabled) {
-					driveAutoRestoreEnabled.checked =
-						restorePrefs.driveAutoRestoreEnabled === true;
-				}
-			} else {
-				driveNotConnected.style.display = "block";
-				driveConnected.style.display = "none";
-				if (connectDriveBtn) {
-					connectDriveBtn.textContent = "🔗 Connect Drive";
-					connectDriveBtn.disabled = false;
-				}
-				if (disconnectDriveBtn) {
-					disconnectDriveBtn.disabled = true;
-				}
-				const authError = tokens.driveAuthError?.message;
-				if (authError) {
-					driveStatusSpan.textContent = "🔴 Auth failed";
-					driveStatusSpan.style.color = "#f59e0b";
-					if (driveAuthError) {
-						driveAuthError.textContent = authError;
-						driveAuthError.style.display = "block";
-					}
-				} else {
-					driveStatusSpan.textContent = "⚫ Disconnected";
-					driveStatusSpan.style.color = "#999";
-					if (driveAuthError) {
-						driveAuthError.style.display = "none";
-						driveAuthError.textContent = "";
-					}
-				}
-				if (driveAutoRestoreEnabled) {
-					driveAutoRestoreEnabled.checked = false;
+					document
+						.querySelectorAll(".backup-delete-btn")
+						.forEach((btn) => {
+							btn.addEventListener("click", async function () {
+								const backupId = this.dataset.backupId;
+								if (
+									confirm(
+										"Are you sure you want to delete this backup?",
+									)
+								) {
+									await libraryBackupManager.deleteBackup(
+										backupId,
+									);
+									await loadBackupHistory();
+									showStatus(
+										"Backup deleted successfully!",
+										"success",
+									);
+								}
+							});
+						});
+				} catch (error) {
+					debugError("Error loading backup history:", error);
 				}
 			}
-		} catch (err) {
-			debugError("Failed to update Drive UI", err);
-		}
-	}
 
-	/**
-	 * Connect to Google Drive via OAuth
-	 */
-	async function handleConnectDrive() {
-		try {
-			debugLog("handleConnectDrive called");
-			debugLog("connectDriveBtn element:", connectDriveBtn);
-
-			if (!connectDriveBtn) {
-				debugError("connectDriveBtn element not found!");
-				showStatus("Button element not found", "error");
-				return;
-			}
-
-			connectDriveBtn.disabled = true;
-			connectDriveBtn.textContent = "🔗 Connecting...";
-
-			const saved = await browser.storage.local.get([
-				"driveClientId",
-				"driveClientSecret",
-			]);
-			const clientIdInput = driveClientIdInput?.value.trim();
-			const clientSecretInput = driveClientSecretInput?.value.trim();
-			const clientId =
-				clientIdInput || saved.driveClientId || DEFAULT_DRIVE_CLIENT_ID;
-			const clientSecret =
-				clientSecretInput || saved.driveClientSecret || "";
-
-			await browser.storage.local.set({
-				driveClientId: clientId,
-				driveClientSecret: clientSecret,
-			});
-
-			debugLog("Sending ensureDriveAuth message...");
-			const response = await browser.runtime.sendMessage({
-				action: "ensureDriveAuth",
-			});
-
-			debugLog("ensureDriveAuth response:", response);
-
-			if (response?.success) {
-				const tokens =
-					await browser.storage.local.get("driveAuthTokens");
-				if (!tokens.driveAuthTokens?.access_token) {
-					throw new Error(
-						"OAuth completed but no tokens were saved. Check your OAuth client type and redirect URI.",
-					);
-				}
-				showStatus(
-					"✅ Google Drive connected successfully!",
-					"success",
-				);
-
-				// Enable auto-restore by default after successful OAuth
-				debugLog("Enabling auto-restore from Drive...");
-				await browser.storage.local.set({
-					driveAutoRestoreEnabled: true,
-					driveAutoRestoreMergeMode: "merge",
-				});
-
-				await updateDriveUI();
-
-				// Auto-backup after successful OAuth connection
-				debugLog("Creating initial backup after OAuth connection...");
+			/**
+			 * Handle restore backup
+			 */
+			async function handleRestoreBackup(backupId, mergeMode) {
 				try {
-					const backupResponse = await browser.runtime.sendMessage({
-						action: "uploadLibraryBackupToDrive",
-						folderId: null,
-						reason: "oauth-initial",
+					const restored = await libraryBackupManager.restoreBackup(
+						backupId,
+						mergeMode,
+					);
+
+					if (restored) {
+						await browser.storage.local.set({
+							novelHistory: restored,
+						});
+
+						showStatus(
+							`Backup restored successfully (${mergeMode} mode)!`,
+							"success",
+						);
+						await loadBackupHistory();
+						await loadNovelsTab();
+					}
+				} catch (error) {
+					debugError("Error restoring backup:", error);
+					showStatus("Failed to restore backup", "error");
+				}
+			}
+
+			/**
+			 * Update Google Drive backup UI based on connection status
+			 */
+			async function updateDriveUI() {
+				try {
+					if (
+						!driveNotConnected ||
+						!driveConnected ||
+						!driveStatusSpan
+					) {
+						debugError("Drive UI elements missing in popup");
+						return;
+					}
+
+					// Initially hide both sections to prevent flicker
+					driveNotConnected.style.display = "none";
+					driveConnected.style.display = "none";
+
+					const tokens = await browser.storage.local.get([
+						"driveAuthTokens",
+						"driveAuthError",
+					]);
+					const isConnected = !!tokens.driveAuthTokens?.access_token;
+
+					if (driveOAuthDetails) {
+						driveOAuthDetails.open = !isConnected;
+					}
+
+					if (isConnected) {
+						driveNotConnected.style.display = "none";
+						driveConnected.style.display = "block";
+						driveStatusSpan.textContent = "🟢 Connected";
+						driveStatusSpan.style.color = "#4CAF50";
+						if (connectDriveBtn) {
+							connectDriveBtn.textContent = "🔄 Reconnect Drive";
+							connectDriveBtn.disabled = false;
+						}
+						if (disconnectDriveBtn) {
+							disconnectDriveBtn.disabled = false;
+						}
+						if (driveAuthError) {
+							driveAuthError.style.display = "none";
+							driveAuthError.textContent = "";
+						}
+
+						// Load backup mode
+						const prefs = await browser.storage.local.get([
+							"backupMode",
+							"continuousBackupCheckIntervalMinutes",
+							"activeSync",
+						]);
+						const mode = prefs.backupMode || "both";
+						if (syncProviderSelect) {
+							syncProviderSelect.value =
+								prefs.activeSync || "google-drive";
+						}
+						const modeRadio = document.querySelector(
+							`input[name="driveBackupMode"][value="${mode}"]`,
+						);
+						if (modeRadio) modeRadio.checked = true;
+
+						// Load continuous backup check interval
+						const continuousCheckInterval =
+							prefs.continuousBackupCheckIntervalMinutes || 2;
+						const continuousCheckSlider = document.getElementById(
+							"continuousBackupCheckInterval",
+						);
+						const continuousCheckDisplay = document.getElementById(
+							"continuousCheckIntervalDisplay",
+						);
+						if (continuousCheckSlider) {
+							continuousCheckSlider.value =
+								continuousCheckInterval;
+						}
+						if (continuousCheckDisplay) {
+							continuousCheckDisplay.textContent =
+								continuousCheckInterval;
+						}
+
+						// Show/hide continuous backup interval control
+						const continuousContainer = document.getElementById(
+							"continuousBackupCheckContainer",
+						);
+						if (continuousContainer) {
+							continuousContainer.style.display =
+								mode === "continuous" || mode === "both"
+									? "block"
+									: "none";
+						}
+
+						const restorePrefs = await browser.storage.local.get(
+							"driveAutoRestoreEnabled",
+						);
+						if (driveAutoRestoreEnabled) {
+							driveAutoRestoreEnabled.checked =
+								restorePrefs.driveAutoRestoreEnabled === true;
+						}
+					} else {
+						driveNotConnected.style.display = "block";
+						driveConnected.style.display = "none";
+						if (connectDriveBtn) {
+							connectDriveBtn.textContent = "🔗 Connect Drive";
+							connectDriveBtn.disabled = false;
+						}
+						if (disconnectDriveBtn) {
+							disconnectDriveBtn.disabled = true;
+						}
+						const authError = tokens.driveAuthError?.message;
+						if (authError) {
+							driveStatusSpan.textContent = "🔴 Auth failed";
+							driveStatusSpan.style.color = "#f59e0b";
+							if (driveAuthError) {
+								driveAuthError.textContent = authError;
+								driveAuthError.style.display = "block";
+							}
+						} else {
+							driveStatusSpan.textContent = "⚫ Disconnected";
+							driveStatusSpan.style.color = "#999";
+							if (driveAuthError) {
+								driveAuthError.style.display = "none";
+								driveAuthError.textContent = "";
+							}
+						}
+						if (driveAutoRestoreEnabled) {
+							driveAutoRestoreEnabled.checked = false;
+						}
+					}
+				} catch (err) {
+					debugError("Failed to update Drive UI", err);
+				}
+			}
+
+			/**
+			 * Connect to Google Drive via OAuth
+			 */
+			async function handleConnectDrive() {
+				try {
+					debugLog("handleConnectDrive called");
+					debugLog("connectDriveBtn element:", connectDriveBtn);
+
+					if (!connectDriveBtn) {
+						debugError("connectDriveBtn element not found!");
+						showStatus("Button element not found", "error");
+						return;
+					}
+
+					connectDriveBtn.disabled = true;
+					connectDriveBtn.textContent = "🔗 Connecting...";
+
+					const saved = await browser.storage.local.get([
+						"driveClientId",
+						"driveClientSecret",
+					]);
+					const clientIdInput = driveClientIdInput?.value.trim();
+					const clientSecretInput =
+						driveClientSecretInput?.value.trim();
+					const clientId =
+						clientIdInput ||
+						saved.driveClientId ||
+						DEFAULT_DRIVE_CLIENT_ID;
+					const clientSecret =
+						clientSecretInput || saved.driveClientSecret || "";
+
+					await browser.storage.local.set({
+						driveClientId: clientId,
+						driveClientSecret: clientSecret,
 					});
 
-					if (backupResponse?.success) {
-						const fileName =
-							backupResponse.primary?.filename || "backup";
-						debugLog("Initial backup created:", fileName);
+					debugLog("Sending ensureDriveAuth message...");
+					const response = await browser.runtime.sendMessage({
+						action: "ensureDriveAuth",
+					});
+
+					debugLog("ensureDriveAuth response:", response);
+
+					if (response?.success) {
+						const tokens =
+							await browser.storage.local.get("driveAuthTokens");
+						if (!tokens.driveAuthTokens?.access_token) {
+							throw new Error(
+								"OAuth completed but no tokens were saved. Check your OAuth client type and redirect URI.",
+							);
+						}
 						showStatus(
-							`✅ Initial backup created: ${fileName}`,
+							"✅ Google Drive connected successfully!",
+							"success",
+						);
+
+						// Enable auto-restore by default after successful OAuth
+						debugLog("Enabling auto-restore from Drive...");
+						await browser.storage.local.set({
+							driveAutoRestoreEnabled: true,
+							driveAutoRestoreMergeMode: "merge",
+						});
+
+						await updateDriveUI();
+
+						// Auto-backup after successful OAuth connection
+						debugLog(
+							"Creating initial backup after OAuth connection...",
+						);
+						try {
+							const backupResponse =
+								await browser.runtime.sendMessage({
+									action: "uploadLibraryBackupToDrive",
+									folderId: null,
+									reason: "oauth-initial",
+								});
+
+							if (backupResponse?.success) {
+								const fileName =
+									backupResponse.primary?.filename ||
+									"backup";
+								debugLog("Initial backup created:", fileName);
+								showStatus(
+									`✅ Initial backup created: ${fileName}`,
+									"success",
+								);
+							} else {
+								debugError(
+									"Initial backup failed:",
+									backupResponse?.error,
+								);
+								showStatus(
+									`Note: Initial backup creation skipped (${backupResponse?.error || "unknown error"})`,
+									"warning",
+								);
+							}
+						} catch (backupErr) {
+							debugError("Auto-backup error:", backupErr);
+							showStatus(
+								`Note: Initial backup not created (${backupErr.message})`,
+								"warning",
+							);
+						}
+
+						// Trigger initial sync from Drive after OAuth
+						debugLog("Triggering initial sync from Drive...");
+						try {
+							const syncResponse =
+								await browser.runtime.sendMessage({
+									action: "syncDriveNow",
+									reason: "oauth-initial",
+								});
+
+							if (syncResponse?.success) {
+								debugLog(
+									"Initial Drive sync completed:",
+									syncResponse,
+								);
+								if (syncResponse.imported) {
+									showStatus(
+										`✅ Synced ${syncResponse.novelCount || 0} novels from Drive`,
+										"success",
+									);
+								} else {
+									showStatus(
+										"✅ Drive sync completed (no new data)",
+										"success",
+									);
+								}
+							} else if (syncResponse?.skipped) {
+								debugLog(
+									"Drive sync skipped:",
+									syncResponse.reason,
+								);
+								// Don't show skipped message to user - it's expected
+							} else {
+								debugError(
+									"Initial sync failed:",
+									syncResponse?.error,
+								);
+							}
+						} catch (syncErr) {
+							debugError("Auto-sync error:", syncErr);
+							// Don't show sync errors to user - backup succeeded which is most important
+						}
+					} else {
+						throw new Error(
+							response?.error || "Authentication failed",
+						);
+					}
+				} catch (err) {
+					debugError("Failed to connect Drive", err);
+					showStatus(
+						`Failed to connect Google Drive: ${err.message}`,
+						"error",
+					);
+					if (connectDriveBtn) {
+						connectDriveBtn.disabled = false;
+						connectDriveBtn.textContent = "🔗 Connect Google Drive";
+					}
+					return;
+				}
+
+				if (connectDriveBtn) {
+					connectDriveBtn.disabled = false;
+					connectDriveBtn.textContent = "🔗 Connect Google Drive";
+				}
+			}
+
+			/**
+			 * Disconnect from Google Drive
+			 */
+			async function handleDisconnectDrive() {
+				if (
+					!confirm(
+						"Disconnect Google Drive? Backups won't sync automatically.",
+					)
+				)
+					return;
+
+				try {
+					await browser.storage.local.set({ driveAuthTokens: null });
+					showStatus("Disconnected from Google Drive", "success");
+					await updateDriveUI();
+				} catch (err) {
+					debugError("Failed to disconnect Drive", err);
+					showStatus("Failed to disconnect Google Drive", "error");
+				}
+			}
+
+			/**
+			 * Backup library to Google Drive now
+			 */
+			async function handleBackupNow() {
+				if (!backupNowBtn) return;
+
+				try {
+					// Check if connected to Drive
+					const tokens =
+						await browser.storage.local.get("driveAuthTokens");
+					if (!tokens.driveAuthTokens?.access_token) {
+						showStatus(
+							"❌ Not connected to Google Drive. Connect first.",
+							"error",
+						);
+						return;
+					}
+
+					backupNowBtn.disabled = true;
+					backupNowBtn.textContent = "📤 Backing up...";
+
+					debugLog("Starting manual backup to Drive...");
+
+					const response = await browser.runtime.sendMessage({
+						action: "uploadLibraryBackupToDrive",
+						folderId: null,
+						reason: "manual",
+					});
+
+					debugLog("Backup response:", response);
+
+					if (response?.success) {
+						const fileName =
+							response.primary?.filename ||
+							response.name ||
+							"backup";
+						debugLog("Backup successful:", fileName);
+						showStatus(
+							`✅ Backup uploaded: ${fileName}`,
 							"success",
 						);
 					} else {
-						debugError(
-							"Initial backup failed:",
-							backupResponse?.error,
-						);
-						showStatus(
-							`Note: Initial backup creation skipped (${backupResponse?.error || "unknown error"})`,
-							"warning",
-						);
+						throw new Error(response?.error || "Upload failed");
 					}
-				} catch (backupErr) {
-					debugError("Auto-backup error:", backupErr);
-					showStatus(
-						`Note: Initial backup not created (${backupErr.message})`,
-						"warning",
-					);
+				} catch (err) {
+					debugError("Failed to backup to Drive", err);
+					showStatus(`Failed: ${err.message}`, "error");
+				} finally {
+					backupNowBtn.disabled = false;
+					backupNowBtn.textContent = "📤 Backup Now";
 				}
+			}
 
-				// Trigger initial sync from Drive after OAuth
-				debugLog("Triggering initial sync from Drive...");
+			function formatFileSize(bytes) {
+				if (!bytes && bytes !== 0) return "Unknown";
+				const kb = bytes / 1024;
+				if (kb < 1024) return `${kb.toFixed(1)} KB`;
+				return `${(kb / 1024).toFixed(2)} MB`;
+			}
+
+			function getRelativeTimeString(date) {
+				const now = new Date();
+				const diffMs = now - date;
+				const seconds = Math.floor(diffMs / 1000);
+				const minutes = Math.floor(seconds / 60);
+				const hours = Math.floor(minutes / 60);
+				const days = Math.floor(hours / 24);
+
+				if (seconds < 60) return `${seconds}s ago`;
+				if (minutes < 60) return `${minutes}m ago`;
+				if (hours < 24) return `${hours}h ago`;
+				return `${days}d ago`;
+			}
+
+			async function handleRestoreDriveBackup(fileId) {
 				try {
-					const syncResponse = await browser.runtime.sendMessage({
-						action: "syncDriveNow",
-						reason: "oauth-initial",
+					if (!fileId) return;
+					showStatus("⏳ Downloading backup...", "info");
+					const response = await browser.runtime.sendMessage({
+						action: "downloadDriveBackup",
+						fileId,
 					});
 
-					if (syncResponse?.success) {
-						debugLog("Initial Drive sync completed:", syncResponse);
-						if (syncResponse.imported) {
-							showStatus(
-								`✅ Synced ${syncResponse.novelCount || 0} novels from Drive`,
-								"success",
-							);
-						} else {
-							showStatus(
-								"✅ Drive sync completed (no new data)",
-								"success",
-							);
-						}
-					} else if (syncResponse?.skipped) {
-						debugLog("Drive sync skipped:", syncResponse.reason);
-						// Don't show skipped message to user - it's expected
-					} else {
-						debugError("Initial sync failed:", syncResponse?.error);
+					if (!response?.success || !response.data) {
+						throw new Error(response?.error || "Download failed");
 					}
-				} catch (syncErr) {
-					debugError("Auto-sync error:", syncErr);
-					// Don't show sync errors to user - backup succeeded which is most important
-				}
-			} else {
-				throw new Error(response?.error || "Authentication failed");
-			}
-		} catch (err) {
-			debugError("Failed to connect Drive", err);
-			showStatus(
-				`Failed to connect Google Drive: ${err.message}`,
-				"error",
-			);
-			if (connectDriveBtn) {
-				connectDriveBtn.disabled = false;
-				connectDriveBtn.textContent = "🔗 Connect Google Drive";
-			}
-			return;
-		}
 
-		if (connectDriveBtn) {
-			connectDriveBtn.disabled = false;
-			connectDriveBtn.textContent = "🔗 Connect Google Drive";
-		}
-	}
+					await restoreComprehensiveBackup(response.data, {
+						mode: "merge",
+						restoreCredentials: false,
+						restoreApiKeys: true,
+					});
 
-	/**
-	 * Disconnect from Google Drive
-	 */
-	async function handleDisconnectDrive() {
-		if (
-			!confirm(
-				"Disconnect Google Drive? Backups won't sync automatically.",
-			)
-		)
-			return;
-
-		try {
-			await browser.storage.local.set({ driveAuthTokens: null });
-			showStatus("Disconnected from Google Drive", "success");
-			await updateDriveUI();
-		} catch (err) {
-			debugError("Failed to disconnect Drive", err);
-			showStatus("Failed to disconnect Google Drive", "error");
-		}
-	}
-
-	/**
-	 * Backup library to Google Drive now
-	 */
-	async function handleBackupNow() {
-		if (!backupNowBtn) return;
-
-		try {
-			// Check if connected to Drive
-			const tokens = await browser.storage.local.get("driveAuthTokens");
-			if (!tokens.driveAuthTokens?.access_token) {
-				showStatus(
-					"❌ Not connected to Google Drive. Connect first.",
-					"error",
-				);
-				return;
-			}
-
-			backupNowBtn.disabled = true;
-			backupNowBtn.textContent = "📤 Backing up...";
-
-			debugLog("Starting manual backup to Drive...");
-
-			const response = await browser.runtime.sendMessage({
-				action: "uploadLibraryBackupToDrive",
-				folderId: null,
-				reason: "manual",
-			});
-
-			debugLog("Backup response:", response);
-
-			if (response?.success) {
-				const fileName =
-					response.primary?.filename || response.name || "backup";
-				debugLog("Backup successful:", fileName);
-				showStatus(`✅ Backup uploaded: ${fileName}`, "success");
-			} else {
-				throw new Error(response?.error || "Upload failed");
-			}
-		} catch (err) {
-			debugError("Failed to backup to Drive", err);
-			showStatus(`Failed: ${err.message}`, "error");
-		} finally {
-			backupNowBtn.disabled = false;
-			backupNowBtn.textContent = "📤 Backup Now";
-		}
-	}
-
-	function formatFileSize(bytes) {
-		if (!bytes && bytes !== 0) return "Unknown";
-		const kb = bytes / 1024;
-		if (kb < 1024) return `${kb.toFixed(1)} KB`;
-		return `${(kb / 1024).toFixed(2)} MB`;
-	}
-
-	function getRelativeTimeString(date) {
-		const now = new Date();
-		const diffMs = now - date;
-		const seconds = Math.floor(diffMs / 1000);
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
-
-		if (seconds < 60) return `${seconds}s ago`;
-		if (minutes < 60) return `${minutes}m ago`;
-		if (hours < 24) return `${hours}h ago`;
-		return `${days}d ago`;
-	}
-
-	async function handleRestoreDriveBackup(fileId) {
-		try {
-			if (!fileId) return;
-			showStatus("⏳ Downloading backup...", "info");
-			const response = await browser.runtime.sendMessage({
-				action: "downloadDriveBackup",
-				fileId,
-			});
-
-			if (!response?.success || !response.data) {
-				throw new Error(response?.error || "Download failed");
-			}
-
-			await restoreComprehensiveBackup(response.data, {
-				mode: "merge",
-				restoreCredentials: false,
-				restoreApiKeys: true,
-			});
-
-			showStatus("✅ Backup restored successfully", "success");
-			await loadNovelsTab();
-		} catch (err) {
-			debugError("Drive backup restore failed", err);
-			showStatus(`Restore failed: ${err.message}`, "error");
-		}
-	}
-
-	function renderDriveBackups(backups) {
-		if (!driveBackupsList) return;
-		driveBackupsList.innerHTML = "";
-
-		const list = document.createElement("div");
-		list.style.maxHeight = "260px";
-		list.style.overflowY = "auto";
-		list.style.display = "grid";
-		list.style.gap = "12px";
-
-		backups.slice(0, 20).forEach((backup) => {
-			const created = new Date(
-				backup.modifiedTime || backup.createdTime || Date.now(),
-			);
-			const sizeLabel = formatFileSize(Number(backup.size));
-
-			// Determine backup type from filename
-			const isContinuous =
-				backup.name === "ranobe-library-continuous.json";
-			const backupType = isContinuous ? "Continuous" : "Manual";
-			const backupTypeColor = isContinuous ? "#4CAF50" : "#2196F3";
-
-			// Parse timestamp from filename for manual backups
-			let backupDate = created;
-			if (!isContinuous && backup.name.includes("ranobe-library-")) {
-				const timestampStr = backup.name
-					.replace("ranobe-library-", "")
-					.replace(".json", "");
-				// Try to parse ISO timestamp from filename
-				const parsed = new Date(
-					timestampStr.replace(/-/g, ":").replace("T", " "),
-				);
-				if (!isNaN(parsed.getTime())) {
-					backupDate = parsed;
+					showStatus("✅ Backup restored successfully", "success");
+					await loadNovelsTab();
+				} catch (err) {
+					debugError("Drive backup restore failed", err);
+					showStatus(`Restore failed: ${err.message}`, "error");
 				}
 			}
 
-			const card = document.createElement("div");
-			card.className = "drive-backup-card";
-			card.style.padding = "12px";
-			card.style.background = "rgba(0, 0, 0, 0.1)";
-			card.style.borderRadius = "6px";
-			card.style.borderLeft = `4px solid ${backupTypeColor}`;
+			function renderDriveBackups(backups) {
+				if (!driveBackupsList) return;
+				driveBackupsList.innerHTML = "";
 
-			// Title row with type badge
-			const titleRow = document.createElement("div");
-			titleRow.style.display = "flex";
-			titleRow.style.justifyContent = "space-between";
-			titleRow.style.alignItems = "center";
-			titleRow.style.marginBottom = "8px";
+				const list = document.createElement("div");
+				list.style.maxHeight = "260px";
+				list.style.overflowY = "auto";
+				list.style.display = "grid";
+				list.style.gap = "12px";
 
-			const titleLeft = document.createElement("div");
-			titleLeft.style.display = "flex";
-			titleLeft.style.alignItems = "center";
-			titleLeft.style.gap = "8px";
+				backups.slice(0, 20).forEach((backup) => {
+					const created = new Date(
+						backup.modifiedTime || backup.createdTime || Date.now(),
+					);
+					const sizeLabel = formatFileSize(Number(backup.size));
 
-			const typeBadge = document.createElement("span");
-			typeBadge.style.padding = "2px 8px";
-			typeBadge.style.borderRadius = "12px";
-			typeBadge.style.fontSize = "11px";
-			typeBadge.style.fontWeight = "600";
-			typeBadge.style.background = backupTypeColor;
-			typeBadge.style.color = "white";
-			typeBadge.textContent = backupType;
+					// Determine backup type from filename
+					const isContinuous =
+						backup.name === "ranobe-library-continuous.json";
+					const backupType = isContinuous ? "Continuous" : "Manual";
+					const backupTypeColor = isContinuous
+						? "#4CAF50"
+						: "#2196F3";
 
-			const fileName = document.createElement("span");
-			fileName.style.fontSize = "13px";
-			fileName.style.fontWeight = "500";
-			fileName.style.color = "#ddd";
-			fileName.textContent = isContinuous
-				? "Rolling Backup"
-				: backupDate.toLocaleString();
+					// Parse timestamp from filename for manual backups
+					let backupDate = created;
+					if (
+						!isContinuous &&
+						backup.name.includes("ranobe-library-")
+					) {
+						const timestampStr = backup.name
+							.replace("ranobe-library-", "")
+							.replace(".json", "");
+						// Try to parse ISO timestamp from filename
+						const parsed = new Date(
+							timestampStr.replace(/-/g, ":").replace("T", " "),
+						);
+						if (!isNaN(parsed.getTime())) {
+							backupDate = parsed;
+						}
+					}
 
-			titleLeft.appendChild(typeBadge);
-			titleLeft.appendChild(fileName);
+					const card = document.createElement("div");
+					card.className = "drive-backup-card";
+					card.style.padding = "12px";
+					card.style.background = "rgba(0, 0, 0, 0.1)";
+					card.style.borderRadius = "6px";
+					card.style.borderLeft = `4px solid ${backupTypeColor}`;
 
-			const sizeSpan = document.createElement("span");
-			sizeSpan.style.fontSize = "12px";
-			sizeSpan.style.color = "#aaa";
-			sizeSpan.textContent = sizeLabel;
+					// Title row with type badge
+					const titleRow = document.createElement("div");
+					titleRow.style.display = "flex";
+					titleRow.style.justifyContent = "space-between";
+					titleRow.style.alignItems = "center";
+					titleRow.style.marginBottom = "8px";
 
-			titleRow.appendChild(titleLeft);
-			titleRow.appendChild(sizeSpan);
+					const titleLeft = document.createElement("div");
+					titleLeft.style.display = "flex";
+					titleLeft.style.alignItems = "center";
+					titleLeft.style.gap = "8px";
 
-			// Metadata row with icons
-			const meta = document.createElement("div");
-			meta.style.fontSize = "11px";
-			meta.style.color = "#999";
-			meta.style.marginBottom = "10px";
-			meta.style.display = "flex";
-			meta.style.gap = "12px";
-			meta.style.flexWrap = "wrap";
+					const typeBadge = document.createElement("span");
+					typeBadge.style.padding = "2px 8px";
+					typeBadge.style.borderRadius = "12px";
+					typeBadge.style.fontSize = "11px";
+					typeBadge.style.fontWeight = "600";
+					typeBadge.style.background = backupTypeColor;
+					typeBadge.style.color = "white";
+					typeBadge.textContent = backupType;
 
-			const createdSpan = document.createElement("span");
-			createdSpan.textContent = `📅 ${backupDate.toLocaleDateString()} ${backupDate.toLocaleTimeString()}`;
+					const fileName = document.createElement("span");
+					fileName.style.fontSize = "13px";
+					fileName.style.fontWeight = "500";
+					fileName.style.color = "#ddd";
+					fileName.textContent = isContinuous
+						? "Rolling Backup"
+						: backupDate.toLocaleString();
 
-			const relativeSpan = document.createElement("span");
-			relativeSpan.textContent = `🕒 ${getRelativeTimeString(backupDate)}`;
+					titleLeft.appendChild(typeBadge);
+					titleLeft.appendChild(fileName);
 
-			meta.appendChild(createdSpan);
-			meta.appendChild(relativeSpan);
+					const sizeSpan = document.createElement("span");
+					sizeSpan.style.fontSize = "12px";
+					sizeSpan.style.color = "#aaa";
+					sizeSpan.textContent = sizeLabel;
 
-			// Actions row
-			const actions = document.createElement("div");
-			actions.style.display = "flex";
-			actions.style.gap = "8px";
+					titleRow.appendChild(titleLeft);
+					titleRow.appendChild(sizeSpan);
 
-			const restoreBtn = document.createElement("button");
-			restoreBtn.className = "btn-secondary";
-			restoreBtn.style.fontSize = "12px";
-			restoreBtn.style.flex = "1";
-			restoreBtn.textContent = "📥 Restore";
-			restoreBtn.addEventListener("click", () => {
-				handleRestoreDriveBackup(backup.id);
-			});
+					// Metadata row with icons
+					const meta = document.createElement("div");
+					meta.style.fontSize = "11px";
+					meta.style.color = "#999";
+					meta.style.marginBottom = "10px";
+					meta.style.display = "flex";
+					meta.style.gap = "12px";
+					meta.style.flexWrap = "wrap";
 
-			const viewDetailsBtn = document.createElement("button");
-			viewDetailsBtn.className = "btn-secondary";
-			viewDetailsBtn.style.fontSize = "12px";
-			viewDetailsBtn.style.padding = "6px 12px";
-			viewDetailsBtn.textContent = "ℹ️";
-			viewDetailsBtn.title = "View detailed backup info";
-			viewDetailsBtn.addEventListener("click", async () => {
-				await showBackupDetails(backup);
-			});
+					const createdSpan = document.createElement("span");
+					createdSpan.textContent = `📅 ${backupDate.toLocaleDateString()} ${backupDate.toLocaleTimeString()}`;
 
-			actions.appendChild(restoreBtn);
-			actions.appendChild(viewDetailsBtn);
+					const relativeSpan = document.createElement("span");
+					relativeSpan.textContent = `🕒 ${getRelativeTimeString(backupDate)}`;
 
-			card.appendChild(titleRow);
-			card.appendChild(meta);
-			card.appendChild(actions);
-			list.appendChild(card);
-		});
+					meta.appendChild(createdSpan);
+					meta.appendChild(relativeSpan);
 
-		if (backups.length === 0) {
-			list.innerHTML = `
+					// Actions row
+					const actions = document.createElement("div");
+					actions.style.display = "flex";
+					actions.style.gap = "8px";
+
+					const restoreBtn = document.createElement("button");
+					restoreBtn.className = "btn-secondary";
+					restoreBtn.style.fontSize = "12px";
+					restoreBtn.style.flex = "1";
+					restoreBtn.textContent = "📥 Restore";
+					restoreBtn.addEventListener("click", () => {
+						handleRestoreDriveBackup(backup.id);
+					});
+
+					const viewDetailsBtn = document.createElement("button");
+					viewDetailsBtn.className = "btn-secondary";
+					viewDetailsBtn.style.fontSize = "12px";
+					viewDetailsBtn.style.padding = "6px 12px";
+					viewDetailsBtn.textContent = "ℹ️";
+					viewDetailsBtn.title = "View detailed backup info";
+					viewDetailsBtn.addEventListener("click", async () => {
+						await showBackupDetails(backup);
+					});
+
+					actions.appendChild(restoreBtn);
+					actions.appendChild(viewDetailsBtn);
+
+					card.appendChild(titleRow);
+					card.appendChild(meta);
+					card.appendChild(actions);
+					list.appendChild(card);
+				});
+
+				if (backups.length === 0) {
+					list.innerHTML = `
 				<div style="text-align: center; padding: 30px; color: #888;">
 					<div style="font-size: 48px; margin-bottom: 12px;">📦</div>
 					<div style="font-size: 14px;">No backups found on Google Drive</div>
 					<div style="font-size: 12px; margin-top: 8px; color: #666;">Create a backup to get started</div>
 				</div>
 			`;
-		}
+				}
 
-		driveBackupsList.appendChild(list);
-	}
-
-	/**
-	 * Show detailed backup information in a modal
-	 */
-	async function showBackupDetails(backup) {
-		try {
-			showStatus("⏳ Loading backup details...", "info");
-
-			// Download and parse the backup to get detailed metadata
-			const response = await browser.runtime.sendMessage({
-				action: "downloadDriveBackup",
-				fileId: backup.id,
-			});
-
-			if (!response || !response.data) {
-				throw new Error("Failed to download backup");
+				driveBackupsList.appendChild(list);
 			}
 
-			const backupData = response.data;
-			const metadata = backupData.metadata || {};
-			const novelCount =
-				metadata.novelCount ||
-				Object.keys(
-					backupData.data?.novelHistory ||
-						backupData.data?.rg_novel_library?.novels ||
-						{},
-				).length ||
-				0;
+			/**
+			 * Show detailed backup information in a modal
+			 */
+			async function showBackupDetails(backup) {
+				try {
+					showStatus("⏳ Loading backup details...", "info");
 
-			// Calculate chapter count
-			let chapterCount = 0;
-			if (backupData.chapters) {
-				chapterCount = Object.values(backupData.chapters).reduce(
-					(sum, chapterData) => {
-						return (
-							sum +
-							(Array.isArray(chapterData)
-								? chapterData.length
-								: 0)
-						);
-					},
-					0,
-				);
-			}
+					// Download and parse the backup to get detailed metadata
+					const response = await browser.runtime.sendMessage({
+						action: "downloadDriveBackup",
+						fileId: backup.id,
+					});
 
-			const details = `
+					if (!response || !response.data) {
+						throw new Error("Failed to download backup");
+					}
+
+					const backupData = response.data;
+					const metadata = backupData.metadata || {};
+					const novelCount =
+						metadata.novelCount ||
+						Object.keys(
+							backupData.data?.novelHistory ||
+								backupData.data?.rg_novel_library?.novels ||
+								{},
+						).length ||
+						0;
+
+					// Calculate chapter count
+					let chapterCount = 0;
+					if (backupData.chapters) {
+						chapterCount = Object.values(
+							backupData.chapters,
+						).reduce((sum, chapterData) => {
+							return (
+								sum +
+								(Array.isArray(chapterData)
+									? chapterData.length
+									: 0)
+							);
+						}, 0);
+					}
+
+					const details = `
 📦 Backup Details
 ━━━━━━━━━━━━━━━
 📚 Novels: ${novelCount}
@@ -4889,815 +5259,902 @@ ${metadata.hasPrompts ? "✅" : "❌"} Custom Prompts
 ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 			`.trim();
 
-			alert(details);
-			showStatus("✅ Backup details loaded", "success");
-		} catch (error) {
-			debugError("Failed to load backup details:", error);
-			showStatus(
-				`❌ Failed to load backup details: ${error.message}`,
-				"error",
-			);
-		}
-	}
-
-	/**
-	 * View backups on Google Drive
-	 */
-	async function handleViewBackups() {
-		if (!viewBackupsBtn) return;
-
-		try {
-			// Check if connected to Drive
-			const tokens = await browser.storage.local.get("driveAuthTokens");
-			if (!tokens.driveAuthTokens?.access_token) {
-				showStatus(
-					"❌ Not connected to Google Drive. Connect first.",
-					"error",
-				);
-				return;
-			}
-
-			viewBackupsBtn.disabled = true;
-			viewBackupsBtn.textContent = "⏳ Loading...";
-
-			debugLog("Fetching backups from Drive...");
-			const response = await browser.runtime.sendMessage({
-				action: "listDriveBackups",
-			});
-
-			debugLog("Backups response:", response);
-
-			// Extract backups array from response object
-			const backups = response?.backups || response;
-
-			if (!backups || backups.length === 0) {
-				renderDriveBackups([]);
-				showStatus("No backups found on Drive", "info");
-				return;
-			}
-
-			renderDriveBackups(backups);
-			showStatus(
-				"Retrieved " + backups.length + " backup(s) from Drive",
-				"success",
-			);
-		} catch (err) {
-			debugError("View backups failed", err);
-			showStatus(`View backups failed: ${err.message}`, "error");
-		} finally {
-			viewBackupsBtn.disabled = false;
-			viewBackupsBtn.textContent = "📋 View Backups";
-		}
-	}
-
-	/**
-	 * Handle Sync From Drive Now button click
-	 */
-	async function handleDriveSyncNow() {
-		if (!driveSyncNowBtn) return;
-
-		try {
-			// Check if connected to Drive
-			const tokens = await browser.storage.local.get("driveAuthTokens");
-			if (!tokens.driveAuthTokens?.access_token) {
-				showStatus(
-					"❌ Not connected to Google Drive. Connect first.",
-					"error",
-				);
-				return;
-			}
-
-			driveSyncNowBtn.disabled = true;
-			driveSyncNowBtn.textContent = "⏳ Syncing...";
-
-			debugLog("Syncing library from Drive...");
-			const response = await browser.runtime.sendMessage({
-				action: "syncDriveNow",
-			});
-
-			if (response?.success) {
-				debugLog("Drive sync successful");
-				showStatus(
-					"Library synced from Drive successfully!",
-					"success",
-				);
-				// Reload library if on library page
-				if (typeof loadLibrary === "function") {
-					await loadLibrary();
-				}
-			} else {
-				throw new Error(response?.error || "Drive sync failed");
-			}
-		} catch (err) {
-			debugError("Drive sync failed", err);
-			showStatus(`Drive sync failed: ${err.message}`, "error");
-		} finally {
-			driveSyncNowBtn.disabled = false;
-			driveSyncNowBtn.textContent = "🔄 Sync From Drive Now";
-		}
-	}
-
-	/**
-	 * Handle Drive backup mode change (scheduled vs continuous)
-	 */
-	async function handleDriveBackupModeChange(e) {
-		try {
-			const mode = e.target.value;
-			await browser.storage.local.set({ backupMode: mode });
-
-			// Show/hide continuous backup check interval control
-			const continuousContainer = document.getElementById(
-				"continuousBackupCheckContainer",
-			);
-			if (continuousContainer) {
-				continuousContainer.style.display =
-					mode === "continuous" || mode === "both" ? "block" : "none";
-			}
-
-			showStatus(`Backup mode set to: ${mode}`, "success");
-		} catch (err) {
-			debugError("Failed to update backup mode", err);
-			showStatus("Failed to update backup mode", "error");
-		}
-	}
-
-	/**
-	 * Handle continuous backup check interval change
-	 */
-	async function handleContinuousBackupCheckIntervalChange(e) {
-		try {
-			const interval = parseInt(e.target.value);
-			await browser.storage.local.set({
-				continuousBackupCheckIntervalMinutes: interval,
-			});
-
-			// Update display
-			const display = document.getElementById(
-				"continuousCheckIntervalDisplay",
-			);
-			if (display) {
-				display.textContent = interval;
-			}
-
-			debugLog(
-				`Continuous backup check interval set to ${interval} minutes`,
-			);
-		} catch (err) {
-			debugError(
-				"Failed to update continuous backup check interval",
-				err,
-			);
-		}
-	}
-
-	/**
-	 * Handle Drive auto-restore toggle
-	 */
-	async function handleDriveAutoRestoreToggle(e) {
-		try {
-			const enabled = e.target.checked;
-			await browser.storage.local.set({
-				driveAutoRestoreEnabled: enabled,
-			});
-			showStatus(
-				enabled
-					? "Auto-restore from Drive enabled"
-					: "Auto-restore from Drive disabled",
-				"success",
-			);
-		} catch (err) {
-			debugError("Failed to update auto-restore setting", err);
-			showStatus("Failed to update auto-restore setting", "error");
-		}
-	}
-
-	async function handleSyncProviderChange(e) {
-		try {
-			const providerId = e.target.value || "google-drive";
-			await browser.storage.local.set({ activeSync: providerId });
-			showStatus(`Sync provider set to: ${providerId}`, "success");
-		} catch (err) {
-			debugError("Failed to update sync provider", err);
-			showStatus("Failed to update sync provider", "error");
-		}
-	}
-
-	/**
-	 * Handle manual backup creation
-	 */
-	async function handleCreateManualBackup() {
-		try {
-			const result = await browser.storage.local.get(["novelHistory"]);
-			const libraryData = result.novelHistory || {};
-
-			const backup = await libraryBackupManager.createBackup(
-				libraryData,
-				false,
-			);
-
-			if (backup) {
-				showStatus(
-					`Backup created: ${backup.novelCount} novels backed up`,
-					"success",
-				);
-				await loadBackupHistory();
-			}
-		} catch (error) {
-			debugError("Error creating backup:", error);
-			showStatus("Failed to create backup", "error");
-		}
-	}
-
-	/**
-	 * Update backup config
-	 */
-	async function updateBackupConfig() {
-		try {
-			const config = {
-				autoBackupEnabled: autoBackupCheckbox?.checked || false,
-				mergeMode:
-					document.querySelector('input[name="mergeMode"]:checked')
-						?.value || "merge",
-			};
-
-			await libraryBackupManager.updateConfig(config);
-			showStatus("Backup settings saved!", "success");
-		} catch (error) {
-			debugError("Error updating backup config:", error);
-		}
-	}
-
-	// Attach backup handlers
-	if (refreshNovelsBtn) {
-		refreshNovelsBtn.addEventListener("click", loadNovelsTab);
-	}
-
-	if (randomizeSuggestionsBtn) {
-		randomizeSuggestionsBtn.addEventListener("click", async () => {
-			await loadRandomizedSuggestions();
-		});
-	}
-
-	if (createManualBackup) {
-		createManualBackup.addEventListener("click", handleCreateManualBackup);
-	}
-
-	if (autoBackupCheckbox) {
-		autoBackupCheckbox.addEventListener("change", updateBackupConfig);
-	}
-
-	mergeModRadios.forEach((radio) => {
-		radio.addEventListener("change", updateBackupConfig);
-	});
-
-	// Attach Google Drive backup handlers
-	if (connectDriveBtn) {
-		// Use both click and touchend for better mobile support
-		const handleConnect = (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			handleConnectDrive();
-		};
-		connectDriveBtn.addEventListener("click", handleConnect);
-		// Add touch event for mobile browsers
-		connectDriveBtn.addEventListener("touchend", handleConnect, {
-			passive: false,
-		});
-	}
-	if (disconnectDriveBtn) {
-		disconnectDriveBtn.addEventListener("click", handleDisconnectDrive);
-	}
-	if (backupNowBtn) {
-		backupNowBtn.addEventListener("click", handleBackupNow);
-	}
-	if (viewBackupsBtn) {
-		viewBackupsBtn.addEventListener("click", handleViewBackups);
-	}
-
-	// Handle all Library Settings buttons
-	const allLibrarySettingsButtons = document.querySelectorAll(
-		".open-library-settings",
-	);
-	allLibrarySettingsButtons.forEach((button) => {
-		button.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library-settings.html"),
-			});
-		});
-	});
-
-	// Handle openLibrarySettingsFromBackup button (in Advanced tab Backups section)
-	const openLibrarySettingsFromBackup = document.getElementById(
-		"openLibrarySettingsFromBackup",
-	);
-	if (openLibrarySettingsFromBackup) {
-		openLibrarySettingsFromBackup.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library-settings.html"),
-			});
-		});
-	}
-
-	// openLibrarySettingsFromPrompts removed (prompts section moved to library settings)
-
-	// Handle Main Library button
-	const openMainLibrary = document.getElementById("openMainLibrary");
-	if (openMainLibrary) {
-		openMainLibrary.addEventListener("click", () => {
-			browser.tabs.create({
-				url: browser.runtime.getURL("library/library.html"),
-			});
-		});
-	}
-
-	// Handle Novel Tab View Toggle (List/Grid)
-	const novelViewBtns = document.querySelectorAll(".novel-view-btn");
-	// novelsList redeclaration removed - using outer-scope novelsListContainer instead
-
-	if (novelViewBtns.length > 0 && novelsListContainer) {
-		novelViewBtns.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				const view = btn.getAttribute("data-view");
-				novelViewBtns.forEach((b) => b.classList.remove("active"));
-				btn.classList.add("active");
-
-				if (view === "grid") {
-					novelsListContainer.style.gridTemplateColumns =
-						"repeat(3, 1fr)";
-				} else {
-					novelsListContainer.style.gridTemplateColumns = "1fr";
-				}
-			});
-		});
-	}
-
-	// Handle Novel Tab Filter
-	const novelFilterBtns = document.querySelectorAll(".novel-filter-btn");
-	if (novelFilterBtns.length > 0) {
-		novelFilterBtns.forEach((btn) => {
-			btn.addEventListener("click", () => {
-				novelFilterBtns.forEach((b) => b.classList.remove("active"));
-				btn.classList.add("active");
-
-				// Trigger filter logic (will be implemented in renderNovelsCardList)
-				// For now, just toggle active state
-			});
-		});
-	}
-
-	// Handle shelf links (website-specific libraries)
-	const shelfLinks = document.querySelectorAll(".shelf-link");
-	shelfLinks.forEach((link) => {
-		link.addEventListener("click", (e) => {
-			e.preventDefault();
-			const shelfId = link.getAttribute("data-shelf");
-			if (shelfId) {
-				browser.tabs.create({
-					url: browser.runtime.getURL(
-						`library/websites/${shelfId}/index.html`,
-					),
-				});
-			}
-		});
-	});
-
-	// Handle Backup Manager button
-	const openBackupManager = document.getElementById("openBackupManager");
-	if (openBackupManager) {
-		openBackupManager.addEventListener("click", () => {
-			// Open library settings directly on the Backups tab
-			browser.tabs.create({
-				url: browser.runtime.getURL(
-					"library/library-settings.html?tab=backups",
-				),
-			});
-		});
-	}
-
-	driveBackupModeRadios.forEach((radio) => {
-		radio.addEventListener("change", handleDriveBackupModeChange);
-	});
-	const continuousBackupCheckInterval = document.getElementById(
-		"continuousBackupCheckInterval",
-	);
-	if (continuousBackupCheckInterval) {
-		continuousBackupCheckInterval.addEventListener(
-			"change",
-			handleContinuousBackupCheckIntervalChange,
-		);
-		continuousBackupCheckInterval.addEventListener(
-			"input",
-			handleContinuousBackupCheckIntervalChange,
-		);
-	}
-	if (driveAutoRestoreEnabled) {
-		driveAutoRestoreEnabled.addEventListener(
-			"change",
-			handleDriveAutoRestoreToggle,
-		);
-	}
-	if (syncProviderSelect) {
-		syncProviderSelect.addEventListener("change", handleSyncProviderChange);
-	}
-	if (driveSyncNowBtn) {
-		driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);
-	}
-
-	// Eye icon toggle for client secret visibility
-	if (toggleClientSecretBtn && driveClientSecretInput) {
-		toggleClientSecretBtn.addEventListener("click", () => {
-			const isPassword = driveClientSecretInput.type === "password";
-			driveClientSecretInput.type = isPassword ? "text" : "password";
-			toggleClientSecretBtn.textContent = isPassword ? "🙈" : "👁️";
-			toggleClientSecretBtn.title = isPassword
-				? "Hide Client Secret"
-				: "Show Client Secret";
-		});
-	}
-
-	// ===== OAuth JSON Parsing Handlers =====
-	if (parseOAuthJsonBtn) {
-		parseOAuthJsonBtn.addEventListener("click", async () => {
-			try {
-				const jsonText = oauthJsonPaste?.value?.trim();
-				if (!jsonText) {
-					showOAuthParseResult(
-						"Please paste your OAuth JSON first",
-						"error",
-					);
-					return;
-				}
-
-				debugLog("Parsing OAuth JSON, length:", jsonText.length);
-				const result = parseOAuthCredentials(jsonText);
-
-				if (!result.valid) {
-					debugError("OAuth parsing failed:", result.error);
-					showOAuthParseResult(`❌ ${result.error}`, "error");
-					return;
-				}
-
-				debugLog("OAuth parsed successfully:", {
-					type: result.type,
-					clientIdLength: result.clientId?.length,
-					clientSecretLength: result.clientSecret?.length,
-				});
-
-				// Validate redirect URIs
-				const uriValidation = validateRedirectUris(result.redirectUris);
-
-				// Apply credentials to inputs (but don't save yet)
-				if (driveClientIdInput)
-					driveClientIdInput.value = result.clientId;
-				if (driveClientSecretInput)
-					driveClientSecretInput.value = result.clientSecret || "";
-				// Show the secret after parsing so user can verify
-				if (toggleClientSecretBtn && driveClientSecretInput) {
-					driveClientSecretInput.type = "text";
-					toggleClientSecretBtn.textContent = "🙈";
-					toggleClientSecretBtn.title = "Hide Client Secret";
-				}
-
-				let message = `✅ Parsed ${result.type} credentials\n`;
-				message += `Client ID: ${result.clientId.substring(0, 20)}...\n`;
-				message += `Click "Save to Storage" to save credentials.`;
-
-				if (uriValidation.warnings.length > 0) {
-					message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
-				}
-
-				showOAuthParseResult(
-					message,
-					uriValidation.valid ? "success" : "warning",
-				);
-			} catch (err) {
-				debugError("Failed to parse OAuth JSON", err);
-				showOAuthParseResult(
-					"❌ Failed to parse: " + err.message,
-					"error",
-				);
-			}
-		});
-	}
-
-	// ===== Save OAuth from JSON Handler =====
-	if (saveOAuthFromJsonBtn) {
-		saveOAuthFromJsonBtn.addEventListener("click", async () => {
-			try {
-				const clientId = driveClientIdInput?.value.trim() || "";
-				const clientSecret = driveClientSecretInput?.value.trim() || "";
-
-				if (!clientId) {
-					showOAuthParseResult(
-						"No Client ID to save. Parse JSON first.",
-						"error",
-					);
-					return;
-				}
-
-				const existing = await browser.storage.local.get([
-					"driveFolderId",
-				]);
-				const folderId =
-					driveFolderIdInput?.value.trim() ||
-					existing.driveFolderId ||
-					"";
-
-				debugLog("Saving OAuth credentials to storage...");
-				await browser.storage.local.set({
-					driveClientId: clientId,
-					driveClientSecret: clientSecret,
-					driveFolderId: folderId,
-				});
-
-				debugLog("Verifying saved OAuth credentials...");
-				const saved = await browser.storage.local.get([
-					"driveClientId",
-					"driveClientSecret",
-					"driveFolderId",
-				]);
-
-				debugLog("Saved values:", {
-					clientIdMatch: saved.driveClientId === clientId,
-					secretMatch: saved.driveClientSecret === clientSecret,
-					folderIdMatch: saved.driveFolderId === folderId,
-					savedClientIdLength: saved.driveClientId?.length,
-					savedSecretLength: saved.driveClientSecret?.length,
-				});
-
-				if (
-					saved.driveClientId !== clientId ||
-					saved.driveClientSecret !== clientSecret ||
-					saved.driveFolderId !== folderId
-				) {
-					debugError("OAuth verification failed!", {
-						expected: {
-							clientId: clientId.substring(0, 20),
-							secretLength: clientSecret?.length,
-							folderId,
-						},
-						actual: {
-							clientId: saved.driveClientId?.substring(0, 20),
-							secretLength: saved.driveClientSecret?.length,
-							folderId: saved.driveFolderId,
-						},
-					});
-					showOAuthParseResult(
-						"❌ Failed to save credentials",
-						"error",
-					);
-					showStatus("❌ OAuth settings failed to persist", "error");
-					return;
-				}
-
-				debugLog("OAuth credentials saved and verified successfully!");
-				showOAuthParseResult(
-					"✅ Credentials saved to storage!",
-					"success",
-				);
-				showStatus("✅ OAuth settings saved!", "success");
-				await updateDriveUI();
-			} catch (err) {
-				debugError("Failed to save OAuth settings", err);
-				showOAuthParseResult(
-					"❌ Failed to save: " + err.message,
-					"error",
-				);
-				showStatus(
-					"❌ Failed to save OAuth settings: " + err.message,
-					"error",
-				);
-			}
-		});
-	}
-
-	function showOAuthParseResult(message, type = "info") {
-		if (!oauthParseResult) return;
-		oauthParseResult.style.display = "block";
-		oauthParseResult.textContent = message;
-		oauthParseResult.style.whiteSpace = "pre-wrap";
-		oauthParseResult.style.wordWrap = "break-word";
-
-		// Use CSS variables for colors that respect theme
-		let backgroundColor, textColor;
-		if (type === "error") {
-			textColor = "#ef4444";
-			backgroundColor = "rgba(239, 68, 68, 0.1)";
-		} else if (type === "success") {
-			textColor = "#22c55e";
-			backgroundColor = "rgba(34, 197, 94, 0.1)";
-		} else if (type === "warning") {
-			textColor = "#f59e0b";
-			backgroundColor = "rgba(245, 158, 11, 0.1)";
-		} else {
-			textColor = "var(--text-secondary, #9ca3af)";
-			backgroundColor = "var(--accent-primary, rgba(0, 0, 0, 0.1))";
-		}
-
-		oauthParseResult.style.color = textColor;
-		oauthParseResult.style.backgroundColor = backgroundColor;
-	}
-
-	if (saveOAuthSettingsBtn) {
-		saveOAuthSettingsBtn.addEventListener("click", async () => {
-			try {
-				const clientId = driveClientIdInput?.value.trim() || "";
-				const clientSecret = driveClientSecretInput?.value.trim() || "";
-				const folderId = driveFolderIdInput?.value.trim() || "";
-
-				if (!clientId) {
-					showStatus("Please enter a Client ID", "error");
-					return;
-				}
-
-				debugLog("Saving OAuth credentials:", {
-					clientIdLength: clientId.length,
-					clientSecretLength: clientSecret.length,
-					folderIdLength: folderId.length,
-				});
-
-				await browser.storage.local.set({
-					driveClientId: clientId,
-					driveClientSecret: clientSecret,
-					driveFolderId: folderId,
-				});
-
-				const saved = await browser.storage.local.get([
-					"driveClientId",
-					"driveClientSecret",
-					"driveFolderId",
-				]);
-
-				debugLog("Verifying saved OAuth credentials:", {
-					savedClientId: saved.driveClientId?.substring(0, 20),
-					savedSecretLength: saved.driveClientSecret?.length,
-					expectedClientId: clientId.substring(0, 20),
-					expectedSecretLength: clientSecret.length,
-				});
-
-				if (
-					saved.driveClientId !== clientId ||
-					saved.driveClientSecret !== clientSecret ||
-					saved.driveFolderId !== folderId
-				) {
-					debugError("OAuth settings failed to persist!", {
-						saved,
-						expected: { clientId, clientSecret, folderId },
-					});
+					alert(details);
+					showStatus("✅ Backup details loaded", "success");
+				} catch (error) {
+					debugError("Failed to load backup details:", error);
 					showStatus(
-						"❌ OAuth settings failed to persist - check console",
+						`❌ Failed to load backup details: ${error.message}`,
 						"error",
 					);
-					return;
 				}
+			}
 
-				showStatus("✅ OAuth settings saved!", "success");
-				if (typeof showOAuthParseResult === "function") {
-					showOAuthParseResult(
-						"✅ OAuth settings saved successfully",
+			/**
+			 * View backups on Google Drive
+			 */
+			async function handleViewBackups() {
+				if (!viewBackupsBtn) return;
+
+				try {
+					// Check if connected to Drive
+					const tokens =
+						await browser.storage.local.get("driveAuthTokens");
+					if (!tokens.driveAuthTokens?.access_token) {
+						showStatus(
+							"❌ Not connected to Google Drive. Connect first.",
+							"error",
+						);
+						return;
+					}
+
+					viewBackupsBtn.disabled = true;
+					viewBackupsBtn.textContent = "⏳ Loading...";
+
+					debugLog("Fetching backups from Drive...");
+					const response = await browser.runtime.sendMessage({
+						action: "listDriveBackups",
+					});
+
+					debugLog("Backups response:", response);
+
+					// Extract backups array from response object
+					const backups = response?.backups || response;
+
+					if (!backups || backups.length === 0) {
+						renderDriveBackups([]);
+						showStatus("No backups found on Drive", "info");
+						return;
+					}
+
+					renderDriveBackups(backups);
+					showStatus(
+						"Retrieved " + backups.length + " backup(s) from Drive",
 						"success",
 					);
+				} catch (err) {
+					debugError("View backups failed", err);
+					showStatus(`View backups failed: ${err.message}`, "error");
+				} finally {
+					viewBackupsBtn.disabled = false;
+					viewBackupsBtn.textContent = "📋 View Backups";
 				}
-				if (driveClientIdInput) driveClientIdInput.value = clientId;
-				if (driveClientSecretInput)
-					driveClientSecretInput.value = clientSecret;
-				if (driveFolderIdInput) driveFolderIdInput.value = folderId;
-				await updateDriveUI();
-			} catch (err) {
-				debugError("Error saving OAuth settings:", err);
-				showStatus(
-					"❌ Error saving OAuth settings: " + err.message,
-					"error",
-				);
 			}
-		});
-	}
 
-	// ===== Comprehensive Backup Handlers =====
-	if (createComprehensiveBackupBtn) {
-		createComprehensiveBackupBtn.addEventListener("click", async () => {
-			try {
-				createComprehensiveBackupBtn.disabled = true;
-				createComprehensiveBackupBtn.textContent = "⏳ Creating...";
+			/**
+			 * Handle Sync From Drive Now button click
+			 */
+			async function handleDriveSyncNow() {
+				if (!driveSyncNowBtn) return;
 
-				const backup = await createComprehensiveBackup({
-					type: BACKUP_OPTIONS.FULL,
-					includeApiKeys: backupIncludeApiKeys?.checked ?? true,
-					includeCredentials:
-						backupIncludeCredentials?.checked ?? true,
-				});
-
-				downloadBackupAsFile(backup);
-				showStatus(
-					`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
-					"success",
-				);
-			} catch (error) {
-				debugError("Comprehensive backup failed:", error);
-				showStatus(`❌ Backup failed: ${error.message}`, "error");
-			} finally {
-				createComprehensiveBackupBtn.disabled = false;
-				createComprehensiveBackupBtn.textContent = "💾 Full Backup";
-			}
-		});
-	}
-
-	if (restoreComprehensiveBackupBtn) {
-		restoreComprehensiveBackupBtn.addEventListener("click", () => {
-			comprehensiveBackupFile?.click();
-		});
-	}
-
-	if (comprehensiveBackupFile) {
-		comprehensiveBackupFile.addEventListener("change", async (e) => {
-			const file = e.target.files?.[0];
-			if (!file) return;
-
-			try {
-				const backup = await readBackupFromFile(file);
-
-				if (!backup.version || !backup.data) {
-					throw new Error("Invalid backup file format");
-				}
-
-				const novelCount = backup.metadata?.novelCount || 0;
-				const hasApiKey = backup.metadata?.hasApiKey;
-				const hasCredentials = backup.metadata?.hasDriveCredentials;
-
-				// Build confirmation message with version info
-				let confirmMsg = `Restore this backup?\n\n`;
-
-				// Add version information if available
-				if (backup.extensionVersion) {
-					confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
-				}
-				if (backup.version) {
-					confirmMsg += `📋 Format Version: ${backup.version}\n`;
-				}
-				confirmMsg += `📚 ${novelCount} novels\n`;
-				confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
-				confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
-				confirmMsg += `Mode: MERGE (preserves existing data)`;
-
-				if (!confirm(confirmMsg)) {
-					e.target.value = "";
-					return;
-				}
-
-				const result = await restoreComprehensiveBackup(backup, {
-					mode: "merge",
-					restoreApiKeys: hasApiKey && confirm("Restore API keys?"),
-					restoreCredentials:
-						hasCredentials && confirm("Restore OAuth credentials?"),
-				});
-
-				if (result.success) {
-					// Show version warnings if any
-					if (result.versionInfo?.warnings?.length > 0) {
-						const warningMsg =
-							result.versionInfo.warnings.join("\n");
-						showStatus(`⚠️ ${warningMsg}`, "warning");
-						setTimeout(() => {
-							showStatus(
-								`✅ Restored ${result.restoredKeys.length} items!`,
-								"success",
-							);
-						}, 3000);
-					} else {
+				try {
+					// Check if connected to Drive
+					const tokens =
+						await browser.storage.local.get("driveAuthTokens");
+					if (!tokens.driveAuthTokens?.access_token) {
 						showStatus(
-							`✅ Restored ${result.restoredKeys.length} items!`,
+							"❌ Not connected to Google Drive. Connect first.",
+							"error",
+						);
+						return;
+					}
+
+					driveSyncNowBtn.disabled = true;
+					driveSyncNowBtn.textContent = "⏳ Syncing...";
+
+					debugLog("Syncing library from Drive...");
+					const response = await browser.runtime.sendMessage({
+						action: "syncDriveNow",
+					});
+
+					if (response?.success) {
+						debugLog("Drive sync successful");
+						showStatus(
+							"Library synced from Drive successfully!",
 							"success",
 						);
+						// Reload library if on library page
+						if (typeof loadLibrary === "function") {
+							await loadLibrary();
+						}
+					} else {
+						throw new Error(response?.error || "Drive sync failed");
 					}
-					// Reload popup to reflect changes
-					setTimeout(() => location.reload(), 1500);
+				} catch (err) {
+					debugError("Drive sync failed", err);
+					showStatus(`Drive sync failed: ${err.message}`, "error");
+				} finally {
+					driveSyncNowBtn.disabled = false;
+					driveSyncNowBtn.textContent = "🔄 Sync From Drive Now";
 				}
-			} catch (error) {
-				debugError("Restore failed:", error);
-				showStatus(`❌ Restore failed: ${error.message}`, "error");
 			}
 
-			e.target.value = "";
-		});
-	}
+			/**
+			 * Handle Drive backup mode change (scheduled vs continuous)
+			 */
+			async function handleDriveBackupModeChange(e) {
+				try {
+					const mode = e.target.value;
+					await browser.storage.local.set({ backupMode: mode });
 
-	// ===== Rolling Backup Handlers =====
-	async function loadRollingBackups() {
-		if (!rollingBackupList) return;
+					// Show/hide continuous backup check interval control
+					const continuousContainer = document.getElementById(
+						"continuousBackupCheckContainer",
+					);
+					if (continuousContainer) {
+						continuousContainer.style.display =
+							mode === "continuous" || mode === "both"
+								? "block"
+								: "none";
+					}
 
-		const backups = await listRollingBackups();
+					showStatus(`Backup mode set to: ${mode}`, "success");
+				} catch (err) {
+					debugError("Failed to update backup mode", err);
+					showStatus("Failed to update backup mode", "error");
+				}
+			}
 
-		if (backups.length === 0) {
-			rollingBackupList.innerHTML = `
+			/**
+			 * Handle continuous backup check interval change
+			 */
+			async function handleContinuousBackupCheckIntervalChange(e) {
+				try {
+					const interval = parseInt(e.target.value);
+					await browser.storage.local.set({
+						continuousBackupCheckIntervalMinutes: interval,
+					});
+
+					// Update display
+					const display = document.getElementById(
+						"continuousCheckIntervalDisplay",
+					);
+					if (display) {
+						display.textContent = interval;
+					}
+
+					debugLog(
+						`Continuous backup check interval set to ${interval} minutes`,
+					);
+				} catch (err) {
+					debugError(
+						"Failed to update continuous backup check interval",
+						err,
+					);
+				}
+			}
+
+			/**
+			 * Handle Drive auto-restore toggle
+			 */
+			async function handleDriveAutoRestoreToggle(e) {
+				try {
+					const enabled = e.target.checked;
+					await browser.storage.local.set({
+						driveAutoRestoreEnabled: enabled,
+					});
+					showStatus(
+						enabled
+							? "Auto-restore from Drive enabled"
+							: "Auto-restore from Drive disabled",
+						"success",
+					);
+				} catch (err) {
+					debugError("Failed to update auto-restore setting", err);
+					showStatus(
+						"Failed to update auto-restore setting",
+						"error",
+					);
+				}
+			}
+
+			async function handleSyncProviderChange(e) {
+				try {
+					const providerId = e.target.value || "google-drive";
+					await browser.storage.local.set({ activeSync: providerId });
+					showStatus(
+						`Sync provider set to: ${providerId}`,
+						"success",
+					);
+				} catch (err) {
+					debugError("Failed to update sync provider", err);
+					showStatus("Failed to update sync provider", "error");
+				}
+			}
+
+			/**
+			 * Handle manual backup creation
+			 */
+			async function handleCreateManualBackup() {
+				try {
+					const result = await browser.storage.local.get([
+						"novelHistory",
+					]);
+					const libraryData = result.novelHistory || {};
+
+					const backup = await libraryBackupManager.createBackup(
+						libraryData,
+						false,
+					);
+
+					if (backup) {
+						showStatus(
+							`Backup created: ${backup.novelCount} novels backed up`,
+							"success",
+						);
+						await loadBackupHistory();
+					}
+				} catch (error) {
+					debugError("Error creating backup:", error);
+					showStatus("Failed to create backup", "error");
+				}
+			}
+
+			/**
+			 * Update backup config
+			 */
+			async function updateBackupConfig() {
+				try {
+					const config = {
+						autoBackupEnabled: autoBackupCheckbox?.checked || false,
+						mergeMode:
+							document.querySelector(
+								'input[name="mergeMode"]:checked',
+							)?.value || "merge",
+					};
+
+					await libraryBackupManager.updateConfig(config);
+					showStatus("Backup settings saved!", "success");
+				} catch (error) {
+					debugError("Error updating backup config:", error);
+				}
+			}
+
+			// Attach backup handlers
+			if (refreshNovelsBtn) {
+				refreshNovelsBtn.addEventListener("click", loadNovelsTab);
+			}
+
+			if (randomizeSuggestionsBtn) {
+				randomizeSuggestionsBtn.addEventListener("click", async () => {
+					await loadRandomizedSuggestions();
+				});
+			}
+
+			if (createManualBackup) {
+				createManualBackup.addEventListener(
+					"click",
+					handleCreateManualBackup,
+				);
+			}
+
+			if (autoBackupCheckbox) {
+				autoBackupCheckbox.addEventListener(
+					"change",
+					updateBackupConfig,
+				);
+			}
+
+			mergeModRadios.forEach((radio) => {
+				radio.addEventListener("change", updateBackupConfig);
+			});
+
+			// Attach Google Drive backup handlers
+			if (connectDriveBtn) {
+				// Use both click and touchend for better mobile support
+				const handleConnect = (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					handleConnectDrive();
+				};
+				connectDriveBtn.addEventListener("click", handleConnect);
+				// Add touch event for mobile browsers
+				connectDriveBtn.addEventListener("touchend", handleConnect, {
+					passive: false,
+				});
+			}
+			if (disconnectDriveBtn) {
+				disconnectDriveBtn.addEventListener(
+					"click",
+					handleDisconnectDrive,
+				);
+			}
+			if (backupNowBtn) {
+				backupNowBtn.addEventListener("click", handleBackupNow);
+			}
+			if (viewBackupsBtn) {
+				viewBackupsBtn.addEventListener("click", handleViewBackups);
+			}
+
+			// Handle all Library Settings buttons
+			const allLibrarySettingsButtons = document.querySelectorAll(
+				".open-library-settings",
+			);
+			allLibrarySettingsButtons.forEach((button) => {
+				button.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL(
+							"library/library-settings.html",
+						),
+					});
+				});
+			});
+
+			// Handle openLibrarySettingsFromBackup button (in Advanced tab Backups section)
+			const openLibrarySettingsFromBackup = document.getElementById(
+				"openLibrarySettingsFromBackup",
+			);
+			if (openLibrarySettingsFromBackup) {
+				openLibrarySettingsFromBackup.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL(
+							"library/library-settings.html",
+						),
+					});
+				});
+			}
+
+			// openLibrarySettingsFromPrompts removed (prompts section moved to library settings)
+
+			// Handle Main Library button
+			const openMainLibrary = document.getElementById("openMainLibrary");
+			if (openMainLibrary) {
+				openMainLibrary.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL("library/library.html"),
+					});
+				});
+			}
+
+			// Handle Novel Tab View Toggle (List/Grid)
+			const novelViewBtns = document.querySelectorAll(".novel-view-btn");
+			// novelsList redeclaration removed - using outer-scope novelsListContainer instead
+
+			if (novelViewBtns.length > 0 && novelsListContainer) {
+				novelViewBtns.forEach((btn) => {
+					btn.addEventListener("click", () => {
+						const view = btn.getAttribute("data-view");
+						novelViewBtns.forEach((b) =>
+							b.classList.remove("active"),
+						);
+						btn.classList.add("active");
+
+						if (view === "grid") {
+							novelsListContainer.style.gridTemplateColumns =
+								"repeat(3, 1fr)";
+						} else {
+							novelsListContainer.style.gridTemplateColumns =
+								"1fr";
+						}
+					});
+				});
+			}
+
+			// Handle Novel Tab Filter
+			const novelFilterBtns =
+				document.querySelectorAll(".novel-filter-btn");
+			if (novelFilterBtns.length > 0) {
+				novelFilterBtns.forEach((btn) => {
+					btn.addEventListener("click", () => {
+						novelFilterBtns.forEach((b) =>
+							b.classList.remove("active"),
+						);
+						btn.classList.add("active");
+
+						// Trigger filter logic (will be implemented in renderNovelsCardList)
+						// For now, just toggle active state
+					});
+				});
+			}
+
+			// Handle shelf links (website-specific libraries)
+			const shelfLinks = document.querySelectorAll(".shelf-link");
+			shelfLinks.forEach((link) => {
+				link.addEventListener("click", (e) => {
+					e.preventDefault();
+					const shelfId = link.getAttribute("data-shelf");
+					if (shelfId) {
+						browser.tabs.create({
+							url: browser.runtime.getURL(
+								`library/websites/${shelfId}/index.html`,
+							),
+						});
+					}
+				});
+			});
+
+			// Handle Backup Manager button
+			const openBackupManager =
+				document.getElementById("openBackupManager");
+			if (openBackupManager) {
+				openBackupManager.addEventListener("click", () => {
+					// Open library settings directly on the Backups tab
+					browser.tabs.create({
+						url: browser.runtime.getURL(
+							"library/library-settings.html?tab=backups",
+						),
+					});
+				});
+			}
+
+			driveBackupModeRadios.forEach((radio) => {
+				radio.addEventListener("change", handleDriveBackupModeChange);
+			});
+			const continuousBackupCheckInterval = document.getElementById(
+				"continuousBackupCheckInterval",
+			);
+			if (continuousBackupCheckInterval) {
+				continuousBackupCheckInterval.addEventListener(
+					"change",
+					handleContinuousBackupCheckIntervalChange,
+				);
+				continuousBackupCheckInterval.addEventListener(
+					"input",
+					handleContinuousBackupCheckIntervalChange,
+				);
+			}
+			if (driveAutoRestoreEnabled) {
+				driveAutoRestoreEnabled.addEventListener(
+					"change",
+					handleDriveAutoRestoreToggle,
+				);
+			}
+			if (syncProviderSelect) {
+				syncProviderSelect.addEventListener(
+					"change",
+					handleSyncProviderChange,
+				);
+			}
+			if (driveSyncNowBtn) {
+				driveSyncNowBtn.addEventListener("click", handleDriveSyncNow);
+			}
+
+			// Eye icon toggle for client secret visibility
+			if (toggleClientSecretBtn && driveClientSecretInput) {
+				toggleClientSecretBtn.addEventListener("click", () => {
+					const isPassword =
+						driveClientSecretInput.type === "password";
+					driveClientSecretInput.type = isPassword
+						? "text"
+						: "password";
+					toggleClientSecretBtn.textContent = isPassword
+						? "🙈"
+						: "👁️";
+					toggleClientSecretBtn.title = isPassword
+						? "Hide Client Secret"
+						: "Show Client Secret";
+				});
+			}
+
+			// ===== OAuth JSON Parsing Handlers =====
+			if (parseOAuthJsonBtn) {
+				parseOAuthJsonBtn.addEventListener("click", async () => {
+					try {
+						const jsonText = oauthJsonPaste?.value?.trim();
+						if (!jsonText) {
+							showOAuthParseResult(
+								"Please paste your OAuth JSON first",
+								"error",
+							);
+							return;
+						}
+
+						debugLog(
+							"Parsing OAuth JSON, length:",
+							jsonText.length,
+						);
+						const result = parseOAuthCredentials(jsonText);
+
+						if (!result.valid) {
+							debugError("OAuth parsing failed:", result.error);
+							showOAuthParseResult(`❌ ${result.error}`, "error");
+							return;
+						}
+
+						debugLog("OAuth parsed successfully:", {
+							type: result.type,
+							clientIdLength: result.clientId?.length,
+							clientSecretLength: result.clientSecret?.length,
+						});
+
+						// Validate redirect URIs
+						const uriValidation = validateRedirectUris(
+							result.redirectUris,
+						);
+
+						// Apply credentials to inputs (but don't save yet)
+						if (driveClientIdInput)
+							driveClientIdInput.value = result.clientId;
+						if (driveClientSecretInput)
+							driveClientSecretInput.value =
+								result.clientSecret || "";
+						// Show the secret after parsing so user can verify
+						if (toggleClientSecretBtn && driveClientSecretInput) {
+							driveClientSecretInput.type = "text";
+							toggleClientSecretBtn.textContent = "🙈";
+							toggleClientSecretBtn.title = "Hide Client Secret";
+						}
+
+						let message = `✅ Parsed ${result.type} credentials\n`;
+						message += `Client ID: ${result.clientId.substring(0, 20)}...\n`;
+						message += `Click "Save to Storage" to save credentials.`;
+
+						if (uriValidation.warnings.length > 0) {
+							message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
+						}
+
+						showOAuthParseResult(
+							message,
+							uriValidation.valid ? "success" : "warning",
+						);
+					} catch (err) {
+						debugError("Failed to parse OAuth JSON", err);
+						showOAuthParseResult(
+							"❌ Failed to parse: " + err.message,
+							"error",
+						);
+					}
+				});
+			}
+
+			// ===== Save OAuth from JSON Handler =====
+			if (saveOAuthFromJsonBtn) {
+				saveOAuthFromJsonBtn.addEventListener("click", async () => {
+					try {
+						const clientId = driveClientIdInput?.value.trim() || "";
+						const clientSecret =
+							driveClientSecretInput?.value.trim() || "";
+
+						if (!clientId) {
+							showOAuthParseResult(
+								"No Client ID to save. Parse JSON first.",
+								"error",
+							);
+							return;
+						}
+
+						const existing = await browser.storage.local.get([
+							"driveFolderId",
+						]);
+						const folderId =
+							driveFolderIdInput?.value.trim() ||
+							existing.driveFolderId ||
+							"";
+
+						debugLog("Saving OAuth credentials to storage...");
+						await browser.storage.local.set({
+							driveClientId: clientId,
+							driveClientSecret: clientSecret,
+							driveFolderId: folderId,
+						});
+
+						debugLog("Verifying saved OAuth credentials...");
+						const saved = await browser.storage.local.get([
+							"driveClientId",
+							"driveClientSecret",
+							"driveFolderId",
+						]);
+
+						debugLog("Saved values:", {
+							clientIdMatch: saved.driveClientId === clientId,
+							secretMatch:
+								saved.driveClientSecret === clientSecret,
+							folderIdMatch: saved.driveFolderId === folderId,
+							savedClientIdLength: saved.driveClientId?.length,
+							savedSecretLength: saved.driveClientSecret?.length,
+						});
+
+						if (
+							saved.driveClientId !== clientId ||
+							saved.driveClientSecret !== clientSecret ||
+							saved.driveFolderId !== folderId
+						) {
+							debugError("OAuth verification failed!", {
+								expected: {
+									clientId: clientId.substring(0, 20),
+									secretLength: clientSecret?.length,
+									folderId,
+								},
+								actual: {
+									clientId: saved.driveClientId?.substring(
+										0,
+										20,
+									),
+									secretLength:
+										saved.driveClientSecret?.length,
+									folderId: saved.driveFolderId,
+								},
+							});
+							showOAuthParseResult(
+								"❌ Failed to save credentials",
+								"error",
+							);
+							showStatus(
+								"❌ OAuth settings failed to persist",
+								"error",
+							);
+							return;
+						}
+
+						debugLog(
+							"OAuth credentials saved and verified successfully!",
+						);
+						showOAuthParseResult(
+							"✅ Credentials saved to storage!",
+							"success",
+						);
+						showStatus("✅ OAuth settings saved!", "success");
+						await updateDriveUI();
+					} catch (err) {
+						debugError("Failed to save OAuth settings", err);
+						showOAuthParseResult(
+							"❌ Failed to save: " + err.message,
+							"error",
+						);
+						showStatus(
+							"❌ Failed to save OAuth settings: " + err.message,
+							"error",
+						);
+					}
+				});
+			}
+
+			function showOAuthParseResult(message, type = "info") {
+				if (!oauthParseResult) return;
+				oauthParseResult.style.display = "block";
+				oauthParseResult.textContent = message;
+				oauthParseResult.style.whiteSpace = "pre-wrap";
+				oauthParseResult.style.wordWrap = "break-word";
+
+				// Use CSS variables for colors that respect theme
+				let backgroundColor, textColor;
+				if (type === "error") {
+					textColor = "#ef4444";
+					backgroundColor = "rgba(239, 68, 68, 0.1)";
+				} else if (type === "success") {
+					textColor = "#22c55e";
+					backgroundColor = "rgba(34, 197, 94, 0.1)";
+				} else if (type === "warning") {
+					textColor = "#f59e0b";
+					backgroundColor = "rgba(245, 158, 11, 0.1)";
+				} else {
+					textColor = "var(--text-secondary, #9ca3af)";
+					backgroundColor =
+						"var(--accent-primary, rgba(0, 0, 0, 0.1))";
+				}
+
+				oauthParseResult.style.color = textColor;
+				oauthParseResult.style.backgroundColor = backgroundColor;
+			}
+
+			if (saveOAuthSettingsBtn) {
+				saveOAuthSettingsBtn.addEventListener("click", async () => {
+					try {
+						const clientId = driveClientIdInput?.value.trim() || "";
+						const clientSecret =
+							driveClientSecretInput?.value.trim() || "";
+						const folderId = driveFolderIdInput?.value.trim() || "";
+
+						if (!clientId) {
+							showStatus("Please enter a Client ID", "error");
+							return;
+						}
+
+						debugLog("Saving OAuth credentials:", {
+							clientIdLength: clientId.length,
+							clientSecretLength: clientSecret.length,
+							folderIdLength: folderId.length,
+						});
+
+						await browser.storage.local.set({
+							driveClientId: clientId,
+							driveClientSecret: clientSecret,
+							driveFolderId: folderId,
+						});
+
+						const saved = await browser.storage.local.get([
+							"driveClientId",
+							"driveClientSecret",
+							"driveFolderId",
+						]);
+
+						debugLog("Verifying saved OAuth credentials:", {
+							savedClientId: saved.driveClientId?.substring(
+								0,
+								20,
+							),
+							savedSecretLength: saved.driveClientSecret?.length,
+							expectedClientId: clientId.substring(0, 20),
+							expectedSecretLength: clientSecret.length,
+						});
+
+						if (
+							saved.driveClientId !== clientId ||
+							saved.driveClientSecret !== clientSecret ||
+							saved.driveFolderId !== folderId
+						) {
+							debugError("OAuth settings failed to persist!", {
+								saved,
+								expected: { clientId, clientSecret, folderId },
+							});
+							showStatus(
+								"❌ OAuth settings failed to persist - check console",
+								"error",
+							);
+							return;
+						}
+
+						showStatus("✅ OAuth settings saved!", "success");
+						if (typeof showOAuthParseResult === "function") {
+							showOAuthParseResult(
+								"✅ OAuth settings saved successfully",
+								"success",
+							);
+						}
+						if (driveClientIdInput)
+							driveClientIdInput.value = clientId;
+						if (driveClientSecretInput)
+							driveClientSecretInput.value = clientSecret;
+						if (driveFolderIdInput)
+							driveFolderIdInput.value = folderId;
+						await updateDriveUI();
+					} catch (err) {
+						debugError("Error saving OAuth settings:", err);
+						showStatus(
+							"❌ Error saving OAuth settings: " + err.message,
+							"error",
+						);
+					}
+				});
+			}
+
+			// ===== Comprehensive Backup Handlers =====
+			if (createComprehensiveBackupBtn) {
+				createComprehensiveBackupBtn.addEventListener(
+					"click",
+					async () => {
+						try {
+							createComprehensiveBackupBtn.disabled = true;
+							createComprehensiveBackupBtn.textContent =
+								"⏳ Creating...";
+
+							const backup = await createComprehensiveBackup({
+								type: BACKUP_OPTIONS.FULL,
+								includeApiKeys:
+									backupIncludeApiKeys?.checked ?? true,
+								includeCredentials:
+									backupIncludeCredentials?.checked ?? true,
+							});
+
+							downloadBackupAsFile(backup);
+							showStatus(
+								`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
+								"success",
+							);
+						} catch (error) {
+							debugError("Comprehensive backup failed:", error);
+							showStatus(
+								`❌ Backup failed: ${error.message}`,
+								"error",
+							);
+						} finally {
+							createComprehensiveBackupBtn.disabled = false;
+							createComprehensiveBackupBtn.textContent =
+								"💾 Full Backup";
+						}
+					},
+				);
+			}
+
+			if (restoreComprehensiveBackupBtn) {
+				restoreComprehensiveBackupBtn.addEventListener("click", () => {
+					comprehensiveBackupFile?.click();
+				});
+			}
+
+			if (comprehensiveBackupFile) {
+				comprehensiveBackupFile.addEventListener(
+					"change",
+					async (e) => {
+						const file = e.target.files?.[0];
+						if (!file) return;
+
+						try {
+							const backup = await readBackupFromFile(file);
+
+							if (!backup.version || !backup.data) {
+								throw new Error("Invalid backup file format");
+							}
+
+							const novelCount = backup.metadata?.novelCount || 0;
+							const hasApiKey = backup.metadata?.hasApiKey;
+							const hasCredentials =
+								backup.metadata?.hasDriveCredentials;
+
+							// Build confirmation message with version info
+							let confirmMsg = `Restore this backup?\n\n`;
+
+							// Add version information if available
+							if (backup.extensionVersion) {
+								confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
+							}
+							if (backup.version) {
+								confirmMsg += `📋 Format Version: ${backup.version}\n`;
+							}
+							confirmMsg += `📚 ${novelCount} novels\n`;
+							confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
+							confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
+							confirmMsg += `Mode: MERGE (preserves existing data)`;
+
+							if (!confirm(confirmMsg)) {
+								e.target.value = "";
+								return;
+							}
+
+							const result = await restoreComprehensiveBackup(
+								backup,
+								{
+									mode: "merge",
+									restoreApiKeys:
+										hasApiKey &&
+										confirm("Restore API keys?"),
+									restoreCredentials:
+										hasCredentials &&
+										confirm("Restore OAuth credentials?"),
+								},
+							);
+
+							if (result.success) {
+								// Show version warnings if any
+								if (result.versionInfo?.warnings?.length > 0) {
+									const warningMsg =
+										result.versionInfo.warnings.join("\n");
+									showStatus(`⚠️ ${warningMsg}`, "warning");
+									setTimeout(() => {
+										showStatus(
+											`✅ Restored ${result.restoredKeys.length} items!`,
+											"success",
+										);
+									}, 3000);
+								} else {
+									showStatus(
+										`✅ Restored ${result.restoredKeys.length} items!`,
+										"success",
+									);
+								}
+								// Reload popup to reflect changes
+								setTimeout(() => location.reload(), 1500);
+							}
+						} catch (error) {
+							debugError("Restore failed:", error);
+							showStatus(
+								`❌ Restore failed: ${error.message}`,
+								"error",
+							);
+						}
+
+						e.target.value = "";
+					},
+				);
+			}
+
+			// ===== Rolling Backup Handlers =====
+			async function loadRollingBackups() {
+				if (!rollingBackupList) return;
+
+				const backups = await listRollingBackups();
+
+				if (backups.length === 0) {
+					rollingBackupList.innerHTML = `
 				<div class="no-backups" style="text-align: center; padding: 15px; color: #888; font-size: 12px">
 					No rolling backups yet. Enable auto-backup or create one manually.
 				</div>`;
-			return;
-		}
+					return;
+				}
 
-		rollingBackupList.innerHTML = backups
-			.map(
-				(b) => `
+				rollingBackupList.innerHTML = backups
+					.map(
+						(b) => `
 			<div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 6px; font-size: 12px">
 				<div>
 					<div style="font-weight: 500">${b.dateStr}</div>
@@ -5710,240 +6167,256 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				</div>
 			</div>
 		`,
-			)
-			.join("");
+					)
+					.join("");
 
-		// Attach event listeners
-		rollingBackupList
-			.querySelectorAll(".rolling-restore")
-			.forEach((btn) => {
-				btn.addEventListener("click", async () => {
-					const backup = await getRollingBackup(btn.dataset.key);
-					if (
-						backup &&
-						confirm("Restore this backup? (Merge mode)")
-					) {
-						await restoreComprehensiveBackup(backup, {
-							mode: "merge",
+				// Attach event listeners
+				rollingBackupList
+					.querySelectorAll(".rolling-restore")
+					.forEach((btn) => {
+						btn.addEventListener("click", async () => {
+							const backup = await getRollingBackup(
+								btn.dataset.key,
+							);
+							if (
+								backup &&
+								confirm("Restore this backup? (Merge mode)")
+							) {
+								await restoreComprehensiveBackup(backup, {
+									mode: "merge",
+								});
+								showStatus("✅ Backup restored!", "success");
+								setTimeout(() => location.reload(), 1000);
+							}
 						});
-						showStatus("✅ Backup restored!", "success");
-						setTimeout(() => location.reload(), 1000);
+					});
+
+				rollingBackupList
+					.querySelectorAll(".rolling-download")
+					.forEach((btn) => {
+						btn.addEventListener("click", async () => {
+							const backup = await getRollingBackup(
+								btn.dataset.key,
+							);
+							if (backup) {
+								downloadBackupAsFile(backup);
+							}
+						});
+					});
+
+				rollingBackupList
+					.querySelectorAll(".rolling-delete")
+					.forEach((btn) => {
+						btn.addEventListener("click", async () => {
+							if (confirm("Delete this backup?")) {
+								await deleteRollingBackup(btn.dataset.key);
+								await loadRollingBackups();
+								showStatus("Backup deleted", "success");
+							}
+						});
+					});
+			}
+
+			if (createRollingBackupBtn) {
+				createRollingBackupBtn.addEventListener("click", async () => {
+					try {
+						createRollingBackupBtn.disabled = true;
+						createRollingBackupBtn.textContent = "⏳ Creating...";
+
+						await createRollingBackup("manual");
+						await loadRollingBackups();
+						showStatus("✅ Rolling backup created!", "success");
+					} catch (error) {
+						debugError("Rolling backup failed:", error);
+						showStatus(`❌ Failed: ${error.message}`, "error");
+					} finally {
+						createRollingBackupBtn.disabled = false;
+						createRollingBackupBtn.textContent =
+							"➕ Create Rolling Backup Now";
 					}
 				});
-			});
-
-		rollingBackupList
-			.querySelectorAll(".rolling-download")
-			.forEach((btn) => {
-				btn.addEventListener("click", async () => {
-					const backup = await getRollingBackup(btn.dataset.key);
-					if (backup) {
-						downloadBackupAsFile(backup);
-					}
-				});
-			});
-
-		rollingBackupList.querySelectorAll(".rolling-delete").forEach((btn) => {
-			btn.addEventListener("click", async () => {
-				if (confirm("Delete this backup?")) {
-					await deleteRollingBackup(btn.dataset.key);
-					await loadRollingBackups();
-					showStatus("Backup deleted", "success");
-				}
-			});
-		});
-	}
-
-	if (createRollingBackupBtn) {
-		createRollingBackupBtn.addEventListener("click", async () => {
-			try {
-				createRollingBackupBtn.disabled = true;
-				createRollingBackupBtn.textContent = "⏳ Creating...";
-
-				await createRollingBackup("manual");
-				await loadRollingBackups();
-				showStatus("✅ Rolling backup created!", "success");
-			} catch (error) {
-				debugError("Rolling backup failed:", error);
-				showStatus(`❌ Failed: ${error.message}`, "error");
-			} finally {
-				createRollingBackupBtn.disabled = false;
-				createRollingBackupBtn.textContent =
-					"➕ Create Rolling Backup Now";
-			}
-		});
-	}
-
-	// Load rolling backups on popup open
-	loadRollingBackups();
-
-	// Load backups and novels on popup open
-		// UI updates moved to separate calls or handled by storage change listeners
-		updateDriveUI().catch(e => debugError("Error updating Drive UI", e));
-		updateNotificationBadge().catch(e => debugError("Error updating notification badge", e));
-	})();
-
-	// Notifications tab is now a proper tab handled by tab switching above
-	// (Old modal toggle code removed)
-
-	// Log that the popup is initialized
-	debugLog("RanobeGemini popup initialized");
-
-	// Auto-refresh the novels tab and library section whenever the library
-	// data changes in storage (e.g. after enhancing a chapter in another tab).
-	// Without this listener, the popup would show a stale enhanced-chapter count
-	// until the user closes and reopens it.
-	browser.storage.onChanged.addListener((changes, areaName) => {
-		if (areaName !== "local") return;
-		if (!changes.rg_novel_library) return;
-		// Debounce to avoid rapid re-renders when multiple chunks complete
-		if (window._popupLibraryRefreshTimer) {
-			clearTimeout(window._popupLibraryRefreshTimer);
-		}
-		window._popupLibraryRefreshTimer = setTimeout(async () => {
-			// Only re-render if the novels tab is currently visible
-			const novelsTabContent = document.getElementById("novels");
-			if (
-				novelsTabContent &&
-				novelsTabContent.classList.contains("active")
-			) {
-				await loadNovelsTab();
-			}
-			// Also refresh the home-tab library section (recent novels grid)
-			if (typeof loadLibraryData === "function") {
-				await loadLibraryData();
-			}
-		}, 600);
-	});
-
-	// Load site-specific prompts (only when UI is present)
-	const sitePromptsContainer = document.getElementById(
-		"siteSpecificPromptsContainer",
-	);
-	if (sitePromptsContainer) {
-		loadSiteHandlerPrompts();
-	}
-
-	// Initialize info tab with dynamic data
-	initInfoTab();
-
-	// Add tab change listener to update prompts when switching to the prompts tab
-	if (sitePromptsContainer) {
-		document.querySelectorAll(".tab-btn").forEach(function (button) {
-			button.addEventListener("click", function () {
-				if (button.getAttribute("data-tab") === "prompts") {
-					// Reload site-specific prompts when prompts tab is selected
-					loadSiteHandlerPrompts();
-				}
-			});
-		});
-	}
-
-	/**
-	 * Initialize Info tab with dynamic version and supported sites
-	 */
-	async function initInfoTab() {
-		try {
-			// Get version from manifest
-			const manifestUrl = browser.runtime.getURL("manifest.json");
-			const manifestResponse = await fetch(manifestUrl);
-			const manifest = await manifestResponse.json();
-			const version = manifest.version || "Unknown";
-
-			// Update version badge
-			const versionBadge = document.querySelector(".version-badge");
-			if (versionBadge) {
-				versionBadge.textContent = `Version ${version}`;
 			}
 
-			// Build supported sites list from SHELF_REGISTRY
-			const supportedSitesList = document.querySelector(
-				".faq-item:nth-child(3) .faq-answer ul",
+			// Load rolling backups on popup open
+			loadRollingBackups();
+
+			// Load backups and novels on popup open
+			// UI updates moved to separate calls or handled by storage change listeners
+			updateDriveUI().catch((e) =>
+				debugError("Error updating Drive UI", e),
 			);
-			if (supportedSitesList && SHELVES) {
-				let sitesHTML = "";
-				Object.values(SHELVES).forEach((shelf) => {
-					const emoji = shelf.emoji || "📚";
-					const primaryDomain =
-						shelf.primaryDomain ||
-						(shelf.domains && shelf.domains[0]) ||
-						"N/A";
-					const allDomains =
-						shelf.domains && shelf.domains.length > 1
-							? shelf.domains.join(", ")
-							: primaryDomain;
-					sitesHTML += `<li>${emoji} <strong>${escapeHtml(
-						shelf.name,
-					)}</strong> — <code>${escapeHtml(allDomains)}</code></li>`;
-				});
-				supportedSitesList.innerHTML = sitesHTML;
-			}
-		} catch (error) {
-			debugError("Error initializing info tab:", error);
-		}
-	}
+			updateNotificationBadge().catch((e) =>
+				debugError("Error updating notification badge", e),
+			);
 
-	/**
-	 * Initialize Notifications Tab
-	 */
-	async function initNotificationsTab() {
-		try {
-			await notificationManager.initialize();
-			await loadNotifications();
-			await updateNotificationBadge();
-		} catch (error) {
-			debugError("Error initializing notifications tab:", error);
-		}
-	}
+			// Notifications tab is now a proper tab handled by tab switching above
+			// (Old modal toggle code removed)
 
-	/**
-	 * Load and display notifications
-	 */
-	async function loadNotifications() {
-		const filterType =
-			currentNotificationFilter === "all"
-				? null
-				: currentNotificationFilter;
+			// Log that the popup is initialized
+			debugLog("RanobeGemini popup initialized");
 
-		let notifications = [];
-		let stats = null;
-		try {
-			const response = await browser.runtime.sendMessage({
-				action: "getNotifications",
-				type: filterType,
-				grouped: true, // Request grouped notifications
+			// Auto-refresh the novels tab and library section whenever the library
+			// data changes in storage (e.g. after enhancing a chapter in another tab).
+			// Without this listener, the popup would show a stale enhanced-chapter count
+			// until the user closes and reopens it.
+			browser.storage.onChanged.addListener((changes, areaName) => {
+				if (areaName !== "local") return;
+				if (!changes.rg_novel_library) return;
+				// Debounce to avoid rapid re-renders when multiple chunks complete
+				if (window._popupLibraryRefreshTimer) {
+					clearTimeout(window._popupLibraryRefreshTimer);
+				}
+				window._popupLibraryRefreshTimer = setTimeout(async () => {
+					// Only re-render if the novels tab is currently visible
+					const novelsTabContent = document.getElementById("novels");
+					if (
+						novelsTabContent &&
+						novelsTabContent.classList.contains("active")
+					) {
+						await loadNovelsTab();
+					}
+					// Also refresh the home-tab library section (recent novels grid)
+					if (typeof loadLibraryData === "function") {
+						await loadLibraryData();
+					}
+				}, 600);
 			});
-			if (response?.success) {
-				notifications = response.notifications || [];
-				stats = response.stats || null;
-			} else {
-				throw new Error(response?.error || "Notification fetch failed");
+
+			// Load site-specific prompts (only when UI is present)
+			const sitePromptsContainer = document.getElementById(
+				"siteSpecificPromptsContainer",
+			);
+			if (sitePromptsContainer) {
+				loadSiteHandlerPrompts();
 			}
-		} catch (_error) {
-			notifications = notificationManager.getAll({
-				type: filterType,
-				grouped: true,
-			});
-			stats = notificationManager.getStats();
-		}
 
-		// Update stats
-		if (stats) {
-			if (totalNotifsSpan) totalNotifsSpan.textContent = stats.total;
-			if (unreadNotifsSpan) unreadNotifsSpan.textContent = stats.unread;
-		} else {
-			const fallbackStats = notificationManager.getStats();
-			if (totalNotifsSpan)
-				totalNotifsSpan.textContent = fallbackStats.total;
-			if (unreadNotifsSpan)
-				unreadNotifsSpan.textContent = fallbackStats.unread;
-		}
+			// Initialize info tab with dynamic data
+			initInfoTab();
 
-		// Clear container
-		if (!notificationsContainer) return;
+			// Add tab change listener to update prompts when switching to the prompts tab
+			if (sitePromptsContainer) {
+				document
+					.querySelectorAll(".tab-btn")
+					.forEach(function (button) {
+						button.addEventListener("click", function () {
+							if (button.getAttribute("data-tab") === "prompts") {
+								// Reload site-specific prompts when prompts tab is selected
+								loadSiteHandlerPrompts();
+							}
+						});
+					});
+			}
 
-		if (notifications.length === 0) {
-			notificationsContainer.innerHTML = `
+			/**
+			 * Initialize Info tab with dynamic version and supported sites
+			 */
+			async function initInfoTab() {
+				try {
+					// Get version from manifest
+					const manifestUrl = browser.runtime.getURL("manifest.json");
+					const manifestResponse = await fetch(manifestUrl);
+					const manifest = await manifestResponse.json();
+					const version = manifest.version || "Unknown";
+
+					// Update version badge
+					const versionBadge =
+						document.querySelector(".version-badge");
+					if (versionBadge) {
+						versionBadge.textContent = `Version ${version}`;
+					}
+
+					// Build supported sites list from SHELF_REGISTRY
+					const supportedSitesList = document.querySelector(
+						".faq-item:nth-child(3) .faq-answer ul",
+					);
+					if (supportedSitesList && SHELVES) {
+						let sitesHTML = "";
+						Object.values(SHELVES).forEach((shelf) => {
+							const emoji = shelf.emoji || "📚";
+							const primaryDomain =
+								shelf.primaryDomain ||
+								(shelf.domains && shelf.domains[0]) ||
+								"N/A";
+							const allDomains =
+								shelf.domains && shelf.domains.length > 1
+									? shelf.domains.join(", ")
+									: primaryDomain;
+							sitesHTML += `<li>${emoji} <strong>${escapeHtml(
+								shelf.name,
+							)}</strong> — <code>${escapeHtml(allDomains)}</code></li>`;
+						});
+						supportedSitesList.innerHTML = sitesHTML;
+					}
+				} catch (error) {
+					debugError("Error initializing info tab:", error);
+				}
+			}
+
+			/**
+			 * Initialize Notifications Tab
+			 */
+			async function initNotificationsTab() {
+				try {
+					await notificationManager.initialize();
+					await loadNotifications();
+					await updateNotificationBadge();
+				} catch (error) {
+					debugError("Error initializing notifications tab:", error);
+				}
+			}
+
+			/**
+			 * Load and display notifications
+			 */
+			async function loadNotifications() {
+				const filterType =
+					currentNotificationFilter === "all"
+						? null
+						: currentNotificationFilter;
+
+				let notifications = [];
+				let stats = null;
+				try {
+					const response = await browser.runtime.sendMessage({
+						action: "getNotifications",
+						type: filterType,
+						grouped: true, // Request grouped notifications
+					});
+					if (response?.success) {
+						notifications = response.notifications || [];
+						stats = response.stats || null;
+					} else {
+						throw new Error(
+							response?.error || "Notification fetch failed",
+						);
+					}
+				} catch (_error) {
+					notifications = notificationManager.getAll({
+						type: filterType,
+						grouped: true,
+					});
+					stats = notificationManager.getStats();
+				}
+
+				// Update stats
+				if (stats) {
+					if (totalNotifsSpan)
+						totalNotifsSpan.textContent = stats.total;
+					if (unreadNotifsSpan)
+						unreadNotifsSpan.textContent = stats.unread;
+				} else {
+					const fallbackStats = notificationManager.getStats();
+					if (totalNotifsSpan)
+						totalNotifsSpan.textContent = fallbackStats.total;
+					if (unreadNotifsSpan)
+						unreadNotifsSpan.textContent = fallbackStats.unread;
+				}
+
+				// Clear container
+				if (!notificationsContainer) return;
+
+				if (notifications.length === 0) {
+					notificationsContainer.innerHTML = `
 				<div class="no-notifications">
 					<p>📭</p>
 					<p>No notifications</p>
@@ -5954,118 +6427,129 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					}</p>
 				</div>
 			`;
-			return;
-		}
+					return;
+				}
 
-		// Build notifications HTML
-		notificationsContainer.innerHTML = notifications
-			.map((notif) => renderNotification(notif))
-			.join("");
+				// Build notifications HTML
+				notificationsContainer.innerHTML = notifications
+					.map((notif) => renderNotification(notif))
+					.join("");
 
-		// Add event listeners
-		notificationsContainer
-			.querySelectorAll(".notification-item")
-			.forEach((item) => {
-				const id = item.dataset.id;
-				const notif = notifications.find((n) => n.id === id);
-				item.addEventListener("click", async (e) => {
-					// Don't mark as read if clicking action buttons
-					if (e.target.closest(".notification-action-btn")) return;
-					if (e.target.closest(".notification-library-link")) return;
+				// Add event listeners
+				notificationsContainer
+					.querySelectorAll(".notification-item")
+					.forEach((item) => {
+						const id = item.dataset.id;
+						const notif = notifications.find((n) => n.id === id);
+						item.addEventListener("click", async (e) => {
+							// Don't mark as read if clicking action buttons
+							if (e.target.closest(".notification-action-btn"))
+								return;
+							if (e.target.closest(".notification-library-link"))
+								return;
 
-					try {
-						// If grouped notification, mark all underlying notifications
-						if (notif?.isGroup && notif?.groupedNotifications) {
-							await Promise.all(
-								notif.groupedNotifications.map((n) =>
-									browser.runtime
-										.sendMessage({
-											action: "markNotificationRead",
-											id: n.id,
-										})
-										.catch(() =>
-											notificationManager.markAsRead(
-												n.id,
-											),
+							try {
+								// If grouped notification, mark all underlying notifications
+								if (
+									notif?.isGroup &&
+									notif?.groupedNotifications
+								) {
+									await Promise.all(
+										notif.groupedNotifications.map((n) =>
+											browser.runtime
+												.sendMessage({
+													action: "markNotificationRead",
+													id: n.id,
+												})
+												.catch(() =>
+													notificationManager.markAsRead(
+														n.id,
+													),
+												),
 										),
-								),
-							);
-						} else {
-							await browser.runtime.sendMessage({
-								action: "markNotificationRead",
-								id,
-							});
-						}
-					} catch (_err) {
-						if (notif?.isGroup && notif?.groupedNotifications) {
-							notif.groupedNotifications.forEach((n) =>
-								notificationManager.markAsRead(n.id),
-							);
-						} else {
-							await notificationManager.markAsRead(id);
-						}
-					}
-					item.classList.remove("unread");
-					await updateNotificationBadge();
-				});
-			});
+									);
+								} else {
+									await browser.runtime.sendMessage({
+										action: "markNotificationRead",
+										id,
+									});
+								}
+							} catch (_err) {
+								if (
+									notif?.isGroup &&
+									notif?.groupedNotifications
+								) {
+									notif.groupedNotifications.forEach((n) =>
+										notificationManager.markAsRead(n.id),
+									);
+								} else {
+									await notificationManager.markAsRead(id);
+								}
+							}
+							item.classList.remove("unread");
+							await updateNotificationBadge();
+						});
+					});
 
-		// Add expand/collapse listeners for grouped notifications
-		notificationsContainer
-			.querySelectorAll(".notification-group-toggle")
-			.forEach((toggle) => {
-				toggle.addEventListener("click", (e) => {
-					e.stopPropagation();
-					const group = toggle
-						.closest(".notification-item")
-						.querySelector(".notification-group-items");
-					group.classList.toggle("expanded");
-					toggle.textContent = group.classList.contains("expanded")
-						? "▼ Hide"
-						: `▶ Show ${toggle.dataset.count} related`;
-				});
-			});
+				// Add expand/collapse listeners for grouped notifications
+				notificationsContainer
+					.querySelectorAll(".notification-group-toggle")
+					.forEach((toggle) => {
+						toggle.addEventListener("click", (e) => {
+							e.stopPropagation();
+							const group = toggle
+								.closest(".notification-item")
+								.querySelector(".notification-group-items");
+							group.classList.toggle("expanded");
+							toggle.textContent = group.classList.contains(
+								"expanded",
+							)
+								? "▼ Hide"
+								: `▶ Show ${toggle.dataset.count} related`;
+						});
+					});
 
-		// Add library link listeners
-		notificationsContainer
-			.querySelectorAll(".notification-library-link")
-			.forEach((link) => {
-				link.addEventListener("click", async (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					const novelId = link.dataset.novelId;
-					const shelfId = link.dataset.shelfId;
-					await openNovelInLibrary(novelId, shelfId);
-				});
-			});
+				// Add library link listeners
+				notificationsContainer
+					.querySelectorAll(".notification-library-link")
+					.forEach((link) => {
+						link.addEventListener("click", async (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							const novelId = link.dataset.novelId;
+							const shelfId = link.dataset.shelfId;
+							await openNovelInLibrary(novelId, shelfId);
+						});
+					});
 
-		notificationsContainer
-			.querySelectorAll(".notification-action-btn")
-			.forEach((btn) => {
-				btn.addEventListener("click", (e) => {
-					e.stopPropagation();
-					const action = btn.dataset.action;
-					const id = btn.closest(".notification-item").dataset.id;
-					if (action === "delete") {
-						deleteNotification(id);
-					}
-				});
-			});
-	}
+				notificationsContainer
+					.querySelectorAll(".notification-action-btn")
+					.forEach((btn) => {
+						btn.addEventListener("click", (e) => {
+							e.stopPropagation();
+							const action = btn.dataset.action;
+							const id =
+								btn.closest(".notification-item").dataset.id;
+							if (action === "delete") {
+								deleteNotification(id);
+							}
+						});
+					});
+			}
 
-	/**
-	 * Render a single notification
-	 */
-	function renderNotification(notif) {
-		const relativeTime = formatRelativeTime(notif.timestamp);
-		const fullTime = new Date(notif.timestamp).toLocaleString();
+			/**
+			 * Render a single notification
+			 */
+			function renderNotification(notif) {
+				const relativeTime = formatRelativeTime(notif.timestamp);
+				const fullTime = new Date(notif.timestamp).toLocaleString();
 
-		// Handle grouped notifications
-		if (notif.isGroup && notif.groupedNotifications) {
-			return renderGroupedNotification(notif);
-		}
+				// Handle grouped notifications
+				if (notif.isGroup && notif.groupedNotifications) {
+					return renderGroupedNotification(notif);
+				}
 
-		return `
+				return `
 			<div class="notification-item ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
 				<div class="notification-header">
 					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
@@ -6079,17 +6563,17 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				</div>
 			</div>
 		`;
-	}
+			}
 
-	/**
-	 * Render a grouped notification
-	 */
-	function renderGroupedNotification(notif) {
-		const relativeTime = formatRelativeTime(notif.timestamp);
-		const fullTime = new Date(notif.timestamp).toLocaleString();
-		const startTime = formatRelativeTime(notif.timeRange.start);
+			/**
+			 * Render a grouped notification
+			 */
+			function renderGroupedNotification(notif) {
+				const relativeTime = formatRelativeTime(notif.timestamp);
+				const fullTime = new Date(notif.timestamp).toLocaleString();
+				const startTime = formatRelativeTime(notif.timeRange.start);
 
-		return `
+				return `
 			<div class="notification-item notification-group ${notif.read ? "" : "unread"}" data-id="${escapeHtml(notif.id)}">
 				<div class="notification-header">
 					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
@@ -6110,16 +6594,16 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				</div>
 			</div>
 		`;
-	}
+			}
 
-	/**
-	 * Render a single item within a group
-	 */
-	function renderGroupedItem(notif) {
-		const relativeTime = formatRelativeTime(notif.timestamp);
-		const fullTime = new Date(notif.timestamp).toLocaleString();
+			/**
+			 * Render a single item within a group
+			 */
+			function renderGroupedItem(notif) {
+				const relativeTime = formatRelativeTime(notif.timestamp);
+				const fullTime = new Date(notif.timestamp).toLocaleString();
 
-		return `
+				return `
 			<div class="notification-group-item">
 				<div class="notification-group-item-header">
 					<span class="notification-type-badge ${notif.type}">${notif.type}</span>
@@ -6128,44 +6612,44 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				<div class="notification-message">${escapeHtml(notif.message)}</div>
 			</div>
 		`;
-	}
+			}
 
-	/**
-	 * Render notification metadata
-	 */
-	function renderNotificationMeta(notif) {
-		let metaHTML = "";
+			/**
+			 * Render notification metadata
+			 */
+			function renderNotificationMeta(notif) {
+				let metaHTML = "";
 
-		if (notif.url || notif.novelData || notif.source) {
-			metaHTML += '<div class="notification-meta">';
+				if (notif.url || notif.novelData || notif.source) {
+					metaHTML += '<div class="notification-meta">';
 
-			if (notif.url) {
-				metaHTML += `
+					if (notif.url) {
+						metaHTML += `
 					<div class="notification-meta-item">
 						<a href="${escapeHtml(notif.url)}" target="_blank" class="notification-url">
 							🔗 ${escapeHtml(truncateUrl(notif.url))}
 						</a>
 					</div>
 				`;
-			}
+					}
 
-			if (notif.source) {
-				metaHTML += `
+					if (notif.source) {
+						metaHTML += `
 					<div class="notification-meta-item">
 						<strong>Source:</strong> ${escapeHtml(notif.source)}
 					</div>
 				`;
-			}
+					}
 
-			if (notif.novelData) {
-				const novelTitle =
-					notif.novelData.title ||
-					notif.novelData.bookTitle ||
-					"Unknown Novel";
-				const novelId = notif.novelData.novelId;
-				const shelfId = notif.novelData.shelfId;
+					if (notif.novelData) {
+						const novelTitle =
+							notif.novelData.title ||
+							notif.novelData.bookTitle ||
+							"Unknown Novel";
+						const novelId = notif.novelData.novelId;
+						const shelfId = notif.novelData.shelfId;
 
-				metaHTML += `
+						metaHTML += `
 					<div class="notification-novel-data">
 						<div class="notification-novel-title">${escapeHtml(novelTitle)}</div>
 						<div class="notification-novel-meta">
@@ -6181,212 +6665,229 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						}
 					</div>
 				`;
-			}
+					}
 
-			if (notif.metadata && Object.keys(notif.metadata).length > 0) {
-				metaHTML += `
+					if (
+						notif.metadata &&
+						Object.keys(notif.metadata).length > 0
+					) {
+						metaHTML += `
 					<div class="notification-meta-item notification-meta-details">
 						<strong>Details:</strong>
 						${renderNotificationMetadataList(notif.metadata)}
 					</div>
 				`;
-			}
-
-			metaHTML += "</div>";
-		}
-
-		return metaHTML;
-	}
-
-	function renderNotificationMetadataList(metadata) {
-		const entries = Object.entries(metadata)
-			.filter(([, value]) => value !== undefined && value !== null)
-			.slice(0, 8);
-
-		if (entries.length === 0) return "";
-
-		const items = entries
-			.map(([key, value]) => {
-				let displayValue = value;
-				if (typeof value === "object") {
-					try {
-						displayValue = JSON.stringify(value);
-					} catch (_err) {
-						displayValue = "[Object]";
 					}
+
+					metaHTML += "</div>";
 				}
-				const text = String(displayValue);
-				const trimmed =
-					text.length > 120 ? `${text.slice(0, 117)}...` : text;
-				return `<div class="notification-meta-detail"><strong>${escapeHtml(
-					key,
-				)}:</strong> ${escapeHtml(trimmed)}</div>`;
-			})
-			.join("");
 
-		return `<div class="notification-meta-details-list">${items}</div>`;
-	}
-
-	/**
-	 * Truncate URL for display
-	 */
-	function truncateUrl(url) {
-		try {
-			const urlObj = new URL(url);
-			const path =
-				urlObj.pathname.length > 30
-					? urlObj.pathname.substring(0, 30) + "..."
-					: urlObj.pathname;
-			return `${urlObj.hostname}${path}`;
-		} catch (e) {
-			return url.length > 50 ? url.substring(0, 50) + "..." : url;
-		}
-	}
-
-	/**
-	 * Delete a notification
-	 */
-	async function deleteNotification(id) {
-		try {
-			await browser.runtime.sendMessage({
-				action: "deleteNotification",
-				id,
-			});
-		} catch (_err) {
-			await notificationManager.delete(id);
-		}
-		await loadNotifications();
-		await updateNotificationBadge();
-	}
-
-	/**
-	 * Open novel in library (opens library page with modal)
-	 */
-	async function openNovelInLibrary(novelId, shelfId) {
-		try {
-			const shelf = Object.values(SHELVES).find((s) => s.id === shelfId);
-			const shelfPage = shelf
-				? `library/websites/${encodeURIComponent(shelfId)}/index.html`
-				: "library/library.html";
-			const libraryUrl = browser.runtime.getURL(
-				`${shelfPage}?novel=${encodeURIComponent(novelId)}`,
-			);
-
-			// Open in new tab
-			await browser.tabs.create({
-				url: libraryUrl,
-				active: true,
-			});
-
-			// Close popup
-			window.close();
-		} catch (error) {
-			debugError("Failed to open novel in library:", error);
-			showStatus("Failed to open library. Please try again.", "error");
-		}
-	}
-
-	/**
-	 * Update notification badge
-	 */
-	async function updateNotificationBadge() {
-		if (!notificationBadge) return;
-		let unreadCount = 0;
-		try {
-			const response = await browser.runtime.sendMessage({
-				action: "getNotifications",
-				limit: 0,
-			});
-			if (response?.success && response.stats) {
-				unreadCount = response.stats.unread || 0;
-			} else {
-				unreadCount = notificationManager.getUnreadCount();
+				return metaHTML;
 			}
-		} catch (_error) {
-			unreadCount = notificationManager.getUnreadCount();
-		}
-		const badgeText = unreadCount > 999 ? "999+" : `${unreadCount}`;
-		if (unreadCount > 0) {
-			notificationBadge.textContent = badgeText;
-			notificationBadge.style.display = "inline-block";
-		} else {
-			notificationBadge.style.display = "none";
-		}
 
-		try {
-			const actionApi = browser.action || browser.browserAction;
-			if (actionApi?.setBadgeText) {
-				actionApi.setBadgeText({
-					text: unreadCount > 0 ? badgeText : "",
-				});
-				if (actionApi.setBadgeBackgroundColor) {
-					actionApi.setBadgeBackgroundColor({ color: "#ef4444" });
+			function renderNotificationMetadataList(metadata) {
+				const entries = Object.entries(metadata)
+					.filter(
+						([, value]) => value !== undefined && value !== null,
+					)
+					.slice(0, 8);
+
+				if (entries.length === 0) return "";
+
+				const items = entries
+					.map(([key, value]) => {
+						let displayValue = value;
+						if (typeof value === "object") {
+							try {
+								displayValue = JSON.stringify(value);
+							} catch (_err) {
+								displayValue = "[Object]";
+							}
+						}
+						const text = String(displayValue);
+						const trimmed =
+							text.length > 120
+								? `${text.slice(0, 117)}...`
+								: text;
+						return `<div class="notification-meta-detail"><strong>${escapeHtml(
+							key,
+						)}:</strong> ${escapeHtml(trimmed)}</div>`;
+					})
+					.join("");
+
+				return `<div class="notification-meta-details-list">${items}</div>`;
+			}
+
+			/**
+			 * Truncate URL for display
+			 */
+			function truncateUrl(url) {
+				try {
+					const urlObj = new URL(url);
+					const path =
+						urlObj.pathname.length > 30
+							? urlObj.pathname.substring(0, 30) + "..."
+							: urlObj.pathname;
+					return `${urlObj.hostname}${path}`;
+				} catch (e) {
+					return url.length > 50 ? url.substring(0, 50) + "..." : url;
 				}
 			}
-		} catch (_err) {
-			// ignore badge errors for browsers that do not support it
-		}
-	}
 
-	// Notification tab event listeners
-	if (filterButtons) {
-		filterButtons.forEach((btn) => {
-			btn.addEventListener("click", async () => {
-				filterButtons.forEach((b) => b.classList.remove("active"));
-				btn.classList.add("active");
-				currentNotificationFilter = btn.dataset.filter;
-				await loadNotifications();
-			});
-		});
-	}
-
-	if (markAllReadBtn) {
-		markAllReadBtn.addEventListener("click", async () => {
-			try {
-				await browser.runtime.sendMessage({
-					action: "markAllNotificationsRead",
-				});
-			} catch (_err) {
-				await notificationManager.markAllAsRead();
-			}
-			await loadNotifications();
-			await updateNotificationBadge();
-			showStatus("All notifications marked as read", "success");
-		});
-	}
-
-	if (clearNotificationsBtn) {
-		clearNotificationsBtn.addEventListener("click", async () => {
-			if (
-				confirm(
-					"Are you sure you want to clear all notifications? This cannot be undone.",
-				)
-			) {
+			/**
+			 * Delete a notification
+			 */
+			async function deleteNotification(id) {
 				try {
 					await browser.runtime.sendMessage({
-						action: "clearNotifications",
+						action: "deleteNotification",
+						id,
 					});
 				} catch (_err) {
-					await notificationManager.clearAll();
+					await notificationManager.delete(id);
 				}
 				await loadNotifications();
 				await updateNotificationBadge();
-				// Show only status message (no notification)
-				const statusDiv = document.getElementById("status");
-				if (statusDiv) {
-					statusDiv.className = "status success";
-					statusDiv.textContent = "✓ All notifications cleared";
-					statusDiv.style.display = "block";
-					setTimeout(() => {
-						statusDiv.style.display = "none";
-						statusDiv.textContent = "";
-					}, 3000);
+			}
+
+			/**
+			 * Open novel in library (opens library page with modal)
+			 */
+			async function openNovelInLibrary(novelId, shelfId) {
+				try {
+					const shelf = Object.values(SHELVES).find(
+						(s) => s.id === shelfId,
+					);
+					const shelfPage = shelf
+						? `library/websites/${encodeURIComponent(shelfId)}/index.html`
+						: "library/library.html";
+					const libraryUrl = browser.runtime.getURL(
+						`${shelfPage}?novel=${encodeURIComponent(novelId)}`,
+					);
+
+					// Open in new tab
+					await browser.tabs.create({
+						url: libraryUrl,
+						active: true,
+					});
+
+					// Close popup
+					window.close();
+				} catch (error) {
+					debugError("Failed to open novel in library:", error);
+					showStatus(
+						"Failed to open library. Please try again.",
+						"error",
+					);
 				}
 			}
-		});
-	}
 
-	// Tab switching for notifications is handled in the main tab switching code above
-	// Initialize notifications badge on startup (content loads on tab switch)
-	updateNotificationBadge();
+			/**
+			 * Update notification badge
+			 */
+			async function updateNotificationBadge() {
+				if (!notificationBadge) return;
+				let unreadCount = 0;
+				try {
+					const response = await browser.runtime.sendMessage({
+						action: "getNotifications",
+						limit: 0,
+					});
+					if (response?.success && response.stats) {
+						unreadCount = response.stats.unread || 0;
+					} else {
+						unreadCount = notificationManager.getUnreadCount();
+					}
+				} catch (_error) {
+					unreadCount = notificationManager.getUnreadCount();
+				}
+				const badgeText = unreadCount > 999 ? "999+" : `${unreadCount}`;
+				if (unreadCount > 0) {
+					notificationBadge.textContent = badgeText;
+					notificationBadge.style.display = "inline-block";
+				} else {
+					notificationBadge.style.display = "none";
+				}
+
+				try {
+					const actionApi = browser.action || browser.browserAction;
+					if (actionApi?.setBadgeText) {
+						actionApi.setBadgeText({
+							text: unreadCount > 0 ? badgeText : "",
+						});
+						if (actionApi.setBadgeBackgroundColor) {
+							actionApi.setBadgeBackgroundColor({
+								color: "#ef4444",
+							});
+						}
+					}
+				} catch (_err) {
+					// ignore badge errors for browsers that do not support it
+				}
+			}
+
+			// Notification tab event listeners
+			if (filterButtons) {
+				filterButtons.forEach((btn) => {
+					btn.addEventListener("click", async () => {
+						filterButtons.forEach((b) =>
+							b.classList.remove("active"),
+						);
+						btn.classList.add("active");
+						currentNotificationFilter = btn.dataset.filter;
+						await loadNotifications();
+					});
+				});
+			}
+
+			if (markAllReadBtn) {
+				markAllReadBtn.addEventListener("click", async () => {
+					try {
+						await browser.runtime.sendMessage({
+							action: "markAllNotificationsRead",
+						});
+					} catch (_err) {
+						await notificationManager.markAllAsRead();
+					}
+					await loadNotifications();
+					await updateNotificationBadge();
+					showStatus("All notifications marked as read", "success");
+				});
+			}
+
+			if (clearNotificationsBtn) {
+				clearNotificationsBtn.addEventListener("click", async () => {
+					if (
+						confirm(
+							"Are you sure you want to clear all notifications? This cannot be undone.",
+						)
+					) {
+						try {
+							await browser.runtime.sendMessage({
+								action: "clearNotifications",
+							});
+						} catch (_err) {
+							await notificationManager.clearAll();
+						}
+						await loadNotifications();
+						await updateNotificationBadge();
+						// Show only status message (no notification)
+						const statusDiv = document.getElementById("status");
+						if (statusDiv) {
+							statusDiv.className = "status success";
+							statusDiv.textContent =
+								"✓ All notifications cleared";
+							statusDiv.style.display = "block";
+							setTimeout(() => {
+								statusDiv.style.display = "none";
+								statusDiv.textContent = "";
+							}, 3000);
+						}
+					}
+				});
+			}
+
+			// Tab switching for notifications is handled in the main tab switching code above
+			// Initialize notifications badge on startup (content loads on tab switch)
+			updateNotificationBadge();
 }

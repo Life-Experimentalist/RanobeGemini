@@ -31,7 +31,7 @@
 import { debugLog, debugError } from "../../utils/logger.js";
 
 import MetadataFetcher from "../../utils/metadata-fetcher.js";
-import { handlerRegistry } from "../../utils/website-handlers/handler-registry.js";
+import handlerManager from "../../utils/website-handlers/handler-manager.js";
 
 /**
  * Handle fetchNovelMetadata message
@@ -57,7 +57,7 @@ export async function handleFetchMetadata(message, sendResponse) {
 		const { url, handlerDomain, handlerType } = message;
 
 		// Get handler instance
-		const handler = handlerRegistry.getHandlerByDomain(handlerDomain);
+		const handler = await handlerManager.getHandlerByDomain(handlerDomain);
 		if (!handler) {
 			debugError(
 				`[MetadataHandler] Handler not found for domain: ${handlerDomain}`,

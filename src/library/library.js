@@ -51,6 +51,11 @@ import {
 	recoverMissingNovelById,
 } from "./shared-shelf-helpers.js";
 import { openInlineEditModal } from "./edit-modal.js";
+import {
+	initStatusFilters,
+	getStatusFilter,
+	renderStatusFilterButtons,
+} from "./modules/status-filters.js";
 import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
 import { RanobesHandler } from "../utils/website-handlers/ranobes-handler.js";
@@ -122,7 +127,7 @@ function scopeModalCss(cssText, scopeSelector) {
 // State
 let currentView = "shelves";
 let currentSort = "recent";
-let currentStatusFilter = "all";
+// let currentStatusFilter = "all"; (Now managed by status-filters module)
 let searchQuery = "";
 let allNovels = [];
 let siteSettings = {};
@@ -1160,7 +1165,13 @@ async function init() {
 	await loadLibrarySettings();
 
 	// Render status filter buttons dynamically (supports custom statuses)
-	renderStatusFilterButtons();
+	initStatusFilters(
+		elements.readingStatusFilter,
+		librarySettings,
+		(newFilter) => {
+			renderCurrentView();
+		},
+	);
 
 	// Apply any saved status label/colour overrides globally
 	applyStatusConfig(librarySettings?.statusConfig);
@@ -1177,7 +1188,10 @@ async function init() {
 				patch.customStatuses !== undefined ||
 				patch.rereadingOverlay !== undefined
 			) {
-				renderStatusFilterButtons();
+				renderStatusFilterButtons(
+					elements.readingStatusFilter,
+					librarySettings,
+				);
 			}
 		},
 	);
@@ -4340,14 +4354,15 @@ function filterAndSortNovels() {
 	}
 
 	// Filter by reading status (only in lists view)
-	if (currentView === "lists" && currentStatusFilter !== "all") {
-		if (currentStatusFilter === "_rereading") {
+	const statusFilter = getStatusFilter();
+	if (currentView === "lists" && statusFilter !== "all") {
+		if (statusFilter === "_rereading") {
 			// Re-reading overlay filter: show novels with the re-reading flag
 			novels = novels.filter((novel) => novel.rereadingStatus === true);
 		} else {
 			novels = novels.filter((novel) => {
 				const novelStatus = novel.readingStatus || "unset";
-				return novelStatus === currentStatusFilter;
+				return novelStatus === statusFilter;
 			});
 		}
 	}
@@ -4382,26 +4397,24 @@ function renderListsView(novels) {
 	if (!elements.listsNovels) return;
 
 	// Update title based on current filter
+	const statusFilter = getStatusFilter();
 	if (elements.listsTitle) {
-		if (currentStatusFilter === "all") {
+		if (statusFilter === "all") {
 			elements.listsTitle.textContent = "📖 Reading Lists";
-		} else if (currentStatusFilter === "_rereading") {
+		} else if (statusFilter === "_rereading") {
 			// Re-reading overlay filter
 			const rr = librarySettings?.rereadingOverlay;
 			elements.listsTitle.textContent = rr?.label || "🔁 Re-reading";
 		} else {
 			// Check built-in statuses first, then custom statuses
-			const statusInfo = READING_STATUS_INFO[currentStatusFilter];
+			const statusInfo = READING_STATUS_INFO[statusFilter];
 			if (statusInfo) {
 				elements.listsTitle.textContent = statusInfo.label;
 			} else {
 				// Custom status — look it up from librarySettings
 				const customStatuses = librarySettings?.customStatuses || [];
-				const cs = customStatuses.find(
-					(s) => s.id === currentStatusFilter,
-				);
-				elements.listsTitle.textContent =
-					cs?.label || currentStatusFilter;
+				const cs = customStatuses.find((s) => s.id === statusFilter);
+				elements.listsTitle.textContent = cs?.label || statusFilter;
 			}
 		}
 	}
@@ -5974,77 +5987,6 @@ function handleViewChange(view) {
 /**
  * Handle reading status filter change
  */
-function handleStatusFilterChange(status) {
-	currentStatusFilter = status;
-
-	// Update button states (query live to include dynamically rendered buttons)
-	const filter = elements.readingStatusFilter;
-	if (filter) {
-		filter.querySelectorAll(".status-filter-btn").forEach((btn) => {
-			btn.classList.toggle("active", btn.dataset.status === status);
-		});
-	}
-
-	renderCurrentView();
-}
-
-/**
- * Render reading status filter buttons from librarySettings (built-in + custom).
- * Replaces any previously rendered buttons.
- */
-function renderStatusFilterButtons() {
-	const filter = elements.readingStatusFilter;
-	if (!filter) return;
-
-	const settings = librarySettings || {};
-	const statuses = getAllStatuses(settings, READING_STATUS_INFO);
-	const rereadingOverlay = {
-		...getDefaultRereadingOverlay(),
-		...(settings.rereadingOverlay || {}),
-	};
-
-	// Build button HTML
-	const allBtn = `<button class="status-filter-btn active" data-status="all" title="All Novels">📚 All</button>`;
-
-	const statusBtns = statuses
-		.filter((s) => !s.isRereadingOverlay) // RE_READING handled inline as overlay
-		.map(
-			(s) =>
-				`<button class="status-filter-btn" data-status="${s.id}" title="${s.label}"
-				style="--status-color:${s.color};">${s.label}</button>`,
-		)
-		.join("");
-
-	// Re-reading overlay toggle (only if enabled in settings)
-	const rrBtn = rereadingOverlay.enabled
-		? `<button class="status-filter-btn status-filter-rereading" data-status="_rereading"
-			title="${rereadingOverlay.label} (overlay filter)"
-			style="--status-color:${rereadingOverlay.color};">${rereadingOverlay.label}</button>`
-		: "";
-
-	filter.innerHTML = allBtn + statusBtns + rrBtn;
-
-	// Attach click listeners via event delegation on the container
-	filter.addEventListener("click", (e) => {
-		const btn = e.target.closest(".status-filter-btn");
-		if (!btn) return;
-		handleStatusFilterChange(btn.dataset.status);
-	});
-
-	// Restore active state if a filter was already set
-	if (currentStatusFilter && currentStatusFilter !== "all") {
-		const active = filter.querySelector(
-			`[data-status="${currentStatusFilter}"]`,
-		);
-		if (active) {
-			filter
-				.querySelector(".status-filter-btn.active")
-				?.classList.remove("active");
-			active.classList.add("active");
-		}
-	}
-}
-
 /**
  * Handle search input
  */

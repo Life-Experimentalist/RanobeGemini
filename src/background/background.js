@@ -11,7 +11,10 @@ import {
 	NOVEL_CHAPTER_CHECK_ALARM_NAME,
 } from "../utils/constants.js";
 import chunkingSystem from "../utils/chunking/index.js";
-import { uploadLogsToDriveWithAdapter } from "../utils/drive.js";
+import {
+	uploadLogsToDriveWithAdapter,
+	isDriveAuthenticated,
+} from "../utils/drive.js";
 import {
 	createRollingBackup,
 	listRollingBackups,
@@ -560,6 +563,24 @@ if (typeof browser === "undefined") {
 				skipped: true,
 				reason: "oauth-not-configured",
 			};
+		}
+
+		// Check if we are authenticated before attempting background operations
+		if (!(await isDriveAuthenticated())) {
+			if (
+				reason === "startup" ||
+				reason === "scheduled" ||
+				reason === "auto"
+			) {
+				return {
+					success: false,
+					skipped: true,
+					reason: "not-authenticated",
+				};
+			}
+			throw new Error(
+				"Google Drive is not connected. Please connect Drive in Library Settings.",
+			);
 		}
 
 		const prefs = await browser.storage.local.get([
@@ -1330,9 +1351,7 @@ if (typeof browser === "undefined") {
 					debugLog("Backup reason:", message.reason);
 
 					// Ensure we have valid auth before attempting backup
-					const tokens =
-						await browser.storage.local.get("driveAuthTokens");
-					if (!tokens.driveAuthTokens?.access_token) {
+					if (!(await isDriveAuthenticated())) {
 						throw new Error(
 							"Not authenticated with Google Drive. Please connect Drive first.",
 						);

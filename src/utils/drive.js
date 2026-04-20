@@ -118,6 +118,11 @@ async function getTokens() {
 	return getStored(TOKEN_KEY);
 }
 
+export async function isDriveAuthenticated() {
+	const tokens = await getTokens();
+	return !!(tokens?.access_token || tokens?.refresh_token);
+}
+
 function isTokenValid(token) {
 	return (
 		token?.access_token &&

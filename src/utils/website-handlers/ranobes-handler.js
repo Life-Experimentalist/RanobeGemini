@@ -175,27 +175,43 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	 * @returns {string} Unique novel ID
 	 */
 	generateNovelId(url = window.location.href) {
-		// Try multiple patterns to extract novel ID
-		const patterns = [
-			/\/novels\/(\d+)-/, // /novels/1206917-my-yandere-female-tycoon-wife.html
-			/\/[a-z0-9-]+-(\d+)\//, // /my-yandere-female-tycoon-wife-1206917/
-			/^\/read-(\d+)\.html/, // /read-1206917.html
-			/\/chapters\/(\d+)/, // /chapters/1206917/
-		];
+		try {
+			const urlObj = new URL(url);
+			const path = urlObj.pathname;
 
-		for (const pattern of patterns) {
-			const match = url.match(pattern);
-			if (match) {
-				return `ranobes-${match[1]}`;
+			// Try multiple patterns to extract novel ID from path
+			const patterns = [
+				/\/novels\/(\d+)-/, // /novels/1206917-my-yandere-female-tycoon-wife.html
+				/\/[a-z0-9-]+-(\d+)\//, // /my-yandere-female-tycoon-wife-1206917/
+				/\/read-(\d+)\.html/, // /read-1206917.html
+				/\/chapters\/(\d+)/, // /chapters/1206917/
+			];
+
+			for (const pattern of patterns) {
+				const match = path.match(pattern);
+				if (match) {
+					// Return the first captured group (the numeric ID)
+					const id = match.find((m, i) => i > 0 && m !== undefined);
+					if (id) return `ranobes-${id}`;
+				}
 			}
-		}
 
-		// Fallback to URL hash
-		const urlPath = new URL(url).pathname;
-		const urlHash = btoa(urlPath)
-			.substring(0, 16)
-			.replace(/[^a-zA-Z0-9]/g, "");
-		return `ranobes-${urlHash}`;
+			// Fallback: If no numeric ID found, use a short hash of the pathname
+			const pathParts = path.split("/").filter(Boolean);
+			const lastPart = pathParts[pathParts.length - 1] || "home";
+			const cleanPart = lastPart.split(".")[0].split("-").slice(0, 3).join("-");
+			
+			// Simple numeric-like hash for consistency if possible
+			let hash = 0;
+			for (let i = 0; i < path.length; i++) {
+				hash = (hash << 5) - hash + path.charCodeAt(i);
+				hash |= 0;
+			}
+			return `ranobes-h${Math.abs(hash).toString(36)}`;
+		} catch (e) {
+			console.error("Error generating novel ID:", e);
+			return "ranobes-unknown";
+		}
 	}
 
 	/**
