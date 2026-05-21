@@ -553,8 +553,8 @@ Ensure the Library page styling (.filters-section) is responsive and perfectly a
 | Unit  | Scope                                                     | Target Prompts | Status   | Exit Criteria                              |
 | ----- | --------------------------------------------------------- | -------------- | -------- | ------------------------------------------ |
 | 11-U1 | Refactor .filters-section CSS & layout                    | 1-2            | ✅ complete | Removed duplicate @media + unscoped blocks from all 4 site CSS files. |
-| 11-U2 | Implement Library UI Settings & Options                   | 1-2            | ⏳ queued | Settings panel controls filter visibility. |
-| 11-U3 | Abstract Settings UI for AI Providers & Storage Providers | 2-3            | ⏳ queued | Nested, tabbed settings configuration UI.  |
+| 11-U2 | Implement Library UI Settings & Options                   | 1-2            | ✅ complete | Display settings panel added; all 5 shelf pages read libraryDisplayOptions and apply visibility. 0 errors. |
+| 11-U3 | Abstract Settings UI for AI Providers & Storage Providers | 2-3            | ✅ complete | Provider dropdowns replaced with pill tabs; syncProviderTabs() syncs active state on load/click. 0 errors. |
 
 ## Phase 12: Swipe & Gesture Navigation
 ### Objective
