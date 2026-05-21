@@ -1727,7 +1727,9 @@ body {
 }
 
 /* Make wide sections span both columns */
+.metadata-section#modal-genres-section,
 .metadata-section#modal-additional-tags-section,
+.metadata-section#modal-work-info-section,
 .metadata-section#modal-work-stats-section {
 	grid-column: span 2;
 }
@@ -1843,6 +1845,35 @@ body {
 .additional-tags .tag-item {
 	background: rgba(149, 165, 166, 0.15);
 	color: var(--text-secondary);
+}
+
+/* Work info grid (status, language, year, translator) */
+.work-info-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: var(--spacing-sm);
+}
+
+.work-info-item {
+	display: flex;
+	flex-direction: column;
+	padding: var(--spacing-sm);
+	background: var(--bg-secondary);
+	border-radius: var(--radius-sm);
+}
+
+.work-info-label {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+	margin-bottom: 2px;
+}
+
+.work-info-value {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--text-primary);
 }
 
 /* Work stats grid */
@@ -2463,7 +2494,9 @@ body {
 		grid-template-columns: 1fr;
 	}
 
+	.metadata-section#modal-genres-section,
 	.metadata-section#modal-additional-tags-section,
+	.metadata-section#modal-work-info-section,
 	.metadata-section#modal-work-stats-section {
 		grid-column: span 1;
 	}

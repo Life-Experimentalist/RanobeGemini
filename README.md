@@ -19,7 +19,7 @@ Ranobe Gemini is a local-first browser extension that enhances chapter readabili
 <br/>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Version](https://img.shields.io/badge/version-4.7.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
+[![Version](https://img.shields.io/badge/version-5.0.0-blueviolet?style=flat)](https://github.com/Life-Experimentalist/RanobeGemini/releases)
 [![GitHub Issues](https://img.shields.io/github/issues/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Life-Experimentalist/RanobeGemini?style=flat&logo=github)](https://github.com/Life-Experimentalist/RanobeGemini/pulls)
 [![Mozilla Add-on Users](https://img.shields.io/amo/users/ranobegemini?style=flat&logo=firefox&label=Users)](https://addons.mozilla.org/en-US/firefox/addon/ranobegemini/)
@@ -67,7 +67,7 @@ Ranobe Gemini is a local-first browser extension that enhances chapter readabili
 - **Canvas Background Animations**: Five animation types (particles, snow, rain, falling leaves, fireflies) for library pages, color-synced to your theme.
 - **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
 - **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
-- **Google Drive Sync**: Optional OAuth-based backup to Google Drive with configurable retention, using the canonical web redirect flow.
+- **Cloud Sync — Google Drive, OneDrive, Dropbox, WebDAV**: OAuth-based backup to Google Drive or Microsoft OneDrive (PKCE); Dropbox API v2 with offline refresh tokens; any self-hosted WebDAV server (Nextcloud, Seafile, etc.). Multi-sync fan-out lets you write to two providers simultaneously.
 - **True Web PWA Entry**: Installable landing web app (Android/Windows supported browsers) with secure extension presence detection and library handoff.
 - **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
 - **Provider Selection**: Switch the active AI provider in popup settings (`Gemini`, `OpenAI-compatible`, `Ollama`) without changing core workflows.

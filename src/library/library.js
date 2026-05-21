@@ -248,7 +248,6 @@ const elements = {
 	modalEnhanced: document.getElementById("modal-enhanced"),
 	modalLastRead: document.getElementById("modal-last-read"),
 	modalDescription: document.getElementById("modal-description"),
-	modalGenres: document.getElementById("modal-genres"),
 	modalContinueBtn: document.getElementById("modal-continue-btn"),
 	modalSourceBtn: document.getElementById("modal-source-btn"),
 	modalCopyInfoBtn: document.getElementById("modal-copy-info-btn"),
@@ -274,10 +273,14 @@ const elements = {
 	modalRelationships: document.getElementById("modal-relationships"),
 	modalCharactersSection: document.getElementById("modal-characters-section"),
 	modalCharacters: document.getElementById("modal-characters"),
+	modalGenresSection: document.getElementById("modal-genres-section"),
+	modalGenres: document.getElementById("modal-genres"),
 	modalAdditionalTagsSection: document.getElementById(
 		"modal-additional-tags-section",
 	),
 	modalAdditionalTags: document.getElementById("modal-additional-tags"),
+	modalWorkInfoSection: document.getElementById("modal-work-info-section"),
+	modalWorkInfo: document.getElementById("modal-work-info"),
 	modalWorkStatsSection: document.getElementById("modal-work-stats-section"),
 	modalWorkStats: document.getElementById("modal-work-stats"),
 
@@ -5583,6 +5586,15 @@ function populateNovelMetadata(novel) {
 		elements.modalCharactersSection.style.display = "none";
 	}
 
+	// Genres section (ScribbleHub, Ranobes, etc.)
+	if (metadata.genres && metadata.genres.length > 0) {
+		hasAnyMetadata = true;
+		if (elements.modalGenresSection) elements.modalGenresSection.style.display = "block";
+		renderTagList(elements.modalGenres, metadata.genres);
+	} else {
+		if (elements.modalGenresSection) elements.modalGenresSection.style.display = "none";
+	}
+
 	// Additional Tags section (use additionalTags, freeformTags, or tags)
 	const additionalTags =
 		metadata.additionalTags || metadata.freeformTags || metadata.tags;
@@ -5594,76 +5606,68 @@ function populateNovelMetadata(novel) {
 		elements.modalAdditionalTagsSection.style.display = "none";
 	}
 
+	// Work Info section (status, language, year, translationStatus, translator)
+	const infoItems = [];
+	if (metadata.status) infoItems.push({ label: "Status", value: metadata.status });
+	if (metadata.translationStatus) infoItems.push({ label: "Translation", value: metadata.translationStatus });
+	if (metadata.language) infoItems.push({ label: "Language", value: metadata.language });
+	if (metadata.year) infoItems.push({ label: "Year", value: metadata.year });
+	if (metadata.translator) infoItems.push({ label: "Translator", value: metadata.translator });
+	if (metadata.chapterCount) infoItems.push({ label: "Chapters (Source)", value: metadata.chapterCount });
+	if (metadata.rating && typeof metadata.rating === "number") {
+		infoItems.push({ label: "Rating", value: `${metadata.rating.toFixed(1)} / 10` + (metadata.ratingCount ? ` (${formatNumber(metadata.ratingCount)} ratings)` : "") });
+	}
+	if (infoItems.length > 0) {
+		hasAnyMetadata = true;
+		if (elements.modalWorkInfoSection) elements.modalWorkInfoSection.style.display = "block";
+		if (elements.modalWorkInfo) {
+			elements.modalWorkInfo.innerHTML = infoItems
+				.map((item) => `<div class="work-info-item"><span class="work-info-label">${escapeHtml(item.label)}</span><span class="work-info-value">${escapeHtml(String(item.value))}</span></div>`)
+				.join("");
+		}
+	} else {
+		if (elements.modalWorkInfoSection) elements.modalWorkInfoSection.style.display = "none";
+	}
+
 	// Work Stats section
-	// Check both metadata.stats (AO3 style) and metadata directly (FanFiction style)
+	// Check both metadata.stats (AO3 style) and metadata directly (FanFiction/ScribbleHub/Ranobes style)
 	const statsNested = metadata.stats || {};
 	const stats = {
 		words: statsNested.words || metadata.words || null,
 		kudos: statsNested.kudos || metadata.kudos || null,
 		hits: statsNested.hits || metadata.hits || null,
+		views: statsNested.views || metadata.views || null,
 		bookmarks: statsNested.bookmarks || metadata.bookmarks || null,
 		comments: statsNested.comments || metadata.comments || null,
 		reviews: statsNested.reviews || metadata.reviews || null,
 		favorites: statsNested.favorites || metadata.favorites || null,
 		follows: statsNested.follows || metadata.follows || null,
+		readers: statsNested.readers || metadata.readers || null,
+		chaptersPerWeek: metadata.chaptersPerWeek || null,
 	};
-	const hasStats =
-		stats.words ||
-		stats.kudos ||
-		stats.hits ||
-		stats.bookmarks ||
-		stats.comments ||
-		stats.reviews ||
-		stats.favorites ||
-		stats.follows;
+	const hasStats = Object.values(stats).some(Boolean);
 	if (hasStats) {
 		hasAnyMetadata = true;
 		elements.modalWorkStatsSection.style.display = "block";
 
-		let statsHtml = "";
-		if (stats.words) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.words,
-			)}</span><span class="work-stat-label">Words</span></div>`;
-		}
-		if (stats.kudos) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.kudos,
-			)}</span><span class="work-stat-label">Kudos</span></div>`;
-		}
-		if (stats.hits) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.hits,
-			)}</span><span class="work-stat-label">Hits</span></div>`;
-		}
-		if (stats.bookmarks) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.bookmarks,
-			)}</span><span class="work-stat-label">Bookmarks</span></div>`;
-		}
-		if (stats.comments) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.comments,
-			)}</span><span class="work-stat-label">Comments</span></div>`;
-		}
-		// FanFiction-specific stats
-		if (stats.reviews) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.reviews,
-			)}</span><span class="work-stat-label">Reviews</span></div>`;
-		}
-		if (stats.favorites) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.favorites,
-			)}</span><span class="work-stat-label">Favorites</span></div>`;
-		}
-		if (stats.follows) {
-			statsHtml += `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(
-				stats.follows,
-			)}</span><span class="work-stat-label">Follows</span></div>`;
-		}
+		const statDefs = [
+			{ key: "words", label: "Words" },
+			{ key: "views", label: "Views" },
+			{ key: "kudos", label: "Kudos" },
+			{ key: "hits", label: "Hits" },
+			{ key: "readers", label: "Readers" },
+			{ key: "bookmarks", label: "Bookmarks" },
+			{ key: "favorites", label: "Favorites" },
+			{ key: "follows", label: "Follows" },
+			{ key: "reviews", label: "Reviews" },
+			{ key: "comments", label: "Comments" },
+			{ key: "chaptersPerWeek", label: "Ch/Week" },
+		];
 
-		elements.modalWorkStats.innerHTML = statsHtml;
+		elements.modalWorkStats.innerHTML = statDefs
+			.filter((d) => stats[d.key])
+			.map((d) => `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(stats[d.key])}</span><span class="work-stat-label">${d.label}</span></div>`)
+			.join("");
 	} else {
 		elements.modalWorkStatsSection.style.display = "none";
 	}
