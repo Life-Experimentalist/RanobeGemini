@@ -19,12 +19,62 @@ let lastDebugCheck = 0;
 const DEBUG_CACHE_TTL_MS = 3000;
 // Caching for debug truncation settings
 let debugTruncateCache = null;
-let debugLengthCache = 500;
+let debugLengthCache = 300;
 let lastTruncateCheck = 0;
 const originalConsoleError = console.error.bind(console);
 const originalConsoleLog = console.log.bind(console);
 let persistentLoggingEnabled = true;
 const MAX_LOG_MESSAGE_LENGTH = 8000;
+
+// Deduplication window to suppress near-identical logs that occur in quick
+// succession (e.g., duplicate debug calls from different modules).
+const DEDUPE_WINDOW_MS = 1000;
+const _recentLogMap = new Map();
+let _dedupePruneCounter = 0;
+const _DEDUPE_PRUNE_INTERVAL = 500;
+
+function _safeKeyFromArgs(args) {
+	try {
+		return args.map((a) => (typeof a === "string" ? a : safeStringify(a))).join(" || ");
+	} catch (e) {
+		return String(args);
+	}
+}
+
+function _isDuplicateAndRecord(key) {
+	const now = Date.now();
+	const last = _recentLogMap.get(key);
+	if (last && now - last < DEDUPE_WINDOW_MS) {
+		return true;
+	}
+	_recentLogMap.set(key, now);
+	_dedupePruneCounter += 1;
+	if (_dedupePruneCounter % _DEDUPE_PRUNE_INTERVAL === 0) {
+		const cutoff = now - DEDUPE_WINDOW_MS * 2;
+		for (const [k, v] of _recentLogMap) {
+			if (v < cutoff) _recentLogMap.delete(k);
+		}
+	}
+	return false;
+}
+
+function getStorageLocal() {
+	try {
+		if (typeof browser !== "undefined" && browser?.storage?.local) {
+			return browser.storage.local;
+		}
+	} catch (err) {
+		// ignore
+	}
+	try {
+		if (typeof chrome !== "undefined" && chrome?.storage?.local) {
+			return chrome.storage.local;
+		}
+	} catch (err) {
+		// ignore
+	}
+	return null;
+}
 
 function isPopupDebugEnabledSync() {
 	try {
@@ -39,7 +89,6 @@ function isPopupDebugEnabledSync() {
 
 async function isDebugEnabledAsync() {
 	try {
-		// Return cached value if it is fresh
 		if (
 			debugModeCache !== null &&
 			Date.now() - lastDebugCheck < DEBUG_CACHE_TTL_MS
@@ -47,12 +96,9 @@ async function isDebugEnabledAsync() {
 			return debugModeCache;
 		}
 
-		if (
-			typeof browser !== "undefined" &&
-			browser.storage &&
-			browser.storage.local
-		) {
-			const { debugMode } = await browser.storage.local.get("debugMode");
+		const storageLocal = getStorageLocal();
+		if (storageLocal) {
+			const { debugMode } = await storageLocal.get("debugMode");
 			debugModeCache = !!debugMode;
 			lastDebugCheck = Date.now();
 			return debugModeCache;
@@ -69,25 +115,26 @@ async function isDebugEnabledAsync() {
  */
 async function getTruncationSettings() {
 	try {
-		// Return cached values if recently checked
 		const now = Date.now();
 		if (lastTruncateCheck && now - lastTruncateCheck < DEBUG_CACHE_TTL_MS) {
 			return { enabled: debugTruncateCache, length: debugLengthCache };
 		}
 
-		const result = await browser.storage.local.get([
+		const storageLocal = getStorageLocal();
+		if (!storageLocal) {
+			return { enabled: true, length: 300 };
+		}
+		const result = await storageLocal.get([
 			"debugTruncateOutput",
 			"debugTruncateLength",
 		]);
-		debugTruncateCache =
-			result.debugTruncateOutput !== false ? true : false;
-		debugLengthCache = result.debugTruncateLength || 500;
+		debugTruncateCache = result.debugTruncateOutput !== false;
+		debugLengthCache = result.debugTruncateLength || 300;
 		lastTruncateCheck = now;
 
 		return { enabled: debugTruncateCache, length: debugLengthCache };
 	} catch (err) {
-		// Return defaults on error
-		return { enabled: true, length: 500 };
+		return { enabled: true, length: 300 };
 	}
 }
 
@@ -97,10 +144,13 @@ async function getTruncationSettings() {
  * @param {number} maxLength - Maximum length before truncation
  * @returns {string}
  */
-function formatOutput(value, maxLength = 500) {
+function formatOutput(value, maxLength = 300) {
 	const str = safeStringify(value);
 	if (str.length > maxLength) {
-		return str.substring(0, maxLength) + `... [truncated, ${str.length - maxLength} more chars]`;
+		return (
+			str.substring(0, maxLength) +
+			`... [truncated, ${str.length - maxLength} more chars]`
+		);
 	}
 	return str;
 }
@@ -112,54 +162,55 @@ function formatOutput(value, maxLength = 500) {
  */
 export function debugLog(...args) {
 	const immediate = isPopupDebugEnabledSync();
+
+	function _logNow(truncatedArgs) {
+		try {
+			const key = _safeKeyFromArgs(truncatedArgs);
+			if (_isDuplicateAndRecord(key)) return;
+			originalConsoleLog(...truncatedArgs);
+			recordPersistent("debug", truncatedArgs);
+		} catch (e) {
+			try {
+				originalConsoleLog(...truncatedArgs);
+				recordPersistent("debug", truncatedArgs);
+			} catch (_) { /* swallow */ }
+		}
+	}
+
 	if (immediate !== null) {
 		if (immediate) {
-			// Apply truncation synchronously for popup context
 			getTruncationSettings()
 				.then((settings) => {
 					const truncatedArgs = settings.enabled
 						? args.map((arg) => formatOutput(arg, settings.length))
 						: args;
-					originalConsoleLog(...truncatedArgs);
-					recordPersistent("debug", truncatedArgs);
+					_logNow(truncatedArgs);
 				})
 				.catch(() => {
-					originalConsoleLog(...args);
-					recordPersistent("debug", args);
+					_logNow(args);
 				});
 		}
 		return;
 	}
 
-	// Fallback to async storage check for background/content/library contexts
 	isDebugEnabledAsync()
 		.then((enabled) => {
 			if (enabled) {
 				getTruncationSettings()
 					.then((settings) => {
 						const truncatedArgs = settings.enabled
-							? args.map((arg) =>
-									formatOutput(arg, settings.length),
-								)
+							? args.map((arg) => formatOutput(arg, settings.length))
 							: args;
-						originalConsoleLog(...truncatedArgs);
-						recordPersistent("debug", truncatedArgs);
+						_logNow(truncatedArgs);
 					})
 					.catch(() => {
-						originalConsoleLog(...args);
-						recordPersistent("debug", args);
+						_logNow(args);
 					});
 			}
 		})
 		.catch(() => {
 			/* swallow logging errors */
 		});
-}
-
-function shouldLogNowSync() {
-	const immediate = isPopupDebugEnabledSync();
-	if (immediate !== null) return immediate;
-	return !!debugModeCache;
 }
 
 function safeStringify(value) {
@@ -203,65 +254,126 @@ function recordPersistent(level, args) {
 }
 
 /**
- * Error-only logger that honors the debug toggle. Replace console.error with this when you want
- * errors hidden unless debug is on.
+ * Error-only logger that honors the debug toggle.
  * @param  {...any} args - Arguments to log as errors
  */
 export function debugError(...args) {
-	if (shouldLogNowSync()) {
-		getTruncationSettings()
-			.then((settings) => {
-				const truncatedArgs = settings.enabled
-					? args.map((arg) => formatOutput(arg, settings.length))
-					: args;
+	const immediate = isPopupDebugEnabledSync();
+
+	function _errorNow(truncatedArgs) {
+		try {
+			const key = _safeKeyFromArgs(truncatedArgs);
+			if (_isDuplicateAndRecord(key)) return;
+			originalConsoleError(...truncatedArgs);
+			recordPersistent("error", truncatedArgs);
+		} catch (e) {
+			try {
 				originalConsoleError(...truncatedArgs);
 				recordPersistent("error", truncatedArgs);
-			})
-			.catch(() => {
-				originalConsoleError(...args);
-				recordPersistent("error", args);
-			});
+			} catch (_) { /* swallow */ }
+		}
+	}
+
+	if (immediate !== null) {
+		if (immediate) {
+			getTruncationSettings()
+				.then((settings) => {
+					const truncatedArgs = settings.enabled
+						? args.map((arg) => formatOutput(arg, settings.length))
+						: args;
+					_errorNow(truncatedArgs);
+				})
+				.catch(() => {
+					_errorNow(args);
+				});
+		}
 		return;
 	}
 
-	// Refresh cache asynchronously so future calls can log promptly when enabled
-	isDebugEnabledAsync().catch(() => {});
-}
-
-// Optional global gating of console.error so that existing error logs also respect debug mode.
-try {
-	if (!console.__rgErrorWrapped) {
-		console.error = (...args) => debugError(...args);
-		console.__rgErrorWrapped = true;
-		// Prime cache asynchronously without forcing output
-		isDebugEnabledAsync().catch(() => {});
-	}
-} catch (err) {
-	// ignore
-}
-
-// Gate console.log as well so existing logs are hidden unless debug is enabled.
-try {
-	if (!console.__rgLogWrapped) {
-		console.log = (...args) => {
-			if (shouldLogNowSync()) {
-				originalConsoleLog(...args);
-				recordPersistent("debug", args);
-				return;
+	isDebugEnabledAsync()
+		.then((enabled) => {
+			if (enabled) {
+				getTruncationSettings()
+					.then((settings) => {
+						const truncatedArgs = settings.enabled
+							? args.map((arg) => formatOutput(arg, settings.length))
+							: args;
+						_errorNow(truncatedArgs);
+					})
+					.catch(() => {
+						_errorNow(args);
+					});
 			}
-			isDebugEnabledAsync().catch(() => {});
-		};
-			console.__rgLogWrapped = true;
-			isDebugEnabledAsync().catch(() => {});
+		})
+		.catch(() => {
+			/* swallow logging errors */
+		});
+}
+
+/**
+ * Warning-only logger that honors the debug toggle.
+ * @param  {...any} args
+ */
+export function debugWarn(...args) {
+	const immediate = isPopupDebugEnabledSync();
+
+	function _warnNow(truncatedArgs) {
+		try {
+			const key = _safeKeyFromArgs(truncatedArgs);
+			if (_isDuplicateAndRecord(key)) return;
+			console.warn(...truncatedArgs);
+			recordPersistent("warn", truncatedArgs);
+		} catch (e) {
+			try {
+				console.warn(...truncatedArgs);
+				recordPersistent("warn", truncatedArgs);
+			} catch (_) { /* swallow */ }
 		}
-} catch (err) {
-	// ignore
+	}
+
+	if (immediate !== null) {
+		if (immediate) {
+			getTruncationSettings()
+				.then((settings) => {
+					const truncatedArgs = settings.enabled
+						? args.map((arg) => formatOutput(arg, settings.length))
+						: args;
+					_warnNow(truncatedArgs);
+				})
+				.catch(() => {
+					_warnNow(args);
+				});
+		}
+		return;
+	}
+
+	isDebugEnabledAsync()
+		.then((enabled) => {
+			if (enabled) {
+				getTruncationSettings()
+					.then((settings) => {
+						const truncatedArgs = settings.enabled
+							? args.map((arg) => formatOutput(arg, settings.length))
+							: args;
+						_warnNow(truncatedArgs);
+					})
+					.catch(() => {
+						_warnNow(args);
+					});
+			}
+		})
+		.catch(() => {
+			/* swallow logging errors */
+		});
 }
 
 // Expose globally for non-module scripts that still want a shared debugLog helper.
 try {
 	if (typeof globalThis !== "undefined" && !globalThis.debugLog) {
 		globalThis.debugLog = debugLog;
+	}
+	if (typeof globalThis !== "undefined" && !globalThis.debugWarn) {
+		globalThis.debugWarn = debugWarn;
 	}
 } catch (err) {
 	// ignore
@@ -281,18 +393,10 @@ export class Logger {
 		this.lastStepTime = null;
 	}
 
-	/**
-	 * Set the minimum log level
-	 * @param {LogLevel} level - Minimum level to log
-	 */
 	setLogLevel(level) {
 		this.minLevel = level;
 	}
 
-	/**
-	 * Enable or disable trace mode
-	 * @param {boolean} enabled - Whether tracing is enabled
-	 */
 	setTraceEnabled(enabled) {
 		this.traceEnabled = enabled;
 		if (enabled && !this.startTime) {
@@ -301,47 +405,22 @@ export class Logger {
 		}
 	}
 
-	/**
-	 * Log a message at the DEBUG level
-	 * @param {string} message - Message to log
-	 * @param {any} data - Optional data to include in the log
-	 */
 	debug(message, data) {
 		this._log(LogLevel.DEBUG, message, data);
 	}
 
-	/**
-	 * Log a message at the INFO level
-	 * @param {string} message - Message to log
-	 * @param {any} data - Optional data to include in the log
-	 */
 	info(message, data) {
 		this._log(LogLevel.INFO, message, data);
 	}
 
-	/**
-	 * Log a message at the WARN level
-	 * @param {string} message - Message to log
-	 * @param {any} data - Optional data to include in the log
-	 */
 	warn(message, data) {
 		this._log(LogLevel.WARN, message, data);
 	}
 
-	/**
-	 * Log a message at the ERROR level
-	 * @param {string} message - Message to log
-	 * @param {any} data - Optional data to include in the log
-	 */
 	error(message, data) {
 		this._log(LogLevel.ERROR, message, data);
 	}
 
-	/**
-	 * Add a trace step with timing information
-	 * @param {string} step - Description of the step
-	 * @param {any} data - Optional data to include in the trace
-	 */
 	traceStep(step, data = null) {
 		if (!this.traceEnabled) return;
 
@@ -361,17 +440,10 @@ export class Logger {
 		this.traceSteps.push(traceData);
 		this.lastStepTime = now;
 
-		// Also log the trace step immediately as INFO
-		const timeInfo = `[+${sinceStart.toFixed(0)}ms | +${sinceLast.toFixed(
-			0
-		)}ms]`;
+		const timeInfo = `[+${sinceStart.toFixed(0)}ms | +${sinceLast.toFixed(0)}ms]`;
 		this._log(LogLevel.INFO, `TRACE STEP: ${step} ${timeInfo}`, data);
 	}
 
-	/**
-	 * Get the complete trace as a formatted string
-	 * @returns {string} - Formatted trace log
-	 */
 	getFormattedTrace() {
 		if (!this.traceEnabled || this.traceSteps.length === 0) {
 			return "No trace data available";
@@ -400,37 +472,26 @@ export class Logger {
 		return output;
 	}
 
-	/**
-	 * Reset the trace data
-	 */
 	resetTrace() {
 		this.traceSteps = [];
 		this.startTime = this.traceEnabled ? performance.now() : null;
 		this.lastStepTime = this.startTime;
 	}
 
-	/**
-	 * Internal method to handle logging
-	 * @private
-	 */
 	_log(level, message, data) {
 		if (level < this.minLevel) return;
 
 		const timestamp = new Date().toISOString();
-		const prefix = `[${timestamp}][${this._getLevelName(level)}][${
-			this.context
-		}]`;
+		const prefix = `[${timestamp}][${this._getLevelName(level)}][${this.context}]`;
 
 		if (data !== undefined) {
 			let dataToLog;
 			try {
-				dataToLog =
-					typeof data === "object" ? JSON.stringify(data) : data;
+				dataToLog = typeof data === "object" ? JSON.stringify(data) : data;
 			} catch (e) {
 				dataToLog = "[Circular or large object]";
 			}
 
-			// Choose appropriate logging method based on level
 			switch (level) {
 				case LogLevel.ERROR:
 					console.error(prefix, message, dataToLog);
@@ -447,7 +508,6 @@ export class Logger {
 					break;
 			}
 		} else {
-			// Choose appropriate logging method based on level
 			switch (level) {
 				case LogLevel.ERROR:
 					console.error(prefix, message);
@@ -466,10 +526,6 @@ export class Logger {
 		}
 	}
 
-	/**
-	 * Get the name of a log level
-	 * @private
-	 */
 	_getLevelName(level) {
 		switch (level) {
 			case LogLevel.DEBUG:
@@ -488,9 +544,6 @@ export class Logger {
 
 /**
  * Create a new logger instance
- * @param {string} context - The context for the logger
- * @param {LogLevel} minLevel - Minimum level to log
- * @returns {Logger} - A new logger instance
  */
 export function createLogger(context, minLevel = LogLevel.INFO) {
 	return new Logger(context, minLevel);
@@ -526,12 +579,12 @@ export async function uploadLogsWithAdapter(adapter, options = {}) {
 	return logStore.uploadWithAdapter(adapter, options);
 }
 
-// Default export for easier importing
 export default {
 	createLogger,
 	LogLevel,
 	debugLog,
 	debugError,
+	debugWarn,
 	setPersistentLoggingEnabled,
 	setMaxPersistentEntries,
 	getStoredLogs,

@@ -176,12 +176,21 @@
 						<button id="refreshNovels" title="Refresh"
 							style="background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12px">↻</button>
 					</div>
-					<!-- View Toggle -->
-					<div style="display: flex; gap: 4px; margin-bottom: 10px">
-						<button class="novel-view-btn active" data-view="list" style="flex: 1; font-size: 11px">📋
-							List</button>
-						<button class="novel-view-btn" data-view="grid" style="flex: 1; font-size: 11px">⬜
-							Grid</button>
+					<!-- View Toggle & Sort -->
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
+						<div style="display: flex; gap: 4px;">
+							<button class="novel-view-btn active" data-view="list" style="padding: 4px 8px; font-size: 11px">📋 List</button>
+							<button class="novel-view-btn" data-view="grid" style="padding: 4px 8px; font-size: 11px">⬜ Grid</button>
+						</div>
+						<div style="display: flex; align-items: center; gap: 4px;">
+							<label style="font-size: 10px; color: var(--text-secondary);">Sort:</label>
+							<select id="novelSortSelect" style="font-size: 10px; padding: 2px 4px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+								<option value="recent">Recently Read</option>
+								<option value="added">Recently Added</option>
+								<option value="title">Title (A-Z)</option>
+								<option value="progress">Progress</option>
+							</select>
+						</div>
 					</div>
 
 					<!-- Novels Container -->

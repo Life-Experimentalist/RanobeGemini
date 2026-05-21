@@ -27,3 +27,4 @@ INSTRUCTIONS.md
 gcm-diagnose.log
 graphify-out/
 .tmp/
+scratch/

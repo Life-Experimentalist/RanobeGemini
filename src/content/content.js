@@ -1,18 +1,41 @@
 // Lightweight logger bootstrap for content scripts (no top-level imports allowed here)
 let debugLog = console.log.bind(console);
 let debugError = console.error.bind(console);
+let debugWarn = console.warn.bind(console);
+let importedLoggerDebugLog = null;
+let importedLoggerDebugError = null;
+let importedLoggerDebugWarn = null;
 (async () => {
 	try {
 		if (typeof browser !== "undefined" && browser.runtime?.getURL) {
 			const loggerUrl = browser.runtime.getURL("utils/logger.js");
 			const mod = await import(loggerUrl);
-			debugLog = mod.debugLog || debugLog;
-			debugError = mod.debugError || debugError;
+			importedLoggerDebugLog =
+				typeof mod.debugLog === "function" ? mod.debugLog : null;
+			importedLoggerDebugError =
+				typeof mod.debugError === "function" ? mod.debugError : null;
+			importedLoggerDebugWarn =
+				typeof mod.debugWarn === "function" ? mod.debugWarn : null;
 		}
 	} catch (_err) {
 		// keep console fallbacks
 	}
 })();
+
+/**
+ * Debounce helper for UI re-injection callbacks.
+ */
+function debounce(func, wait) {
+	let timeout;
+	return function executedFunction(...args) {
+		const later = () => {
+			clearTimeout(timeout);
+			func(...args);
+		};
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+	};
+}
 
 // Simplified content script to extract chapter content without relying on imports
 
@@ -68,7 +91,7 @@ let chunkErrorModule = null; // Chunk error handling runtime
 let chunkProcessedModule = null; // Chunk processed handling runtime
 let chunkEventsModule = null; // Chunk action handlers runtime
 let popupLibraryRuntimeModule = null; // Popup/library actions runtime
-let novelContextModule = null;        // Novel Context orchestration module
+let novelContextModule = null; // Novel Context orchestration module
 let chunkControlRuntime = null; // Chunk control state/helpers
 let uiElementsRuntimeModule = null; // UI elements (buttons, banners) runtime module
 let lastChunkModelInfo = null; // Track last model info for chunked banners
@@ -216,7 +239,9 @@ if (window.__RGInitDone) {
 	let debugModeEnabled = true; // Default to true for debugging
 
 	// Gate console logging based on stored debugMode so logs are hidden by default unless enabled via popup checkbox.
-	const __rgOriginalLog = debugLog.bind(console);
+	const __rgConsoleLog = console.log.bind(console);
+	const __rgConsoleError = console.error.bind(console);
+	const __rgConsoleWarn = console.warn.bind(console);
 	async function loadReadAloudUiModule() {
 		if (readAloudUiModule) return readAloudUiModule;
 		try {
@@ -502,8 +527,6 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	const __rgOriginalError = debugError.bind(console);
-
 	// eslint-disable-next-line no-inner-declarations
 	function applyDebugFlag(enabled) {
 		debugModeEnabled = !!enabled;
@@ -561,12 +584,111 @@ if (window.__RGInitDone) {
 		// ignore storage access errors
 	}
 
+	// Local safe stringify + truncation fallback used until the full logger module
+	// is available. Keeps console output bounded.
+	function localSafeStringify(v) {
+		try {
+			if (v instanceof Error) return v.stack || v.message || String(v);
+			if (typeof v === "object") return JSON.stringify(v);
+			return String(v);
+		} catch (e) {
+			return "[unserializable]";
+		}
+	}
+
+	function localFormatOutput(value, maxLength = 500) {
+		const s = localSafeStringify(value);
+		if (s.length > maxLength) {
+			return (
+				s.substring(0, maxLength) +
+				`... [truncated, ${s.length - maxLength} more chars]`
+			);
+		}
+		return s;
+	}
+
 	debugLog = (...args) => {
-		if (debugModeEnabled) __rgOriginalLog(...args);
+		if (!debugModeEnabled) return;
+		if (typeof importedLoggerDebugLog === "function") {
+			try {
+				importedLoggerDebugLog(...args);
+				return;
+			} catch (e) {
+				// fall through
+			}
+		}
+		try {
+			__rgConsoleLog(...args.map((a) => localFormatOutput(a, 500)));
+		} catch (e) {
+			__rgConsoleLog(...args);
+		}
 	};
+
 	debugError = (...args) => {
-		if (debugModeEnabled) __rgOriginalError(...args);
+		if (!debugModeEnabled) return;
+		if (typeof importedLoggerDebugError === "function") {
+			try {
+				importedLoggerDebugError(...args);
+				return;
+			} catch (e) {
+				// fall through
+			}
+		}
+		try {
+			__rgConsoleError(...args.map((a) => localFormatOutput(a, 500)));
+		} catch (e) {
+			__rgConsoleError(...args);
+		}
 	};
+
+	debugWarn = (...args) => {
+		if (!debugModeEnabled) return;
+		if (typeof importedLoggerDebugWarn === "function") {
+			try {
+				importedLoggerDebugWarn(...args);
+				return;
+			} catch (e) {
+				// fall through
+			}
+		}
+		try {
+			__rgConsoleWarn(...args.map((a) => localFormatOutput(a, 500)));
+		} catch (e) {
+			__rgConsoleWarn(...args);
+		}
+	};
+
+	// Lightweight status overlay used by novel-context and other modules before
+	// the full UI runtime loads.
+	function showStatusOverlay(message, options = {}) {
+		try {
+			let overlay = document.getElementById("rg-status-overlay");
+			if (!overlay) {
+				overlay = document.createElement("div");
+				overlay.id = "rg-status-overlay";
+				overlay.style.cssText =
+					"position:fixed;left:10px;bottom:10px;z-index:2147483647;" +
+					"background:rgba(20,20,20,0.9);color:#fff;padding:10px 12px;" +
+					"border-radius:6px;font-size:13px;max-width:40vw;" +
+					"box-shadow:0 2px 8px rgba(0,0,0,0.4);";
+				document.documentElement.appendChild(overlay);
+			}
+			overlay.textContent = message || "";
+			if (options.autoHideMs) {
+				setTimeout(() => overlay.remove(), options.autoHideMs);
+			}
+			return overlay;
+		} catch (e) {
+			// swallow
+		}
+	}
+
+	function hideStatusOverlay() {
+		try {
+			const overlay = document.getElementById("rg-status-overlay");
+			if (overlay) overlay.remove();
+		} catch (e) { /* swallow */ }
+	}
 
 	// eslint-disable-next-line no-inner-declarations
 	function clearKeepAliveTimers() {
@@ -2679,31 +2801,53 @@ if (window.__RGInitDone) {
 		}
 	}
 
+	let novelContextHandlerName = null;
 	async function loadNovelContextModule() {
-		if (novelContextModule) return;
+		const handlerName = currentHandler?.constructor?.name || null;
+		if (novelContextModule && novelContextHandlerName === handlerName) {
+			return novelContextModule;
+		}
 		try {
-			const modUrl = browser.runtime.getURL("content/modules/novel-context.js");
+			const modUrl = browser.runtime.getURL(
+				"content/modules/novel-context.js",
+			);
 			const mod = await import(modUrl);
 			novelContextModule = mod.initNovelContextModule({
-				windowRef:   window,
+				windowRef: window,
 				documentRef: document,
-				browserRef:  browser,
+				browserRef: browser,
 				currentHandler,
 				novelLibrary,
 				storageManager,
 				siteSettingsModule,
 				siteSettings,
 				bannerConfig,
-				debugLog, debugError, debugWarn,
-				showTimedBanner, showStatusMessage, showStatusOverlay, hideStatusOverlay,
-				isIncognitoActive, getHandlerType, HANDLER_TYPES, READING_STATUS,
-				buildNovelDataFromMetadata, cacheNovelData, deriveReadingStatusFromProgress,
-				refreshLibraryUI, loadNovelLibrary, protectFromThemeExtensions,
-				updateLibraryUIState, removeActionOverlay,
+				debugLog,
+				debugError,
+				debugWarn,
+				showTimedBanner,
+				showStatusMessage,
+				showStatusOverlay,
+				hideStatusOverlay,
+				isIncognitoActive,
+				getHandlerType,
+				HANDLER_TYPES,
+				READING_STATUS,
+				buildNovelDataFromMetadata,
+				cacheNovelData,
+				deriveReadingStatusFromProgress,
+				refreshLibraryUI,
+				loadNovelLibrary,
+				protectFromThemeExtensions,
+				updateLibraryUIState,
+				removeActionOverlay,
 			});
+			novelContextHandlerName = handlerName;
 			debugLog("✅ novelContextModule loaded");
+			return novelContextModule;
 		} catch (err) {
 			debugError("❌ Failed to load novelContextModule:", err);
+			return null;
 		}
 	}
 
@@ -2789,7 +2933,7 @@ if (window.__RGInitDone) {
 
 		if (!novelLibrary) {
 			await loadNovelLibrary();
-		await loadNovelContextModule();
+			await loadNovelContextModule();
 		}
 
 		if (!novelLibrary) {
@@ -3078,44 +3222,27 @@ if (window.__RGInitDone) {
 	// Generic content extraction that works across different websites
 	// This serves as a fallback when no specific handler is available
 	function extractContentGeneric() {
-		// Find paragraphs - works on most novel/fiction sites
-		const paragraphs = document.querySelectorAll("p");
-		if (paragraphs.length > 5) {
-			// Get all paragraphs text
-			const chapterText = Array.from(paragraphs)
-				.map((p) => p.innerText)
-				.join("\n\n");
-
-			return {
-				found: chapterText.length > 200, // Only consider it found if we have substantial text
-				title: document.title || "Unknown Title",
-				text: chapterText,
-				selector: "generic paragraph extractor",
-			};
-		}
-
-		// Try to find main content using common article selectors
+		// Try explicit content selectors first before falling back to paragraph clustering.
 		const contentSelectors = [
+			"#arrticle", // Ranobes.net
+			".text-chapter",
+			"#storytext", // fanfiction.net
+			".chapter-content",
+			".novel-content",
+			".chapter-inner",
 			"article",
 			".article",
-			".content",
 			".story-content",
 			".entry-content",
 			"#content",
 			".main-content",
 			".post-content",
-			"#storytext", // fanfiction.net
-			"#arrticle", // Ranobes.net
-			".text-chapter",
-			".chapter-content",
-			".novel-content",
 			".story",
-			".chapter-inner",
 		];
 
 		for (const selector of contentSelectors) {
 			const element = document.querySelector(selector);
-			if (element) {
+			if (element && (element.innerText || "").trim().length > 300) {
 				return {
 					found: true,
 					title: document.title || "Unknown Title",
@@ -3125,7 +3252,61 @@ if (window.__RGInitDone) {
 			}
 		}
 
-		// Nothing found
+		// Paragraph-cluster fallback: group <p> tags by nearest ancestor to avoid
+		// pulling in sidebar/footer content.
+		const paragraphs = Array.from(document.querySelectorAll("p"));
+		if (paragraphs.length > 5) {
+			const groups = new Map();
+			for (const p of paragraphs) {
+				const text = (p.innerText || "").trim();
+				if (!text) continue;
+				let ancestor = p.parentElement;
+				let depth = 0;
+				while (ancestor && ancestor !== document.body && depth < 3) {
+					if (
+						ancestor.id ||
+						(ancestor.classList && ancestor.classList.length > 0)
+					) {
+						break;
+					}
+					ancestor = ancestor.parentElement;
+					depth++;
+				}
+				if (!ancestor) ancestor = p.parentElement;
+				const stats = groups.get(ancestor) || { length: 0, count: 0 };
+				stats.length += text.length;
+				stats.count += 1;
+				groups.set(ancestor, stats);
+			}
+
+			let bestEl = null;
+			let bestLen = 0;
+			for (const [el, stats] of groups.entries()) {
+				if (
+					el !== document.body &&
+					el !== document.documentElement &&
+					stats.count >= 3 &&
+					stats.length > bestLen
+				) {
+					bestEl = el;
+					bestLen = stats.length;
+				}
+			}
+
+			if (bestEl && bestLen > 300) {
+				const chapterText = Array.from(bestEl.querySelectorAll("p"))
+					.map((p) => p.innerText.trim())
+					.filter(Boolean)
+					.join("\n\n");
+				return {
+					found: chapterText.length > 200,
+					title: document.title || "Unknown Title",
+					text: chapterText,
+					selector: "generic paragraph-cluster extractor",
+				};
+			}
+		}
+
 		return {
 			found: false,
 			title: "",
@@ -3976,7 +4157,7 @@ if (window.__RGInitDone) {
 						controlsConfig: config,
 						HANDLER_TYPES,
 						getHandlerType,
-						getNovelIdFromCurrentPage: () => currentHandler?.getNovelId?.() || getNovelIdFromCurrentPage(),
+						getNovelIdFromCurrentPage,
 						getReadingStatusOptions: () => READING_STATUS_OPTIONS,
 						showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
 						isIncognitoActive: () => incognitoMode?.enabled === true,
@@ -4079,7 +4260,7 @@ if (window.__RGInitDone) {
 					controlsConfig,
 					HANDLER_TYPES,
 					getHandlerType,
-					getNovelIdFromCurrentPage: () => currentHandler?.getNovelId?.() || getNovelIdFromCurrentPage(),
+					getNovelIdFromCurrentPage,
 					getReadingStatusOptions: () => READING_STATUS_OPTIONS,
 					showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
 					isIncognitoActive: () => incognitoMode?.enabled === true,
@@ -4100,56 +4281,95 @@ if (window.__RGInitDone) {
 		}, 100);
 
 		// Keep controls alive in case the site re-renders or strips injected nodes
-		startUIKeepAlive();
+		setupUIObserver();
 	}
 
-	let uiKeepAliveTimer = null;
-	function startUIKeepAlive() {
-		if (uiKeepAliveTimer) return;
-		uiKeepAliveTimer = setInterval(async () => {
-			// Re-inject main controls if the host page wipes them out
+	let uiObserver = null;
+	function setupUIObserver() {
+		if (uiObserver) return;
+
+		const checkAndReinject = debounce(async () => {
+			if (!currentHandler) return;
+
+			const isChapter = currentHandler.isChapterPage?.();
+			const isNovel = currentHandler.isNovelPage?.();
+
 			if (!document.getElementById("gemini-controls")) {
-				console.warn(
-					"Ranobe Gemini: controls missing, re-injecting UI",
-				);
-				await injectUI();
-				return;
+				if (isChapter) {
+					debugWarn("Ranobe Gemini: Main UI missing, re-injecting...");
+					await injectUI();
+					return;
+				} else if (
+					isNovel &&
+					getHandlerType() === HANDLER_TYPES.DEDICATED_PAGE
+				) {
+					debugWarn(
+						"Ranobe Gemini: Novel Page UI missing, re-injecting...",
+					);
+					await injectNovelPageUI();
+				}
 			}
 
-			// Recreate chapter-level novel controls if they disappear
 			if (
-				currentHandler?.isChapterPage?.() &&
+				isChapter &&
 				!document.getElementById("rg-chapter-novel-controls")
 			) {
 				try {
 					const runtime = getUIElementsRuntime();
 					if (!runtime) return;
 
-					const controlsConfig = currentHandler?.getNovelControlsConfig?.() || {};
-					const novelControls = await runtime.createChapterPageNovelControls({
-						controlsConfig,
-						HANDLER_TYPES,
-						getHandlerType,
-						getNovelIdFromCurrentPage: () => currentHandler?.getNovelId?.() || getNovelIdFromCurrentPage(),
-						getReadingStatusOptions: () => READING_STATUS_OPTIONS,
-						showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
-						isIncognitoActive: () => incognitoMode?.enabled === true,
-						handleChapterControlsToggleBanners: handleToggleBannersVisibility,
-						manuallyCheckAndUpdateNovel: manuallyCheckAndUpdateNovel,
-						handleNovelAddUpdate: handleNovelAddUpdate,
-					});
+					const controlsConfig =
+						currentHandler?.getNovelControlsConfig?.() || {};
+					const novelControls =
+						await runtime.createChapterPageNovelControls({
+							controlsConfig,
+							HANDLER_TYPES,
+							getHandlerType,
+							getNovelIdFromCurrentPage,
+							getReadingStatusOptions: () => READING_STATUS_OPTIONS,
+							showTimedBanner: (msg, type, duration) =>
+								showStatusMessage(msg, type, duration),
+							isIncognitoActive: () =>
+								incognitoMode?.enabled === true,
+							handleChapterControlsToggleBanners:
+								handleToggleBannersVisibility,
+							manuallyCheckAndUpdateNovel,
+							handleNovelAddUpdate,
+						});
 
 					if (novelControls) {
-						runtime.placeChapterNovelControls(novelControls, controlsConfig);
+						runtime.placeChapterNovelControls(
+							novelControls,
+							controlsConfig,
+						);
 					}
-				} catch (heartbeatError) {
-					debugLog(
-						"Ranobe Gemini: keep-alive could not re-add controls",
-						heartbeatError,
+				} catch (err) {
+					debugError(
+						"Ranobe Gemini: Observer could not re-add controls",
+						err,
 					);
 				}
 			}
-		}, 15000);
+		}, 500);
+
+		uiObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				for (const node of mutation.removedNodes) {
+					if (
+						node.id === "gemini-controls" ||
+						node.id === "rg-chapter-novel-controls" ||
+						(node.classList &&
+							node.classList.contains("gemini-ui-container"))
+					) {
+						checkAndReinject();
+						return;
+					}
+				}
+			}
+		});
+
+		uiObserver.observe(document.body, { childList: true, subtree: true });
+		debugLog("Ranobe Gemini: MutationObserver started for UI persistence.");
 	}
 
 	// Automatically extract content once the page is loaded
