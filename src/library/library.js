@@ -48,6 +48,7 @@ import {
 } from "./status-machine.js";
 import {
 	bindModalSwipeDismiss,
+	bindModalSwipeNavigation,
 	recoverMissingNovelById,
 } from "./shared-shelf-helpers.js";
 import { openInlineEditModal } from "./edit-modal.js";
@@ -2935,6 +2936,14 @@ function setupEventListeners() {
 		elements.novelModal._swipeCleanup = bindModalSwipeDismiss({
 			modal: elements.novelModal,
 			onDismiss: () => closeModal(elements.novelModal),
+		});
+		if (typeof elements.novelModal._swipeNavCleanup === "function") {
+			elements.novelModal._swipeNavCleanup();
+		}
+		elements.novelModal._swipeNavCleanup = bindModalSwipeNavigation({
+			modal: elements.novelModal,
+			onPrev: () => void navigateModalRelative(-1),
+			onNext: () => void navigateModalRelative(1),
 		});
 	}
 	elements.modalRemoveBtn.addEventListener("click", handleRemoveNovel);
@@ -5840,6 +5849,20 @@ async function navigateModalRelative(offset) {
 			source: "modal-nav",
 		},
 	});
+
+	// Animate .novel-detail in from the direction of navigation
+	const novelDetail = elements.novelModal?.querySelector(".novel-detail");
+	if (novelDetail) {
+		const dirClass =
+			offset < 0 ? "modal-nav-entering-left" : "modal-nav-entering-right";
+		novelDetail.classList.remove(
+			"modal-nav-entering-left",
+			"modal-nav-entering-right",
+		);
+		void novelDetail.offsetWidth; // force reflow to restart animation
+		novelDetail.classList.add(dirClass);
+		setTimeout(() => novelDetail.classList.remove(dirClass), 280);
+	}
 }
 
 /**

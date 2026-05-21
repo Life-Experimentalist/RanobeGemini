@@ -1503,6 +1503,25 @@ body {
 	pointer-events: none;
 }
 
+/* Modal novel navigation slide-in animations */
+@keyframes modal-slide-in-from-right {
+	from { transform: translateX(28px); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes modal-slide-in-from-left {
+	from { transform: translateX(-28px); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+
+.novel-detail.modal-nav-entering-right {
+	animation: modal-slide-in-from-right 0.22s ease;
+}
+
+.novel-detail.modal-nav-entering-left {
+	animation: modal-slide-in-from-left 0.22s ease;
+}
+
 @media (max-width: 640px) {
 	.modal-close,
 	.modal-corner-btn {

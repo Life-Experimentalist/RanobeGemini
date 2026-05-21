@@ -120,7 +120,7 @@ Track both planned and actual effort per unit.
 | 9: Deployment Automation             | 3          | 4-7            | 8        | completed   |
 | 10: Content Orchestrator Thinning    | 3          | 5-8            | 10       | in-progress |
 | 11: UI & Filter System Refactor      | 3          | 4-7            | 9        | in-progress |
-| 12: Swipe & Gesture Navigation       | 2          | 4-6            | 8        | queued      |
+| 12: Swipe & Gesture Navigation       | 2          | 4-6            | 8        | completed   |
 | 13: Storage Adapter Expansion        | 3          | 7-10           | 14       | queued      |
 | 14: Popup UI Overhaul                | 3          | 5-8            | 10       | completed   |
 | 15: Maintenance & Security Fixes     | 2          | 2-4            | 6        | in-progress |
@@ -562,8 +562,8 @@ Implement swipe gestures (touch) and dragging (desktop) to seamlessly switch bet
 
 | Unit  | Scope                                        | Target Prompts | Status   | Exit Criteria                          |
 | ----- | -------------------------------------------- | -------------- | -------- | -------------------------------------- |
-| 12-U1 | Baseline Swipe/Drag event listeners          | 2-3            | ⏳ queued | Pointer/touch events detect direction. |
-| 12-U2 | Modal transition animation and state syncing | 2-3            | ⏳ queued | Navigates adjacent novels seamlessly.  |
+| 12-U1 | Baseline Swipe/Drag event listeners          | 2-3            | ✅ complete | bindModalSwipeNavigation() added to shared-shelf-helpers; touch + pointer drag on modal triggers prev/next. 0 errors. |
+| 12-U2 | Modal transition animation and state syncing | 2-3            | ✅ complete | CSS slide-in keyframes added; navigateModalRelative applies direction class to .novel-detail after content loads. 0 errors. |
 
 ## Phase 13: Storage Adapter Expansion & Multi-Sync
 ### Objective

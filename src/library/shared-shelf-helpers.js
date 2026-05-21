@@ -432,6 +432,116 @@ export function createModalNavigationController({
 }
 
 /**
+ * Bind horizontal swipe (touch) and drag (pointer/mouse) gestures to navigate
+ * prev/next novels inside a modal. Works on all screen sizes.
+ * Swipe right → onPrev, swipe left → onNext.
+ *
+ * @param {Object} options
+ * @param {HTMLElement|string} options.modal - Modal element or id.
+ * @param {Function} options.onPrev - Called when user swipes right.
+ * @param {Function} options.onNext - Called when user swipes left.
+ * @param {string} [options.contentSelector='.modal-content'] - Swipe target selector.
+ * @param {number} [options.minSwipeDistance=60] - Min horizontal travel to trigger.
+ * @param {number} [options.maxVerticalDrift=50] - Max vertical drift for a horizontal gesture.
+ * @returns {Function} cleanup function.
+ */
+export function bindModalSwipeNavigation({
+	modal,
+	onPrev,
+	onNext,
+	contentSelector = ".modal-content",
+	minSwipeDistance = 60,
+	maxVerticalDrift = 50,
+}) {
+	const modalEl =
+		typeof modal === "string" ? document.getElementById(modal) : modal;
+	if (!modalEl || (typeof onPrev !== "function" && typeof onNext !== "function")) {
+		return () => {};
+	}
+
+	const swipeSurface =
+		modalEl.querySelector(contentSelector) ||
+		modalEl.querySelector(".modal-content") ||
+		modalEl;
+
+	let startX = 0;
+	let startY = 0;
+	let tracking = false;
+
+	const isModalOpen = () => {
+		if (modalEl.classList?.contains("hidden")) return false;
+		const st = window.getComputedStyle(modalEl);
+		return st.display !== "none" && st.visibility !== "hidden";
+	};
+
+	const isEligibleTarget = (target) => {
+		if (!(target instanceof Element)) return true;
+		return !target.closest(
+			"input, textarea, select, button, a, [role='button'], .modal-corner-nav",
+		);
+	};
+
+	const tryFire = (endX, endY) => {
+		if (!tracking) return;
+		tracking = false;
+		const dx = endX - startX;
+		const dy = endY - startY;
+		if (Math.abs(dy) > maxVerticalDrift) return;
+		if (Math.abs(dx) < minSwipeDistance) return;
+		if (dx > 0) {
+			if (typeof onPrev === "function") onPrev();
+		} else {
+			if (typeof onNext === "function") onNext();
+		}
+	};
+
+	// Touch
+	const handleTouchStart = (e) => {
+		if (!isModalOpen() || e.touches.length !== 1) return;
+		if (!isEligibleTarget(e.target)) return;
+		startX = e.touches[0].clientX;
+		startY = e.touches[0].clientY;
+		tracking = true;
+	};
+	const handleTouchEnd = (e) => {
+		const t = e.changedTouches?.[0];
+		if (t) tryFire(t.clientX, t.clientY);
+		else tracking = false;
+	};
+
+	// Pointer / mouse drag (skip touch pointer type to avoid double-firing)
+	const handlePointerDown = (e) => {
+		if (e.pointerType === "touch") return;
+		if (!isModalOpen() || !isEligibleTarget(e.target)) return;
+		startX = e.clientX;
+		startY = e.clientY;
+		tracking = true;
+	};
+	const handlePointerUp = (e) => {
+		if (e.pointerType === "touch") return;
+		tryFire(e.clientX, e.clientY);
+	};
+
+	swipeSurface.addEventListener("touchstart", handleTouchStart, {
+		passive: true,
+	});
+	swipeSurface.addEventListener("touchend", handleTouchEnd, { passive: true });
+	swipeSurface.addEventListener("touchcancel", handleTouchEnd, {
+		passive: true,
+	});
+	swipeSurface.addEventListener("pointerdown", handlePointerDown);
+	swipeSurface.addEventListener("pointerup", handlePointerUp);
+
+	return () => {
+		swipeSurface.removeEventListener("touchstart", handleTouchStart);
+		swipeSurface.removeEventListener("touchend", handleTouchEnd);
+		swipeSurface.removeEventListener("touchcancel", handleTouchEnd);
+		swipeSurface.removeEventListener("pointerdown", handlePointerDown);
+		swipeSurface.removeEventListener("pointerup", handlePointerUp);
+	};
+}
+
+/**
  * Bind a touch swipe-down gesture to dismiss a modal on mobile devices.
  * The gesture is ignored on desktop widths and when modal body is scrolled.
  *
