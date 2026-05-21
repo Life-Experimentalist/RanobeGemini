@@ -1340,21 +1340,6 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	/**
-	 * Dedicated toggle function for Show/Hide button in chapter novel controls
-	 * ONLY hides enhancement banners, NEVER hides the controls container itself.
-	 * @param {HTMLElement|null} callerBtn - The button that triggered the toggle (optional)
-	 */
-	async function handleChapterControlsToggleBanners(callerBtn = null) {
-		const mod = await loadEnhancementBannersModule();
-		mod?.toggleEnhancedBannersRuntime?.({
-			documentRef: document,
-			currentHandler,
-			showStatusMessage,
-			callerBtn,
-		});
-	}
-
 	function buildChunkBanner(
 		chunking,
 		chunkIndex,
@@ -2501,63 +2486,6 @@ if (window.__RGInitDone) {
 		return null;
 	}
 
-	function createToggleBannersButton() {
-		const runtime = getUIElementsRuntime();
-		if (runtime) return runtime.createToggleBannersButton();
-
-		// Fallback
-		const btn = document.createElement("button");
-		btn.textContent = "Show Ranobe Gemini";
-		btn.className = "gemini-toggle-banners-btn";
-		btn.addEventListener("click", handleToggleBannersVisibility);
-		return btn;
-	}
-
-	function createCancelEnhanceButton() {
-		const runtime = getUIElementsRuntime();
-		if (runtime) return runtime.createCancelEnhanceButton();
-
-		// Fallback
-		const btn = document.createElement("button");
-		btn.id = "gemini-cancel-enhance-btn";
-		btn.textContent = "Cancel";
-		btn.style.display = "none";
-		btn.addEventListener("click", handleCancelEnhancement);
-		return btn;
-	}
-
-	function createEnhanceButton() {
-		const runtime = getUIElementsRuntime();
-		if (runtime) return runtime.createEnhanceButton();
-
-		// Fallback
-		const btn = document.createElement("button");
-		btn.className = "gemini-enhance-btn";
-		btn.textContent = "Enhance Chapter";
-		btn.addEventListener("click", handleEnhanceClick);
-		return btn;
-	}
-
-	async function showProgressUpdatePrompt(params) {
-		if (uiElementsRuntimeModule?.showProgressUpdatePromptRuntime) {
-			return uiElementsRuntimeModule.showProgressUpdatePromptRuntime({
-				...params,
-				documentRef: document,
-				windowRef: window,
-				progressPromptState,
-				shouldShowProgressPrompt,
-				PROGRESS_PROMPT_TIMEOUT_MS,
-				onUpdateProgress: async (id, ch, url, total) => {
-					await novelLibrary.updateReadingProgress(id, ch, url, {
-						totalChapters: total,
-					});
-				},
-				showTimedBanner,
-				bannerConfig,
-			});
-		}
-	}
-
 	async function showRereadingBanner(params) {
 		if (uiElementsRuntimeModule?.showRereadingBannerRuntime) {
 			return uiElementsRuntimeModule.showRereadingBannerRuntime({
@@ -3623,61 +3551,13 @@ if (window.__RGInitDone) {
 
 
 	/**
-	 * Show "Check for Updates" banner for existing novels.
-	 * Auto-dismisses after updateNotifyMs — user does NOT need to interact.
-	 * The "Update" button in the chapter controls handles manual updates.
-	 */
-
-	function showUpdateAvailableBanner(existingNovel, currentMetadata) {
-		if (novelContextModule?.showUpdateAvailableBanner) {
-			return novelContextModule.showUpdateAvailableBanner(existingNovel, currentMetadata);
-		}
-	}
-
-
-	/**
 	 * Manually check and update novel with change detection and display
 	 */
-
 	async function manuallyCheckAndUpdateNovel(existingNovel, currentMetadata) {
 		if (novelContextModule?.manuallyCheckAndUpdateNovel) {
 			return novelContextModule.manuallyCheckAndUpdateNovel(existingNovel, currentMetadata);
 		}
 	}
-
-
-	/**
-	 * Detect what metadata changed between old and new
-	 */
-
-	function detectMetadataChanges(oldNovel, newMetadata) {
-		if (novelContextModule?.detectMetadataChanges) {
-			return novelContextModule.detectMetadataChanges(oldNovel, newMetadata);
-		}
-	}
-
-
-	/**
-	 * Display changes in a change modal
-	 */
-
-	function displayChangeSummary(novelTitle, changes) {
-		if (novelContextModule?.displayChangeSummary) {
-			return novelContextModule.displayChangeSummary(novelTitle, changes);
-		}
-	}
-
-
-	/**
-	 * Prompt user if library chapter is higher than current (chapter regression)
-	 */
-
-	async function showChapterRegressionPrompt(options) {
-		if (novelContextModule?.showChapterRegressionPrompt) {
-			return novelContextModule.showChapterRegressionPrompt(options);
-		}
-	}
-
 
 	/**
 	 * Get novel ID from current page using handler
@@ -3774,40 +3654,6 @@ if (window.__RGInitDone) {
 	}
 
 	/**
-	 * Find the best insertion point for novel page UI
-	 */
-	function findNovelPageInsertionPoint() {
-		if (!currentHandler) return null;
-
-		// Try handler-specific insertion point
-		if (typeof currentHandler.getNovelPageUIInsertionPoint === "function") {
-			return currentHandler.getNovelPageUIInsertionPoint();
-		}
-
-		// Common novel page selectors across sites
-		const selectors = [
-			".r-fullstory-spec", // Ranobes
-			".fic_row", // ScribbleHub
-			".g_thumb", // WebNovel
-			".story-info", // Generic
-			".novel-info",
-			".book-info",
-			"article header",
-			"h1",
-		];
-
-		for (const selector of selectors) {
-			const element = document.querySelector(selector);
-			if (element) {
-				return { element, position: "before" };
-			}
-		}
-
-		// Fallback to body
-		return { element: document.body.firstChild, position: "before" };
-	}
-
-	/**
 	 * Handle add/update button click on novel page
 	 */
 
@@ -3894,46 +3740,6 @@ if (window.__RGInitDone) {
 	}
 
 	/**
-	 * Handle delete button click
-	 */
-	// eslint-disable-next-line no-unused-vars
-
-	async function handleNovelDelete() {
-		if (novelContextModule?.handleNovelDelete) {
-			return novelContextModule.handleNovelDelete();
-		}
-	}
-
-
-	/**
-	 * Remove a novel from library and add its ID to the auto-add blocklist
-	 * This prevents the novel from being automatically re-added on reload
-	 * @param {string} novelId - The novel ID to remove and blocklist
-	 */
-	// eslint-disable-next-line no-unused-vars
-
-	async function handleRemoveNovelWithBlocklist(novelId) {
-		if (novelContextModule?.handleRemoveNovelWithBlocklist) {
-			return novelContextModule.handleRemoveNovelWithBlocklist(novelId);
-		}
-	}
-
-
-	/**
-	 * Check if a novel should be added to library (not blocklisted)
-	 * @param {string} novelId - The novel ID to check
-	 * @returns {boolean} True if novel can be auto-added, false if blocklisted
-	 */
-
-	function isNovelBlocklisted(novelId) {
-		if (novelContextModule?.isNovelBlocklisted) {
-			return novelContextModule.isNovelBlocklisted(novelId);
-		}
-		return false;
-	}
-
-
-	/**
 	 * Check and collect metadata for a novel if it was pending collection
 	 * This is called when visiting a novel page after a failed metadata update
 	 * @param {string} novelId - The novel ID to potentially collect metadata for
@@ -3981,198 +3787,6 @@ if (window.__RGInitDone) {
 		} catch (error) {
 			debugWarn("Ranobe Gemini: Error auto-collecting metadata:", error);
 		}
-	}
-
-	/**
-	 * Create compact novel controls for CHAPTER_EMBEDDED type sites
-	 * These appear inline with enhance/summarize controls on chapter pages
-	 * @returns {HTMLElement|null} The novel controls container or null if not applicable
-	 */
-	function insertAtPosition(target, node, position = "before") {
-		if (!target || !node) return;
-		switch (position) {
-			case "after":
-			case "afterend":
-				target.parentNode.insertBefore(node, target.nextSibling);
-				break;
-			case "prepend":
-			case "afterbegin":
-				target.prepend(node);
-				break;
-			case "append":
-			case "beforeend":
-				target.appendChild(node);
-				break;
-			default:
-				target.parentNode.insertBefore(node, target);
-		}
-	}
-
-	function resolveNovelControlsInsertion(config = {}) {
-		let targetElement =
-			config?.insertionPoint?.element ||
-			config?.insertionPoint?.target ||
-			config?.insertionPoint ||
-			null;
-		let position =
-			config?.insertionPoint?.position || config?.position || "after";
-
-		// Fallback: reuse handler-provided novel page insertion point when available
-		if (
-			!targetElement &&
-			typeof currentHandler?.getNovelPageUIInsertionPoint === "function"
-		) {
-			const handlerPoint = currentHandler.getNovelPageUIInsertionPoint();
-			targetElement = handlerPoint?.element || targetElement;
-			position = handlerPoint?.position || position;
-		}
-
-		// Last resort: place below Gemini controls or before content area
-		if (!targetElement) {
-			const mainControls = document.getElementById("gemini-controls");
-			if (mainControls) {
-				targetElement = mainControls;
-				position = "after";
-			} else {
-				targetElement = findContentArea() || document.body.firstChild;
-				position = "before";
-			}
-		}
-
-		return { element: targetElement, position };
-	}
-
-	/**
-	 * Remove the chapter novel controls container AND its DT/DD wrapper from the DOM.
-	 * Calling .remove() on just #rg-chapter-novel-controls leaves orphaned
-	 * dt.rg-gemini-controls-label + dd.rg-gemini-controls shells in the page,
-	 * causing duplicate label/wrapper pairs each time the controls are refreshed.
-	 */
-	function removeChapterNovelControlsFromDOM() {
-		const existing = document.getElementById("rg-chapter-novel-controls");
-		if (!existing) return;
-		const wrapper = existing.closest(".rg-gemini-controls");
-		if (wrapper) {
-			const maybeLabel = wrapper.previousElementSibling;
-			if (maybeLabel?.classList.contains("rg-gemini-controls-label")) {
-				maybeLabel.remove();
-			}
-			wrapper.remove();
-		} else {
-			existing.remove();
-		}
-	}
-
-	function placeChapterNovelControls(novelControls, controlsConfig = {}) {
-		if (!novelControls) return;
-
-		const existing = document.getElementById("rg-chapter-novel-controls");
-		if (existing && existing !== novelControls) {
-			const wrapper = existing.closest(".rg-gemini-controls");
-			if (wrapper) {
-				const maybeLabel = wrapper.previousElementSibling;
-				if (
-					maybeLabel &&
-					maybeLabel.classList.contains("rg-gemini-controls-label")
-				) {
-					maybeLabel.remove();
-				}
-				wrapper.remove();
-			} else {
-				existing.remove();
-			}
-		}
-
-		// Hide the old toggle banners button since we have the Show/Hide button in novel controls now
-		const oldToggleBtn = document.querySelector(
-			".gemini-toggle-banners-btn",
-		);
-		if (oldToggleBtn) {
-			oldToggleBtn.style.display = "none";
-		}
-
-		const insertion = resolveNovelControlsInsertion(controlsConfig);
-		if (insertion?.element) {
-			let target = insertion.element;
-			let position = insertion.position;
-
-			if (controlsConfig.wrapInDefinitionList) {
-				const labelText = controlsConfig.dlLabel || "Ranobe Gemini";
-				const dtLabel = document.createElement("dt");
-				dtLabel.className = "rg-gemini-controls-label";
-				const labelLink = document.createElement("a");
-				labelLink.href = "https://ranobe.vkrishna04.me/";
-				labelLink.textContent = labelText;
-				labelLink.target = "_blank";
-				labelLink.rel = "noopener noreferrer";
-				dtLabel.appendChild(labelLink);
-
-				const ddWrapper = document.createElement("dd");
-				ddWrapper.className = "rg-gemini-controls";
-				novelControls.classList.add("rg-dl-embedded");
-				ddWrapper.appendChild(novelControls);
-
-				if (position === "after" || position === "afterend") {
-					insertAtPosition(target, dtLabel, "after");
-					insertAtPosition(dtLabel, ddWrapper, "after");
-				} else if (position === "beforeend" || position === "append") {
-					target.appendChild(dtLabel);
-					target.appendChild(ddWrapper);
-				} else {
-					insertAtPosition(target, dtLabel, position || "before");
-					insertAtPosition(dtLabel, ddWrapper, "after");
-				}
-			} else {
-				insertAtPosition(target, novelControls, position);
-			}
-		}
-	}
-
-	// Concurrency guard: prevent two simultaneous createChapterPageNovelControls calls
-	let __rgCreatingChapterControls = false;
-
-	async function createChapterPageNovelControls(controlsConfig = {}) {
-		const runtime = getUIElementsRuntime();
-		if (runtime) {
-			return runtime.createChapterPageNovelControls({
-				controlsConfig,
-				HANDLER_TYPES,
-				getHandlerType,
-				getNovelIdFromCurrentPage,
-				getReadingStatusOptions,
-				showTimedBanner,
-				isIncognitoActive,
-				incognitoMode,
-				shouldBannersBeHidden,
-				handleChapterControlsToggleBanners: handleToggleBannersVisibility,
-				manuallyCheckAndUpdateNovel,
-				handleNovelAddUpdate,
-				removeChapterNovelControlsFromDOM: () => {
-					const runtime = getUIElementsRuntime();
-					runtime?.removeChapterNovelControlsFromDOM?.();
-				},
-				createChapterPageNovelControls: async (config) => {
-					const runtime = getUIElementsRuntime();
-					return runtime?.createChapterPageNovelControls?.({
-						controlsConfig: config,
-						HANDLER_TYPES,
-						getHandlerType,
-						getNovelIdFromCurrentPage,
-						getReadingStatusOptions: () => READING_STATUS_OPTIONS,
-						showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
-						isIncognitoActive: () => incognitoMode?.enabled === true,
-						handleChapterControlsToggleBanners: handleToggleBannersVisibility,
-						manuallyCheckAndUpdateNovel: manuallyCheckAndUpdateNovel,
-						handleNovelAddUpdate: handleNovelAddUpdate,
-					});
-				},
-				placeChapterNovelControls: (controls, config) => {
-					const runtime = getUIElementsRuntime();
-					runtime?.placeChapterNovelControls?.(controls, config);
-				},
-			});
-		}
-		return null;
 	}
 
 	// Function to inject UI elements (buttons, status area)
