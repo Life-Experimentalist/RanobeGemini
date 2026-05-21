@@ -106,6 +106,7 @@ export async function initShelfPage(shelfId, _config = {}) {
 
 	// Setup UI elements
 	setupFilterControls();
+	await applyDisplaySettings();
 	setupEventListeners();
 	setupWebsiteSettingsModal();
 
@@ -192,6 +193,29 @@ function setupFilterControls() {
             <!-- Active filter tags shown here -->
         </div>
     `;
+}
+
+async function applyDisplaySettings() {
+	const result = await browser.storage.local.get("libraryDisplayOptions");
+	const s = {
+		showFilterToolbar: true,
+		showSortFilter: true,
+		showStatusFilter: true,
+		showActiveFilters: true,
+		...(result.libraryDisplayOptions || {}),
+	};
+	const filterContainer = document.getElementById("shelf-filters");
+	if (!filterContainer) return;
+	if (!s.showFilterToolbar) {
+		filterContainer.style.display = "none";
+		return;
+	}
+	const sortGroup = document.getElementById("sort-filter")?.closest(".filter-group");
+	if (sortGroup) sortGroup.style.display = s.showSortFilter ? "" : "none";
+	const statusGroup = document.getElementById("status-filter")?.closest(".filter-group");
+	if (statusGroup) statusGroup.style.display = s.showStatusFilter ? "" : "none";
+	const activeFilters = document.getElementById("active-filters");
+	if (activeFilters) activeFilters.style.display = s.showActiveFilters ? "" : "none";
 }
 
 /**
@@ -871,11 +895,13 @@ function createNovelCard(novel) {
 							.join("")}
                     </select>
 
-                    <button class="btn-continue" data-url="${escapeHtml(
-						novel.lastChapterUrl || novel.sourceUrl,
+					<button class="btn-continue" data-url="${escapeHtml(
+						novel.lastReadUrl ||
+							novel.lastChapterUrl ||
+							novel.sourceUrl,
 					)}" title="Continue reading">
-                        📖 Continue
-                    </button>
+						📖 Continue
+					</button>
 
                     <button class="btn-novel-menu" data-novel-id="${escapeHtml(
 						novel.id,
@@ -926,10 +952,11 @@ function setupCardEventListeners() {
 		});
 	});
 
-	// Continue button
+	// Continue button — use event.currentTarget to avoid inner-target issues
 	document.querySelectorAll(".btn-continue").forEach((btn) => {
 		btn.addEventListener("click", (e) => {
-			const url = e.target.dataset.url;
+			const el = e.currentTarget || e.target.closest(".btn-continue");
+			const url = el?.dataset?.url;
 			if (url) {
 				window.open(url, "_blank");
 			}

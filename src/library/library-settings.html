@@ -1562,6 +1562,77 @@
 					<!-- Box type cards — rendered by library-settings.js -->
 					<div id="content-boxes-list" style="padding: 0 4px;"></div>
 				</section>
+				<!-- ════════════════════════════════════════════════
+			     PANEL: Display
+			     ════════════════════════════════════════════════ -->
+				<section class="ls-panel" id="panel-display">
+					<div class="ls-panel-header">
+						<div class="ls-panel-header-content">
+							<h1 class="ls-panel-title">🖥️ Display</h1>
+							<p class="ls-panel-description">Control which filter and sort options are visible in the library shelf pages.</p>
+						</div>
+						<div class="ls-panel-header-actions">
+							<button id="display-settings-save-btn" class="ls-btn ls-btn-primary ls-btn-sm">💾 Save</button>
+						</div>
+					</div>
+
+					<div class="ls-section" data-accent="blue">
+						<div class="ls-section-title">🔍 Filter Toolbar Visibility</div>
+						<div class="ls-section-desc">Choose which filters appear in the shelf filter panel. Changes take effect on the next page load.</div>
+
+						<div class="ls-form-group">
+							<div class="ls-toggle-row">
+								<div class="ls-toggle-row-label">
+									<span class="ls-label">Show Filter Toolbar</span>
+									<span class="ls-hint">Show or hide the entire ⚙️ Filters button and dropdown on shelf pages.</span>
+								</div>
+								<label class="ls-toggle">
+									<input type="checkbox" id="display-show-filter-toolbar" checked />
+									<span class="ls-toggle-track"></span>
+								</label>
+							</div>
+						</div>
+
+						<div class="ls-form-group">
+							<div class="ls-toggle-row">
+								<div class="ls-toggle-row-label">
+									<span class="ls-label">Show Sort Filter</span>
+									<span class="ls-hint">Show or hide the Sort by dropdown in the filter panel.</span>
+								</div>
+								<label class="ls-toggle">
+									<input type="checkbox" id="display-show-sort-filter" checked />
+									<span class="ls-toggle-track"></span>
+								</label>
+							</div>
+						</div>
+
+						<div class="ls-form-group">
+							<div class="ls-toggle-row">
+								<div class="ls-toggle-row-label">
+									<span class="ls-label">Show Reading Status Filter</span>
+									<span class="ls-hint">Show or hide the Reading Status filter in the filter panel.</span>
+								</div>
+								<label class="ls-toggle">
+									<input type="checkbox" id="display-show-status-filter" checked />
+									<span class="ls-toggle-track"></span>
+								</label>
+							</div>
+						</div>
+
+						<div class="ls-form-group">
+							<div class="ls-toggle-row">
+								<div class="ls-toggle-row-label">
+									<span class="ls-label">Show Active Filters Indicator</span>
+									<span class="ls-hint">Show or hide the active filter pills below the Filters button.</span>
+								</div>
+								<label class="ls-toggle">
+									<input type="checkbox" id="display-show-active-filters" checked />
+									<span class="ls-toggle-track"></span>
+								</label>
+							</div>
+						</div>
+					</div>
+				</section>
 
 			</main>
 		</div>

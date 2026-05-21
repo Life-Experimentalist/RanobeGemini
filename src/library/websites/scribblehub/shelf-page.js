@@ -1679,6 +1679,7 @@ function ensureRandomSelectButton() {
 		}
 
 		populateDynamicFilters();
+		await applyDisplaySettings();
 		setupInsightClicks();
 		applyFiltersAndSort();
 		modalNavigation.bind();
@@ -1697,6 +1698,29 @@ function ensureRandomSelectButton() {
 		if (novelGrid) novelGrid.style.display = "none";
 	}
 })();
+
+async function applyDisplaySettings() {
+	const result = await browser.storage.local.get("libraryDisplayOptions");
+	const s = {
+		showFilterToolbar: true,
+		showSortFilter: true,
+		showStatusFilter: true,
+		showActiveFilters: true,
+		...(result.libraryDisplayOptions || {}),
+	};
+	const container = document.querySelector(".filter-dropdown-container");
+	if (!container) return;
+	if (!s.showFilterToolbar) {
+		container.style.display = "none";
+		return;
+	}
+	const sortItem = document.getElementById("sort-select")?.closest(".filter-item");
+	if (sortItem) sortItem.style.display = s.showSortFilter ? "" : "none";
+	const statusItem = document.getElementById("status-filter")?.closest(".filter-item");
+	if (statusItem) statusItem.style.display = s.showStatusFilter ? "" : "none";
+	const activeFilters = document.getElementById("active-filters");
+	if (activeFilters) activeFilters.style.display = s.showActiveFilters ? "" : "none";
+}
 
 function openNovelFromQuery() {
 	try {

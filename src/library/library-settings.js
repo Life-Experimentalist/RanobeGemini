@@ -122,6 +122,12 @@ const SETTINGS_TABS = [
 		label: "Content Boxes",
 		panelId: "panel-content-boxes",
 	},
+	{
+		id: "display",
+		icon: "🖥️",
+		label: "Display",
+		panelId: "panel-display",
+	},
 ];
 
 // ── Theme — centralized ───────────────────────────────────────────────────────
@@ -4550,6 +4556,45 @@ async function initContentFiltersTab() {
 	}
 }
 
+// ── Display Settings Tab ─────────────────────────────────────────────────────
+const DISPLAY_SETTINGS_KEY = "libraryDisplayOptions";
+const DEFAULT_DISPLAY_SETTINGS = {
+	showFilterToolbar: true,
+	showSortFilter: true,
+	showStatusFilter: true,
+	showActiveFilters: true,
+};
+
+async function initDisplaySettingsTab() {
+	const result = await browser.storage.local.get(DISPLAY_SETTINGS_KEY);
+	const settings = { ...DEFAULT_DISPLAY_SETTINGS, ...(result[DISPLAY_SETTINGS_KEY] || {}) };
+
+	const toolbarEl = document.getElementById("display-show-filter-toolbar");
+	const sortEl = document.getElementById("display-show-sort-filter");
+	const statusEl = document.getElementById("display-show-status-filter");
+	const activeEl = document.getElementById("display-show-active-filters");
+
+	if (toolbarEl) toolbarEl.checked = settings.showFilterToolbar;
+	if (sortEl) sortEl.checked = settings.showSortFilter;
+	if (statusEl) statusEl.checked = settings.showStatusFilter;
+	if (activeEl) activeEl.checked = settings.showActiveFilters;
+
+	const saveBtn = document.getElementById("display-settings-save-btn");
+	if (saveBtn) {
+		saveBtn.addEventListener("click", async () => {
+			await browser.storage.local.set({
+				[DISPLAY_SETTINGS_KEY]: {
+					showFilterToolbar: toolbarEl?.checked ?? true,
+					showSortFilter: sortEl?.checked ?? true,
+					showStatusFilter: statusEl?.checked ?? true,
+					showActiveFilters: activeEl?.checked ?? true,
+				},
+			});
+			showToast("✅ Display settings saved!");
+		});
+	}
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
 	debugLog("⚙️ Library Settings page initialising…");
@@ -4608,6 +4653,9 @@ async function init() {
 
 	// Content Filters tab
 	await initContentFiltersTab();
+
+	// Display Settings tab
+	await initDisplaySettingsTab();
 
 	// Wire up all event listeners
 	setupEventListeners();
