@@ -37,6 +37,9 @@ import { createOpenAICompatibleProviderAdapter } from "./ai/providers/openai-com
 import { createOllamaProviderAdapter } from "./ai/providers/ollama-provider.js";
 import { createStorageSyncOrchestrator } from "./storage/storage-orchestrator.js";
 import { createGoogleDriveStorageAdapter } from "./storage/adapters/google-drive-storage.js";
+import { createWebdavStorageAdapter } from "./storage/adapters/webdav-storage.js";
+import { createOnedriveStorageAdapter } from "./storage/adapters/onedrive-storage.js";
+import { createDropboxStorageAdapter } from "./storage/adapters/dropbox-storage.js";
 
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
@@ -58,6 +61,9 @@ if (typeof browser === "undefined") {
 		defaultProvider: "google-drive",
 		adapters: {
 			"google-drive": createGoogleDriveStorageAdapter(),
+			"webdav": createWebdavStorageAdapter(),
+			"onedrive": createOnedriveStorageAdapter(),
+			"dropbox": createDropboxStorageAdapter(),
 		},
 	});
 

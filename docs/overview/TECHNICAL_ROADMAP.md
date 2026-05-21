@@ -121,7 +121,7 @@ Track both planned and actual effort per unit.
 | 10: Content Orchestrator Thinning    | 3          | 5-8            | 10       | in-progress |
 | 11: UI & Filter System Refactor      | 3          | 4-7            | 9        | in-progress |
 | 12: Swipe & Gesture Navigation       | 2          | 4-6            | 8        | completed   |
-| 13: Storage Adapter Expansion        | 3          | 7-10           | 14       | queued      |
+| 13: Storage Adapter Expansion        | 3          | 7-10           | 14       | completed   |
 | 14: Popup UI Overhaul                | 3          | 5-8            | 10       | completed   |
 | 15: Maintenance & Security Fixes     | 2          | 2-4            | 6        | in-progress |
 
@@ -571,9 +571,9 @@ Add OneDrive, Dropbox, and WebDAV (NAS) sync methods to the storage system. Enab
 
 | Unit  | Scope                                                          | Target Prompts | Status   | Exit Criteria                              |
 | ----- | -------------------------------------------------------------- | -------------- | -------- | ------------------------------------------ |
-| 13-U1 | Update Storage registry to support multi-sync and custom paths | 2-3            | ⏳ queued | Storage manager handles N destinations.    |
-| 13-U2 | Implement WebDAV (NAS) Storage Adapter                         | 2-3            | ⏳ queued | WebDAV adapter works and validates.        |
-| 13-U3 | Implement OneDrive & Dropbox Storage Adapters                  | 3-4            | ⏳ queued | Full OAuth/upload flow for both providers. |
+| 13-U1 | Update Storage registry to support multi-sync and custom paths | 2-3            | ✅ complete | Orchestrator reads syncDestinations array; uploadBackup fans out to all; reads use primary. Backward compat with activeSync. 0 errors. |
+| 13-U2 | Implement WebDAV (NAS) Storage Adapter                         | 2-3            | ✅ complete | webdav-storage.js: PROPFIND/PUT/GET with basic auth; MKCOL for folder creation; continuous + timestamped backups. 0 errors. |
+| 13-U3 | Implement OneDrive & Dropbox Storage Adapters                  | 3-4            | ✅ complete | oauth-pkce.js shared PKCE helpers; onedrive.js (Graph API) + dropbox.js (API v2); both adapters registered in background.js. 0 errors. |
 
 ## Phase 14: Popup UI Overhaul ✅
 ### Objective

@@ -2,6 +2,38 @@ import { validateStorageSyncAdapterRuntime } from "./storage-interface.js";
 
 const DEFAULT_ACTIVE_SYNC_PROVIDER = "google-drive";
 
+/**
+ * Read the ordered list of active sync destinations from storage.
+ * Returns an array of { providerId, customPath? } objects.
+ * Falls back to legacy `activeSync` string for backward compatibility.
+ *
+ * @param {Object} browserRef
+ * @param {string} defaultProvider
+ * @returns {Promise<Array<{providerId: string, customPath?: string}>>}
+ */
+async function readSyncDestinations(browserRef, defaultProvider) {
+	try {
+		if (!browserRef?.storage?.local?.get) return [{ providerId: defaultProvider }];
+		const stored = await browserRef.storage.local.get([
+			"syncDestinations",
+			"activeSync",
+		]);
+
+		// New multi-sync format
+		if (Array.isArray(stored?.syncDestinations) && stored.syncDestinations.length) {
+			return stored.syncDestinations
+				.filter((d) => d && typeof d.providerId === "string" && d.providerId)
+				.map((d) => ({ ...d }));
+		}
+
+		// Legacy single-provider format
+		const legacy = stored?.activeSync || defaultProvider;
+		return [{ providerId: legacy }];
+	} catch (_err) {
+		return [{ providerId: defaultProvider }];
+	}
+}
+
 export function createStorageSyncOrchestrator({
 	browserRef,
 	adapters = {},
@@ -19,19 +51,9 @@ export function createStorageSyncOrchestrator({
 	}
 
 	async function getActiveSyncProviderId() {
-		try {
-			if (!browserRef?.storage?.local?.get) {
-				return defaultProvider;
-			}
-			const stored = await browserRef.storage.local.get("activeSync");
-			const requestedProvider = stored?.activeSync || defaultProvider;
-			if (registry.has(requestedProvider)) {
-				return requestedProvider;
-			}
-			return defaultProvider;
-		} catch (_error) {
-			return defaultProvider;
-		}
+		const destinations = await readSyncDestinations(browserRef, defaultProvider);
+		const primary = destinations[0]?.providerId || defaultProvider;
+		return registry.has(primary) ? primary : defaultProvider;
 	}
 
 	async function getActiveSyncAdapter() {
@@ -48,10 +70,39 @@ export function createStorageSyncOrchestrator({
 		};
 	}
 
+	/**
+	 * Upload backup to ALL configured sync destinations in parallel.
+	 * Returns results from each destination.
+	 */
 	async function uploadBackup(backupBlob, options = {}) {
-		const { providerId, adapter } = await getActiveSyncAdapter();
-		const result = await adapter.uploadBackup(backupBlob, options);
-		return { providerId, ...result };
+		const destinations = await readSyncDestinations(browserRef, defaultProvider);
+		const validDestinations = destinations.filter((d) => registry.has(d.providerId));
+
+		if (!validDestinations.length) {
+			// Fall back to default provider
+			const adapter = registry.get(defaultProvider);
+			if (!adapter) throw new Error(`No adapter for default provider '${defaultProvider}'.`);
+			const result = await adapter.uploadBackup(backupBlob, options);
+			return { providerId: defaultProvider, ...result };
+		}
+
+		// Fan out to all destinations; primary result is returned, others run in parallel
+		const [primary, ...secondaries] = validDestinations;
+		const primaryAdapter = registry.get(primary.providerId);
+		const primaryOpts = { ...options, customPath: primary.customPath };
+
+		// Fire secondary uploads without waiting (best-effort)
+		for (const dest of secondaries) {
+			const adapter = registry.get(dest.providerId);
+			if (adapter) {
+				adapter
+					.uploadBackup(backupBlob, { ...options, customPath: dest.customPath })
+					.catch(() => {});
+			}
+		}
+
+		const result = await primaryAdapter.uploadBackup(backupBlob, primaryOpts);
+		return { providerId: primary.providerId, ...result };
 	}
 
 	async function listBackups(options = {}) {
