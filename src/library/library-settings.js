@@ -255,10 +255,13 @@ window.activateTab = activateTab;
 
 // ── AI Provider per-slot switcher ─────────────────────────────────────────────
 function initAiProviderTabs() {
-	// Wire each provider <select> to show/hide its provider-specific config block
-	document.querySelectorAll(".ls-provider-select").forEach((sel) => {
-		const slot = sel.dataset.slot; // "primary" | "fallback"
-		sel.addEventListener("change", () => switchProviderConfig(slot, sel.value));
+	// Wire provider tab pill clicks
+	document.querySelectorAll(".ls-provider-tab").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const slot = btn.dataset.slot;
+			const provider = btn.dataset.provider;
+			switchProviderConfig(slot, provider);
+		});
 	});
 
 	// Wire the fallback enable/disable toggle
@@ -277,6 +280,11 @@ function switchProviderConfig(slot, provider) {
 		const el = $(`${slot}-${p}-config`);
 		if (el) el.classList.toggle("ls-hidden", p !== provider);
 	});
+	// Sync hidden select value for save/load compatibility
+	const sel = $(`${slot}-provider-select`);
+	if (sel) sel.value = provider;
+	// Sync tab pill active state
+	syncProviderTabs(slot, provider);
 	// Update the badge on the primary slot
 	if (slot === "primary") {
 		const badge = $("primary-provider-badge");
@@ -285,6 +293,15 @@ function switchProviderConfig(slot, provider) {
 			badge.textContent = labels[provider] ?? provider;
 		}
 	}
+}
+
+/** Set active class on provider tab pills for a slot. */
+function syncProviderTabs(slot, provider) {
+	document.querySelectorAll(`.ls-provider-tab[data-slot="${slot}"]`).forEach((btn) => {
+		const active = btn.dataset.provider === provider;
+		btn.classList.toggle("active", active);
+		btn.setAttribute("aria-pressed", active ? "true" : "false");
+	});
 }
 
 // ── Version badge ─────────────────────────────────────────────────────────────

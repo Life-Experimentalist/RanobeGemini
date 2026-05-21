@@ -321,11 +321,16 @@
 					</div>
 
 					<div class="ls-form-group" style="margin-top:16px;">
-						<label class="ls-label" for="primary-provider-select">Provider</label>
-						<select id="primary-provider-select" class="ls-select ls-provider-select" data-slot="primary">
-							<option value="gemini">✨ Gemini (Google)</option>
-							<option value="openai">🔷 OpenAI-Compatible</option>
-							<option value="ollama">🦙 Ollama (Local)</option>
+						<label class="ls-label">Provider</label>
+						<div class="ls-provider-tabs" role="group" aria-label="Primary provider" data-slot="primary">
+							<button type="button" class="ls-provider-tab active" data-provider="gemini" data-slot="primary">✨ Gemini</button>
+							<button type="button" class="ls-provider-tab" data-provider="openai" data-slot="primary">🔷 OpenAI-Compatible</button>
+							<button type="button" class="ls-provider-tab" data-provider="ollama" data-slot="primary">🦙 Ollama</button>
+						</div>
+						<select id="primary-provider-select" class="ls-provider-select" style="display:none;" aria-hidden="true" data-slot="primary">
+							<option value="gemini">Gemini</option>
+							<option value="openai">OpenAI-Compatible</option>
+							<option value="ollama">Ollama</option>
 						</select>
 					</div>
 
@@ -415,11 +420,16 @@
 
 					<div id="fallback-model-config" class="ls-hidden" style="margin-top:16px;">
 						<div class="ls-form-group">
-							<label class="ls-label" for="fallback-provider-select">Provider</label>
-							<select id="fallback-provider-select" class="ls-select ls-provider-select" data-slot="fallback">
-								<option value="gemini">✨ Gemini (Google)</option>
-								<option value="openai">🔷 OpenAI-Compatible</option>
-								<option value="ollama">🦙 Ollama (Local)</option>
+							<label class="ls-label">Provider</label>
+							<div class="ls-provider-tabs" role="group" aria-label="Fallback provider" data-slot="fallback">
+								<button type="button" class="ls-provider-tab active" data-provider="gemini" data-slot="fallback">✨ Gemini</button>
+								<button type="button" class="ls-provider-tab" data-provider="openai" data-slot="fallback">🔷 OpenAI-Compatible</button>
+								<button type="button" class="ls-provider-tab" data-provider="ollama" data-slot="fallback">🦙 Ollama</button>
+							</div>
+							<select id="fallback-provider-select" class="ls-provider-select" style="display:none;" aria-hidden="true" data-slot="fallback">
+								<option value="gemini">Gemini</option>
+								<option value="openai">OpenAI-Compatible</option>
+								<option value="ollama">Ollama</option>
 							</select>
 						</div>
 

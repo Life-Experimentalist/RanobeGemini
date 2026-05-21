@@ -1858,6 +1858,39 @@ textarea {
 	background: var(--bg-tertiary);
 }
 
+/* ── Provider tab pills ──────────────────────────────────────────────────────  */
+.ls-provider-tabs {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 4px;
+}
+
+.ls-provider-tab {
+	padding: 6px 14px;
+	border-radius: 20px;
+	border: 1.5px solid var(--border-color);
+	background: var(--bg-secondary);
+	color: var(--text-primary);
+	cursor: pointer;
+	font-size: 13px;
+	transition: background 0.2s, border-color 0.2s, color 0.2s;
+	white-space: nowrap;
+	line-height: 1.4;
+}
+
+.ls-provider-tab.active {
+	border-color: var(--primary-color);
+	background: var(--primary-color);
+	color: #fff;
+	font-weight: 600;
+}
+
+.ls-provider-tab:hover:not(.active) {
+	border-color: var(--primary-color);
+	background: var(--bg-tertiary);
+}
+
 /* ── Theme preset row ────────────────────────────────────────────────────────  */
 .ls-preset-row {
 	display: flex;
