@@ -6,7 +6,7 @@
 export const DEFAULT_BANNERS_VISIBLE = true;
 export const DEFAULT_DEBUG_MODE = true;
 export const DEFAULT_DEBUG_TRUNCATE_OUTPUT = true; // Truncate console output by default
-export const DEFAULT_DEBUG_TRUNCATE_LENGTH = 500; // Max characters per log entry when truncated
+export const DEFAULT_DEBUG_TRUNCATE_LENGTH = 150; // Max characters per log entry when truncated
 export const MAX_DEBUG_LOG_ENTRIES = 1000; // Max entries in debug log buffer
 
 // Font size configuration (percent)
@@ -25,7 +25,15 @@ export const BANNER_DURATION_PERSISTENT = 0; // No auto-dismiss
 export const UI_MOBILE_BREAKPOINT_PX = 600;
 
 // Copy/export format configuration
-export const COPY_EXPORT_EXTENSIONS = ["txt", "epub", "html"];
+export const COPY_EXPORT_EXTENSIONS = [
+	"txt",
+	"epub",
+	"html",
+	"pdf",
+	"awz3",
+	"docx",
+	"mobi",
+];
 export const COPY_EXPORT_DEFAULT_EXTENSION = "epub";
 /** Default copy template. Uses {lastRead}/{chapters} for reading progress,
  *  falling back gracefully when those fields are empty. */

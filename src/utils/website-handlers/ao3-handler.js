@@ -112,6 +112,8 @@ When enhancing, improve readability while fully respecting the author's original
 				"div.userstuff.module[role='article']", // Main chapter content
 				"#chapters .userstuff.module", // Alternative chapter content
 				".userstuff.module",
+				"div.chapter[id^=chapter]", // Newer AO3 chapter wrapper
+				"#workskin .chapter", // Workskin chapter wrapper
 			],
 			title: [
 				"h2.title.heading", // Work title
@@ -150,14 +152,31 @@ When enhancing, improve readability while fully respecting the author's original
 		const url = window.location.pathname;
 		// Strictly require canonical AO3 work/chapter routes.
 		const isWork = /^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(url);
-		// Check for chapter content on page
+		// Check for chapter content on page - include newer AO3 structures
 		const hasContent = !!document.querySelector(
-			'div.userstuff.module[role="article"], #chapters .userstuff.module',
+			'div.userstuff.module[role="article"], #chapters .userstuff.module, .userstuff.module, div.chapter[id^="chapter"], #workskin .chapter, #workskin .userstuff, .chapter',
 		);
 		const hasWorkMeta =
 			!!document.querySelector("dl.work.meta") ||
 			!!document.querySelector("dl.stats");
 		return isWork && hasContent && hasWorkMeta;
+	}
+
+	/**
+	 * Generate a canonical chapter URL for AO3
+	 * @param {number} chapterNum - Chapter number
+	 * @returns {string} Normalized URL
+	 */
+	generateChapterUrl(chapterNum) {
+		const workId = this.getNovelId();
+		if (!workId) return null;
+		// If it's the first chapter, we can use the base work URL
+		if (chapterNum === 1) {
+			return `https://archiveofourown.org/works/${workId}`;
+		}
+		// AO3 doesn't have a simple works/ID/chapter/N route without the specific chapter ID.
+		// However, we can preserve the current URL if it already contains the chapter number.
+		return null;
 	}
 
 	/**
@@ -270,9 +289,25 @@ When enhancing, improve readability while fully respecting the author's original
 		}
 
 		// Fallback to before chapter content
-		const chapterContent = document.querySelector(
-			'.userstuff.module[role="article"]',
-		);
+		// Broaden insertion-fallback selectors to match current AO3 DOM
+		const insertionCandidates = [
+			'div.userstuff.module[role="article"]',
+			"#chapters .userstuff.module",
+			".userstuff.module",
+			"div.chapter[id^='chapter']",
+			"#workskin .chapter",
+			"#workskin .userstuff",
+			".chapter",
+		];
+		let chapterContent = null;
+		for (const sel of insertionCandidates) {
+			const el = document.querySelector(sel);
+			if (el && (el.textContent || "").trim().length > 50) {
+				chapterContent = el;
+				break;
+			}
+			if (!chapterContent && el) chapterContent = el;
+		}
 		if (chapterContent) {
 			return { element: chapterContent, position: "before" };
 		}
@@ -755,10 +790,34 @@ When enhancing, improve readability while fully respecting the author's original
 	findContentArea() {
 		debugLog("AO3: Looking for content area...");
 
-		// AO3's main chapter content is in div.userstuff.module with role="article"
-		const mainContent = document.querySelector(
+		// AO3's main chapter content is usually in one of several wrappers.
+		// Try multiple selectors to be resilient to AO3 DOM changes.
+
+		const candidates = [
 			'div.userstuff.module[role="article"]',
-		);
+			"#chapters .userstuff.module",
+			".userstuff.module",
+			"div.chapter[id^='chapter']", // newer AO3 structure
+			"#workskin .chapter",
+			"#workskin .userstuff",
+			".chapter",
+		];
+
+		let mainContent = null;
+		for (const sel of candidates) {
+			const el = document.querySelector(sel);
+			if (!el) continue;
+			// Prefer elements with non-trivial text content
+			const text = (el.textContent || "").trim();
+			if (text.length < 50) {
+				// keep searching unless this is the only match
+				if (!mainContent) mainContent = el;
+				continue;
+			}
+			mainContent = el;
+			break;
+		}
+
 		if (mainContent) {
 			debugLog("AO3: Found main chapter content with role=article");
 			return mainContent;
@@ -839,6 +898,17 @@ When enhancing, improve readability while fully respecting the author's original
 			// Check for previous/next chapter links
 			const prevLink = document.querySelector('a[rel="prev"]');
 			const nextLink = document.querySelector('a[rel="next"]');
+
+			// STABILIZATION: If we are on a valid chapter page but no chapter select is found,
+			// it's likely a single-chapter work or "Entire Work" view.
+			if (this.isChapterPage()) {
+				return {
+					hasPrevious: !!prevLink,
+					hasNext: !!nextLink,
+					currentChapter: 1, // Default to 1 for valid AO3 work pages
+					totalChapters: 1, // Default to 1
+				};
+			}
 
 			return {
 				hasPrevious: !!prevLink,

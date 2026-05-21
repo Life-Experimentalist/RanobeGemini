@@ -158,7 +158,19 @@ export class BaseWebsiteHandler {
 
 	// Find the main content element of the page
 	findContentArea() {
-		// Common content selectors across many websites
+		// Prefer explicit main landmark or role-marked main elements first
+		const mainSelectors = ["main[role='main']", "[role='main']", "main"];
+		for (const sel of mainSelectors) {
+			const el = document.querySelector(sel);
+			if (el && (el.textContent || "").trim().length > 200) {
+				debugLog(
+					`Base handler: Found content using main selector: ${sel}`,
+				);
+				return el;
+			}
+		}
+
+		// Common content selectors across many websites (prefer more specific ones)
 		const commonSelectors = [
 			"article",
 			".article",
@@ -168,11 +180,17 @@ export class BaseWebsiteHandler {
 			"#content",
 			".entry-content",
 			".post-content",
+			"#storytext",
 		];
 
 		for (const selector of commonSelectors) {
 			const element = document.querySelector(selector);
-			if (element && element.textContent.length > 500) {
+			if (
+				element &&
+				element !== document.body &&
+				element !== document.documentElement &&
+				(element.textContent || "").trim().length > 300
+			) {
 				debugLog(
 					`Base handler: Found content with selector ${selector}`,
 				);
@@ -180,25 +198,60 @@ export class BaseWebsiteHandler {
 			}
 		}
 
-		// Fallback: Look for the largest text block on the page
-		const paragraphs = document.querySelectorAll("p");
-		let bestCandidate = null;
-		let maxLength = 0;
+		// Fallback: group paragraphs by their nearest content parent and pick the
+		// parent with the most total paragraph text. This avoids joining every
+		// <p> on the page (sidebars, footers) which can cause whole-page extraction.
+		const paragraphs = Array.from(document.querySelectorAll("p"));
+		const groups = new Map();
 
-		// Find the paragraph with the most content, likely part of the main text
 		for (const p of paragraphs) {
-			const text = p.textContent.trim();
-			if (text.length > maxLength) {
-				maxLength = text.length;
-				bestCandidate = p.parentElement;
+			const text = (p.textContent || "").trim();
+			if (!text) continue;
+			// Use the nearest meaningful ancestor (up to 3 levels)
+			let ancestor = p.parentElement;
+			let depth = 0;
+			while (ancestor && ancestor !== document.body && depth < 3) {
+				if (!ancestor) break;
+				// stop if ancestor is likely a container (has class/id)
+				if (
+					ancestor.id ||
+					(ancestor.classList && ancestor.classList.length > 0)
+				) {
+					break;
+				}
+				ancestor = ancestor.parentElement;
+				depth++;
+			}
+
+			if (!ancestor) ancestor = p.parentElement;
+
+			const key = ancestor;
+			const stats = groups.get(key) || { length: 0, count: 0 };
+			stats.length += text.length;
+			stats.count += 1;
+			groups.set(key, stats);
+		}
+
+		// Choose the group with the largest combined paragraph length
+		let best = null;
+		let bestLen = 0;
+		for (const [el, stats] of groups.entries()) {
+			if (
+				el !== document.body &&
+				el !== document.documentElement &&
+				stats.length > bestLen &&
+				stats.count >= 3
+			) {
+				best = el;
+				bestLen = stats.length;
 			}
 		}
 
-		if (bestCandidate && maxLength > 200) {
+		if (best && bestLen > 300) {
 			debugLog(
-				"Base handler: Found content using largest text block method",
+				"Base handler: Found content using paragraph-cluster method",
 			);
-			return bestCandidate;
+			return best;
 		}
 
 		debugLog("Base handler: Could not find content area");

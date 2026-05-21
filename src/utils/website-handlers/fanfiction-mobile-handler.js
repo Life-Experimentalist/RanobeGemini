@@ -124,6 +124,18 @@ When enhancing, improve readability while fully respecting the author's creative
 	}
 
 	/**
+	 * Generate a canonical chapter URL for mobile FanFiction.net
+	 * @param {number} chapterNum - Chapter number
+	 * @returns {string} Normalized URL
+	 */
+	generateChapterUrl(chapterNum) {
+		const storyId = this.getNovelId();
+		if (!storyId) return null;
+		// m.fanfiction.net/s/ID/CHAPTER/
+		return `https://m.fanfiction.net/s/${storyId}/${chapterNum}/`;
+	}
+
+	/**
 	 * Inherit isNovelPage() from parent
 	 * FanFiction.net doesn't have separate novel info pages
 	 * All details are embedded on the chapter page

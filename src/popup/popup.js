@@ -173,8 +173,48 @@ async function initializePopup() {
 	const debugModeCheckbox = document.getElementById("debugMode");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const summaryPrompt = document.getElementById("summaryPrompt");
-	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt");
 	const permanentPrompt = document.getElementById("permanentPrompt");
+
+	// Novel tab events
+	const novelSortSelect = document.getElementById("novelSortSelect");
+	if (novelSortSelect) {
+		// Load persisted sort preference
+		browser.storage.local.get("novelLibrarySort").then((res) => {
+			if (res.novelLibrarySort) {
+				novelSortSelect.value = res.novelLibrarySort;
+				if (typeof loadNovelsTab === "function") {
+					loadNovelsTab();
+				}
+			}
+		});
+
+		novelSortSelect.addEventListener("change", async () => {
+			const sortMode = novelSortSelect.value;
+			await browser.storage.local.set({ novelLibrarySort: sortMode });
+			if (typeof loadNovelsTab === "function") {
+				loadNovelsTab();
+			}
+		});
+	}
+
+	const refreshNovelsBtn = document.getElementById("refreshNovels");
+	if (refreshNovelsBtn) {
+		refreshNovelsBtn.addEventListener("click", () => {
+			if (typeof loadNovelsTab === "function") {
+				loadNovelsTab();
+			}
+		});
+	}
+
+	document.querySelectorAll(".novel-filter-btn").forEach(btn => {
+		btn.addEventListener("click", (e) => {
+			document.querySelectorAll(".novel-filter-btn").forEach(b => b.classList.remove("active"));
+			e.target.classList.add("active");
+			if (typeof loadNovelsTab === "function") {
+				loadNovelsTab();
+			}
+		});
+	});
 
 	// Incognito mode elements
 	const incognitoEnabledCheckbox =
@@ -365,7 +405,6 @@ async function initializePopup() {
 	const apiKeyRotationSelect = document.getElementById("apiKeyRotation");
 
 	// Novels tab elements
-	const refreshNovelsBtn = document.getElementById("refreshNovels");
 	const novelsListContainer = document.getElementById("novelsList");
 	const currentNovelInfo = document.getElementById("currentNovelInfo");
 	const suggestedNovelsList = document.getElementById("suggestedNovelsList");
@@ -4121,6 +4160,26 @@ async function initializePopup() {
 					});
 				}
 
+				const sortSelect = document.getElementById("novelSortSelect");
+				const sortMode = sortSelect ? sortSelect.value : "recent";
+
+				filtered.sort((a, b) => {
+					if (sortMode === "recent") {
+						return (b.lastReadAt || 0) - (a.lastReadAt || 0);
+					} else if (sortMode === "added") {
+						return (b.createdAt || b.addedAt || 0) - (a.createdAt || a.addedAt || 0);
+					} else if (sortMode === "title") {
+						const titleA = (a.title || "").toLowerCase();
+						const titleB = (b.title || "").toLowerCase();
+						return titleA.localeCompare(titleB);
+					} else if (sortMode === "progress") {
+						const progA = a.totalChapters ? (a.lastReadChapter || a.currentChapter || 0) / a.totalChapters : 0;
+						const progB = b.totalChapters ? (b.lastReadChapter || b.currentChapter || 0) / b.totalChapters : 0;
+						return progB - progA;
+					}
+					return 0;
+				});
+
 				if (filtered.length === 0) {
 					novelsList.innerHTML = `
 				<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
@@ -4331,8 +4390,22 @@ async function initializePopup() {
 								url.hostname === "ranobe.vkrishna04.me"
 							) {
 								return {
-									title: "VKrishna04 Site",
-									detail: "You're on VKrishna04's website. Enjoy exploring!",
+									title: "Ranobe Gemini Web",
+									detail: "You're on the Ranobe Gemini web app.",
+								};
+							}
+							
+							if (url.hostname.includes("fanfiction.net")) {
+								return {
+									title: "FanFiction.net",
+									detail: "You're browsing FanFiction.net. Open a chapter to track reading.",
+								};
+							}
+							
+							if (url.hostname.includes("archiveofourown.org")) {
+								return {
+									title: "Archive Of Our Own",
+									detail: "You're browsing AO3. Open a chapter to track reading.",
 								};
 							}
 						} catch (_err) {
@@ -5511,9 +5584,6 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 			}
 
 			// Attach backup handlers
-			if (refreshNovelsBtn) {
-				refreshNovelsBtn.addEventListener("click", loadNovelsTab);
-			}
 
 			if (randomizeSuggestionsBtn) {
 				randomizeSuggestionsBtn.addEventListener("click", async () => {

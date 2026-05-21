@@ -367,6 +367,18 @@ When enhancing, improve readability while fully respecting the author's creative
 	}
 
 	/**
+	 * Generate a canonical chapter URL for FanFiction.net
+	 * @param {number} chapterNum - Chapter number
+	 * @returns {string} Normalized URL
+	 */
+	generateChapterUrl(chapterNum) {
+		const storyId = this.getNovelId();
+		if (!storyId) return null;
+		// fanfiction.net/s/ID/CHAPTER/
+		return `https://www.fanfiction.net/s/${storyId}/${chapterNum}/`;
+	}
+
+	/**
 	 * Generate a unique novel ID from URL
 	 * @param {string} url - The story URL
 	 * @returns {string} Unique novel ID

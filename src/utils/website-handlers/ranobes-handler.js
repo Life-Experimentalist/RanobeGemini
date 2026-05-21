@@ -95,26 +95,46 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		return (
 			window.location.hostname.includes("ranobes.net") ||
 			window.location.hostname.includes("ranobes.com") ||
-			window.location.hostname.includes("ranobes.top")
+			window.location.hostname.includes("ranobes.top") ||
+			window.location.hostname.includes("ranobes.org")
 		);
+	}
+
+	isChapterPath(pathname = window.location.pathname) {
+		// Known Ranobes chapter URL patterns:
+		// /read-1206917.html
+		// /novel-slug-1206917/2964516.html
+		// /novel-slug-1206917/chapter-123.html
+		if (/^\/read-\d+\.html$/i.test(pathname)) return true;
+		if (/^\/[a-z0-9-]+-\d+\/\d+(?:-[^/]+)?\.html$/i.test(pathname)) {
+			return true;
+		}
+		if (/^\/[a-z0-9-]+-\d+\/chapter-\d+(?:-[^/]+)?\.html$/i.test(pathname)) {
+			return true;
+		}
+		return false;
 	}
 
 	// Check if current page is a chapter page (not a listing/index page)
 	isChapterPage() {
-		if (/^\/chapters\/\d+\/?$/.test(window.location.pathname)) {
+		const pathname = window.location.pathname;
+		if (/^\/chapters\/\d+\/?$/.test(pathname)) {
 			return false;
 		}
-		// Check if URL contains chapter indicators
-		if (
-			window.location.pathname.includes("/chapter-") ||
-			window.location.pathname.includes("/read-")
-		) {
+		if (/^\/novels\/\d+-[^/]+\.html$/i.test(pathname)) {
+			return false;
+		}
+
+		if (this.isChapterPath(pathname)) {
 			return true;
 		}
 
 		// Check if this is a novel info page (NOT a chapter page)
-		// Novel pages have .r-fullstory structure
-		if (document.querySelector(".r-fullstory")) {
+		// Novel pages usually have .r-fullstory and lack chapter content containers.
+		if (
+			document.querySelector(".r-fullstory") &&
+			!document.querySelector("#arrticle, .text-chapter")
+		) {
 			return false;
 		}
 
@@ -122,9 +142,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		for (const selector of this.selectors.content) {
 			const element = document.querySelector(selector);
 			// Content element exists and has substantial text (not just a listing)
-			if (element && element.innerText.trim().length > 1000) {
+			if (element && element.innerText.trim().length > 120) {
 				return true;
 			}
+		}
+
+		// Navigation controls are a strong signal that this is a chapter page.
+		if (document.querySelector(".prev-chap, .next-chap, .story_tools")) {
+			return true;
 		}
 
 		// Check if page has title elements typical for chapter pages
@@ -197,10 +222,6 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			}
 
 			// Fallback: If no numeric ID found, use a short hash of the pathname
-			const pathParts = path.split("/").filter(Boolean);
-			const lastPart = pathParts[pathParts.length - 1] || "home";
-			const cleanPart = lastPart.split(".")[0].split("-").slice(0, 3).join("-");
-			
 			// Simple numeric-like hash for consistency if possible
 			let hash = 0;
 			for (let i = 0; i < path.length; i++) {
@@ -396,9 +417,12 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Get clean text content
 		let chapterText = contentClone.innerText
-			.trim()
-			.replace(/\n\s+/g, "\n") // Preserve paragraph breaks but remove excess whitespace
-			.replace(/\s{2,}/g, " "); // Replace multiple spaces with a single space
+			.replace(/\r\n?/g, "\n")
+			.split("\n")
+			.map((line) => line.replace(/[^\S\r\n]{2,}/g, " ").trimEnd())
+			.join("\n")
+			.replace(/\n{3,}/g, "\n\n")
+			.trim();
 
 		// Remove ad-related text patterns from the content
 		chapterText = this.removeAdRelatedText(chapterText);
@@ -447,25 +471,41 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	// Get chapter navigation info (previous, next, current chapter number)
 	getChapterNavigation() {
 		try {
-			// Try to find current chapter number
-			const breadcrumbs = document.querySelector(".options-left");
-			if (breadcrumbs) {
-				const chapterText = breadcrumbs.textContent;
-				const chapterMatch = chapterText.match(/Chapter (\d+)/i);
+			const prevLink = document.querySelector(".prev-chap, a.prev");
+			const nextLink = document.querySelector(".next-chap, a.next");
+			const chapterSources = [
+				document.querySelector(".options-left")?.textContent || "",
+				document.querySelector("h1.title")?.textContent || "",
+				document.title || "",
+				window.location.pathname || "",
+			];
 
-				// Try to find navigation links
-				const prevLink = document.querySelector(".prev-chap");
-				const nextLink = document.querySelector(".next-chap");
-
-				if (chapterMatch) {
-					const currentChapter = parseInt(chapterMatch[1], 10);
-					return {
-						hasPrevious: prevLink !== null,
-						hasNext: nextLink !== null,
-						currentChapter: currentChapter,
-						totalChapters: 0, // Total unknown
-					};
+			let currentChapter = null;
+			for (const source of chapterSources) {
+				const match = source.match(/chapter\s*(\d+)/i);
+				if (match) {
+					currentChapter = parseInt(match[1], 10);
+					break;
 				}
+			}
+
+			// URL fallback: /slug-id/123456.html is often chapter sequence.
+			if (currentChapter == null) {
+				const urlMatch = window.location.pathname.match(
+					/\/[a-z0-9-]+-\d+\/(\d+)(?:-[^/]+)?\.html$/i,
+				);
+				if (urlMatch) {
+					currentChapter = parseInt(urlMatch[1], 10);
+				}
+			}
+
+			if (Number.isFinite(currentChapter) && currentChapter > 0) {
+				return {
+					hasPrevious: prevLink !== null,
+					hasNext: nextLink !== null,
+					currentChapter,
+					totalChapters: 0,
+				};
 			}
 		} catch (error) {
 			debugError("Error getting chapter navigation:", error);

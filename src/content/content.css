@@ -911,7 +911,7 @@ html[data-darkreader-mode] .rg-system-msg,
 		cursor: pointer !important;
 		transition: all 0.2s ease !important;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-		white-space: nowrap !important;
+		white-space: wrap !important;
 		flex: 1 1 auto !important;
 		min-width: 100px !important;
 		max-width: 180px !important;
@@ -1206,7 +1206,7 @@ html[data-darkreader-mode] .rg-system-msg,
 	font-size: 11px !important;
 	padding: 4px 8px !important;
 	box-sizing: border-box !important;
-	white-space: nowrap !important;
+	white-space: wrap !important;
 	line-height: 1 !important;
 }
 
