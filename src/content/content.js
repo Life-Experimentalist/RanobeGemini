@@ -97,7 +97,6 @@ let uiElementsRuntimeModule = null; // UI elements (buttons, banners) runtime mo
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
-const PROGRESS_PROMPT_TIMEOUT_MS = 30000; // 30 s user needs time to decide
 if (window.__RGInitDone) {
 	debugLog(
 		"Ranobe Gemini: Content script already initialized, skipping duplicate load.",
@@ -2076,55 +2075,6 @@ if (window.__RGInitDone) {
 	}
 
 	/**
-	 * Add model attribution to the content area
-	 * @param {Object} modelInfo - Information about the model used
-	 */
-	// eslint-disable-next-line no-unused-vars
-	function addModelAttribution(modelInfo) {
-		if (
-			!enhancementAttributionModule?.addModelAttributionRuntime ||
-			!modelInfo
-		) {
-			return;
-		}
-
-		enhancementAttributionModule.addModelAttributionRuntime({
-			modelInfo,
-			documentRef: document,
-			windowRef: window,
-			findContentArea,
-			escapeHtml,
-		});
-	}
-
-	/**
-	 * Create a main summary banner for completed chunked enhancement
-	 * Shows overall word count comparison and global controls
-	 * @param {Object} modelInfo - Information about the model used
-	 * @param {number} totalChunks - Total number of chunks
-	 * @param {number} completedChunks - Number of successfully enhanced chunks
-	 * @returns {HTMLElement} The main summary banner
-	 */
-	// eslint-disable-next-line no-unused-vars
-	function createMainSummaryBanner(modelInfo, totalChunks, completedChunks) {
-		if (!mainSummaryBannerModule?.createMainSummaryBannerRuntime) {
-			return null;
-		}
-
-		return mainSummaryBannerModule.createMainSummaryBannerRuntime({
-			modelInfo,
-			totalChunks,
-			completedChunks,
-			findContentArea,
-			countWords,
-			handleToggleAllChunks,
-			handleDeleteAllChunks,
-			documentRef: document,
-			windowRef: window,
-		});
-	}
-
-	/**
 	 * Toggle all chunks between original and enhanced
 	 */
 	function handleToggleAllChunks() {
@@ -3532,17 +3482,6 @@ if (window.__RGInitDone) {
 		return Date.now() - lastPrompt > PROGRESS_PROMPT_COOLDOWN_MS;
 	}
 
-
-
-
-
-
-
-	/**
-	 * Auto-update novel metadata when visiting any supported novel page
-	 * This ensures the library stays up-to-date without requiring user action
-	 */
-
 	async function autoUpdateNovelOnVisit() {
 		if (novelContextModule?.autoUpdateNovelOnVisit) {
 			return novelContextModule.autoUpdateNovelOnVisit();
@@ -3736,56 +3675,6 @@ if (window.__RGInitDone) {
 			}
 		} catch (error) {
 			debugError("Error updating chapter progression:", error);
-		}
-	}
-
-	/**
-	 * Check and collect metadata for a novel if it was pending collection
-	 * This is called when visiting a novel page after a failed metadata update
-	 * @param {string} novelId - The novel ID to potentially collect metadata for
-	 */
-	// eslint-disable-next-line no-unused-vars
-	async function autoCollectMetadataOnPageIfPending(novelId) {
-		if (!novelId || !novelLibrary || !currentHandler) return;
-
-		try {
-			const pendingJson = localStorage.getItem(
-				"rg_pending_metadata_collect",
-			);
-			if (!pendingJson) return;
-
-			const pending = JSON.parse(pendingJson);
-			// Check if this is the pending novel and within 10-minute window
-			if (
-				pending.novelId === novelId &&
-				Date.now() - pending.timestamp < 600000
-			) {
-				debugLog(
-					"Ranobe Gemini: Collecting pending metadata for novelId:",
-					novelId,
-				);
-
-				// Extract metadata from current page
-				const metadata = currentHandler.extractNovelMetadata();
-				if (metadata) {
-					// Update the novel in library with the newly collected metadata
-					await novelLibrary.updateNovel(novelId, metadata);
-					debugLog(
-						"Ranobe Gemini: Updated pending metadata for:",
-						novelId,
-					);
-					showTimedBanner(
-						"Metadata synchronized from page",
-						"success",
-						2000,
-					);
-				}
-
-				// Clear the pending flag
-				localStorage.removeItem("rg_pending_metadata_collect");
-			}
-		} catch (error) {
-			debugWarn("Ranobe Gemini: Error auto-collecting metadata:", error);
 		}
 	}
 

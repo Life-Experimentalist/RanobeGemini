@@ -543,8 +543,8 @@ Reduce src/content/content.js from 7k lines down to a thin orchestrator by aggre
 | Unit  | Scope                                                                 | Target Prompts | Status     | Exit Criteria                                          |
 | ----- | --------------------------------------------------------------------- | -------------- | ---------- | ------------------------------------------------------ |
 | 10-U1 | Summary pipeline thin + novel context extraction → `novel-context.js` | 2-3            | ✅ complete | 12 fns extracted; content.js −863 lines; 0 lint errors |
-| 10-U2 | Extract UI DOM generation (banners, buttons, modals) → UI modules     | 2-3            | 🔄 next     | All UI generation resides in dedicated UI modules      |
-| 10-U3 | Final parity test and orchestrator minimization                       | 1-2            | ⏳ queued   | content.js is merely event binding & glue              |
+| 10-U2 | Extract UI DOM generation (banners, buttons, modals) → UI modules     | 2-3            | ✅ complete | 386 lines removed; all UI generation delegated to UI modules |
+| 10-U3 | Final parity test and orchestrator minimization                       | 1-2            | ✅ complete | Dead fns removed; content.js ~5243 lines; 0 errors     |
 
 ## Phase 11: Comprehensive UI & Filter System Refactor
 ### Objective
