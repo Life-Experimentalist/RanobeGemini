@@ -29,7 +29,8 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		id: "ranobes",
 		isPrimary: true,
 		name: "Ranobes",
-		icon: "https://ranobes.top/favicon.ico",
+		icon: "https://ranobes.net/favicon.ico",
+		iconFallback: "https://ranobes.top/favicon.ico",
 		emoji: "🍃",
 		color: "#4a7c4e",
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
@@ -76,7 +77,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	};
 
 	static DEFAULT_SITE_PROMPT =
-		"This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beginning or at the end of the chapter. And then add breaks to signify the separation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.";
+		"This is a novel from Ranobes. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions. In regards with any author notes please place them in a box and filter out any non plot-related content in the author notes which may be placed at the beginning or at the end of the chapter. Add breaks to signify the separation between author notes and the actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese, and Chinese names should be properly transliterated.";
 
 	constructor() {
 		super();
@@ -631,25 +632,17 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Implement site-specific default prompt for Ranobes
 	getDefaultPrompt() {
-		return "This is a novel from Ranobes.top. Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc. Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions, and in regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter. And then add breaks to signify the sepeation between author notes and actual chapter. Please improve the translation while maintaining the original meaning and flow. Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated.";
+		return RanobesHandler.DEFAULT_SITE_PROMPT;
 	}
 
 	// Get a readable site name for the UI
 	getSiteIdentifier() {
-		return "Ranobes.top";
+		return "Ranobes";
 	}
 
 	// Get site-specific prompt for Ranobes
 	getSiteSpecificPrompt() {
-		return (
-			"This is a novel from Ranobes.top." +
-			"Please maintain the author's style and any formatting features like section breaks, centered text, italics, etc." +
-			"Respect any special formatting the author uses for dialogue, thoughts, flashbacks, or scene transitions." +
-			"In regards with any author notes please place them in a box and filter out any non plot related content in the author notes which may be placed at the beggining or at the end of the chapter" +
-			" And then add breaks to signify the sepeation between author notes and actual chapter." +
-			"Please improve the translation while maintaining the original meaning and flow." +
-			"Keep any special formatting like section breaks. Korean, Japanese and Chinese names should be properly transliterated."
-		);
+		return RanobesHandler.DEFAULT_SITE_PROMPT;
 	}
 
 	/**
@@ -1193,11 +1186,17 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	}
 
 	/**
-	 * Get the URL where metadata should be fetched from
-	 * Ranobes is a "dedicated_page" type - metadata only on novel pages
+	 * Get the URL where metadata should be fetched from.
+	 * Ranobes is a "dedicated_page" type - metadata only on novel pages.
+	 * Uses the current hostname so ranobes.net, ranobes.top, etc. all work.
 	 * @returns {string|null}
 	 */
 	getMetadataSourceUrl() {
+		// If already on a novel page, use the current URL directly
+		if (this.isNovelPage()) {
+			return window.location.href;
+		}
+
 		// Extract novel ID from current URL
 		const match = window.location.href.match(
 			this.constructor.SHELF_METADATA.novelIdPattern,
@@ -1208,9 +1207,11 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Get the captured group (one of the groups contains the ID)
 		const novelId = match[1] || match[2] || match[3] || match[4];
+		if (!novelId) return null;
 
-		// Return the novel page URL on preferred domain
-		return `https://ranobes.top/novels/${novelId}/`;
+		// Use current hostname to preserve the user's preferred domain
+		const domain = window.location.hostname || "ranobes.top";
+		return `https://${domain}/novels/${novelId}/`;
 	}
 
 	/**

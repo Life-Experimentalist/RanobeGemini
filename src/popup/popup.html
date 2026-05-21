@@ -14,14 +14,30 @@
 			<p>Initializing...</p>
 		</div>
 		<div class="container">
+
+			<!-- Header -->
 			<div class="header">
-				<h1>
-					<img src="../icons/logo-48.png" alt="Ranobe Gemini"
-						style="width: 48px; height: 48px; margin-right: 8px" />Ranobe Gemini
-				</h1>
-				<button id="quickLibraryBtn" class="quick-library-btn" title="Open Full Library (Ctrl+Alt+N)">
-					<img src="../icons/icon.png" alt="Library" style="width: 48px; height: 48px; margin-right: 8px" />
-				</button>
+				<div class="header-brand">
+					<img src="../icons/logo-48.png" alt="Ranobe Gemini" class="header-logo" />
+					<span class="header-title">Ranobe Gemini</span>
+				</div>
+				<button id="quickLibraryBtn" class="header-lib-btn" title="Open Full Library (Ctrl+Alt+N)">&#128218;</button>
+			</div>
+
+			<!-- Stats row -->
+			<div class="stats-row">
+				<div class="stat-item">
+					<span class="stat-val" id="statNovels">&#8212;</span>
+					<span class="stat-lbl">Novels</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-val" id="statChapters">&#8212;</span>
+					<span class="stat-lbl">Chapters</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-val" id="statShelves">&#8212;</span>
+					<span class="stat-lbl">Shelves</span>
+				</div>
 			</div>
 
 			<!-- Tab navigation -->
@@ -29,162 +45,101 @@
 				<button class="tab-btn" data-tab="novels">Novels</button>
 				<button class="tab-btn active" data-tab="config">Config</button>
 				<button class="tab-btn" data-tab="notifications" id="notificationsTabBtn">
-					🔔
-					<span id="notificationBadge" class="notification-badge" style="display: none">0</span>
+					Alerts
+					<span id="notificationBadge" class="notification-badge" style="display:none">0</span>
 				</button>
 			</div>
 
 			<!-- Config Tab -->
-		<div id="config" class="tab-content active">
-			<!-- Quick Settings -->
-			<div class="config-section" id="incognito-section">
-				<h3 class="config-section-title">⚡ Quick Settings</h3>
-				<div class="config-section-content">
-					<!-- Incognito -->
-					<div class="config-item">
-						<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
-							<input type="checkbox" id="incognitoEnabled" />
-							<span>🕵️ Incognito Mode (Pause Tracking)</span>
-						</label>
-					</div>
-					<!-- Theme Mode -->
-					<div class="config-item">
-						<label for="themeMode">Theme Mode</label>
-						<select id="themeMode" style="width: 100%">
-							<option value="dark">Dark Mode (Default)</option>
-							<option value="light">Light Mode</option>
-							<option value="auto">Auto (System Preference)</option>
-						</select>
-					</div>
-					<!-- AI Provider -->
-					<div class="config-item">
-						<label for="aiProviderSelect">AI Provider</label>
-						<select id="aiProviderSelect" style="width: 100%">
-							<option value="gemini">Google Gemini</option>
-							<option value="openai-compatible">OpenAI-Compatible</option>
-							<option value="ollama">Ollama (Local)</option>
-						</select>
-					</div>
-				</div>
-			</div>
-
-			<!-- Site Toggles -->
-			<details class="config-section">
-				<summary style="padding: 12px 15px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary); display: flex; justify-content: space-between; align-items: center">
-					<span>🌐 Site Toggles</span>
-					<span style="font-size: 11px; color: var(--text-secondary); font-weight: normal">Toggle sites</span>
-				</summary>
-				<div class="config-section-content" style="padding-top: 0">
-					<div id="siteToggleList" class="site-toggle-list"></div>
-				</div>
-			</details>
-
-			<!-- Advanced Settings CTA -->
-			<div style="margin-top: 16px">
-				<button id="saveSettings" style="width: 100%; padding: 10px; background: var(--success-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 12px; font-size: 14px">
-					✅ Save Quick Settings
-				</button>
-				<a href="#" id="openLibrarySettingsLink" class="open-library-settings" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-decoration: none; color: var(--text-primary); transition: all 0.2s">
-					<div style="display: flex; align-items: center; gap: 10px">
-						<span style="font-size: 18px">⚙️</span>
-						<div>
-							<strong style="display: block; font-size: 12px">Advanced Settings</strong>
-							<span style="font-size: 10px; color: var(--text-secondary)">API Keys, Drive Backup, Prompts</span>
+			<div id="config" class="tab-content active">
+				<div class="config-section" id="incognito-section">
+					<h3 class="config-section-title">Quick Settings</h3>
+					<div class="config-section-content">
+						<div class="config-item">
+							<label class="check-label">
+								<input type="checkbox" id="incognitoEnabled" />
+								<span>Incognito Mode (Pause Tracking)</span>
+							</label>
+						</div>
+						<div class="config-item">
+							<label for="themeMode">Theme</label>
+							<select id="themeMode" class="config-select">
+								<option value="dark">Dark (Default)</option>
+								<option value="light">Light</option>
+								<option value="auto">Auto (System)</option>
+							</select>
+						</div>
+						<div class="config-item">
+							<label for="aiProviderSelect">AI Provider</label>
+							<select id="aiProviderSelect" class="config-select">
+								<option value="gemini">Google Gemini</option>
+								<option value="openai-compatible">OpenAI-Compatible</option>
+								<option value="ollama">Ollama (Local)</option>
+							</select>
 						</div>
 					</div>
-					<span style="color: var(--text-secondary)">→</span>
-				</a>
-			</div>
-		</div>
+				</div>
 
-		<!-- Novels Tab -->
+				<details class="config-section">
+					<summary class="config-summary">
+						<span>Site Toggles</span>
+						<span class="config-hint">enable / disable</span>
+					</summary>
+					<div class="config-section-content">
+						<div id="siteToggleList" class="site-toggle-list"></div>
+					</div>
+				</details>
+
+				<div class="config-footer">
+					<button id="saveSettings" class="btn-primary-full">Save Settings</button>
+					<a href="#" id="openLibrarySettingsLink" class="adv-settings-link">
+						<span class="adv-settings-icon">&#9881;&#65039;</span>
+						<div class="adv-settings-text">
+							<strong>Advanced Settings</strong>
+							<span>API Keys, Drive Backup, Prompts</span>
+						</div>
+						<span class="adv-settings-arrow">&#8594;</span>
+					</a>
+				</div>
+			</div>
+
+			<!-- Novels Tab -->
 			<div class="tab-content" id="novels">
-				<!-- Quick Filter -->
-				<div style="display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px">
-					<button class="novel-filter-btn active" data-filter="all" style="white-space: nowrap">All</button>
-					<button class="novel-filter-btn" data-filter="reading" style="white-space: nowrap">📖
-						Reading</button>
-					<button class="novel-filter-btn" data-filter="up-to-date" style="white-space: nowrap">✨
-						Up-to-Date</button>
-					<button class="novel-filter-btn" data-filter="completed" style="white-space: nowrap">✅
-						Completed</button>
-					<button class="novel-filter-btn" data-filter="on-hold" style="white-space: nowrap">⏸️
-						Hold</button>
+				<div class="filter-bar">
+					<button class="novel-filter-btn active" data-filter="all">All</button>
+					<button class="novel-filter-btn" data-filter="reading">Reading</button>
+					<button class="novel-filter-btn" data-filter="up-to-date">Up-to-date</button>
+					<button class="novel-filter-btn" data-filter="completed">Done</button>
+					<button class="novel-filter-btn" data-filter="on-hold">Hold</button>
 				</div>
-				<!-- Currently Reading Section -->
-				<section class="novels-section" style="margin-bottom: 16px">
-					<h3 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: var(--text-secondary)">
-						📖 Now Reading
-					</h3>
+
+				<section class="novels-section">
+					<h3 class="section-heading">Now Reading</h3>
 					<div id="currentNovelInfo">
-						<div class="current-novel-card"
-							style="display: none; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px">
-							<div style="display: flex; gap: 10px">
-								<div style="font-size: 28px; flex-shrink: 0">📕</div>
-								<div style="flex: 1; min-width: 0">
-									<div style="font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px"
-										id="current-novel-title"></div>
-									<div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px"
-										id="current-novel-site">
-									</div>
-									<div>
-										<div style="font-size: 9px; color: var(--text-secondary); margin-bottom: 2px">
-											Progress</div>
-										<div
-											style="background: var(--bg-secondary); border-radius: 3px; height: 5px; overflow: hidden">
-											<div id="current-novel-progress"
-												style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: 0%; transition: width 0.3s ease">
-											</div>
-										</div>
-										<div style="font-size: 9px; color: var(--text-secondary); margin-top: 2px; display: flex; justify-content: space-between;">
-											<span id="current-novel-progress-text">0%</span>
-											<span id="current-novel-chapter-count" style="opacity: 0.8"></span>
-										</div>
-									</div>
-									<div class="current-novel-actions" style="display: flex; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px">
-										<button id="quickEnhanceBtn" class="quick-action-btn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
-											✨ Enhance
-										</button>
-										<button id="quickSummarizeBtn" class="quick-action-btn" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
-											📝 Summarize
-										</button>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="no-current-novel"
-							style="text-align: center; padding: 16px; color: var(--text-secondary); font-size: 11px; background: var(--bg-secondary); border-radius: 6px">
-							<p style="margin: 0 0 4px 0">📖</p>
-							<p style="margin: 0; font-weight: 500">No novel on this page</p>
-							<p style="margin: 4px 0 0 0; font-size: 10px">Visit a supported site to see current
-								novel</p>
+						<div class="no-current-novel">
+							<p class="empty-icon">&#128214;</p>
+							<p>No novel on this page</p>
+							<p class="empty-hint">Visit a supported site to see current novel</p>
 						</div>
 					</div>
 				</section>
 
-				<!-- Library Section -->
 				<section class="novels-section">
-					<div
-						style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
-						<h3 style="margin: 0; font-size: 13px; font-weight: 600">
-							📚 Your Library
-							<span
-								style="font-size: 11px; background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 12px; margin-left: 6px">
-								<span id="novelCountBadge">0</span>
-							</span>
+					<div class="section-row">
+						<h3 class="section-heading">
+							Library
+							<span class="count-badge" id="novelCountBadge">0</span>
 						</h3>
-						<button id="refreshNovels" title="Refresh"
-							style="background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12px">↻</button>
+						<button id="refreshNovels" class="icon-action-btn" title="Refresh">&#8635;</button>
 					</div>
-					<!-- View Toggle & Sort -->
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
-						<div style="display: flex; gap: 4px;">
-							<button class="novel-view-btn active" data-view="list" style="padding: 4px 8px; font-size: 11px">📋 List</button>
-							<button class="novel-view-btn" data-view="grid" style="padding: 4px 8px; font-size: 11px">⬜ Grid</button>
+					<div class="novels-controls-row">
+						<div class="view-btns">
+							<button class="novel-view-btn active" data-view="list">List</button>
+							<button class="novel-view-btn" data-view="grid">Grid</button>
 						</div>
-						<div style="display: flex; align-items: center; gap: 4px;">
-							<label style="font-size: 10px; color: var(--text-secondary);">Sort:</label>
-							<select id="novelSortSelect" style="font-size: 10px; padding: 2px 4px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+						<div class="sort-row">
+							<span class="sort-label">Sort:</span>
+							<select id="novelSortSelect" class="sort-select">
 								<option value="recent">Recently Read</option>
 								<option value="added">Recently Added</option>
 								<option value="title">Title (A-Z)</option>
@@ -192,32 +147,23 @@
 							</select>
 						</div>
 					</div>
-
-					<!-- Novels Container -->
-					<div id="novelsList" class="novels-list"
-						style="display: grid; grid-template-columns: 1fr; gap: 8px; max-height: 400px; overflow-y: auto">
-						<div
-							style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
-							<p style="margin: 0; font-size: 20px">📚</p>
-							<p style="margin: 8px 0 0 0; font-weight: 500">No novels yet</p>
-							<p style="margin: 4px 0 0 0; font-size: 10px">Open full library to add novels</p>
+					<div id="novelsList" class="novels-list">
+						<div class="novels-empty">
+							<p class="empty-icon">&#128218;</p>
+							<p>No novels yet</p>
+							<p class="empty-hint">Open full library to add novels</p>
 						</div>
 					</div>
 				</section>
 
-				<!-- Open Full Library Link -->
-				<div style="margin-top: 16px">
-					<a href="#" id="openMainLibrary"
-						style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; text-decoration: none; color: var(--text-primary); transition: all 0.2s">
-						<div style="display: flex; align-items: center; gap: 10px">
-							<span style="font-size: 18px">🏛️</span>
-							<div>
-								<strong style="display: block; font-size: 12px">Open Full Library</strong>
-								<span style="font-size: 10px; color: var(--text-secondary)">Manage all novels &
-									settings</span>
-							</div>
+				<div class="open-library-row">
+					<a href="#" id="openMainLibrary" class="open-library-link">
+						<span class="open-library-icon">&#127963;</span>
+						<div class="open-library-text">
+							<strong>Open Full Library</strong>
+							<span>Manage all novels &amp; settings</span>
 						</div>
-						<span style="color: var(--text-secondary)">→</span>
+						<span>&#8594;</span>
 					</a>
 				</div>
 			</div>
@@ -227,13 +173,12 @@
 				<div class="notifications-tab-header">
 					<div class="notifications-stats">
 						<span id="totalNotifs">0</span> total
-						<span class="notif-stat-sep">·</span>
+						<span class="notif-stat-sep">&middot;</span>
 						<span id="unreadNotifs" class="notif-unread-count">0</span> unread
 					</div>
 					<div class="notifications-tab-actions">
-						<button id="markAllReadBtn" class="notif-action-btn">✓ Read All</button>
-						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">🗑
-							Clear</button>
+						<button id="markAllReadBtn" class="notif-action-btn">&#10003; Read All</button>
+						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">&#128465; Clear</button>
 					</div>
 				</div>
 				<div class="notifications-filter-bar">
@@ -244,21 +189,18 @@
 				</div>
 				<div id="notificationsContainer" class="notifications-list">
 					<div class="no-notifications">
-						<p style="font-size: 36px; margin-bottom: 8px">📭</p>
+						<p class="empty-icon-lg">&#128237;</p>
 						<p>No notifications yet</p>
 						<p class="description">Notifications will appear here as you use the extension</p>
 					</div>
 				</div>
 			</div>
 
-			<!-- Size indicator -->
+			<!-- Resize -->
 			<div class="size-indicator" id="sizeIndicator"></div>
-
-			<!-- * NOTICE: DO NOT TOUCH THIS BELOW DIV (FROM EXPERIENCE)!!! -->
-			<!-- Resize handle with improved visibility -->
+			<!-- NOTICE: DO NOT TOUCH THIS DIV -->
 			<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
 		</div>
-		<!-- Browser API polyfill for Chrome/Edge compatibility -->
 		<script src="../lib/browser-polyfill.min.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>

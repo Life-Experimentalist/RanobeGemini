@@ -696,6 +696,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 							metadata.totalChapters = parsedValue;
 						} else if (text.includes("reader")) {
 							metadata.readers = parsedValue;
+						} else if (text.includes("word")) {
+							metadata.words = parsedValue;
 						}
 					}
 				});
@@ -715,6 +717,21 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 							countMatch[1].replace(/,/g, ""),
 							10,
 						);
+					}
+				}
+
+				// Status from .fic_status or spec items
+				const statusEl = document.querySelector(".fic_status a, .wi_fic_stats a[href*='ongoing'], .wi_fic_stats a[href*='completed']");
+				if (statusEl) {
+					metadata.status = statusEl.textContent.trim();
+				}
+
+				// Author from #authorid (ensure set)
+				if (!metadata.author) {
+					const authorId = document.querySelector("#authorid");
+					if (authorId) {
+						const authorLink = authorId.querySelector("a");
+						metadata.author = (authorLink || authorId).textContent.trim();
 					}
 				}
 

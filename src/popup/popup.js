@@ -173,6 +173,7 @@ async function initializePopup() {
 	const debugModeCheckbox = document.getElementById("debugMode");
 	const promptTemplate = document.getElementById("promptTemplate");
 	const summaryPrompt = document.getElementById("summaryPrompt");
+	const shortSummaryPrompt = document.getElementById("shortSummaryPrompt");
 	const permanentPrompt = document.getElementById("permanentPrompt");
 
 	// Novel tab events
