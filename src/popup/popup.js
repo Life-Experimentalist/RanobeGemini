@@ -1982,12 +1982,14 @@ async function initializePopup() {
 			// enhancePageBtn handler removed
 
 			// Open Google AI Studio link to get API key
-			getKeyLink.addEventListener("click", (e) => {
-				e.preventDefault();
-				browser.tabs.create({
-					url: "https://aistudio.google.com/app/api-keys",
+			if (getKeyLink) {
+				getKeyLink.addEventListener("click", (e) => {
+					e.preventDefault();
+					browser.tabs.create({
+						url: "https://aistudio.google.com/app/api-keys",
+					});
 				});
-			});
+			}
 
 			// Add refresh models button functionality
 			const refreshModelsBtn = document.getElementById("refreshModels");
@@ -4105,9 +4107,14 @@ async function initializePopup() {
 					}
 
 					const library = await novelLibrary.getLibrary();
-					const novelArray = Object.values(
-						library.novels || {},
-					).slice(0, 50); // Limit to 50 most recent
+					const allNovels = Object.values(library.novels || {});
+					// Sort by most recently accessed before slicing
+					allNovels.sort(
+						(a, b) =>
+							(b.lastAccessedAt || b.lastReadAt || 0) -
+							(a.lastAccessedAt || a.lastReadAt || 0),
+					);
+					const novelArray = allNovels.slice(0, 50);
 
 					// Update current novel info and display progress
 					await updateCurrentNovelInfo(novelArray);
@@ -4115,11 +4122,39 @@ async function initializePopup() {
 					// Render novels list in new card format
 					renderNovelsCardList(novelArray);
 
-					// Update novel count badge
+					// Update novel count badge (show real total)
 					const countBadge =
 						document.getElementById("novelCountBadge");
 					if (countBadge) {
-						countBadge.textContent = novelArray.length;
+						countBadge.textContent = allNovels.length;
+					}
+
+					// Update header stats
+					try {
+						const stats = await novelLibrary.getStats();
+						if (statNovels)
+							statNovels.textContent = stats.totalNovels || 0;
+						if (statChapters)
+							statChapters.textContent =
+								stats.totalEnhancedChapters || 0;
+						if (statShelves) {
+							const enabledShelves = new Set(
+								Object.values(SHELVES)
+									.filter((s) =>
+										isSiteEnabledSafe(siteSettings, s.id),
+									)
+									.map((s) => s.id),
+							);
+							const activeCount = Object.entries(
+								stats.shelves || {},
+							).filter(
+								([id, s]) =>
+									enabledShelves.has(id) && s.novelCount > 0,
+							).length;
+							statShelves.textContent = activeCount;
+						}
+					} catch (_statsErr) {
+						// stats are cosmetic; ignore failures
 					}
 				} catch (error) {
 					debugError("Error loading novels tab:", error);
@@ -4131,7 +4166,7 @@ async function initializePopup() {
 			}
 
 			function renderNovelsCardList(novels) {
-				if (!novelsList) return;
+				if (!novelsListContainer) return;
 
 				const filterBtn = document.querySelector(
 					".novel-filter-btn.active",
@@ -4140,11 +4175,11 @@ async function initializePopup() {
 					? filterBtn.getAttribute("data-filter")
 					: "all";
 
-				novelsList.innerHTML = "";
+				novelsListContainer.innerHTML = "";
 
 				if (!novels || novels.length === 0) {
-					novelsList.innerHTML =
-						'<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">📚 No novels in library<br><span style="font-size: 10px">Open full library to add novels</span></div>';
+					novelsListContainer.innerHTML =
+						'<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">&#128218; No novels in library<br><span style="font-size: 10px">Open full library to add novels</span></div>';
 					return;
 				}
 
@@ -4170,7 +4205,7 @@ async function initializePopup() {
 
 				filtered.sort((a, b) => {
 					if (sortMode === "recent") {
-						return (b.lastReadAt || 0) - (a.lastReadAt || 0);
+						return (b.lastAccessedAt || b.lastReadAt || 0) - (a.lastAccessedAt || a.lastReadAt || 0);
 					} else if (sortMode === "added") {
 						return (b.createdAt || b.addedAt || 0) - (a.createdAt || a.addedAt || 0);
 					} else if (sortMode === "title") {
@@ -4186,7 +4221,7 @@ async function initializePopup() {
 				});
 
 				if (filtered.length === 0) {
-					novelsList.innerHTML = `
+					novelsListContainer.innerHTML = `
 				<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 11px; grid-column: 1/-1">
 					No novels with status: ${activeFilter}
 				</div>
@@ -4289,7 +4324,7 @@ async function initializePopup() {
 						card.style.background = "var(--setting-bg)";
 					});
 
-					novelsList.appendChild(card);
+					novelsListContainer.appendChild(card);
 				});
 			}
 
