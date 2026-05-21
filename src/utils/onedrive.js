@@ -161,27 +161,48 @@ async function graphRequest(method, path, { token, body, headers = {} } = {}) {
 }
 
 async function ensureFolder(token, folderPath) {
-	// Ensure each folder segment in the path exists (simple single-level support)
-	const segments = folderPath.split("/").filter(Boolean);
-	let parentPath = "/me/drive/root";
-	for (const seg of segments) {
-		const checkResp = await fetch(
-			`${GRAPH_BASE}${parentPath}:/${encodeURIComponent(seg)}:`,
-			{ headers: { Authorization: `Bearer ${token}` } },
-		);
-		if (!checkResp.ok) {
-			// Create the folder
-			const parentChildrenPath = parentPath === "/me/drive/root"
+	const pathSegments = folderPath.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+	if (!pathSegments.length) return "/me/drive/root";
+
+	const encodedPath = pathSegments.map(encodeURIComponent).join("/");
+	const folderRef = `/me/drive/root:/${encodedPath}:`;
+
+	// Fast path: folder already exists
+	const checkResp = await fetch(`${GRAPH_BASE}${folderRef}`, {
+		headers: { Authorization: `Bearer ${token}` },
+	});
+	if (checkResp.ok) return folderRef;
+
+	// Create each path segment in order
+	const created = [];
+	for (const seg of pathSegments) {
+		const parentRef =
+			created.length === 0
 				? "/me/drive/root/children"
-				: `${parentPath}:/${encodeURIComponent(seg)}:/children`;
-			await graphRequest("POST", parentChildrenPath.replace(/:\/[^/]+:\/$/, "/children"), {
-				token,
-				body: { name: seg, folder: {}, "@microsoft.graph.conflictBehavior": "rename" },
-			});
+				: `/me/drive/root:/${created.map(encodeURIComponent).join("/")}:/children`;
+		created.push(seg);
+
+		const createResp = await fetch(`${GRAPH_BASE}${parentRef}`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				name: seg,
+				folder: {},
+				"@microsoft.graph.conflictBehavior": "fail",
+			}),
+		});
+		// 409 Conflict means folder already exists — OK to continue
+		if (!createResp.ok && createResp.status !== 409) {
+			const text = await createResp.text().catch(() => "");
+			throw new Error(
+				`OneDrive folder creation failed ${createResp.status}: ${text}`,
+			);
 		}
-		parentPath = `${parentPath}:/${encodeURIComponent(seg)}:`;
 	}
-	return parentPath;
+	return folderRef;
 }
 
 // ─── Backup name helpers ───────────────────────────────────────────────────────
@@ -217,7 +238,9 @@ export async function uploadOnedriveBackup(backupData, options = {}) {
 				: JSON.stringify(backupData);
 
 	// Upload using simple PUT (< 4 MB is fine for library backups)
-	const uploadPath = `${folderRef}:/${encodeURIComponent(fileName)}:/content`;
+	// folderRef ends with ":" e.g. "/me/drive/root:/Folder:" — strip it to build the file path
+	const folderBase = folderRef.replace(/:$/, "");
+	const uploadPath = `${folderBase}/${encodeURIComponent(fileName)}:/content`;
 	const resp = await fetch(`${GRAPH_BASE}${uploadPath}`, {
 		method: "PUT",
 		headers: {
@@ -233,7 +256,7 @@ export async function uploadOnedriveBackup(backupData, options = {}) {
 	const item = await resp.json();
 
 	// Update continuous backup
-	const continuousPath = `${folderRef}:/${encodeURIComponent(CONTINUOUS_NAME)}:/content`;
+	const continuousPath = `${folderBase}/${encodeURIComponent(CONTINUOUS_NAME)}:/content`;
 	await fetch(`${GRAPH_BASE}${continuousPath}`, {
 		method: "PUT",
 		headers: {
@@ -290,8 +313,9 @@ export async function getContinuousOnedriveBackup(options = {}) {
 	const folderRef = await ensureFolder(token, folderPath);
 
 	try {
+		const folderBase = folderRef.replace(/:$/, "");
 		const resp = await fetch(
-			`${GRAPH_BASE}${folderRef}:/${encodeURIComponent(CONTINUOUS_NAME)}:`,
+			`${GRAPH_BASE}${folderBase}/${encodeURIComponent(CONTINUOUS_NAME)}:`,
 			{ headers: { Authorization: `Bearer ${token}` } },
 		);
 		if (!resp.ok) return null;

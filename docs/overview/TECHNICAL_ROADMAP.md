@@ -118,12 +118,12 @@ Track both planned and actual effort per unit.
 | 7: Landing Awareness                 | 3          | 4-7            | 8        | completed   |
 | 8: Cross-Device Compatibility        | 3          | 5-8            | 10       | completed   |
 | 9: Deployment Automation             | 3          | 4-7            | 8        | completed   |
-| 10: Content Orchestrator Thinning    | 3          | 5-8            | 10       | in-progress |
-| 11: UI & Filter System Refactor      | 3          | 4-7            | 9        | in-progress |
+| 10: Content Orchestrator Thinning    | 3          | 5-8            | 10       | completed   |
+| 11: UI & Filter System Refactor      | 3          | 4-7            | 9        | completed   |
 | 12: Swipe & Gesture Navigation       | 2          | 4-6            | 8        | completed   |
 | 13: Storage Adapter Expansion        | 3          | 7-10           | 14       | completed   |
 | 14: Popup UI Overhaul                | 3          | 5-8            | 10       | completed   |
-| 15: Maintenance & Security Fixes     | 2          | 2-4            | 6        | in-progress |
+| 15: Maintenance & Security Fixes     | 2          | 2-4            | 6        | completed   |
 
 ### Rolling Prompt Tracker
 
@@ -580,3 +580,12 @@ Add OneDrive, Dropbox, and WebDAV (NAS) sync methods to the storage system. Enab
 Modernize and redesign the extension popup menu so that it accurately reflects the latest library settings and library page features.
 
 **Status: Completed in v5.0.0.** See [POPUP_OVERHAUL.md](./POPUP_OVERHAUL.md) for full tracking metrics, task units, and exit criteria.
+
+## Phase 15: Maintenance & Security Fixes ✅
+### Objective
+Resolve CSP violations, runtime initialization errors, and security hardening to keep the extension stable and compliant across Firefox and Chromium.
+
+| Unit  | Scope                                                     | Target Prompts | Status       | Exit Criteria |
+| ----- | --------------------------------------------------------- | -------------- | ------------ | ------------- |
+| 15-U1 | CSP & Runtime error hotfixes                             | 1-2            | ✅ complete   | CSP inline-handler blocks resolved; popup TDZ error fixed; dynamic imports removed from SW context. |
+| 15-U2 | OneDrive path-construction bugfix + roadmap housekeeping  | 1-2            | ✅ complete   | ensureFolder double-colon URL bug fixed; Phase 10/11/15 summary table corrected; 0 errors. |
