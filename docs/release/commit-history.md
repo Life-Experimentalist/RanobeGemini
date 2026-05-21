@@ -1,7 +1,1033 @@
 Mode: all
 Format: text
-Generated: 2026-04-16T05:33:42.853Z
-Total commits: 102
+Generated: 2026-05-21T12:03:51.728Z
+Total commits: 167
+
+[8518116] 2026-05-21 feat: polish library modal metadata and update README to v5.0.0
+   feat: polish library modal metadata and update README to v5.0.0
+   - Add genres section (id=modal-genres-section) and work info section
+   (id=modal-work-info-section) to library modal HTML
+   - Wire modalGenresSection, modalGenres, modalWorkInfoSection,
+   modalWorkInfo into elements cache (remove duplicate modalGenres key)
+   - Extend populateNovelMetadata: render genres tag list, work info grid
+   (status/translationStatus/language/year/translator/chapterCount/rating),
+   and extended stats (views, readers, chaptersPerWeek)
+   Files:
+   - README.md
+   - src/library/library.css
+   - src/library/library.html
+   - src/library/library.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[6925872] 2026-05-21 fix+feat: popup redesign, handler improvements, 5.0.0 release notes, remove v4.7.0 artifacts
+   fix+feat: popup redesign, handler improvements, 5.0.0 release notes, remove v4.7.0 artifacts
+   - Fix fatal popup error: add missing shortSummaryPrompt variable declaration
+   - Redesign popup.html: remove all inline styles, compact header with stats row,
+   clean tab layout, semantic CSS classes throughout
+   - Update popup.css: proper blue/purple accent colors, new layout classes for
+   header-brand, stats-row, filter-bar, section headings, empty states, etc.
+   - Fix orphaned CSS properties in popup.css current-novel-card block
+   - Reduce popup min-width from 600px to 380px
+   Files:
+   - docs/release/RELEASE_NOTES_5.0.0.md
+   - releases/RanobeGemini_v4.7.0_chromium.zip
+   - releases/RanobeGemini_v4.7.0_firefox.zip
+   - releases/source/Ranobe-gemini_v4.7.0_source.zip
+   - src/popup/popup.css
+   - src/popup/popup.html
+   - ... (3 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[03e2cac] 2026-05-21 fix(phase15-u2): OneDrive URL path bug + roadmap housekeeping
+   fix(phase15-u2): OneDrive URL path bug + roadmap housekeeping
+   - onedrive.js ensureFolder: rewrote to correctly build Graph API paths;
+   old loop built double-colon paths like /me/drive/root:/Folder::/${seg}:
+   which is invalid; new version checks folder existence first then creates
+   each missing segment using the correct parent children endpoint
+   - Fixed upload, continuous backup, and getContinuousOnedriveBackup URL
+   construction: strip trailing ':' from folderRef before appending filename
+   so paths are /me/drive/root:/Folder/file:/content (not double-colon)
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/utils/onedrive.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[87c5e9e] 2026-05-21 feat(phase13): storage adapter expansion — WebDAV, OneDrive, Dropbox + multi-sync
+   feat(phase13): storage adapter expansion — WebDAV, OneDrive, Dropbox + multi-sync
+   13-U1 Multi-sync orchestrator:
+   - storage-orchestrator.js reads syncDestinations array from storage
+   - uploadBackup fans out to all configured destinations in parallel
+   - Read operations (list/download/latest/continuous) use primary destination
+   - Backward compatible: falls back to legacy activeSync string
+   13-U2 WebDAV adapter (src/background/storage/adapters/webdav-storage.js):
+   - PROPFIND/PUT/GET with HTTP basic auth
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/background/background.js
+   - src/background/storage/adapters/dropbox-storage.js
+   - src/background/storage/adapters/onedrive-storage.js
+   - src/background/storage/adapters/webdav-storage.js
+   - src/background/storage/storage-orchestrator.js
+   - ... (3 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[ef26d92] 2026-05-21 feat(phase12): add swipe/drag gesture navigation for novel modals
+   feat(phase12): add swipe/drag gesture navigation for novel modals
+   - bindModalSwipeNavigation() in shared-shelf-helpers: touch + pointer
+   drag left/right on modal content triggers prev/next novel navigation
+   - Wired alongside bindModalSwipeDismiss in library.js with same cleanup
+   pattern; gesture excludes corner-nav buttons, ignores touch pointers
+   on the pointer path to avoid double-firing
+   - CSS slide-in keyframes (modal-slide-in-from-right/left) animate
+   .novel-detail 28px + fade after openNovelDetail resolves
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/library/library.css
+   - src/library/library.js
+   - src/library/shared-shelf-helpers.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[3b6004a] 2026-05-21 docs: mark Phase 11-U2 and 11-U3 complete in roadmap
+   docs: mark Phase 11-U2 and 11-U3 complete in roadmap
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[fbf682f] 2026-05-21 fix: commit handler improvements and popup/constants updates
+   fix: commit handler improvements and popup/constants updates
+   - base-handler: prefer main landmark, group paragraphs by ancestor,
+   add #storytext, guard against body/html, lower threshold 500→300
+   - ao3-handler: add newer AO3 content selectors, generateChapterUrl(),
+   broaden insertion-point fallbacks for DOM changes
+   - ranobes-handler: add ranobes.org host, isChapterPath() helper,
+   improved chapter detection, navigation control signal
+   - fanfiction/mobile handlers: add generateChapterUrl()
+   Files:
+   - src/content/content.css
+   - src/popup/popup.js
+   - src/utils/constants.js
+   - src/utils/website-handlers/ao3-handler.js
+   - src/utils/website-handlers/base-handler.js
+   - src/utils/website-handlers/fanfiction-handler.js
+   - ... (2 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[419a723] 2026-05-21 feat(phase11-u3): replace AI provider dropdowns with tab pills
+   feat(phase11-u3): replace AI provider dropdowns with tab pills
+   Provider selection in Primary/Fallback slots now uses pill-style tabs
+   (Gemini | OpenAI-Compatible | Ollama) following the same pattern as
+   theme mode pills. Hidden selects kept for save/load compatibility.
+   syncProviderTabs() syncs active state on load and on click.
+   Files:
+   - src/library/library-settings.css
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[37f2570] 2026-05-21 feat(phase11-u2): add Display settings panel with filter visibility controls
+   feat(phase11-u2): add Display settings panel with filter visibility controls
+   Settings panel in library-settings.html/js allows toggling filter toolbar,
+   sort filter, status filter, and active filters visibility. Each shelf page
+   (common + ao3/fanfiction/ranobes/scribblehub) reads libraryDisplayOptions
+   from storage on init and applies show/hide via inline style.
+   Files:
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   - src/library/websites/ao3/shelf-page.js
+   - src/library/websites/fanfiction/shelf-page.js
+   - src/library/websites/ranobes/shelf-page.js
+   - src/library/websites/scribblehub/shelf-page.js
+   - ... (1 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[61e7351] 2026-05-21 fix(phase11-U1): remove duplicate CSS blocks from all site library styles
+   fix(phase11-U1): remove duplicate CSS blocks from all site library styles
+   Each site CSS (ao3, fanfiction, ranobes, scribblehub) had:
+   - A duplicate unindented @media (max-width: 768px) { .filters-section }
+   block near the top, identical to the properly-indented one above it
+   - A late page-specific .xxx-page .filters-section block with the exact
+   same properties as the base .filters-section (no actual overrides),
+   followed by another duplicate media query and unscoped .filter-group
+   All duplicates removed; base rules in shelf-page.css are authoritative.
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/library/websites/ao3/style.css
+   - src/library/websites/fanfiction/style.css
+   - src/library/websites/ranobes/style.css
+   - src/library/websites/scribblehub/style.css
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[a327d8e] 2026-05-21 feat(phase10-U3): final orchestrator cleanup and parity check
+   feat(phase10-U3): final orchestrator cleanup and parity check
+   Remove remaining dead code from content.js: addModelAttribution and
+   createMainSummaryBanner wrappers (never called), autoCollectMetadataOnPageIfPending
+   (orphaned, never called), PROGRESS_PROMPT_TIMEOUT_MS (unused constant),
+   and excess blank lines. All remaining functions are thin module-delegation
+   wrappers or genuine orchestrator/event-binding code. 0 lint errors.
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[eceb4c8] 2026-05-21 feat(phase10-U2): delete orphaned inline function stubs from content.js
+   feat(phase10-U2): delete orphaned inline function stubs from content.js
+   Remove all redundant function definitions that merely forwarded to
+   module implementations already in ui-controls.js and novel-context.js:
+   findNovelPageInsertionPoint, handleNovelDelete, handleRemoveNovelWithBlocklist,
+   isNovelBlocklisted, insertAtPosition, resolveNovelControlsInsertion,
+   removeChapterNovelControlsFromDOM, placeChapterNovelControls,
+   createChapterPageNovelControls, and the __rgCreatingChapterControls guard.
+   All callers already use runtime.xxx paths; local stubs were dead weight.
+   Files:
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[fde8ed7] 2026-05-21 fix: recover logger.js and content.js from corrupted state
+   fix: recover logger.js and content.js from corrupted state
+   - logger.js: fix parse error (export inside try block); add log
+   deduplication, debugWarn export, getStorageLocal helper; remove
+   broken console.error/log wrappers; consistent async pattern across
+   all three export functions; add debugWarn to globalThis and default export
+   - content.js: add debugWarn bootstrap, importedLoggerDebugWarn,
+   local truncation fallbacks; add showStatusOverlay/hideStatusOverlay;
+   replace 15s setInterval keep-alive with MutationObserver setupUIObserver;
+   Files:
+   - .gitignore
+   - .vscode/mcp.json
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - package.json
+   - src/content/content.js
+   - src/popup/popup.html
+   - ... (1 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[f262dc5] 2026-04-20 fix: stabilize popup navigation and novel detection logic
+   fix: stabilize popup navigation and novel detection logic
+   Files:
+   - src/background/background.js
+   - src/background/message-handlers/metadata-handler.js
+   - src/background/message-handlers/settings-handler.js
+   - src/background/novel-updater.js
+   - src/content/content.js
+   - src/content/modules/ai-runtime.js
+   - ... (12 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[94f6202] 2026-04-20 Phase 10: Fix popup stability, dual-slot AI persistence, and Ranobe Box injection ReferenceErrors
+   Phase 10: Fix popup stability, dual-slot AI persistence, and Ranobe Box injection ReferenceErrors
+   Files:
+   - .gemini/antigravity/prompts/get-to-work.prompt.md
+   - .gemini/antigravity/prompts/release-notes.prompt.md
+   - .gemini/antigravity/prompts/roadmap-continue-autonomous.prompt.md
+   - .gemini/antigravity/prompts/roadmap-implementation.prompt.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/background/message-handlers/metadata-handler.js
+   - ... (11 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[d1dc30d] 2026-04-20 docs: update roadmap with phases 10-14 status, budget table, and rolling tracker [10-U1 complete]
+   docs: update roadmap with phases 10-14 status, budget table, and rolling tracker [10-U1 complete]
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[8677cfc] 2026-04-20 feat(phase10): extract novel context to novel-context.js module [10-U1]
+   feat(phase10): extract novel context to novel-context.js module [10-U1]
+   - Moved 12 functions (extractNovelContext, getNovelIdFromCurrentPage, autoUpdateNovelOnVisit, showUpdateAvailableBanner, manuallyCheckAndUpdateNovel, detectMetadataChanges, displayChangeSummary, showChapterRegressionPrompt, handleNovelAddUpdate, handleNovelDelete, handleRemoveNovelWithBlocklist, isNovelBlocklisted) from content.js to src/content/modules/novel-context.js
+   - Thinned content.js by ~863 lines (7628 -> 6765)
+   - Wired up loadNovelContextModule() with full ctx injection
+   - Added .tmp/ to .gitignore for temp extraction scripts
+   Files:
+   - .gitignore
+   - src/content/content.js
+   - src/content/modules/novel-context.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[d825f0b] 2026-04-20 feat/fix: Complete Phase 14 Popup Overhaul and notification aggregation
+   feat/fix: Complete Phase 14 Popup Overhaul and notification aggregation
+   Files:
+   - .gemini/antigravity/mcp_config.json
+   - .gemini/prompts/get-to-work.prompt.md
+   - .gemini/prompts/release-notes.prompt.md
+   - .gemini/prompts/roadmap-continue-autonomous.prompt.md
+   - .gemini/prompts/roadmap-implementation.prompt.md
+   - .markdownlint.json
+   - ... (20 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[a536b7f] 2026-04-19 feat: update emojis and labels for better clarity and consistency across website handlers
+   feat: update emojis and labels for better clarity and consistency across website handlers
+   - Changed emojis in AO3, FanFiction, Ranobes, ScribbleHub, and WebNovel handlers for improved visual representation.
+   - Updated section labels in settings definitions to use emojis instead of Unicode characters for better readability.
+   - Enhanced formatting rules comments to use clearer symbols and language.
+   - Adjusted button labels to include emojis for a more engaging user interface.
+   Signed-off-by: Krishna GSVV <krishnagsvv@gmail.com>
+   Files:
+   - dev/emoji-tools.js
+   - dev/fix_mojibake_utf8.py
+   - dev/list-mojibake-tokens.py
+   - dev/repair-text-encoding.js
+   - docs/release/RELEASE_NOTES_3.7.0.md
+   - landing/content-styles.html
+   - ... (70 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[c054974] 2026-04-19 fix(encoding): escape all non-ascii characters in javascript to prevent browser mojibake on iso-8859-1 host pages
+   fix(encoding): escape all non-ascii characters in javascript to prevent browser mojibake on iso-8859-1 host pages
+   Files:
+   - dev/emoji-report.txt
+   - dev/encode-unicode.js
+   - dev/fix_all_emojis.py
+   - dev/global-fix-emoji.js
+   - dev/universal_emoji.js
+   - src/background/background.js
+   - ... (61 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.8.0
+   Manifests:
+   - src/manifest-firefox.json: 4.8.0
+   - src/manifest-chromium.json: 4.8.0
+   - src/library/manifest.webmanifest: 4.8.0
+
+[1a6b8b8] 2026-04-19 docs: append phases 10-13 based on user requests (swipe, multi-sync storage, filters, modular settings)
+   docs: append phases 10-13 based on user requests (swipe, multi-sync storage, filters, modular settings)
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.8.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[aa56e7a] 2026-04-19 chore: verify and mark phase 2-8 as completed, bump version to 4.8.0
+   chore: verify and mark phase 2-8 as completed, bump version to 4.8.0
+   - Validated code existence for phases 2 through 8 (e.g. Handler contracts, Provider interface, Storage adapter, OAuth fixes).
+   - Updated TECHNICAL_ROADMAP.md budget table to reflect true completion state.
+   - Regenerated GRAPH_REPORT.md reflecting the fully modularized Phase 1-9 structure.
+   - Version bumped to 4.8.0 per roadmap semver guidelines as all architectural phases are implemented.
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - package-lock.json
+   - package.json
+   Package:
+   - name: ranobe-gemini
+   - version: 4.8.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[a6584bf] 2026-04-19 feat: complete Phase 1 content runtime modularization
+   feat: complete Phase 1 content runtime modularization
+   Files:
+   - src/content/content.js
+   - src/content/modules/chunk-batch.js
+   - src/content/modules/enhancement-cancel.js
+   - src/content/modules/notification-runtime.js
+   - src/content/modules/popup-library-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[603b25a] 2026-04-19 docs: formalize roadmap execution prompts and deprecate old TODOs
+   docs: formalize roadmap execution prompts and deprecate old TODOs
+   - Updated .github/prompts to instruct AI on version control and tracking (git branch, commit, map updates).
+   - Moved legacy agile sprint planning from docs/development/TODO.md to explicitly enforce TECHNICAL_ROADMAP.md as the source of truth.
+   - Marked src/TODO.md as an archived backlog proxy.
+   - Set prompts to manually leave brief journals in the tracker when completing phases.
+   Files:
+   - .github/prompts/get-to-work.prompt.md
+   - .github/prompts/release-notes.prompt.md
+   - .github/prompts/roadmap-continue-autonomous.prompt.md
+   - .github/prompts/roadmap-implementation.prompt.md
+   - .gitignore
+   - docs/development/TODO.md
+   - ... (9 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[910b2d5] 2026-04-18 chore normalize chunk processed runtime formatting
+   chore normalize chunk processed runtime formatting
+   Files:
+   - src/content/modules/chunk-processed-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[2cd4c73] 2026-04-18 refactor extract chunk action handlers
+   refactor extract chunk action handlers
+   Files:
+   - src/content/content.js
+   - src/content/modules/chunk-events.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e262150] 2026-04-18 chore normalize chunk error runtime formatting
+   chore normalize chunk error runtime formatting
+   Files:
+   - src/content/modules/chunk-error-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[c746d76] 2026-04-18 refactor extract chunk processed runtime
+   refactor extract chunk processed runtime
+   Files:
+   - src/content/content.js
+   - src/content/modules/chunk-processed-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[bf33c05] 2026-04-18 refactor extract chunk error runtime
+   refactor extract chunk error runtime
+   Files:
+   - src/content/content.js
+   - src/content/modules/chunk-error-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[67417a4] 2026-04-18 refactor extract finalize prefix runtime
+   refactor extract finalize prefix runtime
+   Files:
+   - src/content/content.js
+   - src/content/modules/finalize-prefix.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[07d8d01] 2026-04-18 refactor simplify wip banner delegates
+   refactor simplify wip banner delegates
+   Files:
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[506443a] 2026-04-18 refactor delegate attribution helper only
+   refactor delegate attribution helper only
+   Files:
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[91a9a3d] 2026-04-18 chore normalize main summary banner formatting
+   chore normalize main summary banner formatting
+   Files:
+   - src/content/modules/main-summary-banner.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[98937f8] 2026-04-18 refactor all-chunks-processed runtime handler
+   refactor all-chunks-processed runtime handler
+   Files:
+   - src/content/content.js
+   - src/content/modules/all-chunks-processed.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[7ca0213] 2026-04-18 refactor delegate main summary banner helper
+   refactor delegate main summary banner helper
+   Files:
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[4668c47] 2026-04-18 refactor main summary banner runtime
+   refactor main summary banner runtime
+   Files:
+   - src/content/content.js
+   - src/content/modules/main-summary-banner.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[195d17a] 2026-04-18 chore normalize formatting drift
+   chore normalize formatting drift
+   Files:
+   - landing/privacy.html
+   - src/content/content.js
+   - src/content/modules/enhancement-banners.js
+   - src/content/modules/enhancement-cancel.js
+   - src/content/modules/enhancement-display.js
+   - src/content/modules/enhancement-toggle-banner.js
+   - ... (2 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[9a91551] 2026-04-18 refactor enhancement attribution helper
+   refactor enhancement attribution helper
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhancement-attribution.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[313b465] 2026-04-18 refactor wip banner runtime
+   refactor wip banner runtime
+   Files:
+   - src/content/content.js
+   - src/content/modules/wip-banner-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[4287285] 2026-04-18 refactor enhancement cancel flow
+   refactor enhancement cancel flow
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhancement-cancel.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[6375c62] 2026-04-18 refactor enhancement display helpers
+   refactor enhancement display helpers
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhancement-display.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[2dd4455] 2026-04-18 refactor enhanced banner factory
+   refactor enhanced banner factory
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhanced-content-banner.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e057688] 2026-04-18 refactor enhancement toggle helpers
+   refactor enhancement toggle helpers
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhancement-toggle-banner.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[71c0272] 2026-04-18 refactor content notifications
+   refactor content notifications
+   Files:
+   - src/content/content.js
+   - src/content/modules/notification-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[c1e8f4a] 2026-04-18 refactor content banner helpers
+   refactor content banner helpers
+   Files:
+   - src/content/content.js
+   - src/content/modules/enhancement-banners.js
+   - src/content/modules/read-aloud-ui.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[7559e9b] 2026-04-18 Extract read-aloud UI content module
+   Extract read-aloud UI content module
+   Files:
+   - src/content/content.js
+   - src/content/modules/read-aloud-ui.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[477c770] 2026-04-18 Sync roadmap and privacy docs
+   Sync roadmap and privacy docs
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - landing/privacy.html
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e13f126] 2026-04-18 Align privacy policy with opt-in metrics
+   Align privacy policy with opt-in metrics
+   Files:
+   - landing/privacy.html
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[85bbac6] 2026-04-18 Add consent-safe telemetry impact metrics
+   Add consent-safe telemetry impact metrics
+   Files:
+   - README.md
+   - docs/backup/RESTORE_SMOKE_CHECKLIST.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - docs/ux/CROSS_DEVICE_PARITY_CHECKLIST.md
+   - landing/index.html
+   - landing/script.js
+   - ... (4 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[9867dbc] 2026-04-18 phase8: add manual restore smoke checklist and roadmap drift sync
+   phase8: add manual restore smoke checklist and roadmap drift sync
+   Files:
+   - docs/backup/CROSS_SURFACE_COMPATIBILITY.md
+   - docs/backup/RESTORE_SMOKE_CHECKLIST.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[784c3cb] 2026-04-18 phase8: add cross-device parity checklist and stabilize roadmap progress
+   phase8: add cross-device parity checklist and stabilize roadmap progress
+   Files:
+   - .github/prompts/roadmap-continue-autonomous.prompt.md
+   - README.md
+   - dev/build.js
+   - dev/validate-backup-compat.js
+   - docs/backup/BACKUP_GUIDE.md
+   - docs/backup/CROSS_SURFACE_COMPATIBILITY.md
+   - ... (39 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[46e9830] 2026-04-16 refactor(content): centralize wip banner dom insertion
+   refactor(content): centralize wip banner dom insertion
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/content/modules/dom-integration.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[e25e4ef] 2026-04-16 refactor(content): extract master banner dom integration runtime
+   refactor(content): extract master banner dom integration runtime
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/content/modules/dom-integration.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[0a50d7e] 2026-04-16 refactor(content): extract batch chunk controls runtime
+   refactor(content): extract batch chunk controls runtime
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/content/modules/chunk-batch.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[8c7db39] 2026-04-16 refactor(content): extract chunk toggle/delete event runtime (phase 1-u2)
+   refactor(content): extract chunk toggle/delete event runtime (phase 1-u2)
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/content/modules/chunk-events.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[4ec58cf] 2026-04-16 refactor(content): extract chunk control runtime and add autonomous prompt templates
+   refactor(content): extract chunk control runtime and add autonomous prompt templates
+   Files:
+   - .github/prompts/get-to-work.prompt.md
+   - .github/prompts/roadmap-continue-autonomous.prompt.md
+   - src/content/content.js
+   - src/content/modules/chunk-controls.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[abb207a] 2026-04-16 refactor(content): extract summary runtime orchestration module (phase 1-u1)
+   refactor(content): extract summary runtime orchestration module (phase 1-u1)
+   Files:
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/content/modules/summary-runtime.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[270c30e] 2026-04-16 merge: addon store automation and extension bridge cycle
+   merge: addon store automation and extension bridge cycle
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[37b29d6] 2026-04-16 docs(release): document modular store publish modes and AMO requirements
+   docs(release): document modular store publish modes and AMO requirements
+   Files:
+   - docs/development/README.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[d522030] 2026-04-16 feat(bridge): add modular extension bridge framework and AO3 adapter example
+   feat(bridge): add modular extension bridge framework and AO3 adapter example
+   Files:
+   - docs/development/TODO.md
+   - docs/guides/PLUGIN_HANDLER_PUBLISHING.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/content/content.js
+   - src/utils/extension-bridges.js
+   - src/utils/website-handlers/ao3-handler.js
+   - ... (1 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[9da88be] 2026-04-16 build(release): harden packaging and simplify store publish requirements
+   build(release): harden packaging and simplify store publish requirements
+   Files:
+   - .github/workflows/publish-addons.yml
+   - README.md
+   - dev/build.js
+   - dev/publish-addon-stores.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[8d6f112] 2026-04-16 Mark mobile nav UX sprint item complete
+   Mark mobile nav UX sprint item complete
+   Files:
+   - docs/development/TODO.md
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[6d16a9e] 2026-04-16 Add mobile bottom navigation and update roadmap budgets
+   Add mobile bottom navigation and update roadmap budgets
+   Files:
+   - docs/development/TODO.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - src/library/library.css
+   - src/library/library.html
+   - src/library/library.js
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[bc1691c] 2026-04-16 Add layered roadmap planning and complete mobile modal UX tracking
+   Add layered roadmap planning and complete mobile modal UX tracking
+   Files:
+   - docs/development/TODO.md
+   - docs/overview/TECHNICAL_ROADMAP.md
+   - docs/overview/VISUAL_JOURNEY.md
+   - docs/release/commit-history.md
+   - releases/RanobeGemini_v4.7.0_chromium.zip
+   - releases/RanobeGemini_v4.7.0_firefox.zip
+   - ... (12 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
+
+[f91b401] 2026-04-16 Add phase unit sizing and prompt-efficiency tracking to roadmap
+   Add phase unit sizing and prompt-efficiency tracking to roadmap
+   Package:
+   - name: ranobe-gemini
+   - version: 4.7.0
+   Manifests:
+   - src/manifest-firefox.json: 4.7.0
+   - src/manifest-chromium.json: 4.7.0
+   - src/library/manifest.webmanifest: 4.7.0
 
 [634cec0] 2026-04-16 Improve mobile modal touch targets
    Improve mobile modal touch targets
