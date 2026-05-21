@@ -5379,6 +5379,7 @@ async function openDefaultNovelDetail(novel) {
 	}
 	if (elements.modalRefreshBtn) {
 		elements.modalRefreshBtn.dataset.refreshUrl = refreshTarget || "";
+		elements.modalRefreshBtn.dataset.novelId = novel.id;
 	}
 
 	applyModalActionVisibility(novel);
@@ -5699,8 +5700,11 @@ function formatNumber(num) {
  * Resets edited fields and navigates to the novel page to refresh
  */
 async function handleRefreshMetadata() {
-	const novelId = elements.modalRemoveBtn.dataset.novelId;
-	const novel = allNovels.find((n) => n.id === novelId);
+	const novelId =
+		currentModalNovel?.id ||
+		elements.modalRefreshBtn?.dataset.novelId ||
+		elements.modalRemoveBtn?.dataset.novelId;
+	const novel = currentModalNovel || allNovels.find((n) => n.id === novelId);
 
 	if (!novel) {
 		showToast("Novel not found", "error");

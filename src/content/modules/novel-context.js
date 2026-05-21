@@ -222,6 +222,24 @@ async function autoUpdateNovelOnVisit() {
 		// SILENT: Only update total chapters if it's additive OR if site setting allows
 		// MANUAL ONLY: User must click "Check for Updates" button to update metadata
 		if (existingNovel) {
+			// If the library explicitly requested a full refresh, honor it unconditionally
+			if (existingNovel.pendingRefresh === true) {
+				debugLog(`📚 pendingRefresh flag set — forcing full metadata update for ${existingNovel.title}`);
+				const updatedData = buildNovelDataFromMetadata(metadata);
+				await novelLibrary.updateNovelMetadata(novelId, updatedData);
+				// Clear the flag
+				await novelLibrary.updateNovel(novelId, {
+					pendingRefresh: false,
+					lastMetadataUpdate: Date.now(),
+				});
+				showTimedBanner(
+					`✅ Metadata refreshed: ${existingNovel.title}`,
+					"success",
+					4000,
+				);
+				return;
+			}
+
 			// Check per-site auto-update settings
 			const shelfId =
 				currentHandler.constructor.SHELF_METADATA?.id || "unknown";

@@ -179,14 +179,9 @@ async function initializePopup() {
 	// Novel tab events
 	const novelSortSelect = document.getElementById("novelSortSelect");
 	if (novelSortSelect) {
-		// Load persisted sort preference
+		// Load persisted sort preference; default to "recent"
 		browser.storage.local.get("novelLibrarySort").then((res) => {
-			if (res.novelLibrarySort) {
-				novelSortSelect.value = res.novelLibrarySort;
-				if (typeof loadNovelsTab === "function") {
-					loadNovelsTab();
-				}
-			}
+			novelSortSelect.value = res.novelLibrarySort || "recent";
 		});
 
 		novelSortSelect.addEventListener("change", async () => {
@@ -2381,12 +2376,21 @@ async function initializePopup() {
 				return novelItem;
 			}
 
-			// Add event listener for quick library button in header
+			// Header navigation buttons
 			const quickLibraryBtn = document.getElementById("quickLibraryBtn");
 			if (quickLibraryBtn) {
 				quickLibraryBtn.addEventListener("click", () => {
 					browser.tabs.create({
 						url: browser.runtime.getURL("library/library.html"),
+					});
+				});
+			}
+
+			const quickSettingsBtn = document.getElementById("quickSettingsBtn");
+			if (quickSettingsBtn) {
+				quickSettingsBtn.addEventListener("click", () => {
+					browser.tabs.create({
+						url: browser.runtime.getURL("library/library-settings.html"),
 					});
 				});
 			}

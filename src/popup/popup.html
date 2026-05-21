@@ -21,7 +21,10 @@
 					<img src="../icons/logo-48.png" alt="Ranobe Gemini" class="header-logo" />
 					<span class="header-title">Ranobe Gemini</span>
 				</div>
-				<button id="quickLibraryBtn" class="header-lib-btn" title="Open Full Library (Ctrl+Alt+N)">&#128218;</button>
+				<div class="header-actions">
+					<button id="quickSettingsBtn" class="header-icon-btn" title="Library Settings">&#9881;&#65039;</button>
+					<button id="quickLibraryBtn" class="header-icon-btn" title="Open Full Library (Ctrl+Alt+N)">&#128218;</button>
+				</div>
 			</div>
 
 			<!-- Stats row -->
@@ -80,23 +83,13 @@
 					</div>
 				</div>
 
-				<details class="config-section">
-					<summary class="config-summary">
-						<span>Site Toggles</span>
-						<span class="config-hint">enable / disable</span>
-					</summary>
-					<div class="config-section-content">
-						<div id="siteToggleList" class="site-toggle-list"></div>
-					</div>
-				</details>
-
 				<div class="config-footer">
 					<button id="saveSettings" class="btn-primary-full">Save Settings</button>
 					<a href="#" id="openLibrarySettingsLink" class="adv-settings-link">
 						<span class="adv-settings-icon">&#9881;&#65039;</span>
 						<div class="adv-settings-text">
-							<strong>Advanced Settings</strong>
-							<span>API Keys, Drive Backup, Prompts</span>
+							<strong>Library Settings</strong>
+							<span>API Keys, Sync, Site Toggles, Prompts</span>
 						</div>
 						<span class="adv-settings-arrow">&#8594;</span>
 					</a>

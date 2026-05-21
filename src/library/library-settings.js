@@ -2716,6 +2716,18 @@ function setupEventListeners() {
 		});
 	}
 
+	// ── Popup Defaults ─────────────────────────────────────────────────────────
+
+	const popupDefaultSort = $("popup-default-sort");
+	if (popupDefaultSort) {
+		browser.storage.local.get("novelLibrarySort").then((res) => {
+			popupDefaultSort.value = res.novelLibrarySort || "recent";
+		});
+		popupDefaultSort.addEventListener("change", () => {
+			browser.storage.local.set({ novelLibrarySort: popupDefaultSort.value });
+		});
+	}
+
 	// ── URL Import ─────────────────────────────────────────────────────────────
 
 	const urlImportBtn = $("url-import-btn");

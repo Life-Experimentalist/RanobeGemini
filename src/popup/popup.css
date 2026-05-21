@@ -138,7 +138,13 @@ textarea::placeholder {
 	letter-spacing: -0.01em;
 }
 
-.header-lib-btn {
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.header-icon-btn {
 	width: 30px;
 	height: 30px;
 	padding: 0;
@@ -155,7 +161,7 @@ textarea::placeholder {
 	box-shadow: none;
 }
 
-.header-lib-btn:hover {
+.header-icon-btn:hover {
 	background: var(--hover-bg);
 	color: var(--accent-primary);
 	border-color: var(--accent-primary);
@@ -163,7 +169,7 @@ textarea::placeholder {
 	box-shadow: none;
 }
 
-.header-lib-btn:active {
+.header-icon-btn:active {
 	transform: none;
 	box-shadow: none;
 }
