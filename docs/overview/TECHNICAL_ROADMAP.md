@@ -552,7 +552,7 @@ Ensure the Library page styling (.filters-section) is responsive and perfectly a
 
 | Unit  | Scope                                                     | Target Prompts | Status   | Exit Criteria                              |
 | ----- | --------------------------------------------------------- | -------------- | -------- | ------------------------------------------ |
-| 11-U1 | Refactor .filters-section CSS & layout                    | 1-2            | ⏳ queued | Responsive, aligned filters for all sizes. |
+| 11-U1 | Refactor .filters-section CSS & layout                    | 1-2            | ✅ complete | Removed duplicate @media + unscoped blocks from all 4 site CSS files. |
 | 11-U2 | Implement Library UI Settings & Options                   | 1-2            | ⏳ queued | Settings panel controls filter visibility. |
 | 11-U3 | Abstract Settings UI for AI Providers & Storage Providers | 2-3            | ⏳ queued | Nested, tabbed settings configuration UI.  |
 

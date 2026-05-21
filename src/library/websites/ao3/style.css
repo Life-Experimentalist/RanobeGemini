@@ -180,14 +180,6 @@ body {
 	}
 }
 
-@media (max-width: 768px) {
-.filters-section {
-flex-direction: column;
-align-items: stretch;
-gap: var(--spacing-md);
-}
-}
-
 .filter-group {
 	display: flex;
 	align-items: center;
