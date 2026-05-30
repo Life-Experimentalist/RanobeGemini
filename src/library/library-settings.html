@@ -1126,6 +1126,14 @@
 							<span class="ls-hint">Recommended: 3200. Smaller = safer but more API calls.</span>
 						</div>
 
+						<div class="setting-row" id="word-count-threshold-row">
+							<label for="wordCountThreshold" class="setting-label">
+								Word count change threshold (%)
+								<span class="setting-hint">Show a warning when enhanced content changes word count by more than this amount. Default: 25</span>
+							</label>
+							<input type="number" id="wordCountThreshold" class="setting-input" min="5" max="500" step="5" value="25" />
+						</div>
+
 						<div class="ls-form-group">
 							<label class="ls-label" for="library-chunk-summary-count">Summary buttons every N
 								chunks:</label>
@@ -1178,49 +1186,6 @@
 									Copy</button>
 							</div>
 							<span class="ls-hint">Auto-generated model API endpoint.</span>
-						</div>
-					</div>
-
-					<!-- Database Fixes -->
-					<div class="ls-section" data-accent="amber">
-						<div class="ls-section-title">🔧 Database Fixes</div>
-						<p class="ls-section-description"
-							style="margin:0 0 12px;font-size:12px;color:var(--text-secondary);">
-							Apply data corrections to your library. These operations re-process existing novel data
-							without deleting anything.
-						</p>
-
-						<div class="ls-form-group">
-							<div class="ls-row ls-row-between">
-								<div>
-									<span class="ls-label">Fix FanFiction.net Character Data</span>
-									<span class="ls-hint">Re-runs character/relationship normalization on all FF.net
-										novels. Removes genres from character lists and properly groups romantic
-										relationships like [A, B, C].</span>
-								</div>
-								<button id="fix-ffnet-characters-btn" class="ls-btn ls-btn-secondary ls-btn-sm">
-									🔄 Run Fix
-								</button>
-							</div>
-							<div id="fix-ffnet-characters-result"
-								style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px;"></div>
-						</div>
-
-						<div class="ls-form-group">
-							<div class="ls-row ls-row-between">
-								<div>
-									<span class="ls-label">Forceful FF.net Metadata Scan</span>
-									<span class="ls-hint">Runs a stricter repair pass for FF.net novels to remove
-										date-like
-										character leaks, repair malformed relationships, recover parseable stats/dates,
-										and backfill missing fandom categories.</span>
-								</div>
-								<button id="scan-ffnet-metadata-btn" class="ls-btn ls-btn-secondary ls-btn-sm">
-									🧪 Scan &amp; Fix
-								</button>
-							</div>
-							<div id="scan-ffnet-metadata-result"
-								style="display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px;"></div>
 						</div>
 					</div>
 

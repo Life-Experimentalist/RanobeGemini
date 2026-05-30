@@ -38,13 +38,17 @@ export function createEnhancedBannerRuntime({
 		const hours = Math.floor(age / (1000 * 60 * 60));
 		const days = Math.floor(hours / 24);
 		const timeAgo = days > 0 ? `${days}d ago` : `${hours}h ago`;
-		cacheLabel = ` • Cached ${timeAgo}`;
-		cacheIcon = "✓ ";
+		cacheLabel = ` \u{2022} Cached ${timeAgo}`;
+		cacheIcon = "\u{2713} ";
 	}
 
 	const modelDisplay = `${cacheIcon}Enhanced with ${modelProvider}${
 		modelName !== "AI" ? ` (${modelName})` : ""
 	}${cacheLabel}`;
+
+	const largeExpansionWarning = percentChange > 200
+		? `<div style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">\u{26A0}\u{FE0F} Very large expansion (+${Math.abs(percentChange)}%). Content may be unusually long. <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button></div>`
+		: "";
 
 	const banner = documentRef.createElement("div");
 	banner.className = "gemini-enhanced-banner";
@@ -85,14 +89,14 @@ export function createEnhancedBannerRuntime({
     `;
 
 	const deleteButtonHtml = showDeleteButton
-		? '<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️</button>'
+		? '<button class="gemini-delete-cache-btn" title="Delete cached enhanced content" aria-label="Delete cached enhanced content" style="padding: 8px 12px; margin-left: 8px; background-color: #d32f2f; color: white; border: 1px solid #b71c1c; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">\u{1F5D1}\u{FE0F}</button>'
 		: "";
 
 	banner.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%;">
 			<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center;">
-                        <span style="font-size: 18px; margin-right: 5px;">✨</span>
+                        <span style="font-size: 18px; margin-right: 5px;">\u{2728}</span>
                         <span style="font-weight: bold; margin: 0 10px; font-size: 16px;">${modelDisplay}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -102,7 +106,7 @@ export function createEnhancedBannerRuntime({
                 </div>
             <div style="width: 100%; font-size: 14px; color: #555; padding-top: 8px; border-top: 1px solid #eee;">
                 <span style="font-family: monospace;">
-                    Words: ${originalWordCount.toLocaleString()} → ${enhancedWordCount.toLocaleString()}
+                    Words: ${originalWordCount.toLocaleString()} \u{2192} ${enhancedWordCount.toLocaleString()}
                     <span style="color: ${
 						wordDifference >= 0 ? "#28a745" : "#dc3545"
 					}; font-weight: bold;">
@@ -111,9 +115,21 @@ export function createEnhancedBannerRuntime({
 						)}%)
                     </span>
                 </span>
+                ${largeExpansionWarning}
             </div>
         </div>
     `;
+
+	const forceShowBtn = banner.querySelector(".rg-force-show-enhanced-btn");
+	if (forceShowBtn) {
+		forceShowBtn.addEventListener("click", () => {
+			const toggleBtn = banner.querySelector(".gemini-toggle-btn");
+			if (toggleBtn && toggleBtn.textContent.includes("Show Enhanced")) {
+				toggleBtn.click();
+			}
+			forceShowBtn.closest("[style*='rgba(239']")?.remove();
+		});
+	}
 
 	return banner;
 }
