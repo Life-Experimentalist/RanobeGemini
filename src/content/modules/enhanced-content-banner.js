@@ -47,7 +47,7 @@ export function createEnhancedBannerRuntime({
 	}${cacheLabel}`;
 
 	const largeExpansionWarning = percentChange > 200
-		? `<div style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">\u{26A0}\u{FE0F} Very large expansion (+${Math.abs(percentChange)}%). Content may be unusually long. <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button></div>`
+		? `<div class="rg-large-expansion-warning" style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">\u{26A0}\u{FE0F} Very large expansion (+${Math.abs(percentChange)}%). Content may be unusually long. <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button></div>`
 		: "";
 
 	const banner = documentRef.createElement("div");
@@ -123,11 +123,7 @@ export function createEnhancedBannerRuntime({
 	const forceShowBtn = banner.querySelector(".rg-force-show-enhanced-btn");
 	if (forceShowBtn) {
 		forceShowBtn.addEventListener("click", () => {
-			const toggleBtn = banner.querySelector(".gemini-toggle-btn");
-			if (toggleBtn && toggleBtn.textContent.includes("Show Enhanced")) {
-				toggleBtn.click();
-			}
-			forceShowBtn.closest("[style*='rgba(239']")?.remove();
+			forceShowBtn.closest(".rg-large-expansion-warning")?.remove();
 		});
 	}
 
