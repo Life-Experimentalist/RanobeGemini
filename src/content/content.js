@@ -3215,6 +3215,60 @@ if (window.__RGInitDone) {
 		};
 	}
 
+	/**
+	 * Intercepts pushState/replaceState/popstate to detect in-page chapter
+	 * navigation (e.g. NovelBin's AJAX chapter loading) and re-init the UI.
+	 * Called once at the end of initialize().
+	 */
+	function setupNavigationObserver() {
+		let lastUrl = window.location.href;
+		let debounceTimer = null;
+
+		function onNavigationChange() {
+			const newUrl = window.location.href;
+			if (newUrl === lastUrl) return;
+			lastUrl = newUrl;
+
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(async () => {
+				if (!currentHandler) return;
+
+				if (typeof currentHandler.refreshForCurrentUrl === "function") {
+					currentHandler.refreshForCurrentUrl();
+				}
+
+				if (!currentHandler.isChapterPage()) return;
+
+				debugLog("[NavObserver] Chapter URL changed, re-initialising UI for:", newUrl);
+
+				const oldControls = document.getElementById("gemini-controls");
+				if (oldControls) oldControls.remove();
+				const oldChapterControls = document.getElementById("rg-chapter-novel-controls");
+				if (oldChapterControls) oldChapterControls.remove();
+
+				if (typeof clearCachedEnhancementState === "function") {
+					clearCachedEnhancementState();
+				}
+
+				await autoExtractContent();
+			}, 400);
+		}
+
+		const origPush = history.pushState.bind(history);
+		history.pushState = function (...args) {
+			origPush(...args);
+			onNavigationChange();
+		};
+		const origReplace = history.replaceState.bind(history);
+		history.replaceState = function (...args) {
+			origReplace(...args);
+			onNavigationChange();
+		};
+
+		window.addEventListener("popstate", onNavigationChange);
+		window.addEventListener("hashchange", onNavigationChange);
+	}
+
 	async function initialize() {
 		debugLog("Ranobe Gemini: Initializing content script");
 
@@ -3413,6 +3467,9 @@ if (window.__RGInitDone) {
 				autoExtractContent();
 			}, 1500);
 		}
+
+		setupNavigationObserver();
+		debugLog("[NavObserver] Navigation observer registered");
 	}
 
 	/**
