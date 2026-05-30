@@ -7,6 +7,10 @@ import {
 	DEFAULT_MODEL_ENDPOINT,
 	DEFAULT_MODEL_ID,
 	DEFAULT_CHUNK_SIZE,
+	LOREWEAVE_DEFAULT_URL,
+	LOREWEAVE_DEFAULT_DOMAIN_ID,
+	LOREWEAVE_DEFAULT_TOKEN,
+	LOREWEAVE_AUTO_GRAPHIFY,
 } from "../utils/constants.js";
 import { debugError } from "../utils/logger.js";
 
@@ -21,6 +25,11 @@ const DEFAULT_CONFIG = {
 	selectedModelId: DEFAULT_MODEL_ID,
 	chunkingEnabled: true, // Enable chunking by default
 	chunkSize: DEFAULT_CHUNK_SIZE, // Default chunk size
+	// LoreWeave integration
+	loreWeaveUrl: LOREWEAVE_DEFAULT_URL,
+	loreWeaveDomainId: LOREWEAVE_DEFAULT_DOMAIN_ID,
+	loreWeaveToken: LOREWEAVE_DEFAULT_TOKEN,
+	loreWeaveAutoGraphify: LOREWEAVE_AUTO_GRAPHIFY,
 };
 
 // Load configuration from storage

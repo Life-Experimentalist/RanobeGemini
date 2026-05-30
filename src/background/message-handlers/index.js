@@ -11,9 +11,17 @@
 import metadataHandler from "./metadata-handler.js";
 import settingsHandler from "./settings-handler.js";
 import updateHandler from "./update-handler.js";
+import loreWeaveHandler from "./loreweave-handler.js";
+import loreWeavePingHandler from "./loreweave-ping-handler.js";
 
 // Registry of all message handlers
-const handlers = [metadataHandler, settingsHandler, updateHandler];
+const handlers = [
+	metadataHandler,
+	settingsHandler,
+	updateHandler,
+	loreWeaveHandler,
+	loreWeavePingHandler,
+];
 
 /**
  * Process incoming message and dispatch to appropriate handler
@@ -28,7 +36,7 @@ export function processMessage(message, sender, sendResponse) {
 	if (handler) {
 		try {
 			const result = handler.handler(message, sendResponse);
-			// Async handlers return a Promise — the browser extension runtime only
+			// Async handlers return a Promise \u{2014} the browser extension runtime only
 			// keeps the message channel open when the listener returns the boolean
 			// `true` synchronously.  Returning a Promise is truthy but it does NOT
 			// keep the channel open in Firefox (and is unreliable in Chrome MV3).

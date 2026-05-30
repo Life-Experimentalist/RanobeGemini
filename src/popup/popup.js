@@ -246,7 +246,7 @@ async function initializePopup() {
 				const hh = Math.floor(remaining / 3600000);
 				const mm = Math.floor((remaining % 3600000) / 60000);
 				const timeStr = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
-				incognitoStatusText.textContent = `Active — expires in ${timeStr} (${new Date(expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
+				incognitoStatusText.textContent = `Active \u{2014} expires in ${timeStr} (${new Date(expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
 			} else {
 				incognitoStatusText.textContent = "Active indefinitely";
 			}
@@ -339,32 +339,23 @@ async function initializePopup() {
 		debugLog("Tab switching setup complete!");
 	}
 
-	// Determine and set initial tab immediately
+	// Determine initial tab (visual feedback only \u{2014} novels load is deferred below after all vars are declared)
+	let _initialHasKey = false;
 	try {
 		showLoadingState("Checking API status...");
 		const stored = await browser.storage.local.get([
 			"apiKey",
 			"backupApiKeys",
 		]);
-		const hasKey =
+		_initialHasKey =
 			!!stored.apiKey ||
 			(Array.isArray(stored.backupApiKeys) &&
 				stored.backupApiKeys.length > 0);
 
-		debugLog(`Initializing with hasKey=${hasKey}`);
-		setActiveTab(hasKey ? "novels" : "config");
+		debugLog(`Initializing with hasKey=${_initialHasKey}`);
+		setActiveTab(_initialHasKey ? "novels" : "config");
 
-		if (hasKey) {
-			showLoadingState("Loading novels...");
-			loadNovelsTab()
-				.catch((err) => {
-					debugError("Initial loadNovelsTab failed", err);
-					hideLoadingState();
-				})
-				.finally(() => {
-					hideLoadingState();
-				});
-		} else {
+		if (!_initialHasKey) {
 			hideLoadingState();
 		}
 	} catch (err) {
@@ -385,6 +376,25 @@ async function initializePopup() {
 			e.preventDefault();
 			browser.tabs.create({
 				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	// Header navigation buttons (always present, wire up early)
+	const quickLibraryBtn = document.getElementById("quickLibraryBtn");
+	if (quickLibraryBtn) {
+		quickLibraryBtn.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library.html"),
+			});
+		});
+	}
+
+	const quickSettingsBtn = document.getElementById("quickSettingsBtn");
+	if (quickSettingsBtn) {
+		quickSettingsBtn.addEventListener("click", () => {
+			browser.tabs.create({
+				url: browser.runtime.getURL("library/library-settings.html"),
 			});
 		});
 	}
@@ -538,7 +548,7 @@ async function initializePopup() {
 	const totalNotifsSpan = document.getElementById("totalNotifs");
 	const unreadNotifsSpan = document.getElementById("unreadNotifs");
 
-	// Theme Management — uses centralized theme-config
+	// Theme Management \u{2014} uses centralized theme-config
 	const {
 		DEFAULT_THEME: defaultTheme,
 		setThemeVariables,
@@ -603,6 +613,19 @@ async function initializePopup() {
 
 	// Load theme on startup
 	loadTheme();
+
+	// Deferred novels load \u{2014} must run after all const declarations above are initialized
+	if (_initialHasKey) {
+		showLoadingState("Loading novels...");
+		loadNovelsTab()
+			.catch((err) => {
+				debugError("Initial loadNovelsTab failed", err);
+				hideLoadingState();
+			})
+			.finally(() => {
+				hideLoadingState();
+			});
+	}
 
 	// Load backup checkbox settings on startup
 	loadBackupCheckboxSettings();
@@ -727,12 +750,12 @@ async function initializePopup() {
 	}
 
 	const AUTO_ADD_STATUS_OPTIONS = [
-		{ value: "reading", label: "📖 Reading" },
-		{ value: "plan-to-read", label: "📋 Plan to Read" },
-		{ value: "up-to-date", label: "✨ Up to Date" },
-		{ value: "completed", label: "✅ Completed" },
-		{ value: "on-hold", label: "⏸️ On Hold" },
-		{ value: "dropped", label: "❌ Dropped" },
+		{ value: "reading", label: "\u{1F4D6} Reading" },
+		{ value: "plan-to-read", label: "\u{1F4CB} Plan to Read" },
+		{ value: "up-to-date", label: "\u{2728} Up to Date" },
+		{ value: "completed", label: "\u{2705} Completed" },
+		{ value: "on-hold", label: "\u{23F8}\u{FE0F} On Hold" },
+		{ value: "dropped", label: "\u{274C} Dropped" },
 	];
 
 	function renderSiteToggles() {
@@ -759,7 +782,7 @@ async function initializePopup() {
 
 			const iconHtml = shelf.icon?.startsWith("http")
 				? `<img src="${shelf.icon}" alt="${shelf.name}" onerror="this.remove()">`
-				: shelf.emoji || "📖";
+				: shelf.emoji || "\u{1F4D6}";
 			const domainsPreview = (shelf.domains || []).slice(0, 2).join(", ");
 			const autoAddStatusChapter =
 				setting.autoAddStatusChapter || "reading";
@@ -862,7 +885,7 @@ async function initializePopup() {
 			keyItem.innerHTML = `
 				<span class="key-label">${label}</span>
 				<span class="key-preview">${keyPreview}</span>
-				<button class="remove-key-btn" data-index="${index}">✕</button>
+				<button class="remove-key-btn" data-index="${index}">\u{2715}</button>
 			`;
 			apiKeysListContainer.appendChild(keyItem);
 		});
@@ -1145,7 +1168,7 @@ async function initializePopup() {
 			);
 			const name = nameInput?.value?.trim();
 			if (!name) return;
-			const icon = iconInput?.value?.trim() || "📌";
+			const icon = iconInput?.value?.trim() || "\u{1F4CC}";
 			const collapsed = collapsedInput?.checked !== false;
 			const cfCustomList = document.getElementById("cf-custom-list");
 			if (cfCustomList) {
@@ -1165,6 +1188,8 @@ async function initializePopup() {
 	// ===== END AUTOSAVE FUNCTIONALITY =====
 
 	// Toggle advanced parameters section
+	const toggleAdvancedParamsBtn = document.getElementById("toggleAdvancedParams");
+	const advancedParamsContent = document.getElementById("advancedParamsContent");
 	if (toggleAdvancedParamsBtn && advancedParamsContent) {
 		toggleAdvancedParamsBtn.addEventListener("click", () => {
 			toggleAdvancedParamsBtn.classList.toggle("active");
@@ -1174,7 +1199,7 @@ async function initializePopup() {
 
 	// Enable resizing of the popup
 
-	// "Advanced Settings" link — opens library settings page
+	// "Advanced Settings" link \u{2014} opens library settings page
 	const openLibrarySettingsLink = document.getElementById(
 		"openLibrarySettingsLink",
 	);
@@ -1397,7 +1422,7 @@ async function initializePopup() {
 			debugLog("Background script is active");
 		}
 	} catch (error) {
-		// Soft-fail: service worker may be asleep—log and continue without alarming the user
+		// Soft-fail: service worker may be asleep\u{2014}log and continue without alarming the user
 		console.warn("Background script not reachable yet:", error?.message);
 	}
 
@@ -1630,7 +1655,7 @@ async function initializePopup() {
 						backupApiKeys: apiKeys.slice(1),
 					});
 
-					showStatus("API key is valid! Models loaded ✓", "success");
+					showStatus("API key is valid! Models loaded \u{2713}", "success");
 				} else {
 					showStatus(
 						"API key appears invalid or no models available",
@@ -2010,7 +2035,7 @@ async function initializePopup() {
 
 					try {
 						refreshModelsBtn.disabled = true;
-						refreshModelsBtn.textContent = "⟳";
+						refreshModelsBtn.textContent = "\u{27F3}";
 						await updateModelSelector(apiKey);
 						showStatus("Models refreshed successfully", "success");
 					} catch (error) {
@@ -2020,7 +2045,7 @@ async function initializePopup() {
 						);
 					} finally {
 						refreshModelsBtn.disabled = false;
-						refreshModelsBtn.textContent = "↻";
+						refreshModelsBtn.textContent = "\u{21BB}";
 					}
 				});
 			}
@@ -2158,8 +2183,8 @@ async function initializePopup() {
 							if (icon) {
 								icon.textContent =
 									novelsList.classList.contains("collapsed")
-										? "▶"
-										: "▼";
+										? "\u{25B6}"
+										: "\u{25BC}";
 							}
 						});
 					});
@@ -2182,8 +2207,8 @@ async function initializePopup() {
 								? "false"
 								: "true";
 							btn.textContent = isExpanded
-								? "▶ Show all"
-								: "▼ Show less";
+								? "\u{25B6} Show all"
+								: "\u{25BC} Show less";
 						});
 					});
 
@@ -2208,7 +2233,7 @@ async function initializePopup() {
 			 */
 			function renderDomainIcon(icon, className = "") {
 				if (!icon)
-					return `<span class="domain-icon ${className}">📖</span>`;
+					return `<span class="domain-icon ${className}">\u{1F4D6}</span>`;
 
 				// If icon is a simple string
 				if (typeof icon === "string") {
@@ -2221,7 +2246,7 @@ async function initializePopup() {
 					<img src="${escapeHtml(icon)}" alt=""
 						onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
 						style="width: 16px; height: 16px; vertical-align: middle;">
-					<span class="icon-fallback" style="display: none;">📖</span>
+					<span class="icon-fallback" style="display: none;">\u{1F4D6}</span>
 				</span>`;
 					}
 					// It's an emoji
@@ -2230,7 +2255,7 @@ async function initializePopup() {
 
 				// If icon is an object with url and fallback
 				if (typeof icon === "object" && icon.url) {
-					const fallback = icon.fallback || "📖";
+					const fallback = icon.fallback || "\u{1F4D6}";
 					return `<span class="domain-icon domain-icon-img ${className}">
 				<img src="${escapeHtml(icon.url)}" alt=""
 					onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"
@@ -2239,7 +2264,7 @@ async function initializePopup() {
 			</span>`;
 				}
 
-				return `<span class="domain-icon ${className}">📖</span>`;
+				return `<span class="domain-icon ${className}">\u{1F4D6}</span>`;
 			}
 
 			/**
@@ -2256,7 +2281,7 @@ async function initializePopup() {
 				const shelf = Object.values(SHELVES).find(
 					(s) => s.id === shelfId,
 				);
-				const shelfIcon = shelf ? shelf.icon : "📖";
+				const shelfIcon = shelf ? shelf.icon : "\u{1F4D6}";
 				const shelfName = shelf ? shelf.name : shelfId;
 				const iconHtml = renderDomainIcon(shelfIcon);
 				const limit = options.limitPerShelf || 0;
@@ -2264,7 +2289,7 @@ async function initializePopup() {
 				const header = document.createElement("div");
 				header.className = "domain-header domain-toggle";
 				header.innerHTML = `
-			<span class="toggle-icon">▼</span>
+			<span class="toggle-icon">\u{25BC}</span>
 			${iconHtml}
 			<span class="domain-name">${escapeHtml(shelfName)}</span>
 			<span class="domain-count">${novels.length} ${
@@ -2337,7 +2362,7 @@ async function initializePopup() {
 
 				const coverImg = novel.coverImage
 					? `<img src="${escapeHtml(novel.coverImage)}" alt="${escapeHtml(bookTitle)}" class="novel-cover">`
-					: '<div class="novel-cover-placeholder">📖</div>';
+					: '<div class="novel-cover-placeholder">\u{1F4D6}</div>';
 
 				novelItem.innerHTML = `
 			<div class="novel-card-wrapper">
@@ -2376,25 +2401,6 @@ async function initializePopup() {
 		`;
 
 				return novelItem;
-			}
-
-			// Header navigation buttons
-			const quickLibraryBtn = document.getElementById("quickLibraryBtn");
-			if (quickLibraryBtn) {
-				quickLibraryBtn.addEventListener("click", () => {
-					browser.tabs.create({
-						url: browser.runtime.getURL("library/library.html"),
-					});
-				});
-			}
-
-			const quickSettingsBtn = document.getElementById("quickSettingsBtn");
-			if (quickSettingsBtn) {
-				quickSettingsBtn.addEventListener("click", () => {
-					browser.tabs.create({
-						url: browser.runtime.getURL("library/library-settings.html"),
-					});
-				});
 			}
 
 			// ============================================
@@ -2526,7 +2532,7 @@ async function initializePopup() {
 						);
 
 						debugLog(
-							"📚 Library: getNovelInfo response:",
+							"\u{1F4DA} Library: getNovelInfo response:",
 							response,
 						);
 
@@ -2573,7 +2579,7 @@ async function initializePopup() {
 						}
 					} catch (error) {
 						debugLog(
-							"📚 Library: Error communicating with content script:",
+							"\u{1F4DA} Library: Error communicating with content script:",
 							error,
 						);
 						if (
@@ -2626,12 +2632,12 @@ async function initializePopup() {
 				// Page type tag
 				if (currentPageTypeTag) {
 					if (novelInfo.isChapterPage) {
-						currentPageTypeTag.textContent = "📖 Chapter";
+						currentPageTypeTag.textContent = "\u{1F4D6} Chapter";
 						currentPageTypeTag.className =
 							"tag tag-page-type chapter";
 						currentPageTypeTag.style.display = "inline-flex";
 					} else if (novelInfo.isNovelPage) {
-						currentPageTypeTag.textContent = "📚 Novel Page";
+						currentPageTypeTag.textContent = "\u{1F4DA} Novel Page";
 						currentPageTypeTag.className =
 							"tag tag-page-type novel";
 						currentPageTypeTag.style.display = "inline-flex";
@@ -2646,12 +2652,12 @@ async function initializePopup() {
 					if (status) {
 						const statusMap = {
 							completed: {
-								text: "✅ Completed",
+								text: "\u{2705} Completed",
 								class: "completed",
 							},
-							ongoing: { text: "📝 Ongoing", class: "ongoing" },
-							hiatus: { text: "⏸️ Hiatus", class: "hiatus" },
-							dropped: { text: "❌ Dropped", class: "dropped" },
+							ongoing: { text: "\u{1F4DD} Ongoing", class: "ongoing" },
+							hiatus: { text: "\u{23F8}\u{FE0F} Hiatus", class: "hiatus" },
+							dropped: { text: "\u{274C} Dropped", class: "dropped" },
 						};
 						const statusInfo = statusMap[status.toLowerCase()] || {
 							text: status,
@@ -2860,7 +2866,7 @@ async function initializePopup() {
 							currentPageNovelData.isInLibrary = true;
 						}
 						if (pageStatusBadge) {
-							pageStatusBadge.textContent = "✓ In Library";
+							pageStatusBadge.textContent = "\u{2713} In Library";
 							pageStatusBadge.className =
 								"status-badge in-library";
 						}
@@ -3023,9 +3029,9 @@ async function initializePopup() {
 									? `<img src="${escapeHtml(
 											currentShelf.icon,
 										)}" alt="" class="site-icon" onerror="this.outerHTML='${
-											currentShelf.emoji || "📖"
+											currentShelf.emoji || "\u{1F4D6}"
 										}'">`
-									: currentShelf.emoji || "📖";
+									: currentShelf.emoji || "\u{1F4D6}";
 							siteIndicator.innerHTML = iconHtml;
 							siteIndicator.style.display = "inline-flex";
 						} else {
@@ -3055,7 +3061,7 @@ async function initializePopup() {
 									const shelf = Object.values(SHELVES).find(
 										(s) => s.id === novel.shelfId,
 									);
-									const shelfEmoji = shelf?.emoji || "📖";
+									const shelfEmoji = shelf?.emoji || "\u{1F4D6}";
 									const shelfIcon = shelf?.icon;
 									const shelfName = shelf?.name || "Unknown";
 
@@ -3103,7 +3109,7 @@ async function initializePopup() {
 									<div class="novel-meta">
 										${
 											novel.enhancedChaptersCount > 0
-												? `<span class="enhanced-badge">✨ ${novel.enhancedChaptersCount}</span>`
+												? `<span class="enhanced-badge">\u{2728} ${novel.enhancedChaptersCount}</span>`
 												: ""
 										}
 									</div>
@@ -3153,7 +3159,7 @@ async function initializePopup() {
 						const file = escapeHtml(
 							entry.filename || "rg-backup.json",
 						);
-						return `<li>${date.toLocaleString()} — ${file}</li>`;
+						return `<li>${date.toLocaleString()} \u{2014} ${file}</li>`;
 					})
 					.join("");
 			}
@@ -3273,10 +3279,10 @@ async function initializePopup() {
 							`Library ${
 								choice ? "merged" : "restored"
 							} successfully!\n\n` +
-								`• ${result.imported} new novels added\n` +
-								`• ${result.updated} existing novels updated` +
+								`\u{2022} ${result.imported} new novels added\n` +
+								`\u{2022} ${result.updated} existing novels updated` +
 								(result.errors > 0
-									? `\n• ${result.errors} errors occurred`
+									? `\n\u{2022} ${result.errors} errors occurred`
 									: ""),
 							"success",
 						);
@@ -3419,7 +3425,7 @@ async function initializePopup() {
 					cfCustomList.querySelectorAll(".cf-custom-item"),
 				).map((el) => ({
 					name: el.dataset.name || "",
-					icon: el.dataset.icon || "📌",
+					icon: el.dataset.icon || "\u{1F4CC}",
 					defaultCollapsed: el.dataset.collapsed === "true",
 				}));
 			}
@@ -3443,11 +3449,11 @@ async function initializePopup() {
 				const row = document.createElement("div");
 				row.className = "cf-custom-item";
 				row.dataset.name = item.name;
-				row.dataset.icon = item.icon || "📌";
+				row.dataset.icon = item.icon || "\u{1F4CC}";
 				row.dataset.collapsed = item.defaultCollapsed
 					? "true"
 					: "false";
-				row.innerHTML = `<span class="cf-custom-icon">${escapeHtml(item.icon || "📌")}</span><span class="cf-custom-name">${escapeHtml(item.name)}</span><span class="cf-custom-state">${item.defaultCollapsed ? "Collapsed" : "Expanded"}</span><button class="cf-custom-remove btn btn-sm" title="Remove">✕</button>`;
+				row.innerHTML = `<span class="cf-custom-icon">${escapeHtml(item.icon || "\u{1F4CC}")}</span><span class="cf-custom-name">${escapeHtml(item.name)}</span><span class="cf-custom-state">${item.defaultCollapsed ? "Collapsed" : "Expanded"}</span><button class="cf-custom-remove btn btn-sm" title="Remove">\u{2715}</button>`;
 				row.querySelector(".cf-custom-remove").addEventListener(
 					"click",
 					() => {
@@ -3575,7 +3581,7 @@ async function initializePopup() {
 
 				// Update size indicator
 				function updateSizeIndicator(width, height) {
-					sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(
+					sizeIndicator.textContent = `${Math.round(width)} \u{D7} ${Math.round(
 						height,
 					)}`;
 				}
@@ -4175,7 +4181,10 @@ async function initializePopup() {
 					? filterBtn.getAttribute("data-filter")
 					: "all";
 
+				// Preserve grid-view class across re-renders
+				const isGrid = novelsListContainer.classList.contains("grid-view");
 				novelsListContainer.innerHTML = "";
+				if (isGrid) novelsListContainer.classList.add("grid-view");
 
 				if (!novels || novels.length === 0) {
 					novelsListContainer.innerHTML =
@@ -4238,20 +4247,19 @@ async function initializePopup() {
 						totalChapters > 0 ? lastReadChapter / totalChapters : 0;
 
 					const statusMap = {
-						reading: "📖",
-						completed: "✅",
-						"on-hold": "⏸️",
-						"plan-to-read": "📋",
-						dropped: "❌",
-						"up-to-date": "✨",
-						"re-reading": "🔁",
+						reading: "\u{1F4D6}",
+						completed: "\u{2705}",
+						"on-hold": "\u{23F8}\u{FE0F}",
+						"plan-to-read": "\u{1F4CB}",
+						dropped: "\u{274C}",
+						"up-to-date": "\u{2728}",
+						"re-reading": "\u{1F501}",
 					};
 
-					const statusEmoji = statusMap[readingStatus] || "📖";
+					const statusEmoji = statusMap[readingStatus] || "\u{1F4D6}";
 
 					const card = document.createElement("div");
 					card.className = "novel-card";
-					card.style.cursor = "pointer";
 					card.style.cssText = `
 				background: var(--setting-bg);
 				border: 1px solid var(--border-color);
@@ -4261,14 +4269,17 @@ async function initializePopup() {
 				display: flex;
 				gap: 10px;
 				align-items: flex-start;
+				cursor: pointer;
 			`;
 
 					const cover = document.createElement("div");
+					cover.className = "novel-card-cover";
 					cover.style.cssText =
 						"font-size: 24px; flex-shrink: 0; width: 40px; text-align: center";
-					cover.textContent = "📕";
+					cover.textContent = "\u{1F4D5}";
 
 					const info = document.createElement("div");
+					info.className = "novel-card-info";
 					info.style.cssText = "flex: 1; min-width: 0";
 
 					const titleEl = document.createElement("div");
@@ -4277,9 +4288,10 @@ async function initializePopup() {
 					titleEl.textContent = novel.title || "Unknown Novel";
 
 					const metaEl = document.createElement("div");
+					metaEl.className = "novel-card-meta";
 					metaEl.style.cssText =
 						"font-size: 10px; color: var(--text-secondary); margin-bottom: 6px";
-					metaEl.innerHTML = `<span>${statusEmoji} ${escapeHtml(readingStatus)}</span> • <span>${escapeHtml(novel.website || "Unknown")}</span>`;
+					metaEl.innerHTML = `<span>${statusEmoji} ${escapeHtml(readingStatus)}</span> \u{2022} <span>${escapeHtml(novel.website || "Unknown")}</span>`;
 
 					const progressContainer = document.createElement("div");
 					progressContainer.style.cssText =
@@ -4294,6 +4306,7 @@ async function initializePopup() {
 					progressContainer.appendChild(progressBar);
 
 					const progressText = document.createElement("div");
+					progressText.className = "novel-card-progress-text";
 					progressText.style.cssText =
 						"font-size: 9px; color: var(--text-secondary)";
 					progressText.textContent = `${lastReadChapter}/${totalChapters} chapters`;
@@ -4500,13 +4513,13 @@ async function initializePopup() {
 
 				// Map status to emoji and label
 				const statusMap = {
-					reading: "📖 Reading",
-					completed: "✅ Completed",
-					"on-hold": "⏸️ On Hold",
-					"plan-to-read": "📋 Plan to Read",
-					dropped: "❌ Dropped",
-					"up-to-date": "✨ Up-to-Date",
-					"re-reading": "🔁 Re-reading",
+					reading: "\u{1F4D6} Reading",
+					completed: "\u{2705} Completed",
+					"on-hold": "\u{23F8}\u{FE0F} On Hold",
+					"plan-to-read": "\u{1F4CB} Plan to Read",
+					dropped: "\u{274C} Dropped",
+					"up-to-date": "\u{2728} Up-to-Date",
+					"re-reading": "\u{1F501} Re-reading",
 				};
 
 				const statusLabel =
@@ -4516,7 +4529,7 @@ async function initializePopup() {
 				currentNovelInfo.innerHTML = `
 		<div class="current-novel-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 12px">
 			<div style="display: flex; gap: 10px">
-				<div style="font-size: 28px; flex-shrink: 0">📕</div>
+				<div style="font-size: 28px; flex-shrink: 0">\u{1F4D5}</div>
 				<div style="flex: 1; min-width: 0">
 					<div style="font-weight: 600; font-size: 12px; color: var(--text-primary); word-break: break-word; margin-bottom: 4px">${escapeHtml(title)}</div>
 					<div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 6px">${escapeHtml(site)}</div>
@@ -4532,10 +4545,10 @@ async function initializePopup() {
 					</div>
 					<div class="current-novel-actions" style="display: flex; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px">
 						<button id="quickEnhanceBtn" class="quick-action-btn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
-							✨ Enhance
+							\u{2728} Enhance
 						</button>
 						<button id="quickSummarizeBtn" class="quick-action-btn" style="flex: 1; background: #8b5cf6; color: white; border: none; padding: 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px">
-							📝 Summarize
+							\u{1F4DD} Summarize
 						</button>
 					</div>
 				</div>
@@ -4589,7 +4602,7 @@ async function initializePopup() {
 					novel.lastRead || novel.lastAccessedAt || null;
 				const lastRead = lastReadRaw
 					? new Date(lastReadRaw).toLocaleDateString()
-					: "—";
+					: "\u{2014}";
 
 				return `
 			<div class="suggested-novel-card" data-novel-id="${escapeHtml(novel.id)}" data-shelf-id="${escapeHtml(novel.shelfId || "")}">
@@ -4597,7 +4610,7 @@ async function initializePopup() {
 					${
 						novel.coverUrl
 							? `<img src="${escapeHtml(novel.coverUrl)}" alt="Cover" />`
-							: `<div class="suggested-novel-cover-placeholder">📖</div>`
+							: `<div class="suggested-novel-cover-placeholder">\u{1F4D6}</div>`
 					}
 				</div>
 				<div class="suggested-novel-body">
@@ -4643,7 +4656,7 @@ async function initializePopup() {
 							backup.dateStr
 						}</div>
 						<div style="font-size: 12px; color: #aaa;">
-							${backup.novelCount} novels • ${Math.round(backup.size / 1024)} KB ${
+							${backup.novelCount} novels \u{2022} ${Math.round(backup.size / 1024)} KB ${
 								backup.isAutomatic
 									? '<span style="color: #4caf50;">(Auto)</span>'
 									: "(Manual)"
@@ -4766,10 +4779,10 @@ async function initializePopup() {
 					if (isConnected) {
 						driveNotConnected.style.display = "none";
 						driveConnected.style.display = "block";
-						driveStatusSpan.textContent = "🟢 Connected";
+						driveStatusSpan.textContent = "\u{1F7E2} Connected";
 						driveStatusSpan.style.color = "#4CAF50";
 						if (connectDriveBtn) {
-							connectDriveBtn.textContent = "🔄 Reconnect Drive";
+							connectDriveBtn.textContent = "\u{1F504} Reconnect Drive";
 							connectDriveBtn.disabled = false;
 						}
 						if (disconnectDriveBtn) {
@@ -4836,7 +4849,7 @@ async function initializePopup() {
 						driveNotConnected.style.display = "block";
 						driveConnected.style.display = "none";
 						if (connectDriveBtn) {
-							connectDriveBtn.textContent = "🔗 Connect Drive";
+							connectDriveBtn.textContent = "\u{1F517} Connect Drive";
 							connectDriveBtn.disabled = false;
 						}
 						if (disconnectDriveBtn) {
@@ -4844,14 +4857,14 @@ async function initializePopup() {
 						}
 						const authError = tokens.driveAuthError?.message;
 						if (authError) {
-							driveStatusSpan.textContent = "🔴 Auth failed";
+							driveStatusSpan.textContent = "\u{1F534} Auth failed";
 							driveStatusSpan.style.color = "#f59e0b";
 							if (driveAuthError) {
 								driveAuthError.textContent = authError;
 								driveAuthError.style.display = "block";
 							}
 						} else {
-							driveStatusSpan.textContent = "⚫ Disconnected";
+							driveStatusSpan.textContent = "\u{26AB} Disconnected";
 							driveStatusSpan.style.color = "#999";
 							if (driveAuthError) {
 								driveAuthError.style.display = "none";
@@ -4882,7 +4895,7 @@ async function initializePopup() {
 					}
 
 					connectDriveBtn.disabled = true;
-					connectDriveBtn.textContent = "🔗 Connecting...";
+					connectDriveBtn.textContent = "\u{1F517} Connecting...";
 
 					const saved = await browser.storage.local.get([
 						"driveClientId",
@@ -4919,7 +4932,7 @@ async function initializePopup() {
 							);
 						}
 						showStatus(
-							"✅ Google Drive connected successfully!",
+							"\u{2705} Google Drive connected successfully!",
 							"success",
 						);
 
@@ -4950,7 +4963,7 @@ async function initializePopup() {
 									"backup";
 								debugLog("Initial backup created:", fileName);
 								showStatus(
-									`✅ Initial backup created: ${fileName}`,
+									`\u{2705} Initial backup created: ${fileName}`,
 									"success",
 								);
 							} else {
@@ -4987,12 +5000,12 @@ async function initializePopup() {
 								);
 								if (syncResponse.imported) {
 									showStatus(
-										`✅ Synced ${syncResponse.novelCount || 0} novels from Drive`,
+										`\u{2705} Synced ${syncResponse.novelCount || 0} novels from Drive`,
 										"success",
 									);
 								} else {
 									showStatus(
-										"✅ Drive sync completed (no new data)",
+										"\u{2705} Drive sync completed (no new data)",
 										"success",
 									);
 								}
@@ -5025,14 +5038,14 @@ async function initializePopup() {
 					);
 					if (connectDriveBtn) {
 						connectDriveBtn.disabled = false;
-						connectDriveBtn.textContent = "🔗 Connect Google Drive";
+						connectDriveBtn.textContent = "\u{1F517} Connect Google Drive";
 					}
 					return;
 				}
 
 				if (connectDriveBtn) {
 					connectDriveBtn.disabled = false;
-					connectDriveBtn.textContent = "🔗 Connect Google Drive";
+					connectDriveBtn.textContent = "\u{1F517} Connect Google Drive";
 				}
 			}
 
@@ -5069,14 +5082,14 @@ async function initializePopup() {
 						await browser.storage.local.get("driveAuthTokens");
 					if (!tokens.driveAuthTokens?.access_token) {
 						showStatus(
-							"❌ Not connected to Google Drive. Connect first.",
+							"\u{274C} Not connected to Google Drive. Connect first.",
 							"error",
 						);
 						return;
 					}
 
 					backupNowBtn.disabled = true;
-					backupNowBtn.textContent = "📤 Backing up...";
+					backupNowBtn.textContent = "\u{1F4E4} Backing up...";
 
 					debugLog("Starting manual backup to Drive...");
 
@@ -5095,7 +5108,7 @@ async function initializePopup() {
 							"backup";
 						debugLog("Backup successful:", fileName);
 						showStatus(
-							`✅ Backup uploaded: ${fileName}`,
+							`\u{2705} Backup uploaded: ${fileName}`,
 							"success",
 						);
 					} else {
@@ -5106,7 +5119,7 @@ async function initializePopup() {
 					showStatus(`Failed: ${err.message}`, "error");
 				} finally {
 					backupNowBtn.disabled = false;
-					backupNowBtn.textContent = "📤 Backup Now";
+					backupNowBtn.textContent = "\u{1F4E4} Backup Now";
 				}
 			}
 
@@ -5134,7 +5147,7 @@ async function initializePopup() {
 			async function handleRestoreDriveBackup(fileId) {
 				try {
 					if (!fileId) return;
-					showStatus("⏳ Downloading backup...", "info");
+					showStatus("\u{23F3} Downloading backup...", "info");
 					const response = await browser.runtime.sendMessage({
 						action: "downloadDriveBackup",
 						fileId,
@@ -5150,7 +5163,7 @@ async function initializePopup() {
 						restoreApiKeys: true,
 					});
 
-					showStatus("✅ Backup restored successfully", "success");
+					showStatus("\u{2705} Backup restored successfully", "success");
 					await loadNovelsTab();
 				} catch (err) {
 					debugError("Drive backup restore failed", err);
@@ -5257,10 +5270,10 @@ async function initializePopup() {
 					meta.style.flexWrap = "wrap";
 
 					const createdSpan = document.createElement("span");
-					createdSpan.textContent = `📅 ${backupDate.toLocaleDateString()} ${backupDate.toLocaleTimeString()}`;
+					createdSpan.textContent = `\u{1F4C5} ${backupDate.toLocaleDateString()} ${backupDate.toLocaleTimeString()}`;
 
 					const relativeSpan = document.createElement("span");
-					relativeSpan.textContent = `🕒 ${getRelativeTimeString(backupDate)}`;
+					relativeSpan.textContent = `\u{1F552} ${getRelativeTimeString(backupDate)}`;
 
 					meta.appendChild(createdSpan);
 					meta.appendChild(relativeSpan);
@@ -5274,7 +5287,7 @@ async function initializePopup() {
 					restoreBtn.className = "btn-secondary";
 					restoreBtn.style.fontSize = "12px";
 					restoreBtn.style.flex = "1";
-					restoreBtn.textContent = "📥 Restore";
+					restoreBtn.textContent = "\u{1F4E5} Restore";
 					restoreBtn.addEventListener("click", () => {
 						handleRestoreDriveBackup(backup.id);
 					});
@@ -5283,7 +5296,7 @@ async function initializePopup() {
 					viewDetailsBtn.className = "btn-secondary";
 					viewDetailsBtn.style.fontSize = "12px";
 					viewDetailsBtn.style.padding = "6px 12px";
-					viewDetailsBtn.textContent = "ℹ️";
+					viewDetailsBtn.textContent = "\u{2139}\u{FE0F}";
 					viewDetailsBtn.title = "View detailed backup info";
 					viewDetailsBtn.addEventListener("click", async () => {
 						await showBackupDetails(backup);
@@ -5301,7 +5314,7 @@ async function initializePopup() {
 				if (backups.length === 0) {
 					list.innerHTML = `
 				<div style="text-align: center; padding: 30px; color: #888;">
-					<div style="font-size: 48px; margin-bottom: 12px;">📦</div>
+					<div style="font-size: 48px; margin-bottom: 12px;">\u{1F4E6}</div>
 					<div style="font-size: 14px;">No backups found on Google Drive</div>
 					<div style="font-size: 12px; margin-top: 8px; color: #666;">Create a backup to get started</div>
 				</div>
@@ -5316,7 +5329,7 @@ async function initializePopup() {
 			 */
 			async function showBackupDetails(backup) {
 				try {
-					showStatus("⏳ Loading backup details...", "info");
+					showStatus("\u{23F3} Loading backup details...", "info");
 
 					// Download and parse the backup to get detailed metadata
 					const response = await browser.runtime.sendMessage({
@@ -5355,29 +5368,29 @@ async function initializePopup() {
 					}
 
 					const details = `
-📦 Backup Details
-━━━━━━━━━━━━━━━
-📚 Novels: ${novelCount}
-📖 Chapters: ${chapterCount}
-💾 Size: ${formatFileSize(Number(backup.size))}
-📅 Created: ${new Date(backup.createdTime || backup.modifiedTime).toLocaleString()}
-🔄 Modified: ${new Date(backup.modifiedTime).toLocaleString()}
-🆔 Version: ${backupData.version || "unknown"}
-🔧 Extension: ${backupData.extensionVersion || "unknown"}
-🌐 Browser: ${backupData.browser || "unknown"}
+\u{1F4E6} Backup Details
+\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
+\u{1F4DA} Novels: ${novelCount}
+\u{1F4D6} Chapters: ${chapterCount}
+\u{1F4BE} Size: ${formatFileSize(Number(backup.size))}
+\u{1F4C5} Created: ${new Date(backup.createdTime || backup.modifiedTime).toLocaleString()}
+\u{1F504} Modified: ${new Date(backup.modifiedTime).toLocaleString()}
+\u{1F194} Version: ${backupData.version || "unknown"}
+\u{1F527} Extension: ${backupData.extensionVersion || "unknown"}
+\u{1F310} Browser: ${backupData.browser || "unknown"}
 
-🔑 Contains:
-${metadata.hasApiKey ? "✅" : "❌"} API Keys
-${metadata.hasPrompts ? "✅" : "❌"} Custom Prompts
-${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
+\u{1F511} Contains:
+${metadata.hasApiKey ? "\u{2705}" : "\u{274C}"} API Keys
+${metadata.hasPrompts ? "\u{2705}" : "\u{274C}"} Custom Prompts
+${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 			`.trim();
 
 					alert(details);
-					showStatus("✅ Backup details loaded", "success");
+					showStatus("\u{2705} Backup details loaded", "success");
 				} catch (error) {
 					debugError("Failed to load backup details:", error);
 					showStatus(
-						`❌ Failed to load backup details: ${error.message}`,
+						`\u{274C} Failed to load backup details: ${error.message}`,
 						"error",
 					);
 				}
@@ -5395,14 +5408,14 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						await browser.storage.local.get("driveAuthTokens");
 					if (!tokens.driveAuthTokens?.access_token) {
 						showStatus(
-							"❌ Not connected to Google Drive. Connect first.",
+							"\u{274C} Not connected to Google Drive. Connect first.",
 							"error",
 						);
 						return;
 					}
 
 					viewBackupsBtn.disabled = true;
-					viewBackupsBtn.textContent = "⏳ Loading...";
+					viewBackupsBtn.textContent = "\u{23F3} Loading...";
 
 					debugLog("Fetching backups from Drive...");
 					const response = await browser.runtime.sendMessage({
@@ -5430,7 +5443,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					showStatus(`View backups failed: ${err.message}`, "error");
 				} finally {
 					viewBackupsBtn.disabled = false;
-					viewBackupsBtn.textContent = "📋 View Backups";
+					viewBackupsBtn.textContent = "\u{1F4CB} View Backups";
 				}
 			}
 
@@ -5446,14 +5459,14 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						await browser.storage.local.get("driveAuthTokens");
 					if (!tokens.driveAuthTokens?.access_token) {
 						showStatus(
-							"❌ Not connected to Google Drive. Connect first.",
+							"\u{274C} Not connected to Google Drive. Connect first.",
 							"error",
 						);
 						return;
 					}
 
 					driveSyncNowBtn.disabled = true;
-					driveSyncNowBtn.textContent = "⏳ Syncing...";
+					driveSyncNowBtn.textContent = "\u{23F3} Syncing...";
 
 					debugLog("Syncing library from Drive...");
 					const response = await browser.runtime.sendMessage({
@@ -5478,7 +5491,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					showStatus(`Drive sync failed: ${err.message}`, "error");
 				} finally {
 					driveSyncNowBtn.disabled = false;
-					driveSyncNowBtn.textContent = "🔄 Sync From Drive Now";
+					driveSyncNowBtn.textContent = "\u{1F504} Sync From Drive Now";
 				}
 			}
 
@@ -5718,24 +5731,26 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 
 			// Handle Novel Tab View Toggle (List/Grid)
 			const novelViewBtns = document.querySelectorAll(".novel-view-btn");
-			// novelsList redeclaration removed - using outer-scope novelsListContainer instead
 
 			if (novelViewBtns.length > 0 && novelsListContainer) {
-				novelViewBtns.forEach((btn) => {
-					btn.addEventListener("click", () => {
-						const view = btn.getAttribute("data-view");
-						novelViewBtns.forEach((b) =>
-							b.classList.remove("active"),
-						);
-						btn.classList.add("active");
+				// Restore persisted view mode
+				browser.storage.local.get("novelViewMode").then((res) => {
+					const saved = res.novelViewMode || "list";
+					novelViewBtns.forEach((b) => {
+						b.classList.toggle("active", b.getAttribute("data-view") === saved);
+					});
+					novelsListContainer.classList.toggle("grid-view", saved === "grid");
+				});
 
-						if (view === "grid") {
-							novelsListContainer.style.gridTemplateColumns =
-								"repeat(3, 1fr)";
-						} else {
-							novelsListContainer.style.gridTemplateColumns =
-								"1fr";
-						}
+				novelViewBtns.forEach((btn) => {
+					btn.addEventListener("click", async () => {
+						const view = btn.getAttribute("data-view");
+						novelViewBtns.forEach((b) => b.classList.remove("active"));
+						btn.classList.add("active");
+						novelsListContainer.classList.toggle("grid-view", view === "grid");
+						await browser.storage.local.set({ novelViewMode: view });
+						// Re-render cards so grid layout applies cleanly
+						if (typeof loadNovelsTab === "function") loadNovelsTab();
 					});
 				});
 			}
@@ -5828,8 +5843,8 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						? "text"
 						: "password";
 					toggleClientSecretBtn.textContent = isPassword
-						? "🙈"
-						: "👁️";
+						? "\u{1F648}"
+						: "\u{1F441}\u{FE0F}";
 					toggleClientSecretBtn.title = isPassword
 						? "Hide Client Secret"
 						: "Show Client Secret";
@@ -5857,7 +5872,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 
 						if (!result.valid) {
 							debugError("OAuth parsing failed:", result.error);
-							showOAuthParseResult(`❌ ${result.error}`, "error");
+							showOAuthParseResult(`\u{274C} ${result.error}`, "error");
 							return;
 						}
 
@@ -5881,16 +5896,16 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						// Show the secret after parsing so user can verify
 						if (toggleClientSecretBtn && driveClientSecretInput) {
 							driveClientSecretInput.type = "text";
-							toggleClientSecretBtn.textContent = "🙈";
+							toggleClientSecretBtn.textContent = "\u{1F648}";
 							toggleClientSecretBtn.title = "Hide Client Secret";
 						}
 
-						let message = `✅ Parsed ${result.type} credentials\n`;
+						let message = `\u{2705} Parsed ${result.type} credentials\n`;
 						message += `Client ID: ${result.clientId.substring(0, 20)}...\n`;
 						message += `Click "Save to Storage" to save credentials.`;
 
 						if (uriValidation.warnings.length > 0) {
-							message += `\n⚠️ ${uriValidation.warnings.join(", ")}`;
+							message += `\n\u{26A0}\u{FE0F} ${uriValidation.warnings.join(", ")}`;
 						}
 
 						showOAuthParseResult(
@@ -5900,7 +5915,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					} catch (err) {
 						debugError("Failed to parse OAuth JSON", err);
 						showOAuthParseResult(
-							"❌ Failed to parse: " + err.message,
+							"\u{274C} Failed to parse: " + err.message,
 							"error",
 						);
 					}
@@ -5976,11 +5991,11 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 								},
 							});
 							showOAuthParseResult(
-								"❌ Failed to save credentials",
+								"\u{274C} Failed to save credentials",
 								"error",
 							);
 							showStatus(
-								"❌ OAuth settings failed to persist",
+								"\u{274C} OAuth settings failed to persist",
 								"error",
 							);
 							return;
@@ -5990,19 +6005,19 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 							"OAuth credentials saved and verified successfully!",
 						);
 						showOAuthParseResult(
-							"✅ Credentials saved to storage!",
+							"\u{2705} Credentials saved to storage!",
 							"success",
 						);
-						showStatus("✅ OAuth settings saved!", "success");
+						showStatus("\u{2705} OAuth settings saved!", "success");
 						await updateDriveUI();
 					} catch (err) {
 						debugError("Failed to save OAuth settings", err);
 						showOAuthParseResult(
-							"❌ Failed to save: " + err.message,
+							"\u{274C} Failed to save: " + err.message,
 							"error",
 						);
 						showStatus(
-							"❌ Failed to save OAuth settings: " + err.message,
+							"\u{274C} Failed to save OAuth settings: " + err.message,
 							"error",
 						);
 					}
@@ -6088,16 +6103,16 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 								expected: { clientId, clientSecret, folderId },
 							});
 							showStatus(
-								"❌ OAuth settings failed to persist - check console",
+								"\u{274C} OAuth settings failed to persist - check console",
 								"error",
 							);
 							return;
 						}
 
-						showStatus("✅ OAuth settings saved!", "success");
+						showStatus("\u{2705} OAuth settings saved!", "success");
 						if (typeof showOAuthParseResult === "function") {
 							showOAuthParseResult(
-								"✅ OAuth settings saved successfully",
+								"\u{2705} OAuth settings saved successfully",
 								"success",
 							);
 						}
@@ -6111,7 +6126,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					} catch (err) {
 						debugError("Error saving OAuth settings:", err);
 						showStatus(
-							"❌ Error saving OAuth settings: " + err.message,
+							"\u{274C} Error saving OAuth settings: " + err.message,
 							"error",
 						);
 					}
@@ -6126,7 +6141,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						try {
 							createComprehensiveBackupBtn.disabled = true;
 							createComprehensiveBackupBtn.textContent =
-								"⏳ Creating...";
+								"\u{23F3} Creating...";
 
 							const backup = await createComprehensiveBackup({
 								type: BACKUP_OPTIONS.FULL,
@@ -6138,19 +6153,19 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 
 							downloadBackupAsFile(backup);
 							showStatus(
-								`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
+								`\u{2705} Full backup downloaded (${backup.metadata.novelCount} novels)`,
 								"success",
 							);
 						} catch (error) {
 							debugError("Comprehensive backup failed:", error);
 							showStatus(
-								`❌ Backup failed: ${error.message}`,
+								`\u{274C} Backup failed: ${error.message}`,
 								"error",
 							);
 						} finally {
 							createComprehensiveBackupBtn.disabled = false;
 							createComprehensiveBackupBtn.textContent =
-								"💾 Full Backup";
+								"\u{1F4BE} Full Backup";
 						}
 					},
 				);
@@ -6186,14 +6201,14 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 
 							// Add version information if available
 							if (backup.extensionVersion) {
-								confirmMsg += `📦 Backup Version: ${backup.extensionVersion}\n`;
+								confirmMsg += `\u{1F4E6} Backup Version: ${backup.extensionVersion}\n`;
 							}
 							if (backup.version) {
-								confirmMsg += `📋 Format Version: ${backup.version}\n`;
+								confirmMsg += `\u{1F4CB} Format Version: ${backup.version}\n`;
 							}
-							confirmMsg += `📚 ${novelCount} novels\n`;
-							confirmMsg += `🔑 API Key: ${hasApiKey ? "Yes" : "No"}\n`;
-							confirmMsg += `🔐 OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
+							confirmMsg += `\u{1F4DA} ${novelCount} novels\n`;
+							confirmMsg += `\u{1F511} API Key: ${hasApiKey ? "Yes" : "No"}\n`;
+							confirmMsg += `\u{1F510} OAuth Credentials: ${hasCredentials ? "Yes" : "No"}\n\n`;
 							confirmMsg += `Mode: MERGE (preserves existing data)`;
 
 							if (!confirm(confirmMsg)) {
@@ -6219,16 +6234,16 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 								if (result.versionInfo?.warnings?.length > 0) {
 									const warningMsg =
 										result.versionInfo.warnings.join("\n");
-									showStatus(`⚠️ ${warningMsg}`, "warning");
+									showStatus(`\u{26A0}\u{FE0F} ${warningMsg}`, "warning");
 									setTimeout(() => {
 										showStatus(
-											`✅ Restored ${result.restoredKeys.length} items!`,
+											`\u{2705} Restored ${result.restoredKeys.length} items!`,
 											"success",
 										);
 									}, 3000);
 								} else {
 									showStatus(
-										`✅ Restored ${result.restoredKeys.length} items!`,
+										`\u{2705} Restored ${result.restoredKeys.length} items!`,
 										"success",
 									);
 								}
@@ -6238,7 +6253,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						} catch (error) {
 							debugError("Restore failed:", error);
 							showStatus(
-								`❌ Restore failed: ${error.message}`,
+								`\u{274C} Restore failed: ${error.message}`,
 								"error",
 							);
 						}
@@ -6268,12 +6283,12 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 			<div class="backup-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; margin-bottom: 6px; font-size: 12px">
 				<div>
 					<div style="font-weight: 500">${b.dateStr}</div>
-					<div style="color: #888; font-size: 11px">${b.novelCount} novels • ${b.reason}</div>
+					<div style="color: #888; font-size: 11px">${b.novelCount} novels \u{2022} ${b.reason}</div>
 				</div>
 				<div style="display: flex; gap: 4px">
-					<button class="rolling-restore" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">↩️</button>
-					<button class="rolling-download" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">💾</button>
-					<button class="rolling-delete" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px; color: #ef4444">🗑️</button>
+					<button class="rolling-restore" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">\u{21A9}\u{FE0F}</button>
+					<button class="rolling-download" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px">\u{1F4BE}</button>
+					<button class="rolling-delete" data-key="${b.key}" style="padding: 4px 8px; font-size: 11px; color: #ef4444">\u{1F5D1}\u{FE0F}</button>
 				</div>
 			</div>
 		`,
@@ -6295,7 +6310,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 								await restoreComprehensiveBackup(backup, {
 									mode: "merge",
 								});
-								showStatus("✅ Backup restored!", "success");
+								showStatus("\u{2705} Backup restored!", "success");
 								setTimeout(() => location.reload(), 1000);
 							}
 						});
@@ -6331,18 +6346,18 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				createRollingBackupBtn.addEventListener("click", async () => {
 					try {
 						createRollingBackupBtn.disabled = true;
-						createRollingBackupBtn.textContent = "⏳ Creating...";
+						createRollingBackupBtn.textContent = "\u{23F3} Creating...";
 
 						await createRollingBackup("manual");
 						await loadRollingBackups();
-						showStatus("✅ Rolling backup created!", "success");
+						showStatus("\u{2705} Rolling backup created!", "success");
 					} catch (error) {
 						debugError("Rolling backup failed:", error);
-						showStatus(`❌ Failed: ${error.message}`, "error");
+						showStatus(`\u{274C} Failed: ${error.message}`, "error");
 					} finally {
 						createRollingBackupBtn.disabled = false;
 						createRollingBackupBtn.textContent =
-							"➕ Create Rolling Backup Now";
+							"\u{2795} Create Rolling Backup Now";
 					}
 				});
 			}
@@ -6442,7 +6457,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 					if (supportedSitesList && SHELVES) {
 						let sitesHTML = "";
 						Object.values(SHELVES).forEach((shelf) => {
-							const emoji = shelf.emoji || "📚";
+							const emoji = shelf.emoji || "\u{1F4DA}";
 							const primaryDomain =
 								shelf.primaryDomain ||
 								(shelf.domains && shelf.domains[0]) ||
@@ -6453,7 +6468,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 									: primaryDomain;
 							sitesHTML += `<li>${emoji} <strong>${escapeHtml(
 								shelf.name,
-							)}</strong> — <code>${escapeHtml(allDomains)}</code></li>`;
+							)}</strong> \u{2014} <code>${escapeHtml(allDomains)}</code></li>`;
 						});
 						supportedSitesList.innerHTML = sitesHTML;
 					}
@@ -6528,7 +6543,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				if (notifications.length === 0) {
 					notificationsContainer.innerHTML = `
 				<div class="no-notifications">
-					<p>📭</p>
+					<p>\u{1F4ED}</p>
 					<p>No notifications</p>
 					<p class="description">${
 						currentNotificationFilter === "all"
@@ -6614,8 +6629,8 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 							toggle.textContent = group.classList.contains(
 								"expanded",
 							)
-								? "▼ Hide"
-								: `▶ Show ${toggle.dataset.count} related`;
+								? "\u{25BC} Hide"
+								: `\u{25B6} Show ${toggle.dataset.count} related`;
 						});
 					});
 
@@ -6669,7 +6684,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				<div class="notification-message">${escapeHtml(notif.message)}</div>
 				${renderNotificationMeta(notif)}
 				<div class="notification-actions">
-					<button class="notification-action-btn" data-action="delete">🗑️ Delete</button>
+					<button class="notification-action-btn" data-action="delete">\u{1F5D1}\u{FE0F} Delete</button>
 				</div>
 			</div>
 		`;
@@ -6694,13 +6709,13 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 				<div class="notification-message">${escapeHtml(notif.message)}</div>
 				${renderNotificationMeta(notif)}
 				<button class="notification-group-toggle" data-count="${notif.groupCount}">
-					▶ Show ${notif.groupCount} related
+					\u{25B6} Show ${notif.groupCount} related
 				</button>
 				<div class="notification-group-items">
 					${notif.groupedNotifications.map((n) => renderGroupedItem(n)).join("")}
 				</div>
 				<div class="notification-actions">
-					<button class="notification-action-btn" data-action="delete">🗑️ Delete</button>
+					<button class="notification-action-btn" data-action="delete">\u{1F5D1}\u{FE0F} Delete</button>
 				</div>
 			</div>
 		`;
@@ -6737,7 +6752,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						metaHTML += `
 					<div class="notification-meta-item">
 						<a href="${escapeHtml(notif.url)}" target="_blank" class="notification-url">
-							🔗 ${escapeHtml(truncateUrl(notif.url))}
+							\u{1F517} ${escapeHtml(truncateUrl(notif.url))}
 						</a>
 					</div>
 				`;
@@ -6764,12 +6779,12 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						<div class="notification-novel-title">${escapeHtml(novelTitle)}</div>
 						<div class="notification-novel-meta">
 							${notif.novelData.author ? `by ${escapeHtml(notif.novelData.author)}` : ""}
-							${notif.novelData.currentChapter ? ` • Ch. ${notif.novelData.currentChapter}` : ""}
+							${notif.novelData.currentChapter ? ` \u{2022} Ch. ${notif.novelData.currentChapter}` : ""}
 						</div>
 						${
 							novelId && shelfId
 								? `<button class="notification-library-link" data-novel-id="${escapeHtml(novelId)}" data-shelf-id="${escapeHtml(shelfId)}">
-									📚 View in Library
+									\u{1F4DA} View in Library
 								</button>`
 								: ""
 						}
@@ -6986,7 +7001,7 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 						if (statusDiv) {
 							statusDiv.className = "status success";
 							statusDiv.textContent =
-								"✓ All notifications cleared";
+								"\u{2713} All notifications cleared";
 							statusDiv.style.display = "block";
 							setTimeout(() => {
 								statusDiv.style.display = "none";
@@ -7000,4 +7015,133 @@ ${metadata.hasDriveCredentials ? "✅" : "❌"} Drive Credentials
 			// Tab switching for notifications is handled in the main tab switching code above
 			// Initialize notifications badge on startup (content loads on tab switch)
 			updateNotificationBadge();
+
+			// ── LoreWeave tab ─────────────────────────────────────────────────────────
+			const lwUrl = document.getElementById("lwUrl");
+			const lwDomain = document.getElementById("lwDomain");
+			const lwToken = document.getElementById("lwToken");
+			const lwAuto = document.getElementById("lwAutoGraphify");
+			const lwPingBtn = document.getElementById("lwPingBtn");
+			const lwPingStatus = document.getElementById("lwPingStatus");
+			const lwGraphifyNow = document.getElementById("lwGraphifyNow");
+			const lwStatusBar = document.getElementById("lwStatusBar");
+
+			// Populate from storage
+			browser.storage.local
+				.get([
+					"loreWeaveUrl",
+					"loreWeaveDomainId",
+					"loreWeaveToken",
+					"loreWeaveAutoGraphify",
+				])
+				.then(
+					({
+						loreWeaveUrl,
+						loreWeaveDomainId,
+						loreWeaveToken,
+						loreWeaveAutoGraphify,
+					}) => {
+						if (lwUrl) lwUrl.value = loreWeaveUrl || "";
+						if (lwDomain) lwDomain.value = loreWeaveDomainId || "";
+						if (lwToken) lwToken.value = loreWeaveToken || "";
+						if (lwAuto) lwAuto.checked = !!loreWeaveAutoGraphify;
+					},
+				)
+				.catch(() => {});
+
+			// Save URL + domain on change
+			function saveLwSettings() {
+				browser.storage.local
+					.set({
+						loreWeaveUrl: lwUrl ? lwUrl.value.trim() : "",
+						loreWeaveDomainId: lwDomain ? lwDomain.value.trim() : "",
+						loreWeaveToken: lwToken ? lwToken.value.trim() : "",
+					})
+					.catch(() => {});
+			}
+			if (lwUrl) lwUrl.addEventListener("change", saveLwSettings);
+			if (lwDomain) lwDomain.addEventListener("change", saveLwSettings);
+			if (lwToken) lwToken.addEventListener("change", saveLwSettings);
+
+			if (lwAuto) {
+				lwAuto.addEventListener("change", () => {
+					browser.storage.local
+						.set({ loreWeaveAutoGraphify: lwAuto.checked })
+						.catch(() => {});
+				});
+			}
+
+			// Ping test
+			if (lwPingBtn) {
+				lwPingBtn.addEventListener("click", async () => {
+					if (!lwPingStatus) return;
+					lwPingStatus.textContent = "Testing…";
+					try {
+						const resp = await browser.runtime.sendMessage({
+							action: "loreweave-ping",
+							url: lwUrl ? lwUrl.value.trim() : "",
+						});
+						lwPingStatus.textContent = resp?.reachable
+							? "✓ Connected"
+							: "✗ Unreachable";
+					} catch {
+						lwPingStatus.textContent = "✗ Error";
+					}
+				});
+			}
+
+			// Manual graphify — grab text from the active tab
+			if (lwGraphifyNow) {
+				lwGraphifyNow.addEventListener("click", async () => {
+					if (lwStatusBar) {
+						lwStatusBar.style.display = "block";
+						lwStatusBar.textContent = "Extracting…";
+					}
+					try {
+						const [tab] = await browser.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
+						const [{ result: chapterText }] =
+							await browser.scripting.executeScript({
+								target: { tabId: tab.id },
+								func: () => {
+									const el =
+										document.querySelector(
+											".gemini-chunk-content",
+										) ||
+										document.querySelector("article") ||
+										document.querySelector(
+											".chapter-content",
+										) ||
+										document.body;
+									return el ? el.innerText : "";
+								},
+							});
+
+						// Use current timestamp as fallback epoch
+						const epochOrder = Date.now();
+						const epochLabel = `manual_${epochOrder}`;
+
+						const resp = await browser.runtime.sendMessage({
+							action: "loreweave-graphify",
+							chapterText,
+							epochOrder,
+							epochLabel,
+						});
+
+						if (lwStatusBar) {
+							lwStatusBar.style.display = "block";
+							lwStatusBar.textContent = resp?.success
+								? `Sent ${resp.stats?.entities_added ?? 0} entities, ${resp.stats?.edges_added ?? 0} edges.`
+								: `Error: ${resp?.error ?? "unknown error"}`;
+						}
+					} catch (err) {
+						if (lwStatusBar) {
+							lwStatusBar.style.display = "block";
+							lwStatusBar.textContent = `Error: ${err.message}`;
+						}
+					}
+				});
+			}
 }

@@ -51,6 +51,7 @@
 					Alerts
 					<span id="notificationBadge" class="notification-badge" style="display:none">0</span>
 				</button>
+				<button class="tab-btn" data-tab="loreweave" id="loreweaveTabBtn">Graph</button>
 			</div>
 
 			<!-- Config Tab -->
@@ -185,6 +186,51 @@
 						<p class="empty-icon-lg">&#128237;</p>
 						<p>No notifications yet</p>
 						<p class="description">Notifications will appear here as you use the extension</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- LoreWeave Tab -->
+			<div class="tab-content" id="loreweave">
+				<div class="config-section">
+					<h3 class="config-section-title">LoreWeave Graph Builder</h3>
+					<div class="config-section-content">
+						<p class="settings-desc">
+							Automatically extract story entities from chapters and build a knowledge graph in your LoreWeave backend.
+						</p>
+
+						<div class="config-item">
+							<label for="lwUrl">Backend URL</label>
+							<div style="display:flex;gap:6px">
+								<input type="url" id="lwUrl" class="config-input" placeholder="https://api.yourserver.com" style="flex:1" />
+								<button id="lwPingBtn" class="btn-secondary" style="white-space:nowrap">Test</button>
+							</div>
+							<span id="lwPingStatus" class="settings-hint"></span>
+						</div>
+
+						<div class="config-item">
+							<label for="lwDomain">Domain ID</label>
+							<input type="text" id="lwDomain" class="config-input" placeholder="lw_dom_my_novel" />
+							<span class="settings-hint">One domain per novel series. Create at loreweave.vkrishna04.me</span>
+						</div>
+
+						<div class="config-item">
+							<label for="lwToken">API Token</label>
+							<input type="password" id="lwToken" class="config-input" placeholder="Leave empty if auth is disabled" />
+							<span class="settings-hint">Matches LW_API_TOKEN in your backend .env</span>
+						</div>
+
+						<div class="config-item">
+							<label class="check-label">
+								<input type="checkbox" id="lwAutoGraphify" />
+								<span>Auto-graphify after every chapter enhancement</span>
+							</label>
+						</div>
+
+						<div id="lwStatusBar" class="settings-hint" style="display:none;margin-top:6px"></div>
+						<button id="lwGraphifyNow" class="btn-primary-full" style="margin-top:8px">
+							Graphify Current Chapter
+						</button>
 					</div>
 				</div>
 			</div>
