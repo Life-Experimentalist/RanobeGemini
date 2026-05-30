@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix five concrete problems: remove duplicate Enhance button from the controls bar, make long and short summaries stack instead of replace, add a colour threshold to the word-count banner, fix NovelBin SPA navigation staleness, and complete the NovelBin library modal (chapter count, tags, metadata).
+**Goal:** Fix five concrete problems: remove duplicate Enhance button from the controls bar, make long and short summaries stack instead of replace, add "Show Enhanced" button + configurable threshold when word count diverges, fix NovelBin SPA navigation staleness, and complete the NovelBin library modal (chapter count, tags, metadata). Keep existing green/red word count colour behaviour unchanged.
 
 **Architecture:** Each fix targets one or two files in isolation. The summary stacking fix touches `chunk-summary-ui.js` (DOM creation), `summary-service.js` (container lookup), and `content.js` (container selection). The SPA fix intercepts `history.pushState`/`replaceState` and triggers a lightweight re-init. NovelBin modal completion extends the existing `extractNovelMetadata()` and `renderModalMetadata()` without changing their contracts.
 
@@ -59,55 +59,162 @@ git commit -m "fix: remove duplicate enhance button from top controls bar"
 
 ---
 
-### Task 2: Word count colour threshold
+### Task 2: "Show Enhanced" button + configurable threshold
 
 **Files:**
-- Modify: `src/content/modules/enhanced-content-banner.js:106-113`
+- Modify: `src/utils/chunking/chunk-ui.js:209-227` (add button to threshold warning)
+- Modify: `src/library/library-settings.html` (add threshold input)
+- Modify: `src/library/library-settings.js` (load/save threshold)
+- Modify: `src/content/modules/enhanced-content-banner.js` (guard for >200% expansion)
 
-Currently any positive word count change is green. A +150% expansion (AI doubled the content) should be a warning sign.
+The threshold warning exists in `chunk-ui.js` but only shows text. When content exceeds the threshold:
+1. Add a "Show Enhanced Anyway" button inside the warning box.
+2. Expose the `wordCountThreshold` value as a configurable setting in library settings.
+3. In the full-chapter (non-chunked) banner, guard against suspiciously large expansions (>200%) by showing a warning and adding a "Show Enhanced" toggle.
 
-- [ ] **Step 1: Add the colour helper function**
+**Note: Keep existing green/red colour behaviour unchanged.** The colours in `enhanced-content-banner.js` stay as-is (`wordDifference >= 0 ? "#28a745" : "#dc3545"`).
 
-In `src/content/modules/enhanced-content-banner.js`, add this function immediately before the `createEnhancedBannerRuntime` export:
+- [ ] **Step 1: Add "Show Enhanced Anyway" button in chunk-ui.js threshold warning**
 
-```js
-function wordCountColor(percentChange) {
-	if (percentChange < 0) return "#dc3545";    // red: content removed
-	if (percentChange <= 40) return "#28a745";  // green: normal expansion
-	if (percentChange <= 100) return "#ff9800"; // orange: notable expansion
-	return "#ef5350";                           // red-orange: >100% — possible padding
-}
-
-function wordCountTooltip(percentChange) {
-	if (percentChange < 0) return "Content was shortened";
-	if (percentChange <= 40) return "Normal enhancement";
-	if (percentChange <= 100) return "Significant expansion — review quality";
-	return "Very large expansion — may indicate AI padding";
-}
-```
-
-- [ ] **Step 2: Replace the inline colour expression**
-
-Find this block inside `createEnhancedBannerRuntime` (around line 106):
+Find the `thresholdWarning` variable in `chunk-ui.js` (around line 210-226). It currently renders:
 
 ```js
-<span style="color: ${
-    wordDifference >= 0 ? "#28a745" : "#dc3545"
-}; font-weight: bold;">
-    (${changeSymbol}${Math.abs(percentChange)}%)
-</span>
+thresholdWarning = `
+    <div style="...">
+        <span style="font-size: 16px;">⚠️</span>
+        <span>Word count change (${percentChange}%) exceeds threshold (${threshold}%)</span>
+    </div>
+`;
 ```
 
 Replace with:
 
 ```js
-<span style="color: ${wordCountColor(percentChange)}; font-weight: bold;"
-      title="${wordCountTooltip(percentChange)}">
-    (${changeSymbol}${Math.abs(percentChange)}%)
-</span>
+const showEnhancedBtnId = `rg-show-enhanced-${Math.random().toString(36).slice(2, 7)}`;
+thresholdWarning = `
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(239, 68, 68, 0.1);
+        border-left: 3px solid #ef4444;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #fca5a5;
+        flex-wrap: wrap;
+    ">
+        <span style="font-size: 16px;">\u{26A0}\u{FE0F}</span>
+        <span>Word count change (${percentChange}%) exceeds threshold (${threshold}%). Content may be unusually long.</span>
+        <button id="${showEnhancedBtnId}" style="
+            padding: 3px 10px;
+            background: #374151;
+            color: #e5e7eb;
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            white-space: nowrap;
+        ">Show Enhanced</button>
+    </div>
+`;
 ```
 
-- [ ] **Step 3: Build and lint**
+After the banner HTML is inserted into the DOM, wire up the button. The `createChunkBanner` function returns a banner element. Add this after creating the banner element (find the `return banner` statement and add before it):
+
+```js
+// Wire up Show Enhanced button after DOM insertion via delegated click
+banner.addEventListener("click", (e) => {
+    if (e.target && e.target.id && e.target.id.startsWith("rg-show-enhanced-")) {
+        // Find the chunk content in the same wrapper
+        const wrapper = banner.closest(".gemini-chunk-wrapper");
+        if (!wrapper) return;
+        const chunkContent = wrapper.querySelector(".gemini-chunk-content");
+        if (!chunkContent) return;
+        const toggleBtn = banner.querySelector(".rg-chunk-toggle-btn");
+        if (toggleBtn) {
+            const showing = chunkContent.style.display !== "none";
+            if (!showing) {
+                chunkContent.style.display = "";
+                toggleBtn.textContent = "Hide";
+            }
+        } else {
+            chunkContent.style.display = "";
+        }
+        // Remove the warning so user doesn't see it again
+        e.target.closest("[style*='rgba(239']")?.remove();
+    }
+});
+```
+
+- [ ] **Step 2: Add large-expansion guard to enhanced-content-banner.js**
+
+In `src/content/modules/enhanced-content-banner.js`, find the word count display area inside the banner's `innerHTML` template (around line 103-114). After the word count span, add:
+
+```js
+const largeExpansionWarning = percentChange > 200
+    ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">
+        \u{26A0}\u{FE0F} Very large expansion (+${Math.abs(percentChange)}%). Check if enhanced content is correct.
+        <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button>
+       </div>`
+    : "";
+```
+
+Add `${largeExpansionWarning}` to the banner's `innerHTML` template after the word count span.
+
+Then after the banner is created, add an event listener:
+
+```js
+const forceShowBtn = banner.querySelector(".rg-force-show-enhanced-btn");
+if (forceShowBtn) {
+    forceShowBtn.addEventListener("click", () => {
+        // Trigger "Show Enhanced" — same as clicking the toggle btn when showing original
+        const toggleBtn = banner.querySelector(".gemini-toggle-btn");
+        if (toggleBtn && toggleBtn.textContent.includes("Show Enhanced")) {
+            toggleBtn.click();
+        }
+        forceShowBtn.closest("[style*='rgba(239']")?.remove();
+    });
+}
+
+return banner;
+```
+
+(This function currently ends with `return banner` — add these lines before it.)
+
+- [ ] **Step 3: Add wordCountThreshold setting to library-settings.html**
+
+Open `src/library/library-settings.html`. Find the AI settings section (search for "chunk" or "chunkSize"). Add this setting near the chunk size setting:
+
+```html
+<div class="setting-row">
+    <label for="wordCountThreshold" class="setting-label">
+        Word count change threshold (%)
+        <span class="setting-hint">Show warning when enhanced content changes word count by more than this amount. Default: 25</span>
+    </label>
+    <input type="number" id="wordCountThreshold" class="setting-input"
+           min="5" max="500" step="5" value="25" />
+</div>
+```
+
+- [ ] **Step 4: Wire threshold setting in library-settings.js**
+
+In `src/library/library-settings.js`, find where chunk settings are loaded (search for `chunkSizeWords` or `chunkSize`). Add the load/save for `wordCountThreshold`:
+
+```js
+// In the load function (where settings are read from storage):
+const { wordCountThreshold = 25 } = await browser.storage.local.get("wordCountThreshold");
+const thresholdInput = document.getElementById("wordCountThreshold");
+if (thresholdInput) thresholdInput.value = wordCountThreshold;
+
+// In the save function (where settings are written):
+const newThreshold = parseInt(document.getElementById("wordCountThreshold")?.value || "25", 10);
+if (!isNaN(newThreshold) && newThreshold >= 5) {
+    await browser.storage.local.set({ wordCountThreshold: newThreshold });
+}
+```
+
+- [ ] **Step 5: Build and lint**
 
 ```powershell
 npm run lint && npm run build
@@ -115,11 +222,11 @@ npm run lint && npm run build
 
 Expected: 0 errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
-git add src/content/modules/enhanced-content-banner.js
-git commit -m "fix: three-tier word-count colour threshold (green/orange/red-orange)"
+git add src/utils/chunking/chunk-ui.js src/content/modules/enhanced-content-banner.js src/library/library-settings.html src/library/library-settings.js
+git commit -m "feat: Show Enhanced button for divergent content; configurable word count threshold in settings"
 ```
 
 ---
