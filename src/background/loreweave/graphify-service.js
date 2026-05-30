@@ -1,24 +1,27 @@
 /**
  * Graphify service — extracts story entities from chapter text and ingests into LoreWeave.
- *
- * Calls the Gemini API directly with a low-temperature extraction prompt,
- * then POSTs the structured result to the LoreWeave /lw_api/ingest endpoint.
+ * Also saves results to the local story chronicle when chronicle is enabled.
  */
 
 import { buildGraphifyPrompt } from "./graphify-prompt.js";
 import { postIngestDelta } from "./loreweave-client.js";
+import {
+	loadChronicle,
+	saveChapterRecord,
+	getEntityIndex,
+	markGraphified,
+} from "./chronicle-storage.js";
 
-// 150k chars ~= 100k tokens; well within Gemini 2.0 Flash 1M context window
 const MAX_CHAPTER_CHARS = 150_000;
 
 /**
  * Extract story entities from chapter text and push to LoreWeave.
  *
- * @param {string} chapterText    - Raw plain-text chapter
- * @param {Object} config         - Extension settings from browser.storage.local
- * @param {number} epochOrder     - Chapter number as integer (epoch_order for LoreWeave)
- * @param {string} epochLabel     - Human-readable epoch string, e.g. "Chapter 042"
- * @returns {Promise<{entities_added: number, edges_added: number, domain_id: string}>}
+ * @param {string} chapterText
+ * @param {Object} config        - from browser.storage.local
+ * @param {number} epochOrder    - chapter number as integer
+ * @param {string} epochLabel    - e.g. "Chapter 042"
+ * @returns {Promise<{entities_added, edges_added, domain_id}>}
  */
 export async function graphifyChapter(
 	chapterText,
@@ -26,7 +29,15 @@ export async function graphifyChapter(
 	epochOrder,
 	epochLabel,
 ) {
-	const { loreWeaveUrl, loreWeaveDomainId, loreWeaveToken } = config;
+	const {
+		loreWeaveUrl,
+		loreWeaveDomainId,
+		loreWeaveToken,
+		loreWeaveChronicleEnabled,
+		loreWeaveWritingStyle,
+		loreWeaveNovelId,
+	} = config;
+
 	if (!loreWeaveUrl || !loreWeaveDomainId) {
 		throw new Error(
 			"LoreWeave URL and Domain ID must be configured in the LoreWeave tab.",
@@ -40,49 +51,55 @@ export async function graphifyChapter(
 		);
 	}
 
-	const text = chapterText.slice(0, MAX_CHAPTER_CHARS);
-	const prompt = buildGraphifyPrompt(
-		text,
-		loreWeaveDomainId,
-		epochOrder,
-		epochLabel,
-	);
+	// Build prior context from chronicle if enabled
+	let priorEntityIds = [];
+	let priorContext = "";
 
-	// Call Gemini directly with low temperature for structured JSON extraction
+	if (loreWeaveChronicleEnabled && loreWeaveNovelId) {
+		const entityIndex = await getEntityIndex(loreWeaveNovelId);
+		priorEntityIds = Object.keys(entityIndex);
+
+		const chronicle = await loadChronicle(loreWeaveNovelId);
+		const chapters = chronicle?.chapters || {};
+		const sorted = Object.values(chapters)
+			.filter((c) => c.chapterNum < epochOrder && c.shortSummary)
+			.sort((a, b) => b.chapterNum - a.chapterNum);
+		if (sorted.length > 0) {
+			priorContext = sorted[0].shortSummary;
+		}
+	}
+
+	const text = chapterText.slice(0, MAX_CHAPTER_CHARS);
+	const prompt = buildGraphifyPrompt(text, loreWeaveDomainId, epochOrder, epochLabel, {
+		priorEntityIds,
+		priorContext,
+		writingStyle: loreWeaveWritingStyle || "other",
+	});
+
 	const modelEndpoint =
 		config.modelEndpoint ||
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-	const requestBody = {
-		contents: [{ role: "user", parts: [{ text: prompt }] }],
-		generationConfig: {
-			temperature: 0.1,
-			maxOutputTokens: 8192,
-		},
-	};
-
 	const geminiRes = await fetch(`${modelEndpoint}?key=${apiKey}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(requestBody),
+		body: JSON.stringify({
+			contents: [{ role: "user", parts: [{ text: prompt }] }],
+			generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+		}),
 	});
 
 	if (!geminiRes.ok) {
 		const errBody = await geminiRes.text().catch(() => "");
-		throw new Error(
-			`Gemini API error ${geminiRes.status}: ${errBody.slice(0, 200)}`,
-		);
+		throw new Error(`Gemini API error ${geminiRes.status}: ${errBody.slice(0, 200)}`);
 	}
 
 	const geminiData = await geminiRes.json();
-	const rawJson =
-		geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
+	const rawJson = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 	if (!rawJson) {
 		throw new Error("Gemini returned an empty response for graphify.");
 	}
 
-	// Strip accidental markdown code fences before parsing
 	const clean = rawJson
 		.replace(/^```[a-z]*\n?/m, "")
 		.replace(/```\s*$/m, "")
@@ -92,18 +109,39 @@ export async function graphifyChapter(
 	try {
 		delta = JSON.parse(clean);
 	} catch (err) {
-		throw new Error(
-			`Gemini returned invalid JSON for graphify: ${err.message}`,
-		);
+		throw new Error(`Gemini returned invalid JSON: ${err.message}`);
 	}
 
 	if (!delta.domain_id || !Array.isArray(delta.extracted_entities)) {
 		throw new Error(
-			"Gemini response is missing required fields (domain_id, extracted_entities).",
+			"Gemini response missing required fields (domain_id, extracted_entities).",
 		);
 	}
 
 	await postIngestDelta(loreWeaveUrl, delta, loreWeaveToken || "");
+
+	if (loreWeaveChronicleEnabled && loreWeaveNovelId) {
+		await saveChapterRecord(loreWeaveNovelId, epochOrder, {
+			chapterLabel: epochLabel,
+			summary: "",
+			shortSummary: "",
+			entities: delta.extracted_entities.map((e) => ({
+				id: e.id,
+				name: e.name,
+				type: e.type,
+				aliases: e.aliases || [],
+			})),
+			edges: (delta.temporal_edges || []).map((e) => ({
+				source_id: e.source_id,
+				target_id: e.target_id,
+				relation_type: e.relation_type,
+				weight: e.weight || 1.0,
+			})),
+			graphified: true,
+			domainId: loreWeaveDomainId,
+		});
+		await markGraphified(loreWeaveNovelId, epochOrder);
+	}
 
 	return {
 		entities_added: delta.extracted_entities.length,
