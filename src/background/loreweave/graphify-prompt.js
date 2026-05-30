@@ -1,23 +1,19 @@
 /**
- * Builds the Gemini prompt for LoreWeave entity extraction.
+ * Builds the Gemini extraction prompt for LoreWeave.
  *
- * Outputs JSON matching the LoreWeave Phase 5 IngestDelta schema:
- * {
- *   domain_id: string,
- *   extracted_entities: [{id, name, type, aliases}],
- *   state_forms:        [{id, entity_id, epoch_order, epoch_label}],
- *   temporal_edges:     [{source_id, target_id, relation_type, start_epoch, end_epoch, weight}]
- * }
+ * Universal schema — works for any fiction style:
+ *   Entity types: character | place | group | item | concept | other
+ *   Relation types: KNOWS | ALLIED | OPPOSED | LEADS | MENTORS |
+ *                   OWNS | MEMBER_OF | LOCATED_AT | CREATED | RELATED_TO
  *
- * epoch_order must be a JSON integer (the chapter number).
- * relation_type must be one of: ALIGNED_WITH, HATES, MENTORS, KNOWS_SECRET
- */
-
-/**
- * @param {string} chapterText   - Plain text of the chapter
- * @param {string} domainId      - LoreWeave domain ID, e.g. "lw_dom_xianxia"
- * @param {number} epochOrder    - Chapter number as integer (e.g. 42)
- * @param {string} epochLabel    - Human-readable epoch, e.g. "Chapter 042"
+ * @param {string}   chapterText    - Plain text chapter
+ * @param {string}   domainId       - LoreWeave domain, e.g. "lw_dom_xianxia"
+ * @param {number}   epochOrder     - Chapter number as integer
+ * @param {string}   epochLabel     - e.g. "Chapter 042"
+ * @param {Object}   [options]
+ * @param {string[]} [options.priorEntityIds]  - Known entity IDs from chronicle
+ * @param {string}   [options.priorContext]    - 1-sentence summary of prior events
+ * @param {string}   [options.writingStyle]    - "xianxia"|"litrpg"|"fantasy"|"romance"|"thriller"|"other"
  * @returns {string}
  */
 export function buildGraphifyPrompt(
@@ -25,13 +21,40 @@ export function buildGraphifyPrompt(
 	domainId,
 	epochOrder,
 	epochLabel,
+	options = {},
 ) {
+	const { priorEntityIds = [], priorContext = "", writingStyle = "other" } = options;
+	const chPad = String(epochOrder).padStart(4, "0");
+
+	const styleHints = {
+		xianxia:
+			"This is a xianxia/cultivation novel. Treat cultivation realms, techniques, and sect names as `concept` or `group` entities. Characters often have many aliases and titles.",
+		litrpg:
+			"This is a LitRPG/system novel. Treat skill names, class titles, and system notifications as `concept` entities. Named gear is `item`.",
+		fantasy:
+			"This is a western fantasy novel. Magic schools, divine laws, and world-specific terms are `concept` entities.",
+		romance:
+			"This is a romance novel. Focus on character relationships. KNOWS and RELATED_TO edges are most common.",
+		thriller:
+			"This is a thriller/mystery. Focus on alliances, oppositions, and secrets.",
+		other: "",
+	};
+	const styleHint = styleHints[writingStyle] || "";
+
+	const priorCtxBlock = priorContext
+		? `\n## Prior story context\n${priorContext}\n`
+		: "";
+
+	const priorIdsBlock = priorEntityIds.length
+		? `\n## Known entity IDs (REUSE these exact IDs — do not invent new IDs for the same entity)\n${priorEntityIds.slice(0, 60).join(", ")}\n`
+		: "";
+
 	return `You are a story knowledge-graph extractor for LoreWeave.
-
-Analyse the novel chapter below. Extract all named entities and the relationships between them that are ESTABLISHED OR CHANGED in this chapter only. Do not infer from prior chapters.
-
+Analyse the chapter below and extract all named entities and relationships ESTABLISHED OR CHANGED in this chapter only.
+${styleHint}
+${priorCtxBlock}${priorIdsBlock}
 ## Output format
-Return ONLY valid JSON matching this exact shape. No markdown fences, no commentary, no trailing text.
+Return ONLY valid JSON. No markdown fences, no commentary, no trailing text.
 
 {
   "domain_id": "${domainId}",
@@ -39,13 +62,13 @@ Return ONLY valid JSON matching this exact shape. No markdown fences, no comment
     {
       "id": "lw_ent_<slug>",
       "name": "<canonical name in source language>",
-      "type": "<character|artifact|location|faction>",
-      "aliases": ["<alternate name>", "<transliteration>"]
+      "type": "<character|place|group|item|concept|other>",
+      "aliases": ["<alternate name or transliteration>"]
     }
   ],
   "state_forms": [
     {
-      "id": "lw_sf_<entity_slug>_ch${String(epochOrder).padStart(4, "0")}",
+      "id": "lw_sf_<entity_slug>_ch${chPad}",
       "entity_id": "lw_ent_<slug>",
       "epoch_order": ${epochOrder},
       "epoch_label": "${epochLabel}"
@@ -53,9 +76,9 @@ Return ONLY valid JSON matching this exact shape. No markdown fences, no comment
   ],
   "temporal_edges": [
     {
-      "source_id": "lw_sf_<a>_ch${String(epochOrder).padStart(4, "0")}",
-      "target_id": "lw_sf_<b>_ch${String(epochOrder).padStart(4, "0")}",
-      "relation_type": "<ALIGNED_WITH|HATES|MENTORS|KNOWS_SECRET>",
+      "source_id": "lw_sf_<a>_ch${chPad}",
+      "target_id": "lw_sf_<b>_ch${chPad}",
+      "relation_type": "<KNOWS|ALLIED|OPPOSED|LEADS|MENTORS|OWNS|MEMBER_OF|LOCATED_AT|CREATED|RELATED_TO>",
       "start_epoch": ${epochOrder},
       "end_epoch": null,
       "weight": 1.0
@@ -64,30 +87,38 @@ Return ONLY valid JSON matching this exact shape. No markdown fences, no comment
 }
 
 ## ID rules
-- All IDs use only lowercase letters, digits, and underscores.
-- Entity IDs: lw_ent_ + romanised slug of canonical name. Same entity MUST get the same ID across all chapters.
-- State form IDs: lw_sf_ + entity slug + _ + ch + zero-padded chapter number (e.g. lw_sf_li_wei_ch0042).
-- epoch_order MUST be the integer ${epochOrder}. Do NOT use a string.
-- Include ALL known aliases (other-language names, nicknames, titles, epithets).
-
-## Relation types (use EXACTLY these strings)
-- ALIGNED_WITH: working together, sworn allies, members of same group
-- HATES: antagonistic, enemies, sworn rivals
-- MENTORS: teaching/training/guiding (one direction: mentor source -> student target)
-- KNOWS_SECRET: source character knows a secret about target character
+- All IDs: lowercase letters, digits, underscores only.
+- Entity IDs: lw_ent_ + romanised slug. SAME entity across chapters = SAME ID.
+- State form IDs: lw_sf_ + entity_slug + _ch + zero-padded chapter number.
+- epoch_order MUST be the integer ${epochOrder} — never a string.
+- Include ALL known name variants, nicknames, titles, and alternate-language names as aliases.
 
 ## Entity types
-- character: any named person, cultivator, demon, god, AI, etc.
-- artifact: named weapons, tools, treasures, techniques, cultivation manuals
-- location: named places, realms, sects, cities, planes of existence
-- faction: named organisations, sects, kingdoms, clans
+- character  — named person, cultivator, demon, god, AI, spirit, etc.
+- place      — named location, realm, dungeon, city, sect headquarters, plane
+- group      — named organisation, sect, guild, army, clan, kingdom
+- item       — named weapon, artifact, tool, cultivation manual, technique, skill book
+- concept    — cultivation stage, magic system, divine law, title, status effect, class
+- other      — any clearly named recurring element that does not fit above
+
+## Relation types
+- KNOWS       — characters are mutually aware of each other
+- ALLIED      — cooperative, sworn companions, allies
+- OPPOSED     — enemies, rivals, antagonistic forces
+- LEADS       — source commands/leads target (person to group or superior to subordinate)
+- MENTORS     — source teaches/trains/guides target (one direction)
+- OWNS        — source possesses target item
+- MEMBER_OF   — source belongs to target group
+- LOCATED_AT  — source entity is at/from target place
+- CREATED     — source made/summoned/forged/discovered target entity
+- RELATED_TO  — any meaningful link that does not fit above
 
 ## Rules
-- Include a state_form for EVERY entity that appears or is referenced in this chapter.
-- Create temporal_edges ONLY for relationships explicitly shown or stated in this chapter.
-- Consolidate the same entity across different names into ONE entity with all names as aliases.
-- If unsure which relation_type applies, omit the edge rather than guess.
-- epoch_order must always be the integer ${epochOrder} for every state_form and edge in this response.
+- Include a state_form for EVERY entity that appears or is referenced.
+- Create edges ONLY for relationships explicitly shown or stated.
+- Consolidate the same entity under different names into ONE entity with all names as aliases.
+- If unsure of relation type, use RELATED_TO rather than omitting the edge.
+- epoch_order must always be ${epochOrder} for every state_form and edge in this response.
 
 ## Chapter text
 ${chapterText}`;
