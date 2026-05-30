@@ -1,4 +1,4 @@
-// Simple popup script for Ranobe Gemini
+﻿// Simple popup script for Ranobe Gemini
 
 import {
 	DEFAULT_PROMPT,
@@ -7180,4 +7180,186 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 					}
 				});
 			}
+			// ── Queue tab ─────────────────────────────────────────────────────────────────
+			const qFirstUrl = document.getElementById("qFirstUrl");
+			const qStart = document.getElementById("qStart");
+			const qEnd = document.getElementById("qEnd");
+			const qSendToLW = document.getElementById("qSendToLW");
+			const qAddBtn = document.getElementById("qAddBtn");
+			const qJobList = document.getElementById("qJobList");
+			const qResultView = document.getElementById("qResultView");
+			const qResultTitle = document.getElementById("qResultTitle");
+			const qResultContent = document.getElementById("qResultContent");
+			const qResultClose = document.getElementById("qResultClose");
+
+			async function refreshQueueList() {
+				if (!qJobList) return;
+				try {
+					const resp = await browser.runtime.sendMessage({ action: "queue", subAction: "status" });
+					const jobs = resp?.result?.jobs || [];
+					qJobList.textContent = "";
+
+					if (!jobs.length) {
+						const p = document.createElement("p");
+						p.className = "settings-desc";
+						p.textContent = "No jobs queued.";
+						qJobList.appendChild(p);
+						return;
+					}
+
+					for (const job of jobs) {
+						const row = document.createElement("div");
+						row.style.cssText = "padding:6px 0;border-bottom:1px solid #333;font-size:12px;";
+
+						const done = job.progress?.processedChapters?.length ?? 0;
+						const total = job.progress?.total ?? 0;
+						const pct = total ? Math.round((done / total) * 100) : 0;
+
+						const titleEl = document.createElement("div");
+						titleEl.style.cssText = "font-weight:bold;margin-bottom:3px;";
+						titleEl.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+
+						const statusEl = document.createElement("span");
+						statusEl.style.cssText = "font-size:11px;color:#999;";
+						statusEl.textContent = ` [${job.status}] ${done}/${total} (${pct}%)`;
+
+						const actionsEl = document.createElement("div");
+						actionsEl.style.marginTop = "4px";
+
+						const makeBtn = (label, color, onClick) => {
+							const btn = document.createElement("button");
+							btn.className = "btn-secondary";
+							btn.style.cssText = `font-size:11px;margin-right:6px;${color ? `color:${color};` : ""}`;
+							btn.textContent = label;
+							btn.addEventListener("click", onClick);
+							return btn;
+						};
+
+						if (job.status === "running") {
+							actionsEl.appendChild(makeBtn("Pause", null, async () => {
+								await browser.runtime.sendMessage({ action: "queue", subAction: "pause" });
+								setTimeout(refreshQueueList, 300);
+							}));
+						} else if (job.status === "paused") {
+							actionsEl.appendChild(makeBtn("Resume", null, async () => {
+								await browser.runtime.sendMessage({ action: "queue", subAction: "resume" });
+								setTimeout(refreshQueueList, 300);
+							}));
+						} else if (job.status === "done") {
+							actionsEl.appendChild(makeBtn("View Summaries", null, () => showQueueResults(job)));
+						}
+
+						actionsEl.appendChild(makeBtn("Remove", "#ef5350", async () => {
+							await browser.runtime.sendMessage({ action: "queue", subAction: "cancel", jobId: job.id });
+							setTimeout(refreshQueueList, 200);
+						}));
+
+						row.appendChild(titleEl);
+						row.appendChild(statusEl);
+						row.appendChild(actionsEl);
+						qJobList.appendChild(row);
+					}
+				} catch (err) {
+					if (qJobList) {
+						qJobList.textContent = `Error loading queue: ${err.message}`;
+					}
+				}
+			}
+
+			async function showQueueResults(job) {
+				if (!qResultView || !qResultContent || !qResultTitle) return;
+				qResultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+				qResultContent.textContent = "Loading...";
+				qResultView.style.display = "block";
+
+				try {
+					const key = `rg_chronicle_${job.novelId}`;
+					const stored = await browser.storage.local.get(key);
+					const chronicle = stored[key];
+
+					if (!chronicle?.chapters) {
+						qResultContent.textContent = "No summaries found. Chronicle may not be enabled.";
+						return;
+					}
+
+					qResultContent.textContent = "";
+					const chapters = Object.values(chronicle.chapters)
+						.filter((c) => c.chapterNum >= job.startChapter && c.chapterNum <= job.endChapter && c.summary)
+						.sort((a, b) => a.chapterNum - b.chapterNum);
+
+					if (!chapters.length) {
+						qResultContent.textContent = "No summaries available for this range.";
+						return;
+					}
+
+					for (const ch of chapters) {
+						const block = document.createElement("div");
+						block.style.cssText = "margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #333;";
+
+						const heading = document.createElement("strong");
+						heading.textContent = ch.chapterLabel;
+						block.appendChild(heading);
+
+						const body = document.createElement("p");
+						body.style.cssText = "margin:4px 0 0;white-space:pre-wrap;color:#ccc;";
+						body.textContent = ch.summary;
+						block.appendChild(body);
+						qResultContent.appendChild(block);
+					}
+				} catch (err) {
+					qResultContent.textContent = `Error: ${err.message}`;
+				}
+			}
+
+			if (qAddBtn) {
+				qAddBtn.addEventListener("click", async () => {
+					const firstUrl = qFirstUrl?.value?.trim();
+					const start = parseInt(qStart?.value, 10);
+					const end = parseInt(qEnd?.value, 10);
+
+					if (!firstUrl || isNaN(start) || isNaN(end) || start > end) {
+						alert("Please fill in a valid first chapter URL and chapter range.");
+						return;
+					}
+
+					const lwStored = await browser.storage.local
+						.get(["loreWeaveUrl", "loreWeaveDomainId"])
+						.catch(() => ({}));
+
+					let activeTabTitle = "Novel";
+					try {
+						const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+						activeTabTitle = tab?.title || "Novel";
+					} catch (_e) { /* ignore */ }
+
+					await browser.runtime.sendMessage({
+						action: "queue",
+						subAction: "add",
+						job: {
+							novelId: `queue_${Date.now()}`,
+							novelTitle: activeTabTitle,
+							firstChapterUrl: firstUrl,
+							startChapter: start,
+							endChapter: end,
+							sendToLoreWeave: qSendToLW?.checked !== false,
+							loreWeaveUrl: lwStored.loreWeaveUrl || "",
+							domainId: lwStored.loreWeaveDomainId || "",
+						},
+					});
+
+					if (qFirstUrl) qFirstUrl.value = "";
+					setTimeout(refreshQueueList, 300);
+				});
+			}
+
+			if (qResultClose) {
+				qResultClose.addEventListener("click", () => {
+					if (qResultView) qResultView.style.display = "none";
+				});
+			}
+
+			// Refresh job list when Queue tab is opened
+			document.querySelectorAll('.tab-btn[data-tab="queue"]').forEach((btn) => {
+				btn.addEventListener("click", refreshQueueList);
+			});
 }

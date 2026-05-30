@@ -52,6 +52,7 @@
 					<span id="notificationBadge" class="notification-badge" style="display:none">0</span>
 				</button>
 				<button class="tab-btn" data-tab="loreweave" id="loreweaveTabBtn">Graph</button>
+				<button class="tab-btn" data-tab="queue" id="queueTabBtn">Queue</button>
 			</div>
 
 			<!-- Config Tab -->
@@ -258,6 +259,61 @@
 							Graphify Current Chapter
 						</button>
 					</div>
+				</div>
+			</div>
+
+			<!-- Queue Tab -->
+			<div class="tab-content" id="queue">
+				<div class="config-section">
+					<h3 class="config-section-title">Chapter Queue</h3>
+					<div class="config-section-content">
+						<p class="settings-desc">
+							Fetch, summarise, and graphify a chapter range in the background.
+						</p>
+
+						<div class="config-item">
+							<label for="qFirstUrl">First Chapter URL</label>
+							<input type="url" id="qFirstUrl" class="config-input"
+								placeholder="https://novelbin.com/b/slug/chapter-1" />
+						</div>
+
+						<div class="config-item" style="display:flex;gap:8px">
+							<div style="flex:1">
+								<label for="qStart">From Chapter</label>
+								<input type="number" id="qStart" class="config-input" placeholder="1" min="1" />
+							</div>
+							<div style="flex:1">
+								<label for="qEnd">To Chapter</label>
+								<input type="number" id="qEnd" class="config-input" placeholder="50" min="1" />
+							</div>
+						</div>
+
+						<div class="config-item">
+							<label class="check-label">
+								<input type="checkbox" id="qSendToLW" checked />
+								<span>Send to LoreWeave after processing</span>
+							</label>
+						</div>
+
+						<button id="qAddBtn" class="btn-primary-full">Add to Queue</button>
+					</div>
+				</div>
+
+				<!-- Job list -->
+				<div class="config-section" id="qJobListSection">
+					<h3 class="config-section-title">Jobs</h3>
+					<div id="qJobList" class="config-section-content">
+						<p class="settings-desc">No jobs queued.</p>
+					</div>
+				</div>
+
+				<!-- Result view (hidden by default) -->
+				<div class="config-section" id="qResultView" style="display:none">
+					<div style="display:flex;align-items:center;justify-content:space-between">
+						<h3 class="config-section-title" id="qResultTitle">Results</h3>
+						<button id="qResultClose" class="btn-secondary" style="font-size:11px">Back</button>
+					</div>
+					<div id="qResultContent" style="max-height:280px;overflow-y:auto;font-size:12px;line-height:1.5;padding:4px"></div>
 				</div>
 			</div>
 
