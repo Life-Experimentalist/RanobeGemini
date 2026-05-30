@@ -303,15 +303,29 @@ async function _fetchChapter(url, chapterNum) {
 // ─── AI summary ───────────────────────────────────────────────────────────────
 
 async function _generateSummary(text, config, epochLabel) {
+	const prompt = `Summarise the following novel chapter(s) in 2-4 paragraphs covering: main events, character actions, key reveals, and important world-building. Label: ${epochLabel}.\n\n${text.slice(0, 80_000)}`;
+	const provider = String(config.aiProvider || "gemini").toLowerCase();
+
+	try {
+		if (provider === "openai-compatible") {
+			return await _summarizeOpenAI(prompt, config);
+		}
+		if (provider === "ollama") {
+			return await _summarizeOllama(prompt, config);
+		}
+		return await _summarizeGemini(prompt, config);
+	} catch (err) {
+		console.warn("[Queue] Summary error:", err.message);
+		return "";
+	}
+}
+
+async function _summarizeGemini(prompt, config) {
 	const apiKey = config.apiKey;
 	if (!apiKey) return "";
-
 	const modelEndpoint =
 		config.modelEndpoint ||
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-
-	const prompt = `Summarise the following novel chapter(s) in 2-4 paragraphs covering: main events, character actions, key reveals, and important world-building. Label: ${epochLabel}.\n\n${text.slice(0, 80_000)}`;
-
 	const res = await fetch(`${modelEndpoint}?key=${apiKey}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -323,6 +337,38 @@ async function _generateSummary(text, config, epochLabel) {
 	if (!res.ok) return "";
 	const data = await res.json();
 	return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+}
+
+async function _summarizeOpenAI(prompt, config) {
+	const apiKey = config.openAiApiKey || config.apiKey;
+	if (!apiKey) return "";
+	const endpoint = config.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
+	const res = await fetch(endpoint, {
+		method: "POST",
+		headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+		body: JSON.stringify({
+			model: config.openAiModel || "gpt-4o-mini",
+			messages: [{ role: "user", content: prompt }],
+			temperature: 0.3,
+			max_tokens: 2048,
+		}),
+	});
+	if (!res.ok) return "";
+	const data = await res.json();
+	return data?.choices?.[0]?.message?.content?.trim() || "";
+}
+
+async function _summarizeOllama(prompt, config) {
+	const endpoint = config.ollamaEndpoint || "http://localhost:11434/api/generate";
+	const model = config.ollamaModel || "llama3.1:8b";
+	const res = await fetch(endpoint, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ model, prompt, stream: false }),
+	});
+	if (!res.ok) return "";
+	const data = await res.json();
+	return String(data?.response || "").trim();
 }
 
 async function _loadConfig() {

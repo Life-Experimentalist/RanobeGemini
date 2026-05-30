@@ -2,6 +2,7 @@
  * Background handler for story chat.
  * action: "story-chat"
  * payload: { question, novelId, conversationHistory }
+ * conversationHistory is stored in Gemini format: [{role, parts:[{text}]}]
  * response: { success, answer, conversationHistory }
  */
 
@@ -28,17 +29,11 @@ export default {
 
 async function _buildResponse(question, novelId, history) {
 	const config = await browser.storage.local.get();
-	const apiKey = config.apiKey;
-	if (!apiKey) throw new Error("No Gemini API key configured.");
 
 	const novelTitle = config.lw_novel_title || "this novel";
 	const contextBlock = novelId
 		? await _assembleContext(novelId, question)
 		: "(No story context available. Enhance or queue some chapters first.)";
-
-	const modelEndpoint =
-		config.modelEndpoint ||
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 	const systemPrompt = `You are a story assistant for "${novelTitle}".
 Answer questions using ONLY the provided story context.
@@ -49,8 +44,40 @@ Keep answers concise (2-4 sentences unless detail is needed).
 ${contextBlock}`;
 
 	const trimmedHistory = history.slice(-(MAX_HISTORY_PAIRS * 2));
-	const contents = [
+
+	const answer = await _callProvider(config, systemPrompt, question, trimmedHistory);
+
+	const updatedHistory = [
 		...trimmedHistory,
+		{ role: "user", parts: [{ text: question }] },
+		{ role: "model", parts: [{ text: answer }] },
+	];
+
+	return { answer, updatedHistory };
+}
+
+async function _callProvider(config, systemPrompt, question, history) {
+	const provider = String(config.aiProvider || "gemini").toLowerCase();
+
+	if (provider === "openai-compatible") {
+		return _callOpenAI(config, systemPrompt, question, history);
+	}
+	if (provider === "ollama") {
+		return _callOllama(config, systemPrompt, question, history);
+	}
+	return _callGemini(config, systemPrompt, question, history);
+}
+
+async function _callGemini(config, systemPrompt, question, history) {
+	const apiKey = config.apiKey;
+	if (!apiKey) throw new Error("No Gemini API key configured.");
+
+	const modelEndpoint =
+		config.modelEndpoint ||
+		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+	const contents = [
+		...history,
 		{ role: "user", parts: [{ text: question }] },
 	];
 
@@ -70,17 +97,73 @@ ${contextBlock}`;
 	}
 
 	const data = await res.json();
-	const answer =
-		data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-		"No answer generated.";
+	return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "No answer generated.";
+}
 
-	const updatedHistory = [
-		...trimmedHistory,
-		{ role: "user", parts: [{ text: question }] },
-		{ role: "model", parts: [{ text: answer }] },
+async function _callOpenAI(config, systemPrompt, question, history) {
+	const apiKey = config.openAiApiKey || config.apiKey;
+	if (!apiKey) throw new Error("No OpenAI-compatible API key configured.");
+
+	const endpoint = config.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
+
+	// Convert Gemini history format to OpenAI format
+	const messages = [
+		{ role: "system", content: systemPrompt },
+		...history.map((h) => ({
+			role: h.role === "model" ? "assistant" : h.role,
+			content: h.parts?.[0]?.text || "",
+		})),
+		{ role: "user", content: question },
 	];
 
-	return { answer, updatedHistory };
+	const res = await fetch(endpoint, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		},
+		body: JSON.stringify({
+			model: config.openAiModel || "gpt-4o-mini",
+			messages,
+			temperature: 0.3,
+			max_tokens: 1024,
+		}),
+	});
+
+	if (!res.ok) {
+		const body = await res.text().catch(() => "");
+		throw new Error(`OpenAI error ${res.status}: ${body.slice(0, 100)}`);
+	}
+
+	const data = await res.json();
+	return data?.choices?.[0]?.message?.content?.trim() || "No answer generated.";
+}
+
+async function _callOllama(config, systemPrompt, question, history) {
+	const endpoint = config.ollamaEndpoint || "http://localhost:11434/api/generate";
+	const model = config.ollamaModel || "llama3.1:8b";
+
+	// Ollama generate API: embed history as conversation in prompt
+	let prompt = `${systemPrompt}\n\n`;
+	for (const h of history) {
+		const role = h.role === "model" ? "Assistant" : "User";
+		prompt += `${role}: ${h.parts?.[0]?.text || ""}\n`;
+	}
+	prompt += `User: ${question}\nAssistant:`;
+
+	const res = await fetch(endpoint, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ model, prompt, stream: false }),
+	});
+
+	if (!res.ok) {
+		const body = await res.text().catch(() => "");
+		throw new Error(`Ollama error ${res.status}: ${body.slice(0, 100)}`);
+	}
+
+	const data = await res.json();
+	return String(data?.response || "").trim() || "No answer generated.";
 }
 
 async function _assembleContext(novelId, question) {

@@ -7323,20 +7323,28 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 					}
 
 					const lwStored = await browser.storage.local
-						.get(["loreWeaveUrl", "loreWeaveDomainId"])
+						.get(["loreWeaveUrl", "loreWeaveDomainId", "loreWeaveWritingStyle"])
 						.catch(() => ({}));
 
 					let activeTabTitle = "Novel";
+					let resolvedNovelId = `queue_${Date.now()}`;
 					try {
 						const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 						activeTabTitle = tab?.title || "Novel";
+						const ctx = await browser.tabs
+							.sendMessage(tab.id, { action: "getNovelContext" })
+							.catch(() => null);
+						if (ctx?.novelId) {
+							resolvedNovelId = ctx.novelId;
+							if (ctx.novelTitle) activeTabTitle = ctx.novelTitle;
+						}
 					} catch (_e) { /* ignore */ }
 
 					await browser.runtime.sendMessage({
 						action: "queue",
 						subAction: "add",
 						job: {
-							novelId: `queue_${Date.now()}`,
+							novelId: resolvedNovelId,
 							novelTitle: activeTabTitle,
 							firstChapterUrl: firstUrl,
 							startChapter: start,
@@ -7344,6 +7352,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 							sendToLoreWeave: qSendToLW?.checked !== false,
 							loreWeaveUrl: lwStored.loreWeaveUrl || "",
 							domainId: lwStored.loreWeaveDomainId || "",
+							writingStyle: lwStored.loreWeaveWritingStyle || "other",
 						},
 					});
 
