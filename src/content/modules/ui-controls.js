@@ -533,7 +533,6 @@ export async function injectUI({
 	documentRef = document,
 	protectFromThemeExtensions = (el) => el,
 	createToggleBannersButton = () => null,
-	createEnhanceButton = () => null,
 	createCancelEnhanceButton = () => null,
 	isMobileDevice = false,
 	getHandlerType = () => "",
