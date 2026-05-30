@@ -13,6 +13,7 @@ import settingsHandler from "./settings-handler.js";
 import updateHandler from "./update-handler.js";
 import loreWeaveHandler from "./loreweave-handler.js";
 import loreWeavePingHandler from "./loreweave-ping-handler.js";
+import queueHandler from "./queue-handler.js";
 
 // Registry of all message handlers
 const handlers = [
@@ -21,6 +22,7 @@ const handlers = [
 	updateHandler,
 	loreWeaveHandler,
 	loreWeavePingHandler,
+	queueHandler,
 ];
 
 /**
