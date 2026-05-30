@@ -827,10 +827,6 @@ async function loadLibraryAdvancedSettings() {
 				data.chunkSize ||
 				DEFAULT_CHUNK_SIZE_WORDS;
 
-		const { wordCountThreshold: storedThreshold = 25 } = await browser.storage.local.get("wordCountThreshold");
-		const thresholdInput = document.getElementById("wordCountThreshold");
-		if (thresholdInput) thresholdInput.value = storedThreshold;
-
 		const chunkSumCount = $("library-chunk-summary-count");
 		if (chunkSumCount)
 			chunkSumCount.value =
