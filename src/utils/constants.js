@@ -299,7 +299,10 @@ export const COMPREHENSIVE_BACKUP_KEYS = [
 	"loreWeaveUrl",
 	"loreWeaveDomainId",
 	"loreWeaveAutoGraphify",
-	// Note: loreWeaveToken is intentionally excluded from backup (treat like an API key)
+	"loreWeaveChronicleEnabled",
+	"loreWeaveUsePriorContext",
+	"loreWeaveWritingStyle",
+	// Note: loreWeaveToken intentionally excluded from backup (treat like API key)
 ];
 
 // Emotion emoji mapping for enhancing text with emotional indicators
@@ -386,3 +389,6 @@ export const LOREWEAVE_DEFAULT_URL = ""; // e.g. "https://api.loreweave.example.
 export const LOREWEAVE_DEFAULT_DOMAIN_ID = ""; // e.g. "lw_dom_my_novel"
 export const LOREWEAVE_DEFAULT_TOKEN = ""; // LW_API_TOKEN on the server (empty = no auth)
 export const LOREWEAVE_AUTO_GRAPHIFY = false; // opt-in: send to LoreWeave after every enhancement
+export const LOREWEAVE_CHRONICLE_ENABLED = false;  // opt-in: accumulate story chronicle
+export const LOREWEAVE_USE_PRIOR_CONTEXT = false;  // inject chronicle into summaries
+export const LOREWEAVE_WRITING_STYLE = "other";    // hint for extraction prompt

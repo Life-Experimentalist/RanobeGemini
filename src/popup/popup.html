@@ -227,6 +227,32 @@
 							</label>
 						</div>
 
+						<div class="config-item">
+							<label class="check-label">
+								<input type="checkbox" id="lwChronicleEnabled" />
+								<span>Build story chronicle (accumulate chapter context)</span>
+							</label>
+						</div>
+
+						<div class="config-item">
+							<label class="check-label">
+								<input type="checkbox" id="lwUsePriorContext" />
+								<span>Use chronicle context to improve summaries</span>
+							</label>
+						</div>
+
+						<div class="config-item">
+							<label for="lwWritingStyle">Writing Style Hint</label>
+							<select id="lwWritingStyle" class="config-select">
+								<option value="other">General (any style)</option>
+								<option value="xianxia">Xianxia / Cultivation</option>
+								<option value="litrpg">LitRPG / System</option>
+								<option value="fantasy">Western Fantasy</option>
+								<option value="romance">Romance</option>
+								<option value="thriller">Thriller / Mystery</option>
+							</select>
+						</div>
+
 						<div id="lwStatusBar" class="settings-hint" style="display:none;margin-top:6px"></div>
 						<button id="lwGraphifyNow" class="btn-primary-full" style="margin-top:8px">
 							Graphify Current Chapter

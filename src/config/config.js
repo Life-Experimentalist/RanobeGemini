@@ -11,6 +11,9 @@ import {
 	LOREWEAVE_DEFAULT_DOMAIN_ID,
 	LOREWEAVE_DEFAULT_TOKEN,
 	LOREWEAVE_AUTO_GRAPHIFY,
+	LOREWEAVE_CHRONICLE_ENABLED,
+	LOREWEAVE_USE_PRIOR_CONTEXT,
+	LOREWEAVE_WRITING_STYLE,
 } from "../utils/constants.js";
 import { debugError } from "../utils/logger.js";
 
@@ -30,6 +33,9 @@ const DEFAULT_CONFIG = {
 	loreWeaveDomainId: LOREWEAVE_DEFAULT_DOMAIN_ID,
 	loreWeaveToken: LOREWEAVE_DEFAULT_TOKEN,
 	loreWeaveAutoGraphify: LOREWEAVE_AUTO_GRAPHIFY,
+	loreWeaveChronicleEnabled: LOREWEAVE_CHRONICLE_ENABLED,
+	loreWeaveUsePriorContext: LOREWEAVE_USE_PRIOR_CONTEXT,
+	loreWeaveWritingStyle: LOREWEAVE_WRITING_STYLE,
 };
 
 // Load configuration from storage

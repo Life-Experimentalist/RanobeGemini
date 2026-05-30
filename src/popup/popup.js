@@ -7071,6 +7071,42 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 				});
 			}
 
+			const lwChronicle = document.getElementById("lwChronicleEnabled");
+			const lwPriorCtx = document.getElementById("lwUsePriorContext");
+			const lwStyle = document.getElementById("lwWritingStyle");
+
+			// Load chronicle settings
+			browser.storage.local
+				.get(["loreWeaveChronicleEnabled", "loreWeaveUsePriorContext", "loreWeaveWritingStyle"])
+				.then(({ loreWeaveChronicleEnabled, loreWeaveUsePriorContext, loreWeaveWritingStyle }) => {
+					if (lwChronicle) lwChronicle.checked = !!loreWeaveChronicleEnabled;
+					if (lwPriorCtx) lwPriorCtx.checked = !!loreWeaveUsePriorContext;
+					if (lwStyle) lwStyle.value = loreWeaveWritingStyle || "other";
+				})
+				.catch(() => {});
+
+			if (lwChronicle) {
+				lwChronicle.addEventListener("change", () =>
+					browser.storage.local
+						.set({ loreWeaveChronicleEnabled: lwChronicle.checked })
+						.catch(() => {})
+				);
+			}
+			if (lwPriorCtx) {
+				lwPriorCtx.addEventListener("change", () =>
+					browser.storage.local
+						.set({ loreWeaveUsePriorContext: lwPriorCtx.checked })
+						.catch(() => {})
+				);
+			}
+			if (lwStyle) {
+				lwStyle.addEventListener("change", () =>
+					browser.storage.local
+						.set({ loreWeaveWritingStyle: lwStyle.value })
+						.catch(() => {})
+				);
+			}
+
 			// Ping test
 			if (lwPingBtn) {
 				lwPingBtn.addEventListener("click", async () => {
