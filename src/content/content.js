@@ -5153,6 +5153,14 @@ if (window.__RGInitDone) {
 					sendResponse({ success: true, message: "Content script is alive" });
 					return true;
 				}
+				if (message.action === "getNovelContext") {
+					const id = getNovelIdFromCurrentPage?.() || null;
+					const novelData = getLastKnownNovelData?.();
+					const title = novelData?.title || document.title || null;
+					const chapterNum = novelData?.currentChapter || null;
+					sendResponse({ novelId: id, novelTitle: title, chapterNum });
+					return false;
+				}
 				return false;
 			});
 			return;
@@ -5170,6 +5178,14 @@ if (window.__RGInitDone) {
 			handleGetNovelInfo,
 			handleAddToLibrary,
 			handleUpdateNovelReadingStatus,
+			handleGetNovelContext(sendResponse) {
+				const id = getNovelIdFromCurrentPage?.() || null;
+				const novelData = getLastKnownNovelData?.();
+				const title = novelData?.title || document.title || null;
+				const chapterNum = novelData?.currentChapter || null;
+				sendResponse({ novelId: id, novelTitle: title, chapterNum });
+				return false;
+			},
 		});
 	});
 
