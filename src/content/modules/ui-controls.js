@@ -554,7 +554,6 @@ export async function injectUI({
 	if (isMobileDevice) controlsContainer.classList.add("mobile-view");
 
 	const toggleBannersButton = createToggleBannersButton();
-	const enhanceButton = createEnhanceButton();
 	const cancelButton = createCancelEnhanceButton();
 
 	if (getHandlerType() !== HANDLER_TYPES.CHAPTER_EMBEDDED) {
