@@ -94,6 +94,19 @@ let popupLibraryRuntimeModule = null; // Popup/library actions runtime
 let novelContextModule = null; // Novel Context orchestration module
 let chunkControlRuntime = null; // Chunk control state/helpers
 let uiElementsRuntimeModule = null; // UI elements (buttons, banners) runtime module
+let messageRouterModule = null; // Message dispatch router
+
+async function loadMessageRouterModule() {
+	if (messageRouterModule) return messageRouterModule;
+	try {
+		const url = browser.runtime.getURL("content/modules/message-router.js");
+		messageRouterModule = await import(url);
+		return messageRouterModule;
+	} catch (error) {
+		debugError("Error loading message-router module:", error);
+		return null;
+	}
+}
 let lastChunkModelInfo = null; // Track last model info for chunked banners
 const progressPromptState = new Map();
 const PROGRESS_PROMPT_COOLDOWN_MS = 10 * 60 * 1000;
@@ -1032,16 +1045,16 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Remove copy-blocking applied by sites (e.g. .nocopy class on FF.net).
-	 * Idempotent — safe to call multiple times.
+	 * Idempotent \u{2014} safe to call multiple times.
 	 * @param {Element} contentArea
 	 */
 	function enableCopyOnContentArea(contentArea) {
 		if (!contentArea) return;
-		// Always re-apply — site scripts may have re-added blocking handlers since last call
+		// Always re-apply \u{2014} site scripts may have re-added blocking handlers since last call
 		// (e.g. after innerHTML replacement or toggle back to enhanced view).
 		contentArea.dataset.rgCopyEnabled = "true";
 		// Walk up ancestors to remove inline copy-blocking handlers, nocopy class,
-		// and any user-select:none — unconditionally force text on every ancestor
+		// and any user-select:none \u{2014} unconditionally force text on every ancestor
 		// (FanFiction sets user-select:none inline on the #storytext parent; checking
 		// only === "none" is unreliable across browsers due to vendor-prefix normalisation)
 		let el = contentArea;
@@ -1072,7 +1085,7 @@ if (window.__RGInitDone) {
 				);
 			}
 		}
-		// Clear document/window level inline handlers — the most common anti-copy pattern
+		// Clear document/window level inline handlers \u{2014} the most common anti-copy pattern
 		document.onselectstart = null;
 		document.oncopy = null;
 		window.onselectstart = null;
@@ -1280,7 +1293,7 @@ if (window.__RGInitDone) {
 		// Safety fallback if dynamic module loading failed.
 		const fallback = document.createElement("div");
 		fallback.className = "gemini-enhanced-banner";
-		fallback.textContent = "✨ Content enhanced with Ranobe Gemini";
+		fallback.textContent = "\u{2728} Content enhanced with Ranobe Gemini";
 		return fallback;
 	}
 
@@ -1530,7 +1543,7 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// ── Skip / Pause helpers ────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Skip / Pause helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 	function handleSkipChunk(chunkIndex) {
 		chunkEventsModule?.handleSkipChunkRuntime?.({
@@ -1580,7 +1593,7 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// ───────────────────────────────────────────────────────────────────────────
+	// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 	async function handleReenhanceChunk(chunkIndex) {
 		let eventsRuntime = chunkEventsModule;
@@ -1788,7 +1801,7 @@ if (window.__RGInitDone) {
 			const svc = await loadSummaryService();
 			if (svc) {
 				debugLog(
-					`Summary service loaded — delegating ${isShort ? "short" : "long"} summary for chunks`,
+					`Summary service loaded \u{2014} delegating ${isShort ? "short" : "long"} summary for chunks`,
 					chunkIndices,
 				);
 				const result = await svc.summarize(chunkIndices, isShort);
@@ -1802,9 +1815,9 @@ if (window.__RGInitDone) {
 			debugError("Summary service threw during summarize:", svcErr);
 		}
 
-		// ── Inline fallback — runs when the ES-module import fails ──
+		// \u{2500}\u{2500} Inline fallback \u{2014} runs when the ES-module import fails \u{2500}\u{2500}
 		debugLog(
-			"Summary service unavailable — using inline fallback for",
+			"Summary service unavailable \u{2014} using inline fallback for",
 			isShort ? "short" : "long",
 			"summary",
 		);
@@ -1840,26 +1853,38 @@ if (window.__RGInitDone) {
 
 		// Locate or create summary text container
 		let summaryTextContainer;
+		const summaryContainerClass = isShort
+			? ".gemini-short-summary-text-container"
+			: ".gemini-summary-text-container";
+		const mainSummaryClass = isShort
+			? ".gemini-main-short-summary-text"
+			: ".gemini-main-summary-text";
+
 		if (isMainSummary) {
 			summaryTextContainer =
-				document.querySelector(".gemini-main-summary-text") ||
+				document.querySelector(mainSummaryClass) ||
 				document.querySelector(
-					".gemini-summary-text-container[data-group-start='0']",
+					`${summaryContainerClass}[data-group-start='0']`,
 				);
 		} else {
 			// Find container within the correct per-chunk group
 			summaryTextContainer = document.querySelector(
-				`.gemini-summary-text-container[data-group-start="${groupStartIndex}"]`,
+				`${summaryContainerClass}[data-group-start="${groupStartIndex}"]`,
 			);
 		}
+
+		// For short summaries, render into the body child div (keeps the "Quick Summary" label intact)
+		const summaryRenderTarget = isShort
+			? (summaryTextContainer?.querySelector(".gemini-short-summary-body") || summaryTextContainer)
+			: summaryTextContainer;
 
 		try {
 			// 1. Wake up background
 			if (btn) {
 				btn.disabled = true;
-				btn.textContent = "Waking up AI…";
+				btn.textContent = "Waking up AI\u{2026}";
 			}
-			if (statusDiv) statusDiv.textContent = "Waking up AI service…";
+			if (statusDiv) statusDiv.textContent = "Waking up AI service\u{2026}";
 
 			const isReady = await wakeUpBackgroundWorker();
 			if (!isReady) {
@@ -1869,11 +1894,11 @@ if (window.__RGInitDone) {
 			}
 
 			// 2. Collect content (three-tier fallback)
-			if (btn) btn.textContent = "Extracting content…";
-			if (statusDiv) statusDiv.textContent = "Extracting content…";
+			if (btn) btn.textContent = "Extracting content\u{2026}";
+			if (statusDiv) statusDiv.textContent = "Extracting content\u{2026}";
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Generating ${summaryType.toLowerCase()} summary…`;
+				summaryRenderTarget.textContent = `Generating ${summaryType.toLowerCase()} summary\u{2026}`;
 			}
 
 			let contentText = null;
@@ -1928,7 +1953,7 @@ if (window.__RGInitDone) {
 				showStatusMessage(msg, "warning", 5000);
 				if (summaryTextContainer) {
 					summaryTextContainer.style.display = "block";
-					summaryTextContainer.textContent = msg;
+					summaryRenderTarget.textContent = msg;
 				}
 				return;
 			}
@@ -1938,9 +1963,9 @@ if (window.__RGInitDone) {
 			);
 
 			// 3. Send to background for summarisation
-			if (btn) btn.textContent = "Summarising…";
+			if (btn) btn.textContent = "Summarising\u{2026}";
 			if (statusDiv) {
-				statusDiv.textContent = `Sending to Gemini for ${summaryType.toLowerCase()} summary…`;
+				statusDiv.textContent = `Sending to Gemini for ${summaryType.toLowerCase()} summary\u{2026}`;
 			}
 
 			const action = isShort
@@ -1956,7 +1981,7 @@ if (window.__RGInitDone) {
 				const errMsg = response?.error || "Failed to generate summary.";
 				if (errMsg.includes("API key is missing")) {
 					showStatusMessage(
-						"API key is missing. Opening settings page…",
+						"API key is missing. Opening settings page\u{2026}",
 						"error",
 					);
 					browser.runtime.sendMessage({ action: "openPopup" });
@@ -1966,7 +1991,7 @@ if (window.__RGInitDone) {
 
 			// 4. Render result
 			renderSummaryOutput(
-				summaryTextContainer,
+				summaryRenderTarget,
 				response.summary,
 				summaryType,
 			);
@@ -2015,7 +2040,7 @@ if (window.__RGInitDone) {
 			}
 			if (summaryTextContainer) {
 				summaryTextContainer.style.display = "block";
-				summaryTextContainer.textContent = `Failed to generate summary: ${error.message}`;
+				summaryRenderTarget.textContent = `Failed to generate summary: ${error.message}`;
 			}
 		} finally {
 			if (btn) {
@@ -2459,7 +2484,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// ── Custom box type CSS injection ──────────────────────────────────────────
+	// \u{2500}\u{2500} Custom box type CSS injection \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	let customBoxTypesModule = null;
 
 	async function loadCustomBoxTypesModule() {
@@ -2475,7 +2500,7 @@ if (window.__RGInitDone) {
 
 	/**
 	 * Inject (or refresh) a <style> tag for user-defined custom content box types.
-	 * Idempotent — updates the existing tag on subsequent calls.
+	 * Idempotent \u{2014} updates the existing tag on subsequent calls.
 	 */
 	async function injectCustomBoxCSS() {
 		try {
@@ -2532,7 +2557,7 @@ if (window.__RGInitDone) {
 				}
 			}
 		} catch (_err) {
-			// non-critical — fall back to prompt without custom boxes
+			// non-critical \u{2014} fall back to prompt without custom boxes
 		}
 		return prompt;
 	}
@@ -2572,7 +2597,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// ── Collapsible sections module ──────────────────────────────
+	// \u{2500}\u{2500} Collapsible sections module \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	let collapsibleSectionsModule = null;
 
 	async function loadCollapsibleSectionsModule() {
@@ -2617,7 +2642,7 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// ── Summary service (unified summary pipeline) ──────────────
+	// \u{2500}\u{2500} Summary service (unified summary pipeline) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	let summaryServiceModule = null;
 	let summaryRuntimeModule = null;
 	let chunkBatchModule = null;
@@ -2713,18 +2738,15 @@ if (window.__RGInitDone) {
 				READING_STATUS,
 				buildNovelDataFromMetadata,
 				cacheNovelData,
-				deriveReadingStatusFromProgress,
-				refreshLibraryUI,
+				deriveReadingStatusFromProgress: uiElementsRuntimeModule?.deriveReadingStatusFromProgressRuntime ?? (() => null),
 				loadNovelLibrary,
 				protectFromThemeExtensions,
-				updateLibraryUIState,
-				removeActionOverlay,
 			});
 			novelContextHandlerName = handlerName;
-			debugLog("✅ novelContextModule loaded");
+			debugLog("\u{2705} novelContextModule loaded");
 			return novelContextModule;
 		} catch (err) {
-			debugError("❌ Failed to load novelContextModule:", err);
+			debugError("\u{274C} Failed to load novelContextModule:", err);
 			return null;
 		}
 	}
@@ -2954,7 +2976,7 @@ if (window.__RGInitDone) {
 		const contentArea = findContentArea();
 		if (!contentArea) {
 			debugLog(
-				"[Cache Restore] No content area found — scheduling retry.",
+				"[Cache Restore] No content area found \u{2014} scheduling retry.",
 			);
 			// Content area may not be ready yet (DOM still loading).
 			// Schedule one retry so chunked cache is still restored reliably.
@@ -2980,7 +3002,7 @@ if (window.__RGInitDone) {
 		}
 		if (document.getElementById("gemini-chunked-content")) {
 			debugLog(
-				"[Cache Restore] Chunked content container already exists — skipping.",
+				"[Cache Restore] Chunked content container already exists \u{2014} skipping.",
 			);
 			return false;
 		}
@@ -2988,7 +3010,7 @@ if (window.__RGInitDone) {
 		const chunking = await loadChunkingSystem();
 		if (!chunking?.cache?.hasChunksInCache) {
 			debugLog(
-				"[Cache Restore] Chunking system or cache unavailable — skipping.",
+				"[Cache Restore] Chunking system or cache unavailable \u{2014} skipping.",
 			);
 			return false;
 		}
@@ -3016,14 +3038,14 @@ if (window.__RGInitDone) {
 		const isComplete = isChunkCacheComplete(chunks, metadata?.totalChunks);
 		if (!isComplete) {
 			debugLog(
-				`[Cache Restore] Chunk cache incomplete — have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
+				`[Cache Restore] Chunk cache incomplete \u{2014} have ${chunks.length} chunks, expected ${metadata?.totalChunks ?? "unknown"}. Skipping.`,
 			);
 			return false;
 		}
 
 		// Validate cached chunk count against a fresh split of the current page content.
 		// A stale cache (e.g. from a previous buggy run that produced duplicate chunks)
-		// can have more entries than the corrected splitter would produce — trim them.
+		// can have more entries than the corrected splitter would produce \u{2014} trim them.
 		if (
 			chunking.core?.splitContentByWords &&
 			chunking.config?.getChunkConfig
@@ -3037,7 +3059,7 @@ if (window.__RGInitDone) {
 				);
 				if (freshChunks.length < chunks.length) {
 					debugLog(
-						`[Cache Restore] Stale cache detected — cached ${chunks.length} chunks but fresh split gives ${freshChunks.length}. Trimming extras.`,
+						`[Cache Restore] Stale cache detected \u{2014} cached ${chunks.length} chunks but fresh split gives ${freshChunks.length}. Trimming extras.`,
 					);
 					const extraChunks = chunks.slice(freshChunks.length);
 					for (const extraChunk of extraChunks) {
@@ -3052,7 +3074,7 @@ if (window.__RGInitDone) {
 					if (metadata) metadata.totalChunks = freshChunks.length;
 					if (chunks.length === 0) {
 						debugLog(
-							"[Cache Restore] All chunks trimmed — nothing to restore.",
+							"[Cache Restore] All chunks trimmed \u{2014} nothing to restore.",
 						);
 						return false;
 					}
@@ -3061,7 +3083,7 @@ if (window.__RGInitDone) {
 					// but never updates totalChunks, so the next page load would
 					// see chunkIndices.length (3) !== totalChunks (4) and refuse to
 					// restore. Re-saving the first remaining chunk causes
-					// saveChunkToCache → updateChunkMetadata("add", {totalChunks: N})
+					// saveChunkToCache \u{2192} updateChunkMetadata("add", {totalChunks: N})
 					// which writes the correct value to storage.
 					const firstChunk = chunks[0];
 					await chunking.cache.saveChunkToCache(
@@ -3086,7 +3108,7 @@ if (window.__RGInitDone) {
 		);
 		if (!allEnhanced) {
 			debugLog(
-				"[Cache Restore] One or more chunks missing enhanced content — skipping.",
+				"[Cache Restore] One or more chunks missing enhanced content \u{2014} skipping.",
 			);
 			return false;
 		}
@@ -3327,6 +3349,12 @@ if (window.__RGInitDone) {
 		// Auto-update novel metadata when visiting any supported novel page
 		// This happens regardless of whether it's a chapter or novel info page
 		if (currentHandler) {
+			// Ensure the novel context module is loaded so autoUpdateNovelOnVisit
+			// (and the auto-add-to-library flow) actually runs on every page visit.
+			if (!novelContextModule) {
+				await loadNovelLibrary();
+				await loadNovelContextModule();
+			}
 			await autoUpdateNovelOnVisit();
 
 			// For mobile fanfiction handler, inject desktop metadata summary
@@ -3610,10 +3638,10 @@ if (window.__RGInitDone) {
 	async function updateChapterProgression() {
 		if (!novelLibrary || !currentHandler) return;
 
-		// Incognito mode — skip automatic progress tracking
+		// Incognito mode \u{2014} skip automatic progress tracking
 		if (isIncognitoActive()) {
 			debugLog(
-				"🕵️ Incognito mode active — skipping updateChapterProgression",
+				"\u{1F575}\u{FE0F} Incognito mode active \u{2014} skipping updateChapterProgression",
 			);
 			return;
 		}
@@ -3653,7 +3681,7 @@ if (window.__RGInitDone) {
 					},
 				);
 				debugLog(
-					`📖 Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
+					`\u{1F4D6} Chapter progression updated: Chapter ${chapterNav.currentChapter}`,
 				);
 				showTimedBanner(
 					`Progress saved: Chapter ${chapterNav.currentChapter}`,
@@ -3664,7 +3692,7 @@ if (window.__RGInitDone) {
 				novel.lastReadChapter &&
 				chapterNav.currentChapter < novel.lastReadChapter
 			) {
-				// User is reading an earlier chapter — offer re-reading prompt
+				// User is reading an earlier chapter \u{2014} offer re-reading prompt
 				await showRereadingBanner({
 					novelId,
 					currentChapter: chapterNav.currentChapter,
@@ -3683,6 +3711,9 @@ if (window.__RGInitDone) {
 		const runtime = getUIElementsRuntime();
 		if (!runtime) return;
 
+		const contentArea = findContentArea();
+		if (!contentArea) return;
+
 		const ui = await runtime.injectUI({
 			isMobileDevice,
 			getHandlerType,
@@ -3691,6 +3722,7 @@ if (window.__RGInitDone) {
 			initializeChunkedViewForSummaries,
 			summarizeChunkRange,
 			handleEnhanceClick,
+			findContentArea,
 		});
 
 		if (!ui) return;
@@ -3744,10 +3776,10 @@ if (window.__RGInitDone) {
 			currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false
 		) {
 			toggleBtn.innerHTML =
-				'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+				'<span style="font-size: 20px;">\u{1F441}</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 		} else if (toggleBtn) {
 			toggleBtn.innerHTML =
-				'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
+				'<span style="font-size: 20px;">\u{1F441}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
 		}
 
 		// Add novel controls for CHAPTER_EMBEDDED type sites (like FanFiction.net)
@@ -3916,7 +3948,7 @@ if (window.__RGInitDone) {
 
 						if (shouldAutoEnhance) {
 							debugLog(
-								"🚀 Auto-enhance enabled for this novel, starting enhancement...",
+								"\u{1F680} Auto-enhance enabled for this novel, starting enhancement...",
 							);
 							// Wait a bit for page to stabilize
 							setTimeout(() => {
@@ -4403,7 +4435,7 @@ if (window.__RGInitDone) {
 					: `${percentChange}% decrease`;
 
 			existingWordCount.innerHTML = `
-			<strong>  Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
+			<strong>  Word Count:</strong> ${originalCount} \u{2192} ${newCount} (${changeText})
 		`;
 			return;
 		}
@@ -4430,7 +4462,7 @@ if (window.__RGInitDone) {
 				: `${percentChange}% decrease`;
 
 		wordCountContainer.innerHTML = `
-		<strong>  Word Count:</strong> ${originalCount} → ${newCount} (${changeText})
+		<strong>  Word Count:</strong> ${originalCount} \u{2192} ${newCount} (${changeText})
 	`;
 
 		insertAfterControlsOrTop(contentArea, wordCountContainer);
@@ -4656,7 +4688,7 @@ if (window.__RGInitDone) {
 
 		try {
 			if (!currentHandler) {
-				debugLog("📚 getNovelInfo: No handler available");
+				debugLog("\u{1F4DA} getNovelInfo: No handler available");
 				return {
 					success: false,
 					error: "No handler available for this page",
@@ -4664,12 +4696,12 @@ if (window.__RGInitDone) {
 			}
 
 			// Get novel metadata from handler
-			debugLog("📚 getNovelInfo: Extracting metadata...");
+			debugLog("\u{1F4DA} getNovelInfo: Extracting metadata...");
 			const metadata = await currentHandler.extractNovelMetadata();
-			debugLog("📚 getNovelInfo: Raw metadata:", metadata);
+			debugLog("\u{1F4DA} getNovelInfo: Raw metadata:", metadata);
 
 			if (!metadata || !metadata.title) {
-				debugLog("📚 getNovelInfo: No valid metadata found");
+				debugLog("\u{1F4DA} getNovelInfo: No valid metadata found");
 				return {
 					success: false,
 					error: "Could not extract novel metadata",
@@ -4753,7 +4785,7 @@ if (window.__RGInitDone) {
 						}),
 			};
 
-			debugLog("📚 getNovelInfo: Returning novelInfo:", novelInfo);
+			debugLog("\u{1F4DA} getNovelInfo: Returning novelInfo:", novelInfo);
 			cacheNovelData(novelInfo);
 			return {
 				success: true,
@@ -4814,7 +4846,22 @@ if (window.__RGInitDone) {
 					: undefined;
 
 			// Add/update novel in library
+			const shelfId =
+				currentHandler.constructor.SHELF_METADATA?.id || null;
+			const novelId =
+				metadata.id ||
+				(typeof currentHandler.generateNovelId === "function"
+					? currentHandler.generateNovelId(window.location.href)
+					: null);
+			console.log("[RG-Library-Debug] handleAddToLibrary fallback: calling addOrUpdateNovel", {
+				novelId,
+				shelfId,
+				title: metadata.title,
+				needsDetailPage: metadata.needsDetailPage ?? false,
+			});
 			const result = await novelLibrary.addOrUpdateNovel({
+				id: novelId,
+				shelfId,
 				title: metadata.title,
 				author: metadata.author,
 				coverUrl: metadata.coverUrl || metadata.coverImage,
@@ -4843,6 +4890,7 @@ if (window.__RGInitDone) {
 				description: metadata.description,
 			});
 
+			console.log("[RG-Library-Debug] handleAddToLibrary fallback: SUCCESS", { id: result?.id, shelfId: result?.shelfId, title: result?.title });
 			const cachedNovel = cacheNovelData(result);
 			logNotification({
 				type: "success",
@@ -4958,7 +5006,7 @@ if (window.__RGInitDone) {
 						wipBanner.remove();
 					}
 				},
-				continueLabel: "⚡ Continue Enhancement",
+				continueLabel: "\u{26A1} Continue Enhancement",
 			});
 			return;
 		}
@@ -4986,7 +5034,7 @@ if (window.__RGInitDone) {
 		}
 
 		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "⚡ Continue Enhancement";
+			btn.textContent = "\u{26A1} Continue Enhancement";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});
@@ -4999,7 +5047,7 @@ if (window.__RGInitDone) {
 				debugError,
 				showStatusMessage,
 				messageText:
-					"⚠️ API key is missing. Please configure it in the extension popup.",
+					"\u{26A0}\u{FE0F} API key is missing. Please configure it in the extension popup.",
 				openPopup: () => {
 					browser.runtime
 						.sendMessage({ action: "openPopup" })
@@ -5007,14 +5055,14 @@ if (window.__RGInitDone) {
 							console.warn("Could not open popup:", err);
 						});
 				},
-				buttonLabel: "✨ Enhance with Gemini",
+				buttonLabel: "\u{2728} Enhance with Gemini",
 			});
 			return;
 		}
 
 		debugError("[Content] API key is missing, halting processing");
 		showStatusMessage(
-			"⚠️ API key is missing. Please configure it in the extension popup.",
+			"\u{26A0}\u{FE0F} API key is missing. Please configure it in the extension popup.",
 			"error",
 			10000,
 		);
@@ -5030,155 +5078,39 @@ if (window.__RGInitDone) {
 		}
 
 		document.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "✨ Enhance with Gemini";
+			btn.textContent = "\u{2728} Enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});
 	}
 
-	function respondFromAsyncAction({
-		task,
-		sendResponse,
-		onSuccess = (result) => result,
-		fallbackError,
-	}) {
-		Promise.resolve()
-			.then(task)
-			.then((result) => {
-				sendResponse(onSuccess(result));
-			})
-			.catch((error) => {
-				sendResponse({
-					success: false,
-					error: error.message || fallbackError,
-				});
+	// Register all content message handlers via the message-router module
+	loadMessageRouterModule().then((router) => {
+		if (!router) {
+			// Fallback: inline ping-only listener so the extension doesn't go silent
+			browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+				if (message.action === "ping") {
+					sendResponse({ success: true, message: "Content script is alive" });
+					return true;
+				}
+				return false;
 			});
-		return true;
-	}
-
-	// Listen for messages from the extension popup or background
-	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		debugLog("Content script received message:", message);
-
-		if (message.action === "ping") {
-			sendResponse({ success: true, message: "Content script is alive" });
-			return true;
+			return;
 		}
-
-		// Handle API key missing message - stop everything immediately
-		if (message.action === "apiKeyMissing") {
-			handleApiKeyMissingMessage();
-			sendResponse({ success: true });
-			return true;
-		}
-
-		// Handle chunk processing results (new handlers for progressive display)
-		if (message.action === "chunkProcessed") {
-			handleChunkProcessed(message);
-			sendResponse({ success: true });
-			return true;
-		}
-
-		// Handle chunk processing errors
-		if (message.action === "chunkError") {
-			handleChunkError(message);
-			sendResponse({ success: true });
-			return true;
-		}
-
-		// Handle all chunks processing completion
-		if (message.action === "allChunksProcessed") {
-			handleAllChunksProcessed(message);
-			sendResponse({ success: true });
-			return true;
-		}
-
-		// Handle processing cancellation
-		if (message.action === "processingCancelled") {
-			handleProcessingCancelledMessage(message);
-			sendResponse({ success: true });
-			return true;
-		}
-
-		if (message.action === "getSiteHandlerInfo") {
-			return respondFromAsyncAction({
-				task: () => handleGetSiteHandlerInfo(),
-				sendResponse,
-				fallbackError: "Failed to get site handler info",
-			});
-		}
-
-		if (message.action === "testExtraction") {
-			return respondFromAsyncAction({
-				task: () => handleTestExtraction(),
-				sendResponse,
-				fallbackError: "Failed to test extraction",
-			});
-		}
-
-		if (
-			message.action === "processWithGemini" ||
-			message.action === "enhanceChapter"
-		) {
-			return respondFromAsyncAction({
-				task: () => handleEnhanceClick(),
-				sendResponse,
-				onSuccess: () => ({ success: true }),
-				fallbackError: "Unknown error processing content",
-			});
-		}
-
-		if (message.action === "settingsUpdated") {
-			// Update any local settings
-			debugLog("Settings updated:", message);
-			sendResponse({ success: true });
-			return true;
-		}
-
-		if (
-			message.action === "summarizeWithGemini" ||
-			message.action === "summarizeChapter"
-		) {
-			return respondFromAsyncAction({
-				task: () => handleSummarizeClick(),
-				sendResponse,
-				onSuccess: () => ({ success: true }),
-				fallbackError: "Unknown error summarizing content",
-			});
-		}
-
-		// Get novel info for popup display
-		if (message.action === "getNovelInfo") {
-			return respondFromAsyncAction({
-				task: () => handleGetNovelInfo(),
-				sendResponse,
-				fallbackError: "Failed to get novel info",
-			});
-		}
-
-		// Add current novel to library
-		if (message.action === "addToLibrary") {
-			return respondFromAsyncAction({
-				task: () => handleAddToLibrary(),
-				sendResponse,
-				fallbackError: "Failed to add to library",
-			});
-		}
-
-		// Update novel reading status
-		if (message.action === "updateNovelReadingStatus") {
-			return respondFromAsyncAction({
-				task: () =>
-					handleUpdateNovelReadingStatus(
-						message.novelId,
-						message.readingStatus,
-					),
-				sendResponse,
-				fallbackError: "Failed to update reading status",
-			});
-		}
-
-		return false;
+		router.registerContentMessageHandlers({
+			handleApiKeyMissingMessage,
+			handleChunkProcessed,
+			handleChunkError,
+			handleAllChunksProcessed,
+			handleProcessingCancelledMessage,
+			handleGetSiteHandlerInfo,
+			handleTestExtraction,
+			handleEnhanceClick,
+			handleSummarizeClick,
+			handleGetNovelInfo,
+			handleAddToLibrary,
+			handleUpdateNovelReadingStatus,
+		});
 	});
 
 	// Test function for game status boxes (can be triggered from the console for verification)
@@ -5213,7 +5145,7 @@ if (window.__RGInitDone) {
 				testContainer.innerHTML = `
 				<h3>Game Stats Box Test Results:</h3>
 				<p>Test completed. Game stats box preserved: ${
-					response.preservedGameStatsBox ? "✅ Yes" : "❌ No"
+					response.preservedGameStatsBox ? "\u{2705} Yes" : "\u{274C} No"
 				}</p>
 				<div style="margin-top: 20px;">
 					<h4>Processed Content:</h4>
