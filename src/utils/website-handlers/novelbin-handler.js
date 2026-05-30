@@ -44,6 +44,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		importUrlTemplate: "https://novelbin.com/b/{id}",
 		taxonomy: [
 			{ id: "genres", label: "Genres", type: "array" },
+			{ id: "tags", label: "Tags", type: "array" },
 			{ id: "status", label: "Status", type: "string" },
 			{ id: "language", label: "Language", type: "string" },
 		],
@@ -442,10 +443,23 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 							10,
 						);
 					}
+				} else if (label.includes("tag")) {
+					li.querySelectorAll("a").forEach((a) => {
+						const t = a.textContent.trim();
+						if (t) metadata.tags.push(t);
+					});
 				}
 			}
 
 			// Description \u{2014} the site uses a collapsible block; grab the full text
+			// Tags may also appear outside the info-meta list
+			if (!metadata.tags.length) {
+				document.querySelectorAll(".tag-list a, .tag a").forEach((a) => {
+					const t = a.textContent.trim();
+					if (t && !metadata.genres.includes(t)) metadata.tags.push(t);
+				});
+			}
+
 			const descEl = document.querySelector(
 				"#novel-description-content, .desc-text",
 			);

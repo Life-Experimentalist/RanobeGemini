@@ -408,6 +408,115 @@ export function getRanobesStyles() {
 }
 
 /**
+ * Get NovelBin-specific modal styles
+ */
+export function getNovelbinStyles() {
+	return `
+		<style>
+			.novelbin-modal-grid {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+				margin-top: 8px;
+			}
+
+			.novelbin-primary-row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				padding: 12px 16px;
+				background: rgba(98, 0, 234, 0.06);
+				border-radius: 8px;
+				border: 1px solid rgba(98, 0, 234, 0.15);
+				align-items: center;
+			}
+
+			.novelbin-meta-group {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				min-width: 90px;
+			}
+
+			.novelbin-meta-label {
+				font-size: 0.7rem;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: #9ca3af;
+				font-weight: 600;
+			}
+
+			.novelbin-meta-value {
+				font-size: 0.9rem;
+				color: #e5e7eb;
+				font-weight: 500;
+			}
+
+			.novelbin-chip {
+				display: inline-flex;
+				align-items: center;
+				padding: 3px 10px;
+				border-radius: 99px;
+				font-size: 0.8rem;
+				font-weight: 600;
+				background: rgba(98, 0, 234, 0.15);
+				border: 1px solid rgba(98, 0, 234, 0.3);
+				color: #c4b5fd;
+				white-space: nowrap;
+			}
+
+			.novelbin-chip.chip-ongoing {
+				background: rgba(251, 191, 36, 0.15);
+				border-color: rgba(251, 191, 36, 0.3);
+				color: #fbbf24;
+			}
+
+			.novelbin-chip.chip-completed {
+				background: rgba(34, 197, 94, 0.15);
+				border-color: rgba(34, 197, 94, 0.3);
+				color: #22c55e;
+			}
+
+			.novelbin-chip.chip-hiatus {
+				background: rgba(156, 163, 175, 0.15);
+				border-color: rgba(156, 163, 175, 0.3);
+				color: #9ca3af;
+			}
+
+			.novelbin-genres-row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+			}
+
+			.novelbin-genre-tag {
+				padding: 3px 10px;
+				border-radius: 6px;
+				font-size: 0.78rem;
+				background: rgba(98, 0, 234, 0.12);
+				color: #c4b5fd;
+				border: 1px solid rgba(98, 0, 234, 0.25);
+			}
+
+			.novelbin-section-title {
+				font-size: 0.75rem;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: #9ca3af;
+				margin-bottom: 6px;
+			}
+
+			.novelbin-tag {
+				background: rgba(255, 152, 0, 0.15) !important;
+				border-color: rgba(255, 152, 0, 0.4) !important;
+				color: #ff9800 !important;
+			}
+		</style>
+	`;
+}
+
+/**
  * Get ScribbleHub-specific styles
  */
 export function getScribbleHubStyles() {
