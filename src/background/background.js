@@ -41,6 +41,15 @@ import { createWebdavStorageAdapter } from "./storage/adapters/webdav-storage.js
 import { createOnedriveStorageAdapter } from "./storage/adapters/onedrive-storage.js";
 import { createDropboxStorageAdapter } from "./storage/adapters/dropbox-storage.js";
 
+// Gemini safety settings \u{2014} set all categories to BLOCK_NONE so mature/violent
+// novel content is not refused by the safety filter.
+const GEMINI_SAFETY_SETTINGS = [
+	{ category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+	{ category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+	{ category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+	{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+];
+
 // Browser API compatibility shim - Chrome uses 'chrome', Firefox uses 'browser'
 // This must be at the very top before any other code
 if (typeof browser === "undefined") {
@@ -879,6 +888,9 @@ if (typeof browser === "undefined") {
 	// Global configuration
 	let currentConfig = null;
 	let aiProviderRegistry = null;
+	// Temporary per-call config override used during fallback provider routing.
+	// JS is single-threaded so this is safe for sequential async calls.
+	let _configOverride = null;
 
 	// Cancellation flag for chunk processing
 	let isCancellationRequested = false;
@@ -888,44 +900,74 @@ if (typeof browser === "undefined") {
 		try {
 			// Get settings directly from storage
 			const data = await browser.storage.local.get();
-			return {
-				aiProvider: data.aiProvider || "gemini",
-				openAiEndpoint:
-					data.openAiEndpoint ||
-					"https://api.openai.com/v1/chat/completions",
-				openAiModel: data.openAiModel || "gpt-4o-mini",
-				openAiApiKey: data.openAiApiKey || "",
-				ollamaEndpoint:
-					data.ollamaEndpoint ||
-					"http://localhost:11434/api/generate",
-				ollamaModel: data.ollamaModel || "llama3.1:8b",
+
+			// Normalise provider fields from new primaryModelConfig if present
+			const pc = data.primaryModelConfig;
+			let aiProvider = data.aiProvider || "gemini";
+			let openAiEndpoint = data.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
+			let openAiModel = data.openAiModel || "gpt-4o-mini";
+			let openAiApiKey = data.openAiApiKey || "";
+			let ollamaEndpoint = data.ollamaEndpoint || "http://localhost:11434/api/generate";
+			let ollamaModel = data.ollamaModel || "llama3.1:8b";
+			let modelEndpoint = data.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
+
+			// _configOverride means we're routing to the fallback provider \u{2014} skip primary normalisation
+			if (pc && !_configOverride) {
+				if (pc.provider === "openai") {
+					aiProvider = "openai-compatible";
+					if (pc.baseUrl) openAiEndpoint = pc.baseUrl;
+					if (pc.modelId) openAiModel = pc.modelId;
+					if (pc.apiKey) openAiApiKey = pc.apiKey;
+				} else if (pc.provider === "ollama") {
+					aiProvider = "ollama";
+					if (pc.baseUrl) ollamaEndpoint = pc.baseUrl + "/api/generate";
+					if (pc.modelId) ollamaModel = pc.modelId;
+				} else {
+					aiProvider = "gemini";
+					if (pc.endpoint) modelEndpoint = pc.endpoint;
+				}
+			}
+
+			const base = {
+				aiProvider,
+				openAiEndpoint,
+				openAiModel,
+				openAiApiKey,
+				ollamaEndpoint,
+				ollamaModel,
 				apiKey: data.apiKey || "",
-				backupApiKeys: data.backupApiKeys || [], // Array of backup API keys
-				apiKeyRotation: data.apiKeyRotation || "failover", // "failover" or "round-robin"
-				currentApiKeyIndex: data.currentApiKeyIndex || 0, // Current API key index for round-robin
+				backupApiKeys: data.backupApiKeys || [],
+				apiKeyRotation: data.apiKeyRotation || "failover",
+				currentApiKeyIndex: data.currentApiKeyIndex || 0,
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
 				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
-				shortSummaryPrompt:
-					data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
-				permanentPrompt:
-					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
+				shortSummaryPrompt: data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
+				permanentPrompt: data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
 				temperature: data.temperature || 0.7,
 				topP: data.topP !== undefined ? data.topP : 0.95,
 				topK: data.topK !== undefined ? data.topK : 40,
 				maxOutputTokens: data.maxOutputTokens || 8192,
 				debugMode: data.debugMode || false,
-				modelEndpoint: data.modelEndpoint || DEFAULT_MODEL_ENDPOINT,
+				modelEndpoint,
 				backupModelId: data.backupModelId || "",
 				backupModelEndpoint: data.backupModelId
 					? `https://generativelanguage.googleapis.com/v1beta/models/${data.backupModelId}:generateContent`
 					: "",
+				fallbackModelEnabled: data.fallbackModelEnabled || false,
+				fallbackModelConfig: data.fallbackModelConfig || null,
 				chunkingEnabled: data.chunkingEnabled !== false,
-				chunkSize: data.chunkSize || 20000, // Used for both threshold AND chunk size
-				chunkThreshold: data.chunkSize || 20000, // Same as chunkSize (simplified)
-				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — must match content script
+				chunkSize: data.chunkSize || 20000,
+				chunkThreshold: data.chunkSize || 20000,
+				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS,
 				useEmoji: data.useEmoji || false,
-				fontSize: data.fontSize || 100, // Font size percentage (default 100%)
+				fontSize: data.fontSize || 100,
 			};
+
+			// Apply override for fallback routing (only provider-routing fields)
+			if (_configOverride) {
+				return { ...base, ..._configOverride };
+			}
+			return base;
 		} catch (error) {
 			debugError("Error loading configuration:", error);
 			return {
@@ -953,7 +995,7 @@ if (typeof browser === "undefined") {
 				chunkingEnabled: true,
 				chunkSize: 20000,
 				chunkThreshold: 20000,
-				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — fallback default
+				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size \u{2014} fallback default
 				useEmoji: false,
 				fontSize: 100,
 			};
@@ -1004,14 +1046,63 @@ if (typeof browser === "undefined") {
 		return registry.getProvider(providerId);
 	}
 
-	async function processContentWithProvider(payload) {
+	// Build a config override object from a fallbackModelConfig descriptor
+	function buildFallbackOverride(fc) {
+		if (!fc) return null;
+		if (fc.provider === "openai") {
+			return {
+				aiProvider: "openai-compatible",
+				openAiEndpoint: fc.baseUrl || "https://api.openai.com/v1/chat/completions",
+				openAiModel: fc.modelId || "gpt-4o-mini",
+				openAiApiKey: fc.apiKey || "",
+			};
+		}
+		if (fc.provider === "ollama") {
+			return {
+				aiProvider: "ollama",
+				ollamaEndpoint: fc.baseUrl ? fc.baseUrl + "/api/generate" : "http://localhost:11434/api/generate",
+				ollamaModel: fc.modelId || "llama3.1:8b",
+			};
+		}
+		// gemini fallback \u{2014} route to different model
+		return {
+			aiProvider: "gemini",
+			modelEndpoint: fc.modelId
+				? `https://generativelanguage.googleapis.com/v1beta/models/${fc.modelId}:generateContent`
+				: null,
+			// Disable Gemini-internal backup so we don't recurse
+			backupModelEndpoint: "",
+		};
+	}
+
+	async function tryWithFallback(method, payload) {
 		const provider = await getActiveProviderAdapter();
-		return provider.generateEnhancement(payload);
+		try {
+			return await provider[method](payload);
+		} catch (primaryErr) {
+			const config = await initConfig();
+			if (!config.fallbackModelEnabled || !config.fallbackModelConfig) throw primaryErr;
+			const override = buildFallbackOverride(config.fallbackModelConfig);
+			if (!override) throw primaryErr;
+			debugLog(`Primary provider failed (${primaryErr.message}). Trying fallback provider: ${config.fallbackModelConfig.provider}`);
+			_configOverride = override;
+			aiProviderRegistry = null; // force re-resolve with new aiProvider
+			try {
+				const fallbackProvider = await getActiveProviderAdapter();
+				return await fallbackProvider[method](payload);
+			} finally {
+				_configOverride = null;
+				aiProviderRegistry = null;
+			}
+		}
+	}
+
+	async function processContentWithProvider(payload) {
+		return tryWithFallback("generateEnhancement", payload);
 	}
 
 	async function summarizeContentWithProvider(payload) {
-		const provider = await getActiveProviderAdapter();
-		return provider.generateSummary(payload);
+		return tryWithFallback("generateSummary", payload);
 	}
 
 	// Get the current API key based on rotation strategy
@@ -2242,7 +2333,30 @@ if (typeof browser === "undefined") {
 				partInfo: message.partInfo,
 				isShort: false,
 			})
-				.then((summary) => {
+				.then(async (summary) => {
+					// Save summary to chronicle if enabled
+					try {
+						const chronicleConfig = await browser.storage.local.get([
+							"loreWeaveChronicleEnabled",
+							"loreWeaveNovelId",
+						]);
+						if (
+							chronicleConfig.loreWeaveChronicleEnabled &&
+							chronicleConfig.loreWeaveNovelId &&
+							message.chapterNum
+						) {
+							const chronicleStoreKey = `rg_chronicle_${chronicleConfig.loreWeaveNovelId}`;
+							const storedChronicle = await browser.storage.local.get(chronicleStoreKey);
+							const chronicle = storedChronicle[chronicleStoreKey];
+							if (chronicle?.chapters?.[message.chapterNum]) {
+								chronicle.chapters[message.chapterNum].summary = summary;
+								chronicle.lastUpdated = Date.now();
+								await browser.storage.local.set({ [chronicleStoreKey]: chronicle });
+							}
+						}
+					} catch (_chronicleErr) {
+						// Non-blocking — never disrupt summary flow
+					}
 					sendResponse({ success: true, summary: summary });
 				})
 				.catch((error) => {
@@ -2266,7 +2380,30 @@ if (typeof browser === "undefined") {
 				partInfo: message.partInfo,
 				isShort: true,
 			})
-				.then((summary) => {
+				.then(async (summary) => {
+					// Save summary to chronicle if enabled
+					try {
+						const chronicleConfig = await browser.storage.local.get([
+							"loreWeaveChronicleEnabled",
+							"loreWeaveNovelId",
+						]);
+						if (
+							chronicleConfig.loreWeaveChronicleEnabled &&
+							chronicleConfig.loreWeaveNovelId &&
+							message.chapterNum
+						) {
+							const chronicleStoreKey = `rg_chronicle_${chronicleConfig.loreWeaveNovelId}`;
+							const storedChronicle = await browser.storage.local.get(chronicleStoreKey);
+							const chronicle = storedChronicle[chronicleStoreKey];
+							if (chronicle?.chapters?.[message.chapterNum]) {
+								chronicle.chapters[message.chapterNum].shortSummary = summary;
+								chronicle.lastUpdated = Date.now();
+								await browser.storage.local.set({ [chronicleStoreKey]: chronicle });
+							}
+						}
+					} catch (_chronicleErr) {
+						// Non-blocking — never disrupt summary flow
+					}
 					sendResponse({ success: true, summary: summary });
 				})
 				.catch((error) => {
@@ -2519,7 +2656,7 @@ if (typeof browser === "undefined") {
 			// NOTE: Default 3200 words MUST match content.js and other references for consistency
 			const configuredChunkSizeWords =
 				currentConfig.chunkSizeWords || 3200;
-			// Convert words to approximate character count for comparison (1 word ≈ 7 chars)
+			// Convert words to approximate character count for comparison (1 word \u{2248} 7 chars)
 			const configuredChunkSizeChars = configuredChunkSizeWords * 7;
 			const effectiveChunkSizeChars = Math.min(
 				configuredChunkSizeChars,
@@ -2574,7 +2711,7 @@ if (typeof browser === "undefined") {
 				"[processContentInChunks] Content exceeds chunk size, using word-based paragraph-aware splitting...",
 			);
 			debugLog(
-				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured — matching content script" : "model-aware effective"})`,
+				`[processContentInChunks] Split size: ${splitSizeWords} words (${forceChunking ? "configured \u{2014} matching content script" : "model-aware effective"})`,
 			);
 			// Use new modular chunking system with paragraph awareness
 			const chunks = chunkingSystem.core.splitContentByWords(
@@ -2902,7 +3039,7 @@ if (typeof browser === "undefined") {
 							// Increment retry count and try again
 							retryCount++;
 						} else if (!error._nonRetryable && retryCount < 2) {
-							// For non-rate limit, retryable errors — retry with exponential backoff
+							// For non-rate limit, retryable errors \u{2014} retry with exponential backoff
 							const backoffTime = Math.pow(2, retryCount) * 3000;
 							debugLog(
 								`Error processing chunk. Retrying in ${
@@ -3152,7 +3289,7 @@ if (typeof browser === "undefined") {
 			// Add emoji instructions if enabled
 			if (shouldUseEmoji) {
 				promptPrefix +=
-					"\n\nWhere the tone genuinely calls for it — a tense standoff, a burst of laughter, a moment of wonder, a crushing defeat — weave in a single emoji naturally within the prose. It can sit inside a paragraph, at the end of a line of dialogue or narration, or anywhere it feels organic. There is no fixed rule about placement: let the mood of the moment guide it. Use them sparingly — only the most vivid or emotionally charged beats deserve one. A whole chapter may have just two or three, and that is perfectly fine.";
+					"\n\nWhere the tone genuinely calls for it \u{2014} a tense standoff, a burst of laughter, a moment of wonder, a crushing defeat \u{2014} weave in a single emoji naturally within the prose. It can sit inside a paragraph, at the end of a line of dialogue or narration, or anywhere it feels organic. There is no fixed rule about placement: let the mood of the moment guide it. Use them sparingly \u{2014} only the most vivid or emotionally charged beats deserve one. A whole chapter may have just two or three, and that is perfectly fine.";
 			}
 
 			// Combine base prompt, permanent prompt, title, and content
@@ -3251,6 +3388,7 @@ if (typeof browser === "undefined") {
 					],
 				},
 				contents: requestContents,
+				safetySettings: GEMINI_SAFETY_SETTINGS,
 				generationConfig: {
 					temperature: currentConfig.temperature || 0.7,
 					maxOutputTokens: currentConfig.maxOutputTokens || 8192,
@@ -3350,7 +3488,7 @@ if (typeof browser === "undefined") {
 					throw err;
 				}
 
-				// Content detected as copyrighted — retrying won't help
+				// Content detected as copyrighted \u{2014} retrying won't help
 				if (finishReason === "RECITATION") {
 					debugError("Gemini RECITATION block:", candidate);
 					const err = new Error(
@@ -3362,7 +3500,7 @@ if (typeof browser === "undefined") {
 					throw err;
 				}
 
-				// Output cut off — suggest increasing maxOutputTokens
+				// Output cut off \u{2014} suggest increasing maxOutputTokens
 				if (
 					finishReason === "MAX_TOKENS" ||
 					finishReason === "LENGTH"
@@ -3541,8 +3679,9 @@ if (typeof browser === "undefined") {
 					],
 				},
 				contents: requestContents,
+				safetySettings: GEMINI_SAFETY_SETTINGS,
 				generationConfig: {
-					temperature: 0.5, // Lower temperature for more focused summary
+					temperature: 0.5,
 					maxOutputTokens: maxOutputTokens,
 					topP:
 						currentConfig.topP !== undefined
@@ -3608,6 +3747,7 @@ if (typeof browser === "undefined") {
 								],
 							},
 						],
+						safetySettings: GEMINI_SAFETY_SETTINGS,
 						generationConfig: {
 							temperature: currentConfig.temperature || 0.7,
 							maxOutputTokens:
@@ -3659,6 +3799,7 @@ if (typeof browser === "undefined") {
 								],
 							},
 						],
+						safetySettings: GEMINI_SAFETY_SETTINGS,
 						generationConfig: {
 							temperature: 0.4,
 							maxOutputTokens: Math.min(
@@ -3720,6 +3861,7 @@ if (typeof browser === "undefined") {
 								],
 							},
 						],
+						safetySettings: GEMINI_SAFETY_SETTINGS,
 						generationConfig: {
 							temperature: 0.4,
 							maxOutputTokens: getSummaryOutputBudget(
@@ -3882,8 +4024,9 @@ if (typeof browser === "undefined") {
 					],
 				},
 				contents: requestContents,
+				safetySettings: GEMINI_SAFETY_SETTINGS,
 				generationConfig: {
-					temperature: 0.5, // Lower temperature for more focused summary
+					temperature: 0.5,
 					maxOutputTokens: getSummaryOutputBudget(currentConfig, {
 						isShort: Boolean(options.isShort),
 						isCombine: true,
@@ -4071,7 +4214,7 @@ if (typeof browser === "undefined") {
 				// Add Novel Library shortcut
 				browser.contextMenus.create({
 					id: "openNovelLibrary",
-					title: "📚 Open Novel Library",
+					title: "\u{1F4DA} Open Novel Library",
 					contexts: ["action"], // Shows when right-clicking extension icon
 				});
 
@@ -4085,7 +4228,7 @@ if (typeof browser === "undefined") {
 				// Add quick settings access
 				browser.contextMenus.create({
 					id: "openSettings",
-					title: "⚙️ Settings",
+					title: "\u{2699}\u{FE0F} Settings",
 					contexts: ["action"],
 				});
 

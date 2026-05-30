@@ -1971,10 +1971,13 @@ if (window.__RGInitDone) {
 			const action = isShort
 				? "shortSummarizeWithGemini"
 				: "summarizeWithGemini";
+			const _cachedNovelDataForSummary = getLastKnownNovelData();
 			const response = await sendMessageWithRetry({
 				action,
 				title: document.title,
 				content: contentText,
+				novelId: _cachedNovelDataForSummary?.id || null,
+				chapterNum: _cachedNovelDataForSummary?.currentChapter || null,
 			});
 
 			if (!response?.success || !response.summary) {
