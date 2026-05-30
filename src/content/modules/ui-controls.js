@@ -66,7 +66,7 @@ export function createEnhanceButton({
 	const enhanceButton = documentRef.createElement("button");
 	enhanceButton.className = "gemini-enhance-btn";
 	enhanceButton.innerHTML =
-		'<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Enhance Chapter</span>';
+		'<span style="font-size: 20px;">\u{26A1}</span> <span style="font-weight: 600;">Enhance Chapter</span>';
 	enhanceButton.title = "Enhance readability using AI (Gemini)";
 
 	enhanceButton.style.cssText = `
@@ -107,7 +107,7 @@ export function createCancelEnhanceButton({
 	const cancelButton = documentRef.createElement("button");
 	cancelButton.id = "gemini-cancel-enhance-btn";
 	cancelButton.innerHTML =
-		'<span style="font-size: 20px;">⏹</span> <span style="font-weight: 600;">Cancel</span>';
+		'<span style="font-size: 20px;">\u{23F9}</span> <span style="font-weight: 600;">Cancel</span>';
 	cancelButton.title = "Cancel active enhancement";
 	cancelButton.style.display = "none";
 
@@ -254,7 +254,7 @@ export async function createChapterPageNovelControls({
 
 		const statusBadge = documentRef.createElement("span");
 		statusBadge.style.cssText = `padding: 4px 8px; background: ${existingNovel ? "#1b5e20" : "#424242"}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;`;
-		statusBadge.textContent = existingNovel ? "📚 In Library" : "📖 Not Saved";
+		statusBadge.textContent = existingNovel ? "\u{1F4DA} In Library" : "\u{1F4D6} Not Saved";
 		controlsContainer.appendChild(statusBadge);
 
 		const createCompactButton = (text, icon, color, onClick) => {
@@ -265,7 +265,7 @@ export async function createChapterPageNovelControls({
 			return btn;
 		};
 
-		controlsContainer.appendChild(createCompactButton(existingNovel ? "Update" : "Add to Library", existingNovel ? "🔄" : "➕", existingNovel ? "#00695c" : "#1976d2", async () => {
+		controlsContainer.appendChild(createCompactButton(existingNovel ? "Update" : "Add to Library", existingNovel ? "\u{1F504}" : "\u{2795}", existingNovel ? "#00695c" : "#1976d2", async () => {
 			if (existingNovel) {
 				await manuallyCheckAndUpdateNovel(existingNovel, currentHandler?.extractNovelMetadata?.() || {});
 			} else {
@@ -289,7 +289,7 @@ export async function createChapterPageNovelControls({
 			});
 			controlsContainer.appendChild(statusSelect);
 
-			controlsContainer.appendChild(createCompactButton("Remove", "🗑️", "#c62828", async () => {
+			controlsContainer.appendChild(createCompactButton("Remove", "\u{1F5D1}\u{FE0F}", "#c62828", async () => {
 				if (confirm("Remove this novel from your library?")) {
 					await novelLibrary.removeNovel(existingNovel.id);
 					showTimedBanner("Novel removed from library", "success", 3000);
@@ -299,13 +299,13 @@ export async function createChapterPageNovelControls({
 
 			const readingListSelect = documentRef.createElement("select");
 			readingListSelect.style.cssText = "padding: 6px 8px; background: #2f2f2f; color: white; border: 1px solid #666; border-radius: 4px; cursor: pointer; font-size: 12px; min-width: 140px;";
-			const dOpt = documentRef.createElement("option"); dOpt.textContent = "📑 Add to List..."; dOpt.disabled = true; dOpt.selected = true;
+			const dOpt = documentRef.createElement("option"); dOpt.textContent = "\u{1F4D1} Add to List..."; dOpt.disabled = true; dOpt.selected = true;
 			readingListSelect.appendChild(dOpt);
-			const lists = [{id: "rereading", label: "🔁 Rereading"}, {id: "favourites", label: "❤️ Favourites"}];
+			const lists = [{id: "rereading", label: "\u{1F501} Rereading"}, {id: "favourites", label: "\u{2764}\u{FE0F} Favourites"}];
 			const currentLists = new Set(existingNovel.readingLists || []);
 			lists.forEach(l => {
 				const o = documentRef.createElement("option"); o.value = l.id;
-				o.textContent = (currentLists.has(l.id) ? "✅ " : "  ") + l.label;
+				o.textContent = (currentLists.has(l.id) ? "\u{2705} " : "  ") + l.label;
 				readingListSelect.appendChild(o);
 			});
 			readingListSelect.addEventListener("change", async (e) => {
@@ -316,21 +316,21 @@ export async function createChapterPageNovelControls({
 			controlsContainer.appendChild(readingListSelect);
 		}
 
-		controlsContainer.appendChild(createCompactButton("Library", "📚", "#7b1fa2", () => {
+		controlsContainer.appendChild(createCompactButton("Library", "\u{1F4DA}", "#7b1fa2", () => {
 			const base = browserRef.runtime.getURL("library/library.html");
 			windowRef.open(existingNovel ? `${base}?novel=${encodeURIComponent(existingNovel.id)}` : base, "_blank");
 		}));
 
 		if (isIncognitoActive()) {
 			const badge = documentRef.createElement("span");
-			badge.textContent = "🕵️ Incognito";
+			badge.textContent = "\u{1F575}\u{FE0F} Incognito";
 			badge.style.cssText = "padding: 4px 8px; background: #37474f; color: #b0bec5; border-radius: 4px; font-size: 11px; font-weight: 600;";
 			controlsContainer.appendChild(badge);
 		}
 
 		if (getHandlerType() !== HANDLER_TYPES.DEDICATED_PAGE) {
 			const btnLabel = shouldBannersBeHidden() ? "Show Gemini UI" : "Hide Gemini UI";
-			const toggleBtn = createCompactButton(btnLabel, "👁", "#ff9800", () => handleChapterControlsToggleBanners(toggleBtn));
+			const toggleBtn = createCompactButton(btnLabel, "\u{1F441}", "#ff9800", () => handleChapterControlsToggleBanners(toggleBtn));
 			controlsContainer.appendChild(toggleBtn);
 		}
 
@@ -399,11 +399,11 @@ export async function injectNovelPageUI({
 
 	const header = documentRef.createElement("div");
 	header.style.cssText = "width:100%; display:flex; align-items:center; gap:10px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #0f3460;";
-	const logo = documentRef.createElement("span"); logo.textContent = "📚"; logo.style.fontSize = "24px";
+	const logo = documentRef.createElement("span"); logo.textContent = "\u{1F4DA}"; logo.style.fontSize = "24px";
 	const title = documentRef.createElement("span"); title.textContent = "Ranobe Gemini Library";
 	title.style.cssText = "color:#e94560; font-weight:bold; font-size:16px;";
 	const statusBadge = documentRef.createElement("span");
-	statusBadge.textContent = existingNovel ? "✅ In Library" : "📖 Not in Library";
+	statusBadge.textContent = existingNovel ? "\u{2705} In Library" : "\u{1F4D6} Not in Library";
 	statusBadge.style.cssText = `margin-left:auto; padding:4px 10px; background:${existingNovel ? "#1b5e20" : "#424242"}; color:white; border-radius:4px; font-size:12px;`;
 	header.appendChild(logo); header.appendChild(title); header.appendChild(statusBadge);
 	controlsContainer.appendChild(header);
@@ -428,7 +428,7 @@ export async function injectNovelPageUI({
 		});
 	};
 
-	buttonRow.appendChild(createButton(existingNovel ? "Update Novel" : "Add to Library", existingNovel ? "🔄" : "➕", existingNovel ? "#00695c" : "#1976d2", async () => {
+	buttonRow.appendChild(createButton(existingNovel ? "Update Novel" : "Add to Library", existingNovel ? "\u{1F504}" : "\u{2795}", existingNovel ? "#00695c" : "#1976d2", async () => {
 		if (existingNovel) {
 			const meta = currentHandler?.extractNovelMetadata?.() || {};
 			await manuallyCheckAndUpdateNovel(existingNovel, meta);
@@ -455,7 +455,7 @@ export async function injectNovelPageUI({
 		});
 		buttonRow.appendChild(statusSelect);
 
-		buttonRow.appendChild(createButton("Remove", "🗑️", "#c62828", async () => {
+		buttonRow.appendChild(createButton("Remove", "\u{1F5D1}\u{FE0F}", "#c62828", async () => {
 			if (confirm(`Remove "${existingNovel.title}" from library?`)) {
 				await novelLibrary.removeNovel(existingNovel.id);
 				showTimedBanner("Novel removed from library", "success", 3000);
@@ -464,10 +464,66 @@ export async function injectNovelPageUI({
 		}));
 	}
 
-	buttonRow.appendChild(createButton("Open Library", "📚", "#7b1fa2", () => {
+	buttonRow.appendChild(createButton("Open Library", "\u{1F4DA}", "#7b1fa2", () => {
 		const base = browserRef.runtime.getURL("library/library.html");
 		windowRef.open(existingNovel ? `${base}?novel=${encodeURIComponent(existingNovel.id)}` : base, "_blank");
 	}));
+
+	// Novel-specific prompt button (only for novels already in library)
+	if (existingNovel) {
+		buttonRow.appendChild(createButton("Set Prompt", "\u{270D}\u{FE0F}", "#00838f", () => {
+			// Build inline modal overlay
+			const overlay = documentRef.createElement("div");
+			overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;";
+
+			const modal = documentRef.createElement("div");
+			modal.style.cssText = "background:#1a1a2e;border:1px solid #0f3460;border-radius:10px;padding:20px;width:min(520px,90vw);box-shadow:0 8px 32px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:12px;";
+
+			const modalTitle = documentRef.createElement("div");
+			modalTitle.textContent = "\u{270D}\u{FE0F} Novel-Specific Prompt";
+			modalTitle.style.cssText = "color:#e94560;font-weight:bold;font-size:15px;";
+
+			const hint = documentRef.createElement("p");
+			hint.textContent = 'This prompt is appended to the main enhancement prompt for this novel only. Use it to set tone, style, or special instructions (e.g. "This is a high-quality translation \u{2014} make only light grammar corrections.").';
+			hint.style.cssText = "color:#9ca3af;font-size:12px;line-height:1.5;margin:0;";
+
+			const textarea = documentRef.createElement("textarea");
+			textarea.value = existingNovel.customPrompt || "";
+			textarea.placeholder = "Enter novel-specific instructions for the AI\u{2026}";
+			textarea.style.cssText = "width:100%;box-sizing:border-box;height:120px;background:#0f172a;color:#e5e7eb;border:1px solid #0f3460;border-radius:6px;padding:10px;font-size:13px;resize:vertical;font-family:inherit;";
+
+			const btnRow = documentRef.createElement("div");
+			btnRow.style.cssText = "display:flex;gap:8px;justify-content:flex-end;";
+
+			const cancelBtn = documentRef.createElement("button");
+			cancelBtn.textContent = "Cancel";
+			cancelBtn.style.cssText = "padding:8px 16px;background:#424242;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;";
+			cancelBtn.addEventListener("click", () => overlay.remove());
+
+			const saveBtn = documentRef.createElement("button");
+			saveBtn.textContent = "\u{1F4BE} Save";
+			saveBtn.style.cssText = "padding:8px 16px;background:#00838f;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;";
+			saveBtn.addEventListener("click", async () => {
+				if (!novelLibrary) return;
+				await novelLibrary.updateNovelCustomPrompt(existingNovel.id, textarea.value.trim());
+				showTimedBanner("Novel prompt saved!", "success", 2000);
+				overlay.remove();
+			});
+
+			btnRow.appendChild(cancelBtn);
+			btnRow.appendChild(saveBtn);
+			modal.appendChild(modalTitle);
+			modal.appendChild(hint);
+			modal.appendChild(textarea);
+			modal.appendChild(btnRow);
+			overlay.appendChild(modal);
+
+			// Close on backdrop click
+			overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+			documentRef.body.appendChild(overlay);
+			textarea.focus();
+		}));
+	}
 
 	controlsContainer.appendChild(buttonRow);
 	insertionPoint.element.parentNode.insertBefore(controlsContainer, insertionPoint.element);
@@ -486,10 +542,10 @@ export async function injectUI({
 	initializeChunkedViewForSummaries = async () => 0,
 	summarizeChunkRange = () => {},
 	handleEnhanceClick = () => {},
-	findContentArea = () => documentRef.body,
+	findContentArea = () => null,
 } = {}) {
 	const contentArea = findContentArea();
-	if (!contentArea || documentRef.getElementById("gemini-controls")) return;
+	if (!contentArea || documentRef.getElementById("gemini-controls")) return null;
 
 	const controlsContainer = documentRef.createElement("div");
 	controlsContainer.id = "gemini-controls";
@@ -503,21 +559,23 @@ export async function injectUI({
 
 	if (getHandlerType() !== HANDLER_TYPES.CHAPTER_EMBEDDED) {
 		if (toggleBannersButton) controlsContainer.appendChild(toggleBannersButton);
-		if (enhanceButton) controlsContainer.appendChild(enhanceButton);
+		// enhance button lives in the main summary group — not duplicated here
 		if (cancelButton) controlsContainer.appendChild(cancelButton);
 	}
 
+	let mainSummaryGroup = null;
 	const chunking = await loadChunkingSystem();
 	if (chunking?.summaryUI) {
 		const totalChunks = await initializeChunkedViewForSummaries(contentArea, chunking);
-		const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
+		mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
 			totalChunks,
 			(indices) => summarizeChunkRange(indices, false),
 			(indices) => summarizeChunkRange(indices, true),
 			handleEnhanceClick
 		);
-		controlsContainer.appendChild(mainSummaryGroup);
 	}
 
-	contentArea.parentNode.insertBefore(controlsContainer, contentArea);
+	// Return elements to caller — DOM insertion is handled by insertMainUiBlocksRuntime
+	// in content.js, which honours the handler's getUIInsertionPoint() for correct placement.
+	return { controlsContainer, mainSummaryGroup };
 }
