@@ -7362,4 +7362,113 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 			document.querySelectorAll('.tab-btn[data-tab="queue"]').forEach((btn) => {
 				btn.addEventListener("click", refreshQueueList);
 			});
+
+			// ── Chat tab ──────────────────────────────────────────────────────────────────
+			const chatMessages = document.getElementById("chatMessages");
+			const chatInput = document.getElementById("chatInput");
+			const chatSendBtn = document.getElementById("chatSendBtn");
+			const chatClearBtn = document.getElementById("chatClearBtn");
+			const chatContextInfo = document.getElementById("chatContextInfo");
+
+			let _chatHistory = [];
+			let _chatNovelId = null;
+
+			async function loadChatContext() {
+				try {
+					const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+					if (!tab) return;
+					const resp = await browser.tabs
+						.sendMessage(tab.id, { action: "getNovelContext" })
+						.catch(() => null);
+					if (resp?.novelId) {
+						_chatNovelId = resp.novelId;
+						const chronicleKey = `rg_chronicle_${resp.novelId}`;
+						const stored = await browser.storage.local.get(chronicleKey).catch(() => ({}));
+						const count = Object.keys(stored[chronicleKey]?.chapters || {}).length;
+						if (chatContextInfo) {
+							chatContextInfo.textContent = count > 0
+								? `Context: ${resp.novelTitle || "Novel"} \u{B7} ${count} chapters loaded`
+								: "Novel detected but no chronicle yet. Enhance or queue chapters first.";
+						}
+					} else {
+						if (chatContextInfo) chatContextInfo.textContent = "No novel detected on current tab.";
+					}
+				} catch (_e) {
+					if (chatContextInfo) chatContextInfo.textContent = "Could not detect current novel.";
+				}
+			}
+
+			function appendChatMessage(role, text) {
+				if (!chatMessages) return;
+				const div = document.createElement("div");
+				div.style.cssText = `
+					margin-bottom: 8px;
+					padding: 6px 8px;
+					border-radius: 4px;
+					background: ${role === "user" ? "#1a2540" : "#1e3a1e"};
+					text-align: ${role === "user" ? "right" : "left"};
+					word-break: break-word;
+				`;
+				const label = document.createElement("small");
+				label.style.cssText = "display:block;font-weight:600;margin-bottom:3px;color:#999;";
+				label.textContent = role === "user" ? "You" : "AI";
+				div.appendChild(label);
+				const body = document.createElement("span");
+				body.style.whiteSpace = "pre-wrap";
+				body.textContent = text;
+				div.appendChild(body);
+				chatMessages.appendChild(div);
+				chatMessages.scrollTop = chatMessages.scrollHeight;
+			}
+
+			async function sendChatMessage() {
+				const question = chatInput?.value?.trim();
+				if (!question) return;
+				if (chatInput) chatInput.value = "";
+				appendChatMessage("user", question);
+
+				const thinking = document.createElement("div");
+				thinking.style.cssText = "font-size:11px;color:#666;margin-bottom:6px;font-style:italic;";
+				thinking.textContent = "Thinking...";
+				chatMessages?.appendChild(thinking);
+				chatMessages && (chatMessages.scrollTop = chatMessages.scrollHeight);
+
+				try {
+					const resp = await browser.runtime.sendMessage({
+						action: "story-chat",
+						question,
+						novelId: _chatNovelId,
+						conversationHistory: _chatHistory,
+					});
+					thinking.remove();
+					if (resp?.success) {
+						_chatHistory = resp.conversationHistory || _chatHistory;
+						appendChatMessage("model", resp.answer);
+					} else {
+						appendChatMessage("model", `Error: ${resp?.error || "Unknown error"}`);
+					}
+				} catch (err) {
+					thinking.remove();
+					appendChatMessage("model", `Error: ${err.message}`);
+				}
+			}
+
+			if (chatSendBtn) chatSendBtn.addEventListener("click", sendChatMessage);
+			if (chatInput) {
+				chatInput.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" && !e.shiftKey) {
+						e.preventDefault();
+						sendChatMessage();
+					}
+				});
+			}
+			if (chatClearBtn) {
+				chatClearBtn.addEventListener("click", () => {
+					_chatHistory = [];
+					if (chatMessages) chatMessages.textContent = "";
+				});
+			}
+			document.querySelectorAll('.tab-btn[data-tab="chat"]').forEach((btn) => {
+				btn.addEventListener("click", loadChatContext);
+			});
 }

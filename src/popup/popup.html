@@ -53,6 +53,7 @@
 				</button>
 				<button class="tab-btn" data-tab="loreweave" id="loreweaveTabBtn">Graph</button>
 				<button class="tab-btn" data-tab="queue" id="queueTabBtn">Queue</button>
+				<button class="tab-btn" data-tab="chat" id="chatTabBtn">Chat</button>
 			</div>
 
 			<!-- Config Tab -->
@@ -314,6 +315,35 @@
 						<button id="qResultClose" class="btn-secondary" style="font-size:11px">Back</button>
 					</div>
 					<div id="qResultContent" style="max-height:280px;overflow-y:auto;font-size:12px;line-height:1.5;padding:4px"></div>
+				</div>
+			</div>
+
+			<!-- Chat Tab -->
+			<div class="tab-content" id="chat">
+				<div class="config-section" style="display:flex;flex-direction:column">
+					<h3 class="config-section-title">Story Chat</h3>
+					<div id="chatContextInfo" class="settings-desc" style="margin-bottom:6px">
+						No novel context loaded.
+					</div>
+					<div id="chatMessages" style="
+						min-height:180px;
+						max-height:240px;
+						overflow-y:auto;
+						border:1px solid #333;
+						border-radius:4px;
+						padding:8px;
+						font-size:12px;
+						line-height:1.5;
+						margin-bottom:8px;
+					"></div>
+					<div style="display:flex;gap:6px;margin-bottom:4px">
+						<input type="text" id="chatInput" class="config-input"
+							placeholder="Ask about this novel..." style="flex:1" />
+						<button id="chatSendBtn" class="btn-secondary">Send</button>
+					</div>
+					<div style="display:flex;justify-content:flex-end">
+						<button id="chatClearBtn" class="btn-secondary" style="font-size:11px">Clear Chat</button>
+					</div>
 				</div>
 			</div>
 
