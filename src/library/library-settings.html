@@ -386,9 +386,15 @@
 							<input type="text" id="primary-openai-base-url" class="ls-input" placeholder="https://api.openai.com/v1" />
 						</div>
 						<div class="ls-form-group">
-							<label class="ls-label" for="primary-openai-model">Model ID</label>
-							<input type="text" id="primary-openai-model" class="ls-input" placeholder="gpt-4o-mini" />
-							<span class="ls-hint">Exact model name as accepted by the endpoint (e.g. gpt-4o, claude-3-haiku).</span>
+							<label class="ls-label" for="primary-openai-model">Model</label>
+							<div class="ls-inline">
+								<select id="primary-openai-model" class="ls-select">
+									<option value="">— type below or refresh —</option>
+								</select>
+								<button id="primary-openai-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻ Models</button>
+							</div>
+							<input type="text" id="primary-openai-model-custom" class="ls-input" placeholder="or type model ID (e.g. gpt-4o-mini)" style="margin-top:6px;" />
+							<span class="ls-hint">Refresh to fetch from your endpoint, or type a model ID directly.</span>
 						</div>
 						<div class="ls-form-group">
 							<label class="ls-label" for="primary-openai-key">API Key</label>
@@ -410,12 +416,15 @@
 							<input type="text" id="primary-ollama-url" class="ls-input" placeholder="http://localhost:11434" />
 						</div>
 						<div class="ls-form-group">
-							<label class="ls-label" for="primary-ollama-model">Model Name</label>
+							<label class="ls-label" for="primary-ollama-model">Model</label>
 							<div class="ls-inline">
-								<input type="text" id="primary-ollama-model" class="ls-input" placeholder="llama3.2" />
+								<select id="primary-ollama-model" class="ls-select">
+									<option value="">— refresh to list installed models —</option>
+								</select>
+								<button id="primary-ollama-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻ Models</button>
 								<button id="primary-ollama-test" class="ls-btn ls-btn-secondary ls-btn-sm">🧪 Test</button>
 							</div>
-							<span class="ls-hint">Run <code>ollama list</code> to see installed models.</span>
+							<span class="ls-hint">Refresh to list installed Ollama models.</span>
 						</div>
 					</div>
 				</div>
@@ -452,11 +461,14 @@
 						<div id="fallback-gemini-config" class="ls-provider-config">
 							<div class="ls-form-group">
 								<label class="ls-label" for="fallback-gemini-model">Model</label>
-								<select id="fallback-gemini-model" class="ls-select">
-									<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-									<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-									<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-								</select>
+								<div class="ls-inline">
+									<select id="fallback-gemini-model" class="ls-select">
+										<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+										<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+										<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+									</select>
+									<button id="fallback-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻ Refresh</button>
+								</div>
 								<span class="ls-hint">Uses the same Gemini API keys as the primary slot.</span>
 							</div>
 						</div>
@@ -468,8 +480,14 @@
 								<input type="text" id="fallback-openai-base-url" class="ls-input" placeholder="https://api.openai.com/v1" />
 							</div>
 							<div class="ls-form-group">
-								<label class="ls-label" for="fallback-openai-model">Model ID</label>
-								<input type="text" id="fallback-openai-model" class="ls-input" placeholder="gpt-4o-mini" />
+								<label class="ls-label" for="fallback-openai-model">Model</label>
+								<div class="ls-inline">
+									<select id="fallback-openai-model" class="ls-select">
+										<option value="">— type below or refresh —</option>
+									</select>
+									<button id="fallback-openai-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻ Models</button>
+								</div>
+								<input type="text" id="fallback-openai-model-custom" class="ls-input" placeholder="or type model ID" style="margin-top:6px;" />
 							</div>
 							<div class="ls-form-group">
 								<label class="ls-label" for="fallback-openai-key">API Key</label>
@@ -487,9 +505,12 @@
 								<input type="text" id="fallback-ollama-url" class="ls-input" placeholder="http://localhost:11434" />
 							</div>
 							<div class="ls-form-group">
-								<label class="ls-label" for="fallback-ollama-model">Model Name</label>
+								<label class="ls-label" for="fallback-ollama-model">Model</label>
 								<div class="ls-inline">
-									<input type="text" id="fallback-ollama-model" class="ls-input" placeholder="llama3.2" />
+									<select id="fallback-ollama-model" class="ls-select">
+										<option value="">— refresh to list installed models —</option>
+									</select>
+									<button id="fallback-ollama-refresh-models" class="ls-btn ls-btn-secondary ls-btn-sm">↻ Models</button>
 									<button id="fallback-ollama-test" class="ls-btn ls-btn-secondary ls-btn-sm">🧪 Test</button>
 								</div>
 							</div>
@@ -930,20 +951,11 @@
 				<section class="ls-panel" id="panel-sites">
 					<div class="ls-panel-header">
 						<h1 class="ls-panel-title">🌐 Sites</h1>
-						<p class="ls-panel-description">Enable or disable site enhancements, and configure site-specific
-							settings.</p>
+						<p class="ls-panel-description">Enable sites and browser permissions, configure auto-add behaviour, and adjust per-site settings.</p>
 					</div>
 
-					<!-- Auto-Add by Site -->
-					<div class="ls-section" data-accent="purple">
-						<div class="ls-section-title">🌐 Auto-Add by Site</div>
-						<div class="ls-section-desc">Configure auto-add behavior and reading status for each supported
-							site.</div>
-						<div id="site-autoadd-list" class="site-autoadd-list"></div>
-					</div>
-
-					<!-- Per-site settings panels (rendered by site-settings-ui.js) -->
-					<div id="ls-website-settings-panels"></div>
+					<!-- Unified site cards — rendered by renderSiteSettingsCards() -->
+					<div id="ls-site-cards" class="ls-site-cards-grid"></div>
 				</section>
 
 				<!-- ════════════════════════════════════════════════

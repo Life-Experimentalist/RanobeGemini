@@ -11,6 +11,7 @@ import { FanfictionMobileHandler } from "./website-handlers/fanfiction-mobile-ha
 import { AO3Handler } from "./website-handlers/ao3-handler.js";
 import { WebNovelHandler } from "./website-handlers/webnovel-handler.js";
 import { ScribbleHubHandler } from "./website-handlers/scribblehub-handler.js";
+import { NovelbinHandler } from "./website-handlers/novelbin-handler.js";
 
 /**
  * Registry of all handler classes
@@ -23,6 +24,7 @@ const HANDLER_CLASSES = [
 	AO3Handler,
 	WebNovelHandler,
 	ScribbleHubHandler,
+	NovelbinHandler,
 ];
 
 /**
@@ -89,29 +91,45 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 		// Only primary handlers should control the default enabled state
 		const enabledByDefault =
 			isPrimary && HandlerClass.DEFAULT_ENABLED !== false;
+		const forceDisabled = HandlerClass.FORCE_DISABLED === true;
+
+		// Convert raw SUPPORTED_DOMAINS patterns to browser permission origins.
+		// Wildcard patterns (*.domain.com) → *://*.domain.com/*
+		// Exact domains (domain.com) → *://domain.com/*
+		const permissionOrigins = domains.map((d) =>
+			d.startsWith("*.") ? `*://${d}/*` : `*://${d}/*`,
+		);
 
 		if (!SHELF_REGISTRY[shelfId]) {
 			// Create new shelf entry - use all metadata from primary handler
 			SHELF_REGISTRY[shelfId] = {
 				id: shelfMeta.id,
 				name: shelfMeta.name || shelfMeta.id,
-				icon: shelfMeta.icon || "📖",
-				emoji: shelfMeta.emoji || "📖",
+				icon: shelfMeta.icon || "\u{1F4D6}",
+				emoji: shelfMeta.emoji || "\u{1F4D6}",
 				color: shelfMeta.color || "#666",
 				invertIconInDarkMode: shelfMeta.invertIconInDarkMode || false,
 				domains: expandedDomains,
+				permissionOrigins,
 				novelIdPattern: shelfMeta.novelIdPattern,
 				primaryDomain: shelfMeta.primaryDomain,
 				handlerType: HandlerClass.HANDLER_TYPE || "chapter_embedded",
 				enabledByDefault,
+				forceDisabled,
 				defaultExportTemplate: shelfMeta.defaultExportTemplate || null,
 			};
 		} else {
-			// Merge domains into existing shelf (for mobile/desktop variants)
+			// Merge domains and permission origins into existing shelf (for mobile/desktop variants)
 			SHELF_REGISTRY[shelfId].domains = [
 				...new Set([
 					...SHELF_REGISTRY[shelfId].domains,
 					...expandedDomains,
+				]),
+			];
+			SHELF_REGISTRY[shelfId].permissionOrigins = [
+				...new Set([
+					...(SHELF_REGISTRY[shelfId].permissionOrigins || []),
+					...permissionOrigins,
 				]),
 			];
 
@@ -128,6 +146,7 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 					shelfMeta.primaryDomain ||
 					SHELF_REGISTRY[shelfId].primaryDomain;
 				SHELF_REGISTRY[shelfId].enabledByDefault = enabledByDefault;
+				SHELF_REGISTRY[shelfId].forceDisabled = forceDisabled;
 			}
 		}
 	}

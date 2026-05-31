@@ -478,6 +478,7 @@ async function fetchLibraryModels(apiKey) {
 		);
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 		const data = await response.json();
+		const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(/\/[^/]+:generateContent$/, "");
 		return (data.models || [])
 			.filter(
 				(m) =>
@@ -489,13 +490,63 @@ async function fetchLibraryModels(apiKey) {
 				return {
 					id,
 					displayName: formatLibraryModelName(id),
-					endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`,
+					endpoint: `${baseEndpoint}/${id}:generateContent`,
 				};
 			});
 	} catch (err) {
 		debugError("Failed to fetch models:", err);
 		return null;
 	}
+}
+
+async function fetchOpenAIModels(baseUrl, apiKey) {
+	if (!baseUrl || !apiKey) return [];
+	try {
+		const modelsUrl = baseUrl.replace(/\/chat\/completions\/?$/, "").replace(/\/$/, "") + "/models";
+		const res = await fetch(modelsUrl, {
+			headers: { Authorization: `Bearer ${apiKey}` },
+		});
+		if (!res.ok) return [];
+		const data = await res.json();
+		return (data.data || [])
+			.map((m) => ({ id: m.id, displayName: m.id }))
+			.sort((a, b) => a.id.localeCompare(b.id));
+	} catch {
+		return [];
+	}
+}
+
+async function fetchOllamaModels(baseUrl) {
+	if (!baseUrl) return [];
+	try {
+		const url = baseUrl.replace(/\/$/, "") + "/api/tags";
+		const res = await fetch(url);
+		if (!res.ok) return [];
+		const data = await res.json();
+		return (data.models || []).map((m) => ({ id: m.name, displayName: m.name }));
+	} catch {
+		return [];
+	}
+}
+
+function populateModelSelect(selectEl, models, savedValue) {
+	const prev = savedValue || selectEl.value;
+	selectEl.replaceChildren(); // safe clear — no innerHTML
+	if (!models.length) {
+		const opt = document.createElement("option");
+		opt.value = "";
+		opt.textContent = "— no models found —";
+		selectEl.appendChild(opt);
+		return;
+	}
+	models.forEach((m) => {
+		const opt = document.createElement("option");
+		opt.value = m.id;
+		opt.textContent = m.displayName || m.id;
+		if (m.id === prev) opt.selected = true;
+		selectEl.appendChild(opt);
+	});
+	if (!selectEl.value && prev) selectEl.value = prev;
 }
 
 async function updateLibraryModelSelector(apiKey, slot = "primary") {
@@ -609,15 +660,37 @@ async function loadLibraryModelSettings() {
 		} else if (primaryConfig.provider === "openai") {
 			if ($("primary-openai-base-url"))
 				$("primary-openai-base-url").value = primaryConfig.baseUrl || "";
-			if ($("primary-openai-model"))
-				$("primary-openai-model").value = primaryConfig.modelId || "";
+			// Populate custom text input always; try to match select option too
+			const poModel = $("primary-openai-model");
+			const poCustom = $("primary-openai-model-custom");
+			if (poCustom) poCustom.value = primaryConfig.modelId || "";
+			if (poModel) {
+				poModel.value = primaryConfig.modelId || "";
+				if (!poModel.value && primaryConfig.modelId) {
+					// Model not in select yet — add a temporary option
+					const opt = document.createElement("option");
+					opt.value = primaryConfig.modelId;
+					opt.textContent = primaryConfig.modelId;
+					poModel.appendChild(opt);
+					poModel.value = primaryConfig.modelId;
+				}
+			}
 			if ($("primary-openai-key"))
 				$("primary-openai-key").value = primaryConfig.apiKey || "";
 		} else if (primaryConfig.provider === "ollama") {
 			if ($("primary-ollama-url"))
 				$("primary-ollama-url").value = primaryConfig.baseUrl || "";
-			if ($("primary-ollama-model"))
-				$("primary-ollama-model").value = primaryConfig.modelId || "";
+			const poOllamaModel = $("primary-ollama-model");
+			if (poOllamaModel) {
+				poOllamaModel.value = primaryConfig.modelId || "";
+				if (!poOllamaModel.value && primaryConfig.modelId) {
+					const opt = document.createElement("option");
+					opt.value = primaryConfig.modelId;
+					opt.textContent = primaryConfig.modelId;
+					poOllamaModel.appendChild(opt);
+					poOllamaModel.value = primaryConfig.modelId;
+				}
+			}
 		}
 
 		// \u{2500}\u{2500} Fallback Slot \u{2500}\u{2500}
@@ -976,209 +1049,284 @@ async function loadSiteSettings_() {
 	}
 }
 
-function renderSiteAutoAddSettings() {
-	const list = $("site-autoadd-list");
-	if (!list) return;
+function _makeFaviconImg(iconUrl, emoji, invertInDark) {
+	if (!iconUrl) return null;
+	try {
+		const img = document.createElement("img");
+		img.src = "https://icons.duckduckgo.com/ip3/" + new URL(iconUrl).hostname + ".ico";
+		img.className = "ls-site-icon-img";
+		img.alt = "";
+		img.dataset.emoji = emoji || "📖";
+		if (invertInDark) img.dataset.invert = "true";
+		img.addEventListener("error", () => {
+			const span = document.createElement("span");
+			span.className = "ls-site-icon-emoji";
+			span.textContent = img.dataset.emoji;
+			img.replaceWith(span);
+		});
+		return img;
+	} catch {
+		return null;
+	}
+}
 
-	list.innerHTML = "";
+function _makeStatusSelect(shelfId, mode, currentValue) {
+	const sel = document.createElement("select");
+	sel.className = "site-autoadd-status ls-select";
+	sel.dataset.shelf = shelfId;
+	sel.dataset.mode = mode;
+	Object.entries(READING_STATUS_INFO).forEach(([key, info]) => {
+		const opt = document.createElement("option");
+		opt.value = key;
+		opt.textContent = info.label;
+		if (key === currentValue) opt.selected = true;
+		sel.appendChild(opt);
+	});
+	return sel;
+}
 
-	const shelvesArr = Object.values(SHELVES);
+function renderSiteSettingsCards() {
+	const container = $("ls-site-cards");
+	if (!container) return;
+	container.innerHTML = "";
 
-	shelvesArr.forEach((shelf) => {
-		if (!shelf || !shelf.id) return;
+	const shelves = Object.values(SHELF_REGISTRY);
 
-		const shelfId = shelf.id;
-		const shelfSett =
-			siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-		const isEnabled = shelfSett.enabled !== false;
+	shelves.forEach((regEntry) => {
+		const shelfId = regEntry.id;
+		const shelf = SHELVES[shelfId.toUpperCase()] || SHELVES[shelfId] || regEntry;
+		const shelfSett = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+		const isForceDisabled = regEntry.forceDisabled === true;
+		const isEnabled = !isForceDisabled && shelfSett.enabled !== false;
 		const autoAddEnabled = shelfSett.autoAddEnabled !== false;
+		const permissionOrigins = regEntry.permissionOrigins || [];
+		const siteDef = WEBSITE_SETTINGS_DEFINITIONS.find((d) => d.id === shelfId);
+		const hasSettings = Boolean(siteDef);
 
-		const statusOptions = Object.entries(READING_STATUS_INFO)
-			.map(
-				([key, info]) => `
-			<option value="${key}">${info.label}</option>
-		`,
-			)
-			.join("");
+		// ── Card wrapper ───────────────────────────────────────────────────
+		const card = document.createElement("div");
+		card.className = "ls-site-card" + (isForceDisabled ? " ls-site-card--force-disabled" : "");
+		card.dataset.shelf = shelfId;
 
-		// Build favicon URL using Google's proxy (avoids hotlink blocks)
-		const faviconUrl = shelf.icon
-			? (() => {
-					try {
-						return `https://icons.duckduckgo.com/ip3/${new URL(shelf.icon).hostname}.ico`;
-					} catch {
-						return null;
-					}
-				})()
-			: null;
-		const invertIcon = shelf.invertIconInDarkMode === true;
-		const iconHtml = faviconUrl
-			? `<img src="${faviconUrl}" class="ls-site-icon-img" alt="" data-emoji="${shelf.emoji || "\u{1F4D6}"}" ${invertIcon ? 'data-invert="true"' : ""} />`
-			: `<span class="ls-site-icon-emoji">${shelf.emoji || "\u{1F4D6}"}</span>`;
+		// ── Header ─────────────────────────────────────────────────────────
+		const header = document.createElement("div");
+		header.className = "ls-site-card-header";
 
-		const row = document.createElement("div");
-		row.style.cssText =
-			"display:flex;align-items:center;gap:12px;padding:10px;" +
-			"border:1px solid var(--border-color);border-radius:8px;margin-bottom:8px;" +
-			"background:var(--bg-secondary);";
-		row.innerHTML = `
-			<label class="ls-toggle" title="Enable/disable ${shelf.name}">
-				<input type="checkbox" class="site-enable-toggle" data-shelf="${shelfId}"
-					${isEnabled ? "checked" : ""} />
-				<span class="ls-toggle-track"></span>
-			</label>
-			<span class="ls-site-icon-wrap">${iconHtml}</span>
-			<span style="flex:1;font-weight:500;font-size:13px;">${shelf.name || shelfId}</span>
-			<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-				<label class="ls-toggle" title="Auto-add ${shelf.name} to library">
-					<input type="checkbox" class="site-autoadd-toggle" data-shelf="${shelfId}"
-						${autoAddEnabled ? "checked" : ""} />
-					<span class="ls-toggle-track"></span>
-				</label>
-				<label style="font-size:11px;color:var(--text-secondary);">On chapter:</label>
-				<select class="site-autoadd-status ls-select" data-shelf="${shelfId}" data-mode="chapter"
-					style="font-size:12px;padding:4px 6px;min-width:130px;">
-					${statusOptions}
-				</select>
-				<label style="font-size:11px;color:var(--text-secondary);">On novel:</label>
-				<select class="site-autoadd-status ls-select" data-shelf="${shelfId}" data-mode="novel"
-					style="font-size:12px;padding:4px 6px;min-width:130px;">
-					${statusOptions}
-				</select>
-			</div>
-		`;
-
-		// Swap favicon \u{2192} emoji on load failure (no inline onerror, avoids CSP)
-		const imgEl = row.querySelector(".ls-site-icon-img");
+		const iconWrap = document.createElement("span");
+		iconWrap.className = "ls-site-icon-wrap";
+		const imgEl = _makeFaviconImg(
+			shelf.icon || regEntry.icon,
+			shelf.emoji || regEntry.emoji,
+			shelf.invertIconInDarkMode,
+		);
 		if (imgEl) {
-			imgEl.addEventListener("error", () => {
-				const emoji = imgEl.dataset.emoji || "\u{1F4D6}";
-				const span = document.createElement("span");
-				span.className = "ls-site-icon-emoji";
-				span.textContent = emoji;
-				imgEl.replaceWith(span);
+			iconWrap.appendChild(imgEl);
+		} else {
+			const em = document.createElement("span");
+			em.className = "ls-site-icon-emoji";
+			em.textContent = shelf.emoji || regEntry.emoji || "📖";
+			iconWrap.appendChild(em);
+		}
+		header.appendChild(iconWrap);
+
+		const info = document.createElement("div");
+		info.className = "ls-site-card-info";
+		const nameEl = document.createElement("span");
+		nameEl.className = "ls-site-card-name";
+		nameEl.textContent = shelf.name || regEntry.name || shelfId;
+		const domainEl = document.createElement("span");
+		domainEl.className = "ls-site-card-domain";
+		domainEl.textContent = regEntry.primaryDomain || shelfId;
+		info.appendChild(nameEl);
+		info.appendChild(domainEl);
+		header.appendChild(info);
+
+		if (isForceDisabled) {
+			const badge = document.createElement("span");
+			badge.className = "ls-badge ls-badge-muted";
+			badge.textContent = "Coming soon";
+			header.appendChild(badge);
+		} else {
+			const toggleLabel = document.createElement("label");
+			toggleLabel.className = "ls-toggle";
+			toggleLabel.title = "Enable " + (shelf.name || shelfId);
+			const toggleInput = document.createElement("input");
+			toggleInput.type = "checkbox";
+			toggleInput.className = "site-enable-toggle";
+			toggleInput.dataset.shelf = shelfId;
+			toggleInput.checked = isEnabled;
+			const toggleTrack = document.createElement("span");
+			toggleTrack.className = "ls-toggle-track";
+			toggleLabel.appendChild(toggleInput);
+			toggleLabel.appendChild(toggleTrack);
+			header.appendChild(toggleLabel);
+		}
+
+		if (hasSettings) {
+			const chevron = document.createElement("button");
+			chevron.className = "ls-site-card-chevron";
+			chevron.setAttribute("aria-expanded", "false");
+			chevron.textContent = "▾";
+			header.appendChild(chevron);
+		}
+
+		card.appendChild(header);
+
+		if (!isForceDisabled) {
+			// ── Auto-add sub-row ───────────────────────────────────────────
+			const aaRow = document.createElement("div");
+			aaRow.className = "ls-site-card-autoadd" + (isEnabled ? "" : " ls-hidden");
+
+			const aaLbl = document.createElement("span");
+			aaLbl.className = "ls-site-autoadd-label";
+			aaLbl.textContent = "Auto-add:";
+			const aaToggle = document.createElement("label");
+			aaToggle.className = "ls-toggle";
+			const aaInput = document.createElement("input");
+			aaInput.type = "checkbox";
+			aaInput.className = "site-autoadd-toggle";
+			aaInput.dataset.shelf = shelfId;
+			aaInput.checked = autoAddEnabled;
+			const aaTrack = document.createElement("span");
+			aaTrack.className = "ls-toggle-track";
+			aaToggle.appendChild(aaInput);
+			aaToggle.appendChild(aaTrack);
+			aaRow.appendChild(aaLbl);
+			aaRow.appendChild(aaToggle);
+
+			const chLbl = document.createElement("span");
+			chLbl.className = "ls-site-autoadd-label";
+			chLbl.textContent = "On chapter:";
+			const chSel = _makeStatusSelect(
+				shelfId, "chapter",
+				shelfSett.autoAddStatusChapter || READING_STATUS.READING,
+			);
+			aaRow.appendChild(chLbl);
+			aaRow.appendChild(chSel);
+
+			const nvLbl = document.createElement("span");
+			nvLbl.className = "ls-site-autoadd-label";
+			nvLbl.textContent = "On novel:";
+			const nvSel = _makeStatusSelect(
+				shelfId, "novel",
+				shelfSett.autoAddStatusNovel || READING_STATUS.PLAN_TO_READ,
+			);
+			aaRow.appendChild(nvLbl);
+			aaRow.appendChild(nvSel);
+
+			card.appendChild(aaRow);
+
+			// ── Settings panel (expandable) ────────────────────────────────
+			if (hasSettings) {
+				const settingsPanel = document.createElement("div");
+				settingsPanel.className = "ls-site-card-settings ls-hidden";
+				const stored = siteSettings[shelfId] || {};
+				// safe: renderWebsiteSettingsPanel builds HTML from static handler
+				// SETTINGS_DEFINITION strings; storage values escaped via &quot;
+				settingsPanel.innerHTML = renderWebsiteSettingsPanel(siteDef, stored);
+				card.appendChild(settingsPanel);
+
+				settingsPanel
+					.querySelectorAll("img.ls-handler-panel-icon[data-emoji]")
+					.forEach((sImg) => {
+						sImg.addEventListener("error", () => {
+							const span = document.createElement("span");
+							span.className = "ls-handler-panel-icon ls-handler-panel-emoji";
+							span.textContent = sImg.dataset.emoji;
+							sImg.replaceWith(span);
+						});
+					});
+
+				const chevron = header.querySelector(".ls-site-card-chevron");
+				if (chevron) {
+					chevron.addEventListener("click", () => {
+						const expanded = chevron.getAttribute("aria-expanded") === "true";
+						chevron.setAttribute("aria-expanded", String(!expanded));
+						chevron.textContent = expanded ? "▾" : "▴";
+						settingsPanel.classList.toggle("ls-hidden", expanded);
+					});
+				}
+			}
+
+			// ── Enable toggle: save + request/revoke permission ────────────
+			const enableToggle = card.querySelector(".site-enable-toggle");
+			if (enableToggle) {
+				enableToggle.addEventListener("change", async (e) => {
+					const wantEnabled = e.target.checked;
+					if (wantEnabled && permissionOrigins.length) {
+						try {
+							const granted = await browser.permissions.request({ origins: permissionOrigins });
+							if (!granted) {
+								e.target.checked = false;
+								showToast("Permission denied for " + (shelf.name || shelfId), "error");
+								return;
+							}
+						} catch (err) {
+							debugError("Permission request failed:", err);
+							e.target.checked = false;
+							return;
+						}
+					} else if (!wantEnabled && permissionOrigins.length) {
+						browser.permissions.remove({ origins: permissionOrigins }).catch(() => {});
+					}
+					const aaRowEl = card.querySelector(".ls-site-card-autoadd");
+					if (aaRowEl) aaRowEl.classList.toggle("ls-hidden", !wantEnabled);
+					const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+					siteSettings[shelfId] = { ...current, enabled: wantEnabled };
+					await saveSiteSettings(siteSettings);
+					showToast(
+						wantEnabled
+							? (shelf.name || shelfId) + " enabled"
+							: (shelf.name || shelfId) + " disabled",
+						"info",
+					);
+				});
+			}
+
+			// ── Auto-add toggle ────────────────────────────────────────────
+			aaInput.addEventListener("change", async (e) => {
+				const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+				siteSettings[shelfId] = { ...current, autoAddEnabled: e.target.checked };
+				await saveSiteSettings(siteSettings);
+				showToast(
+					e.target.checked
+						? "Auto-add enabled for " + (shelf.name || shelfId)
+						: "Auto-add disabled for " + (shelf.name || shelfId),
+					"info",
+				);
+			});
+
+			// ── Status selects ─────────────────────────────────────────────
+			[chSel, nvSel].forEach((sel) => {
+				sel.addEventListener("change", async (e) => {
+					const mode = e.target.dataset.mode;
+					const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+					const updated = { ...current };
+					if (mode === "chapter") updated.autoAddStatusChapter = e.target.value;
+					else updated.autoAddStatusNovel = e.target.value;
+					siteSettings[shelfId] = updated;
+					await saveSiteSettings(siteSettings);
+				});
+			});
+
+			// ── Per-site setting field changes ─────────────────────────────
+			card.querySelectorAll("input[data-setting], select[data-setting]").forEach((input) => {
+				input.addEventListener("change", async (e) => {
+					const sid = e.target.dataset.shelf;
+					const settKey = e.target.dataset.setting;
+					if (!sid || !settKey) return;
+					const val = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+					siteSettings[sid] = { ...(siteSettings[sid] || {}), [settKey]: val };
+					await saveSiteSettings(siteSettings);
+					showToast((shelf.name || sid) + " setting saved", "success");
+				});
 			});
 		}
 
-		// Toggle enable/disable
-		row.querySelector(".site-enable-toggle").addEventListener(
-			"change",
-			async (e) => {
-				const current =
-					siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-				const updated = { ...current, enabled: e.target.checked };
-				siteSettings[shelfId] = updated;
-				await saveSiteSettings(siteSettings);
-				showToast(
-					e.target.checked
-						? `\u{2705} ${shelf.name} enabled`
-						: `\u{26D4} ${shelf.name} disabled`,
-					"info",
-				);
-			},
-		);
-
-		// Toggle auto-add
-		row.querySelector(".site-autoadd-toggle").addEventListener(
-			"change",
-			async (e) => {
-				const current =
-					siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-				const updated = {
-					...current,
-					autoAddEnabled: e.target.checked,
-				};
-				siteSettings[shelfId] = updated;
-				await saveSiteSettings(siteSettings);
-				showToast(
-					e.target.checked
-						? `\u{2705} Auto-add enabled for ${shelf.name}`
-						: `\u{23F8}\u{FE0F} Auto-add disabled for ${shelf.name}`,
-					"info",
-				);
-			},
-		);
-
-		// Auto-add status change
-		row.querySelectorAll(".site-autoadd-status").forEach((select) => {
-			const mode = select.dataset.mode;
-			if (mode === "chapter") {
-				select.value =
-					shelfSett.autoAddStatusChapter || READING_STATUS.READING;
-			} else {
-				select.value =
-					shelfSett.autoAddStatusNovel || READING_STATUS.PLAN_TO_READ;
-			}
-			select.addEventListener("change", async (e) => {
-				const current =
-					siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-				const updated = { ...current };
-				if (mode === "chapter") {
-					updated.autoAddStatusChapter = e.target.value;
-				} else {
-					updated.autoAddStatusNovel = e.target.value;
-				}
-				siteSettings[shelfId] = updated;
-				await saveSiteSettings(siteSettings);
-			});
-		});
-
-		list.appendChild(row);
+		container.appendChild(card);
 	});
 }
 
-function renderWebsiteSettingsPanels_() {
-	const container = $("ls-website-settings-panels");
-	if (!container) return;
-
-	container.innerHTML = "";
-
-	WEBSITE_SETTINGS_DEFINITIONS.forEach((def) => {
-		const stored = siteSettings[def.id] || {};
-		const wrapper = document.createElement("div");
-		wrapper.innerHTML = renderWebsiteSettingsPanel(def, stored);
-		container.appendChild(wrapper);
-	});
-
-	// Wire up favicon error fallback (no inline onerror \u{2014} CSP violation)
-	container
-		.querySelectorAll("img.ls-handler-panel-icon[data-emoji]")
-		.forEach((img) => {
-			img.addEventListener("error", () => {
-				const span = document.createElement("span");
-				span.className = "ls-handler-panel-icon ls-handler-panel-emoji";
-				span.textContent = img.dataset.emoji;
-				img.replaceWith(span);
-			});
-		});
-
-	// Wire up setting changes
-	container
-		.querySelectorAll("input[data-setting], select[data-setting]")
-		.forEach((input) => {
-			input.addEventListener("change", async (e) => {
-				const shelfId = e.target.dataset.shelf;
-				const settKey = e.target.dataset.setting;
-				if (!shelfId || !settKey) return;
-				const current = siteSettings[shelfId] || {};
-				const val =
-					e.target.type === "checkbox"
-						? e.target.checked
-						: e.target.value;
-				siteSettings[shelfId] = { ...current, [settKey]: val };
-				await saveSiteSettings(siteSettings);
-				const siteDef = WEBSITE_SETTINGS_DEFINITIONS.find(
-					(d) => d.id === shelfId,
-				);
-				showToast(
-					`\u{2705} ${siteDef?.label || shelfId} setting saved`,
-					"success",
-				);
-			});
-		});
-}
-
-// \u{2500}\u{2500} Load: Backup Checkboxes \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 async function loadBackupCheckboxSettings() {
 	try {
 		const data = await browser.storage.local.get([
@@ -2522,7 +2670,7 @@ function setupEventListeners() {
 		});
 	}
 
-	// Refresh models
+	// Refresh models — Gemini primary
 	const refreshModelsBtn = $("library-refresh-models");
 	if (refreshModelsBtn) {
 		refreshModelsBtn.addEventListener("click", async () => {
@@ -2540,6 +2688,94 @@ function setupEventListeners() {
 		});
 	}
 
+	// Refresh models — Gemini fallback
+	const fallbackRefreshBtn = $("fallback-refresh-models");
+	if (fallbackRefreshBtn) {
+		fallbackRefreshBtn.addEventListener("click", async () => {
+			const key = libraryApiKeys[0] || "";
+			if (!key) { showToast("Add a Gemini API key first", "error"); return; }
+			fallbackRefreshBtn.disabled = true;
+			fallbackRefreshBtn.textContent = "↻ Loading…";
+			await updateLibraryModelSelector(key, "fallback");
+			fallbackRefreshBtn.disabled = false;
+			fallbackRefreshBtn.textContent = "↻ Refresh";
+		});
+	}
+
+	// Refresh models — Primary OpenAI-compatible
+	const poRefreshBtn = $("primary-openai-refresh-models");
+	if (poRefreshBtn) {
+		poRefreshBtn.addEventListener("click", async () => {
+			const baseUrl = $("primary-openai-base-url")?.value?.trim();
+			const apiKey = $("primary-openai-key")?.value?.trim();
+			poRefreshBtn.disabled = true;
+			poRefreshBtn.textContent = "↻ Loading…";
+			const models = await fetchOpenAIModels(baseUrl, apiKey);
+			const sel = $("primary-openai-model");
+			const custom = $("primary-openai-model-custom");
+			if (sel) {
+				const saved = custom?.value?.trim() || sel.value;
+				populateModelSelect(sel, models, saved);
+			}
+			poRefreshBtn.disabled = false;
+			poRefreshBtn.textContent = "↻ Models";
+			showToast(models.length ? `${models.length} models loaded` : "No models found — check URL and key", models.length ? "success" : "error");
+		});
+	}
+
+	// Refresh models — Primary Ollama
+	const poOllamaRefreshBtn = $("primary-ollama-refresh-models");
+	if (poOllamaRefreshBtn) {
+		poOllamaRefreshBtn.addEventListener("click", async () => {
+			const baseUrl = $("primary-ollama-url")?.value?.trim() || "http://localhost:11434";
+			poOllamaRefreshBtn.disabled = true;
+			poOllamaRefreshBtn.textContent = "↻ Loading…";
+			const models = await fetchOllamaModels(baseUrl);
+			const sel = $("primary-ollama-model");
+			if (sel) populateModelSelect(sel, models, sel.value);
+			poOllamaRefreshBtn.disabled = false;
+			poOllamaRefreshBtn.textContent = "↻ Models";
+			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+		});
+	}
+
+	// Refresh models — Fallback OpenAI-compatible
+	const foRefreshBtn = $("fallback-openai-refresh-models");
+	if (foRefreshBtn) {
+		foRefreshBtn.addEventListener("click", async () => {
+			const baseUrl = $("fallback-openai-base-url")?.value?.trim();
+			const apiKey = $("fallback-openai-key")?.value?.trim();
+			foRefreshBtn.disabled = true;
+			foRefreshBtn.textContent = "↻ Loading…";
+			const models = await fetchOpenAIModels(baseUrl, apiKey);
+			const sel = $("fallback-openai-model");
+			const custom = $("fallback-openai-model-custom");
+			if (sel) {
+				const saved = custom?.value?.trim() || sel.value;
+				populateModelSelect(sel, models, saved);
+			}
+			foRefreshBtn.disabled = false;
+			foRefreshBtn.textContent = "↻ Models";
+			showToast(models.length ? `${models.length} models loaded` : "No models found", models.length ? "success" : "error");
+		});
+	}
+
+	// Refresh models — Fallback Ollama
+	const foOllamaRefreshBtn = $("fallback-ollama-refresh-models");
+	if (foOllamaRefreshBtn) {
+		foOllamaRefreshBtn.addEventListener("click", async () => {
+			const baseUrl = $("fallback-ollama-url")?.value?.trim() || "http://localhost:11434";
+			foOllamaRefreshBtn.disabled = true;
+			foOllamaRefreshBtn.textContent = "↻ Loading…";
+			const models = await fetchOllamaModels(baseUrl);
+			const sel = $("fallback-ollama-model");
+			if (sel) populateModelSelect(sel, models, sel.value);
+			foOllamaRefreshBtn.disabled = false;
+			foOllamaRefreshBtn.textContent = "↻ Models";
+			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+		});
+	}
+
 	// Model select change
 	const modelSel = $("library-model-select");
 	if (modelSel) {
@@ -2549,11 +2785,10 @@ function setupEventListeners() {
 			const match = stored.availableModels?.find(
 				(m) => m.id === selectedId,
 			);
+			const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(/\/[^/]+:generateContent$/, "");
 			const endpoint =
 				match?.endpoint ||
-				(selectedId
-					? `https://generativelanguage.googleapis.com/v1beta/models/${selectedId}:generateContent`
-					: "");
+				(selectedId ? `${baseEndpoint}/${selectedId}:generateContent` : "");
 			setLibraryModelEndpoint(endpoint);
 			await browser.storage.local.set({
 				selectedModelId: selectedId,
@@ -2642,7 +2877,8 @@ function setupEventListeners() {
 					updates.modelEndpoint = primaryConfig.endpoint;
 				} else if (primaryProvider === "openai") {
 					primaryConfig.baseUrl = $("primary-openai-base-url")?.value ?? "";
-					primaryConfig.modelId = $("primary-openai-model")?.value ?? "";
+					// Prefer select; fall back to custom text input
+					primaryConfig.modelId = $("primary-openai-model")?.value || $("primary-openai-model-custom")?.value || "";
 					primaryConfig.apiKey = $("primary-openai-key")?.value ?? "";
 				} else if (primaryProvider === "ollama") {
 					primaryConfig.baseUrl = $("primary-ollama-url")?.value ?? "http://localhost:11434";
@@ -2662,7 +2898,7 @@ function setupEventListeners() {
 						updates.backupModelId = fallbackConfig.modelId;
 					} else if (fallbackProvider === "openai") {
 						fallbackConfig.baseUrl = $("fallback-openai-base-url")?.value ?? "";
-						fallbackConfig.modelId = $("fallback-openai-model")?.value ?? "";
+						fallbackConfig.modelId = $("fallback-openai-model")?.value || $("fallback-openai-model-custom")?.value || "";
 						fallbackConfig.apiKey = $("fallback-openai-key")?.value ?? "";
 					} else if (fallbackProvider === "ollama") {
 						fallbackConfig.baseUrl = $("fallback-ollama-url")?.value ?? "http://localhost:11434";
@@ -4112,8 +4348,7 @@ async function init() {
 
 	// Load and render Site Settings
 	await loadSiteSettings_();
-	renderSiteAutoAddSettings();
-	renderWebsiteSettingsPanels_();
+	renderSiteSettingsCards();
 
 	// Telemetry
 	await loadTelemetrySettings();

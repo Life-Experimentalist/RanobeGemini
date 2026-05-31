@@ -112,9 +112,14 @@ export async function graphifyChapter(
 		throw new Error(`Gemini returned invalid JSON: ${err.message}`);
 	}
 
-	if (!delta.domain_id || !Array.isArray(delta.extracted_entities)) {
+	if (
+		!delta.domain_id ||
+		!Array.isArray(delta.extracted_entities) ||
+		!Array.isArray(delta.state_forms) ||
+		!Array.isArray(delta.temporal_edges)
+	) {
 		throw new Error(
-			"Gemini response missing required fields (domain_id, extracted_entities).",
+			"Gemini response missing required fields (domain_id, extracted_entities, state_forms, temporal_edges).",
 		);
 	}
 

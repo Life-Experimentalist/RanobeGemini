@@ -24,6 +24,13 @@ export class BaseWebsiteHandler {
 	 */
 	static SETTINGS_DEFINITION = null;
 
+	/**
+	 * When true, the site card in Library Settings is greyed out and the
+	 * enable toggle is locked. Used for handlers that are not yet ready for
+	 * general use (e.g. WebNovel). Users cannot enable a force-disabled site.
+	 */
+	static FORCE_DISABLED = false;
+
 	constructor() {
 		// Optional initialization
 	}

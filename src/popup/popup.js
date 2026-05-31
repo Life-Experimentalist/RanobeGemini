@@ -8,6 +8,7 @@ import {
 	DEFAULT_DRIVE_CLIENT_ID,
 	DEFAULT_DEBUG_MODE,
 	DEFAULT_MODEL_ID,
+	DEFAULT_MODEL_ENDPOINT,
 	DEFAULT_CONTENT_FILTER_SETTINGS,
 } from "../utils/constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
@@ -1012,7 +1013,7 @@ async function initializePopup() {
 
 				// Fallback to constructing the endpoint if not found
 				if (!modelEndpoint) {
-					modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+					modelEndpoint = DEFAULT_MODEL_ENDPOINT;
 				}
 
 				// Collect all settings
@@ -1254,7 +1255,7 @@ async function initializePopup() {
 					return {
 						id: id,
 						displayName: formatModelName(id),
-						endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${id}:generateContent`,
+						endpoint: `${DEFAULT_MODEL_ENDPOINT.replace(/\/[^/]+:generateContent$/, "")}/${id}:generateContent`,
 					};
 				});
 
@@ -1711,7 +1712,7 @@ async function initializePopup() {
 
 					// Fallback to constructing the endpoint if not found
 					if (!modelEndpoint) {
-						modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModelId}:generateContent`;
+						modelEndpoint = DEFAULT_MODEL_ENDPOINT;
 					}
 
 					const updates = {

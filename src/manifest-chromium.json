@@ -34,7 +34,9 @@
 	},
 	"host_permissions": [
 		"https://www.googleapis.com/*",
-		"https://accounts.google.com/*",
+		"https://accounts.google.com/*"
+	],
+	"optional_host_permissions": [
 		"*://*.ao3.org/*",
 		"*://*.archiveofourown.org/*",
 		"*://*.fanfiction.net/*",
