@@ -7,6 +7,7 @@
 	"endOfLine": "lf",
 	"arrowParens": "always",
 	"bracketSpacing": true,
+	"proseWrap": "preserve",
 	"overrides": [
 		{
 			"files": [

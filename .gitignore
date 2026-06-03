@@ -1,3 +1,4 @@
+desktop.ini
 node_modules/
 dist/
 releases/*
@@ -25,6 +26,12 @@ dev/emoji-report.txt
 .venv/
 INSTRUCTIONS.md
 gcm-diagnose.log
-graphify-out/
+graphify-out/*
+.graphify_*
+!graphify-out/graph.html
+!graphify-out/graph.json
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/.graphify_python
+!graphify-out\.graphify_analysis.json
 .tmp/
 scratch/

@@ -1,7 +1,419 @@
 Mode: all
 Format: text
-Generated: 2026-05-21T12:03:51.728Z
-Total commits: 167
+Generated: 2026-06-03T14:04:26.124Z
+Total commits: 194
+
+[d8137ea] 2026-05-31 feat: redesign site settings + optional permissions + dynamic model fetching
+   feat: redesign site settings + optional permissions + dynamic model fetching
+   Site Settings panel (Plan 1):
+   - Move all novel-site domains to optional_host_permissions in both manifests
+   - Add FORCE_DISABLED flag to base-handler (default false) + WebNovelHandler
+   - SHELF_REGISTRY now stores forceDisabled + permissionOrigins per shelf
+   - Unified ls-site-card layout replaces separate auto-add list and accordion
+   panels: one card per site with enable toggle (requests/revokes browser
+   permission), auto-add sub-row, expandable SETTINGS_DEFINITION fields
+   Files:
+   - src/background/loreweave/graphify-service.js
+   - src/library/library-settings.css
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   - src/manifest-chromium.json
+   - src/manifest-firefox.json
+   - ... (4 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[26c6d31] 2026-05-30 fix: complete queue+chat implementation — multi-provider support, CORS, writingStyle
+   fix: complete queue+chat implementation — multi-provider support, CORS, writingStyle
+   - Add novel sites to host_permissions in both manifests so the queue
+   service worker can fetch chapter HTML without CORS errors
+   - chat-handler: support OpenAI-compatible and Ollama in addition to Gemini;
+   convert history format per provider
+   - queue-manager: split _generateSummary into provider-specific helpers
+   (_summarizeGemini/OpenAI/Ollama) using the configured aiProvider
+   - queue popup: read loreWeaveWritingStyle from storage and pass to job;
+   Files:
+   - src/background/loreweave/queue-manager.js
+   - src/background/message-handlers/chat-handler.js
+   - src/manifest-chromium.json
+   - src/manifest-firefox.json
+   - src/popup/popup.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[12d5d70] 2026-05-30 feat: add Chat popup tab — AI story Q&A using chronicle context
+   feat: add Chat popup tab — AI story Q&A using chronicle context
+   Files:
+   - src/popup/popup.html
+   - src/popup/popup.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[30521ec] 2026-05-30 feat: add story-chat background handler with chronicle context assembly
+   feat: add story-chat background handler with chronicle context assembly
+   Files:
+   - src/background/message-handlers/chat-handler.js
+   - src/background/message-handlers/index.js
+   - src/content/content.js
+   - src/content/modules/message-router.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[2a670ca] 2026-05-30 feat: add Queue popup tab — job form, live job list, summary view
+   feat: add Queue popup tab — job form, live job list, summary view
+   Files:
+   - src/popup/popup.html
+   - src/popup/popup.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[51d27df] 2026-05-30 feat: chapter queue — background fetch, smart chapter grouping, summarize+graphify
+   feat: chapter queue — background fetch, smart chapter grouping, summarize+graphify
+   Files:
+   - src/background/loreweave/queue-manager.js
+   - src/background/message-handlers/index.js
+   - src/background/message-handlers/queue-handler.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[b20948b] 2026-05-30 feat: save AI summaries to story chronicle when chronicle is enabled
+   feat: save AI summaries to story chronicle when chronicle is enabled
+   In the summarizeWithGemini and shortSummarizeWithGemini handlers, after
+   the summary resolves, attempt a non-blocking write to the per-novel
+   chronicle store (rg_chronicle_<novelId>) if loreWeaveChronicleEnabled is
+   set. Content script now forwards novelId and chapterNum in the summarize
+   message payload so the background can key into the correct chronicle entry.
+   Files:
+   - src/background/background.js
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[1c34ec3] 2026-05-30 feat: add chronicle and writing-style config constants + popup settings
+   feat: add chronicle and writing-style config constants + popup settings
+   Add LOREWEAVE_CHRONICLE_ENABLED, LOREWEAVE_USE_PRIOR_CONTEXT, and
+   LOREWEAVE_WRITING_STYLE constants; wire them into DEFAULT_CONFIG; expose
+   all three as checkboxes/select in the LoreWeave popup tab; include the
+   new keys in COMPREHENSIVE_BACKUP_KEYS.
+   Files:
+   - src/config/config.js
+   - src/popup/popup.html
+   - src/popup/popup.js
+   - src/utils/constants.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[8974e38] 2026-05-30 feat: graphify service uses chronicle for prior entity IDs and context
+   feat: graphify service uses chronicle for prior entity IDs and context
+   Files:
+   - src/background/loreweave/graphify-service.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[bfc919f] 2026-05-30 feat: universal 6-entity/10-relation extraction schema with style hints and prior context
+   feat: universal 6-entity/10-relation extraction schema with style hints and prior context
+   Files:
+   - src/background/loreweave/graphify-prompt.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[be2697b] 2026-05-30 feat: add chronicle-storage.js — per-novel story context accumulation
+   feat: add chronicle-storage.js — per-novel story context accumulation
+   Files:
+   - src/background/loreweave/chronicle-storage.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[67172df] 2026-05-30 fix: Show Enhanced warning button — use robust class selector; fix no-op click handler
+   fix: Show Enhanced warning button — use robust class selector; fix no-op click handler
+   Files:
+   - src/content/modules/enhanced-content-banner.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[f61309d] 2026-05-30 fix: remove unused createEnhanceButton param from injectUI
+   fix: remove unused createEnhanceButton param from injectUI
+   Files:
+   - src/content/modules/ui-controls.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[1100b46] 2026-05-30 feat: NovelBin modal — add tags, fix chapter count display, complete metadata
+   feat: NovelBin modal — add tags, fix chapter count display, complete metadata
+   Files:
+   - src/library/websites/modal-styles.js
+   - src/library/websites/novelbin/novel-card.js
+   - src/utils/website-handlers/novelbin-handler.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[0d8e39f] 2026-05-30 fix: add SPA navigation observer for pushState chapter changes (NovelBin)
+   fix: add SPA navigation observer for pushState chapter changes (NovelBin)
+   Files:
+   - src/content/content.js
+   - src/utils/website-handlers/novelbin-handler.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[6d13eff] 2026-05-30 fix: long and short summaries stack instead of replacing each other
+   fix: long and short summaries stack instead of replacing each other
+   Files:
+   - src/content/content.js
+   - src/utils/chunking/chunk-summary-ui.js
+   - src/utils/summary-service.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[7536e3a] 2026-05-30 fix: remove duplicate wordCountThreshold input — existing slider already covers this setting
+   fix: remove duplicate wordCountThreshold input — existing slider already covers this setting
+   Files:
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[69ea1ae] 2026-05-30 feat: Show Enhanced button for divergent content; configurable word count threshold in settings
+   feat: Show Enhanced button for divergent content; configurable word count threshold in settings
+   Files:
+   - src/content/modules/enhanced-content-banner.js
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   - src/utils/chunking/chunk-ui.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[0c2bb85] 2026-05-30 fix: remove unused enhanceButton local variable from injectUI
+   fix: remove unused enhanceButton local variable from injectUI
+   Files:
+   - src/content/modules/ui-controls.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[cd956fc] 2026-05-30 fix: remove duplicate enhance button from top controls bar
+   fix: remove duplicate enhance button from top controls bar
+   Files:
+   - src/content/modules/ui-controls.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[1a78ed8] 2026-05-30 docs: update novelbin plan — replace colour threshold with Show Enhanced button + configurable threshold
+   docs: update novelbin plan — replace colour threshold with Show Enhanced button + configurable threshold
+   Files:
+   - docs/superpowers/plans/2026-05-28-novelbin-ui-fixes.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[197579a] 2026-05-30 docs: add implementation plans for story intelligence, chapter queue, story chat, and novelbin fixes
+   docs: add implementation plans for story intelligence, chapter queue, story chat, and novelbin fixes
+   Files:
+   - docs/superpowers/plans/2026-05-28-chapter-queue.md
+   - docs/superpowers/plans/2026-05-28-novelbin-ui-fixes.md
+   - docs/superpowers/plans/2026-05-28-story-chat.md
+   - docs/superpowers/plans/2026-05-28-story-intelligence.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[bfa383f] 2026-05-30 docs: add four specs for story intelligence, chapter queue, story chat, and novelbin fixes
+   docs: add four specs for story intelligence, chapter queue, story chat, and novelbin fixes
+   Files:
+   - docs/superpowers/specs/2026-05-28-chapter-queue-design.md
+   - docs/superpowers/specs/2026-05-28-novelbin-ui-fixes-design.md
+   - docs/superpowers/specs/2026-05-28-story-chat-design.md
+   - docs/superpowers/specs/2026-05-28-story-intelligence-design.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[1dcf6ce] 2026-05-30 feat: LoreWeave graph integration (graphify pipeline + popup tab)
+   feat: LoreWeave graph integration (graphify pipeline + popup tab)
+   Adds opt-in LoreWeave entity extraction to the extension. After chapter
+   enhancement, story entities (characters, artifacts, locations, factions)
+   are extracted via Gemini at temperature=0.1 and POSTed to the user's
+   LoreWeave backend as an IngestDelta.
+   New files:
+   src/background/loreweave/loreweave-client.js  — HTTP client (bearer token auth)
+   src/background/loreweave/graphify-prompt.js   — Phase 5 epoch_order:int schema prompt
+   Files:
+   - src/background/loreweave/graphify-prompt.js
+   - src/background/loreweave/graphify-service.js
+   - src/background/loreweave/loreweave-client.js
+   - src/background/message-handlers/index.js
+   - src/background/message-handlers/loreweave-handler.js
+   - src/background/message-handlers/loreweave-ping-handler.js
+   - ... (5 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[debf3c1] 2026-05-21 fix(popup): novels and stats not rendering
+   fix(popup): novels and stats not rendering
+   Three bugs prevented the popup from displaying data:
+   1. renderNovelsCardList referenced undefined variable
+   ovelsList —
+   the DOM element is
+   ovelsListContainer at all call sites; fixed.
+   2. getKeyLink.addEventListener called on null (element removed from HTML) —
+   guarded with if (getKeyLink) to prevent crash.
+   Files:
+   - src/popup/popup.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[d40a5ec] 2026-05-21 feat: popup polish, metadata refresh fix, popup sort defaults
+   feat: popup polish, metadata refresh fix, popup sort defaults
+   Files:
+   - src/content/modules/novel-context.js
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   - src/library/library.js
+   - src/popup/popup.css
+   - src/popup/popup.html
+   - ... (1 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[88a4ca6] 2026-05-21 release: v5.0.0 artifacts and commit history
+   release: v5.0.0 artifacts and commit history
+   Files:
+   - docs/release/commit-history.md
+   - releases/RanobeGemini_v5.0.0_chromium.zip
+   - releases/RanobeGemini_v5.0.0_firefox.zip
+   - releases/source/Ranobe-gemini_v5.0.0_source.zip
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
 
 [8518116] 2026-05-21 feat: polish library modal metadata and update README to v5.0.0
    feat: polish library modal metadata and update README to v5.0.0
