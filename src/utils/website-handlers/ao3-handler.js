@@ -39,7 +39,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "Archive of Our Own",
 		icon: "https://archiveofourown.org/images/ao3_logos/logo_42.png",
-		emoji: "📚",
+		emoji: "\u{1F4DA}",
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
@@ -65,24 +65,51 @@ export class AO3Handler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			// ── Enhancement ────────────────────────────────────────────────
-			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
+			// \u{2500}\u{2500} Enhancement \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description:
-					"Automatically run Enhance when an AO3 chapter loads.",
+				description: "Automatically run Enhance when an AO3 chapter loads.",
 			},
-			{ key: "_bridges", type: "section", label: "🔌 Extension Bridges" },
+			{
+				key: "htmlEnhancementMode",
+				label: "HTML enhancement mode",
+				type: "toggle",
+				defaultValue: true,
+				description: "Use HTML-aware enhancement to preserve formatting such as italics and scene breaks.",
+			},
+			{ key: "_context", type: "section", label: "\u{1F4DA} AI Context" },
+			{
+				key: "includeWorkTagsInContext",
+				label: "Include work tags in AI context",
+				type: "toggle",
+				defaultValue: true,
+				description: "Pass the work's tags (fandom, relationships, warnings) to the AI for better enhancement.",
+			},
+			{
+				key: "includeWorkSummaryInContext",
+				label: "Include work summary in AI context",
+				type: "toggle",
+				defaultValue: true,
+				description: "Pass the work summary to the AI so it understands the story context.",
+			},
+			{
+				key: "includeChapterNotesInContext",
+				label: "Include chapter notes in AI context",
+				type: "toggle",
+				defaultValue: false,
+				description: "Include the author's chapter start/end notes as part of the enhancement input.",
+			},
+			{ key: "_bridges", type: "section", label: "\u{1F50C} Extension Bridges" },
 			{
 				key: "experimentalAo3BridgeEnabled",
 				label: "Enable experimental AO3 bridge adapter",
 				type: "toggle",
 				defaultValue: false,
-				description:
-					"Allows an external extension to provide reading status via data-rg-ao3-bridge-status.",
+				description: "Allows an external extension to provide reading status via data-rg-ao3-bridge-status.",
 			},
 			// Note: AO3 natively supports EPUB/MOBI/PDF/HTML download via
 			// the built-in Download button, so no custom download settings needed.
@@ -100,8 +127,8 @@ Please maintain:
 **AO3-Specific Formatting Rules:**
 - **Author Notes / End Notes** ("Author's Note", "A/N:", AO3 sub-headings labelled "Notes" or "End Notes"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Summarise if lengthy; keep only plot-relevant context.
 - **Epigraphs, Poems & Song Lyrics**: Wrap any chapter-opening or closing verse, poem, or quoted lyric in \`<div class="rg-quote-box">\`, preserving line breaks exactly.
-- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "— x years earlier —", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
-- **Game / System Content** (crossover fics with game mechanics): Full stat windows → \`<div class="game-stats-box">\`; short system messages → \`<div class="rg-system-msg">\`; individual skill cards → \`<div class="rg-skill-box">\`.
+- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "\u{2014} x years earlier \u{2014}", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
+- **Game / System Content** (crossover fics with game mechanics): Full stat windows \u{2192} \`<div class="game-stats-box">\`; short system messages \u{2192} \`<div class="rg-system-msg">\`; individual skill cards \u{2192} \`<div class="rg-skill-box">\`.
 
 When enhancing, improve readability while fully respecting the author's original style and the work's creative intent.`;
 
@@ -133,14 +160,27 @@ When enhancing, improve readability while fully respecting the author's original
 			window.location.hostname.includes("ao3.org");
 		if (!hostMatch) return false;
 
-		// Only handle importable AO3 work/chapter pages.
-		// This prevents treating homepage/search/tag listing pages as novels.
+		// Handle both chapter-by-chapter pages and the full-work "waterfall" page.
+		// Path must be /works/{id} or /works/{id}/chapters/{id} — query strings allowed.
 		const path = window.location.pathname || "";
 		if (!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(path)) {
 			return false;
 		}
 
-		return this.isChapterPage();
+		return this.isChapterPage() || this.isFullWorkPage();
+	}
+
+	/**
+	 * Detect AO3's "View Full Work" page — all chapters on one long scrollable page.
+	 * URL: /works/{id}?view_full_work=true  (or view_adult=true&view_full_work=true, etc.)
+	 * @returns {boolean}
+	 */
+	isFullWorkPage() {
+		const params = new URLSearchParams(window.location.search);
+		if (!params.get("view_full_work")) return false;
+		// Must have multiple chapter sections in the DOM
+		const chapters = document.querySelectorAll("#chapters .chapter, #chapters div[id^='chapter']");
+		return chapters.length > 1 && !!(document.querySelector("dl.work.meta") || document.querySelector("dl.stats"));
 	}
 
 	/**
@@ -349,7 +389,7 @@ When enhancing, improve readability while fully respecting the author's original
 		return [
 			{
 				text: "Copy",
-				emoji: "📋",
+				emoji: "\u{1F4CB}",
 				color: "#10b981",
 				onClick: async () => {
 					try {
@@ -490,7 +530,7 @@ When enhancing, improve readability while fully respecting the author's original
 				metadata.tags.push(`Category: ${category}`);
 			});
 
-			// Fandoms — stored in metadata.fandoms and tags but NOT merged into genres
+			// Fandoms \u{2014} stored in metadata.fandoms and tags but NOT merged into genres
 			const fandomEls = workMeta.querySelectorAll("dd.fandom a.tag");
 			fandomEls.forEach((el) => {
 				const fandom = el.textContent.trim();
@@ -575,7 +615,7 @@ When enhancing, improve readability while fully respecting the author's original
 					wordsEl.getAttribute("data-ao3e-original");
 				const wordsText = (originalWords || wordsEl.textContent)
 					.trim()
-					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s\u{A0}]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.words = parseInt(wordsText, 10) || 0;
 			}
 
@@ -652,7 +692,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalComments || commentsEl.textContent
 				)
 					.trim()
-					.replace(/[,\s\u00A0]/g, "");
+					.replace(/[,\s\u{A0}]/g, "");
 				metadata.metadata.comments = parseInt(commentsText, 10) || 0;
 			}
 
@@ -663,7 +703,7 @@ When enhancing, improve readability while fully respecting the author's original
 					kudosEl.getAttribute("data-ao3e-original");
 				const kudosText = (originalKudos || kudosEl.textContent)
 					.trim()
-					.replace(/[,\s\u00A0]/g, "");
+					.replace(/[,\s\u{A0}]/g, "");
 				metadata.metadata.kudos = parseInt(kudosText, 10) || 0;
 			}
 
@@ -676,7 +716,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalBookmarks || bookmarksEl.textContent
 				)
 					.trim()
-					.replace(/[,\s\u00A0]/g, "");
+					.replace(/[,\s\u{A0}]/g, "");
 				metadata.metadata.bookmarks = parseInt(bookmarksText, 10) || 0;
 			}
 
@@ -687,7 +727,7 @@ When enhancing, improve readability while fully respecting the author's original
 				const originalHits = hitsEl.getAttribute("data-ao3e-original");
 				const hitsText = (originalHits || hitsEl.textContent)
 					.trim()
-					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s\u{A0}]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
 			}
 
@@ -789,6 +829,16 @@ When enhancing, improve readability while fully respecting the author's original
 	// Find the content area on AO3
 	findContentArea() {
 		debugLog("AO3: Looking for content area...");
+
+		// Full-work "waterfall" page: return the #chapters container so the
+		// entire work (all chapters concatenated) is treated as one content area.
+		if (this.isFullWorkPage()) {
+			const chaptersEl = document.querySelector("#chapters");
+			if (chaptersEl) {
+				debugLog("AO3: Full-work page — returning #chapters as content area");
+				return chaptersEl;
+			}
+		}
 
 		// AO3's main chapter content is usually in one of several wrappers.
 		// Try multiple selectors to be resilient to AO3 DOM changes.
@@ -1055,6 +1105,11 @@ When enhancing, improve readability while fully respecting the author's original
 	extractContent() {
 		debugLog("AO3: Extracting content...");
 
+		// ── Full-work "waterfall" page ────────────────────────────────────────
+		if (this.isFullWorkPage()) {
+			return this._extractFullWorkContent();
+		}
+
 		const contentArea = this.findContentArea();
 		if (!contentArea) {
 			debugError("AO3: Could not find content area");
@@ -1106,10 +1161,73 @@ When enhancing, improve readability while fully respecting the author's original
 			contentArea: contentArea,
 			metadata: metadata,
 			navigation: navigation,
-			wordCount: textContent
-				.trim()
-				.split(/\s+/)
-				.filter((word) => word.length > 0).length,
+			wordCount: this.countWords(textContent),
+		};
+	}
+
+	/**
+	 * Extract content from the full-work "waterfall" page where AO3 renders all
+	 * chapters on one scrollable page (?view_full_work=true).
+	 * Each chapter's heading + prose is concatenated into a single content block.
+	 * The chunking system then splits it by word count as usual.
+	 * @returns {Object} content result compatible with extractContent()
+	 */
+	_extractFullWorkContent() {
+		const chapterEls = document.querySelectorAll(
+			"#chapters .chapter, #chapters div[id^='chapter']",
+		);
+		if (!chapterEls.length) {
+			return {
+				found: false,
+				title: document.title,
+				text: "",
+				selector: "ao3-no-full-work-chapters",
+				reason: "No chapter sections found on this full-work page.",
+			};
+		}
+
+		const workTitle = document.querySelector(".preface h2.title.heading")?.textContent?.trim()
+			|| document.title.replace(/\s*\[Archive of Our Own\]$/, "").trim();
+
+		let combinedHtml = "";
+		let combinedText = "";
+
+		for (const chEl of chapterEls) {
+			const clone = chEl.cloneNode(true);
+			// Remove scripts / forms
+			clone.querySelectorAll("script, form, .landmark").forEach((el) => el.remove());
+			// Extract chapter heading
+			const heading = clone.querySelector("h3.title, h2.title")?.textContent?.trim() || "";
+			// Extract prose — skip notes blocks (.preface, .end-notes)
+			const notesEls = clone.querySelectorAll(".preface, .notes, .end-notes, .module.notes");
+			notesEls.forEach((n) => n.remove());
+			const prose = clone.querySelector(".userstuff.module, .userstuff, div[role='article']");
+			if (!prose) continue;
+
+			if (heading) {
+				combinedHtml += `<h3 style="margin-top:2em;border-top:1px solid #ccc;padding-top:.5em;">${heading}</h3>\n`;
+				combinedText += `\n\n== ${heading} ==\n\n`;
+			}
+			combinedHtml += prose.innerHTML.trim() + "\n";
+			combinedText += (prose.textContent || "").trim() + "\n";
+		}
+
+		const contentArea = document.querySelector("#chapters") || document.querySelector("#workskin");
+		const metadata = this.getWorkMetadata();
+
+		debugLog(`AO3: Full-work extraction — ${chapterEls.length} chapters, ${combinedText.length} chars`);
+
+		return {
+			found: true,
+			title: workTitle,
+			text: combinedText.trim(),
+			content: combinedHtml.trim(),
+			contentArea,
+			metadata,
+			navigation: null,
+			wordCount: this.countWords(combinedText),
+			isFullWork: true,
+			totalChapters: chapterEls.length,
 		};
 	}
 
@@ -1132,55 +1250,21 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @param {string} content - HTML content that may contain markdown-style text
 	 * @returns {string} - Content with markdown converted to proper HTML tags
 	 */
-	convertMarkdownFormatting(content) {
-		if (!content) return content;
-
-		// Process in a way that doesn't break existing HTML tags
-		// We need to be careful not to match asterisks inside HTML attributes
-
-		// First, temporarily protect HTML tags
-		const htmlTagPlaceholders = [];
-		let protectedContent = content.replace(/<[^>]+>/g, (match) => {
-			htmlTagPlaceholders.push(match);
-			return `__HTML_TAG_${htmlTagPlaceholders.length - 1}__`;
-		});
-
-		// Convert ***text*** to <strong><em>text</em></strong> (bold italic)
-		protectedContent = protectedContent.replace(
-			/\*\*\*([^*]+)\*\*\*/g,
-			"<strong><em>$1</em></strong>",
-		);
-
-		// Convert **text** to <strong>text</strong> (bold)
-		protectedContent = protectedContent.replace(
-			/\*\*([^*]+)\*\*/g,
-			"<strong>$1</strong>",
-		);
-
-		// Convert *text* to <em>text</em> (italic)
-		// Be more careful here - only match if not preceded/followed by space after/before asterisk
-		protectedContent = protectedContent.replace(
-			/\*([^\s*][^*]*[^\s*])\*/g,
-			"<em>$1</em>",
-		);
-		// Also handle single word italics like *word*
-		protectedContent = protectedContent.replace(
-			/\*([^\s*]+)\*/g,
-			"<em>$1</em>",
-		);
-
-		// Restore HTML tags
-		protectedContent = protectedContent.replace(
-			/__HTML_TAG_(\d+)__/g,
-			(_, index) => htmlTagPlaceholders[parseInt(index)],
-		);
-
-		return protectedContent;
-	}
+	// convertMarkdownFormatting() is now inherited from BaseWebsiteHandler
 
 	// Get site-specific prompt enhancement
 	getSiteSpecificPrompt() {
 		return AO3Handler.DEFAULT_SITE_PROMPT;
+	}
+
+	/** AO3 renders structured HTML prose — HTML enhancement is preferred. */
+	formatAfterEnhancement(contentArea) {
+		super.formatAfterEnhancement(contentArea);
+	}
+
+	/** AO3 renders structured HTML prose — HTML enhancement is preferred. */
+	supportsTextOnlyEnhancement() {
+		return false;
 	}
 
 	/**

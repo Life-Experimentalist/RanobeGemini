@@ -235,6 +235,9 @@ async function initializePopup() {
 		const reallyActive = active && !expired;
 
 		incognitoEnabledCheckbox.checked = reallyActive;
+		// Visual highlight on the new incognito bar in the Novels tab
+		const incognitoBar = document.getElementById("incognitoBar");
+		if (incognitoBar) incognitoBar.classList.toggle("active", reallyActive);
 		if (incognitoDurationRow) {
 			incognitoDurationRow.style.display = reallyActive ? "" : "none";
 		}
@@ -381,6 +384,50 @@ async function initializePopup() {
 		});
 	}
 
+	// ── Header: Toggle Gemini UI button ────────────────────────────────────
+	const toggleGeminiUIHeaderBtn = document.getElementById("toggleGeminiUIHeaderBtn");
+	if (toggleGeminiUIHeaderBtn) {
+		// Sync initial button state with the active tab
+		(async () => {
+			try {
+				const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+				const tab = tabs[0];
+				if (!tab) return;
+				const resp = await browser.tabs.sendMessage(tab.id, { action: "getNovelInfo" });
+				const isHidden = resp?.novelInfo?.geminiUIHidden === true;
+				toggleGeminiUIHeaderBtn.classList.toggle("ui-hidden", isHidden);
+				toggleGeminiUIHeaderBtn.title = isHidden
+					? "Show Ranobe Gemini UI on this page"
+					: "Hide Ranobe Gemini UI on this page";
+			} catch {
+				// Tab has no content script — keep default appearance
+			}
+		})();
+
+		toggleGeminiUIHeaderBtn.addEventListener("click", async () => {
+			try {
+				const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+				const tab = tabs[0];
+				if (!tab) return;
+				const resp = await browser.tabs.sendMessage(tab.id, { action: "toggleGeminiUI" });
+				const nowHidden = resp?.nowHidden ?? !toggleGeminiUIHeaderBtn.classList.contains("ui-hidden");
+				toggleGeminiUIHeaderBtn.classList.toggle("ui-hidden", nowHidden);
+				toggleGeminiUIHeaderBtn.title = nowHidden
+					? "Show Ranobe Gemini UI on this page"
+					: "Hide Ranobe Gemini UI on this page";
+				// Sync the in-card button too if it exists
+				if (toggleGeminiUIBtn) {
+					toggleGeminiUIBtn.classList.toggle("ui-hidden", nowHidden);
+					toggleGeminiUIBtn.textContent = nowHidden
+						? "\u{1F441} Show Gemini UI"
+						: "\u{1F576}️ Hide Gemini UI";
+				}
+			} catch {
+				// Content script not available; ignore
+			}
+		});
+	}
+
 	// Header navigation buttons (always present, wire up early)
 	const quickLibraryBtn = document.getElementById("quickLibraryBtn");
 	if (quickLibraryBtn) {
@@ -400,7 +447,32 @@ async function initializePopup() {
 		});
 	}
 
-	// Obsolete elements (moved to Library Settings)
+	// Shortcut links → Library Settings panels
+	const LS_URL = browser.runtime.getURL("library/library-settings.html");
+	const shortcutMap = {
+		shortcutQueue: "loreweave",
+		shortcutLoreweave: "loreweave",
+		shortcutAI: "ai-providers",
+	};
+	for (const [id, tab] of Object.entries(shortcutMap)) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.addEventListener("click", (e) => {
+				e.preventDefault();
+				browser.tabs.create({ url: `${LS_URL}?tab=${tab}` });
+			});
+		}
+	}
+	// Chat settings link (inside Chat tab)
+	const chatSettingsLink = document.getElementById("chatSettingsLink");
+	if (chatSettingsLink) {
+		chatSettingsLink.addEventListener("click", (e) => {
+			e.preventDefault();
+			browser.tabs.create({ url: `${LS_URL}?tab=ai-providers` });
+		});
+	}
+
+	// Obsolete elements (moved to Library Settings — kept as null so if-guards below don't throw)
 	const topPSlider = document.getElementById("topPSlider");
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
@@ -410,6 +482,11 @@ async function initializePopup() {
 	const customEndpointInput = document.getElementById("customEndpoint");
 	const siteToggleList = document.getElementById("siteToggleList");
 	const apiKeyRotationSelect = document.getElementById("apiKeyRotation");
+	const saveAdvancedSettingsBtn = document.getElementById("saveAdvancedSettings");
+	const resetAllAdvancedBtn = document.getElementById("resetAllAdvanced");
+	const resetSiteTogglesBtn = document.getElementById("resetSiteToggles");
+	const resetPromptBtn = document.getElementById("resetPrompt");
+	const resetSummaryPromptBtn = document.getElementById("resetSummaryPromptBtn");
 
 	// Novels tab elements
 	const novelsListContainer = document.getElementById("novelsList");
@@ -447,6 +524,9 @@ async function initializePopup() {
 	const genresList = document.getElementById("genresList");
 	const addToLibraryBtn = document.getElementById("addToLibraryBtn");
 	const openNovelBtn = document.getElementById("openNovelBtn");
+	const toggleGeminiUIBtn = document.getElementById("toggleGeminiUIBtn");
+	const currentNovelTitle = document.getElementById("currentNovelTitle");
+	const defaultNovelPlaceholder = document.getElementById("defaultNovelPlaceholder");
 	const notSupportedMessage = document.getElementById("notSupportedMessage");
 	const notSupportedText = document.getElementById("notSupportedText");
 	const openFullLibraryBtn = document.getElementById("openFullLibrary");
@@ -2625,10 +2705,16 @@ async function initializePopup() {
 			function displayCurrentPageNovel(novelInfo) {
 				if (!currentNovelCard) return;
 
-				// Show the card, hide not supported message
+				// Show the card, hide placeholder and not-supported message
 				currentNovelCard.style.display = "flex";
-				if (notSupportedMessage)
-					notSupportedMessage.style.display = "none";
+				if (defaultNovelPlaceholder) defaultNovelPlaceholder.style.display = "none";
+				if (notSupportedMessage) notSupportedMessage.style.display = "none";
+
+				// Novel title
+				if (currentNovelTitle) {
+					currentNovelTitle.textContent =
+						novelInfo.title || novelInfo.novelTitle || "";
+				}
 
 				// Page type tag
 				if (currentPageTypeTag) {
@@ -2797,13 +2883,52 @@ async function initializePopup() {
 						openNovelBtn.style.display = "inline-flex";
 						openNovelBtn.onclick = () => {
 							browser.tabs.create({
-								url:
-									novelInfo.mainNovelUrl ||
-									novelInfo.sourceUrl,
+								url: novelInfo.mainNovelUrl || novelInfo.sourceUrl,
 							});
 						};
 					} else {
 						openNovelBtn.style.display = "none";
+					}
+				}
+
+				// Add to Library button — fix text (no .btn-text span, set directly)
+				if (addToLibraryBtn) {
+					addToLibraryBtn.textContent = novelInfo.isInLibrary
+						? "\u{1F504} Update"
+						: "\u{2795} Add to Library";
+					addToLibraryBtn.style.display = "inline-flex";
+					addToLibraryBtn.onclick = () => addCurrentNovelToLibrary?.();
+				}
+
+				// Toggle Gemini UI button — only meaningful on chapter/novel pages
+				if (toggleGeminiUIBtn) {
+					if (novelInfo.isChapterPage || novelInfo.isNovelPage) {
+						toggleGeminiUIBtn.style.display = "inline-flex";
+						// Reflect current state from page
+						const isHidden = novelInfo.geminiUIHidden === true;
+						toggleGeminiUIBtn.textContent = isHidden
+							? "\u{1F441} Show Gemini UI"
+							: "\u{1F576}️ Hide Gemini UI";
+						toggleGeminiUIBtn.classList.toggle("ui-hidden", isHidden);
+						toggleGeminiUIBtn.onclick = async () => {
+							try {
+								const tab = await getCurrentTab();
+								if (!tab) return;
+								const resp = await browser.tabs.sendMessage(tab.id, {
+									action: "toggleGeminiUI",
+								});
+								// Use authoritative state from content script response
+								const nowHidden = resp?.nowHidden ?? !toggleGeminiUIBtn.classList.contains("ui-hidden");
+								toggleGeminiUIBtn.classList.toggle("ui-hidden", nowHidden);
+								toggleGeminiUIBtn.textContent = nowHidden
+									? "\u{1F441} Show Gemini UI"
+									: "\u{1F576}️ Hide Gemini UI";
+							} catch (e) {
+								// Content script may not be available; ignore silently
+							}
+						};
+					} else {
+						toggleGeminiUIBtn.style.display = "none";
 					}
 				}
 			}
@@ -2813,6 +2938,7 @@ async function initializePopup() {
 			 */
 			function showNotSupported(message) {
 				if (currentNovelCard) currentNovelCard.style.display = "none";
+				if (defaultNovelPlaceholder) defaultNovelPlaceholder.style.display = "none";
 				if (notSupportedMessage) {
 					notSupportedMessage.style.display = "flex";
 					if (notSupportedText) {
@@ -4319,6 +4445,38 @@ async function initializePopup() {
 
 					card.appendChild(cover);
 					card.appendChild(info);
+
+					// Continue-reading button — only shown when a URL is available
+					const continueUrl = novel.lastReadUrl || novel.sourceUrl || "";
+					if (continueUrl) {
+						const continueBtn = document.createElement("button");
+						continueBtn.title = "Continue reading";
+						continueBtn.textContent = "\u{25B6}";
+						continueBtn.style.cssText = [
+							"flex-shrink:0",
+							"align-self:center",
+							"padding:5px 8px",
+							"background:var(--accent-primary)",
+							"color:#fff",
+							"border:none",
+							"border-radius:6px",
+							"font-size:13px",
+							"cursor:pointer",
+							"line-height:1",
+							"transition:background 0.15s",
+						].join(";");
+						continueBtn.addEventListener("mouseenter", () => {
+							continueBtn.style.background = "var(--accent-secondary)";
+						});
+						continueBtn.addEventListener("mouseleave", () => {
+							continueBtn.style.background = "var(--accent-primary)";
+						});
+						continueBtn.addEventListener("click", (e) => {
+							e.stopPropagation();
+							browser.tabs.create({ url: continueUrl });
+						});
+						card.appendChild(continueBtn);
+					}
 
 					card.addEventListener("click", () => {
 						// Open library page with novel modal
@@ -7387,46 +7545,49 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 				try {
 					const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 					if (!tab) return;
-					const resp = await browser.tabs
-						.sendMessage(tab.id, { action: "getNovelContext" })
+
+					// getNovelInfo is the same call "Now Reading" uses — always the
+					// most reliable source of novelId on the active tab.
+					const infoResp = await browser.tabs
+						.sendMessage(tab.id, { action: "getNovelInfo" })
 						.catch(() => null);
-					if (resp?.novelId) {
-						_chatNovelId = resp.novelId;
-						const chronicleKey = `rg_chronicle_${resp.novelId}`;
+
+					const novelId =
+						infoResp?.novelInfo?.novelId ||
+						infoResp?.novelInfo?.id ||
+						null;
+					const novelTitle =
+						infoResp?.novelInfo?.title ||
+						infoResp?.novelInfo?.novelTitle ||
+						null;
+
+					if (novelId) {
+						_chatNovelId = novelId;
+						const chronicleKey = `rg_chronicle_${novelId}`;
 						const stored = await browser.storage.local.get(chronicleKey).catch(() => ({}));
 						const count = Object.keys(stored[chronicleKey]?.chapters || {}).length;
 						if (chatContextInfo) {
-							chatContextInfo.textContent = count > 0
-								? `Context: ${resp.novelTitle || "Novel"} \u{B7} ${count} chapters loaded`
-								: "Novel detected but no chronicle yet. Enhance or queue chapters first.";
+							chatContextInfo.textContent =
+								count > 0
+									? `Context: ${novelTitle || "Novel"} \u{B7} ${count} chapters loaded`
+									: `Novel: ${novelTitle || novelId} \u{B7} Enhance chapters to build context`;
 						}
 					} else {
-						if (chatContextInfo) chatContextInfo.textContent = "No novel detected on current tab.";
+						if (chatContextInfo)
+							chatContextInfo.textContent =
+								"No novel detected on current tab. Visit a chapter page.";
 					}
 				} catch (_e) {
-					if (chatContextInfo) chatContextInfo.textContent = "Could not detect current novel.";
+					if (chatContextInfo)
+						chatContextInfo.textContent = "Could not detect current novel.";
 				}
 			}
 
 			function appendChatMessage(role, text) {
 				if (!chatMessages) return;
 				const div = document.createElement("div");
-				div.style.cssText = `
-					margin-bottom: 8px;
-					padding: 6px 8px;
-					border-radius: 4px;
-					background: ${role === "user" ? "#1a2540" : "#1e3a1e"};
-					text-align: ${role === "user" ? "right" : "left"};
-					word-break: break-word;
-				`;
-				const label = document.createElement("small");
-				label.style.cssText = "display:block;font-weight:600;margin-bottom:3px;color:#999;";
-				label.textContent = role === "user" ? "You" : "AI";
-				div.appendChild(label);
-				const body = document.createElement("span");
-				body.style.whiteSpace = "pre-wrap";
-				body.textContent = text;
-				div.appendChild(body);
+				div.className = `chat-msg chat-msg--${role === "user" ? "user" : "model"}`;
+				div.textContent = text;
 				chatMessages.appendChild(div);
 				chatMessages.scrollTop = chatMessages.scrollHeight;
 			}
@@ -7438,8 +7599,8 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 				appendChatMessage("user", question);
 
 				const thinking = document.createElement("div");
-				thinking.style.cssText = "font-size:11px;color:#666;margin-bottom:6px;font-style:italic;";
-				thinking.textContent = "Thinking...";
+				thinking.className = "chat-msg chat-msg--thinking";
+				thinking.textContent = "Thinking\u{2026}";
 				chatMessages?.appendChild(thinking);
 				chatMessages && (chatMessages.scrollTop = chatMessages.scrollHeight);
 

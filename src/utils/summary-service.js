@@ -41,6 +41,32 @@ let deps = null;
 const inFlightSummaryRequests = new Map();
 const latestRequestByContainer = new WeakMap();
 
+/**
+ * Strip residual markdown syntax from a plain-text string.
+ * Called after HTML→text conversion to catch markers the AI left in the text
+ * (e.g. **bold**, ## headings, - list bullets).
+ */
+function stripMarkdown(text) {
+	if (!text) return text;
+	return text
+		.replace(/^#{1,6}\s+/gm, "")              // # headings
+		.replace(/\*\*\*([^*\n]+)\*\*\*/g, "$1")   // ***bold-italic***
+		.replace(/\*\*([^*\n]+)\*\*/g, "$1")        // **bold**
+		.replace(/__([^_\n]+)__/g, "$1")            // __bold__
+		.replace(/\*([^*\n]+)\*/g, "$1")            // *italic*
+		.replace(/_([^_\n]+)_/g, "$1")             // _italic_
+		.replace(/`([^`\n]+)`/g, "$1")             // `inline code`
+		.replace(/~~([^~\n]+)~~/g, "$1")           // ~~strikethrough~~
+		.replace(/^\s*[-*+]\s+/gm, "")             // unordered list items
+		.replace(/^\s*\d+\.\s+/gm, "")             // ordered list items
+		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [link](url) → link text
+		.replace(/^>\s*/gm, "")                    // > blockquotes
+		.replace(/^-{3,}\s*$/gm, "")               // --- horizontal rules
+		.replace(/\\\*/g, "*")                     // escaped * → *
+		.replace(/\\_/g, "_")                      // escaped _ → _
+		.trim();
+}
+
 function buildSummaryRequestKey(chunkIndices, isShort) {
 	const ordered = Array.from(new Set(chunkIndices)).sort((a, b) => a - b);
 	const scope = window.location.href || document.location?.href || "unknown";
@@ -293,7 +319,8 @@ function renderSummaryInContainer(container, summary, summaryType) {
 
 	const paragraphs = extractParagraphsFromHtml(summary);
 	if (paragraphs.length > 0) {
-		paragraphs.forEach((text) => {
+		paragraphs.forEach((rawText) => {
+			const text = stripMarkdown(rawText);
 			const p = document.createElement("p");
 			p.textContent = text;
 			p.style.margin = `0 0 ${referenceStyles.paragraphMarginBottom} 0`;
@@ -306,7 +333,7 @@ function renderSummaryInContainer(container, summary, summaryType) {
 			contentDiv.appendChild(p);
 		});
 	} else {
-		contentDiv.textContent = stripHtmlTags(summary);
+		contentDiv.textContent = stripMarkdown(stripHtmlTags(summary));
 		contentDiv.style.whiteSpace = "pre-wrap";
 	}
 

@@ -425,9 +425,9 @@ export function getNovelbinStyles() {
 				flex-wrap: wrap;
 				gap: 12px;
 				padding: 12px 16px;
-				background: rgba(98, 0, 234, 0.06);
+				background: rgba(192, 107, 40, 0.06);
 				border-radius: 8px;
-				border: 1px solid rgba(98, 0, 234, 0.15);
+				border: 1px solid rgba(192, 107, 40, 0.15);
 				align-items: center;
 			}
 
@@ -459,9 +459,9 @@ export function getNovelbinStyles() {
 				border-radius: 99px;
 				font-size: 0.8rem;
 				font-weight: 600;
-				background: rgba(98, 0, 234, 0.15);
-				border: 1px solid rgba(98, 0, 234, 0.3);
-				color: #c4b5fd;
+				background: rgba(192, 107, 40, 0.15);
+				border: 1px solid rgba(192, 107, 40, 0.3);
+				color: #fcd34d;
 				white-space: nowrap;
 			}
 
@@ -493,9 +493,9 @@ export function getNovelbinStyles() {
 				padding: 3px 10px;
 				border-radius: 6px;
 				font-size: 0.78rem;
-				background: rgba(98, 0, 234, 0.12);
+				background: rgba(192, 107, 40, 0.12);
 				color: #c4b5fd;
-				border: 1px solid rgba(98, 0, 234, 0.25);
+				border: 1px solid rgba(192, 107, 40, 0.25);
 			}
 
 			.novelbin-section-title {
@@ -545,3 +545,4 @@ export function getScribbleHubStyles() {
 		</style>
 	`;
 }
+

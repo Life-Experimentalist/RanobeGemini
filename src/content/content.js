@@ -1343,12 +1343,42 @@ if (window.__RGInitDone) {
 		);
 	}
 
-	async function handleToggleBannersVisibility() {
+	const RG_VISIBILITY_KEY = "rg_ui_visibility";
+
+	async function saveVisibilityState(isHidden) {
+		try {
+			const hostname = window.location.hostname;
+			const stored = await browser.storage.local.get(RG_VISIBILITY_KEY);
+			const map = stored[RG_VISIBILITY_KEY] || {};
+			map[hostname] = isHidden;
+			await browser.storage.local.set({ [RG_VISIBILITY_KEY]: map });
+		} catch (_e) { /* non-critical */ }
+	}
+
+	async function restoreVisibilityState() {
+		try {
+			const hostname = window.location.hostname;
+			const stored = await browser.storage.local.get(RG_VISIBILITY_KEY);
+			const map = stored[RG_VISIBILITY_KEY] || {};
+			if (hostname in map) {
+				const mod = await loadEnhancementBannersModule();
+				mod?.applyStoredVisibilityRuntime?.({
+					shouldBeHidden: map[hostname],
+					documentRef: document,
+					currentHandler,
+				});
+			}
+		} catch (_e) { /* non-critical */ }
+	}
+
+	async function handleToggleBannersVisibility(callerBtn = null) {
 		const mod = await loadEnhancementBannersModule();
 		mod?.toggleEnhancedBannersRuntime?.({
 			documentRef: document,
 			currentHandler,
 			showStatusMessage,
+			callerBtn,
+			onVisibilityChange: (isHidden) => saveVisibilityState(isHidden),
 		});
 	}
 
@@ -2350,12 +2380,18 @@ if (window.__RGInitDone) {
 		const handlerShelfId = currentHandler?.constructor?.SHELF_METADATA?.id;
 		if (!handlerShelfId) return;
 
+		// getHandlerByDomain matches against SUPPORTED_DOMAINS (real hostnames), not shelf IDs.
+		const handlerDomain =
+			currentHandler?.constructor?.SHELF_METADATA?.primaryDomain ||
+			currentHandler?.constructor?.SUPPORTED_DOMAINS?.[0] ||
+			handlerShelfId;
+
 		try {
 			// Fetch handler settings from background
 			const response = await sendMessageWithRetry(
 				{
 					action: "getHandlerSettings",
-					handlerDomain: handlerShelfId,
+					handlerDomain,
 				},
 				2,
 				500,
@@ -3230,7 +3266,29 @@ if (window.__RGInitDone) {
 		function onNavigationChange() {
 			const newUrl = window.location.href;
 			if (newUrl === lastUrl) return;
+
+			// Ignore hash-only changes — skip links like <a href="#main-content"> fire
+			// hashchange but don't navigate to a new page, and re-initing on them breaks
+			// the SPA by tearing down enhancement state mid-read.
+			try {
+				const oldU = new URL(lastUrl);
+				const newU = new URL(newUrl);
+				if (oldU.pathname + oldU.search === newU.pathname + newU.search) {
+					lastUrl = newUrl;
+					return;
+				}
+			} catch { /* ignore malformed URLs */ }
+
 			lastUrl = newUrl;
+
+			// Snapshot old content before the debounce so waitForChapterContent
+			// can detect when the SPA has actually swapped in new chapter text.
+			// Use the handler's own findContentArea() so every site gets the right element.
+			const _snapEl = (typeof currentHandler?.findContentArea === "function"
+				? currentHandler.findContentArea()
+				: null)
+				?? document.querySelector("#chr-content, .chr-c, article[data-chapter-id]");
+			const oldContentFingerprint = _snapEl ? _snapEl.textContent.trim().slice(0, 300) : "";
 
 			clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(async () => {
@@ -3243,6 +3301,16 @@ if (window.__RGInitDone) {
 				if (!currentHandler.isChapterPage()) return;
 
 				debugLog("[NavObserver] Chapter URL changed, re-initialising UI for:", newUrl);
+
+				// For SPA-heavy sites (e.g. NovelBin), wait for chapter content
+				// to load asynchronously before clearing UI and re-injecting.
+				if (typeof currentHandler.waitForChapterContent === "function") {
+					const found = await currentHandler.waitForChapterContent(6000, oldContentFingerprint);
+					if (!found) {
+						debugLog("[NavObserver] Timed out waiting for chapter content on SPA navigation.");
+						return;
+					}
+				}
 
 				const oldControls = document.getElementById("gemini-controls");
 				if (oldControls) oldControls.remove();
@@ -3842,7 +3910,10 @@ if (window.__RGInitDone) {
 				'<span style="font-size: 20px;">\u{1F441}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
 		}
 
-		// Add novel controls for CHAPTER_EMBEDDED type sites (like FanFiction.net)
+		// Restore the per-hostname hide/show preference saved from a previous visit.
+		restoreVisibilityState();
+
+		// Add novel controls (library management bar) for all chapter pages.
 		// These are added asynchronously after main UI
 		setTimeout(async () => {
 			try {
@@ -3856,7 +3927,7 @@ if (window.__RGInitDone) {
 					HANDLER_TYPES,
 					getHandlerType,
 					getNovelIdFromCurrentPage,
-					getReadingStatusOptions: () => READING_STATUS_OPTIONS,
+					getReadingStatusOptions,
 					showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
 					isIncognitoActive: () => incognitoMode?.enabled === true,
 					handleChapterControlsToggleBanners: handleToggleBannersVisibility,
@@ -3921,7 +3992,7 @@ if (window.__RGInitDone) {
 							HANDLER_TYPES,
 							getHandlerType,
 							getNovelIdFromCurrentPage,
-							getReadingStatusOptions: () => READING_STATUS_OPTIONS,
+							getReadingStatusOptions,
 							showTimedBanner: (msg, type, duration) =>
 								showStatusMessage(msg, type, duration),
 							isIncognitoActive: () =>
@@ -4930,7 +5001,7 @@ if (window.__RGInitDone) {
 				lastReadUrl: window.location.href,
 				readingStatus: inferredReadingStatus,
 				totalChapters:
-					metadata.totalChapters || metadata.metadata?.totalChapters,
+					metadata.totalChapters || metadata.chapterCount || metadata.metadata?.totalChapters,
 				chapterTitle: metadata.chapterTitle,
 				source: metadata.source || currentHandler.getSiteIdentifier(),
 				sourceUrl: metadata.sourceUrl || window.location.href,
@@ -5178,6 +5249,7 @@ if (window.__RGInitDone) {
 			handleGetNovelInfo,
 			handleAddToLibrary,
 			handleUpdateNovelReadingStatus,
+			handleToggleBannersVisibility,
 			handleGetNovelContext(sendResponse) {
 				const id = getNovelIdFromCurrentPage?.() || null;
 				const novelData = getLastKnownNovelData?.();

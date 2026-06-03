@@ -4,7 +4,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>RanobeGemini</title>
+		<title>Ranobe Gemini</title>
 		<link rel="stylesheet" href="popup.css" />
 	</head>
 
@@ -22,8 +22,9 @@
 					<span class="header-title">Ranobe Gemini</span>
 				</div>
 				<div class="header-actions">
+					<button id="toggleGeminiUIHeaderBtn" class="header-icon-btn toggle-gemini-header-btn" title="Hide Ranobe Gemini UI on this page">&#128065;</button>
 					<button id="quickSettingsBtn" class="header-icon-btn" title="Library Settings">&#9881;&#65039;</button>
-					<button id="quickLibraryBtn" class="header-icon-btn" title="Open Full Library (Ctrl+Alt+N)">&#128218;</button>
+					<button id="quickLibraryBtn" class="header-icon-btn" title="Open Full Library">&#128218;</button>
 				</div>
 			</div>
 
@@ -45,62 +46,25 @@
 
 			<!-- Tab navigation -->
 			<div class="tabs">
-				<button class="tab-btn" data-tab="novels">Novels</button>
-				<button class="tab-btn active" data-tab="config">Config</button>
+				<button class="tab-btn active" data-tab="novels">Novels</button>
+				<button class="tab-btn" data-tab="chat">Chat</button>
 				<button class="tab-btn" data-tab="notifications" id="notificationsTabBtn">
 					Alerts
 					<span id="notificationBadge" class="notification-badge" style="display:none">0</span>
 				</button>
-				<button class="tab-btn" data-tab="loreweave" id="loreweaveTabBtn">Graph</button>
-				<button class="tab-btn" data-tab="queue" id="queueTabBtn">Queue</button>
-				<button class="tab-btn" data-tab="chat" id="chatTabBtn">Chat</button>
 			</div>
 
-			<!-- Config Tab -->
-			<div id="config" class="tab-content active">
-				<div class="config-section" id="incognito-section">
-					<h3 class="config-section-title">Quick Settings</h3>
-					<div class="config-section-content">
-						<div class="config-item">
-							<label class="check-label">
-								<input type="checkbox" id="incognitoEnabled" />
-								<span>Incognito Mode (Pause Tracking)</span>
-							</label>
-						</div>
-						<div class="config-item">
-							<label for="themeMode">Theme</label>
-							<select id="themeMode" class="config-select">
-								<option value="dark">Dark (Default)</option>
-								<option value="light">Light</option>
-								<option value="auto">Auto (System)</option>
-							</select>
-						</div>
-						<div class="config-item">
-							<label for="aiProviderSelect">AI Provider</label>
-							<select id="aiProviderSelect" class="config-select">
-								<option value="gemini">Google Gemini</option>
-								<option value="openai-compatible">OpenAI-Compatible</option>
-								<option value="ollama">Ollama (Local)</option>
-							</select>
-						</div>
-					</div>
+			<!-- ── Novels Tab ──────────────────────────────────────────────── -->
+			<div id="novels" class="tab-content active">
+
+				<!-- Incognito quick-toggle -->
+				<div class="incognito-bar" id="incognitoBar">
+					<label class="check-label incognito-label">
+						<input type="checkbox" id="incognitoEnabled" />
+						<span class="incognito-text">&#128575;&#65039; Incognito — pause tracking</span>
+					</label>
 				</div>
 
-				<div class="config-footer">
-					<button id="saveSettings" class="btn-primary-full">Save Settings</button>
-					<a href="#" id="openLibrarySettingsLink" class="adv-settings-link">
-						<span class="adv-settings-icon">&#9881;&#65039;</span>
-						<div class="adv-settings-text">
-							<strong>Library Settings</strong>
-							<span>API Keys, Sync, Site Toggles, Prompts</span>
-						</div>
-						<span class="adv-settings-arrow">&#8594;</span>
-					</a>
-				</div>
-			</div>
-
-			<!-- Novels Tab -->
-			<div class="tab-content" id="novels">
 				<div class="filter-bar">
 					<button class="novel-filter-btn active" data-filter="all">All</button>
 					<button class="novel-filter-btn" data-filter="reading">Reading</button>
@@ -110,9 +74,76 @@
 				</div>
 
 				<section class="novels-section">
-					<h3 class="section-heading">Now Reading</h3>
+					<div class="section-row">
+						<h3 class="section-heading">Now Reading</h3>
+						<span id="pageStatusBadge" class="status-badge" style="display:none"></span>
+					</div>
 					<div id="currentNovelInfo">
-						<div class="no-current-novel">
+						<!-- Placeholder shown when no novel is detected -->
+						<div class="no-current-novel" id="notSupportedMessage" style="display:none">
+							<p class="empty-icon">&#128214;</p>
+							<p id="notSupportedText">No novel on this page</p>
+							<p class="empty-hint">Visit a supported site to see current novel</p>
+						</div>
+
+						<!-- Current novel card — shown when a novel is detected -->
+						<div id="currentNovelCard" class="current-novel-card" style="display:none">
+							<!-- Title row -->
+							<div class="current-novel-title-row">
+								<div id="currentNovelTitle" class="current-novel-title"></div>
+								<div class="current-novel-tags">
+									<span id="currentPageTypeTag" class="tag tag-page-type" style="display:none"></span>
+									<span id="currentStatusTag" class="tag tag-status" style="display:none"></span>
+								</div>
+							</div>
+
+							<!-- Chapter info -->
+							<div id="currentChapterInfo" class="current-chapter-info" style="display:none">
+								<span class="chapter-icon">&#128366;</span>
+								<span id="currentChapterText" class="current-chapter-text"></span>
+							</div>
+
+							<!-- Progress bar -->
+							<div id="currentProgressBar" class="current-progress-bar" style="display:none">
+								<div class="progress-track">
+									<div id="currentProgressFill" class="progress-fill" style="width:0%"></div>
+								</div>
+								<span id="currentProgressPercent" class="progress-percent" style="display:none">0%</span>
+							</div>
+
+							<!-- Library details (shown only when in library) -->
+							<div id="libraryDetails" style="display:none">
+								<div class="library-detail-row">
+									<label class="detail-label">Status</label>
+									<select id="readingStatusSelect" class="compact-select">
+										<option value="reading">&#128214; Reading</option>
+										<option value="up-to-date">&#10024; Up to Date</option>
+										<option value="completed">&#9989; Completed</option>
+										<option value="plan-to-read">&#128203; Plan to Read</option>
+										<option value="on-hold">&#9208;&#65039; On Hold</option>
+										<option value="dropped">&#10060; Dropped</option>
+									</select>
+								</div>
+								<div id="enhancedCountRow" class="library-detail-row" style="display:none">
+									<label class="detail-label">Enhanced</label>
+									<span id="enhancedCountValue" class="detail-value"></span>
+								</div>
+								<div id="genresRow" class="library-detail-row" style="display:none">
+									<label class="detail-label">Genres</label>
+									<div id="genresList" class="genres-list"></div>
+								</div>
+							</div>
+
+							<!-- Action buttons -->
+							<div class="current-novel-actions">
+								<button id="addToLibraryBtn" class="action-btn primary" style="display:none">&#43; Add to Library</button>
+								<button id="openNovelBtn" class="action-btn secondary" style="display:none">&#128279; Open Novel</button>
+								<button id="toggleGeminiUIBtn" class="action-btn toggle-ui-btn" style="display:none" title="Toggle Ranobe Gemini UI on the page">&#128065; Hide Gemini UI</button>
+							</div>
+						</div>
+
+						<!-- Default placeholder when no novel/chapter detected -->
+						<div class="no-current-novel" id="defaultNovelPlaceholder">
 							<p class="empty-icon">&#128214;</p>
 							<p>No novel on this page</p>
 							<p class="empty-hint">Visit a supported site to see current novel</p>
@@ -152,6 +183,25 @@
 					</div>
 				</section>
 
+				<!-- Quick-links to Library Settings features -->
+				<div class="settings-shortcuts">
+					<a href="#" class="settings-shortcut-item" id="shortcutQueue">
+						<span class="shortcut-icon">&#128293;</span>
+						<span class="shortcut-label">Chapter Queue</span>
+						<span class="shortcut-arrow">&#8594;</span>
+					</a>
+					<a href="#" class="settings-shortcut-item" id="shortcutLoreweave">
+						<span class="shortcut-icon">&#127760;</span>
+						<span class="shortcut-label">LoreWeave Graph</span>
+						<span class="shortcut-arrow">&#8594;</span>
+					</a>
+					<a href="#" class="settings-shortcut-item" id="shortcutAI">
+						<span class="shortcut-icon">&#129302;</span>
+						<span class="shortcut-label">AI Providers &amp; Models</span>
+						<span class="shortcut-arrow">&#8594;</span>
+					</a>
+				</div>
+
 				<div class="open-library-row">
 					<a href="#" id="openMainLibrary" class="open-library-link">
 						<span class="open-library-icon">&#127963;</span>
@@ -164,7 +214,35 @@
 				</div>
 			</div>
 
-			<!-- Notifications Tab -->
+			<!-- ── Chat Tab ───────────────────────────────────────────────── -->
+			<div class="tab-content" id="chat">
+				<div class="chat-context-bar" id="chatContextInfo">Detecting novel…</div>
+
+				<div class="chat-messages" id="chatMessages"></div>
+
+				<div class="chat-input-row">
+					<input
+						type="text"
+						id="chatInput"
+						class="chat-input"
+						placeholder="Ask about this novel…"
+						autocomplete="off"
+					/>
+					<button id="chatSendBtn" class="chat-send-btn" title="Send">&#10148;</button>
+				</div>
+
+				<div class="chat-toolbar">
+					<button id="chatClearBtn" class="chat-clear-btn">Clear</button>
+					<a
+						href="#"
+						id="chatSettingsLink"
+						class="chat-settings-link"
+						title="Chat Settings in Library Settings"
+					>&#9881;&#65039; Settings</a>
+				</div>
+			</div>
+
+			<!-- ── Alerts Tab ──────────────────────────────────────────────── -->
 			<div class="tab-content" id="notifications">
 				<div class="notifications-tab-header">
 					<div class="notifications-stats">
@@ -187,162 +265,7 @@
 					<div class="no-notifications">
 						<p class="empty-icon-lg">&#128237;</p>
 						<p>No notifications yet</p>
-						<p class="description">Notifications will appear here as you use the extension</p>
-					</div>
-				</div>
-			</div>
-
-			<!-- LoreWeave Tab -->
-			<div class="tab-content" id="loreweave">
-				<div class="config-section">
-					<h3 class="config-section-title">LoreWeave Graph Builder</h3>
-					<div class="config-section-content">
-						<p class="settings-desc">
-							Automatically extract story entities from chapters and build a knowledge graph in your LoreWeave backend.
-						</p>
-
-						<div class="config-item">
-							<label for="lwUrl">Backend URL</label>
-							<div style="display:flex;gap:6px">
-								<input type="url" id="lwUrl" class="config-input" placeholder="https://api.yourserver.com" style="flex:1" />
-								<button id="lwPingBtn" class="btn-secondary" style="white-space:nowrap">Test</button>
-							</div>
-							<span id="lwPingStatus" class="settings-hint"></span>
-						</div>
-
-						<div class="config-item">
-							<label for="lwDomain">Domain ID</label>
-							<input type="text" id="lwDomain" class="config-input" placeholder="lw_dom_my_novel" />
-							<span class="settings-hint">One domain per novel series. Create at loreweave.vkrishna04.me</span>
-						</div>
-
-						<div class="config-item">
-							<label for="lwToken">API Token</label>
-							<input type="password" id="lwToken" class="config-input" placeholder="Leave empty if auth is disabled" />
-							<span class="settings-hint">Matches LW_API_TOKEN in your backend .env</span>
-						</div>
-
-						<div class="config-item">
-							<label class="check-label">
-								<input type="checkbox" id="lwAutoGraphify" />
-								<span>Auto-graphify after every chapter enhancement</span>
-							</label>
-						</div>
-
-						<div class="config-item">
-							<label class="check-label">
-								<input type="checkbox" id="lwChronicleEnabled" />
-								<span>Build story chronicle (accumulate chapter context)</span>
-							</label>
-						</div>
-
-						<div class="config-item">
-							<label class="check-label">
-								<input type="checkbox" id="lwUsePriorContext" />
-								<span>Use chronicle context to improve summaries</span>
-							</label>
-						</div>
-
-						<div class="config-item">
-							<label for="lwWritingStyle">Writing Style Hint</label>
-							<select id="lwWritingStyle" class="config-select">
-								<option value="other">General (any style)</option>
-								<option value="xianxia">Xianxia / Cultivation</option>
-								<option value="litrpg">LitRPG / System</option>
-								<option value="fantasy">Western Fantasy</option>
-								<option value="romance">Romance</option>
-								<option value="thriller">Thriller / Mystery</option>
-							</select>
-						</div>
-
-						<div id="lwStatusBar" class="settings-hint" style="display:none;margin-top:6px"></div>
-						<button id="lwGraphifyNow" class="btn-primary-full" style="margin-top:8px">
-							Graphify Current Chapter
-						</button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Queue Tab -->
-			<div class="tab-content" id="queue">
-				<div class="config-section">
-					<h3 class="config-section-title">Chapter Queue</h3>
-					<div class="config-section-content">
-						<p class="settings-desc">
-							Fetch, summarise, and graphify a chapter range in the background.
-						</p>
-
-						<div class="config-item">
-							<label for="qFirstUrl">First Chapter URL</label>
-							<input type="url" id="qFirstUrl" class="config-input"
-								placeholder="https://novelbin.com/b/slug/chapter-1" />
-						</div>
-
-						<div class="config-item" style="display:flex;gap:8px">
-							<div style="flex:1">
-								<label for="qStart">From Chapter</label>
-								<input type="number" id="qStart" class="config-input" placeholder="1" min="1" />
-							</div>
-							<div style="flex:1">
-								<label for="qEnd">To Chapter</label>
-								<input type="number" id="qEnd" class="config-input" placeholder="50" min="1" />
-							</div>
-						</div>
-
-						<div class="config-item">
-							<label class="check-label">
-								<input type="checkbox" id="qSendToLW" checked />
-								<span>Send to LoreWeave after processing</span>
-							</label>
-						</div>
-
-						<button id="qAddBtn" class="btn-primary-full">Add to Queue</button>
-					</div>
-				</div>
-
-				<!-- Job list -->
-				<div class="config-section" id="qJobListSection">
-					<h3 class="config-section-title">Jobs</h3>
-					<div id="qJobList" class="config-section-content">
-						<p class="settings-desc">No jobs queued.</p>
-					</div>
-				</div>
-
-				<!-- Result view (hidden by default) -->
-				<div class="config-section" id="qResultView" style="display:none">
-					<div style="display:flex;align-items:center;justify-content:space-between">
-						<h3 class="config-section-title" id="qResultTitle">Results</h3>
-						<button id="qResultClose" class="btn-secondary" style="font-size:11px">Back</button>
-					</div>
-					<div id="qResultContent" style="max-height:280px;overflow-y:auto;font-size:12px;line-height:1.5;padding:4px"></div>
-				</div>
-			</div>
-
-			<!-- Chat Tab -->
-			<div class="tab-content" id="chat">
-				<div class="config-section" style="display:flex;flex-direction:column">
-					<h3 class="config-section-title">Story Chat</h3>
-					<div id="chatContextInfo" class="settings-desc" style="margin-bottom:6px">
-						No novel context loaded.
-					</div>
-					<div id="chatMessages" style="
-						min-height:180px;
-						max-height:240px;
-						overflow-y:auto;
-						border:1px solid #333;
-						border-radius:4px;
-						padding:8px;
-						font-size:12px;
-						line-height:1.5;
-						margin-bottom:8px;
-					"></div>
-					<div style="display:flex;gap:6px;margin-bottom:4px">
-						<input type="text" id="chatInput" class="config-input"
-							placeholder="Ask about this novel..." style="flex:1" />
-						<button id="chatSendBtn" class="btn-secondary">Send</button>
-					</div>
-					<div style="display:flex;justify-content:flex-end">
-						<button id="chatClearBtn" class="btn-secondary" style="font-size:11px">Clear Chat</button>
+						<p class="description">Notifications appear as you use the extension</p>
 					</div>
 				</div>
 			</div>

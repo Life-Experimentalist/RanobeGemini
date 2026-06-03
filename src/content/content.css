@@ -1008,10 +1008,13 @@ html[data-darkreader-mode] .rg-system-msg,
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 	}
 
-	/* Summary groups - better layout for mobile */
+	/* Summary groups - better layout for mobile.
+	   Note: do NOT use !important on display here — JS hides these via
+	   inline style.display="none" and !important would override that,
+	   making the banner reappear at narrow widths even when hidden. */
 	.gemini-main-summary-group,
 	.gemini-chunk-summary-group {
-		display: flex !important;
+		display: flex;
 		flex-direction: column !important;
 		gap: 10px !important;
 		padding: 12px !important;
@@ -1046,6 +1049,45 @@ html[data-darkreader-mode] .rg-system-msg,
 	.gemini-wip-banner .progress-text {
 		font-size: 13px !important;
 	}
+
+	/* Chunk banners - vertical layout */
+	.gemini-chunk-banner {
+		flex-direction: column !important;
+		gap: 8px !important;
+		padding: 12px !important;
+	}
+
+	.gemini-chunk-banner button {
+		width: 100% !important;
+		margin: 4px 0 !important;
+	}
+
+	/* Progress bar enhancements for mobile */
+	.gemini-wip-banner>div:nth-child(2) {
+		height: 12px !important;
+		border-radius: 6px !important;
+		margin: 12px 0 !important;
+	}
+
+	/* Novel page UI controls (#rg-novel-controls) - mobile layout */
+	#rg-novel-controls {
+		flex-direction: row !important;
+		flex-wrap: wrap !important;
+		align-items: center !important;
+		gap: 8px !important;
+		padding: 12px !important;
+	}
+
+	#rg-novel-controls button,
+	#rg-novel-controls select {
+		width: auto !important;
+		max-width: max-content !important;
+		min-width: 132px !important;
+		min-height: 44px !important;
+		font-size: 15px !important;
+		padding: 12px 10px !important;
+		box-sizing: border-box !important;
+	}
 }
 
 /* ── Copy fix: always allow text selection inside enhanced content ── */
@@ -1068,45 +1110,6 @@ html[data-darkreader-mode] .rg-system-msg,
 .gemini-wip-banner button {
 	user-select: none;
 	-webkit-user-select: none;
-}
-
-/* Chunk banners - vertical layout */
-.gemini-chunk-banner {
-	flex-direction: column !important;
-	gap: 8px !important;
-	padding: 12px !important;
-}
-
-.gemini-chunk-banner button {
-	width: 100% !important;
-	margin: 4px 0 !important;
-}
-
-/* Progress bar enhancements for mobile */
-.gemini-wip-banner>div:nth-child(2) {
-	height: 12px !important;
-	border-radius: 6px !important;
-	margin: 12px 0 !important;
-}
-
-/* Novel page UI controls (#rg-novel-controls) - mobile layout */
-#rg-novel-controls {
-	flex-direction: row !important;
-	flex-wrap: wrap !important;
-	align-items: center !important;
-	gap: 8px !important;
-	padding: 12px !important;
-}
-
-#rg-novel-controls button,
-#rg-novel-controls select {
-	width: auto !important;
-	max-width: max-content !important;
-	min-width: 132px !important;
-	min-height: 44px !important;
-	font-size: 15px !important;
-	padding: 12px 10px !important;
-	box-sizing: border-box !important;
 }
 
 /* Styling for enhanced banner toggle button */
@@ -1172,60 +1175,80 @@ html[data-darkreader-mode] .rg-system-msg,
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   CHAPTER PAGE NOVEL CONTROLS — Mobile & touch improvements
+   CHAPTER PAGE NOVEL CONTROLS — Elastic layout, mobile-friendly
    Targets: #rg-chapter-novel-controls (compact bar injected on
-   chapter pages) and #rg-novel-controls (novel index page bar).
+   all chapter pages) and #rg-novel-controls (novel index page bar).
    ───────────────────────────────────────────────────────────────── */
 
-/* Chapter compact controls -- better touch targets */
+/* ── Chapter page novel controls ──────────────────────────────────────────── */
+/* Compact single-row bar; items wrap but never grow to fill wasted space. */
 #rg-chapter-novel-controls {
-	-webkit-overflow-scrolling: touch;
-	scrollbar-width: none !important;
-	/* Firefox */
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	gap: 5px !important;
+	overflow: visible !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
 }
 
-#rg-chapter-novel-controls::-webkit-scrollbar {
-	display: none !important;
-	/* Safari and Chrome */
-}
-
-/* Ensure buttons/selects are ALWAYS absolutely compact, inline, and uniform on ALL platforms */
-#rg-chapter-novel-controls>button,
-#rg-chapter-novel-controls>select,
-#rg-chapter-novel-controls>div,
-#rg-chapter-novel-controls>div>button {
+/* Direct children: inline, compact, never stretch to fill row */
+#rg-chapter-novel-controls > button,
+#rg-chapter-novel-controls > select {
 	display: inline-flex !important;
 	align-items: center !important;
 	justify-content: center !important;
 	flex: 0 0 auto !important;
-	min-width: auto !important;
-	width: max-content !important;
-	max-width: max-content !important;
-	min-height: 28px !important;
-	max-height: 28px !important;
+	min-width: 0 !important;
+	height: 26px !important;
 	font-size: 11px !important;
-	padding: 4px 8px !important;
+	padding: 0 9px !important;
 	box-sizing: border-box !important;
-	white-space: wrap !important;
+	white-space: nowrap !important;
 	line-height: 1 !important;
+	border-radius: 4px !important;
+	cursor: pointer !important;
 }
 
-/* Defensive override: never allow this chapter bar to inherit full-width mobile button styles */
-#rg-chapter-novel-controls button,
-#rg-chapter-novel-controls select {
-	width: auto !important;
-	max-width: max-content !important;
-	min-width: auto !important;
+/* Status badge / incognito span */
+#rg-chapter-novel-controls > span {
+	display: inline-flex !important;
+	align-items: center !important;
 	flex: 0 0 auto !important;
+	height: 22px !important;
+	padding: 0 7px !important;
+	font-size: 10px !important;
+	font-weight: 600 !important;
+	border-radius: 3px !important;
+	white-space: nowrap !important;
 }
 
-/* Status badge (span) stays compact */
-#rg-chapter-novel-controls>span {
-	text-align: center !important;
-	width: auto !important;
-	padding: 4px 6px !important;
-	font-size: 11px !important;
-	flex: 0 0 auto !important;
+/* Selects need a bit more height for the native arrow */
+#rg-chapter-novel-controls > select {
+	height: 26px !important;
+	padding: 0 6px !important;
+	min-width: 130px !important;
+	max-width: 160px !important;
+}
+
+/* Mobile: scale up for touch targets */
+@media screen and (max-width: 600px) {
+	#rg-chapter-novel-controls > button {
+		height: 36px !important;
+		font-size: 12px !important;
+		padding: 0 12px !important;
+	}
+
+	#rg-chapter-novel-controls > select {
+		height: 36px !important;
+		font-size: 12px !important;
+	}
+
+	#rg-chapter-novel-controls > span {
+		height: 28px !important;
+		font-size: 11px !important;
+	}
 }
 
 

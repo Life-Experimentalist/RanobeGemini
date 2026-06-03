@@ -3,7 +3,7 @@
  *
  * Settings are auto-discovered from each handler's static SETTINGS_DEFINITION
  * property. To add settings for a new site, simply add SETTINGS_DEFINITION to
- * its handler class — no changes needed here.
+ * its handler class \u{2014} no changes needed here.
  */
 
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -11,6 +11,7 @@ import { AO3Handler } from "../utils/website-handlers/ao3-handler.js";
 import { RanobesHandler } from "../utils/website-handlers/ranobes-handler.js";
 import { ScribbleHubHandler } from "../utils/website-handlers/scribblehub-handler.js";
 import { WebNovelHandler } from "../utils/website-handlers/webnovel-handler.js";
+import { NovelbinHandler } from "../utils/website-handlers/novelbin-handler.js";
 
 /**
  * All registered handler classes.
@@ -23,6 +24,7 @@ const ALL_HANDLERS = [
 	RanobesHandler,
 	ScribbleHubHandler,
 	WebNovelHandler,
+	NovelbinHandler,
 ];
 
 /**
@@ -40,7 +42,7 @@ export const WEBSITE_SETTINGS_DEFINITIONS = ALL_HANDLERS.filter(
 		label: meta.name,
 		icon: meta.icon || null, // website favicon/logo URL
 		invertIconInDarkMode: meta.invertIconInDarkMode || false,
-		emoji: meta.emoji || "🌐", // fallback emoji if icon fails or is absent
+		emoji: meta.emoji || "\u{1F310}", // fallback emoji if icon fails or is absent
 		description: `Site-specific settings for ${meta.name}.`,
 		fields: H.SETTINGS_DEFINITION.fields,
 	};
@@ -109,7 +111,49 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 				</div>`;
 			}
 
-			const value = Boolean(settings[field.key]);
+			if (field.type === "number") {
+				const numVal = settings[field.key] ?? field.defaultValue ?? 0;
+				const minAttr = field.min != null ? ` min="${field.min}"` : "";
+				const maxAttr = field.max != null ? ` max="${field.max}"` : "";
+				const stepAttr = field.step != null ? ` step="${field.step}"` : "";
+				return `
+				<div class="ls-handler-field">
+					<div class="ls-handler-field-info">
+						<div class="ls-handler-field-label">${field.label}</div>
+						<div class="ls-handler-field-desc">${field.description || ""}</div>
+					</div>
+					<input type="number" class="ls-input ls-handler-field-number"
+						data-shelf="${definition.id}" data-setting="${field.key}"
+						value="${numVal}"${minAttr}${maxAttr}${stepAttr}
+						style="width:100px;" />
+				</div>`;
+			}
+
+			if (field.type === "textarea") {
+				const rawTa = settings[field.key];
+				// Guard: a boolean means the field was previously saved as a toggle
+				// (old renderer didn't support textarea). Treat that as empty.
+				const taVal = String(
+					typeof rawTa === "boolean" || rawTa === undefined || rawTa === null
+						? (field.defaultValue ?? "")
+						: rawTa,
+				).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+				const ph = (field.placeholder || "").replace(/"/g, "&quot;");
+				return `
+				<div class="ls-handler-field ls-handler-field--wide">
+					<div class="ls-handler-field-info">
+						<div class="ls-handler-field-label">${field.label}</div>
+						<div class="ls-handler-field-desc">${field.description || ""}</div>
+					</div>
+					<textarea class="ls-textarea ls-handler-field-textarea"
+						data-shelf="${definition.id}" data-setting="${field.key}"
+						rows="4" placeholder="${ph}"
+						style="margin-top:6px;font-size:12px;font-family:monospace;">${taVal}</textarea>
+				</div>`;
+			}
+
+			// Default: toggle
+			const value = Boolean(settings[field.key] ?? field.defaultValue);
 			return `
 			<div class="ls-handler-field">
 				<div class="ls-handler-field-info">
@@ -124,36 +168,8 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 		})
 		.join("");
 
-	const fieldCount = definition.fields.filter(
-		(f) => f.type !== "section",
-	).length;
-	// Use Google's favicon proxy to avoid hotlink-blocked direct URLs
-	const faviconUrl = definition.icon
-		? (() => {
-				try {
-					return `https://www.google.com/s2/favicons?domain=${new URL(definition.icon).hostname}&sz=32`;
-				} catch {
-					return null;
-				}
-			})()
-		: null;
-	const iconHtml = faviconUrl
-		? `<img src="${faviconUrl}" class="ls-handler-panel-icon" alt="" data-emoji="${definition.emoji}" ${definition.invertIconInDarkMode ? 'data-invert="true"' : ""} />`
-		: `<span class="ls-handler-panel-icon ls-handler-panel-emoji">${definition.emoji}</span>`;
-
-	return `
-		<details class="ls-handler-panel">
-			<summary class="ls-handler-panel-summary">
-				${iconHtml}
-				<span class="ls-handler-panel-title">${definition.label}</span>
-				<span class="ls-handler-panel-badge">${fieldCount} setting${fieldCount !== 1 ? "s" : ""}</span>
-				<span class="ls-handler-panel-chevron">▾</span>
-			</summary>
-			<div class="ls-handler-panel-body">
-				<p class="ls-hint" style="margin-bottom:14px;">${definition.description}</p>
-				<div class="ls-handler-fields">
-					${fieldsHtml}
-				</div>
-			</div>
-		</details>`;
+	// Render flat — no inner <details> wrapper. The site card's own
+	// expand/collapse is already one click; a second nested toggle was
+	// making settings invisible.
+	return `<div class="ls-handler-fields">${fieldsHtml}</div>`;
 }

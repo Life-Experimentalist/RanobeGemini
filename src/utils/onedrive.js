@@ -27,7 +27,7 @@ const BACKUP_PREFIX = "ranobegemini_backup_";
 const CONTINUOUS_NAME = "ranobegemini_continuous.json";
 const DEFAULT_FOLDER = "RanobeGemini";
 
-// ─── Credential / config helpers ──────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Credential / config helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function getStored(key) {
 	const result = await browser.storage.local.get(key);
@@ -64,13 +64,13 @@ function isExpired(tokens) {
 	return elapsed >= tokens.expires_in - 60;
 }
 
-// ─── Auth flow ─────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Auth flow \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function getValidAccessToken({ interactive = true } = {}) {
 	const config = await getOnedriveConfig();
 	if (!config?.clientId) {
 		throw new Error(
-			"OneDrive client ID not configured. Set it in Library Settings → Sync.",
+			"OneDrive client ID not configured. Set it in Library Settings \u{2192} Sync.",
 		);
 	}
 
@@ -141,7 +141,7 @@ export async function revokeOnedriveTokens() {
 	await setStored({ [AUTH_ERROR_KEY]: null });
 }
 
-// ─── Graph API helpers ─────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Graph API helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function graphRequest(method, path, { token, body, headers = {} } = {}) {
 	const resp = await fetch(`${GRAPH_BASE}${path}`, {
@@ -155,7 +155,7 @@ async function graphRequest(method, path, { token, body, headers = {} } = {}) {
 	});
 	if (!resp.ok) {
 		const text = await resp.text().catch(() => "");
-		throw new Error(`OneDrive Graph ${method} ${path} → ${resp.status}: ${text}`);
+		throw new Error(`OneDrive Graph ${method} ${path} \u{2192} ${resp.status}: ${text}`);
 	}
 	return resp;
 }
@@ -194,7 +194,7 @@ async function ensureFolder(token, folderPath) {
 				"@microsoft.graph.conflictBehavior": "fail",
 			}),
 		});
-		// 409 Conflict means folder already exists — OK to continue
+		// 409 Conflict means folder already exists \u{2014} OK to continue
 		if (!createResp.ok && createResp.status !== 409) {
 			const text = await createResp.text().catch(() => "");
 			throw new Error(
@@ -205,7 +205,7 @@ async function ensureFolder(token, folderPath) {
 	return folderRef;
 }
 
-// ─── Backup name helpers ───────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Backup name helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function timestampedName() {
 	const ts = new Date()
@@ -220,7 +220,7 @@ function isBackupFile(name) {
 	return name.startsWith(BACKUP_PREFIX) && name.endsWith(".json");
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Public API \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export async function uploadOnedriveBackup(backupData, options = {}) {
 	const token = await ensureOnedriveAccessToken({ interactive: true });
@@ -238,7 +238,7 @@ export async function uploadOnedriveBackup(backupData, options = {}) {
 				: JSON.stringify(backupData);
 
 	// Upload using simple PUT (< 4 MB is fine for library backups)
-	// folderRef ends with ":" e.g. "/me/drive/root:/Folder:" — strip it to build the file path
+	// folderRef ends with ":" e.g. "/me/drive/root:/Folder:" \u{2014} strip it to build the file path
 	const folderBase = folderRef.replace(/:$/, "");
 	const uploadPath = `${folderBase}/${encodeURIComponent(fileName)}:/content`;
 	const resp = await fetch(`${GRAPH_BASE}${uploadPath}`, {

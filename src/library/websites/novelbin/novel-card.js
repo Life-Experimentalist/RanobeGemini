@@ -14,7 +14,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 	static get shelfConfig() {
 		return {
 			id: "novelbin",
-			name: "NovelBin",
+			name: "NovelBin (NovelArrow)",
 			icon: "https://novelbin.com/favicon.ico",
 			emoji: "\u{1F4DA}",
 			color: "#6200ea",
@@ -129,7 +129,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 
 		const status = getVal("status", "Unknown");
 		const language = getVal("language", "");
-		const totalChapters = getVal("totalChapters") || 0;
+		const totalChapters = getVal("totalChapters") ?? null;
 		const genres = Array.isArray(metadata.genres) ? metadata.genres : (Array.isArray(novel.genres) ? novel.genres : []);
 		const tags = Array.isArray(metadata.tags) ? metadata.tags : (Array.isArray(novel.tags) ? novel.tags : []);
 		const views = getVal("views", 0);
@@ -177,7 +177,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 					</div>` : ""}
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Chapters</span>
-						<span class="novelbin-meta-value">${totalChapters ? this.formatNumber(totalChapters) : "?"}</span>
+						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "—"}</span>
 					</div>
 					${rating ? `
 					<div class="novelbin-meta-group">

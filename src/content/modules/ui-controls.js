@@ -162,8 +162,6 @@ export function placeChapterNovelControls(novelControls, {
 } = {}) {
 	if (!novelControls) return;
 	removeChapterNovelControlsFromDOM(documentRef);
-	const oldToggleBtn = documentRef.querySelector(".gemini-toggle-banners-btn");
-	if (oldToggleBtn) oldToggleBtn.style.display = "none";
 
 	const insertion = resolveNovelControlsInsertion({ config: controlsConfig, currentHandler, documentRef });
 	if (insertion?.element) {
@@ -215,7 +213,6 @@ export async function createChapterPageNovelControls({
 	manuallyCheckAndUpdateNovel = () => {},
 	handleNovelAddUpdate = () => {},
 } = {}) {
-	if (getHandlerType() !== HANDLER_TYPES.CHAPTER_EMBEDDED) return null;
 	if (!currentHandler?.isChapterPage?.()) return null;
 	if (__rgCreatingChapterControls) return null;
 	__rgCreatingChapterControls = true;
@@ -248,8 +245,8 @@ export async function createChapterPageNovelControls({
 		controlsContainer.id = "rg-chapter-novel-controls";
 		protectFromThemeExtensions(controlsContainer);
 		controlsContainer.style.cssText = `
-			display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; margin: 10px 0;
-			background: linear-gradient(135deg, #1a2540 0%, #16213e 100%); border: 1px solid #2a4b8d; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+			display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 5px; padding: 6px 8px; margin: 6px 0;
+			background: #141c30; border: 1px solid #243660; border-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 		`;
 
 		const statusBadge = documentRef.createElement("span");
@@ -257,10 +254,11 @@ export async function createChapterPageNovelControls({
 		statusBadge.textContent = existingNovel ? "\u{1F4DA} In Library" : "\u{1F4D6} Not Saved";
 		controlsContainer.appendChild(statusBadge);
 
-		const createCompactButton = (text, icon, color, onClick) => {
+		const createCompactButton = (text, icon, color, onClick, extraTitle = "") => {
 			const btn = documentRef.createElement("button");
-			btn.innerHTML = `${icon} ${text}`;
-			btn.style.cssText = `padding: 6px 10px; background: ${color}; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap; flex: 0 0 auto;`;
+			btn.textContent = icon ? `${icon}\u{A0}${text}` : text;
+			if (extraTitle) btn.title = extraTitle;
+			btn.style.cssText = `padding: 4px 9px; background: ${color}; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; flex: 0 0 auto; line-height: 1.4;`;
 			btn.addEventListener("click", onClick);
 			return btn;
 		};
@@ -321,6 +319,27 @@ export async function createChapterPageNovelControls({
 			windowRef.open(existingNovel ? `${base}?novel=${encodeURIComponent(existingNovel.id)}` : base, "_blank");
 		}));
 
+		// Handler-provided custom buttons (site-specific functionality).
+		// Handlers override getChapterUIConfig().customButtons or getCustomChapterButtons().
+		try {
+			const handlerConfig = currentHandler?.getChapterUIConfig
+				? await currentHandler.getChapterUIConfig()
+				: null;
+			const customButtons = handlerConfig?.customButtons ?? [];
+			for (const btnDef of customButtons) {
+				if (!btnDef?.label && !btnDef?.emoji) continue;
+				const label = [btnDef.emoji, btnDef.label].filter(Boolean).join("\u{A0}");
+				const btn = documentRef.createElement("button");
+				btn.textContent = label;
+				if (btnDef.title) btn.title = btnDef.title;
+				btn.style.cssText = `padding: 4px 9px; background: ${btnDef.bgColor || "#555"}; color: ${btnDef.textColor || "white"}; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; flex: 0 0 auto; line-height: 1.4;`;
+				if (typeof btnDef.onClick === "function") {
+					btn.addEventListener("click", () => btnDef.onClick({ novelId: getNovelIdFromCurrentPage(), existingNovel, refresh }));
+				}
+				controlsContainer.appendChild(btn);
+			}
+		} catch (_e) { /* non-critical — custom buttons are optional */ }
+
 		if (isIncognitoActive()) {
 			const badge = documentRef.createElement("span");
 			badge.textContent = "\u{1F575}\u{FE0F} Incognito";
@@ -328,11 +347,8 @@ export async function createChapterPageNovelControls({
 			controlsContainer.appendChild(badge);
 		}
 
-		if (getHandlerType() !== HANDLER_TYPES.DEDICATED_PAGE) {
-			const btnLabel = shouldBannersBeHidden() ? "Show Gemini UI" : "Hide Gemini UI";
-			const toggleBtn = createCompactButton(btnLabel, "\u{1F441}", "#ff9800", () => handleChapterControlsToggleBanners(toggleBtn));
-			controlsContainer.appendChild(toggleBtn);
-		}
+		// The Hide/Show UI toggle has moved to the popup "Now Reading" section.
+		// Do not add it to the in-page controls bar on any site.
 
 		__rgCreatingChapterControls = false;
 		return controlsContainer;
@@ -555,11 +571,9 @@ export async function injectUI({
 	const toggleBannersButton = createToggleBannersButton();
 	const cancelButton = createCancelEnhanceButton();
 
-	if (getHandlerType() !== HANDLER_TYPES.CHAPTER_EMBEDDED) {
-		if (toggleBannersButton) controlsContainer.appendChild(toggleBannersButton);
-		// enhance button lives in the main summary group — not duplicated here
-		if (cancelButton) controlsContainer.appendChild(cancelButton);
-	}
+	// The toggle-banners button has been moved to the popup "Now Reading" section
+	// so it doesn't clutter the chapter reading area. Only keep the cancel button here.
+	if (cancelButton) controlsContainer.appendChild(cancelButton);
 
 	let mainSummaryGroup = null;
 	const chunking = await loadChunkingSystem();

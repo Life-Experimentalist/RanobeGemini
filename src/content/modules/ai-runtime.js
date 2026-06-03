@@ -154,7 +154,7 @@ export async function handleEnhanceClickRuntime({
 			showStatusMessage,
 			documentRef,
 			cancelEnhanceButton,
-			buttonText: "✨ Enhance with Gemini",
+			buttonText: "\u{2728} Enhance with Gemini",
 		});
 	}
 }

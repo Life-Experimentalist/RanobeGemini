@@ -78,7 +78,7 @@ export async function handleChunkProcessedRuntime({
 			documentRef
 				.querySelectorAll(".gemini-enhance-btn")
 				.forEach((btn) => {
-					btn.textContent = "🔄 Re-enhance with Gemini";
+					btn.textContent = "\u{1F504} Re-enhance with Gemini";
 					btn.disabled = false;
 					btn.classList.remove("loading");
 				});
@@ -193,7 +193,7 @@ export async function handleChunkProcessedRuntime({
 		}
 
 		documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "🔄 Re-enhance with Gemini";
+			btn.textContent = "\u{1F504} Re-enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});

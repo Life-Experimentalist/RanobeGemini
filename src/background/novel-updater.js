@@ -25,7 +25,7 @@ import { NovelLibrary, READING_STATUS } from "../utils/novel-library.js";
 const novelLibrary = new NovelLibrary();
 
 // ---------------------------------------------------------------------------
-// Storage helpers — read user-configurable settings
+// Storage helpers \u{2014} read user-configurable settings
 // ---------------------------------------------------------------------------
 
 const browserAPI =
@@ -287,7 +287,7 @@ async function processChapterCountResult(novel, result) {
 
 	if (freshChapters > storedChapters) {
 		debugLog(
-			`[NovelUpdater] New chapters for "${novel.title}": ${storedChapters} → ${freshChapters}`,
+			`[NovelUpdater] New chapters for "${novel.title}": ${storedChapters} \u{2192} ${freshChapters}`,
 		);
 
 		await novelLibrary.addOrUpdateNovel(

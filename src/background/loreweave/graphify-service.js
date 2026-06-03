@@ -36,11 +36,12 @@ export async function graphifyChapter(
 		loreWeaveChronicleEnabled,
 		loreWeaveWritingStyle,
 		loreWeaveNovelId,
+		loreWeaveUserId,
 	} = config;
 
 	if (!loreWeaveUrl || !loreWeaveDomainId) {
 		throw new Error(
-			"LoreWeave URL and Domain ID must be configured in the LoreWeave tab.",
+			"LoreWeave URL and a Graph Domain ID are required. Set the domain on the novel's edit modal.",
 		);
 	}
 
@@ -123,7 +124,7 @@ export async function graphifyChapter(
 		);
 	}
 
-	await postIngestDelta(loreWeaveUrl, delta, loreWeaveToken || "");
+	await postIngestDelta(loreWeaveUrl, delta, loreWeaveToken || "", loreWeaveUserId || "");
 
 	if (loreWeaveChronicleEnabled && loreWeaveNovelId) {
 		await saveChapterRecord(loreWeaveNovelId, epochOrder, {

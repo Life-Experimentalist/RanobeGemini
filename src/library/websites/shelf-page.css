@@ -2259,6 +2259,14 @@ body {
 .search-bar-container {
 	flex: 1;
 	min-width: 250px;
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+}
+
+.search-bar-container .random-select-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
 }
 
 .filter-dropdown-container {
@@ -2276,6 +2284,8 @@ body {
 
 .search-bar {
 	width: 100%;
+	flex: 1;
+	min-width: 0;
 	padding: var(--spacing-sm) var(--spacing-md);
 	background: var(--bg-tertiary);
 	border: 1px solid var(--border-color);
@@ -2808,12 +2818,34 @@ body {
 	opacity: 0.5;
 }
 
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-tertiary);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-muted);
+}
+
 .modal-description {
 	font-family: inherit;
 	font-size: 1rem;
 	color: var(--text-secondary);
 	line-height: 1.7;
-	/* No truncation — show the full description */
+	max-height: 160px;
+	overflow-y: auto;
+	white-space: pre-wrap;
 }
 
 .ao3-read-btn {

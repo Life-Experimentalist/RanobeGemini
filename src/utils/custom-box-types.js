@@ -81,7 +81,7 @@ export function buildCustomBoxPromptAppendix(boxTypes) {
 	for (const box of boxTypes) {
 		if (!box.className) continue;
 		const emoji = box.emoji ? `${box.emoji} ` : "";
-		const hint = box.promptHint ? ` — ${box.promptHint}` : "";
+		const hint = box.promptHint ? ` \u{2014} ${box.promptHint}` : "";
 		lines.push(
 			`- \`<div class="${box.className}">\`: ${emoji}${box.name || box.className}${hint}.`,
 		);
@@ -126,7 +126,7 @@ export function createBoxType(overrides = {}) {
 		id: `rg-box-${Date.now()}`,
 		name: "New Box",
 		className: "rg-custom-box",
-		emoji: "📦",
+		emoji: "\u{1F4E6}",
 		backgroundColor: "rgba(20, 20, 30, 0.9)",
 		borderColor: "rgba(130, 130, 200, 0.6)",
 		textColor: "#d0d0e0",

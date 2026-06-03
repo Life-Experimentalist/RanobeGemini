@@ -67,6 +67,7 @@ export async function enqueueJob(jobConfig) {
 			domainId: jobConfig.domainId || "",
 		},
 		createdAt: Date.now(),
+		novelLastRead: jobConfig.novelLastRead || 0,
 		completedAt: null,
 		error: null,
 	};
@@ -93,15 +94,24 @@ export async function startQueue() {
 
 export async function pauseQueue() {
 	const queue = await loadQueue();
-	if (queue.activeJobId) {
-		const job = queue.jobs.find((j) => j.id === queue.activeJobId);
-		if (job) job.status = "paused";
+	const active = queue.jobs.find(
+		(j) => j.id === queue.activeJobId || j.status === "running",
+	);
+	if (active) {
+		active.status = "paused";
 		await saveQueue(queue);
 	}
 	_processing = false;
 }
 
 export async function resumeQueue() {
+	// Re-activate the first paused job so _processLoop picks it up.
+	const queue = await loadQueue();
+	const paused = queue.jobs.find((j) => j.status === "paused");
+	if (paused) {
+		paused.status = "pending";
+		await saveQueue(queue);
+	}
 	if (!_processing) startQueue().catch(console.error);
 }
 
@@ -123,9 +133,11 @@ async function _processLoop() {
 	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const queue = await loadQueue();
-		const nextJob = queue.jobs.find(
+		// Priority: sort pending jobs by novelLastRead descending (most-recently-read first)
+		const candidates = queue.jobs.filter(
 			(j) => j.status === "pending" || j.status === "running",
-		);
+		).sort((a, b) => (b.novelLastRead || b.createdAt || 0) - (a.novelLastRead || a.createdAt || 0));
+		const nextJob = candidates[0] || null;
 		if (!nextJob || nextJob.status === "paused") break;
 
 		queue.activeJobId = nextJob.id;
@@ -168,32 +180,65 @@ async function _processChapters(job, config) {
 		const current = q.jobs.find((j) => j.id === job.id);
 		if (!current || current.status === "paused") return;
 
-		const { content, nextUrl, words } = await _fetchChapter(currentUrl, chapterNum);
+		let fetchResult;
+		try {
+			fetchResult = await _fetchChapter(currentUrl, chapterNum);
+		} catch (fetchErr) {
+			console.warn(`[Queue] Fetch threw for ch ${chapterNum}:`, fetchErr?.message);
+			fetchResult = { content: "", nextUrl: null, words: 0 };
+		}
+		const { content, nextUrl, words } = fetchResult;
 
 		if (!content || words < MIN_CHAPTER_WORDS) {
-			current.progress.skippedChapters = [...(current.progress.skippedChapters || []), chapterNum];
-			await saveQueue(q);
+			// Chapter was empty or too short — count as skipped, not failed
+			const skipped = [...(current.progress.skippedChapters || []), chapterNum];
+			await updateJobProgress(job.id, { skippedChapters: skipped, current: chapterNum });
 		} else if (words < SHORT_CHAPTER_THRESHOLD_WORDS) {
 			buffer.push({ chapterNum, content, words });
 			bufferWords += words;
 			if (bufferWords >= 3200 || chapterNum === job.endChapter) {
-				await _flushBuffer([...buffer], job, config);
+				try {
+					await _flushBuffer([...buffer], job, config);
+					const processed = [
+						...(current.progress.processedChapters || []),
+						...buffer.map((b) => b.chapterNum),
+					];
+					await updateJobProgress(job.id, { processedChapters: processed, current: chapterNum });
+				} catch (flushErr) {
+					const failed = [...(current.progress.failedChapters || []), ...buffer.map((b) => b.chapterNum)];
+					await updateJobProgress(job.id, { failedChapters: failed, current: chapterNum });
+					console.warn(`[Queue] Flush failed for batch ending at ch ${chapterNum}:`, flushErr?.message);
+				}
 				buffer.length = 0;
 				bufferWords = 0;
 			}
 		} else {
 			if (buffer.length > 0) {
-				await _flushBuffer([...buffer], job, config);
+				try {
+					await _flushBuffer([...buffer], job, config);
+					const processed = [
+						...(current.progress.processedChapters || []),
+						...buffer.map((b) => b.chapterNum),
+					];
+					await updateJobProgress(job.id, { processedChapters: processed });
+				} catch (bufFlushErr) {
+					const failed = [...(current.progress.failedChapters || []), ...buffer.map((b) => b.chapterNum)];
+					await updateJobProgress(job.id, { failedChapters: failed });
+					console.warn(`[Queue] Flush failed for buffer:`, bufFlushErr?.message);
+				}
 				buffer.length = 0;
 				bufferWords = 0;
 			}
-			await _flushBuffer([{ chapterNum, content, words }], job, config);
+			try {
+				await _flushBuffer([{ chapterNum, content, words }], job, config);
+				const processed = [...(current.progress.processedChapters || []), chapterNum];
+				await updateJobProgress(job.id, { processedChapters: processed, current: chapterNum });
+			} catch (singleFlushErr) {
+				const failed = [...(current.progress.failedChapters || []), chapterNum];
+				await updateJobProgress(job.id, { failedChapters: failed, current: chapterNum });
+				console.warn(`[Queue] Flush failed for ch ${chapterNum}:`, singleFlushErr?.message);
+			}
 		}
-
-		await updateJobProgress(job.id, {
-			current: chapterNum,
-			processedChapters: [...(current.progress.processedChapters || []), chapterNum],
-		});
 
 		currentUrl = nextUrl;
 		chapterNum++;

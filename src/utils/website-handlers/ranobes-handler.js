@@ -31,14 +31,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		name: "Ranobes",
 		icon: "https://ranobes.net/favicon.ico",
 		iconFallback: "https://ranobes.top/favicon.ico",
-		emoji: "🍃",
+		emoji: "\u{1F343}",
 		color: "#4a7c4e",
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
-		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html → captures 1206917
-		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html → captures 1206917
+		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html \u{2192} captures 1206917
+		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html \u{2192} captures 1206917
 
-		// Read page: /read-1206917.html → captures 1206917
-		// Chapters list: /chapters/1206917/ → captures 1206917
+		// Read page: /read-1206917.html \u{2192} captures 1206917
+		// Chapters list: /chapters/1206917/ \u{2192} captures 1206917
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
@@ -65,13 +65,54 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description:
-					"Automatically run Enhance when a Ranobes chapter loads.",
+				description: "Automatically run Enhance when a Ranobes chapter loads.",
+			},
+			{
+				key: "htmlEnhancementMode",
+				label: "HTML enhancement mode",
+				type: "toggle",
+				defaultValue: true,
+				description: "Use HTML-aware enhancement to preserve formatting. Disable for plain-text mode.",
+			},
+			{ key: "_content", type: "section", label: "\u{1F4DD} Content Handling" },
+			{
+				key: "stripTranslatorNotes",
+				label: "Move translator/author notes to box",
+				type: "toggle",
+				defaultValue: true,
+				description: "Prompt the AI to collect translator and author notes into a separate box at the end rather than leaving them inline.",
+			},
+			{
+				key: "languageHint",
+				label: "Source language hint",
+				type: "select",
+				defaultValue: "auto",
+				description: "Hint the AI about the source language for better transliteration of names and terms.",
+				options: [
+					{ value: "auto", label: "Auto-detect" },
+					{ value: "russian", label: "Russian" },
+					{ value: "korean", label: "Korean" },
+					{ value: "chinese", label: "Chinese" },
+					{ value: "japanese", label: "Japanese" },
+					{ value: "other", label: "Other" },
+				],
+			},
+			{ key: "_display", type: "section", label: "\u{1F3A8} Display" },
+			{
+				key: "chapterFontSize",
+				label: "Enhanced chapter font size",
+				type: "number",
+				defaultValue: 100,
+				min: 70,
+				max: 150,
+				step: 5,
+				description: "Font size percentage for enhanced chapter text (70–150%).",
 			},
 		],
 	};
@@ -384,52 +425,18 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		const chapterTitle = this.extractTitle();
 		let sourceSelector = "";
 
-		// Create a deep clone to prevent modifying the actual DOM
-		const contentClone = contentArea.cloneNode(true);
+		// Clone and strip standard noise + Ranobes-specific title elements
+		const contentClone = this.cloneAndCleanContent(contentArea, [
+			"h1", "h2", "h3.title", ".story-title", ".chapter-title",
+		]);
 
-		// Remove title elements from the content if they exist
-		const titlesToRemove = contentClone.querySelectorAll(
-			"h1, h2, h3.title, .story-title, .chapter-title",
-		);
-		titlesToRemove.forEach((title) => {
-			title.remove();
-		});
-
-		// Remove ad-related elements before extracting text
-		const adSelectors = [
-			"script",
-			"style",
-			"iframe",
-			"ins.adsbygoogle",
-			"[class*='ads']",
-			"[class*='advert']",
-			"[id*='ads']",
-			"[id*='advert']",
-			".google-auto-placed",
-			".adsbygoogle",
-			"[data-ad]",
-			"[data-ads]",
-		];
-		adSelectors.forEach((selector) => {
-			contentClone
-				.querySelectorAll(selector)
-				.forEach((el) => el.remove());
-		});
-
-		// Get clean text content
-		let chapterText = contentClone.innerText
-			.replace(/\r\n?/g, "\n")
-			.split("\n")
-			.map((line) => line.replace(/[^\S\r\n]{2,}/g, " ").trimEnd())
-			.join("\n")
-			.replace(/\n{3,}/g, "\n\n")
-			.trim();
+		let chapterText = this.cleanExtractedText(contentClone.innerText || contentClone.textContent || "");
 
 		// Remove ad-related text patterns from the content
 		chapterText = this.removeAdRelatedText(chapterText);
 
 		// Additional cleaning - check the first few lines for titles
-		const titleParts = chapterTitle.split(/[:\-–—]/);
+		const titleParts = chapterTitle.split(/[:\-\u{2013}\u{2014}]/);
 		const lines = chapterText.split("\n");
 		const headLines = lines.slice(0, 5); // Only look at first 5 lines
 		const filteredHeadLines = headLines.filter((line) => {
@@ -617,17 +624,17 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		return cleanedText;
 	}
 
-	// Format content after enhancement
 	formatAfterEnhancement(contentArea) {
-		// Apply site-specific styling for Ranobes
-		if (contentArea) {
-			// Use the site's own style for paragraphs
-			contentArea.querySelectorAll("p").forEach((p) => {
-				p.style.marginBottom = "1em";
-				p.style.lineHeight = "1.7";
-				p.style.color = "#bab9a0";
-			});
-		}
+		super.formatAfterEnhancement(contentArea);
+		// Ranobes uses its own dark-theme text colour
+		contentArea?.querySelectorAll("p").forEach((p) => {
+			p.style.color = "#bab9a0";
+		});
+	}
+
+	/** Ranobes renders HTML chapter content — HTML enhancement is preferred. */
+	supportsTextOnlyEnhancement() {
+		return false;
 	}
 
 	// Implement site-specific default prompt for Ranobes
@@ -742,7 +749,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						titleEl.childNodes[0]?.textContent?.trim();
 					metadata.title = titleText || titleEl.textContent.trim();
 					// Remove subtitle if present
-					metadata.title = metadata.title.split("•")[0].trim();
+					metadata.title = metadata.title.split("\u{2022}")[0].trim();
 				}
 
 				// Fallback title selectors

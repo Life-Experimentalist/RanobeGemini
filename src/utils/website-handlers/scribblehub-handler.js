@@ -31,7 +31,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		name: "ScribbleHub",
 		icon: "https://www.scribblehub.com/favicon.ico",
 		invertIconInDarkMode: true,
-		emoji: "✨",
+		emoji: "\u{2728}",
 		color: "#6c5ce7",
 		novelIdPattern: /\/series\/(\d+)\/|\/read\/(\d+)-/,
 		primaryDomain: "www.scribblehub.com",
@@ -44,42 +44,62 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description:
-					"Automatically run Enhance when a ScribbleHub chapter loads.",
+				description: "Automatically run Enhance when a ScribbleHub chapter loads.",
 			},
 			{
+				key: "htmlEnhancementMode",
+				label: "HTML enhancement mode",
+				type: "toggle",
+				defaultValue: true,
+				description: "Use HTML-aware enhancement to preserve author formatting and special elements.",
+			},
+			{ key: "_content", type: "section", label: "\u{1F4DD} Content Handling" },
+			{
+				key: "includeParanNote",
+				label: "Include author paragraph notes",
+				type: "toggle",
+				defaultValue: true,
+				description: "Include inline author comments (italicised notes between paragraphs) in the enhancement context.",
+			},
+			{
+				key: "skipMatureContent",
+				label: "Skip mature content blocks",
+				type: "toggle",
+				defaultValue: false,
+				description: "Do not enhance paragraphs that are inside ScribbleHub mature content containers.",
+			},
+			{ key: "_display", type: "section", label: "\u{1F3A8} Display" },
+			{
 				key: "fontSize",
-				label: "Font Size",
+				label: "Font size (%)",
 				type: "number",
 				defaultValue: 100,
 				min: 50,
 				max: 200,
 				step: 10,
-				description:
-					"Font size percentage for enhanced/summary content (50-200%).",
+				description: "Font size percentage for enhanced/summary content (50–200%).",
 			},
+			{ key: "_css", type: "section", label: "\u{1F4BB} Custom CSS" },
 			{
 				key: "globalCSS",
-				label: "Custom Global CSS",
+				label: "Global CSS override",
 				type: "textarea",
 				defaultValue: "",
-				description:
-					"CSS applied globally to all ScribbleHub pages when extension is active.",
-				placeholder:
-					"body { font-family: 'Georgia'; }\n.chapter { line-height: 1.8; }",
+				description: "CSS applied globally to all ScribbleHub pages while the extension is active.",
+				placeholder: "body { font-family: 'Georgia'; }\n.chapter { line-height: 1.8; }",
 			},
 			{
 				key: "logoCSS",
-				label: "Custom Logo CSS",
+				label: "Logo / header CSS override",
 				type: "textarea",
 				defaultValue: "",
-				description:
-					"CSS specifically for the ScribbleHub logo/header area.",
+				description: "CSS for the ScribbleHub header or logo area.",
 				placeholder: ".site-logo { display: none !important; }",
 			},
 		],
@@ -258,20 +278,13 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 		const chapterTitle = this.extractTitle();
 
-		// Clone to prevent modifying DOM
-		const contentClone = contentArea.cloneNode(true);
+		const contentClone = this.cloneAndCleanContent(contentArea, [
+			".ta_c_bm", ".chapter_stats", ".c_set", "#my_popupreading",
+			".nav_chp_fi", ".prenext", ".next_nav_links",
+			".ad_336", ".align_banner", "[id^='div-gpt']",
+		]);
 
-		// Remove unwanted elements
-		const elementsToRemove = contentClone.querySelectorAll(
-			".ta_c_bm, .chapter_stats, .c_set, #my_popupreading, .nav_chp_fi, .prenext, .next_nav_links, script, style, .ad_336, .align_banner, [id^='div-gpt']",
-		);
-		elementsToRemove.forEach((el) => el.remove());
-
-		// Get clean text content
-		let chapterText = contentClone.innerText
-			.trim()
-			.replace(/\n\s+/g, "\n")
-			.replace(/\s{2,}/g, " ")
+		let chapterText = this.cleanExtractedText(contentClone.innerText || contentClone.textContent || "")
 			.replace(/Previous\s*Next/gi, "")
 			.trim();
 
@@ -427,12 +440,12 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 * @param {Element} contentArea
 	 */
 	formatAfterEnhancement(contentArea) {
-		if (contentArea) {
-			contentArea.querySelectorAll("p").forEach((p) => {
-				p.style.marginBottom = "1em";
-				p.style.lineHeight = "1.7";
-			});
-		}
+		super.formatAfterEnhancement(contentArea);
+	}
+
+	/** ScribbleHub renders HTML chapter content — HTML enhancement is preferred. */
+	supportsTextOnlyEnhancement() {
+		return false;
 	}
 
 	getDefaultPrompt() {
@@ -477,22 +490,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		try {
 			const isOnChapterPage = this.isChapterPage();
 			const isOnNovelPage = this.isNovelPage();
-			const parseCompactNumber = (valueText) => {
-				if (!valueText) return null;
-				const cleaned = valueText
-					.trim()
-					.replace(/,/g, "")
-					.toLowerCase();
-				const match = cleaned.match(/([\d.]+)\s*([kmb])?/i);
-				if (!match) return null;
-				const base = parseFloat(match[1]);
-				if (Number.isNaN(base)) return null;
-				const suffix = (match[2] || "").toLowerCase();
-				if (suffix === "k") return Math.round(base * 1000);
-				if (suffix === "m") return Math.round(base * 1000000);
-				if (suffix === "b") return Math.round(base * 1000000000);
-				return Math.round(base);
-			};
+			const parseCompactNumber = (valueText) => this.parseCompactNumber(valueText);
 
 			debugLog(
 				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`,
@@ -848,14 +846,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 * @param {string} url
 	 * @returns {string}
 	 */
-	normalizeUrl(url) {
-		if (!url) return null;
-		try {
-			return new URL(url, window.location.href).href;
-		} catch (e) {
-			return url;
-		}
-	}
+	// normalizeUrl() is now inherited from BaseWebsiteHandler
 
 	/**
 	 * Generate a unique novel ID from URL

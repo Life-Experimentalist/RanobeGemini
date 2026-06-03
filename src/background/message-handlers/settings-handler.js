@@ -84,16 +84,23 @@ export async function handleGetSettings(message, sendResponse) {
 
 		debugLog(`[SettingsHandler] Retrieving settings for ${handlerDomain}`);
 
-		// Get the handler instance
-		const handler = await handlerManager.getHandlerByDomain(handlerDomain);
-		if (!handler) {
-			debugError(
-				`[SettingsHandler] Handler not found for domain: ${handlerDomain}`,
+		// Get the handler instance.
+		// Also try stripping a leading "www." prefix — the content script may send
+		// e.g. "www.fanfiction.net" while some registry entries list "fanfiction.net".
+		let handler = await handlerManager.getHandlerByDomain(handlerDomain);
+		if (!handler && handlerDomain.startsWith("www.")) {
+			handler = await handlerManager.getHandlerByDomain(
+				handlerDomain.slice(4),
 			);
-			sendResponse({
-				success: false,
-				error: `Handler not found for domain: ${handlerDomain}`,
-			});
+		}
+		if (!handler) {
+			// Graceful fallback — return empty settings so the caller can use defaults.
+			// This is benign: the background may not have loaded the same handler
+			// instances as the content script (different import realms).
+			debugLog(
+				`[SettingsHandler] No handler for domain ${handlerDomain} — returning empty settings`,
+			);
+			sendResponse({ success: true, settings: {} });
 			return false;
 		}
 

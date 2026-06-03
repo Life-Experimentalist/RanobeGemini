@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Library Settings Page Script
  * Standalone settings page for Ranobe Gemini library configuration.
  * Replaces the settings modal from library.html and library.js.
@@ -25,6 +25,7 @@ import {
 	CAROUSEL_MIN_COUNT,
 	CAROUSEL_DEFAULT_MANUAL_COUNT,
 	DEFAULT_MODEL_ID,
+	DEFAULT_MODEL_ENDPOINT,
 } from "../utils/constants.js";
 import {
 	isSupportedDomain,
@@ -81,16 +82,16 @@ const SETTINGS_TABS = [
 	{ id: "ai-providers", icon: "\u{1F916}", label: "AI Providers", panelId: "panel-ai-providers" },
 	{ id: "prompts", icon: "\u{270D}\u{FE0F}", label: "Prompts", panelId: "panel-prompts" },
 	// Reading / Display
-	{ id: "display", icon: "\u{1F5A5}\u{FE0F}", label: "Display", panelId: "panel-display" },
 	{ id: "statuses", icon: "\u{1F4CB}", label: "Statuses", panelId: "panel-statuses" },
 	{ id: "copy", icon: "\u{1F4CB}", label: "Copy Format", panelId: "panel-copy" },
-	// Content processing
-	{ id: "content-filters", icon: "\u{1F53D}", label: "Content Filters", panelId: "panel-content-filters" },
-	{ id: "content-boxes", icon: "\u{1F3A8}", label: "Content Boxes", panelId: "panel-content-boxes" },
+	// Content processing (merged filters + boxes)
+	{ id: "content-processing", icon: "\u{1F3A8}", label: "Content", panelId: "panel-content-processing" },
 	// Library management
 	{ id: "sites", icon: "\u{1F310}", label: "Sites", panelId: "panel-sites" },
 	{ id: "automation", icon: "\u{26A1}", label: "Automation", panelId: "panel-automation" },
 	{ id: "backups", icon: "\u{2601}\u{FE0F}", label: "Backups", panelId: "panel-backups" },
+	// Story tools (Queue + Chat merged into LoreWeave/AI-Providers panels)
+	{ id: "loreweave", icon: "\u{1F578}\u{FE0F}", label: "LoreWeave", panelId: "panel-loreweave" },
 	// Advanced
 	{ id: "advanced", icon: "\u{2699}\u{FE0F}", label: "Advanced", panelId: "panel-advanced" },
 ];
@@ -1053,10 +1054,10 @@ function _makeFaviconImg(iconUrl, emoji, invertInDark) {
 	if (!iconUrl) return null;
 	try {
 		const img = document.createElement("img");
-		img.src = "https://icons.duckduckgo.com/ip3/" + new URL(iconUrl).hostname + ".ico";
+		img.src = iconUrl;
 		img.className = "ls-site-icon-img";
 		img.alt = "";
-		img.dataset.emoji = emoji || "📖";
+		img.dataset.emoji = emoji || "\u{1F4D6}";
 		if (invertInDark) img.dataset.invert = "true";
 		img.addEventListener("error", () => {
 			const span = document.createElement("span");
@@ -1216,29 +1217,20 @@ function renderSiteSettingsCards() {
 
 			card.appendChild(aaRow);
 
-			// ── Settings panel (expandable) ────────────────────────────────
+			// ── Settings panel (open by default, collapsible) ─────────────
 			if (hasSettings) {
 				const settingsPanel = document.createElement("div");
-				settingsPanel.className = "ls-site-card-settings ls-hidden";
+				// Start expanded so settings are immediately visible
+				settingsPanel.className = "ls-site-card-settings";
 				const stored = siteSettings[shelfId] || {};
-				// safe: renderWebsiteSettingsPanel builds HTML from static handler
-				// SETTINGS_DEFINITION strings; storage values escaped via &quot;
 				settingsPanel.innerHTML = renderWebsiteSettingsPanel(siteDef, stored);
 				card.appendChild(settingsPanel);
 
-				settingsPanel
-					.querySelectorAll("img.ls-handler-panel-icon[data-emoji]")
-					.forEach((sImg) => {
-						sImg.addEventListener("error", () => {
-							const span = document.createElement("span");
-							span.className = "ls-handler-panel-icon ls-handler-panel-emoji";
-							span.textContent = sImg.dataset.emoji;
-							sImg.replaceWith(span);
-						});
-					});
-
 				const chevron = header.querySelector(".ls-site-card-chevron");
 				if (chevron) {
+					// Start in expanded state
+					chevron.setAttribute("aria-expanded", "true");
+					chevron.textContent = "▴";
 					chevron.addEventListener("click", () => {
 						const expanded = chevron.getAttribute("aria-expanded") === "true";
 						chevron.setAttribute("aria-expanded", String(!expanded));
@@ -1310,15 +1302,24 @@ function renderSiteSettingsCards() {
 			});
 
 			// ── Per-site setting field changes ─────────────────────────────
-			card.querySelectorAll("input[data-setting], select[data-setting]").forEach((input) => {
-				input.addEventListener("change", async (e) => {
+			card.querySelectorAll("input[data-setting], select[data-setting], textarea[data-setting]").forEach((input) => {
+				const evtName = input.tagName === "TEXTAREA" ? "input" : "change";
+				let saveTimer = null;
+				input.addEventListener(evtName, async (e) => {
 					const sid = e.target.dataset.shelf;
 					const settKey = e.target.dataset.setting;
 					if (!sid || !settKey) return;
-					const val = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+					let val;
+					if (e.target.type === "checkbox") val = e.target.checked;
+					else if (e.target.type === "number") val = parseFloat(e.target.value) || 0;
+					else val = e.target.value;
 					siteSettings[sid] = { ...(siteSettings[sid] || {}), [settKey]: val };
-					await saveSiteSettings(siteSettings);
-					showToast((shelf.name || sid) + " setting saved", "success");
+					// Debounce save for textarea/number to avoid hammering storage
+					if (saveTimer) clearTimeout(saveTimer);
+					saveTimer = setTimeout(async () => {
+						await saveSiteSettings(siteSettings);
+						showToast((shelf.name || sid) + " setting saved", "success");
+					}, e.target.type === "number" || e.target.tagName === "TEXTAREA" ? 600 : 0);
 				});
 			});
 		}
@@ -1709,9 +1710,897 @@ function inferChapterHintFromUrl(url) {
 	return 0;
 }
 
-async function addUrlsToLibrary(urls, onProgress = null) {
+// ── Import Preview Modal ────────────────────────────────────────────────────────
+function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfirm }) {
+	document.getElementById("import-preview-modal")?.remove();
+
+	const toImport = prepared.toImport || [];
+	const existingItems = prepared.existingItems || [];
+	const duplicateItems = prepared.duplicateItems || [];
+
+	const overlay = document.createElement("div");
+	overlay.id = "import-preview-modal";
+	overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";
+
+	const modal = document.createElement("div");
+	modal.style.cssText = "background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:10px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;";
+
+	// ── Header ──────────────────────────────────────────────────────────────
+	const hdr = document.createElement("div");
+	hdr.style.cssText = "padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;";
+	const htitle = document.createElement("div");
+	htitle.innerHTML = `<div style="font-size:15px;font-weight:700;color:var(--text-primary)">Review URLs Before Import</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${totalExtracted} URL(s) extracted from your text</div>`;
+	const closeX = document.createElement("button");
+	closeX.style.cssText = "background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;";
+	closeX.textContent = "\u{2715}";
+	closeX.addEventListener("click", () => overlay.remove());
+	hdr.appendChild(htitle);
+	hdr.appendChild(closeX);
+	modal.appendChild(hdr);
+
+	// ── Breakdown chips ──────────────────────────────────────────────────────
+	const chips = document.createElement("div");
+	chips.style.cssText = "padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);background:var(--bg-tertiary,#1f2937);";
+	const chipDefs = [
+		{ n: toImport.length, label: "ready to import", color: "#22c55e" },
+		{ n: existingItems.length, label: "already in library", color: "#f59e0b" },
+		{ n: invalidUrls.length, label: "invalid / unsupported", color: "#ef4444" },
+		{ n: duplicateItems.length, label: "duplicates", color: "#8b5cf6" },
+	];
+	for (const { n, label, color } of chipDefs) {
+		const c = document.createElement("span");
+		c.style.cssText = `padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;background:${color}22;color:${color};border:1px solid ${color}55;`;
+		c.textContent = `${n} ${label}`;
+		chips.appendChild(c);
+	}
+	modal.appendChild(chips);
+
+	// ── Tab bar ──────────────────────────────────────────────────────────────
+	const tabBar = document.createElement("div");
+	tabBar.style.cssText = "display:flex;border-bottom:1px solid var(--border-color,#333);padding:0 20px;background:var(--bg-secondary);";
+	const body = document.createElement("div");
+	body.style.cssText = "flex:1;overflow-y:auto;padding:16px 20px;";
+
+	const sections = {};
+	const tabBtns = [];
+
+	const tabDefs = [
+		{ id: "ready", label: `\u{2705} Ready (${toImport.length})`, show: true },
+		{ id: "existing", label: `\u{1F4DA} In Library (${existingItems.length})`, show: existingItems.length > 0 },
+		{ id: "invalid", label: `\u{274C} Invalid (${invalidUrls.length})`, show: invalidUrls.length > 0 },
+		{ id: "duplicates", label: `\u{267B}\u{FE0F} Duplicates (${duplicateItems.length})`, show: duplicateItems.length > 0 },
+	].filter((t) => t.show || t.id === "ready");
+
+	function activateTab(id) {
+		tabBtns.forEach((b) => {
+			const active = b.dataset.tid === id;
+			b.style.borderBottom = active ? "2px solid var(--accent-color,#7c3aed)" : "2px solid transparent";
+			b.style.color = active ? "var(--accent-color,#7c3aed)" : "var(--text-secondary)";
+			b.style.fontWeight = active ? "600" : "400";
+		});
+		for (const [sid, sec] of Object.entries(sections)) {
+			sec.style.display = sid === id ? "" : "none";
+		}
+	}
+
+	for (const t of tabDefs) {
+		const btn = document.createElement("button");
+		btn.style.cssText = "background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;font-size:12px;cursor:pointer;white-space:nowrap;";
+		btn.textContent = t.label;
+		btn.dataset.tid = t.id;
+		btn.addEventListener("click", () => activateTab(t.id));
+		tabBar.appendChild(btn);
+		tabBtns.push(btn);
+		const sec = document.createElement("div");
+		sec.style.display = "none";
+		sections[t.id] = sec;
+		body.appendChild(sec);
+	}
+
+	// ── Tab: Ready ───────────────────────────────────────────────────────────
+	{
+		const sec = sections["ready"];
+		if (toImport.length === 0) {
+			const p = document.createElement("p");
+			p.style.cssText = "color:var(--text-secondary);font-size:13px;margin:0;";
+			p.textContent = "No new novels to import. Check the other tabs.";
+			sec.appendChild(p);
+		} else {
+			const note = document.createElement("p");
+			note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;";
+			note.textContent = `${toImport.length} novel(s) will be imported.`;
+			sec.appendChild(note);
+			const ul = document.createElement("div");
+			ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;";
+			for (const item of toImport) {
+				const row = document.createElement("div");
+				row.style.cssText = "font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #22c55e;";
+				row.textContent = item.originalUrl || item.url;
+				row.title = item.originalUrl || item.url;
+				ul.appendChild(row);
+			}
+			sec.appendChild(ul);
+		}
+	}
+
+	// ── Tab: Existing ────────────────────────────────────────────────────────
+	const updateCheckboxes = [];
+	if (existingItems.length) {
+		const sec = sections["existing"];
+		const note = document.createElement("p");
+		note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
+		note.textContent = "These novels are already in your library. Tick the ones you want to re-import to refresh metadata (title, chapter count, cover).";
+		sec.appendChild(note);
+
+		const selAll = document.createElement("label");
+		selAll.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;cursor:pointer;";
+		const selAllCb = document.createElement("input");
+		selAllCb.type = "checkbox";
+		selAll.appendChild(selAllCb);
+		selAll.appendChild(document.createTextNode("Select all to update"));
+		sec.appendChild(selAll);
+
+		const ul = document.createElement("div");
+		ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;";
+		for (const item of existingItems) {
+			const row = document.createElement("label");
+			row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#333);border-left:3px solid #f59e0b;cursor:pointer;";
+			const cb = document.createElement("input");
+			cb.type = "checkbox";
+			cb.dataset.importUrl = item.importUrl || item.url;
+			cb.dataset.novelId = item.novelId;
+			updateCheckboxes.push(cb);
+			const info = document.createElement("div");
+			info.style.cssText = "flex:1;min-width:0;";
+			const t = document.createElement("div");
+			t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			t.textContent = item.title;
+			t.title = item.title;
+			const s = document.createElement("div");
+			s.style.cssText = "font-size:10px;color:var(--text-secondary);margin-top:1px;";
+			s.textContent = item.totalChapters
+				? `Ch. ${item.lastReadChapter}/${item.totalChapters} \u{B7} ${item.novelId}`
+				: item.novelId;
+			info.appendChild(t);
+			info.appendChild(s);
+			row.appendChild(cb);
+			row.appendChild(info);
+			ul.appendChild(row);
+		}
+		sec.appendChild(ul);
+
+		selAllCb.addEventListener("change", () => {
+			updateCheckboxes.forEach((c) => { c.checked = selAllCb.checked; });
+		});
+	}
+
+	// ── Tab: Invalid ─────────────────────────────────────────────────────────
+	let invalidTextarea = null;
+	if (invalidUrls.length) {
+		const sec = sections["invalid"];
+
+		const note = document.createElement("div");
+		note.style.cssText = "margin-bottom:10px;";
+		note.innerHTML = `
+			<p style="font-size:12px;color:var(--text-secondary);margin:0 0 6px;line-height:1.5;">
+				These ${invalidUrls.length} URL(s) were not recognised as supported novel pages.
+				Common reasons: wrong site, AO3 series or tag pages, malformed URL, or unsupported format.
+			</p>
+			<p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5;">
+				<strong style="color:var(--text-primary);">Edit them below</strong>, or use <strong style="color:var(--text-primary);">Find on NovelArrow</strong> to search for the same novel on a supported site.
+			</p>`;
+		sec.appendChild(note);
+
+		// Per-URL rows with "Find on NovelArrow" button
+		const perUrlList = document.createElement("div");
+		perUrlList.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-bottom:10px;";
+
+		for (const url of invalidUrls) {
+			const rowEl = document.createElement("div");
+			rowEl.style.cssText = "display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border-color,#333);border-left:3px solid #ef4444;border-radius:6px;background:var(--bg-secondary);";
+
+			const urlText = document.createElement("span");
+			urlText.style.cssText = "flex:1;font-size:11px;font-family:monospace;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			urlText.textContent = url;
+			urlText.title = url;
+
+			const findBtn = document.createElement("button");
+			findBtn.className = "ls-btn ls-btn-secondary ls-btn-sm";
+			findBtn.style.cssText = "flex-shrink:0;font-size:11px;white-space:nowrap;";
+			findBtn.textContent = "\u{1F50D} Find on supported sites";
+
+			// Search results dropdown
+			const dropdown = document.createElement("div");
+			dropdown.style.cssText = "display:none;position:absolute;z-index:10000;background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.5);width:360px;max-height:260px;overflow-y:auto;";
+			rowEl.style.position = "relative";
+
+			findBtn.addEventListener("click", async () => {
+				findBtn.disabled = true;
+				findBtn.textContent = "\u{23F3} Searching\u{2026}";
+				dropdown.style.display = "none";
+				try {
+					const query = _slugToQuery(url);
+					if (!query) { findBtn.textContent = "No title found"; return; }
+					const siteGroups = await searchSupportedSites(query);
+					dropdown.innerHTML = "";
+
+					if (!siteGroups.length) {
+						const none = document.createElement("div");
+						none.style.cssText = "padding:12px;font-size:12px;color:var(--text-secondary);text-align:center;";
+						none.textContent = `No matches found for: "${query}"`;
+						dropdown.appendChild(none);
+					} else {
+						const hdr = document.createElement("div");
+						hdr.style.cssText = "padding:6px 10px;font-size:10px;font-weight:700;color:var(--text-muted,#6b7280);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border-color,#333);";
+						hdr.textContent = `Results for "${query}"`;
+						dropdown.appendChild(hdr);
+
+						for (const group of siteGroups) {
+							// Site label
+							const siteHdr = document.createElement("div");
+							siteHdr.style.cssText = "padding:4px 10px;font-size:10px;font-weight:700;color:var(--accent-color,#7c3aed);background:var(--bg-tertiary);border-bottom:1px solid var(--border-color,#333);";
+							siteHdr.textContent = `${group.emoji} ${group.site}`;
+							dropdown.appendChild(siteHdr);
+
+							for (const r of group.results) {
+								const item = document.createElement("div");
+								item.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border-color,#333);";
+								item.addEventListener("mouseenter", () => { item.style.background = "var(--bg-tertiary)"; });
+								item.addEventListener("mouseleave", () => { item.style.background = ""; });
+
+								if (r.cover) {
+									const thumb = document.createElement("img");
+									thumb.src = r.cover;
+									thumb.style.cssText = "width:32px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0;";
+									thumb.onerror = () => { thumb.style.display = "none"; };
+									item.appendChild(thumb);
+								}
+
+								const info = document.createElement("div");
+								info.style.cssText = "flex:1;min-width:0;";
+								const t = document.createElement("div");
+								t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+								t.textContent = r.title;
+								const sub = document.createElement("div");
+								sub.style.cssText = "font-size:10px;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+								sub.textContent = r.author || r.url;
+								info.appendChild(t);
+								info.appendChild(sub);
+
+								const useBtn = document.createElement("button");
+								useBtn.className = "ls-btn ls-btn-primary ls-btn-sm";
+								useBtn.style.cssText = "font-size:10px;flex-shrink:0;";
+								useBtn.textContent = "Use";
+								useBtn.addEventListener("click", () => {
+									const lines = (invalidTextarea.value || "").split("\n");
+									const idx = lines.findIndex((l) => l.trim() === url);
+									if (idx !== -1) lines[idx] = r.url;
+									else lines.push(r.url);
+									invalidTextarea.value = lines.join("\n");
+									rowEl.style.borderLeftColor = "#22c55e";
+									urlText.textContent = r.url;
+									urlText.title = r.url;
+									urlText.style.color = "#22c55e";
+									findBtn.textContent = "\u{2705} Replaced";
+									dropdown.style.display = "none";
+								});
+
+								item.appendChild(info);
+								item.appendChild(useBtn);
+								dropdown.appendChild(item);
+							}
+						}
+					}
+					dropdown.style.display = "";
+				} catch (e) {
+					findBtn.textContent = "\u{274C} Search failed";
+					setTimeout(() => {
+						findBtn.textContent = "\u{1F50D} Find on supported sites";
+						findBtn.disabled = false;
+					}, 2000);
+					return;
+				} finally {
+					if (findBtn.textContent !== "\u{2705} Replaced" && findBtn.textContent !== "\u{274C} Search failed") {
+						findBtn.textContent = "\u{1F50D} Find on supported sites";
+					}
+					findBtn.disabled = false;
+				}
+			});
+
+			// Close dropdown on outside click
+			document.addEventListener("click", (e) => {
+				if (!rowEl.contains(e.target)) dropdown.style.display = "none";
+			}, { once: false, capture: false });
+
+			rowEl.appendChild(urlText);
+			rowEl.appendChild(findBtn);
+			rowEl.appendChild(dropdown);
+			perUrlList.appendChild(rowEl);
+		}
+		sec.appendChild(perUrlList);
+
+		// Editable textarea for batch editing
+		const textareaLabel = document.createElement("p");
+		textareaLabel.style.cssText = "font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 4px;";
+		textareaLabel.textContent = "Or edit all at once (one URL per line):";
+		sec.appendChild(textareaLabel);
+
+		invalidTextarea = document.createElement("textarea");
+		invalidTextarea.className = "ls-textarea";
+		invalidTextarea.style.cssText = "width:100%;min-height:100px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box;";
+		invalidTextarea.value = invalidUrls.join("\n");
+		invalidTextarea.placeholder = "Edit URLs here, one per line…";
+		invalidTextarea.spellcheck = false;
+		sec.appendChild(invalidTextarea);
+
+		const hint = document.createElement("p");
+		hint.style.cssText = "font-size:11px;color:var(--text-muted,#6b7280);margin:6px 0 0;";
+		hint.textContent = "Corrected URLs will be re-validated on import. Supported: NovelArrow, Ranobes, ScribbleHub, FanFiction, AO3 (works only), WebNovel.";
+		sec.appendChild(hint);
+	}
+
+	// ── Tab: Duplicates ──────────────────────────────────────────────────────
+	if (duplicateItems.length) {
+		const sec = sections["duplicates"];
+		const note = document.createElement("p");
+		note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
+		note.textContent = "The same novel appeared more than once in your input. Only the first occurrence is imported; these extras are ignored.";
+		sec.appendChild(note);
+		const ul = document.createElement("div");
+		ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;";
+		for (const item of duplicateItems) {
+			const row = document.createElement("div");
+			row.style.cssText = "font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-secondary);border-left:3px solid #8b5cf6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			row.textContent = item.url;
+			row.title = item.url;
+			ul.appendChild(row);
+		}
+		sec.appendChild(ul);
+	}
+
+	modal.appendChild(tabBar);
+	modal.appendChild(body);
+
+	// ── Progress bar (hidden until import starts) ─────────────────────────────
+	const progressWrap = document.createElement("div");
+	progressWrap.style.cssText = "padding:0 20px;display:none;border-top:1px solid var(--border-color,#333);";
+	const progressLbl = document.createElement("div");
+	progressLbl.style.cssText = "font-size:11px;color:var(--text-secondary);padding:8px 0 4px;";
+	progressLbl.textContent = "Importing\u{2026}";
+	const progressBarWrap = document.createElement("div");
+	progressBarWrap.style.cssText = "background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:8px;";
+	const progressBarFill = document.createElement("div");
+	progressBarFill.style.cssText = "background:#22c55e;height:100%;width:0%;transition:width 0.3s;";
+	progressBarWrap.appendChild(progressBarFill);
+	progressWrap.appendChild(progressLbl);
+	progressWrap.appendChild(progressBarWrap);
+	modal.appendChild(progressWrap);
+
+	// ── Footer ────────────────────────────────────────────────────────────────
+	const footer = document.createElement("div");
+	footer.style.cssText = "padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:space-between;align-items:center;gap:10px;";
+	const cancelBtn = document.createElement("button");
+	cancelBtn.className = "ls-btn ls-btn-secondary";
+	cancelBtn.textContent = "Cancel";
+	cancelBtn.addEventListener("click", () => overlay.remove());
+	const importBtn = document.createElement("button");
+	importBtn.className = "ls-btn ls-btn-primary";
+	const importBtnBase = toImport.length > 0
+		? `Import ${toImport.length} Novel${toImport.length !== 1 ? "s" : ""} \u{2192}`
+		: "Import Selected \u{2192}";
+	importBtn.textContent = importBtnBase;
+
+	importBtn.addEventListener("click", async () => {
+		importBtn.disabled = true;
+		cancelBtn.disabled = true;
+		importBtn.textContent = "\u{23F3} Starting\u{2026}";
+
+		// Collect corrected invalid URLs (re-parse the edited textarea)
+		const correctedUrls = invalidTextarea
+			? extractUrlsFromText(invalidTextarea.value)
+			: [];
+
+		// Collect force-update items (checked "already in library")
+		const forcedUpdateItems = updateCheckboxes
+			.filter((cb) => cb.checked)
+			.map((cb) => ({
+				url: cb.dataset.importUrl,
+				originalUrl: cb.dataset.importUrl,
+				novelId: cb.dataset.novelId,
+				shelfId: "",
+			}));
+
+		// Show progress bar
+		progressWrap.style.display = "";
+		tabBar.style.display = "none";
+		body.style.display = "none";
+
+		await onConfirm({
+			toImport,
+			forcedUpdateItems,
+			correctedUrls,
+			modalEl: overlay,
+			progressLbl,
+			progressBarFill,
+		});
+	});
+
+	footer.appendChild(cancelBtn);
+	footer.appendChild(importBtn);
+	modal.appendChild(footer);
+
+	overlay.appendChild(modal);
+	overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+	document.body.appendChild(overlay);
+
+	// Activate first tab that has content
+	const firstActive = tabDefs.find((t) => t.id === "invalid" && invalidUrls.length > 0)?.id
+		|| (toImport.length > 0 ? "ready" : tabDefs[0]?.id);
+	activateTab(firstActive);
+}
+
+// ── Import runner (called by both old and new flows) ─────────────────────────
+async function _runImport({ toImport, forcedUpdateItems = [], correctedUrls = [], modalEl, urlImportStatus, progressLbl, progressBarFill }) {
+	const results = await addUrlsToLibrary(
+		correctedUrls,
+		(progress) => {
+			if (progressLbl) {
+				const cur = progress.processed ?? 0;
+				const total = (progress.queued ?? 0) + (toImport.length || 0) + (forcedUpdateItems.length || 0);
+				const done = cur + ((toImport.length || 0) + (forcedUpdateItems.length || 0)) - (progress.queued ?? 0);
+				const pct = total ? Math.round((Math.max(0, done) / total) * 100) : 0;
+				progressLbl.textContent = `Importing ${progress.processed}/${progress.queued + (toImport.length || 0) + (forcedUpdateItems.length || 0)} \u{B7} Added ${progress.added} \u{B7} Failed ${progress.failed}\u{2026}`;
+				if (progressBarFill) progressBarFill.style.width = pct + "%";
+			}
+			if (urlImportStatus) {
+				const p = progress;
+				urlImportStatus.textContent = `Processing ${p.processed}/${p.queued} \u{B7} Added ${p.added} \u{B7} Failed ${p.failed}`;
+			}
+		},
+		[...toImport, ...forcedUpdateItems],
+	);
+
+	if (modalEl) modalEl.remove();
+
+	if (urlImportStatus) {
+		const parts = [`Added ${results.added}`];
+		if (results.failed) parts.push(`\u{26A0}\u{FE0F} ${results.failed} failed`);
+		if (results.skipped) parts.push(`${results.skipped} skipped`);
+		urlImportStatus.textContent = "Done. " + parts.join(" \u{B7} ") + ".";
+	}
+
+	const hasIssues =
+		results.failed > 0 ||
+		results.existingItems.length > 0 ||
+		results.duplicateItems.length > 0 ||
+		results.unsupportedItems.length > 0;
+
+	if (hasIssues) {
+		showImportResultsModal(results, []);
+	} else {
+		showToast(`\u{2705} Import complete. Added ${results.added} novel(s).`, "success");
+	}
+}
+
+// ── Import Results Modal ────────────────────────────────────────────────────────
+function showImportResultsModal(results, allInputUrls = []) {
+	// Remove any existing modal
+	document.getElementById("import-results-modal")?.remove();
+
+	const overlay = document.createElement("div");
+	overlay.id = "import-results-modal";
+	overlay.style.cssText = `
+		position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;
+		display:flex;align-items:center;justify-content:center;padding:16px;
+	`;
+
+	const modal = document.createElement("div");
+	modal.style.cssText = `
+		background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#2f3644);
+		border-radius:10px;width:100%;max-width:680px;max-height:80vh;display:flex;
+		flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;
+	`;
+
+	// Header
+	const header = document.createElement("div");
+	header.style.cssText = "padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;gap:12px;";
+	const title = document.createElement("h2");
+	title.style.cssText = "margin:0;font-size:16px;color:var(--text-primary);";
+	title.textContent = "Import Results";
+	const closeBtn = document.createElement("button");
+	closeBtn.style.cssText = "background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;";
+	closeBtn.textContent = "\u{2715}";
+	closeBtn.addEventListener("click", () => overlay.remove());
+	header.appendChild(title);
+	header.appendChild(closeBtn);
+	modal.appendChild(header);
+
+	// Summary chips
+	const summary = document.createElement("div");
+	summary.style.cssText = "padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);";
+	const chipData = [
+		{ label: `\u{2705} ${results.added} added`, color: "#22c55e", show: results.added > 0 },
+		{ label: `\u{274C} ${results.failed} failed`, color: "#ef4444", show: results.failed > 0 },
+		{ label: `\u{1F4DA} ${results.existingItems.length} already in library`, color: "#f59e0b", show: results.existingItems.length > 0 },
+		{ label: `\u{267B}\u{FE0F} ${results.duplicateItems.length} duplicates`, color: "#8b5cf6", show: results.duplicateItems.length > 0 },
+		{ label: `\u{1F6AB} ${results.unsupportedItems.length} unsupported`, color: "#6b7280", show: results.unsupportedItems.length > 0 },
+	];
+	for (const { label, color, show } of chipData) {
+		if (!show) continue;
+		const chip = document.createElement("span");
+		chip.style.cssText = `padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:${color}22;color:${color};border:1px solid ${color}44;`;
+		chip.textContent = label;
+		summary.appendChild(chip);
+	}
+	modal.appendChild(summary);
+
+	// Tab nav
+	const tabs = [];
+	const tabDefs = [
+		{ id: "failed", label: `\u{274C} Failed (${results.failedUrls.length})`, show: results.failedUrls.length > 0 },
+		{ id: "existing", label: `\u{1F4DA} In Library (${results.existingItems.length})`, show: results.existingItems.length > 0 },
+		{ id: "duplicate", label: `\u{267B}\u{FE0F} Duplicates (${results.duplicateItems.length})`, show: results.duplicateItems.length > 0 },
+		{ id: "unsupported", label: `\u{1F6AB} Unsupported (${results.unsupportedItems.length})`, show: results.unsupportedItems.length > 0 },
+	].filter((t) => t.show);
+
+	const tabBar = document.createElement("div");
+	tabBar.style.cssText = "display:flex;gap:0;border-bottom:1px solid var(--border-color,#333);padding:0 20px;";
+	const tabBody = document.createElement("div");
+	tabBody.style.cssText = "flex:1;overflow-y:auto;padding:16px 20px;";
+
+	const sections = {};
+
+	function activateTab(id) {
+		tabs.forEach((t) => {
+			const active = t.dataset.tabId === id;
+			t.style.borderBottom = active ? "2px solid var(--accent-color,#7c3aed)" : "2px solid transparent";
+			t.style.color = active ? "var(--accent-color,#7c3aed)" : "var(--text-secondary)";
+			t.style.fontWeight = active ? "600" : "400";
+		});
+		for (const [sid, sec] of Object.entries(sections)) {
+			sec.style.display = sid === id ? "" : "none";
+		}
+	}
+
+	for (const tab of tabDefs) {
+		const btn = document.createElement("button");
+		btn.style.cssText = "background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;";
+		btn.textContent = tab.label;
+		btn.dataset.tabId = tab.id;
+		btn.addEventListener("click", () => activateTab(tab.id));
+		tabBar.appendChild(btn);
+		tabs.push(btn);
+
+		const sec = document.createElement("div");
+		sec.style.display = "none";
+		sec.dataset.section = tab.id;
+		sections[tab.id] = sec;
+		tabBody.appendChild(sec);
+	}
+
+	// ── Failed section ────────────────────────────────────────────────────────
+	if (results.failedUrls.length) {
+		const sec = sections["failed"];
+		sec.appendChild(_importNote("These URLs opened as tabs but the extension could not extract novel data. The tabs were left open so you can inspect them. You can retry or open them manually."));
+		for (const item of results.failedUrls) {
+			sec.appendChild(_importRow(
+				item.url,
+				item.error || "Unknown error",
+				"error",
+				[
+					{
+						label: "Retry",
+						onClick: async (rowEl, btn) => {
+							btn.textContent = "Retrying…";
+							btn.disabled = true;
+							const [ok, err] = await _retryImportUrl(item.url);
+							if (ok) {
+								rowEl.style.opacity = "0.4";
+								rowEl.querySelector(".ir-status").textContent = "✅ Added";
+							} else {
+								rowEl.querySelector(".ir-status").textContent = "❌ " + err;
+								btn.textContent = "Retry";
+								btn.disabled = false;
+							}
+						},
+					},
+					{
+						label: "Open URL",
+						onClick: () => browser.tabs.create({ url: item.url }),
+					},
+				],
+			));
+		}
+	}
+
+	// ── Already in Library section ────────────────────────────────────────────
+	if (results.existingItems.length) {
+		const sec = sections["existing"];
+		sec.appendChild(_importNote("These novels are already in your library. You can update their metadata (title, chapters, cover) from the site, or keep what you have."));
+		for (const item of results.existingItems) {
+			const subtitle = item.totalChapters
+				? `Ch. ${item.lastReadChapter}/${item.totalChapters} \u{B7} ${item.novelId}`
+				: item.novelId;
+			sec.appendChild(_importRow(
+				item.title,
+				subtitle,
+				"existing",
+				[
+					{
+						label: "Update Metadata",
+						onClick: async (rowEl, btn) => {
+							btn.textContent = "Updating…";
+							btn.disabled = true;
+							const [ok, err] = await _retryImportUrl(item.importUrl || item.url, true);
+							if (ok) {
+								rowEl.style.opacity = "0.4";
+								rowEl.querySelector(".ir-status").textContent = "\u{2705} Updated";
+							} else {
+								rowEl.querySelector(".ir-status").textContent = "\u{274C} " + err;
+								btn.textContent = "Update Metadata";
+								btn.disabled = false;
+							}
+						},
+					},
+					{
+						label: "Open in Library",
+						onClick: () => browser.tabs.create({ url: browser.runtime.getURL("library/library.html") }),
+					},
+				],
+			));
+		}
+	}
+
+	// ── Duplicates section ────────────────────────────────────────────────────
+	if (results.duplicateItems.length) {
+		const sec = sections["duplicate"];
+		sec.appendChild(_importNote("The same novel appeared multiple times in your input. Only the first occurrence was imported; these duplicates were ignored."));
+		for (const item of results.duplicateItems) {
+			sec.appendChild(_importRow(item.url, item.novelId, "duplicate", []));
+		}
+	}
+
+	// ── Unsupported section ───────────────────────────────────────────────────
+	if (results.unsupportedItems.length) {
+		const sec = sections["unsupported"];
+		sec.appendChild(_importNote("These URLs are not from a supported site, or are not a novel/chapter page (e.g. AO3 series lists). They were skipped."));
+		for (const item of results.unsupportedItems) {
+			if (!item.url) continue;
+			sec.appendChild(_importRow(item.url, "Not a supported novel URL", "unsupported", []));
+		}
+	}
+
+	// Activate first tab
+	if (tabDefs.length) activateTab(tabDefs[0].id);
+
+	modal.appendChild(tabBar);
+	modal.appendChild(tabBody);
+
+	// Footer
+	const footer = document.createElement("div");
+	footer.style.cssText = "padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:flex-end;";
+	const doneBtn = document.createElement("button");
+	doneBtn.className = "ls-btn ls-btn-primary ls-btn-sm";
+	doneBtn.textContent = "Done";
+	doneBtn.addEventListener("click", () => overlay.remove());
+	footer.appendChild(doneBtn);
+	modal.appendChild(footer);
+
+	overlay.appendChild(modal);
+	overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+	document.body.appendChild(overlay);
+}
+
+// ── Cross-site URL resolution via NovelArrow/NovelBin search ──────────────────────────────
+
+/**
+ * Convert a URL slug or path into a plain text search query.
+ * E.g. "back-then-i-adored-you" → "back then i adored you"
+ *      "/back-then-i-adored-you.html" → "back then i adored you"
+ */
+function _slugToQuery(url) {
+	try {
+		const pathname = new URL(url).pathname;
+		// Strip leading slash, file extension, common prefixes like /b/
+		const raw = pathname
+			.replace(/^\/+/, "")
+			.replace(/\.html?$/i, "")
+			.replace(/^b\//, "")
+			.split("/")
+			.pop() || "";
+		return raw.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+	} catch {
+		return "";
+	}
+}
+
+/**
+ * Supported-site search configurations.
+ * Each entry defines how to search that site and parse results.
+ * Only sites whose shelfId is enabled in siteSettings will be queried.
+ */
+const SITE_SEARCH_CONFIGS = [
+	{
+		// novelbin shelfId covers both novelbin.com and novelarrow.com
+		shelfId: "novelbin",
+		label: "NovelBin (NovelArrow)",
+		emoji: "\u{1F4DA}",
+		buildUrl: (q) => `https://novelarrow.com/search?q=${encodeURIComponent(q)}`,
+		parseResults(doc, limit) {
+			// NovelArrow is a Next.js React app — links to /novel/{slug} are the results.
+			const links = doc.querySelectorAll("a[href*='/novel/']");
+			const out = [];
+			const seen = new Set();
+			for (const a of links) {
+				const href = a.getAttribute("href") || "";
+				if (!href.match(/\/novel\/[a-z0-9-]+$/i)) continue;
+				const url = href.startsWith("http") ? href : `https://novelarrow.com${href}`;
+				if (seen.has(url)) continue;
+				seen.add(url);
+				out.push({
+					title: a.textContent.trim() || href.split("/").pop(),
+					url,
+					author: "",
+					cover: "",
+				});
+				if (out.length >= limit) break;
+			}
+			// Fallback: search novelbin.com if novelarrow returns nothing
+			if (!out.length) {
+				const rows = doc.querySelectorAll(".col-novel-main .list-novel .row");
+				for (const row of rows) {
+					const a = row.querySelector("h3.novel-title a");
+					if (!a) continue;
+					const href = a.getAttribute("href") || "";
+					out.push({
+						title: a.getAttribute("title") || a.textContent.trim(),
+						url: href.startsWith("http") ? href : `https://novelbin.com${href}`,
+						author: row.querySelector(".author")?.textContent?.replace(/\s+/g, " ").trim() || "",
+						cover: row.querySelector("img.cover")?.getAttribute("src") || "",
+					});
+					if (out.length >= limit) break;
+				}
+			}
+			return out;
+		},
+	},
+	{
+		shelfId: "ranobes",
+		label: "Ranobes",
+		emoji: "\u{1F30F}",
+		buildUrl: (q) => `https://ranobes.net/search/${encodeURIComponent(q)}/`,
+		parseResults(doc, limit) {
+			const articles = doc.querySelectorAll("article.block.story.shortstory");
+			const out = [];
+			for (const a of articles) {
+				const titleEl = a.querySelector("h2.title a");
+				if (!titleEl) continue;
+				const href = titleEl.getAttribute("href") || "";
+				const url = href.startsWith("http") ? href : `https://ranobes.net${href}`;
+				// Cover is a CSS background-image on figure.cover
+				let cover = "";
+				const fig = a.querySelector("figure.cover");
+				if (fig) {
+					const m = (fig.getAttribute("style") || "").match(/url\(["']?([^"')]+)["']?\)/);
+					if (m) cover = m[1];
+				}
+				out.push({
+					title: titleEl.textContent.trim(),
+					url,
+					author: "",
+					cover,
+				});
+				if (out.length >= limit) break;
+			}
+			return out;
+		},
+	},
+];
+
+/**
+ * Search all currently-enabled supported sites for a title query.
+ * Runs all searches in parallel; returns results grouped by site.
+ * @param {string} query
+ * @param {number} [limitPerSite=4]
+ * @returns {Promise<Array<{site:string, emoji:string, results:Array}>>}
+ */
+async function searchSupportedSites(query, limitPerSite = 4) {
+	const enabledIds = new Set(
+		Object.entries(siteSettings)
+			.filter(([, s]) => s.enabled !== false)
+			.map(([id]) => id),
+	);
+
+	const activeConfigs = SITE_SEARCH_CONFIGS.filter((c) => enabledIds.has(c.shelfId));
+	if (!activeConfigs.length) return [];
+
+	const results = await Promise.allSettled(
+		activeConfigs.map(async (cfg) => {
+			const url = cfg.buildUrl(query.trim());
+			const resp = await fetch(url, { credentials: "omit", headers: { Accept: "text/html" } });
+			if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+			const html = await resp.text();
+			const doc = new DOMParser().parseFromString(html, "text/html");
+			return {
+				site: cfg.label,
+				emoji: cfg.emoji,
+				results: cfg.parseResults(doc, limitPerSite),
+			};
+		}),
+	);
+
+	return results
+		.filter((r) => r.status === "fulfilled" && r.value.results.length > 0)
+		.map((r) => r.value);
+}
+
+function _importNote(text) {
+	const p = document.createElement("p");
+	p.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 12px;line-height:1.5;";
+	p.textContent = text;
+	return p;
+}
+
+const TYPE_COLOR = { error: "#ef4444", existing: "#f59e0b", duplicate: "#8b5cf6", unsupported: "#6b7280" };
+
+function _importRow(title, subtitle, type, actions) {
+	const row = document.createElement("div");
+	row.style.cssText = `
+		display:flex;align-items:center;gap:10px;padding:8px 10px;
+		border:1px solid var(--border-color,#333);border-left:3px solid ${TYPE_COLOR[type] || "#6b7280"};
+		border-radius:6px;margin-bottom:6px;flex-wrap:wrap;
+	`;
+
+	const info = document.createElement("div");
+	info.style.cssText = "flex:1;min-width:0;";
+	const t = document.createElement("div");
+	t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+	t.textContent = title;
+	const s = document.createElement("div");
+	s.className = "ir-status";
+	s.style.cssText = "font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+	s.textContent = subtitle;
+	info.appendChild(t);
+	info.appendChild(s);
+	row.appendChild(info);
+
+	const btns = document.createElement("div");
+	btns.style.cssText = "display:flex;gap:6px;flex-shrink:0;";
+	for (const action of actions) {
+		const btn = document.createElement("button");
+		btn.className = "ls-btn ls-btn-secondary ls-btn-sm";
+		btn.textContent = action.label;
+		btn.addEventListener("click", () => action.onClick(row, btn));
+		btns.appendChild(btn);
+	}
+	row.appendChild(btns);
+	return row;
+}
+
+async function _retryImportUrl(url, forceUpdate = false) {
+	let tabId = null;
+	try {
+		const tab = await browser.tabs.create({ url, active: false });
+		tabId = tab.id;
+		await waitForTabComplete(tabId);
+		const response = await sendAddToLibraryMessage(tabId);
+		if (response.success) {
+			await browser.tabs.remove(tabId).catch(() => {});
+			return [true, null];
+		}
+		await browser.tabs.remove(tabId).catch(() => {});
+		return [false, response.error || "Failed"];
+	} catch (err) {
+		if (tabId) await browser.tabs.remove(tabId).catch(() => {});
+		return [false, err.message || "Error"];
+	}
+}
+
+// forcedItems — items that skip the existence check (e.g. "update metadata" for already-saved novels).
+// Each item must be: { url, originalUrl, novelId, shelfId }
+async function addUrlsToLibrary(urls, onProgress = null, forcedItems = []) {
 	const results = {
-		total: urls.length,
+		total: urls.length + forcedItems.length,
 		queued: 0,
 		processed: 0,
 		added: 0,
@@ -1722,10 +2611,15 @@ async function addUrlsToLibrary(urls, onProgress = null) {
 		unsupported: 0,
 		failed: 0,
 		failedUrls: [],
+		// Detailed lists for the results modal
+		existingItems: [],
+		duplicateItems: [],
+		unsupportedItems: [],
 	};
 
 	const prepared = await novelLibrary.prepareUrlsForImport(urls);
-	const queue = prepared.toImport || [];
+	// Merge forcedItems directly into the queue (they bypass the existence check)
+	const queue = [...(prepared.toImport || []), ...forcedItems];
 	results.queued = queue.length;
 	results.skippedExisting = prepared.skippedExisting || 0;
 	results.skippedDuplicates = prepared.skippedDuplicates || 0;
@@ -1734,6 +2628,9 @@ async function addUrlsToLibrary(urls, onProgress = null) {
 		results.skippedExisting +
 		results.skippedDuplicates +
 		results.unsupported;
+	results.existingItems = prepared.existingItems || [];
+	results.duplicateItems = prepared.duplicateItems || [];
+	results.unsupportedItems = prepared.unsupportedItems || [];
 
 	if (typeof onProgress === "function") {
 		onProgress({ ...results, phase: "prepared" });
@@ -1804,11 +2701,11 @@ async function addUrlsToLibrary(urls, onProgress = null) {
 	return results;
 }
 
-function waitForTabComplete(tabId, timeoutMs = 15000) {
+function waitForTabComplete(tabId, timeoutMs = 30000) {
 	return new Promise((resolve, reject) => {
 		let timeoutId;
-		const onUpdated = (updatedTabId, info) => {
-			if (updatedTabId !== tabId || info.status !== "complete") return;
+		const onUpdated = (updatedTabId, changeInfo) => {
+			if (updatedTabId !== tabId || changeInfo.status !== "complete") return;
 			browser.tabs.onUpdated.removeListener(onUpdated);
 			if (timeoutId) clearTimeout(timeoutId);
 			resolve();
@@ -1817,14 +2714,19 @@ function waitForTabComplete(tabId, timeoutMs = 15000) {
 		browser.tabs.onUpdated.addListener(onUpdated);
 		timeoutId = setTimeout(() => {
 			browser.tabs.onUpdated.removeListener(onUpdated);
-			reject(new Error("Timed out waiting for tab load"));
+			reject(new Error("Timed out waiting for tab to load (30 s)"));
 		}, timeoutMs);
 	});
 }
 
 async function sendAddToLibraryMessage(tabId) {
-	const maxAttempts = 3;
+	// Give the content script time to fully inject and initialize.
+	// Sites like NovelBin execute heavy JS after the "complete" event fires.
+	await new Promise((r) => setTimeout(r, 2500));
+
+	const maxAttempts = 6;
 	let lastError = null;
+
 	for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
 		try {
 			const response = await browser.tabs.sendMessage(tabId, {
@@ -1841,13 +2743,14 @@ async function sendAddToLibraryMessage(tabId) {
 			}
 		} catch (err) {
 			lastError = err;
-			// retry
 		}
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		// Exponential-ish back-off: 1.5 s → 2 s → 2.5 s …
+		await new Promise((r) => setTimeout(r, 1500 + attempt * 500));
 	}
+
 	return {
 		success: false,
-		error: lastError?.message || "Content script did not respond",
+		error: lastError?.message || "Content script did not respond after 6 attempts",
 	};
 }
 
@@ -2948,67 +3851,57 @@ function setupEventListeners() {
 		urlImportBtn.addEventListener("click", async () => {
 			const raw = urlImportText.value || "";
 			const extracted = extractUrlsFromText(raw);
-			const supported = filterSupportedUrls(extracted);
-			const unsupportedInInput = Math.max(
-				0,
-				extracted.length - supported.length,
-			);
 
-			if (urlImportStatus) {
-				urlImportStatus.textContent =
-					supported.length === 0
-						? "No importable URLs found (unsupported URLs like AO3 series pages are skipped)."
-						: `Found ${supported.length} importable URL(s). Preparing import\u{2026}`;
-			}
-			if (supported.length === 0) {
-				showToast(
-					"\u{274C} No importable URLs found. Unsupported URLs were skipped.",
-					"error",
-				);
+			if (!extracted.length) {
+				showToast("\u{274C} No URLs found in the text.", "error");
+				if (urlImportStatus) urlImportStatus.textContent = "No URLs found.";
 				return;
 			}
 
+			// Classify before any tab is opened (fast path)
+			if (urlImportStatus) urlImportStatus.textContent = "Analysing URLs\u{2026}";
 			urlImportBtn.disabled = true;
-			const originalBtnText = urlImportBtn.textContent;
-			urlImportBtn.textContent = "\u{23F3} Importing\u{2026}";
+			urlImportBtn.textContent = "\u{23F3} Analysing\u{2026}";
 
-			const results = await addUrlsToLibrary(supported, (progress) => {
-				if (!urlImportStatus) return;
-				if (progress.phase === "prepared") {
-					urlImportStatus.textContent = `Queued ${progress.queued}. Processing 0/${progress.queued}\u{2026}`;
-					return;
-				}
+			try {
+				const supported = filterSupportedUrls(extracted);
+				// All extracted URLs that didn't pass filterSupportedUrls
+				const supportedSet = new Set(supported);
+				const unsupportedFromFilter = extracted.filter((u) => !supportedSet.has(u));
 
-				const currentUrlPart = progress.currentUrl
-					? ` | ${String(progress.currentUrl).slice(0, 80)}`
-					: "";
-				urlImportStatus.textContent =
-					`Processing ${progress.processed}/${progress.queued} | Added ${progress.added} (continued ${progress.continued}) | ` +
-					`Skipped ${progress.skipped} | Failed ${progress.failed}${currentUrlPart}`;
-			});
+				// Deep classify the supported ones
+				const prepared = await novelLibrary.prepareUrlsForImport(supported);
 
-			if (urlImportStatus) {
-				urlImportStatus.textContent =
-					`Done. Added ${results.added} (continued ${results.continued}), skipped ${results.skipped}, failed ${results.failed}. ` +
-					`(existing: ${results.skippedExisting}, duplicates: ${results.skippedDuplicates}, unsupported: ${results.unsupported})`;
+				// Collect ALL invalid URLs: failed domain filter + failed identity extraction
+				const invalidUrls = [
+					...unsupportedFromFilter,
+					...(prepared.unsupportedItems || []).map((i) => i.url).filter(Boolean),
+				];
+
+				if (urlImportStatus) urlImportStatus.textContent = "Ready.";
+				urlImportBtn.disabled = false;
+				urlImportBtn.textContent = "\u{2795} Add URLs to Library";
+
+				showImportPreviewModal({
+					prepared,
+					invalidUrls,
+					totalExtracted: extracted.length,
+					onConfirm: async ({ toImport, forcedUpdateItems, correctedUrls, modalEl }) => {
+						await _runImport({
+							toImport,
+							forcedUpdateItems,
+							correctedUrls,
+							modalEl,
+							urlImportStatus,
+						});
+					},
+				});
+			} catch (err) {
+				urlImportBtn.disabled = false;
+				urlImportBtn.textContent = "\u{2795} Add URLs to Library";
+				if (urlImportStatus) urlImportStatus.textContent = "Analysis failed: " + err.message;
+				showToast("\u{274C} Analysis failed: " + err.message, "error");
 			}
-
-			if (results.failed > 0) {
-				showToast(
-					`\u{26A0}\u{FE0F} ${results.failed} URL(s) failed. Failed tabs were left open for inspection.`,
-					"warning",
-				);
-			}
-
-			if (results.unsupported > 0 || unsupportedInInput > 0) {
-				showToast(
-					`\u{26A0}\u{FE0F} Skipped ${Math.max(results.unsupported, unsupportedInInput)} unsupported URL(s) (for example AO3 /series pages).`,
-					"warning",
-				);
-			}
-
-			urlImportBtn.disabled = false;
-			urlImportBtn.textContent = originalBtnText;
 		});
 	}
 
@@ -3465,6 +4358,24 @@ function setupEventListeners() {
 			e.target.value = days;
 			await browser.storage.local.set({ novelUpdateIntervalDays: days });
 			showToast(`Novel check interval: every ${days} day(s)`, "success");
+		});
+	}
+
+	const checkNowBtn = $("novel-update-check-now");
+	const checkStatus = $("novel-update-check-status");
+	if (checkNowBtn) {
+		checkNowBtn.addEventListener("click", async () => {
+			checkNowBtn.disabled = true;
+			if (checkStatus) checkStatus.textContent = "Checking…";
+			try {
+				await browser.runtime.sendMessage({ action: "checkNovelsNow" });
+				if (checkStatus) checkStatus.textContent = "✅ Check complete";
+			} catch (e) {
+				if (checkStatus) checkStatus.textContent = "❌ " + e.message;
+			} finally {
+				checkNowBtn.disabled = false;
+				setTimeout(() => { if (checkStatus) checkStatus.textContent = ""; }, 4000);
+			}
 		});
 	}
 
@@ -4315,6 +5226,356 @@ async function initDisplaySettingsTab() {
 }
 
 // \u{2500}\u{2500} Init \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Queue panel ────────────────────────────────────────────────────────────────
+
+const STATUS_ICON = {
+	pending: "\u{23F3}",
+	running: "\u{25B6}",
+	paused: "\u{23F8}",
+	done: "\u{2705}",
+	error: "\u{274C}",
+};
+const STATUS_COLOR = {
+	pending: "#6b7280",
+	running: "#3b82f6",
+	paused: "#f59e0b",
+	done: "#22c55e",
+	error: "#ef4444",
+};
+
+async function initQueuePanel() {
+	const addBtn = document.getElementById("ls-qAddBtn");
+	const jobList = document.getElementById("ls-qJobList");
+	const resultView = document.getElementById("ls-qResultView");
+	const resultClose = document.getElementById("ls-qResultClose");
+	const resultContent = document.getElementById("ls-qResultContent");
+	const resultTitle = document.getElementById("ls-qResultTitle");
+
+	if (!addBtn) return;
+
+	// ── Render job list ──────────────────────────────────────────────────────
+	async function renderJobs() {
+		if (!jobList) return;
+		let jobs = [];
+		try {
+			const resp = await browser.runtime.sendMessage({ action: "queue", subAction: "status" });
+			jobs = resp?.result?.jobs || [];
+		} catch (_e) {
+			jobList.innerHTML = "";
+			const p = document.createElement("p");
+			p.className = "ls-section-desc";
+			p.textContent = "Unable to load queue.";
+			jobList.appendChild(p);
+			return;
+		}
+
+		jobList.innerHTML = "";
+
+		if (jobs.length === 0) {
+			const empty = document.createElement("p");
+			empty.className = "ls-section-desc";
+			empty.textContent = "No jobs queued. Add one below or from a novel’s edit modal.";
+			jobList.appendChild(empty);
+			return;
+		}
+
+		for (const job of jobs) {
+			const prog = job.progress || {};
+			const total = prog.total ?? Math.max(1, (job.endChapter || 1) - (job.startChapter || 1) + 1);
+			const done = (prog.processedChapters || []).length;
+			const skipped = (prog.skippedChapters || []).length;
+			const failed = (prog.failedChapters || []).length;
+			const pct = Math.round((done / total) * 100);
+			const color = STATUS_COLOR[job.status] || "#6b7280";
+			const icon = STATUS_ICON[job.status] || "\u{23F3}";
+
+			const card = document.createElement("div");
+			card.style.cssText = `
+				border:1px solid var(--border-color,#333);
+				border-left:3px solid ${color};
+				border-radius:6px;
+				padding:10px 12px;
+				margin-bottom:8px;
+				font-size:12px;
+				background:var(--bg-secondary);
+			`;
+
+			// ── Title row ────────────────────────────────────────────────────
+			const titleRow = document.createElement("div");
+			titleRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:6px;";
+			const statusSpan = document.createElement("span");
+			statusSpan.textContent = icon;
+			statusSpan.style.cssText = `font-size:14px;color:${color};flex-shrink:0;`;
+			const titleSpan = document.createElement("span");
+			titleSpan.style.cssText = "font-weight:600;flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			titleSpan.textContent = job.novelTitle || "(Unnamed novel)";
+			const chSpan = document.createElement("span");
+			chSpan.style.cssText = "color:var(--text-secondary);font-size:11px;flex-shrink:0;";
+			chSpan.textContent = `Ch ${job.startChapter}–${job.endChapter}`;
+			titleRow.appendChild(statusSpan);
+			titleRow.appendChild(titleSpan);
+			titleRow.appendChild(chSpan);
+			card.appendChild(titleRow);
+
+			// ── Progress bar ─────────────────────────────────────────────────
+			if (job.status === "running" || job.status === "paused" || job.status === "done") {
+				const bar = document.createElement("div");
+				bar.style.cssText = "background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:6px;";
+				const fill = document.createElement("div");
+				fill.style.cssText = `background:${color};height:100%;width:${pct}%;transition:width 0.3s;`;
+				bar.appendChild(fill);
+				card.appendChild(bar);
+			}
+
+			// ── Stats row ────────────────────────────────────────────────────
+			const statsRow = document.createElement("div");
+			statsRow.style.cssText = "display:flex;gap:12px;margin-bottom:6px;font-size:11px;flex-wrap:wrap;";
+
+			const addStat = (label, value, color) => {
+				const s = document.createElement("span");
+				s.innerHTML = `<span style="color:${color || "var(--text-secondary)"};">${value}</span> ${label}`;
+				statsRow.appendChild(s);
+			};
+
+			if (job.status !== "pending") {
+				addStat("done", done, "#22c55e");
+				if (skipped) addStat("skipped", skipped, "#f59e0b");
+				if (failed) addStat("failed", failed, "#ef4444");
+				addStat(`/ ${total} total`, "", "var(--text-secondary)");
+				if (job.status === "running") addStat(`(${pct}%)`, "", "#3b82f6");
+			}
+
+			if (job.status === "error" && job.error) {
+				const errSpan = document.createElement("span");
+				errSpan.style.cssText = "color:#ef4444;font-size:11px;";
+				errSpan.textContent = "⚠️ " + job.error.slice(0, 120);
+				statsRow.appendChild(errSpan);
+			}
+
+			if (job.status === "done" && skipped > 0) {
+				const note = document.createElement("div");
+				note.style.cssText = "color:#f59e0b;font-size:11px;margin-top:2px;";
+				note.textContent = `${skipped} chapter(s) skipped — too short or empty (< 100 words).`;
+				statsRow.appendChild(note);
+			}
+
+			card.appendChild(statsRow);
+
+			// ── Actions ──────────────────────────────────────────────────────
+			const actRow = document.createElement("div");
+			actRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
+
+			const makeBtn = (label, danger, onClick) => {
+				const b = document.createElement("button");
+				b.className = "ls-btn ls-btn-sm " + (danger ? "ls-btn-danger" : "ls-btn-secondary");
+				b.textContent = label;
+				b.addEventListener("click", async () => {
+					b.disabled = true;
+					await onClick();
+					b.disabled = false;
+				});
+				return b;
+			};
+
+			if (job.status === "running") {
+				actRow.appendChild(makeBtn("⏸ Pause", false, async () => {
+					await browser.runtime.sendMessage({ action: "queue", subAction: "pause" });
+					await renderJobs();
+				}));
+			} else if (job.status === "paused" || job.status === "pending") {
+				actRow.appendChild(makeBtn("▶ Resume", false, async () => {
+					await browser.runtime.sendMessage({ action: "queue", subAction: "resume" });
+					await renderJobs();
+				}));
+			}
+
+			if (job.status === "done") {
+				actRow.appendChild(makeBtn("View Summary", false, async () => {
+					if (resultView) resultView.style.display = "";
+					if (resultTitle) resultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+					if (resultContent) resultContent.textContent = job.summary || "(No summary generated)";
+				}));
+			}
+
+			actRow.appendChild(makeBtn("❌ Remove", true, async () => {
+				await browser.runtime.sendMessage({ action: "queue", subAction: "cancel", jobId: job.id });
+				await renderJobs();
+			}));
+
+			card.appendChild(actRow);
+			jobList.appendChild(card);
+		}
+	}
+
+	// ── Add job ──────────────────────────────────────────────────────────────
+	addBtn.addEventListener("click", async () => {
+		const firstUrl = document.getElementById("ls-qFirstUrl")?.value?.trim();
+		const start = parseInt(document.getElementById("ls-qStart")?.value, 10) || 1;
+		const end = parseInt(document.getElementById("ls-qEnd")?.value, 10) || 1;
+		const sendToLW = document.getElementById("ls-qSendToLW")?.checked ?? true;
+		if (!firstUrl) { showToast("Enter the first chapter URL", "warning"); return; }
+		if (start > end) { showToast("From chapter must be ≤ To chapter", "warning"); return; }
+		try {
+			const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
+			await browser.runtime.sendMessage({
+				action: "queue",
+				subAction: "add",
+				job: {
+					novelTitle: "",
+					firstChapterUrl: firstUrl,
+					startChapter: start,
+					endChapter: end,
+					sendToLoreWeave: sendToLW,
+					writingStyle: config.loreWeaveWritingStyle || "other",
+					loreWeaveUrl: config.loreWeaveUrl || "",
+					domainId: "",
+				},
+			});
+			showToast(`Job queued: Ch ${start}–${end}`, "success");
+			document.getElementById("ls-qFirstUrl").value = "";
+			await renderJobs();
+		} catch (e) {
+			showToast("Failed: " + e.message, "error");
+		}
+	});
+
+	if (resultClose) {
+		resultClose.addEventListener("click", () => {
+			if (resultView) resultView.style.display = "none";
+		});
+	}
+
+	// Auto-refresh every 8 seconds while the panel is visible
+	await renderJobs();
+	const _refreshInterval = setInterval(async () => {
+		const panel = document.getElementById("panel-queue-details");
+		if (panel && panel.open) {
+			await renderJobs();
+		}
+	}, 8000);
+
+	// Clean up on panel hide (tab switch) — best-effort
+	document.getElementById("ls-nav")?.addEventListener("click", () => {
+		clearInterval(_refreshInterval);
+	});
+}
+
+// ── LoreWeave panel ─────────────────────────────────────────────────────────────
+async function initLoreWeavePanel() {
+	const lsUrl = document.getElementById("ls-lwUrl");
+	const lsAuto = document.getElementById("ls-lwAutoGraphify");
+	const lsChronicle = document.getElementById("ls-lwChronicleEnabled");
+	const lsPrior = document.getElementById("ls-lwUsePriorContext");
+	const lsStyle = document.getElementById("ls-lwWritingStyle");
+	const lsSave = document.getElementById("ls-lwSaveBtn");
+	const lsPing = document.getElementById("ls-lwPingBtn");
+	const lsPingStatus = document.getElementById("ls-lwPingStatus");
+	const lsUserIdEl = document.getElementById("ls-lwUserId");
+	const lsCopyUid = document.getElementById("ls-lwCopyUserId");
+
+	if (!lsUrl) return;
+
+	// Load or generate LoreWeave user ID (SponsorBlock-style UUID)
+	try {
+		const stored = await browser.storage.local.get([
+			"loreWeaveUrl", "loreWeaveAutoGraphify", "loreWeaveChronicleEnabled",
+			"loreWeaveUsePriorContext", "loreWeaveWritingStyle", "loreWeaveUserId",
+		]);
+		if (lsUrl) lsUrl.value = stored.loreWeaveUrl || "";
+		if (lsAuto) lsAuto.checked = !!stored.loreWeaveAutoGraphify;
+		if (lsChronicle) lsChronicle.checked = !!stored.loreWeaveChronicleEnabled;
+		if (lsPrior) lsPrior.checked = !!stored.loreWeaveUsePriorContext;
+		if (lsStyle && stored.loreWeaveWritingStyle) lsStyle.value = stored.loreWeaveWritingStyle;
+
+		let userId = stored.loreWeaveUserId;
+		if (!userId) {
+			userId = crypto.randomUUID ? crypto.randomUUID() : `lw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+			await browser.storage.local.set({ loreWeaveUserId: userId });
+		}
+		if (lsUserIdEl) lsUserIdEl.textContent = userId;
+	} catch (_e) { /* non-critical */ }
+
+	if (lsCopyUid && lsUserIdEl) {
+		lsCopyUid.addEventListener("click", () => {
+			navigator.clipboard.writeText(lsUserIdEl.textContent).then(() => {
+				showToast("User ID copied", "success");
+			}).catch(() => {});
+		});
+	}
+
+	if (lsSave) {
+		lsSave.addEventListener("click", async () => {
+			await browser.storage.local.set({
+				loreWeaveUrl: lsUrl?.value?.trim() || "",
+				loreWeaveAutoGraphify: lsAuto?.checked ?? false,
+				loreWeaveChronicleEnabled: lsChronicle?.checked ?? false,
+				loreWeaveUsePriorContext: lsPrior?.checked ?? false,
+				loreWeaveWritingStyle: lsStyle?.value || "other",
+			});
+			showToast("LoreWeave settings saved", "success");
+		});
+	}
+
+	if (lsPing) {
+		lsPing.addEventListener("click", async () => {
+			const url = lsUrl?.value?.trim();
+			if (!url) { showToast("Enter a backend URL first", "warning"); return; }
+			if (lsPingStatus) { lsPingStatus.textContent = "Testing\u{2026}"; lsPingStatus.style.display = "block"; }
+			try {
+				const resp = await browser.runtime.sendMessage({ action: "loreweave:ping", url });
+				if (lsPingStatus) {
+					lsPingStatus.textContent = resp?.success ? "\u{2705} Connected" : "\u{274C} " + (resp?.error || "Failed");
+					lsPingStatus.style.display = "block";
+				}
+			} catch (e) {
+				if (lsPingStatus) { lsPingStatus.textContent = "\u{274C} " + e.message; lsPingStatus.style.display = "block"; }
+			}
+		});
+	}
+}
+
+// ── Chat settings panel ─────────────────────────────────────────────────────────
+async function initChatPanel() {
+	const saveBtn = document.getElementById("ls-chatSettingsSaveBtn");
+	if (!saveBtn) return;
+
+	const CHAT_SETTINGS_KEY = "rg_chat_settings";
+	const defaults = {
+		useCurrentChapter: true,
+		useChronicle: true,
+		useLoreWeave: true,
+		useWebSearch: false,
+		maxHistory: 6,
+	};
+
+	try {
+		const stored = await browser.storage.local.get(CHAT_SETTINGS_KEY);
+		const s = { ...defaults, ...(stored[CHAT_SETTINGS_KEY] || {}) };
+		const useChapter = document.getElementById("ls-chatUseCurrentChapter");
+		const useChronicle = document.getElementById("ls-chatUseChronicle");
+		const useLW = document.getElementById("ls-chatUseLoreWeave");
+		const useWeb = document.getElementById("ls-chatUseWebSearch");
+		const maxHist = document.getElementById("ls-chatMaxHistory");
+		if (useChapter) useChapter.checked = s.useCurrentChapter;
+		if (useChronicle) useChronicle.checked = s.useChronicle;
+		if (useLW) useLW.checked = s.useLoreWeave;
+		if (useWeb) useWeb.checked = s.useWebSearch;
+		if (maxHist) maxHist.value = s.maxHistory;
+	} catch (_e) { /* non-critical */ }
+
+	saveBtn.addEventListener("click", async () => {
+		const s = {
+			useCurrentChapter: document.getElementById("ls-chatUseCurrentChapter")?.checked ?? true,
+			useChronicle: document.getElementById("ls-chatUseChronicle")?.checked ?? true,
+			useLoreWeave: document.getElementById("ls-chatUseLoreWeave")?.checked ?? true,
+			useWebSearch: document.getElementById("ls-chatUseWebSearch")?.checked ?? false,
+			maxHistory: parseInt(document.getElementById("ls-chatMaxHistory")?.value, 10) || 6,
+		};
+		await browser.storage.local.set({ [CHAT_SETTINGS_KEY]: s });
+		showToast("Chat settings saved", "success");
+	});
+}
+
 async function init() {
 	debugLog("\u{2699}\u{FE0F} Library Settings page initialising\u{2026}");
 
@@ -4372,8 +5633,13 @@ async function init() {
 	// Content Filters tab
 	await initContentFiltersTab();
 
-	// Display Settings tab
+	// Display Settings tab (hidden panel kept for JS compat)
 	await initDisplaySettingsTab();
+
+	// New story-tool panels moved from popup
+	await initQueuePanel();
+	await initLoreWeavePanel();
+	await initChatPanel();
 
 	// Wire up all event listeners
 	setupEventListeners();

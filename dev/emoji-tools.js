@@ -44,6 +44,8 @@ const CP1252_EXTRA = {
 
 const DEFAULT_ROOTS = ["src", "landing", "docs"];
 const DEFAULT_EXTENSIONS = new Set([".js", ".html", ".css", ".md", ".json"]);
+// Only JS files interpret \u{...} escapes — HTML/CSS/MD need real UTF-8 chars
+const ENCODE_EXTENSIONS = new Set([".js"]);
 const DEFAULT_SKIP_DIRS = new Set([
 	".git",
 	"node_modules",
@@ -297,10 +299,15 @@ function runRepair(args) {
 }
 
 function runEncode(args) {
-	const files = collectTargetFiles(args);
+	let files = collectTargetFiles(args);
 	if (args.file && files.length === 0) {
 		console.error(`File not found: ${args.file}`);
 		return 1;
+	}
+
+	// Restrict encoding to JS-only; HTML/CSS/MD don't interpret \u{...} escapes
+	if (!args.file) {
+		files = files.filter((f) => ENCODE_EXTENSIONS.has(path.extname(f).toLowerCase()));
 	}
 
 	let changed = 0;

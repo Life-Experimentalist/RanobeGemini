@@ -51,20 +51,20 @@ export function toggleAllChunksRuntime({ documentRef = document, escapeHtml }) {
 
 	allChunkToggleBtns.forEach((btn) => {
 		if (isShowingEnhanced) {
-			btn.textContent = "✨ Show Enhanced";
+			btn.textContent = "\u{2728} Show Enhanced";
 			btn.setAttribute("data-showing", "original");
 			return;
 		}
-		btn.textContent = "👁 Show Original";
+		btn.textContent = "\u{1F441} Show Original";
 		btn.setAttribute("data-showing", "enhanced");
 	});
 
 	if (isShowingEnhanced) {
-		toggleBtn.textContent = "✨ Show All Enhanced";
+		toggleBtn.textContent = "\u{2728} Show All Enhanced";
 		toggleBtn.setAttribute("data-showing", "original");
 		return;
 	}
-	toggleBtn.textContent = "👁 Show All Original";
+	toggleBtn.textContent = "\u{1F441} Show All Original";
 	toggleBtn.setAttribute("data-showing", "enhanced");
 }
 
@@ -104,7 +104,7 @@ export async function deleteAllChunksRuntime({
 	);
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "✨ Enhance with Gemini";
+		btn.textContent = "\u{2728} Enhance with Gemini";
 		btn.disabled = false;
 	});
 }
@@ -176,8 +176,8 @@ export async function continueChunkEnhancementRuntime({
 			const allCompleted =
 				doneNow.length === allNow.length && allNow.length > 0;
 			btn.textContent = allCompleted
-				? "🔄 Re-enhance with Gemini"
-				: "✨ Enhance with Gemini";
+				? "\u{1F504} Re-enhance with Gemini"
+				: "\u{2728} Enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		}
@@ -199,7 +199,7 @@ export async function prepareFreshEnhancementFromChunkCacheRuntime({
 		enhancedChunkEls.length === allChunkEls.length
 	) {
 		showStatusMessage(
-			"All chunks already enhanced — re-enhancing from scratch...",
+			"All chunks already enhanced \u{2014} re-enhancing from scratch...",
 			"info",
 			3000,
 		);
@@ -235,7 +235,7 @@ export async function prepareRegenerationFromCachedContentRuntime({
 	onResetCacheFlags?.();
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "✨ Enhance with Gemini";
+		btn.textContent = "\u{2728} Enhance with Gemini";
 	});
 
 	const contentArea = findContentArea?.();
@@ -393,12 +393,9 @@ export function cleanupChunkedUiBeforeInitRuntime({
 		existingMasterBanner.remove();
 	}
 
-	const existingPlaceholderGroup = contentArea.parentNode?.querySelector(
-		".gemini-main-summary-group",
-	);
-	if (existingPlaceholderGroup) {
-		existingPlaceholderGroup.remove();
-	}
+	// Do NOT remove .gemini-main-summary-group here — the user wants that banner
+	// to stay visible when they click Enhance again, with the new enhancement UI
+	// appearing below it.
 }
 
 export async function prepareChunkedViewRuntime({
@@ -473,7 +470,11 @@ export async function prepareChunkedViewRuntime({
 			chunkedContentContainer.querySelectorAll(".gemini-chunk-wrapper"),
 		);
 		if (chunking?.summaryUI) {
-			documentRef
+			// Keep existing .gemini-main-summary-group elements (placed outside the
+			// content area by injectUI) — they hold the Enhance button and the user
+			// wants them to persist across re-enhancements. Only remove any stale
+			// summary group that is already INSIDE this contentArea to avoid duplicates.
+			contentArea
 				.querySelectorAll(".gemini-main-summary-group")
 				.forEach((el) => el.remove());
 
@@ -545,7 +546,7 @@ export function handleEnhancementCancelledRuntime({
 
 	const cancelButton = documentRef.querySelector(".gemini-enhance-btn");
 	if (cancelButton) {
-		cancelButton.textContent = "✨ Enhance with Gemini";
+		cancelButton.textContent = "\u{2728} Enhance with Gemini";
 		cancelButton.disabled = false;
 		cancelButton.classList.remove("loading");
 	}
@@ -600,7 +601,7 @@ export async function handleEnhancementResponseRuntime({
 	const errorMessage = response?.error || "Unknown error";
 	if (response?.needsApiKey || errorMessage.includes("API key is missing")) {
 		showStatusMessage?.(
-			"⚠️ API key is missing. Please configure it in the extension popup.",
+			"\u{26A0}\u{FE0F} API key is missing. Please configure it in the extension popup.",
 			"error",
 		);
 		try {
@@ -608,7 +609,7 @@ export async function handleEnhancementResponseRuntime({
 		} catch (popupError) {
 			consoleWarn("Could not open popup automatically:", popupError);
 			showStatusMessage?.(
-				"⚠️ API key is missing. Please click the extension icon to configure it.",
+				"\u{26A0}\u{FE0F} API key is missing. Please click the extension icon to configure it.",
 				"error",
 				10000,
 			);
@@ -624,7 +625,7 @@ export async function handleEnhancementResponseRuntime({
 
 export function resetEnhanceButtonsOnErrorRuntime({
 	documentRef = document,
-	buttonText = "✨ Enhance with Gemini",
+	buttonText = "\u{2728} Enhance with Gemini",
 }) {
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
 		if (btn.disabled || btn.classList.contains("loading")) {
@@ -1009,7 +1010,7 @@ export function handleEnhancementLifecycleErrorRuntime({
 	showStatusMessage,
 	documentRef = document,
 	cancelEnhanceButton,
-	buttonText = "✨ Enhance with Gemini",
+	buttonText = "\u{2728} Enhance with Gemini",
 }) {
 	debugError("Error in handleEnhanceClick:", error);
 	showStatusMessage?.(`Error: ${error.message}`, "error");
@@ -1232,10 +1233,14 @@ export async function restoreChunkedContentFromCacheRuntime({
 			chunking?.config?.DEFAULT_CHUNK_SUMMARY_COUNT ||
 			2;
 
-		documentRef
+		// Only remove summary groups inside contentArea — the outer one (placed
+		// before .select-text by injectUI) holds the Enhance button and must persist.
+		// The contentArea was already wiped by innerHTML="", so this is just a guard.
+		contentArea
 			.querySelectorAll(".gemini-main-summary-group")
 			.forEach((el) => el.remove());
 
+		// No onEnhance here — the outer summary group from injectUI handles that.
 		const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
 			totalChunks,
 			(indices) => summarizeChunkRange(indices, false),
@@ -1296,7 +1301,7 @@ export async function restoreChunkedContentFromCacheRuntime({
 	}
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "🔄 Regenerate with Gemini";
+		btn.textContent = "\u{1F504} Regenerate with Gemini";
 		btn.disabled = false;
 		btn.classList.remove("loading");
 	});

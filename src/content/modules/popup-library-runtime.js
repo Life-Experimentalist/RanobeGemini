@@ -45,7 +45,9 @@ export async function getNovelInfoRuntime({
 		const library = await novelLibrary.getLibrary();
 		const novelId =
 			metadata.id ||
-			currentHandler.generateNovelId(windowRef.location.href);
+			(typeof currentHandler.generateNovelId === "function"
+				? currentHandler.generateNovelId(windowRef.location.href)
+				: null);
 		const isInLibrary =
 			novelId && library.novels && library.novels[novelId] !== undefined;
 
@@ -54,6 +56,7 @@ export async function getNovelInfoRuntime({
 		const novelInfo = {
 			novelId,
 			title: metadata.title,
+			geminiUIHidden: windowRef.document?.body?.hasAttribute("data-rg-ui-hidden") ?? false,
 			author: metadata.author,
 			description:
 				metadata.description ||
@@ -129,7 +132,13 @@ export async function addCurrentNovelToLibraryRuntime({
 		}
 
 		const metadata = await currentHandler.extractNovelMetadata();
+		console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: metadata", {
+			title: metadata?.title ?? null,
+			needsDetailPage: metadata?.needsDetailPage ?? false,
+			metadataIncomplete: metadata?.metadataIncomplete ?? false,
+		});
 		if (!metadata) {
+			console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: ABORT — no metadata");
 			return {
 				success: false,
 				error: "Could not extract novel metadata",
@@ -147,7 +156,18 @@ export async function addCurrentNovelToLibraryRuntime({
 		const inferredReadingStatus =
 			inferredLastReadChapter > 0 ? READING_STATUS.READING : undefined;
 
+		const shelfId =
+			currentHandler.constructor.SHELF_METADATA?.id || null;
+		const novelId =
+			metadata.id ||
+			(typeof currentHandler.generateNovelId === "function"
+				? currentHandler.generateNovelId(windowRef.location.href)
+				: null);
+
+		console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: calling addOrUpdateNovel", { novelId, shelfId, title: metadata.title });
 		const result = await novelLibrary.addOrUpdateNovel({
+			id: novelId,
+			shelfId,
 			title: metadata.title,
 			author: metadata.author,
 			coverUrl: metadata.coverUrl || metadata.coverImage,
@@ -176,6 +196,7 @@ export async function addCurrentNovelToLibraryRuntime({
 			description: metadata.description,
 		});
 
+		console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: SUCCESS", { id: result?.id, shelfId: result?.shelfId, title: result?.title });
 		const cachedNovel = cacheNovelData?.(result);
 		logNotification?.({
 			type: "success",
@@ -190,6 +211,7 @@ export async function addCurrentNovelToLibraryRuntime({
 
 		return { success: true, novel: result };
 	} catch (error) {
+		console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: ERROR", error?.message, error);
 		debugError("Error in addCurrentNovelToLibraryRuntime:", error);
 		logNotification?.({
 			type: "error",

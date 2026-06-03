@@ -2473,6 +2473,14 @@ if (typeof browser === "undefined") {
 			return processMessage(message, sender, sendResponse);
 		}
 
+		// Manual trigger for the periodic chapter check
+		if (message.action === "checkNovelsNow") {
+			handleNovelUpdateAlarm()
+				.then(() => sendResponse({ success: true }))
+				.catch((err) => sendResponse({ success: false, error: err.message }));
+			return true;
+		}
+
 		// Handle updating novel metadata from content script
 		if (message.action === "updateNovelMetadata") {
 			(async () => {

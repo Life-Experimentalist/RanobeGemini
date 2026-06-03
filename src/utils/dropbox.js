@@ -25,7 +25,7 @@ const BACKUP_PREFIX = "ranobegemini_backup_";
 const CONTINUOUS_NAME = "ranobegemini_continuous.json";
 const DEFAULT_FOLDER = "/RanobeGemini";
 
-// ─── Config helpers ────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Config helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function getStored(key) {
 	const result = await browser.storage.local.get(key);
@@ -63,13 +63,13 @@ function isExpired(tokens) {
 	return elapsed >= tokens.expires_in - 60;
 }
 
-// ─── Auth flow ─────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Auth flow \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function getValidAccessToken({ interactive = true } = {}) {
 	const config = await getDropboxConfig();
 	if (!config?.clientId) {
 		throw new Error(
-			"Dropbox app key not configured. Set it in Library Settings → Sync.",
+			"Dropbox app key not configured. Set it in Library Settings \u{2192} Sync.",
 		);
 	}
 
@@ -146,7 +146,7 @@ export async function revokeDropboxTokens() {
 	await setStored({ [AUTH_ERROR_KEY]: null });
 }
 
-// ─── Dropbox API helpers ───────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Dropbox API helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function dbxRequest(path, body, token) {
 	const resp = await fetch(`${API_BASE}${path}`, {
@@ -159,12 +159,12 @@ async function dbxRequest(path, body, token) {
 	});
 	if (!resp.ok) {
 		const text = await resp.text().catch(() => "");
-		throw new Error(`Dropbox API ${path} → ${resp.status}: ${text}`);
+		throw new Error(`Dropbox API ${path} \u{2192} ${resp.status}: ${text}`);
 	}
 	return resp.json();
 }
 
-// ─── Backup name helpers ───────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Backup name helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function timestampedName() {
 	const ts = new Date()
@@ -184,7 +184,7 @@ function folderPrefix(customPath) {
 	return folder.startsWith("/") ? folder : `/${folder}`;
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Public API \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export async function uploadDropboxBackup(backupData, options = {}) {
 	const token = await ensureDropboxAccessToken({ interactive: true });

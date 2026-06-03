@@ -4,6 +4,8 @@ export const HANDLER_MODULES = [
 	"ao3-handler.js",
 	"fanfiction-handler.js",
 	"fanfiction-mobile-handler.js",
+	"novelarrow-handler.js",
+	"novelbin-handler.js",
 	"ranobes-handler.js",
 	"scribblehub-handler.js",
 	"webnovel-handler.js",

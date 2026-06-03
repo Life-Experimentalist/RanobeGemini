@@ -106,6 +106,9 @@ function copyFileWithRetries(srcPath, destPath, maxAttempts = 5) {
 	}
 }
 
+// Files that should never be copied into the dist output.
+const BUILD_SKIP_FILES = new Set(["desktop.ini", "thumbs.db", ".ds_store"]);
+
 // Helper: Copy directory recursively
 function copyDir(src, dest) {
 	if (!fs.existsSync(dest)) {
@@ -113,6 +116,7 @@ function copyDir(src, dest) {
 	}
 	const entries = fs.readdirSync(src, { withFileTypes: true });
 	for (const entry of entries) {
+		if (BUILD_SKIP_FILES.has(entry.name.toLowerCase())) continue;
 		const srcPath = path.join(src, entry.name);
 		const destPath = path.join(dest, entry.name);
 		if (entry.isDirectory()) {

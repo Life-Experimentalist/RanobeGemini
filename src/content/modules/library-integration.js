@@ -102,7 +102,7 @@ class LibraryIntegration {
 			// Create button element
 			this.buttonElement = document.createElement("button");
 			this.buttonElement.id = "ranobe-gemini-add-to-library-btn";
-			this.buttonElement.textContent = "📚 Add to Library";
+			this.buttonElement.textContent = "\u{1F4DA} Add to Library";
 			this.buttonElement.title = "Add this novel to your library";
 			this.buttonElement.style.cssText = `
         padding: 8px 16px;
@@ -174,7 +174,7 @@ class LibraryIntegration {
 			this.setButtonState("loading");
 
 			// Extract metadata from current page first
-			let metadata = this.handler.extractNovelMetadata();
+			let metadata = await this.handler.extractNovelMetadata();
 
 			if (!metadata) {
 				debugError(
@@ -270,30 +270,66 @@ class LibraryIntegration {
 	 */
 	async addNovelToLibrary(metadata) {
 		try {
-			// Add timestamp
-			metadata.addedAt = Date.now();
-			metadata.handlerDomain = this.handlerDomain;
+			console.log("[RG-Library-Debug] library-integration: addNovelToLibrary called", { title: metadata?.title });
 
-			// Store in library (assuming novelLibrary is available globally or imported)
-			// This would integrate with the existing novel-library.js system
+			const novelId =
+				metadata.id ||
+				(typeof this.handler.generateNovelId === "function"
+					? this.handler.generateNovelId(window.location.href)
+					: null);
+			const shelfId =
+				this.handler.constructor.SHELF_METADATA?.id || null;
+
+			console.log("[RG-Library-Debug] library-integration: novelId/shelfId", { novelId, shelfId });
+
+			const libraryUrl = browser.runtime.getURL("utils/novel-library.js");
+			const { novelLibrary } = await import(libraryUrl);
+
+			const inferredLastReadChapter = Number.isFinite(
+				Number(metadata.currentChapter),
+			)
+				? Number(metadata.currentChapter)
+				: 0;
+
+			const result = await novelLibrary.addOrUpdateNovel({
+				id: novelId,
+				shelfId,
+				title: metadata.title,
+				author: metadata.author,
+				coverUrl: metadata.coverUrl || metadata.coverImage,
+				currentChapter: metadata.currentChapter,
+				lastReadChapter: inferredLastReadChapter,
+				lastReadUrl: window.location.href,
+				totalChapters: metadata.totalChapters,
+				chapterTitle: metadata.chapterTitle,
+				source:
+					metadata.source ||
+					this.handler.getSiteIdentifier?.(),
+				sourceUrl: metadata.sourceUrl || window.location.href,
+				mainNovelUrl:
+					metadata.mainNovelUrl ||
+					metadata.sourceUrl ||
+					window.location.href,
+				lastChapterUrl: window.location.href,
+				tags: metadata.tags || [],
+				genres: metadata.genres || [],
+				status: metadata.status,
+				description: metadata.description,
+				metadata: metadata.metadata || metadata,
+				metadataIncomplete:
+					metadata.metadataIncomplete ||
+					metadata.needsDetailPage ||
+					false,
+			});
+
+			console.log("[RG-Library-Debug] library-integration: addOrUpdateNovel SUCCESS", { id: result?.id, title: result?.title });
 			debugLog(
-				"[LibraryIntegration] Adding novel to library:",
+				"[LibraryIntegration] Novel added to library:",
 				metadata.title,
 			);
-
-			// Send message to background to save to library
-			return new Promise((resolve) => {
-				chrome.runtime.sendMessage(
-					{
-						action: "addNovelToLibrary",
-						metadata,
-					},
-					(response) => {
-						resolve(response?.success ?? false);
-					},
-				);
-			});
+			return true;
 		} catch (error) {
+			console.log("[RG-Library-Debug] library-integration: addOrUpdateNovel ERROR", error?.message, error);
 			debugError("[LibraryIntegration] Error adding to library:", error);
 			return false;
 		}
@@ -310,17 +346,17 @@ class LibraryIntegration {
 		switch (state) {
 			case "loading":
 				this.buttonElement.disabled = true;
-				this.buttonElement.textContent = "⏳ Adding...";
+				this.buttonElement.textContent = "\u{23F3} Adding...";
 				this.buttonElement.style.opacity = "0.7";
 				break;
 
 			case "success":
 				this.buttonElement.style.backgroundColor = "#22c55e";
-				this.buttonElement.textContent = `✅ ${message || "Added!"}`;
+				this.buttonElement.textContent = `\u{2705} ${message || "Added!"}`;
 				setTimeout(() => {
 					if (this.buttonElement) {
 						this.buttonElement.style.backgroundColor = "#4a7c4e";
-						this.buttonElement.textContent = "📚 Add to Library";
+						this.buttonElement.textContent = "\u{1F4DA} Add to Library";
 						this.buttonElement.disabled = false;
 						this.buttonElement.style.opacity = "1";
 					}
@@ -329,11 +365,11 @@ class LibraryIntegration {
 
 			case "error":
 				this.buttonElement.style.backgroundColor = "#ef4444";
-				this.buttonElement.textContent = `❌ ${message || "Failed"}`;
+				this.buttonElement.textContent = `\u{274C} ${message || "Failed"}`;
 				setTimeout(() => {
 					if (this.buttonElement) {
 						this.buttonElement.style.backgroundColor = "#4a7c4e";
-						this.buttonElement.textContent = "📚 Add to Library";
+						this.buttonElement.textContent = "\u{1F4DA} Add to Library";
 						this.buttonElement.disabled = false;
 						this.buttonElement.style.opacity = "1";
 					}
@@ -343,7 +379,7 @@ class LibraryIntegration {
 			case "normal":
 			default:
 				this.buttonElement.disabled = false;
-				this.buttonElement.textContent = "📚 Add to Library";
+				this.buttonElement.textContent = "\u{1F4DA} Add to Library";
 				this.buttonElement.style.opacity = "1";
 				this.buttonElement.style.backgroundColor = "#4a7c4e";
 				break;

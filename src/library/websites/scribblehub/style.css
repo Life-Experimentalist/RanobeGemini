@@ -313,16 +313,15 @@ body {
 	color: var(--text-secondary);
 }
 
-.modal-header-text p:nth-of-type(3) {
+.modal-header-text p:nth-of-type(3),
+#modal-description {
 	font-size: 0.9rem;
 	color: var(--text-muted);
 	line-height: 1.5;
 	margin-top: var(--spacing-xs);
-	display: -webkit-box;
-	-webkit-line-clamp: 4;
-	line-clamp: 4;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+	max-height: 140px;
+	overflow-y: auto;
+	white-space: pre-wrap;
 }
 
 .modal-close {
@@ -2665,4 +2664,24 @@ body {
 .sh-link-btn:hover {
 	background: var(--primary-hover);
 	transform: scale(1.05);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-tertiary);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-muted);
 }

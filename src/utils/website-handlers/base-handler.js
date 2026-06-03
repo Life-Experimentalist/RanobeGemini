@@ -495,4 +495,203 @@ export class BaseWebsiteHandler {
 	static getEditableFields() {
 		return [];
 	}
+
+	// ─── Shared utility methods ──────────────────────────────────────────────────
+	// These were previously duplicated across every handler. All handlers inherit
+	// them from here. Handlers may still override any of these for site-specific
+	// behaviour; call super.method() when you want the base logic plus extras.
+
+	/**
+	 * Noise element selectors removed from cloned content before text extraction.
+	 * Handlers that need to strip additional site-specific elements should pass
+	 * those selectors as `extraSelectors` to cloneAndCleanContent().
+	 */
+	static NOISE_SELECTORS = [
+		"script",
+		"style",
+		"iframe",
+		"ins",
+		".ads",
+		".adsbygoogle",
+		"[class*='ads']",
+		"[id*='ads']",
+		"[data-ad]",
+		"[data-ads]",
+		".google-auto-placed",
+		"[class*='advert']",
+		"[id*='advert']",
+	];
+
+	/**
+	 * Clone a DOM element and strip all standard noise (scripts, ads, iframes).
+	 * Handlers should use this instead of writing their own cloneNode+cleanup.
+	 * @param {Element} element - The DOM element to clone
+	 * @param {string[]} [extraSelectors=[]] - Additional selectors to remove
+	 * @returns {Element} A cleaned deep clone
+	 */
+	cloneAndCleanContent(element, extraSelectors = []) {
+		const clone = element.cloneNode(true);
+		const selectors = [
+			...this.constructor.NOISE_SELECTORS,
+			...extraSelectors,
+		];
+		for (const sel of selectors) {
+			clone.querySelectorAll(sel).forEach((el) => el.remove());
+		}
+		return clone;
+	}
+
+	/**
+	 * Normalise raw extracted text: collapse runs of spaces within lines,
+	 * normalise line-endings, and collapse 3+ blank lines to 2.
+	 * @param {string} rawText
+	 * @returns {string}
+	 */
+	cleanExtractedText(rawText) {
+		return (rawText || "")
+			.replace(/\r\n?/g, "\n")
+			.split("\n")
+			.map((line) => line.replace(/[^\S\r\n]{2,}/g, " ").trimEnd())
+			.join("\n")
+			.replace(/\n{3,}/g, "\n\n")
+			.trim();
+	}
+
+	/**
+	 * Resolve a possibly-relative URL against the current page (or an explicit base).
+	 * Returns null if the input is falsy; returns the input unchanged on error.
+	 * @param {string|null} url
+	 * @param {string} [base=window.location.href]
+	 * @returns {string|null}
+	 */
+	normalizeUrl(url, base = window.location.href) {
+		if (!url) return null;
+		try {
+			return new URL(url, base).href;
+		} catch {
+			return url;
+		}
+	}
+
+	/**
+	 * Extract a cover image URL from a DOM element, trying multiple selectors in order.
+	 * Falls back to the Open Graph image meta tag when nothing else matches.
+	 * Lazy-loaded images are handled by checking `data-src` before `src`.
+	 *
+	 * @param {string[]} selectors - CSS selectors for <img> or container elements
+	 * @param {Element} [root=document] - Root element to search within
+	 * @param {string[]} [skipPatterns=['placeholder','default','no-image']] - src substrings to skip
+	 * @returns {string|null}
+	 */
+	extractCoverUrl(
+		selectors,
+		root = document,
+		skipPatterns = ["placeholder", "default", "no-image", "blank."],
+	) {
+		for (const sel of selectors) {
+			const el = root.querySelector(sel);
+			if (!el) continue;
+			const src = el.dataset?.src || el.getAttribute("src") || el.getAttribute("data-original") || "";
+			if (!src) continue;
+			if (skipPatterns.some((p) => src.includes(p))) continue;
+			return this.normalizeUrl(src) || null;
+		}
+		// Open Graph fallback — reliable on most sites
+		const og = document.querySelector('meta[property="og:image"]');
+		return og?.getAttribute("content") || null;
+	}
+
+	/**
+	 * Count the number of words in a plain-text string.
+	 * @param {string} text
+	 * @returns {number}
+	 */
+	countWords(text) {
+		return (text || "").trim().split(/\s+/).filter(Boolean).length;
+	}
+
+	/**
+	 * Parse compact human-readable numbers ("1.2K", "5M", "3.4B") to integers.
+	 * Returns null when the input cannot be parsed.
+	 * @param {string} text
+	 * @returns {number|null}
+	 */
+	parseCompactNumber(text) {
+		if (!text) return null;
+		const cleaned = String(text).trim().replace(/,/g, "").toLowerCase();
+		const match = cleaned.match(/([\d.]+)\s*([kmb])?/i);
+		if (!match) return null;
+		const base = parseFloat(match[1]);
+		if (Number.isNaN(base)) return null;
+		switch ((match[2] || "").toLowerCase()) {
+			case "k": return Math.round(base * 1_000);
+			case "m": return Math.round(base * 1_000_000);
+			case "b": return Math.round(base * 1_000_000_000);
+			default:  return Math.round(base);
+		}
+	}
+
+	/**
+	 * Convert simple Markdown emphasis markers inside an HTML string to tags.
+	 * Existing HTML tags are preserved unchanged.
+	 * Handles ***bold-italic***, **bold**, and *italic*.
+	 * @param {string} html
+	 * @returns {string}
+	 */
+	convertMarkdownFormatting(html) {
+		if (!html) return html;
+		// Temporarily replace HTML tags with unique placeholders so they are not affected
+		const tags = [];
+		const PH = "\u{FFFE}TAG"; // Private-use code point, safe in strings, won't appear in HTML
+		let out = html.replace(/<[^>]+>/g, (tag) => {
+			tags.push(tag);
+			return `${PH}${tags.length - 1}|`;
+		});
+		out = out
+			.replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>")
+			.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+			.replace(/\*([^\s*][^*]*[^\s*])\*/g, "<em>$1</em>")
+			.replace(/\*([^\s*]+)\*/g, "<em>$1</em>");
+		// Restore HTML tags — escape PH for use in regex
+		return out.replace(new RegExp(`${PH}(\\d+)\\|`, "g"), (_, i) => tags[parseInt(i)]);
+	}
+
+	/**
+	 * Apply standard post-enhancement paragraph styling to a content area.
+	 * Handlers that want site-specific styles should override this method.
+	 * @param {Element} contentArea
+	 */
+	formatAfterEnhancement(contentArea) {
+		if (!contentArea) return;
+		contentArea.querySelectorAll("p").forEach((p) => {
+			p.style.marginBottom = "1em";
+			p.style.lineHeight = "1.7";
+		});
+	}
+
+	/**
+	 * Check whether the current viewport is narrower than the given breakpoint.
+	 * @param {number} [breakpointPx=768]
+	 * @returns {boolean}
+	 */
+	isMobileViewport(breakpointPx = UI_MOBILE_BREAKPOINT_PX) {
+		return window.innerWidth <= breakpointPx;
+	}
+
+	/**
+	 * Get a fallback novel ID by base-64-hashing the URL path.
+	 * Handlers should prefer their own ID schemes; use this only as a last resort.
+	 * @param {string} [url=window.location.href]
+	 * @param {string} prefix - Handler-specific prefix, e.g. "mysite"
+	 * @returns {string}
+	 */
+	generateFallbackNovelId(url = window.location.href, prefix = "novel") {
+		try {
+			const pathname = new URL(url).pathname;
+			const hash = btoa(pathname).substring(0, 16).replace(/[^a-zA-Z0-9]/g, "");
+			return `${prefix}-${hash}`;
+		} catch {
+			return `${prefix}-${Date.now()}`;
+		}
+	}
 }

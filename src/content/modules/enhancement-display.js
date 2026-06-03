@@ -314,7 +314,7 @@ export function prepareCachedEnhancementUiRuntime({
 	isFromCache,
 	documentRef = document,
 	onSetCachedFlags,
-	regenerateLabel = "🔄 Regenerate with Gemini",
+	regenerateLabel = "\u{1F504} Regenerate with Gemini",
 }) {
 	if (!isFromCache) return;
 

@@ -71,6 +71,53 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 		if (e.target === overlay) close();
 	});
 
+	// Wire "Add to Queue" button
+	const qAddBtn = container.querySelector("#em-qAddBtn");
+	const qStatus = container.querySelector("#em-qStatus");
+	if (qAddBtn) {
+		qAddBtn.addEventListener("click", async () => {
+			const firstUrl = novel.lastReadUrl || novel.sourceUrl || "";
+			const start = parseInt(container.querySelector("#em-qStart")?.value, 10) || 1;
+			const end = parseInt(container.querySelector("#em-qEnd")?.value, 10) || 1;
+			const sendToLW = container.querySelector("#em-qSendToLW")?.checked ?? true;
+			const domainId = container.querySelector("#loreWeaveDomainId")?.value?.trim() || novel.loreWeaveDomainId || "";
+			if (!firstUrl) {
+				if (qStatus) qStatus.textContent = "No chapter URL available for this novel.";
+				return;
+			}
+			if (start > end) {
+				if (qStatus) qStatus.textContent = "From chapter must be \u{2264} To chapter.";
+				return;
+			}
+			qAddBtn.disabled = true;
+			if (qStatus) qStatus.textContent = "Adding to queue\u{2026}";
+			try {
+				const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
+				await browser.runtime.sendMessage({
+					action: "queue",
+					subAction: "add",
+					job: {
+						novelId: novel.id,
+						novelTitle: novel.title,
+						firstChapterUrl: firstUrl,
+						startChapter: start,
+						endChapter: end,
+						sendToLoreWeave: sendToLW,
+						writingStyle: config.loreWeaveWritingStyle || "other",
+						loreWeaveUrl: config.loreWeaveUrl || "",
+						domainId,
+						novelLastRead: novel.lastAccessedAt || novel.addedAt || 0,
+					},
+				});
+				if (qStatus) qStatus.textContent = `\u{2705} Added Ch\u{00A0}${start}\u{2013}${end} to queue.`;
+			} catch (err) {
+				if (qStatus) qStatus.textContent = `\u{274C} ${err.message}`;
+			} finally {
+				qAddBtn.disabled = false;
+			}
+		});
+	}
+
 	// Wire save
 	const form = container.querySelector("#edit-modal-form");
 	form?.addEventListener("submit", async (e) => {
@@ -109,7 +156,7 @@ function buildModalHTML(novel, handlerFields) {
 			<div class="edit-modal-panel">
 				<div class="edit-modal-header">
 					<h2 class="edit-modal-title">Edit Novel</h2>
-					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">✕</button>
+					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">\u{2715}</button>
 				</div>
 				<div class="edit-modal-body">
 					${coverHtml}
@@ -134,6 +181,30 @@ function buildModalHTML(novel, handlerFields) {
 						${buildTagsSection("tags", "Tags", novel.tags || [])}
 
 						${handlerFields.length > 0 ? buildHandlerFieldsHTML(handlerFields) : ""}
+
+						<div class="edit-modal-section-label">\u{1F578}\u{FE0F} LoreWeave</div>
+						<div class="edit-modal-grid">
+							${buildTextField("loreWeaveDomainId", "Graph Domain ID", novel.loreWeaveDomainId || "", false, "lw_dom_my_novel")}
+						</div>
+						<p class="edit-field-hint" style="font-size:11px;color:var(--text-muted,#888);margin:-4px 0 10px;">
+							One domain per novel. Create at
+							<a href="https://loreweave.vkrishna04.me" target="_blank" rel="noopener" style="color:var(--accent-color,#7c3aed)">loreweave.vkrishna04.me</a>
+						</p>
+
+						<div class="edit-modal-section-label">\u{1F525} Queue Chapters</div>
+						<div class="edit-modal-grid" id="em-queue-grid">
+							${buildNumberField("em-qStart", "From Chapter", novel.lastReadChapter ? novel.lastReadChapter + 1 : 1, 1)}
+							${buildNumberField("em-qEnd", "To Chapter", novel.totalChapters || (novel.lastReadChapter ? novel.lastReadChapter + 10 : 10), 1)}
+						</div>
+						<div class="edit-modal-toggle-row" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+							<label style="font-size:12px;color:var(--text-secondary,#9ca3af);flex:1">Send to LoreWeave after processing</label>
+							<label class="em-toggle">
+								<input type="checkbox" id="em-qSendToLW" checked />
+								<span class="em-toggle-track"></span>
+							</label>
+						</div>
+						<button type="button" class="btn btn-secondary" id="em-qAddBtn" style="width:100%;margin-bottom:12px;">\u{FF0B} Add Chapter Range to Queue</button>
+						<div id="em-qStatus" style="font-size:11px;color:var(--text-muted,#888);margin-bottom:4px;"></div>
 
 						<div class="edit-modal-actions">
 							<button type="button" class="btn btn-secondary edit-modal-cancel">Cancel</button>
@@ -311,7 +382,7 @@ function buildTagsSection(id, label, initialTags = [], placeholder = "") {
 			</div>
 			<div class="tags-input-row">
 				<input type="text" class="edit-input tags-input" id="tags-input-${id}"
-					placeholder="${escapeAttr(placeholder || "Add tag…")}" />
+					placeholder="${escapeAttr(placeholder || "Add tag\u{2026}")}" />
 				<button type="button" class="btn btn-secondary tags-add-btn" data-target="${id}">+</button>
 			</div>
 			<input type="hidden" id="${id}" name="${id}" value="${tagsJson}" />
@@ -382,7 +453,7 @@ function renderTagChips(fieldId, tags) {
 			(tag, i) =>
 				`<span class="tag-chip">
 					${escapeHtml(tag)}
-					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">×</button>
+					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">\u{D7}</button>
 				</span>`,
 		)
 		.join("");
@@ -454,7 +525,7 @@ async function handleSave(novel, handlerFields, form, container, opts) {
 	const saveBtn = form.querySelector("[type=submit]");
 	if (saveBtn) {
 		saveBtn.disabled = true;
-		saveBtn.textContent = "Saving…";
+		saveBtn.textContent = "Saving\u{2026}";
 	}
 
 	try {
@@ -517,9 +588,10 @@ function collectFormValues(novel, handlerFields, form) {
 		totalChapters: getNum("totalChapters") ?? novel.totalChapters ?? 0,
 		genres: getTags("genres") ?? novel.genres ?? [],
 		tags: getTags("tags") ?? novel.tags ?? [],
+		loreWeaveDomainId: get("loreWeaveDomainId") ?? novel.loreWeaveDomainId ?? "",
 	};
 
-	// Handler-specific fields → merged into updates.metadata
+	// Handler-specific fields \u{2192} merged into updates.metadata
 	const metadataUpdates = { ...(novel.metadata || {}) };
 	for (const field of handlerFields) {
 		const domId = `hf_${field.key}`;

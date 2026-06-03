@@ -1,7 +1,7 @@
 /**
  * novel-context.js
  * Phase 10-U1: Novel Context & Lifecycle orchestration runtime.
- * Auto-extracted from content.js — do not hand-edit.
+ * Auto-extracted from content.js \u{2014} do not hand-edit.
  */
 
 export function initNovelContextModule(ctx) {
@@ -126,12 +126,18 @@ function getNovelIdFromCurrentPage() {
 }
 
 async function autoUpdateNovelOnVisit() {
-	if (!currentHandler) return;
+	console.log("[RG-Library-Debug] autoUpdateNovelOnVisit called", { url: window.location.href });
 
-	// Incognito mode — suppress all automatic tracking
+	if (!currentHandler) {
+		console.log("[RG-Library-Debug] ABORT: no currentHandler");
+		return;
+	}
+
+	// Incognito mode \u{2014} suppress all automatic tracking
 	if (isIncognitoActive()) {
+		console.log("[RG-Library-Debug] ABORT: incognito mode active");
 		debugLog(
-			"🕵️ Incognito mode active — skipping autoUpdateNovelOnVisit",
+			"\u{1F575}\u{FE0F} Incognito mode active \u{2014} skipping autoUpdateNovelOnVisit",
 		);
 		return;
 	}
@@ -142,6 +148,7 @@ async function autoUpdateNovelOnVisit() {
 	}
 
 	if (!novelLibrary) {
+		console.log("[RG-Library-Debug] ABORT: novelLibrary not available after loadNovelLibrary()");
 		debugLog("Novel library not available");
 		return;
 	}
@@ -152,6 +159,14 @@ async function autoUpdateNovelOnVisit() {
 		const isChapter = currentHandler.isChapterPage();
 		const isNovelPage = currentHandler.isNovelPage?.() || false;
 
+		console.log("[RG-Library-Debug] page context", {
+			handlerType,
+			isChapter,
+			isNovelPage,
+			handler: currentHandler?.constructor?.name,
+			shelfId: currentHandler?.constructor?.SHELF_METADATA?.id,
+		});
+
 		// For DEDICATED_PAGE-type sites on chapter pages, show banner with link to novel details
 		if (
 			handlerType === HANDLER_TYPES.DEDICATED_PAGE &&
@@ -159,6 +174,7 @@ async function autoUpdateNovelOnVisit() {
 			!isNovelPage
 		) {
 			const novelPageUrl = currentHandler.getNovelPageUrl?.();
+			console.log("[RG-Library-Debug] dedicated_page chapter: novelPageUrl =", novelPageUrl);
 			if (novelPageUrl) {
 				const novelId = getNovelIdFromCurrentPage();
 				const existingNovels =
@@ -167,6 +183,8 @@ async function autoUpdateNovelOnVisit() {
 					? existingNovels.find((n) => n.id === novelId)
 					: null;
 
+				console.log("[RG-Library-Debug] dedicated_page chapter: novelId =", novelId, "existingNovel =", existingNovel?.title ?? null);
+
 				if (!existingNovel) {
 					showTimedBanner(
 						"Add this novel to your library?",
@@ -174,7 +192,7 @@ async function autoUpdateNovelOnVisit() {
 						8000,
 						{
 							actionButton: {
-								text: "📖 View Novel Details",
+								text: "\u{1F4D6} View Novel Details",
 								url: novelPageUrl,
 							},
 						},
@@ -185,13 +203,24 @@ async function autoUpdateNovelOnVisit() {
 
 		// Check if handler supports metadata extraction
 		if (typeof currentHandler.extractNovelMetadata !== "function") {
+			console.log("[RG-Library-Debug] ABORT: handler has no extractNovelMetadata()");
 			debugLog("Handler does not support metadata extraction");
 			return;
 		}
 
 		// Extract metadata
 		const metadata = currentHandler.extractNovelMetadata();
+		console.log("[RG-Library-Debug] extractNovelMetadata result", {
+			title: metadata?.title ?? null,
+			author: metadata?.author ?? null,
+			needsDetailPage: metadata?.needsDetailPage ?? false,
+			metadataIncomplete: metadata?.metadataIncomplete ?? false,
+			hasCoverUrl: !!metadata?.coverUrl,
+			hasDescription: !!metadata?.description,
+		});
+
 		if (!metadata || !metadata.title) {
+			console.log("[RG-Library-Debug] ABORT: metadata.title is empty/null — cannot auto-add");
 			debugLog("Could not extract novel metadata");
 			return;
 		}
@@ -199,6 +228,7 @@ async function autoUpdateNovelOnVisit() {
 
 		// Get novel ID
 		let novelId = getNovelIdFromCurrentPage();
+		const novelIdSource = novelId ? "handler.generateNovelId()" : "url-hash fallback";
 		if (!novelId) {
 			const shelfId =
 				currentHandler.constructor.SHELF_METADATA?.id || "unknown";
@@ -208,6 +238,7 @@ async function autoUpdateNovelOnVisit() {
 				.replace(/[^a-zA-Z0-9]/g, "");
 			novelId = `${shelfId}-${urlHash}`;
 		}
+		console.log("[RG-Library-Debug] novelId =", novelId, "(source:", novelIdSource + ")");
 
 		// Get chapter info
 		const chapterNav = currentHandler.getChapterNavigation?.() || {};
@@ -218,13 +249,14 @@ async function autoUpdateNovelOnVisit() {
 		// Check if novel exists in library
 		const existingNovels = await novelLibrary.getRecentNovels(0);
 		const existingNovel = existingNovels.find((n) => n.id === novelId);
+		console.log("[RG-Library-Debug] library check: totalNovels =", existingNovels.length, "existingNovel =", existingNovel?.title ?? "(not found)");
 
 		// SILENT: Only update total chapters if it's additive OR if site setting allows
 		// MANUAL ONLY: User must click "Check for Updates" button to update metadata
 		if (existingNovel) {
 			// If the library explicitly requested a full refresh, honor it unconditionally
 			if (existingNovel.pendingRefresh === true) {
-				debugLog(`📚 pendingRefresh flag set — forcing full metadata update for ${existingNovel.title}`);
+				debugLog(`\u{1F4DA} pendingRefresh flag set \u{2014} forcing full metadata update for ${existingNovel.title}`);
 				const updatedData = buildNovelDataFromMetadata(metadata);
 				await novelLibrary.updateNovelMetadata(novelId, updatedData);
 				// Clear the flag
@@ -233,7 +265,7 @@ async function autoUpdateNovelOnVisit() {
 					lastMetadataUpdate: Date.now(),
 				});
 				showTimedBanner(
-					`✅ Metadata refreshed: ${existingNovel.title}`,
+					`\u{2705} Metadata refreshed: ${existingNovel.title}`,
 					"success",
 					4000,
 				);
@@ -268,7 +300,7 @@ async function autoUpdateNovelOnVisit() {
 				);
 				if (Object.keys(changes).length > 0) {
 					debugLog(
-						`📚 Auto-updating ${Object.keys(changes).length} metadata fields for ${existingNovel.title}`,
+						`\u{1F4DA} Auto-updating ${Object.keys(changes).length} metadata fields for ${existingNovel.title}`,
 					);
 					const updatedData =
 						buildNovelDataFromMetadata(metadata);
@@ -288,7 +320,7 @@ async function autoUpdateNovelOnVisit() {
 						totalChapterCount > existingNovel.totalChapters)
 				) {
 					debugLog(
-						`📚 Auto-updating total chapters to ${totalChapterCount}`,
+						`\u{1F4DA} Auto-updating total chapters to ${totalChapterCount}`,
 					);
 					await novelLibrary.updateNovel(novelId, {
 						totalChapters: totalChapterCount,
@@ -321,7 +353,7 @@ async function autoUpdateNovelOnVisit() {
 					currentChapterNum > storedChapter ||
 					!existingNovel.lastReadUrl
 				) {
-					// Chapter progressed, or URL not yet recorded — update reading progress
+					// Chapter progressed, or URL not yet recorded \u{2014} update reading progress
 					await novelLibrary.updateReadingProgress(
 						novelId,
 						currentChapterNum,
@@ -348,10 +380,19 @@ async function autoUpdateNovelOnVisit() {
 				: siteAutoAddSettings.autoAddStatusNovel ||
 					READING_STATUS.PLAN_TO_READ;
 
+			const blocklisted = isNovelBlocklisted(novelId);
+			console.log("[RG-Library-Debug] new-novel auto-add gate", {
+				autoAddEnabled,
+				hasTitle: !!metadata.title,
+				blocklisted,
+				shelfId,
+				siteAutoAddSettings,
+			});
+
 			if (
 				autoAddEnabled &&
 				metadata.title &&
-				!isNovelBlocklisted(novelId)
+				!blocklisted
 			) {
 				// Build novel data
 				const progressStatus = deriveReadingStatusFromProgress(
@@ -408,8 +449,10 @@ async function autoUpdateNovelOnVisit() {
 						: {}),
 				};
 
+				console.log("[RG-Library-Debug] calling addOrUpdateNovel", { id: novelData.id, shelfId: novelData.shelfId, title: novelData.title });
 				await novelLibrary.addOrUpdateNovel(novelData);
-				debugLog("📚 Auto-added novel to library:", metadata.title);
+				console.log("[RG-Library-Debug] addOrUpdateNovel SUCCESS — novel auto-added:", novelData.title);
+				debugLog("\u{1F4DA} Auto-added novel to library:", metadata.title);
 				showTimedBanner(
 					`Added to library: ${metadata.title}`,
 					"success",
@@ -418,19 +461,20 @@ async function autoUpdateNovelOnVisit() {
 			}
 		}
 	} catch (error) {
+		console.log("[RG-Library-Debug] ERROR in autoUpdateNovelOnVisit:", error?.message, error);
 		debugError("Error in auto-update novel:", error);
 	}
 }
 
 function showUpdateAvailableBanner(existingNovel, currentMetadata) {
 	showTimedBanner(
-		`🔗 Updates may be available for "${existingNovel.title}"`,
+		`\u{1F517} Updates may be available for "${existingNovel.title}"`,
 		"info",
 		bannerConfig.updateNotifyMs || 8000,
 		{
 			title: "Novel Update Available",
 			actionButton: {
-				text: "🔄 Update Now",
+				text: "\u{1F504} Update Now",
 				onClick: () => {
 					manuallyCheckAndUpdateNovel(
 						existingNovel,
@@ -459,17 +503,17 @@ async function manuallyCheckAndUpdateNovel(existingNovel, currentMetadata) {
 		if (Object.keys(changes).length === 0) {
 			// No changes detected
 			showTimedBanner(
-				"✅ No updates available (metadata is current)",
+				"\u{2705} No updates available (metadata is current)",
 				"success",
 				4000,
 			);
-			debugLog("📚 No metadata changes detected");
+			debugLog("\u{1F4DA} No metadata changes detected");
 			return;
 		}
 
 		// Show "Updating..." message
 		showTimedBanner(
-			`🔄 Checking: ${existingNovel.title}`,
+			`\u{1F504} Checking: ${existingNovel.title}`,
 			"updating",
 			1500,
 		);
@@ -478,14 +522,14 @@ async function manuallyCheckAndUpdateNovel(existingNovel, currentMetadata) {
 		const updatedData = buildNovelDataFromMetadata(currentMetadata);
 		await novelLibrary.updateNovelMetadata(novelId, updatedData);
 
-		debugLog("📚 Manually updated novel, changes:", changes);
+		debugLog("\u{1F4DA} Manually updated novel, changes:", changes);
 
 		// Display what changed
 		displayChangeSummary(existingNovel.title, changes);
 	} catch (error) {
 		debugError("Error in manual update:", error);
 		showTimedBanner(
-			`❌ Error updating: ${error.message}`,
+			`\u{274C} Error updating: ${error.message}`,
 			"error",
 			5000,
 		);
@@ -584,7 +628,7 @@ function displayChangeSummary(novelTitle, changes) {
 
 	// Title
 	const title = document.createElement("h3");
-	title.textContent = `✨ Updated: ${novelTitle}`;
+	title.textContent = `\u{2728} Updated: ${novelTitle}`;
 	title.style.cssText =
 		"margin-top: 0; margin-bottom: 16px; color: #88bbff;";
 	modal.appendChild(title);
@@ -613,7 +657,7 @@ function displayChangeSummary(novelTitle, changes) {
 			color: #cc6666;
 			text-decoration: line-through;
 		`;
-		oldValue.textContent = `↚ ${change.old}`;
+		oldValue.textContent = `\u{219A} ${change.old}`;
 		fieldDiv.appendChild(oldValue);
 
 		const newValue = document.createElement("div");
@@ -622,7 +666,7 @@ function displayChangeSummary(novelTitle, changes) {
 			font-size: 0.9em;
 			color: #66dd66;
 		`;
-		newValue.textContent = `↦ ${change.new}`;
+		newValue.textContent = `\u{21A6} ${change.new}`;
 		fieldDiv.appendChild(newValue);
 
 		changesDiv.appendChild(fieldDiv);
@@ -643,7 +687,7 @@ function displayChangeSummary(novelTitle, changes) {
 
 	// Close button
 	const closeBtn = document.createElement("button");
-	closeBtn.textContent = "✅ Got it";
+	closeBtn.textContent = "\u{2705} Got it";
 	closeBtn.style.cssText = `
 		margin-top: 16px;
 		width: 100%;
@@ -726,7 +770,7 @@ async function showChapterRegressionPrompt(options) {
 			margin-bottom: 12px;
 			color: #ffbb88;
 		`;
-		title.textContent = "⚠️ Chapter Regression Detected";
+		title.textContent = "\u{26A0}\u{FE0F} Chapter Regression Detected";
 		modal.appendChild(title);
 
 		// Info message
@@ -752,7 +796,7 @@ async function showChapterRegressionPrompt(options) {
 
 		// Keep button
 		const keepBtn = document.createElement("button");
-		keepBtn.textContent = `↩️ Keep Reading Ch. ${currentChapter}`;
+		keepBtn.textContent = `\u{21A9}\u{FE0F} Keep Reading Ch. ${currentChapter}`;
 		keepBtn.style.cssText = `
 			flex: 1;
 			padding: 12px;
@@ -766,9 +810,9 @@ async function showChapterRegressionPrompt(options) {
 		`;
 		keepBtn.addEventListener("click", async () => {
 			debugLog(
-				`💾 Keeping chapter ${currentChapter} for ${novelTitle}`,
+				`\u{1F4BE} Keeping chapter ${currentChapter} for ${novelTitle}`,
 			);
-			// User is choosing to read from this (earlier) chapter — update progress to here
+			// User is choosing to read from this (earlier) chapter \u{2014} update progress to here
 			await novelLibrary.updateReadingProgress(
 				novelId,
 				currentChapter,
@@ -788,7 +832,7 @@ async function showChapterRegressionPrompt(options) {
 
 		// Resume button
 		const resumeBtn = document.createElement("button");
-		resumeBtn.textContent = `📖 Go Back to Ch. ${storedChapter}`;
+		resumeBtn.textContent = `\u{1F4D6} Go Back to Ch. ${storedChapter}`;
 		resumeBtn.style.cssText = `
 			flex: 1;
 			padding: 12px;
@@ -802,7 +846,7 @@ async function showChapterRegressionPrompt(options) {
 		`;
 		resumeBtn.addEventListener("click", async () => {
 			debugLog(
-				`↩️ Resuming chapter ${storedChapter} for ${novelTitle}`,
+				`\u{21A9}\u{FE0F} Resuming chapter ${storedChapter} for ${novelTitle}`,
 			);
 
 			if (lastReadUrl) {
@@ -937,14 +981,7 @@ async function handleNovelAddUpdate() {
 		} else {
 			showTimedBanner(`Saved: ${metadata.title}`, "success", 3000);
 		}
-
-		// Refresh the UI
-		const controls = document.getElementById("rg-novel-controls");
-		if (controls) {
-			controls.remove();
-			hasExtractButton = false;
-			await injectNovelPageUI();
-		}
+		// UI refresh is handled by the caller (ui-controls.js refreshUI)
 	} catch (error) {
 		debugError("Error saving novel:", error);
 		showTimedBanner(
@@ -969,14 +1006,7 @@ async function handleNovelDelete() {
 	try {
 		await novelLibrary.removeNovel(novelId);
 		showTimedBanner("Novel removed from library", "success", 3000);
-
-		// Refresh the UI
-		const controls = document.getElementById("rg-novel-controls");
-		if (controls) {
-			controls.remove();
-			hasExtractButton = false;
-			await injectNovelPageUI();
-		}
+		// UI refresh is handled by the caller (ui-controls.js refreshUI)
 	} catch (error) {
 		debugError("Error removing novel:", error);
 		showTimedBanner("Error removing novel", "warning", 3000);
@@ -1025,7 +1055,7 @@ async function handleRemoveNovelWithBlocklist(novelId) {
 			3000,
 		);
 
-		// Refresh the controls – remove first so the DOM guard allows re-creation.
+		// Refresh the controls \u{2013} remove first so the DOM guard allows re-creation.
 		removeChapterNovelControlsFromDOM();
 		const config = currentHandler?.getNovelControlsConfig?.() || {};
 		const newControls = await createChapterPageNovelControls(config);

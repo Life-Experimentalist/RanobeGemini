@@ -169,6 +169,19 @@ textarea::placeholder {
 	box-shadow: none;
 }
 
+/* Toggle Gemini UI header button — glows amber when UI is hidden */
+.toggle-gemini-header-btn.ui-hidden {
+	border-color: #d97706;
+	color: #f59e0b;
+	background: rgba(217, 119, 6, 0.12);
+}
+
+.toggle-gemini-header-btn.ui-hidden:hover {
+	border-color: #f59e0b;
+	color: #fbbf24;
+	background: rgba(245, 158, 11, 0.18);
+}
+
 .header-icon-btn:active {
 	transform: none;
 	box-shadow: none;
@@ -1260,6 +1273,39 @@ button:disabled {
 	max-height: 500px;
 	overflow-y: auto;
 	padding-right: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.novels-list.grid-view {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px;
+}
+
+/* Grid-mode card: compact vertical layout */
+.novels-list.grid-view .novel-card {
+	flex-direction: column !important;
+	align-items: flex-start !important;
+	padding: 8px !important;
+	gap: 6px !important;
+}
+
+.novels-list.grid-view .novel-card-cover {
+	width: 100% !important;
+	font-size: 28px !important;
+	text-align: center !important;
+	padding: 4px 0 !important;
+}
+
+.novels-list.grid-view .novel-card-info {
+	width: 100% !important;
+}
+
+.novels-list.grid-view .novel-card-meta,
+.novels-list.grid-view .novel-card-progress-text {
+	display: none !important;
 }
 
 .no-novels {
@@ -4696,6 +4742,170 @@ button:disabled {
 	border: 1px solid var(--border-color);
 }
 
+/* ===== Now Reading Card ===== */
+.current-novel-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px;
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.current-novel-title-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.current-novel-title {
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--text-primary);
+	line-height: 1.4;
+	flex: 1;
+	min-width: 0;
+}
+
+.current-novel-tags {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.current-chapter-info {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	color: var(--text-secondary);
+}
+
+.chapter-icon { font-size: 12px; }
+
+.current-chapter-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.current-progress-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.progress-track {
+	flex: 1;
+	height: 4px;
+	background: var(--bg-tertiary);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.progress-fill {
+	height: 100%;
+	background: var(--accent-primary);
+	border-radius: 2px;
+	transition: width 0.3s ease;
+}
+
+.progress-percent {
+	font-size: 10px;
+	color: var(--text-muted);
+	min-width: 28px;
+	text-align: right;
+}
+
+.library-detail-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 11px;
+}
+
+.detail-label {
+	color: var(--text-muted);
+	min-width: 54px;
+	font-weight: 500;
+}
+
+.detail-value {
+	color: var(--text-secondary);
+}
+
+.genres-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+}
+
+.genres-list .genre-tag {
+	padding: 1px 6px;
+	background: var(--bg-tertiary);
+	border-radius: 8px;
+	font-size: 10px;
+	color: var(--text-secondary);
+}
+
+.compact-select {
+	flex: 1;
+	padding: 3px 6px;
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.current-novel-actions {
+	display: flex;
+	gap: 5px;
+	flex-wrap: wrap;
+	margin-top: 2px;
+}
+
+.action-btn {
+	flex: 1;
+	min-width: 80px;
+	padding: 5px 8px;
+	border: none;
+	border-radius: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+
+.action-btn:hover { opacity: 0.85; }
+
+.action-btn.primary {
+	background: var(--accent-primary);
+	color: #fff;
+}
+
+.action-btn.secondary {
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+}
+
+.action-btn.toggle-ui-btn {
+	background: #2a2a2a;
+	color: #8a8a7d;
+	border: 1px solid #444;
+	font-size: 10px;
+}
+
+.action-btn.toggle-ui-btn.ui-hidden {
+	background: #1a2942;
+	color: #88bbff;
+	border-color: #3a5a7a;
+}
+
 /* Empty states */
 .novels-empty,
 .no-current-novel {
@@ -4766,5 +4976,243 @@ button:disabled {
 .open-library-text span {
 	font-size: 10px;
 	color: var(--text-secondary);
+}
+
+/* ── Incognito quick-toggle bar ────────────────────────────────────────── */
+.incognito-bar {
+	display: flex;
+	align-items: center;
+	padding: 5px 8px;
+	margin-bottom: 6px;
+	background: rgba(55, 71, 79, 0.3);
+	border: 1px solid rgba(55, 71, 79, 0.5);
+	border-radius: 6px;
+}
+
+.incognito-label {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	cursor: pointer;
+	font-size: 11px;
+	color: var(--text-secondary);
+	width: 100%;
+}
+
+.incognito-label input[type="checkbox"] {
+	accent-color: #78909c;
+	width: 13px;
+	height: 13px;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.incognito-bar.active {
+	background: rgba(55, 71, 79, 0.55);
+	border-color: rgba(120, 144, 156, 0.6);
+}
+
+.incognito-bar.active .incognito-text {
+	color: #b0bec5;
+}
+
+/* ── Settings shortcut links ────────────────────────────────────────────── */
+.settings-shortcuts {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin: 8px 0 4px;
+}
+
+.settings-shortcut-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 6px;
+	text-decoration: none;
+	color: var(--text-secondary);
+	font-size: 11px;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.settings-shortcut-item:hover {
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.13);
+	color: var(--text-primary);
+}
+
+.shortcut-icon {
+	font-size: 13px;
+	flex-shrink: 0;
+	width: 16px;
+	text-align: center;
+}
+
+.shortcut-label {
+	flex: 1;
+}
+
+.shortcut-arrow {
+	font-size: 11px;
+	opacity: 0.5;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-tertiary);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-muted);
+}
+
+/* ── Chat Tab ─────────────────────────────────────────────────────────────── */
+
+.chat-context-bar {
+	font-size: 11px;
+	color: var(--text-secondary);
+	padding: 6px 10px;
+	background: var(--bg-tertiary);
+	border-radius: 6px;
+	margin: 8px 8px 4px;
+	line-height: 1.4;
+	min-height: 28px;
+	display: flex;
+	align-items: center;
+}
+
+.chat-messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-height: 220px;
+	max-height: 320px;
+	margin: 0 8px;
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	scroll-behavior: smooth;
+}
+
+.chat-messages .chat-msg {
+	max-width: 88%;
+	padding: 6px 10px;
+	border-radius: 10px;
+	font-size: 12px;
+	line-height: 1.55;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.chat-messages .chat-msg--user {
+	align-self: flex-end;
+	background: #1e3a5f;
+	color: #e2e8f0;
+}
+
+.chat-messages .chat-msg--model {
+	align-self: flex-start;
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+}
+
+.chat-messages .chat-msg--thinking {
+	align-self: flex-start;
+	font-size: 11px;
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.chat-input-row {
+	display: flex;
+	gap: 6px;
+	padding: 6px 8px 0;
+	align-items: center;
+}
+
+.chat-input {
+	flex: 1;
+	background: var(--bg-tertiary);
+	border: 1px solid var(--border-color);
+	color: var(--text-primary);
+	border-radius: 8px;
+	padding: 7px 10px;
+	font-size: 13px;
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.chat-input:focus {
+	border-color: var(--accent-primary);
+}
+
+.chat-send-btn {
+	background: var(--accent-primary);
+	color: #fff;
+	border: none;
+	border-radius: 8px;
+	padding: 7px 12px;
+	font-size: 15px;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 0.15s;
+}
+
+.chat-send-btn:hover {
+	background: var(--accent-secondary);
+}
+
+.chat-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 10px 8px;
+	font-size: 11px;
+}
+
+.chat-clear-btn {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 11px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	transition: color 0.12s;
+}
+
+.chat-clear-btn:hover {
+	color: var(--danger-color);
+}
+
+.chat-settings-link {
+	color: var(--text-muted);
+	text-decoration: none;
+	font-size: 11px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	transition: color 0.12s;
+}
+
+.chat-settings-link:hover {
+	color: var(--accent-primary);
 }
 

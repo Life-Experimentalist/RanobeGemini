@@ -273,6 +273,9 @@ export async function recoverMissingNovelById(
 	return true;
 }
 
+// Session-level anti-repeat tracking for random picks (module-scoped, shared across calls)
+const _shelfRecentPicks = new Set();
+
 /**
  * Ensure a random select button exists in the filter area
  * Creates the button if it doesn't exist and attaches event listener
@@ -304,7 +307,7 @@ export function ensureRandomSelectButton(
 	button.type = "button";
 	button.id = "random-select-btn";
 	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "🎲 Random";
+	button.textContent = "\u{1F3B2} Random";
 	button.title = "Pick a random novel from current filters";
 
 	button.addEventListener("click", () => {
@@ -316,7 +319,18 @@ export function ensureRandomSelectButton(
 			showToast("No novels available for random pick", "info");
 			return;
 		}
-		const pick = pool[Math.floor(Math.random() * pool.length)];
+		let candidates = pool.filter((n) => !_shelfRecentPicks.has(n.id || n.sourceUrl));
+		if (!candidates.length) {
+			_shelfRecentPicks.clear();
+			candidates = pool;
+		}
+		const pick = candidates[Math.floor(Math.random() * candidates.length)];
+		const pickKey = pick.id || pick.sourceUrl;
+		_shelfRecentPicks.add(pickKey);
+		if (_shelfRecentPicks.size > Math.ceil(pool.length / 2)) {
+			const oldest = _shelfRecentPicks.values().next().value;
+			_shelfRecentPicks.delete(oldest);
+		}
 		onRandomPicked(pick);
 	});
 
@@ -434,7 +448,7 @@ export function createModalNavigationController({
 /**
  * Bind horizontal swipe (touch) and drag (pointer/mouse) gestures to navigate
  * prev/next novels inside a modal. Works on all screen sizes.
- * Swipe right → onPrev, swipe left → onNext.
+ * Swipe right \u{2192} onPrev, swipe left \u{2192} onNext.
  *
  * @param {Object} options
  * @param {HTMLElement|string} options.modal - Modal element or id.

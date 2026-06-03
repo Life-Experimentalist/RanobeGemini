@@ -171,6 +171,14 @@ export function registerContentMessageHandlers(handlers) {
 			return false;
 		}
 
+		if (message.action === "toggleGeminiUI") {
+			handlers.handleToggleBannersVisibility?.();
+			// Return the new state so the popup can update its button label.
+			const nowHidden = document.body.hasAttribute("data-rg-ui-hidden");
+			sendResponse({ success: true, nowHidden });
+			return true;
+		}
+
 		return false;
 	});
 }

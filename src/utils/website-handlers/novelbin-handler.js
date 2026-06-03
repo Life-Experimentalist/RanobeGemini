@@ -1,24 +1,23 @@
 /**
  * NovelBin Website Content Handler
  *
- * Covers novelbin.com and clone sites that share the same Bootstrap-based
- * web-novel template (novelbin.me, novelfire.net, etc.).
+ * Covers novelbin.com (legacy), novelbin.me (mirror), and NovelBin-template
+ * clones. novelarrow.com is handled by the dedicated NovelarrowHandler
+ * (novelarrow-handler.js) which extends this class.
+ *
+ * URL patterns:
+ *   NovelBin:    /b/{slug}                   (detail)
+ *                /b/{slug}/{chapter-slug}    (chapter)
  *
  * Handler Type: "dedicated_page"
- *   - Full metadata only on /b/{novel-slug} detail pages
- *   - Chapter pages:       /b/{novel-slug}/{chapter-slug}
- *
- * Background metadata fetch note:
- *   MetadataFetcher temporarily swaps document.body with the fetched detail
- *   page HTML while window.location still points to the chapter URL.
- *   extractNovelMetadata() therefore uses DOM-based page-type detection
- *   rather than URL-based, so it works correctly during both scenarios.
+ * Library shelfId stays "novelbin" for backwards compatibility with existing data.
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
 
 export class NovelbinHandler extends BaseWebsiteHandler {
 	static SUPPORTED_DOMAINS = [
+		// NovelBin legacy
 		"novelbin.com",
 		"www.novelbin.com",
 		"novelbin.me",
@@ -32,13 +31,13 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	static PRIORITY = 10;
 
 	static SHELF_METADATA = {
+		// Keep "novelbin" as shelfId — changing it would break existing library data.
 		id: "novelbin",
 		isPrimary: true,
 		name: "NovelBin",
 		icon: "https://novelbin.com/favicon.ico",
 		emoji: "\u{1F4DA}",
 		color: "#6200ea",
-		// Captures the novel slug from /b/{slug} or /b/{slug}/{chapter-slug}
 		novelIdPattern: /\/b\/([a-z0-9-]+)/i,
 		primaryDomain: "novelbin.com",
 		importUrlTemplate: "https://novelbin.com/b/{id}",
@@ -55,22 +54,86 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 
 	static SETTINGS_DEFINITION = {
 		fields: [
+			{ key: "_nav", type: "section", label: "\u{1F310} Domain" },
+			{
+				key: "preferredDomain",
+				label: "Preferred Domain",
+				type: "select",
+				defaultValue: "novelarrow",
+				description:
+					"Which domain to open when following novel links. novelarrow.com is the current primary site.",
+				options: [
+					{
+						value: "novelarrow",
+						label: "novelarrow.com (primary \u{2605})",
+					},
+					{ value: "novelbin", label: "novelbin.com (legacy)" },
+					{ value: "novelbin-me", label: "novelbin.me (mirror)" },
+				],
+			},
+			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
+				description: "Automatically run Enhance when a chapter loads.",
+			},
+			{
+				key: "htmlEnhancementMode",
+				label: "HTML enhancement mode",
+				type: "toggle",
+				defaultValue: true,
 				description:
-					"Automatically run Enhance when a NovelBin chapter loads.",
+					"Use HTML-aware enhancement to preserve paragraph formatting, italics, and line breaks. Disable for plain-text mode.",
+			},
+			{
+				key: "injectEnhancedStyles",
+				label: "Inject enhanced reading styles",
+				type: "toggle",
+				defaultValue: true,
+				description:
+					"Apply typography improvements (line height, spacing) to enhanced chapter text.",
 			},
 		],
 	};
 
 	static DEFAULT_SITE_PROMPT =
-		"This is a web novel from NovelBin. Please maintain the author's style while improving the translation quality. Keep paragraph breaks, dialogue formatting, and scene transitions intact. Preserve special formatting for emphasis, flashbacks, or internal monologue. Place any translator notes in a clearly separated box at the end.";
+		"This is a web novel from NovelArrow. Please maintain the author's style while improving the translation quality. Keep paragraph breaks, dialogue formatting, and scene transitions intact. Preserve special formatting for emphasis, flashbacks, or internal monologue. Place any translator notes in a clearly separated box at the end.";
 
 	constructor() {
 		super();
+	}
+
+	/**
+	 * Called once by handler-manager on every page load.
+	 * Redirects novelbin.me (and any other mirror TLD) to novelbin.com,
+	 * matching the pattern used by fanfiction.ws → fanfiction.net.
+	 */
+	static initialize() {
+		NovelbinHandler.normalizeURL().catch(() => {});
+	}
+
+	/**
+	 * Normalises mirror TLD domains (novelbin.me → novelbin.com).
+	 * novelarrow.com is canonical and is NOT redirected.
+	 * @returns {Promise<boolean>}
+	 */
+	static async normalizeURL() {
+		const hostname = window.location.hostname;
+		// novelarrow.com — primary canonical domain, never redirect
+		if (hostname === "novelarrow.com" || hostname === "www.novelarrow.com")
+			return false;
+		// novelbin.com — legacy canonical, no redirect needed
+		if (hostname === "novelbin.com" || hostname === "www.novelbin.com")
+			return false;
+		// novelbin.me and other TLD mirrors → redirect to novelbin.com
+		if (!hostname.includes("novelbin.")) return false;
+		const canonical = hostname.replace(/novelbin\.[a-z]+$/, "novelbin.com");
+		if (canonical === hostname) return false;
+		const target = window.location.href.replace(hostname, canonical);
+		window.location.replace(target);
+		return true;
 	}
 
 	canHandle() {
@@ -86,21 +149,23 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Detect a detail page via URL: /b/{slug}  (exactly two non-empty segments).
-	 * @param {string} [pathname]
+	 * Detect a detail page via URL.
+	 *   NovelBin:   /b/{slug}       (2 segments, first = "b")
+	 *   NovelArrow: /novel/{slug}   (2 segments, first = "novel")
 	 */
 	_isDetailPageUrl(pathname = window.location.pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-		return parts.length === 2 && parts[0] === "b";
+		return parts.length === 2 && (parts[0] === "b" || parts[0] === "novel");
 	}
 
 	/**
-	 * Detect a chapter page via URL: /b/{slug}/{chapter-slug} (3+ segments).
-	 * @param {string} [pathname]
+	 * Detect a chapter page via URL.
+	 *   NovelBin:   /b/{slug}/{chapter-slug}     (3+ segments, first = "b")
+	 *   NovelArrow: /novel/{slug}/{chapter-id}   (3+ segments, first = "novel")
 	 */
 	_isChapterPageUrl(pathname = window.location.pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
-		return parts.length >= 3 && parts[0] === "b";
+		return parts.length >= 3 && (parts[0] === "b" || parts[0] === "novel");
 	}
 
 	// -------------------------------------------------------------------------
@@ -152,10 +217,21 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	// URL helpers
 	// -------------------------------------------------------------------------
 
-	/** Extract the novel slug from any novelbin URL. */
+	/** True when running on novelarrow.com. */
+	get _isNovelarrow() {
+		const h = window.location.hostname;
+		return h === "novelarrow.com" || h === "www.novelarrow.com";
+	}
+
+	/**
+	 * Extract the novel slug from any supported URL.
+	 * Handles both /b/{slug} (NovelBin) and /novel/{slug} (NovelArrow).
+	 */
 	_novelSlug(url = window.location.href) {
 		try {
-			const match = new URL(url).pathname.match(/\/b\/([a-z0-9-]+)/i);
+			const match = new URL(url).pathname.match(
+				/\/(?:b|novel)\/([a-z0-9-]+)/i,
+			);
 			return match ? match[1] : null;
 		} catch {
 			return null;
@@ -163,39 +239,98 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	}
 
 	/**
-	 * Generate a stable library ID from a novelbin URL.
-	 * Works on both detail pages (/b/{slug}) and chapter pages (/b/{slug}/{chapter}).
-	 * @param {string} url
-	 * @returns {string|null}
+	 * Generate a stable library ID.
+	 * Always uses "novelbin-{slug}" regardless of which domain was visited,
+	 * so novelarrow.com visits merge into existing novelbin library entries.
 	 */
 	generateNovelId(url = window.location.href) {
 		const slug = this._novelSlug(url);
 		return slug ? `novelbin-${slug}` : null;
 	}
 
-	/** Return the detail page URL (works from chapter pages). */
-	getNovelPageUrl() {
-		if (this._isDetailPageUrl()) return window.location.href;
+	/** Build a novel detail URL for the given slug using the preferred domain setting. */
+	_makeNovelUrl(slug, preferredDomain = "novelarrow") {
+		if (!slug) return null;
+		switch (preferredDomain) {
+			case "novelbin":
+				return `https://novelbin.com/b/${slug}`;
+			case "novelbin-me":
+				return `https://novelbin.me/b/${slug}`;
+			case "novelarrow":
+			default:
+				return `https://novelarrow.com/novel/${slug}`;
+		}
+	}
 
-		// Build from slug
+	/**
+	 * Return the canonical detail page URL.
+	 * Respects the preferredDomain setting from Library Settings > Sites.
+	 */
+	getNovelPageUrl(preferredDomain = "novelarrow") {
 		const slug = this._novelSlug();
-		if (slug) return `${window.location.origin}/b/${slug}`;
+		if (slug) return this._makeNovelUrl(slug, preferredDomain);
 
-		// Fallback: JS object injected by the site on chapter pages
+		// Fallback for NovelBin chapter pages: JS object injected by the site
 		const cr = window.__CHAPTER_READER__;
-		if (cr?.novel?.url) return cr.novel.url;
+		if (cr?.novel?.url) {
+			try {
+				const u = new URL(cr.novel.url);
+				const s = this._novelSlug(u.href);
+				if (s) return this._makeNovelUrl(s, preferredDomain);
+			} catch {
+				/* ignore */
+			}
+		}
 
-		// Fallback: DOM link
+		// Fallback: DOM link on novelbin chapter pages
 		const link = document.querySelector("a.novel-title[href]");
-		return link ? link.href : null;
+		if (link?.href) {
+			try {
+				const s = this._novelSlug(link.href);
+				if (s) return this._makeNovelUrl(s, preferredDomain);
+			} catch {
+				/* ignore */
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Wait for chapter content to appear in the DOM after SPA navigation.
+	 * NovelBin loads chapter text asynchronously; the content script must
+	 * wait before trying to extract or inject UI.
+	 * @param {number} [timeoutMs=6000]
+	 * @returns {Promise<boolean>} Resolves true when content found, false on timeout.
+	 */
+	async waitForChapterContent(timeoutMs = 8000, oldFingerprint = "") {
+		const POLL_MS = 150;
+		const deadline = Date.now() + timeoutMs;
+		while (Date.now() < deadline) {
+			const el = this.findContentArea();
+			if (el && el.textContent.trim().length > 50) {
+				if (
+					!oldFingerprint ||
+					el.textContent.trim().slice(0, 300) !== oldFingerprint
+				) {
+					return true;
+				}
+			}
+			await new Promise((r) => setTimeout(r, POLL_MS));
+		}
+		return false;
 	}
 
 	/**
 	 * Return the URL from which the background runner should fetch metadata.
-	 * Always the detail page, whether we're on a chapter or the detail page itself.
+	 * Always the canonical novelbin.com detail page.
 	 */
 	getMetadataSourceUrl() {
 		return this.getNovelPageUrl();
+	}
+
+	/** Normalize lastReadUrl before it is stored. */
+	getLastReadUrl() {
+		return this._normalizeDomain(window.location.href);
 	}
 
 	// -------------------------------------------------------------------------
@@ -230,11 +365,34 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	}
 
 	findContentArea() {
+		// NovelBin (Bootstrap/jQuery site)
 		for (const sel of ["#chr-content", ".chr-c"]) {
 			const el = document.querySelector(sel);
 			if (el && el.textContent.trim().length > 100) {
 				debugLog(`NovelBin: Found content area via '${sel}'`);
 				return el;
+			}
+		}
+		// NovelArrow (Next.js/React SPA) — try common React chapter content patterns
+		for (const sel of [
+			"#chapter-content",
+			"[data-testid='chapter-content']",
+			".chapter-content",
+			".chapter-body",
+			"[class*='chapter-content']",
+			"[class*='chapter-body']",
+			".prose",
+			"[class*='prose']",
+			"article",
+		]) {
+			try {
+				const el = document.querySelector(sel);
+				if (el && el.textContent.trim().length > 100) {
+					debugLog(`NovelArrow: Found content area via '${sel}'`);
+					return el;
+				}
+			} catch {
+				/* invalid selector, skip */
 			}
 		}
 		return super.findContentArea();
@@ -260,30 +418,10 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			};
 		}
 
-		const clone = contentArea.cloneNode(true);
-
-		// Remove noise elements before text extraction
-		for (const sel of [
-			"script",
-			"style",
-			"iframe",
-			"ins",
-			".ads",
-			"[class*='ads']",
-			"[id*='ads']",
-			".adsbygoogle",
-			"[data-ad]",
-		]) {
-			clone.querySelectorAll(sel).forEach((el) => el.remove());
-		}
-
-		const text = (clone.innerText || clone.textContent || "")
-			.replace(/\r\n?/g, "\n")
-			.split("\n")
-			.map((l) => l.replace(/[^\S\r\n]{2,}/g, " ").trimEnd())
-			.join("\n")
-			.replace(/\n{3,}/g, "\n\n")
-			.trim();
+		const clone = this.cloneAndCleanContent(contentArea);
+		const text = this.cleanExtractedText(
+			clone.innerText || clone.textContent || "",
+		);
 
 		return {
 			found: text.length > 100,
@@ -305,13 +443,9 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			);
 
 			const prevUrl =
-				prevEl?.dataset?.chapterUrl ||
-				cr?.prevChapter?.url ||
-				null;
+				prevEl?.dataset?.chapterUrl || cr?.prevChapter?.url || null;
 			const nextUrl =
-				nextEl?.dataset?.chapterUrl ||
-				cr?.nextChapter?.url ||
-				null;
+				nextEl?.dataset?.chapterUrl || cr?.nextChapter?.url || null;
 
 			// Try to parse chapter number from title or URL
 			let currentChapter = null;
@@ -337,17 +471,21 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 
 	getNovelPageUIInsertionPoint() {
 		if (this.isNovelPage()) {
+			// NovelBin detail page
 			for (const sel of [".col-info-desc", ".desc-text", ".novel-info"]) {
+				const el = document.querySelector(sel);
+				if (el) return { element: el, position: "before" };
+			}
+			// NovelArrow detail page (React)
+			for (const sel of ["main", "#main-content", "h1"]) {
 				const el = document.querySelector(sel);
 				if (el) return { element: el, position: "before" };
 			}
 		}
 
-		// Chapter page
-		for (const sel of ["#chr-content", ".chr-c"]) {
-			const el = document.querySelector(sel);
-			if (el) return { element: el, position: "before" };
-		}
+		// Chapter page — use the content area as insertion point
+		const contentEl = this.findContentArea();
+		if (contentEl) return { element: contentEl, position: "before" };
 
 		return null;
 	}
@@ -382,11 +520,60 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		};
 
 		try {
+			// ── NovelArrow (Next.js React) meta-tag extraction path ──────────────
+			// When the background fetcher swaps in a novelarrow.com detail page, the
+			// React components aren't rendered — only static <meta> tags are present.
+			// Detect this by checking og:site_name or the canonical URL.
+			const ogSiteName =
+				document
+					.querySelector('meta[property="og:site_name"]')
+					?.getAttribute("content") || "";
+			const canonicalHref =
+				document
+					.querySelector('link[rel="canonical"]')
+					?.getAttribute("href") || "";
+			const isNovelarrowPage =
+				ogSiteName.toLowerCase().includes("novel arrow") ||
+				canonicalHref.includes("novelarrow.com") ||
+				(window.location?.hostname || "").includes("novelarrow");
+
+			if (isNovelarrowPage) {
+				const getMeta = (attr, val) =>
+					document
+						.querySelector(`meta[${attr}="${val}"]`)
+						?.getAttribute("content") || null;
+				const ogTitle = getMeta("property", "og:title");
+				metadata.title = ogTitle
+					? ogTitle
+							.replace(/\s*[|\-–]\s*Read\s+Online.*$/i, "")
+							.replace(/\s*on\s+Novel\s*Arrow\s*$/i, "")
+							.trim()
+					: null;
+				metadata.author = getMeta("name", "author");
+				metadata.description =
+					getMeta("name", "description") ||
+					getMeta("property", "og:description");
+				metadata.coverUrl = getMeta("property", "og:image");
+				metadata.mainNovelUrl = canonicalHref || this.getNovelPageUrl();
+				// Genres/tags from React-rendered links (available when user is on the page)
+				document.querySelectorAll("a[href^='/genre/']").forEach((a) => {
+					const g = a.textContent.trim();
+					if (g && !metadata.genres.includes(g))
+						metadata.genres.push(g);
+				});
+				document.querySelectorAll("a[href^='/tag/']").forEach((a) => {
+					const t = a.textContent.trim();
+					if (t && !metadata.tags.includes(t)) metadata.tags.push(t);
+				});
+				if (metadata.title) return metadata;
+				// Fall through to novelbin DOM extraction if meta tags are empty
+			}
+
 			const isDetail = this._isDetailPageDom();
 			const isChapter = this._isChapterPageDom();
 
 			if (!isDetail && isChapter) {
-				// Chapter page only \u{2014} return minimal partial metadata
+				// Chapter page only — return minimal partial metadata
 				metadata.needsDetailPage = true;
 				metadata.metadataIncomplete = true;
 
@@ -410,9 +597,28 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			);
 			metadata.title = titleEl?.textContent?.trim() || null;
 
-			// Info-meta list \u{2014} each <li> has an <h3> label and content
+			// Force-unhide the info-meta section so CSS-collapsed items are accessible
+			document
+				.querySelectorAll(
+					"ul.info.info-meta, .info-meta, .tag-container",
+				)
+				.forEach((el) => {
+					el.style.maxHeight = "";
+					el.style.overflow = "";
+					el.style.display = "";
+					el.querySelectorAll(
+						"[style*='display:none'], [style*='visibility:hidden']",
+					).forEach((child) => {
+						child.style.display = "";
+						child.style.visibility = "";
+					});
+				});
+
+			// Info-meta list — each <li> has an <h3> label and content
 			const infoItems = Array.from(
-				document.querySelectorAll("ul.info.info-meta li, .info-meta li"),
+				document.querySelectorAll(
+					"ul.info.info-meta li, .info-meta li",
+				),
 			);
 			for (const li of infoItems) {
 				const label =
@@ -424,7 +630,12 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				} else if (label.includes("genre")) {
 					li.querySelectorAll("a").forEach((a) => {
 						const g = a.textContent.trim();
-						if (g) metadata.genres.push(g);
+						if (
+							g &&
+							!g.includes("»") &&
+							g.toLowerCase() !== "see more"
+						)
+							metadata.genres.push(g);
 					});
 				} else if (label.includes("status")) {
 					metadata.status =
@@ -446,26 +657,49 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				} else if (label.includes("tag")) {
 					li.querySelectorAll("a").forEach((a) => {
 						const t = a.textContent.trim();
-						if (t) metadata.tags.push(t);
+						if (
+							t &&
+							!t.includes("»") &&
+							t.toLowerCase() !== "see more"
+						)
+							metadata.tags.push(t);
 					});
 				}
 			}
 
-			// Description \u{2014} the site uses a collapsible block; grab the full text
 			// Tags may also appear outside the info-meta list
 			if (!metadata.tags.length) {
-				document.querySelectorAll(".tag-list a, .tag a").forEach((a) => {
-					const t = a.textContent.trim();
-					if (t && !metadata.genres.includes(t)) metadata.tags.push(t);
-				});
+				document
+					.querySelectorAll(".tag-list a, .tag a, .tag-container a")
+					.forEach((a) => {
+						const t = a.textContent.trim();
+						if (
+							t &&
+							!t.includes("»") &&
+							t.toLowerCase() !== "see more" &&
+							!metadata.genres.includes(t)
+						)
+							metadata.tags.push(t);
+					});
 			}
 
+			// Description — force-unhide before cloning so CSS-truncated content is captured
 			const descEl = document.querySelector(
 				"#novel-description-content, .desc-text",
 			);
 			if (descEl) {
 				const dc = descEl.cloneNode(true);
-				dc.querySelectorAll("script, style").forEach((e) => e.remove());
+				// Strip UI elements and remove CSS truncation state
+				dc.querySelectorAll(
+					"script, style, .btn-desc-toggle, #novel-description-toggle, .showmore",
+				).forEach((e) => e.remove());
+				dc.classList.remove("desc-text-collapsed");
+				dc.style.maxHeight = "";
+				dc.style.overflow = "";
+				// Reveal any display:none children (defensive against future changes)
+				dc.querySelectorAll("[style*='display']").forEach((el) => {
+					el.style.display = "";
+				});
 				const raw = (dc.textContent || "").trim();
 				if (raw) metadata.description = raw;
 			}
@@ -474,23 +708,11 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			const coverImg = document.querySelector(
 				".books .book img.lazy, .book img[data-src], .book img",
 			);
-			if (coverImg) {
-				const src =
-					coverImg.dataset.src || coverImg.getAttribute("src");
-				if (src && !src.includes("placeholder") && !src.includes("default")) {
-					try {
-						metadata.coverUrl = new URL(src, window.location.href).href;
-					} catch {
-						// invalid URL \u{2014} ignore
-					}
-				}
-			}
-
-			// Fallback cover from Open Graph tag
-			if (!metadata.coverUrl) {
-				const og = document.querySelector('meta[property="og:image"]');
-				if (og) metadata.coverUrl = og.getAttribute("content") || null;
-			}
+			metadata.coverUrl = this.extractCoverUrl([
+				".books .book img.lazy",
+				".book img[data-src]",
+				".book img",
+			]);
 
 			// Main novel URL \u{2014} prefer the canonical <link> when present
 			const canonical = document.querySelector('link[rel="canonical"]');
@@ -498,6 +720,11 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				canonical?.getAttribute("href") || window.location.href;
 		} catch (error) {
 			debugError("NovelBin: Error extracting metadata:", error);
+		}
+
+		// Normalise: library expects `totalChapters`, handler extracts `chapterCount`
+		if (metadata.chapterCount && !metadata.totalChapters) {
+			metadata.totalChapters = metadata.chapterCount;
 		}
 
 		debugLog("NovelBin: Extracted metadata:", metadata);
@@ -521,7 +748,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	// -------------------------------------------------------------------------
 
 	getSiteIdentifier() {
-		return "NovelBin";
+		return this._isNovelarrow ? "NovelArrow" : "NovelBin";
 	}
 
 	getDefaultPrompt() {
@@ -541,9 +768,9 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	}
 
 	formatAfterEnhancement(contentArea) {
-		if (!contentArea) return;
-		contentArea.querySelectorAll("p").forEach((p) => {
-			p.style.marginBottom = "1em";
+		super.formatAfterEnhancement(contentArea);
+		// NovelBin uses slightly wider line-height than the base default
+		contentArea?.querySelectorAll("p").forEach((p) => {
 			p.style.lineHeight = "1.8";
 		});
 	}

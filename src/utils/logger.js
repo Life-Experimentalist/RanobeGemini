@@ -254,117 +254,35 @@ function recordPersistent(level, args) {
 }
 
 /**
- * Error-only logger that honors the debug toggle.
+ * Error logger — always logs synchronously so DevTools shows the real call site.
+ * Errors are never gated on debug mode: they are always surfaced.
  * @param  {...any} args - Arguments to log as errors
  */
 export function debugError(...args) {
-	const immediate = isPopupDebugEnabledSync();
-
-	function _errorNow(truncatedArgs) {
-		try {
-			const key = _safeKeyFromArgs(truncatedArgs);
-			if (_isDuplicateAndRecord(key)) return;
-			originalConsoleError(...truncatedArgs);
-			recordPersistent("error", truncatedArgs);
-		} catch (e) {
-			try {
-				originalConsoleError(...truncatedArgs);
-				recordPersistent("error", truncatedArgs);
-			} catch (_) { /* swallow */ }
-		}
+	try {
+		const key = _safeKeyFromArgs(args);
+		if (_isDuplicateAndRecord(key)) return;
+		originalConsoleError(...args);
+		recordPersistent("error", args);
+	} catch (_) {
+		try { originalConsoleError(...args); } catch (__) { /* swallow */ }
 	}
-
-	if (immediate !== null) {
-		if (immediate) {
-			getTruncationSettings()
-				.then((settings) => {
-					const truncatedArgs = settings.enabled
-						? args.map((arg) => formatOutput(arg, settings.length))
-						: args;
-					_errorNow(truncatedArgs);
-				})
-				.catch(() => {
-					_errorNow(args);
-				});
-		}
-		return;
-	}
-
-	isDebugEnabledAsync()
-		.then((enabled) => {
-			if (enabled) {
-				getTruncationSettings()
-					.then((settings) => {
-						const truncatedArgs = settings.enabled
-							? args.map((arg) => formatOutput(arg, settings.length))
-							: args;
-						_errorNow(truncatedArgs);
-					})
-					.catch(() => {
-						_errorNow(args);
-					});
-			}
-		})
-		.catch(() => {
-			/* swallow logging errors */
-		});
 }
 
 /**
- * Warning-only logger that honors the debug toggle.
+ * Warning logger — always logs synchronously so DevTools shows the real call site.
+ * Warnings are never gated on debug mode: they are always surfaced.
  * @param  {...any} args
  */
 export function debugWarn(...args) {
-	const immediate = isPopupDebugEnabledSync();
-
-	function _warnNow(truncatedArgs) {
-		try {
-			const key = _safeKeyFromArgs(truncatedArgs);
-			if (_isDuplicateAndRecord(key)) return;
-			console.warn(...truncatedArgs);
-			recordPersistent("warn", truncatedArgs);
-		} catch (e) {
-			try {
-				console.warn(...truncatedArgs);
-				recordPersistent("warn", truncatedArgs);
-			} catch (_) { /* swallow */ }
-		}
+	try {
+		const key = _safeKeyFromArgs(args);
+		if (_isDuplicateAndRecord(key)) return;
+		console.warn(...args);
+		recordPersistent("warn", args);
+	} catch (_) {
+		try { console.warn(...args); } catch (__) { /* swallow */ }
 	}
-
-	if (immediate !== null) {
-		if (immediate) {
-			getTruncationSettings()
-				.then((settings) => {
-					const truncatedArgs = settings.enabled
-						? args.map((arg) => formatOutput(arg, settings.length))
-						: args;
-					_warnNow(truncatedArgs);
-				})
-				.catch(() => {
-					_warnNow(args);
-				});
-		}
-		return;
-	}
-
-	isDebugEnabledAsync()
-		.then((enabled) => {
-			if (enabled) {
-				getTruncationSettings()
-					.then((settings) => {
-						const truncatedArgs = settings.enabled
-							? args.map((arg) => formatOutput(arg, settings.length))
-							: args;
-						_warnNow(truncatedArgs);
-					})
-					.catch(() => {
-						_warnNow(args);
-					});
-			}
-		})
-		.catch(() => {
-			/* swallow logging errors */
-		});
 }
 
 // Expose globally for non-module scripts that still want a shared debugLog helper.

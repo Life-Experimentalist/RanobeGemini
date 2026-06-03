@@ -30,12 +30,22 @@ function getTimestamp() {
 }
 
 console.log("🔍 Watching for file changes in src/ directory...");
-console.log('📦 Will run "npm run build" when changes are detected\n');
+console.log('📦 Will run "npm run build" when changes are detected');
+console.log("⌨️  Press Enter to manually trigger a build\n");
 
 let buildInProgress = false;
 let pendingBuild = false;
 let debounceTimer = null;
 let ignoreChangesUntil = 0;
+
+// Manual trigger via Enter key
+const readline = require("readline");
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+rl.on("line", () => {
+	if (debounceTimer) clearTimeout(debounceTimer);
+	console.log(`\n[${getTimestamp()}]\t⌨️  Manual trigger`);
+	debounceTimer = setTimeout(runBuild, 50);
+});
 const lastModifiedTimes = new Map();
 const DEBOUNCE_DELAY = 500;
 const IGNORE_COOLDOWN = 5000;

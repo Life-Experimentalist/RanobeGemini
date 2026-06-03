@@ -1311,6 +1311,19 @@ textarea {
 	font-size: 12px;
 }
 
+/* Textarea / wide fields — column layout so the textarea fills the full width */
+.ls-handler-field--wide {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 6px;
+}
+
+.ls-handler-field-textarea {
+	width: 100%;
+	box-sizing: border-box;
+	resize: vertical;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    COPY FORMAT — PER-SITE OVERRIDES
    ═══════════════════════════════════════════════════════════════════════════════ */

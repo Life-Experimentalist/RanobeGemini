@@ -3,6 +3,7 @@
 > **Index:**
 
 - [Changelog](#changelog)
+  - [5.0.0 - 2026-06-03](#500---2026-06-03)
   - [4.6.0 - 2026-03-25](#460---2026-03-25)
     - [Highlights](#highlights)
     - [Added](#added)
@@ -134,6 +135,66 @@
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [5.0.0](RELEASE_NOTES_5.0.0.md) - 2026-06-03
+
+### Highlights
+
+Largest release since the initial library launch. Completes the Phase 10–15 roadmap: content runtime modularization, UI/filter redesign, swipe navigation, multi-cloud sync (WebDAV, OneDrive, Dropbox), OAuth PKCE infrastructure, popup redesign, Chapter Queue, Story Chat, LoreWeave graph, and a dedicated NovelArrow handler with full SPA support.
+
+### Added
+
+- **Chapter Queue** — background chapter fetch pipeline with smart grouping, progress tracking, and queue management UI in the popup
+- **Story Chat** — AI Q&A panel in the popup tab, powered by the chronicle context assembled from enhanced chapters
+- **LoreWeave** — character/world knowledge graph built from chapter summaries; background service, queue manager, client, and popup integration
+- **NovelArrow handler** — dedicated handler for `novelarrow.com` (Next.js SPA): `/chapter/{slug}/{chapter}` URL detection, `article[data-chapter-id]` content extraction, TTS-safe in-place `p.textContent` replacement with full HTML+markdown stripping, proper `waitForChapterContent` fingerprinting so SPA navigation doesn't re-init on stale content
+- **WebDAV storage adapter** — PROPFIND/PUT/GET/MKCOL with Basic Auth; works with Nextcloud, Seafile, and any RFC 4918 server
+- **OneDrive storage adapter** — Microsoft Graph API integration, PKCE OAuth2, folder creation, upload/download, continuous backup
+- **Dropbox storage adapter** — Dropbox API v2, PKCE OAuth2, offline refresh tokens, paginated folder listing
+- **Multi-sync fan-out** — `storage-orchestrator.js` accepts a `syncDestinations` array; writes go to all destinations in parallel, reads come from the primary
+- **Shared OAuth PKCE helpers** — `oauth-pkce.js` used by all cloud providers
+- **Hide/Show Gemini UI toggle** — button in popup header (always visible); covers all on-page extension elements: controls bar, library bar, chunk banners, summary groups, notification banners
+- **Now Reading card in popup** — title, chapter info, progress bar, library status, reading-status selector, genre tags, Add/Open/Toggle UI actions
+- **`geminiUIHidden` in `getNovelInfo` response** — popup reads current state on open so the toggle button shows the correct label
+- **Swipe/drag navigation for novel modals** — horizontal swipe (mobile) / drag (desktop) navigates between novels; separated from vertical swipe-to-dismiss by angle threshold
+- **Display settings panel** — per-filter visibility controls let users hide unwanted filter chips in the library toolbar
+- **Pill-style provider selectors** — AI provider and backup provider dropdowns replaced with tab-style pill selectors in library settings
+- **NovelBin shelf page** — `src/library/websites/novelbin/` shelf page, card, and styles added
+- **`resetSummaryPromptBtn`** — missing `getElementById` declaration added; resolves fatal popup init crash
+
+### Changed
+
+- **NovelBin handler** — `novelarrow.com` removed from `SUPPORTED_DOMAINS`; shelf name updated to "NovelBin"; `novelbin.com` as primary domain; `novelarrow.com` fully owned by the new dedicated handler
+- **SPA navigation observer** — hash-only URL changes (e.g. skip-link `#main-content`) are now filtered out and no longer trigger a chapter re-init; content fingerprint uses `currentHandler.findContentArea()` instead of hardcoded `#chr-content` selectors
+- **Main summary group persistence** — `.gemini-main-summary-group` (with the Enhance button) is no longer removed on re-enhancement; only inner duplicates inside `contentArea` are cleared
+- **Banner selector expanded** — Hide/Show UI now covers `#gemini-controls`, `#rg-chapter-novel-controls`, `#rg-notification-banner`, `.gemini-main-summary-banner`, `.gemini-short-summary-text-container`; default state is "show"
+- **Popup header** — toggle Gemini UI button added beside gear and library icons
+- **Hide/Show UI button removed from all chapter control bars** — no longer appended to `#gemini-controls` or `rg-chapter-novel-controls` on any site
+- **Chat `loadChatContext`** — uses `getNovelInfo` (same source as Now Reading) instead of `getNovelContext`; reliable novel ID on all supported sites
+- **`debugError` / `debugWarn` synchronous** — now call `console.error`/`console.warn` directly so DevTools shows the actual caller file and line, not `logger.js`
+- **Settings handler graceful fallback** — returns `{ success: true, settings: {} }` instead of an error when `getHandlerByDomain` can't find a handler in the background realm
+- **Build pipeline** — `dev/build.js` skips `desktop.ini`, `thumbs.db`, `.ds_store` when copying source directories
+- **Summary rendering** — `summary-service.js` strips markdown syntax (`**bold**`, `# headings`, `- lists`, etc.) from AI-generated paragraphs before `p.textContent` assignment
+- **NovelArrow UI insertion** — controls inserted before `div.select-text` (between chapter header/divider and content area) so TTS paragraph enumeration is unaffected
+- **`toggleGeminiUI` message** — returns `{ nowHidden }` in response so popup button state is authoritative and correct after toggle
+
+### Fixed
+
+- **`resetSummaryPromptBtn is not defined`** fatal popup crash — variable was used but never declared
+- **Show/Hide UI toggle not restoring** — `shouldBannersBeHiddenRuntime` now reads `body.hasAttribute("data-rg-ui-hidden")` as the primary state source; toggle correctly alternates between hide and show
+- **Summary group removed by cache restore** — `restoreChunkedContentFromCacheRuntime` was calling `documentRef.querySelectorAll(".gemini-main-summary-group").forEach(el => el.remove())` globally; now scoped to `contentArea` only
+- **Stray markdown in enhanced/summary text** — `**bold**`, `*italic*`, `# headings`, etc. stripped via `stripMarkdown()` in `summary-service.js` and via regex HTML+markdown pipeline in `novelarrow-handler.js`
+- **NovelArrow chapter URL detection** — `/chapter/{slug}/{chapter-slug}` path correctly detected; `isChapterPage()` no longer returns false for all novelarrow chapter pages
+- **SPA hash navigation re-init** — clicking the "Skip to main content" accessibility link no longer tears down the enhancement state
+- **Chat popup "no novel detected"** — fixed by switching from `getNovelContext` to `getNovelInfo`
+- **`[SettingsHandler] Handler not found` console spam** — graceful fallback; also tries `www.`-stripped domain as secondary lookup
+- **OneDrive `ensureFolder` URL double-colon bug** — folder creation no longer fails on first use
+- **Popup fatal `shortSummaryPrompt is not defined`** — missing declaration added
+- **ScribbleHub word count, status, author fallback** extraction added
+- **Ranobes metadata consistency** — `getSiteIdentifier()`, `getDefaultPrompt()`, `getMetadataSourceUrl()` unified
+- **Background emoji encoding** — non-ASCII characters escaped to prevent mojibake on ISO-8859-1 host pages
 
 ---
 
