@@ -248,6 +248,33 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		return slug ? `novelbin-${slug}` : null;
 	}
 
+	/**
+	 * Return a domain-agnostic canonical URL for cache keying.
+	 * Both novelbin.com and novelarrow.com chapter pages share the same cache
+	 * so enhancement done on one domain is visible on the other.
+	 *
+	 * Format: https://novelbin.com/b/{novelSlug}/{chapterSlug}
+	 */
+	getCanonicalCacheUrl(url = window.location.href) {
+		try {
+			const path = new URL(url).pathname.replace(/\/$/, "");
+			const parts = path.split("/").filter(Boolean);
+			// NovelBin: /b/{novel}/{chapter}  → parts = ["b", novel, chapter]
+			// NovelArrow: /chapter/{novel}/{chapter} → parts = ["chapter", novel, chapter]
+			let novelSlug, chapterSlug;
+			if (parts[0] === "b" && parts.length >= 3) {
+				[, novelSlug, chapterSlug] = parts;
+			} else if (parts[0] === "chapter" && parts.length >= 3) {
+				[, novelSlug, chapterSlug] = parts;
+			} else {
+				return url;
+			}
+			return `https://novelbin.com/b/${novelSlug}/${chapterSlug}`;
+		} catch {
+			return url;
+		}
+	}
+
 	/** Build a novel detail URL for the given slug using the preferred domain setting. */
 	_makeNovelUrl(slug, preferredDomain = "novelarrow") {
 		if (!slug) return null;
@@ -778,6 +805,17 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	/** NovelBin renders HTML chapter content — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
+	}
+
+	/**
+	 * On NovelBin/NovelArrow chapter pages the library management bar is redundant
+	 * and clutters the reading experience — only show it on the novel detail page.
+	 */
+	getNovelControlsConfig() {
+		if (this.isChapterPage()) {
+			return { showControls: false };
+		}
+		return super.getNovelControlsConfig();
 	}
 
 	// -------------------------------------------------------------------------

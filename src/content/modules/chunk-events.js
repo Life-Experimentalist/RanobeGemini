@@ -65,6 +65,7 @@ export async function deleteChunkEnhancementRuntime({
 	buildChunkBanner,
 	chunkBehaviorConfig,
 	onEnhance,
+	cacheUrl = null,
 }) {
 	const chunking = await loadChunkingSystem();
 	if (!chunking) return;
@@ -91,7 +92,7 @@ export async function deleteChunkEnhancementRuntime({
 	}
 
 	await chunking.cache.deleteChunkFromCache(
-		windowRef.location.href,
+		cacheUrl || windowRef.location.href,
 		chunkIndex,
 	);
 

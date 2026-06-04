@@ -1570,6 +1570,7 @@ if (window.__RGInitDone) {
 			buildChunkBanner,
 			chunkBehaviorConfig,
 			onEnhance: () => handleReenhanceChunk(chunkIndex),
+			cacheUrl: getCacheUrl(),
 		});
 	}
 
@@ -1731,6 +1732,21 @@ if (window.__RGInitDone) {
 			debugError,
 			enableCopyOnContentArea,
 			documentRef: document,
+			cacheUrl: getCacheUrl(),
+			// For TTS-safe handlers (e.g. NovelArrow): delegate paragraph injection to
+			// the handler's own applyEnhancedContent so its HTML-parsing and gemini-element
+			// filtering logic is used (avoids the broken \n{2,} split on AI HTML output).
+			applyEnhancedChunkContent: currentHandler?.supportsTextOnlyEnhancement?.()
+				? (chunkContentEl, enhancedHtml) => {
+					if (typeof currentHandler?.applyEnhancedContent === "function") {
+						const count = currentHandler.applyEnhancedContent(
+							chunkContentEl,
+							enhancedHtml,
+						);
+						debugLog(`[TTS-safe chunk] Handler applied ${count} paragraphs`);
+					}
+				}
+				: null,
 		});
 	}
 
@@ -2164,6 +2180,7 @@ if (window.__RGInitDone) {
 				isCachedContent = false;
 				hasCachedContent = false;
 			},
+			cacheUrl: getCacheUrl(),
 		});
 	}
 
@@ -3008,6 +3025,19 @@ if (window.__RGInitDone) {
 			enableCopyOnContentArea,
 			showStatusMessage,
 			debugLog,
+			applyEnhancedChunkContent: currentHandler?.supportsTextOnlyEnhancement?.()
+				? (chunkContentEl, enhancedHtml) => {
+					if (typeof currentHandler?.applyEnhancedContent === "function") {
+						const count = currentHandler.applyEnhancedContent(
+							chunkContentEl,
+							enhancedHtml,
+						);
+						debugLog(
+							`[TTS-safe cache restore] Handler applied ${count} paragraphs`,
+						);
+					}
+				}
+				: null,
 		});
 	}
 
@@ -3054,7 +3084,9 @@ if (window.__RGInitDone) {
 			return false;
 		}
 
-		const url = window.location.href;
+		// Use canonical URL so cache saved on novelarrow.com is found on novelbin.com
+		// and vice-versa (getCanonicalCacheUrl normalises both to novelbin.com/b/…).
+		const url = getCacheUrl();
 		const hasChunks = await chunking.cache.hasChunksInCache(url);
 		if (!hasChunks) {
 			debugLog("[Cache Restore] No chunks found in cache for this URL.");
@@ -3288,7 +3320,11 @@ if (window.__RGInitDone) {
 				? currentHandler.findContentArea()
 				: null)
 				?? document.querySelector("#chr-content, .chr-c, article[data-chapter-id]");
-			const oldContentFingerprint = _snapEl ? _snapEl.textContent.trim().slice(0, 300) : "";
+			// Prefer data-chapter-id (NovelArrow) — changes the instant React swaps
+			// the chapter. Fall back to a text slice for other SPA sites.
+			const oldContentFingerprint = _snapEl
+				? (_snapEl.getAttribute?.("data-chapter-id") || _snapEl.textContent.trim().slice(0, 300))
+				: "";
 
 			clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(async () => {
@@ -3515,13 +3551,22 @@ if (window.__RGInitDone) {
 		}
 
 		// For DEDICATED_PAGE-type handlers on novel info pages, show novel management UI
-		// instead of enhance/summarize buttons
+		// instead of enhance/summarize buttons — but skip entirely if the user has
+		// previously hidden the extension on this hostname (no DOM injection at all).
 		if (
 			!hasExtractButton &&
 			isNovelPage &&
 			handlerType === HANDLER_TYPES.DEDICATED_PAGE
 		) {
-			injectNovelPageUI();
+			let uiHiddenForHost = false;
+			try {
+				const stored = await browser.storage.local.get(RG_VISIBILITY_KEY);
+				const map = stored[RG_VISIBILITY_KEY] || {};
+				uiHiddenForHost = map[window.location.hostname] === true;
+			} catch { /* non-critical, default to inject */ }
+			if (!uiHiddenForHost) {
+				injectNovelPageUI();
+			}
 		}
 		// Create enhance/summarize UI if it doesn't exist and we're on a chapter page
 		else if (!hasExtractButton && isChapterPage) {
@@ -3913,8 +3958,8 @@ if (window.__RGInitDone) {
 		// Restore the per-hostname hide/show preference saved from a previous visit.
 		restoreVisibilityState();
 
-		// Add novel controls (library management bar) for all chapter pages.
-		// These are added asynchronously after main UI
+		// Add novel controls (library management bar) for chapter pages,
+		// unless the handler has opted out via getNovelControlsConfig().showControls === false.
 		setTimeout(async () => {
 			try {
 				const runtime = getUIElementsRuntime();
@@ -3922,6 +3967,8 @@ if (window.__RGInitDone) {
 
 				const controlsConfig =
 					currentHandler?.getNovelControlsConfig?.() || {};
+				if (controlsConfig.showControls === false) return;
+
 				const novelControls = await runtime.createChapterPageNovelControls({
 					controlsConfig,
 					HANDLER_TYPES,
@@ -4176,7 +4223,12 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// Helper: Get content area HTML without any Gemini UI elements
+	// Return a canonical URL for cache keying that is shared across novelbin/novelarrow domains.
+	function getCacheUrl() {
+		return currentHandler?.getCanonicalCacheUrl?.() ?? window.location.href;
+	}
+
+	// Helper: Get content area HTML without any Gemini UI elements or noise (ads/iframes)
 	function getCleanContentHTML(contentArea) {
 		if (!contentArea) return "";
 
@@ -4190,6 +4242,14 @@ if (window.__RGInitDone) {
 				".gemini-enhanced-banner, #gemini-chunked-content",
 		);
 		geminiElements.forEach((el) => el.remove());
+
+		// Remove ad/noise elements so they never reach Gemini
+		const noiseElements = clone.querySelectorAll(
+			"script, style, iframe, ins, .ads, .adsbygoogle, " +
+				".js-ad-slot, [data-ad-slot], [data-ad], [data-ads], " +
+				".google-auto-placed, [class*='advert'], [id*='advert']",
+		);
+		noiseElements.forEach((el) => el.remove());
 
 		return clone.innerHTML;
 	}

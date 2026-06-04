@@ -76,6 +76,7 @@ export async function deleteAllChunksRuntime({
 	documentRef = document,
 	showStatusMessage,
 	onResetCacheFlags,
+	cacheUrl = null,
 }) {
 	const contentArea = findContentArea();
 	if (!contentArea) return;
@@ -89,11 +90,12 @@ export async function deleteAllChunksRuntime({
 	}
 
 	const chunking = await loadChunkingSystem();
+	const effectiveUrl = cacheUrl || windowRef.location.href;
 	if (chunking) {
-		await chunking.cache.deleteAllChunksForUrl(windowRef.location.href);
+		await chunking.cache.deleteAllChunksForUrl(effectiveUrl);
 	}
 	if (storageManager) {
-		await storageManager.removeEnhancedContent(windowRef.location.href);
+		await storageManager.removeEnhancedContent(effectiveUrl);
 	}
 
 	onResetCacheFlags?.();
@@ -1099,6 +1101,7 @@ export async function restoreChunkedContentFromCacheRuntime({
 	handleToggleAllChunks,
 	handleDeleteAllChunks,
 	loadDomIntegrationModule,
+	applyEnhancedChunkContent = null,
 	documentRef = document,
 	confirmFn,
 	onSetLastChunkModelInfo,
@@ -1206,13 +1209,26 @@ export async function restoreChunkedContentFromCacheRuntime({
 		}
 
 		const sanitizedContent = sanitizeHTML(chunk?.enhancedContent || "");
-		chunkContent.innerHTML = sanitizedContent;
+		const originalHtml = chunk?.originalContent || "";
+		if (applyEnhancedChunkContent && originalHtml) {
+			// For TTS-safe handlers (e.g. NovelArrow): restore original DOM structure
+			// first so <p> elements exist, then replace their textContent in-place.
+			// This avoids injecting raw AI HTML (with markdown artefacts) as innerHTML.
+			chunkContent.innerHTML = originalHtml;
+			applyEnhancedChunkContent(chunkContent, sanitizedContent);
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				chunkContent.innerHTML,
+			);
+		} else {
+			chunkContent.innerHTML = sanitizedContent;
+			chunkContent.setAttribute(
+				"data-enhanced-chunk-content",
+				sanitizedContent,
+			);
+		}
 		chunkContent.setAttribute("data-chunk-enhanced", "true");
 		chunkContent.setAttribute("data-showing", "enhanced");
-		chunkContent.setAttribute(
-			"data-enhanced-chunk-content",
-			sanitizedContent,
-		);
 		chunkWrapper.appendChild(chunkContent);
 
 		chunkedContentContainer.appendChild(chunkWrapper);

@@ -7,6 +7,7 @@
 import {
 	createPkcePair,
 	launchOAuthPkceFlow,
+	launchOAuthTabFlow,
 	exchangeCodeForTokens,
 	refreshAccessToken,
 } from "./oauth-pkce.js";
@@ -102,14 +103,26 @@ async function getValidAccessToken({ interactive = true } = {}) {
 	const { verifier, challenge } = await createPkcePair();
 	const redirectUri = OAUTH_REDIRECT_URIS.web;
 
-	const code = await launchOAuthPkceFlow({
-		authEndpoint: AUTH_ENDPOINT,
-		clientId: config.clientId,
-		redirectUri,
-		scope: SCOPES,
-		challenge,
-		extra: { response_mode: "query" },
-	});
+	let code;
+	try {
+		code = await launchOAuthPkceFlow({
+			authEndpoint: AUTH_ENDPOINT,
+			clientId: config.clientId,
+			redirectUri,
+			scope: SCOPES,
+			challenge,
+			extra: { response_mode: "query" },
+		});
+	} catch (_webAuthErr) {
+		code = await launchOAuthTabFlow({
+			authEndpoint: AUTH_ENDPOINT,
+			clientId: config.clientId,
+			redirectUri,
+			scope: SCOPES,
+			challenge,
+			extra: { response_mode: "query" },
+		});
+	}
 
 	const newTokens = await exchangeCodeForTokens({
 		tokenEndpoint: TOKEN_ENDPOINT,

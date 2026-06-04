@@ -22,6 +22,13 @@
 					return;
 				}
 
+				// Read ext_id only from query params (not hash, where access tokens land).
+			// Validate format: Chromium IDs are 32 chars [a-p], Firefox IDs are UUIDs.
+			const rawExtId = queryParams.get("ext_id") || "";
+			const extId = /^[a-p]{32}$/.test(rawExtId) ||
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(rawExtId)
+				? rawExtId : "";
+
 				const payload = { source: "ranobe-gemini-oauth" };
 				if (state) payload.state = state;
 				if (accessToken) {
@@ -32,7 +39,12 @@
 					payload.authorizationCode = authorizationCode;
 				}
 
-				window.opener?.postMessage(payload, "*");
+				if (window.opener) {
+					window.opener.postMessage(payload, "*");
+				} else if (extId && typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+					// Mobile tab fallback: no window.opener, relay token to extension via sendMessage
+					chrome.runtime.sendMessage(extId, payload);
+				}
 
 				document.body.innerText = "Login successful. You may close this tab.";
 

@@ -26,6 +26,8 @@ export async function handleChunkProcessedRuntime({
 	debugError = () => {},
 	enableCopyOnContentArea,
 	documentRef = document,
+	applyEnhancedChunkContent = null,
+	cacheUrl = null,
 }) {
 	const chunking = await loadChunkingSystem?.();
 	if (!chunking) return;
@@ -92,7 +94,12 @@ export async function handleChunkProcessedRuntime({
 		);
 		if (chunkContent) {
 			const sanitizedContent = sanitizeHTML(chunkResult.enhancedContent);
-			chunkContent.innerHTML = sanitizedContent;
+			if (applyEnhancedChunkContent) {
+				// Handler-specific injection (e.g. NovelArrow TTS-safe text replacement)
+				applyEnhancedChunkContent(chunkContent, sanitizedContent);
+			} else {
+				chunkContent.innerHTML = sanitizedContent;
+			}
 			chunkContent.setAttribute("data-chunk-enhanced", "true");
 			chunkContent.setAttribute(
 				"data-enhanced-chunk-content",
@@ -100,8 +107,9 @@ export async function handleChunkProcessedRuntime({
 			);
 		}
 
+		// Use canonical URL so cross-domain cache hits work (e.g. novelarrow ↔ novelbin).
 		await chunking.cache.saveChunkToCache(
-			windowRef.location.href,
+			cacheUrl || windowRef.location.href,
 			chunkIndex,
 			{
 				originalContent: chunkResult.originalContent || "",

@@ -40,6 +40,8 @@ import { createGoogleDriveStorageAdapter } from "./storage/adapters/google-drive
 import { createWebdavStorageAdapter } from "./storage/adapters/webdav-storage.js";
 import { createOnedriveStorageAdapter } from "./storage/adapters/onedrive-storage.js";
 import { createDropboxStorageAdapter } from "./storage/adapters/dropbox-storage.js";
+import { createNativeSyncStorageAdapter } from "./storage/adapters/native-sync-storage.js";
+import { pendingAuthFlows } from "../utils/oauth-pkce.js";
 
 // Gemini safety settings \u{2014} set all categories to BLOCK_NONE so mature/violent
 // novel content is not refused by the safety filter.
@@ -65,10 +67,12 @@ if (typeof browser === "undefined") {
 	const api = typeof browser !== "undefined" ? browser : chrome;
 
 	debugLog("Ranobe Gemini: Background script loaded");
+	const nativeSyncAdapter = createNativeSyncStorageAdapter();
 	const storageSync = createStorageSyncOrchestrator({
 		browserRef: browser,
-		defaultProvider: "google-drive",
+		defaultProvider: "native-sync",
 		adapters: {
+			"native-sync": nativeSyncAdapter,
 			"google-drive": createGoogleDriveStorageAdapter(),
 			"webdav": createWebdavStorageAdapter(),
 			"onedrive": createOnedriveStorageAdapter(),
@@ -79,16 +83,26 @@ if (typeof browser === "undefined") {
 	if (browser.runtime?.onMessageExternal?.addListener) {
 		browser.runtime.onMessageExternal.addListener(
 			(request, sender, sendResponse) => {
-				if (request?.type !== "EXTERNAL_PING") return;
-
 				const senderUrl = sender?.url || sender?.origin || "";
-				if (
-					senderUrl &&
-					!senderUrl.startsWith("https://ranobe.vkrishna04.me/") &&
-					!senderUrl.startsWith("http://ranobe.vkrishna04.me/")
-				) {
-					return;
+				const isLandingPage =
+					!senderUrl ||
+					senderUrl.startsWith("https://ranobe.vkrishna04.me/") ||
+					senderUrl.startsWith("http://ranobe.vkrishna04.me/");
+
+				if (!isLandingPage) return;
+
+				// Mobile tab OAuth relay: landing page sends back the auth code
+				if (request?.source === "ranobe-gemini-oauth" && request?.state) {
+					const resolver = pendingAuthFlows.get(request.state);
+					if (resolver) {
+						pendingAuthFlows.delete(request.state);
+						resolver(request);
+					}
+					sendResponse({ received: true });
+					return true;
 				}
+
+				if (request?.type !== "EXTERNAL_PING") return;
 
 				const manifest = browser.runtime.getManifest();
 				sendResponse({
@@ -1618,6 +1632,53 @@ if (typeof browser === "undefined") {
 						error: error.message,
 					}),
 				);
+			return true;
+		}
+
+		if (message.action === "nativeSyncNow") {
+			(async () => {
+				try {
+					const data = await novelLibrary.exportLibrary();
+					const blob = new Blob([JSON.stringify(data)], {
+						type: "application/json",
+					});
+					await nativeSyncAdapter.uploadBackup(blob);
+					sendResponse({ success: true });
+				} catch (err) {
+					sendResponse({ success: false, error: err.message });
+				}
+			})();
+			return true;
+		}
+
+		if (message.action === "nativeSyncRestore") {
+			(async () => {
+				try {
+					const latest = await nativeSyncAdapter.getLatestBackup();
+					if (!latest?.id) {
+						sendResponse({ success: false, error: "No native sync backup found." });
+						return;
+					}
+					const jsonStr = await nativeSyncAdapter.downloadBackup(latest.id);
+					const backupData = JSON.parse(jsonStr);
+					await novelLibrary.importLibrary(backupData, true);
+					sendResponse({ success: true });
+				} catch (err) {
+					sendResponse({ success: false, error: err.message });
+				}
+			})();
+			return true;
+		}
+
+		if (message.action === "nativeSyncClear") {
+			(async () => {
+				try {
+					await nativeSyncAdapter.resetAuth();
+					sendResponse({ success: true });
+				} catch (err) {
+					sendResponse({ success: false, error: err.message });
+				}
+			})();
 			return true;
 		}
 

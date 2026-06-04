@@ -4961,7 +4961,7 @@ async function initializePopup() {
 						const mode = prefs.backupMode || "both";
 						if (syncProviderSelect) {
 							syncProviderSelect.value =
-								prefs.activeSync || "google-drive";
+								prefs.activeSync || "native-sync";
 						}
 						const modeRadio = document.querySelector(
 							`input[name="driveBackupMode"][value="${mode}"]`,
@@ -5735,7 +5735,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 
 			async function handleSyncProviderChange(e) {
 				try {
-					const providerId = e.target.value || "google-drive";
+					const providerId = e.target.value || "native-sync";
 					await browser.storage.local.set({ activeSync: providerId });
 					showStatus(
 						`Sync provider set to: ${providerId}`,

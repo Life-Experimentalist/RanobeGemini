@@ -132,12 +132,17 @@ export class NovelarrowHandler extends NovelbinHandler {
 		while (Date.now() < deadline) {
 			const article = document.querySelector("article[data-chapter-id]");
 			if (article) {
+				const chapterId = article.getAttribute("data-chapter-id") || "";
 				const text = article.textContent.trim();
 				if (text.length > 50) {
-					// If no prior fingerprint, accept immediately; otherwise wait for new content
-					if (!oldFingerprint || text.slice(0, 300) !== oldFingerprint) {
-						return true;
-					}
+					// Use data-chapter-id as primary fingerprint — it changes the moment
+					// React swaps the chapter, before the full text is even rendered.
+					// Fall back to text comparison if oldFingerprint was a text slice.
+					const isNewChapter =
+						!oldFingerprint ||
+						chapterId !== oldFingerprint ||
+						text.slice(0, 300) !== oldFingerprint;
+					if (isNewChapter) return true;
 				}
 			}
 			await new Promise((r) => setTimeout(r, POLL_MS));
@@ -355,36 +360,53 @@ export class NovelarrowHandler extends NovelbinHandler {
 	applyEnhancedContent(contentArea, enhancedText) {
 		if (!contentArea || !enhancedText?.trim()) return 0;
 
-		const enhancedParas = enhancedText
-			.split(/\n{2,}/)
-			.map((p) => p.trim())
-			.filter((p) => p.length > 0);
+		// Collect only real content paragraphs — exclude any injected gemini elements
+		// so TTS enumeration of <p> nodes is never polluted by banner/button text.
+		const GEMINI_SELECTOR = [
+			".gemini-master-banner",
+			".gemini-main-summary-group",
+			".gemini-chunk-banner",
+			".gemini-chunk-summary-group",
+			".gemini-wip-banner",
+			".gemini-enhanced-banner",
+			"#gemini-chunked-content",
+			"[class^='gemini-']",
+			"[id^='gemini-']",
+		].join(", ");
 
-		const existingPs = Array.from(contentArea.querySelectorAll("div > p, p"));
+		const existingPs = Array.from(
+			contentArea.querySelectorAll("div > p, p"),
+		).filter((p) => !p.closest(GEMINI_SELECTOR));
+
 		if (!existingPs.length) {
 			return super.applyEnhancedContent(contentArea, enhancedText);
 		}
 
-		// Helper: convert an HTML/markdown string to clean plain text without
-		// touching the DOM (avoids innerHTML XSS risk) so TTS reads actual words.
-		const toPlainText = (raw) => {
-			let text = raw
-				// Remove script/style blocks entirely
+		// Extract paragraphs from the enhanced content.
+		// Preferred path: parse HTML <p> tags directly (AI often returns them).
+		// Fallback: plain-text splitting on any newline sequence.
+		let enhancedParas;
+		if (/<p[\s>]/i.test(enhancedText)) {
+			const tmp = document.createElement("div");
+			tmp.innerHTML = enhancedText;
+			enhancedParas = Array.from(tmp.querySelectorAll("p"))
+				.map((p) => p.textContent.trim())
+				.filter((p) => p.length > 0);
+		}
+		if (!enhancedParas || enhancedParas.length === 0) {
+			// Plain-text path: strip HTML then split on any newline run
+			const stripped = enhancedText
 				.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
 				.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-				// Block-level closers → newline
 				.replace(/<\/p>|<br\s*\/?>/gi, "\n")
-				// Strip all remaining HTML tags
 				.replace(/<[^>]+>/g, "")
-				// Decode common entities
 				.replace(/&amp;/g, "&")
 				.replace(/&lt;/g, "<")
 				.replace(/&gt;/g, ">")
 				.replace(/&quot;/g, '"')
 				.replace(/&#039;/g, "'")
-				.replace(/&nbsp;/g, " ");
-			// Strip residual markdown markers
-			text = text
+				.replace(/&nbsp;/g, " ")
+				// Strip markdown markers
 				.replace(/^#{1,6}\s+/gm, "")
 				.replace(/\*\*\*([^*\n]+)\*\*\*/g, "$1")
 				.replace(/\*\*([^*\n]+)\*\*/g, "$1")
@@ -397,20 +419,26 @@ export class NovelarrowHandler extends NovelbinHandler {
 				.replace(/^\s*\d+\.\s+/gm, "")
 				.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
 				.replace(/^>\s*/gm, "");
-			return text.trim();
-		};
+			enhancedParas = stripped
+				.split(/\n+/)
+				.map((p) => p.trim())
+				.filter((p) => p.length > 0);
+		}
+
+		if (!enhancedParas.length) return 0;
 
 		let updated = 0;
 		const limit = Math.min(enhancedParas.length, existingPs.length);
 		for (let i = 0; i < limit; i++) {
 			if (existingPs[i].textContent.trim().length > 0) {
-				existingPs[i].textContent = toPlainText(enhancedParas[i]);
+				existingPs[i].textContent = enhancedParas[i];
 				updated++;
 			}
 		}
 
 		debugLog(
-			`NovelArrow: TTS-safe replacement — ${updated}/${existingPs.length} paragraphs`,
+			`NovelArrow: TTS-safe replacement — ${updated}/${existingPs.length} paragraphs` +
+			` (${enhancedParas.length} enhanced paras parsed)`,
 		);
 		return updated;
 	}

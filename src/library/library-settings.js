@@ -4058,6 +4058,74 @@ function setupEventListeners() {
 
 	// \u{2500}\u{2500} Google Drive \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
+	// ── Native Browser Sync ────────────────────────────────────────────────────
+
+	function showNativeSyncMsg(text, type) {
+		const el = $("nativeSyncMessage");
+		if (!el) return;
+		el.textContent = text;
+		el.className = "ls-alert ls-alert-" + (type === "error" ? "warn" : (type || "info"));
+		el.style.display = "block";
+		setTimeout(() => { el.style.display = "none"; }, 5000);
+	}
+
+	const nativeSyncNowBtn = $("nativeSyncNowBtn");
+	if (nativeSyncNowBtn) {
+		nativeSyncNowBtn.addEventListener("click", async () => {
+			nativeSyncNowBtn.disabled = true;
+			nativeSyncNowBtn.textContent = "Syncing…";
+			try {
+				const resp = await browser.runtime.sendMessage({ action: "nativeSyncNow" });
+				if (resp?.success) showNativeSyncMsg("✅ Synced to browser account!", "success");
+				else throw new Error(resp?.error || "Sync failed");
+			} catch (err) {
+				showNativeSyncMsg("❌ " + err.message, "error");
+			} finally {
+				nativeSyncNowBtn.disabled = false;
+				nativeSyncNowBtn.textContent = "☁ Sync Now";
+			}
+		});
+	}
+
+	const nativeSyncRestoreBtn = $("nativeSyncRestoreBtn");
+	if (nativeSyncRestoreBtn) {
+		nativeSyncRestoreBtn.addEventListener("click", async () => {
+			nativeSyncRestoreBtn.disabled = true;
+			nativeSyncRestoreBtn.textContent = "Restoring…";
+			try {
+				const resp = await browser.runtime.sendMessage({ action: "nativeSyncRestore" });
+				if (resp?.success) {
+					showNativeSyncMsg("✅ Restored from browser sync!", "success");
+					setTimeout(() => location.reload(), 1500);
+				} else {
+					throw new Error(resp?.error || "Restore failed");
+				}
+			} catch (err) {
+				showNativeSyncMsg("❌ " + err.message, "error");
+			} finally {
+				nativeSyncRestoreBtn.disabled = false;
+				nativeSyncRestoreBtn.textContent = "↺ Restore from Sync";
+			}
+		});
+	}
+
+	const nativeSyncClearBtn = $("nativeSyncClearBtn");
+	if (nativeSyncClearBtn) {
+		nativeSyncClearBtn.addEventListener("click", async () => {
+			if (!confirm("Clear all native browser sync data? This cannot be undone.")) return;
+			nativeSyncClearBtn.disabled = true;
+			try {
+				const resp = await browser.runtime.sendMessage({ action: "nativeSyncClear" });
+				if (resp?.success) showNativeSyncMsg("✅ Sync data cleared.", "success");
+				else throw new Error(resp?.error || "Clear failed");
+			} catch (err) {
+				showNativeSyncMsg("❌ " + err.message, "error");
+			} finally {
+				nativeSyncClearBtn.disabled = false;
+			}
+		});
+	}
+
 	const connectBtn = $("connectDriveBtn");
 	if (connectBtn) connectBtn.addEventListener("click", handleConnectDrive);
 

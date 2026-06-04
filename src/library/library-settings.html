@@ -1002,6 +1002,38 @@
 						</p>
 					</div>
 
+					<!-- 🔄 Native Browser Sync -->
+					<div class="ls-section" data-accent="green" style="background: rgba(52, 168, 83, 0.08); border-left: 3px solid #34a853">
+						<div class="ls-row-between" style="align-items: center; flex-wrap: wrap; gap: 8px;">
+							<div>
+								<div class="ls-section-title" style="color: #34a853">
+									🔄 Native Browser Sync
+								</div>
+								<div class="ls-section-desc">
+									Zero-config sync using your browser account. Works between devices with the same browser (Chrome &harr; Chrome, Firefox &harr; Firefox, Edge &harr; Edge).
+								</div>
+							</div>
+							<span id="nativeSyncStatus" class="ls-badge ls-badge-success">&#x25CF; Always On</span>
+						</div>
+						<p class="ls-hint" style="margin-top: 8px; margin-bottom: 12px">
+							No setup required. Syncs settings and library metadata (not chapter cache). Limit: ~90&nbsp;KB.
+						</p>
+						<div class="ls-grid-2">
+							<button id="nativeSyncNowBtn" class="ls-btn ls-btn-secondary">
+								&#x2601; Sync Now
+							</button>
+							<button id="nativeSyncRestoreBtn" class="ls-btn ls-btn-secondary">
+								&#x21BA; Restore from Sync
+							</button>
+						</div>
+						<div style="margin-top: 8px">
+							<button id="nativeSyncClearBtn" class="ls-btn ls-btn-danger ls-btn-sm" style="opacity: 0.7">
+								&#x1F5D1; Clear Sync Data
+							</button>
+						</div>
+						<div id="nativeSyncMessage" class="ls-alert" style="display: none; margin-top: 10px"></div>
+					</div>
+
 					<!-- ☁️ Google Drive Backups -->
 					<div class="ls-section" data-accent="blue">
 						<div class="ls-row-between" style="

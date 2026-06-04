@@ -9,6 +9,7 @@ import {
 	OAUTH_REDIRECT_URIS,
 	GOOGLE_OAUTH_SCOPES,
 } from "./constants.js";
+import { launchOAuthTabFlow } from "./oauth-pkce.js";
 
 const TOKEN_KEY = "driveAuthTokens";
 const AUTH_ERROR_KEY = "driveAuthError";
@@ -297,33 +298,48 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 		code_challenge_method: "S256",
 	});
 	const authUrl = `${AUTH_ENDPOINT}?${params.toString()}`;
-	let redirectUrl;
+	let code;
 	try {
-		redirectUrl = await launchDriveWebAuthFlow(authUrl);
-	} catch (err) {
-		const authErr = createDriveAuthError(
-			`Google Drive sign-in was interrupted or the redirect URI was rejected: ${err.message}.`,
-		);
-		await setAuthError(authErr);
-		throw authErr;
-	}
-	const parsed = parseOAuthRedirectUrl(redirectUrl);
-	if (parsed.state !== state) {
-		const err = createDriveAuthError("State mismatch during Drive auth.");
-		await setAuthError(err);
-		throw err;
-	}
-	const code = parsed.code;
-	if (!code) {
-		const err = createDriveAuthError("No auth code returned from Drive.");
-		await setAuthError(err);
-		throw err;
-	}
-	if (parsed.accessToken && parsed.expiresIn > 0) {
-		await storeTokens({
-			access_token: parsed.accessToken,
-			expires_in: parsed.expiresIn,
-		});
+		const redirectUrl = await launchDriveWebAuthFlow(authUrl);
+		const parsed = parseOAuthRedirectUrl(redirectUrl);
+		if (parsed.state !== state) {
+			const err = createDriveAuthError("State mismatch during Drive auth.");
+			await setAuthError(err);
+			throw err;
+		}
+		code = parsed.code;
+		if (!code) {
+			const err = createDriveAuthError("No auth code returned from Drive.");
+			await setAuthError(err);
+			throw err;
+		}
+		if (parsed.accessToken && parsed.expiresIn > 0) {
+			await storeTokens({
+				access_token: parsed.accessToken,
+				expires_in: parsed.expiresIn,
+			});
+		}
+	} catch (webAuthErr) {
+		if (webAuthErr.message?.includes("State mismatch") || webAuthErr.message?.includes("No auth code")) {
+			throw webAuthErr;
+		}
+		// browser.identity unavailable or blocked (e.g. mobile) — fall back to tab flow
+		try {
+			code = await launchOAuthTabFlow({
+				authEndpoint: AUTH_ENDPOINT,
+				clientId,
+				redirectUri,
+				scope: SCOPES.join(" "),
+				challenge,
+				extra: { access_type: "offline", prompt: "consent" },
+			});
+		} catch (tabErr) {
+			const authErr = createDriveAuthError(
+				`Google Drive sign-in failed: ${tabErr.message}.`,
+			);
+			await setAuthError(authErr);
+			throw authErr;
+		}
 	}
 	let exchanged;
 	try {

@@ -3,6 +3,8 @@
  * Mirrors the pattern in drive.js but extracted for reuse.
  */
 
+export const pendingAuthFlows = new Map();
+
 export function getRandomString(length = 64) {
 	const array = new Uint8Array(length);
 	crypto.getRandomValues(array);
@@ -150,4 +152,81 @@ export async function refreshAccessToken({
 		throw new Error(`Token refresh failed ${resp.status}: ${text}`);
 	}
 	return resp.json();
+}
+
+/**
+ * Tab-based OAuth flow for mobile/environments where browser.identity is unavailable.
+ * Opens a new tab, appends ext_id to redirect so landing page can sendMessage back.
+ * Resolves with the auth code once onMessageExternal delivers it.
+ *
+ * @param {Object} params
+ * @param {string} params.authEndpoint
+ * @param {string} params.clientId
+ * @param {string} params.redirectUri
+ * @param {string} params.scope
+ * @param {string} params.challenge - PKCE code_challenge
+ * @param {Object} [params.extra]
+ * @param {number} [params.timeoutMs]
+ * @returns {Promise<string>} authorization code
+ */
+export async function launchOAuthTabFlow({
+	authEndpoint,
+	clientId,
+	redirectUri,
+	scope,
+	challenge,
+	extra = {},
+	timeoutMs = 120_000,
+}) {
+	const state = getRandomString(16);
+	const extId = browser.runtime.id;
+	const redirectWithExt = redirectUri.includes("?")
+		? `${redirectUri}&ext_id=${encodeURIComponent(extId)}`
+		: `${redirectUri}?ext_id=${encodeURIComponent(extId)}`;
+
+	const query = new URLSearchParams({
+		response_type: "code",
+		client_id: clientId,
+		redirect_uri: redirectUri,
+		scope,
+		state,
+		code_challenge: challenge,
+		code_challenge_method: "S256",
+		...extra,
+	});
+
+	// Build auth URL and inject ext_id into the redirect_uri param so landing page
+	// knows which extension to sendMessage to on mobile (where window.opener is null).
+	const authUrl = `${authEndpoint}?${query.toString()}`;
+	const authUrlWithExt = authUrl.replace(
+		encodeURIComponent(redirectUri),
+		encodeURIComponent(redirectWithExt),
+	);
+
+	const tab = await browser.tabs.create({ url: authUrlWithExt });
+
+	return new Promise((resolve, reject) => {
+		const cleanup = (tabId) => {
+			pendingAuthFlows.delete(state);
+			if (tabId !== undefined) {
+				browser.tabs.remove(tabId).catch(() => {});
+			}
+		};
+
+		const timer = setTimeout(() => {
+			cleanup(tab.id);
+			reject(new Error("OAuth tab flow timed out."));
+		}, timeoutMs);
+
+		pendingAuthFlows.set(state, (payload) => {
+			clearTimeout(timer);
+			const code = payload.authorizationCode;
+			cleanup(tab.id);
+			if (code) {
+				resolve(code);
+			} else {
+				reject(new Error("OAuth tab flow: no authorization code received."));
+			}
+		});
+	});
 }
