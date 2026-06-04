@@ -28,7 +28,7 @@ import {
 	recoverMissingNovelById,
 } from "../../shared-shelf-helpers.js";
 
-// \u{2500}\u{2500} State \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── State ─────────────────────────────────────────────────────────────────────
 
 let allNovels = [];
 let filteredNovels = [];
@@ -49,7 +49,7 @@ const modalNavigation = createModalNavigationController({
 	onOpenNovel: (novel, options) => showNovelModal(novel, options),
 });
 
-// \u{2500}\u{2500} Filter state \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Filter state ──────────────────────────────────────────────────────────────
 
 const FILTER_STORAGE_KEY = "rg_filters_novelbin";
 const DEFAULT_FILTERS = {
@@ -83,7 +83,7 @@ function persistFilters() {
 	}
 }
 
-// \u{2500}\u{2500} Utilities \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 function escapeHtml(text) {
 	const div = document.createElement("div");
@@ -135,7 +135,7 @@ function sortAlpha(set) {
 	return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-// \u{2500}\u{2500} Taxonomy / filter option building \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Taxonomy / filter option building ─────────────────────────────────────────
 
 function buildFilterOptions(novels) {
 	const languages = new Set();
@@ -166,7 +166,7 @@ function populateDynamicFilters() {
 	renderPillList("genres-filter", genres, filterState.genres, "genres");
 }
 
-// \u{2500}\u{2500} Multi-select pill list \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Multi-select pill list ────────────────────────────────────────────────────
 
 function renderPillList(containerId, items, selectedValues, stateKey) {
 	const container = document.getElementById(containerId);
@@ -215,7 +215,7 @@ function syncPillListUI(containerId, selectedValues) {
 	});
 }
 
-// \u{2500}\u{2500} Active filter chips \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Active filter chips ───────────────────────────────────────────────────────
 
 function renderActiveFilters() {
 	const container = document.getElementById("active-filters");
@@ -239,7 +239,7 @@ function renderActiveFilters() {
 	chips.forEach((chip) => {
 		const el = document.createElement("span");
 		el.className = "filter-chip";
-		el.innerHTML = `<strong>${escapeHtml(chip.label)}</strong> <button aria-label="Clear filter" data-key="${chip.key}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">\u{D7}</button>`;
+		el.innerHTML = `<strong>${escapeHtml(chip.label)}</strong> <button aria-label="Clear filter" data-key="${chip.key}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
 		container.appendChild(el);
 	});
 
@@ -310,7 +310,7 @@ function applyFilterStateToUI() {
 	renderActiveFilters();
 }
 
-// \u{2500}\u{2500} Filter & sort \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Filter & sort ─────────────────────────────────────────────────────────────
 
 function applyFiltersAndSort() {
 	filteredNovels = [...allNovels];
@@ -384,7 +384,7 @@ function applyFiltersAndSort() {
 	persistFilters();
 }
 
-// \u{2500}\u{2500} Render novels \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Render novels ─────────────────────────────────────────────────────────────
 
 function renderNovels(novels = filteredNovels) {
 	const grid = document.getElementById("novel-grid");
@@ -427,7 +427,7 @@ function renderNovels(novels = filteredNovels) {
 
 }
 
-// \u{2500}\u{2500} Modal \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Modal ─────────────────────────────────────────────────────────────────────
 
 function showNovelModal(novel, options = {}) {
 	const modal = document.getElementById("novel-modal");
@@ -573,11 +573,11 @@ function showNovelModal(novel, options = {}) {
 				const template = resolveExportTemplate(settings?.novelCopyFormats, novel.shelfId);
 				const text = formatExportFilename(novel, template);
 				await navigator.clipboard.writeText(text);
-				copyInfoBtn.textContent = "\u{2705} Copied!";
-				setTimeout(() => { copyInfoBtn.textContent = "\u{1F4CB} Copy Name"; }, 2000);
+				copyInfoBtn.textContent = "✅ Copied!";
+				setTimeout(() => { copyInfoBtn.textContent = "📋 Copy Name"; }, 2000);
 			} catch (_) {
-				copyInfoBtn.textContent = "\u{274C} Failed";
-				setTimeout(() => { copyInfoBtn.textContent = "\u{1F4CB} Copy Name"; }, 2000);
+				copyInfoBtn.textContent = "❌ Failed";
+				setTimeout(() => { copyInfoBtn.textContent = "📋 Copy Name"; }, 2000);
 			}
 		};
 	}
@@ -605,7 +605,7 @@ function showNovelModal(novel, options = {}) {
 			const domains = slug
 				? [
 					{ label: "novelbin.com", url: `https://novelbin.com/b/${slug}`, note: "" },
-					{ label: "novelbin.me", url: `https://novelbin.me/b/${slug}`, note: "(mirror \u{2014} may be down)" },
+					{ label: "novelbin.me", url: `https://novelbin.me/b/${slug}`, note: "(mirror — may be down)" },
 					{ label: "novelarrow.com", url: `https://novelarrow.com/novel/${slug}`, note: "(new site)" },
 				]
 				: [];
@@ -631,15 +631,15 @@ function showNovelModal(novel, options = {}) {
 				copyBtn.className = "btn btn-icon lncrawl-copy-cmd";
 				copyBtn.style.cssText = "flex-shrink:0;font-size:11px;padding:3px 8px;";
 				copyBtn.title = `Copy command for ${d.label}`;
-				copyBtn.textContent = "\u{1F4CB}";
+				copyBtn.textContent = "📋";
 				copyBtn.addEventListener("click", async () => {
 					try {
 						await navigator.clipboard.writeText(cmd);
-						copyBtn.textContent = "\u{2705}";
-						setTimeout(() => { copyBtn.textContent = "\u{1F4CB}"; }, 2500);
+						copyBtn.textContent = "✅";
+						setTimeout(() => { copyBtn.textContent = "📋"; }, 2500);
 					} catch (_) {
-						copyBtn.textContent = "\u{274C}";
-						setTimeout(() => { copyBtn.textContent = "\u{1F4CB}"; }, 2000);
+						copyBtn.textContent = "❌";
+						setTimeout(() => { copyBtn.textContent = "📋"; }, 2000);
 					}
 				});
 
@@ -693,7 +693,7 @@ function showNovelModal(novel, options = {}) {
 	document.addEventListener("keydown", closeOnEscape);
 }
 
-// \u{2500}\u{2500} Analytics \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Analytics ─────────────────────────────────────────────────────────────────
 
 function setInsightTarget(valueId, novel, text) {
 	const valueEl = document.getElementById(valueId);
@@ -861,10 +861,10 @@ function renderReadingStatusChart(buckets = {}, total = 0) {
 	const onHoldCount = buckets[READING_STATUS.ON_HOLD] || buckets["on-hold"] || 0;
 	const rereadCount = buckets[READING_STATUS.RE_READING] || buckets["re-reading"] || buckets.rereading || 0;
 
-	summary.textContent = `${rereadCount.toLocaleString()} Rereading \u{2022} ${planCount.toLocaleString()} Plan to Read \u{2022} ${completedCount.toLocaleString()} Completed \u{2022} ${readingCount.toLocaleString()} Reading \u{2022} ${onHoldCount.toLocaleString()} On Hold`;
+	summary.textContent = `${rereadCount.toLocaleString()} Rereading • ${planCount.toLocaleString()} Plan to Read • ${completedCount.toLocaleString()} Completed • ${readingCount.toLocaleString()} Reading • ${onHoldCount.toLocaleString()} On Hold`;
 }
 
-// \u{2500}\u{2500} Filter UI setup \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Filter UI setup ───────────────────────────────────────────────────────────
 
 function positionFilterDropdown() {
 	const dropdown = document.getElementById("filter-dropdown");
@@ -1002,7 +1002,7 @@ function setupFilters() {
 	renderActiveFilters();
 }
 
-// \u{2500}\u{2500} Library helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Library helpers ───────────────────────────────────────────────────────────
 
 function showToast(message, type = "success") {
 	const toast = document.createElement("div");
@@ -1116,7 +1116,7 @@ async function applyDisplaySettings() {
 	if (activeFilters) activeFilters.style.display = s.showActiveFilters ? "" : "none";
 }
 
-// \u{2500}\u{2500} Initialization \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ── Initialization ────────────────────────────────────────────────────────────
 
 (async () => {
 	await applyThemeFromStorage();
@@ -1159,7 +1159,7 @@ async function applyDisplaySettings() {
 			});
 		}
 
-		// Wire card clicks \u{2192} modal. NovelbinNovelCard.onCardClick dispatches a
+		// Wire card clicks → modal. NovelbinNovelCard.onCardClick dispatches a
 		// custom event by default; override it here so clicks open the modal directly.
 		NovelbinNovelCard.onCardClick = (novel) => showNovelModal(novel);
 

@@ -33,7 +33,7 @@ export class WebNovelHandler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "WebNovel",
 		icon: "https://www.yueimg.com/en/favicon/favicon.d3f6a.ico",
-		emoji: "\u{1F30E}",
+		emoji: "🌎",
 		color: "#ff6600",
 		novelIdPattern: /\/book\/(\d+)/,
 		primaryDomain: "www.webnovel.com",
@@ -455,7 +455,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Create enhance button
 		const enhanceBtn = document.createElement("button");
 		enhanceBtn.className = "gemini-enhance-btn";
-		enhanceBtn.textContent = "\u{2728} Enhance Chapter";
+		enhanceBtn.textContent = "✨ Enhance Chapter";
 		enhanceBtn.setAttribute("data-chapter-id", chapterId);
 		enhanceBtn.style.cssText = `
 			flex: 1;
@@ -485,7 +485,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		// Create summarize button
 		const summarizeBtn = document.createElement("button");
 		summarizeBtn.className = "gemini-summarize-btn";
-		summarizeBtn.textContent = "\u{1F4DD} Summarize Chapter";
+		summarizeBtn.textContent = "📝 Summarize Chapter";
 		summarizeBtn.setAttribute("data-chapter-id", chapterId);
 		summarizeBtn.style.cssText = `
 			flex: 1;
@@ -837,7 +837,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		return WebNovelHandler.DEFAULT_SITE_PROMPT;
 	}
 
-	/** WebNovel renders HTML chapter content \u{2014} HTML enhancement is preferred. */
+	/** WebNovel renders HTML chapter content — HTML enhancement is preferred. */
 	formatAfterEnhancement(contentArea) {
 		if (!contentArea) return;
 		contentArea.querySelectorAll("p").forEach((p) => {
@@ -846,7 +846,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		});
 	}
 
-	/** WebNovel renders HTML chapter content \u{2014} HTML enhancement is preferred. */
+	/** WebNovel renders HTML chapter content — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

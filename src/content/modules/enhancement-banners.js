@@ -3,7 +3,7 @@
  */
 
 function getBannerSelector() {
-	// All Ranobe Gemini UI elements on the page \u{2014} toggled together by Hide/Show UI.
+	// All Ranobe Gemini UI elements on the page — toggled together by Hide/Show UI.
 	return [
 		// Enhancement flow banners
 		".gemini-chunk-banner",
@@ -26,11 +26,11 @@ export function shouldBannersBeHiddenRuntime({
 	documentRef = document,
 	currentHandler,
 }) {
-	// Prefer the body attribute as the authoritative state \u{2014} it is set/cleared
+	// Prefer the body attribute as the authoritative state — it is set/cleared
 	// by toggleEnhancedBannersRuntime and survives even when there is no
 	// toggle button on the page (e.g. after we moved it to the popup).
 	if (documentRef.body.hasAttribute("data-rg-ui-hidden")) {
-		return true; // currently hidden \u{2192} toggle will show
+		return true; // currently hidden → toggle will show
 	}
 
 	// Fallback: use the on-page toggle button text when present.
@@ -39,7 +39,7 @@ export function shouldBannersBeHiddenRuntime({
 		return toggleBtn.textContent.includes("Show");
 	}
 
-	// No state tracked yet \u{2192} respect the handler's default.
+	// No state tracked yet → respect the handler's default.
 	return currentHandler?.constructor?.DEFAULT_BANNERS_VISIBLE === false;
 }
 
@@ -64,11 +64,11 @@ function toggleBannerNodes(documentRef, isHidden) {
 
 function syncToggleButtons(documentRef, isHidden, callerBtn = null) {
 	const nextChapterLabel = isHidden
-		? "\u{26A1} Hide Gemini UI"
-		: "\u{26A1} Show Gemini UI";
+		? "⚡ Hide Gemini UI"
+		: "⚡ Show Gemini UI";
 	const nextMainLabel = isHidden
-		? '<span style="font-size: 20px;">\u{26A1}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
-		: '<span style="font-size: 20px;">\u{26A1}</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
+		? '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>'
+		: '<span style="font-size: 20px;">⚡</span> <span style="font-weight: 600;">Show Ranobe Gemini</span>';
 
 	const toggleBtn = documentRef.querySelector(".gemini-toggle-banners-btn");
 	if (toggleBtn) {
@@ -121,7 +121,7 @@ export function toggleEnhancedBannersRuntime({
 }
 
 /**
- * Apply a stored hidden/visible state without toggling \u{2014} used on page load.
+ * Apply a stored hidden/visible state without toggling — used on page load.
  * @param {boolean} shouldBeHidden
  * @param {Document} documentRef
  * @param {object} currentHandler

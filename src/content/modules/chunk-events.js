@@ -39,14 +39,14 @@ export async function toggleChunkViewRuntime({
 		} else {
 			chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
 		}
-		toggleBtn.textContent = "\u{2728} Show Enhanced";
+		toggleBtn.textContent = "✨ Show Enhanced";
 		toggleBtn.setAttribute("data-showing", "original");
 		return;
 	}
 
 	chunkContent.innerHTML = enhancedContent;
 	applyCollapsibleSections(chunkContent);
-	toggleBtn.textContent = "\u{1F441} Show Original";
+	toggleBtn.textContent = "👁 Show Original";
 	toggleBtn.setAttribute("data-showing", "enhanced");
 
 	const contentArea = findContentArea();
@@ -167,14 +167,14 @@ export async function handleChunkToggleRuntime({
 		} else {
 			chunkContent.innerHTML = `<div style="white-space: pre-wrap;">${escapeHtml(originalContent || "")}</div>`;
 		}
-		toggleBtn.textContent = "\u{2728} Show Enhanced";
+		toggleBtn.textContent = "✨ Show Enhanced";
 		toggleBtn.setAttribute("data-showing", "original");
 		return;
 	}
 
 	chunkContent.innerHTML = enhancedContent;
 	applyCollapsibleSections(chunkContent);
-	toggleBtn.textContent = "\u{1F441} Show Original";
+	toggleBtn.textContent = "👁 Show Original";
 	toggleBtn.setAttribute("data-showing", "enhanced");
 
 	const contentArea = findContentArea();
@@ -190,7 +190,7 @@ export async function handleSkipChunkRuntime({
 }) {
 	chunkControlRuntime?.markSkip(chunkIndex);
 	debugLog(
-		`Chunk ${chunkIndex} marked for skip \u{2014} will discard result on arrival.`,
+		`Chunk ${chunkIndex} marked for skip — will discard result on arrival.`,
 	);
 }
 
@@ -201,7 +201,7 @@ export async function handlePauseChunkRuntime({
 }) {
 	chunkControlRuntime?.markPause(chunkIndex);
 	debugLog(
-		`Chunk ${chunkIndex} marked for pause \u{2014} will store result without applying.`,
+		`Chunk ${chunkIndex} marked for pause — will store result without applying.`,
 	);
 }
 
@@ -284,7 +284,7 @@ export async function handleShowEnhancedChunkRuntime({
 
 	if (allDone) {
 		documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "\u{1F504} Re-enhance with Gemini";
+			btn.textContent = "🔄 Re-enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});
@@ -298,7 +298,7 @@ export async function handleShowEnhancedChunkRuntime({
 	}
 
 	showStatusMessage?.(
-		`Chunk ${chunkIndex + 1} enhancement applied! \u{2728}`,
+		`Chunk ${chunkIndex + 1} enhancement applied! ✨`,
 		"success",
 		2000,
 	);
@@ -561,7 +561,7 @@ export async function handleReenhanceChunkRuntime({
 					documentRef
 						.querySelectorAll(".gemini-enhance-btn")
 						.forEach((btn) => {
-							btn.textContent = "\u{2728} Enhance with Gemini";
+							btn.textContent = "✨ Enhance with Gemini";
 							btn.disabled = false;
 							btn.classList.remove("loading");
 						});
@@ -613,13 +613,13 @@ export async function handleReenhanceChunkRuntime({
 						documentRef
 							.querySelectorAll(".gemini-enhance-btn")
 							.forEach((btn) => {
-								btn.textContent = "\u{2728} Enhance with Gemini";
+								btn.textContent = "✨ Enhance with Gemini";
 								btn.disabled = false;
 								btn.classList.remove("loading");
 							});
 					}
 					showStatusMessage?.(
-						`Chunk ${chunkIndex + 1} enhancement ready - click "\u{2728} Show Enhanced" to apply.`,
+						`Chunk ${chunkIndex + 1} enhancement ready - click "✨ Show Enhanced" to apply.`,
 						"info",
 						4000,
 					);
@@ -719,7 +719,7 @@ export async function handleReenhanceChunkRuntime({
 				documentRef
 					.querySelectorAll(".gemini-enhance-btn")
 					.forEach((btn) => {
-						btn.textContent = "\u{1F504} Re-enhance with Gemini";
+						btn.textContent = "🔄 Re-enhance with Gemini";
 						btn.disabled = false;
 						btn.classList.remove("loading");
 					});
@@ -752,7 +752,7 @@ export async function handleReenhanceChunkRuntime({
 					);
 				}
 				showStatusMessage?.(
-					"Content fully enhanced with Gemini! \u{2728}",
+					"Content fully enhanced with Gemini! ✨",
 					"success",
 				);
 			} else {
@@ -760,7 +760,7 @@ export async function handleReenhanceChunkRuntime({
 					documentRef
 						.querySelectorAll(".gemini-enhance-btn")
 						.forEach((btn) => {
-							btn.textContent = "\u{2728} Enhance with Gemini";
+							btn.textContent = "✨ Enhance with Gemini";
 							btn.disabled = false;
 							btn.classList.remove("loading");
 						});
@@ -808,7 +808,7 @@ export async function handleReenhanceChunkRuntime({
 				documentRef
 					.querySelectorAll(".gemini-enhance-btn")
 					.forEach((btn) => {
-						btn.textContent = "\u{2728} Enhance with Gemini";
+						btn.textContent = "✨ Enhance with Gemini";
 						btn.disabled = false;
 						btn.classList.remove("loading");
 					});
@@ -846,7 +846,7 @@ export async function handleReenhanceChunkRuntime({
 			documentRef
 				.querySelectorAll(".gemini-enhance-btn")
 				.forEach((btn) => {
-					btn.textContent = "\u{2728} Enhance with Gemini";
+					btn.textContent = "✨ Enhance with Gemini";
 					btn.disabled = false;
 					btn.classList.remove("loading");
 				});

@@ -31,7 +31,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		name: "ScribbleHub",
 		icon: "https://www.scribblehub.com/favicon.ico",
 		invertIconInDarkMode: true,
-		emoji: "\u{2728}",
+		emoji: "✨",
 		color: "#6c5ce7",
 		novelIdPattern: /\/series\/(\d+)\/|\/read\/(\d+)-/,
 		primaryDomain: "www.scribblehub.com",
@@ -44,7 +44,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -59,7 +59,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				defaultValue: true,
 				description: "Use HTML-aware enhancement to preserve author formatting and special elements.",
 			},
-			{ key: "_content", type: "section", label: "\u{1F4DD} Content Handling" },
+			{ key: "_content", type: "section", label: "📝 Content Handling" },
 			{
 				key: "includeParanNote",
 				label: "Include author paragraph notes",
@@ -74,7 +74,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				defaultValue: false,
 				description: "Do not enhance paragraphs that are inside ScribbleHub mature content containers.",
 			},
-			{ key: "_display", type: "section", label: "\u{1F3A8} Display" },
+			{ key: "_display", type: "section", label: "🎨 Display" },
 			{
 				key: "fontSize",
 				label: "Font size (%)",
@@ -83,9 +83,9 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				min: 50,
 				max: 200,
 				step: 10,
-				description: "Font size percentage for enhanced/summary content (50\u{2013}200%).",
+				description: "Font size percentage for enhanced/summary content (50–200%).",
 			},
-			{ key: "_css", type: "section", label: "\u{1F4BB} Custom CSS" },
+			{ key: "_css", type: "section", label: "💻 Custom CSS" },
 			{
 				key: "globalCSS",
 				label: "Global CSS override",
@@ -443,7 +443,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		super.formatAfterEnhancement(contentArea);
 	}
 
-	/** ScribbleHub renders HTML chapter content \u{2014} HTML enhancement is preferred. */
+	/** ScribbleHub renders HTML chapter content — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

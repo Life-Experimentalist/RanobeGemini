@@ -16,7 +16,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 			id: "novelbin",
 			name: "NovelBin (NovelArrow)",
 			icon: "https://novelbin.com/favicon.ico",
-			emoji: "\u{1F4DA}",
+			emoji: "📚",
 			color: "#6200ea",
 		};
 	}
@@ -59,7 +59,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 
 		const coverHtml = coverUrl
 			? `<img class="nb-cover-img" src="${this.escapeHtml(coverUrl)}" alt="${this.escapeHtml(novel.title)}" loading="lazy" data-fallback="${this.escapeHtml(this.getFallbackCover(this.shelfConfig))}">`
-			: `<div class="nb-cover-placeholder">\u{1F4DA}</div>`;
+			: `<div class="nb-cover-placeholder">📚</div>`;
 
 		const genreHtml = genres.slice(0, MAX_CARD_GENRES)
 			.map((g) => `<span class="nb-genre">${this.escapeHtml(g)}</span>`)
@@ -87,7 +87,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 					<div class="nb-progress-bar">
 						<div class="nb-progress-fill" style="width:${progressPct}%"></div>
 					</div>
-					<span class="nb-enhance-text">${chapterText} \u{2022} \u{2728} <strong>${this.formatNumber(enhanced)}</strong> enhanced</span>
+					<span class="nb-enhance-text">${chapterText} • ✨ <strong>${this.formatNumber(enhanced)}</strong> enhanced</span>
 				</div>
 			</div>
 		`;
@@ -177,7 +177,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 					</div>` : ""}
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Chapters</span>
-						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "\u{2014}"}</span>
+						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "—"}</span>
 					</div>
 					${rating ? `
 					<div class="novelbin-meta-group">
@@ -195,8 +195,8 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 				<div class="site-modal-section">
 					<h4 class="novelbin-section-title">Statistics</h4>
 					<div class="site-stats-grid">
-						${renderStat("Views", this.formatNumber(views), "\u{1F441}\u{FE0F}")}
-						${updatedText ? renderStat("Updated", updatedText, "\u{1F504}") : ""}
+						${renderStat("Views", this.formatNumber(views), "👁️")}
+						${updatedText ? renderStat("Updated", updatedText, "🔄") : ""}
 					</div>
 				</div>` : ""}
 

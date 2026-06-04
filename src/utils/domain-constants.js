@@ -94,8 +94,8 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 		const forceDisabled = HandlerClass.FORCE_DISABLED === true;
 
 		// Convert raw SUPPORTED_DOMAINS patterns to browser permission origins.
-		// Wildcard patterns (*.domain.com) \u{2192} *://*.domain.com/*
-		// Exact domains (domain.com) \u{2192} *://domain.com/*
+		// Wildcard patterns (*.domain.com) → *://*.domain.com/*
+		// Exact domains (domain.com) → *://domain.com/*
 		const permissionOrigins = domains.map((d) =>
 			d.startsWith("*.") ? `*://${d}/*` : `*://${d}/*`,
 		);
@@ -105,8 +105,8 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 			SHELF_REGISTRY[shelfId] = {
 				id: shelfMeta.id,
 				name: shelfMeta.name || shelfMeta.id,
-				icon: shelfMeta.icon || "\u{1F4D6}",
-				emoji: shelfMeta.emoji || "\u{1F4D6}",
+				icon: shelfMeta.icon || "📖",
+				emoji: shelfMeta.emoji || "📖",
 				color: shelfMeta.color || "#666",
 				invertIconInDarkMode: shelfMeta.invertIconInDarkMode || false,
 				domains: expandedDomains,

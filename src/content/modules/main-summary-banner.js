@@ -43,7 +43,7 @@ export function createMainSummaryBannerRuntime({
 	}`;
 
 	const allSuccess = completedChunks === totalChunks;
-	const statusEmoji = allSuccess ? "\u{2728}" : "\u{26A0}\u{FE0F}";
+	const statusEmoji = allSuccess ? "✨" : "⚠️";
 	const statusText = allSuccess
 		? `All ${totalChunks} chunks enhanced`
 		: `${completedChunks}/${totalChunks} chunks enhanced`;
@@ -91,7 +91,7 @@ export function createMainSummaryBannerRuntime({
 						cursor: pointer;
 						font-size: 12px;
 						font-weight: 600;
-					">\u{1F4C4} Show All Original</button>
+					">📄 Show All Original</button>
 					<button class="gemini-main-delete-btn" title="Delete all cached enhanced content" style="
 						padding: 6px 12px;
 						background: #d32f2f;
@@ -101,14 +101,14 @@ export function createMainSummaryBannerRuntime({
 						cursor: pointer;
 						font-size: 12px;
 						font-weight: 600;
-					">\u{1F5D1}\u{FE0F} Delete Cache</button>
+					">🗑️ Delete Cache</button>
 				</div>
 			</div>
 			<div style="padding-top: 10px; border-top: 1px solid ${
 				isDarkMode ? "#444" : "#ddd"
 			};">
 				<div style="font-size: 14px; color: ${textColor}; font-family: monospace;">
-					Total Words: ${originalWordCount.toLocaleString()} \u{2192} ${totalEnhancedWords.toLocaleString()}
+					Total Words: ${originalWordCount.toLocaleString()} → ${totalEnhancedWords.toLocaleString()}
 					<span style="color: ${
 						wordDifference >= 0 ? "#28a745" : "#dc3545"
 					}; font-weight: bold; margin-left: 8px;">

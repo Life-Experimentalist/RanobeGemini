@@ -307,7 +307,7 @@ export function ensureRandomSelectButton(
 	button.type = "button";
 	button.id = "random-select-btn";
 	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "\u{1F3B2} Random";
+	button.textContent = "🎲 Random";
 	button.title = "Pick a random novel from current filters";
 
 	button.addEventListener("click", () => {
@@ -448,7 +448,7 @@ export function createModalNavigationController({
 /**
  * Bind horizontal swipe (touch) and drag (pointer/mouse) gestures to navigate
  * prev/next novels inside a modal. Works on all screen sizes.
- * Swipe right \u{2192} onPrev, swipe left \u{2192} onNext.
+ * Swipe right → onPrev, swipe left → onNext.
  *
  * @param {Object} options
  * @param {HTMLElement|string} options.modal - Modal element or id.

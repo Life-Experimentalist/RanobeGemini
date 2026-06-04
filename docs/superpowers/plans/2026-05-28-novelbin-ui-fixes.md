@@ -104,7 +104,7 @@ thresholdWarning = `
         color: #fca5a5;
         flex-wrap: wrap;
     ">
-        <span style="font-size: 16px;">\u{26A0}\u{FE0F}</span>
+        <span style="font-size: 16px;">⚠️</span>
         <span>Word count change (${percentChange}%) exceeds threshold (${threshold}%). Content may be unusually long.</span>
         <button id="${showEnhancedBtnId}" style="
             padding: 3px 10px;
@@ -154,7 +154,7 @@ In `src/content/modules/enhanced-content-banner.js`, find the word count display
 ```js
 const largeExpansionWarning = percentChange > 200
     ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">
-        \u{26A0}\u{FE0F} Very large expansion (+${Math.abs(percentChange)}%). Check if enhanced content is correct.
+        ⚠️ Very large expansion (+${Math.abs(percentChange)}%). Check if enhanced content is correct.
         <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button>
        </div>`
     : "";

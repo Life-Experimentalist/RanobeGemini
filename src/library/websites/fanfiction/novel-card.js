@@ -46,7 +46,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			id: "fanfiction",
 			name: "FanFiction.net",
 			icon: "https://www.fanfiction.net/static/icons3/ff-icon-192.png",
-			emoji: "\u{270D}\u{FE0F}",
+			emoji: "✍️",
 			color: "#2a4b8d",
 		};
 	}
@@ -353,7 +353,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				)}" alt="${this.escapeHtml(
 					novel.title,
 				)}" data-fallback="${fallbackCover}" loading="lazy">`
-			: '<div class="novel-cover-placeholder">\u{1F4DA}</div>';
+			: '<div class="novel-cover-placeholder">📚</div>';
 
 		const readingKeyRaw =
 			novel.readingStatus ||
@@ -416,7 +416,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		// Build comprehensive stats display
 		const stats = [];
 		if (chapters)
-			stats.push({ icon: "\u{1F4D6}", label: "Chapters", value: chapters });
+			stats.push({ icon: "📖", label: "Chapters", value: chapters });
 
 		const words = getVal("words", 0);
 		const reviews = getVal("reviews", 0);
@@ -425,35 +425,35 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const publishedDate = getVal("publishedDate");
 		const updatedDate = getVal("updatedDate");
 
-		if (words) stats.push({ icon: "\u{1F4DD}", label: "Words", value: words });
+		if (words) stats.push({ icon: "📝", label: "Words", value: words });
 		if (reviews)
 			stats.push({
-				icon: "\u{1F4AC}",
+				icon: "💬",
 				label: "Reviews",
 				value: reviews,
 			});
 		if (favorites)
 			stats.push({
-				icon: "\u{2B50}",
+				icon: "⭐",
 				label: "Favorites",
 				value: favorites,
 			});
 		if (follows)
 			stats.push({
-				icon: "\u{1F465}",
+				icon: "👥",
 				label: "Follows",
 				value: follows,
 			});
 		if (publishedDate)
 			stats.push({
-				icon: "\u{1F4C5}",
+				icon: "📅",
 				label: "Published",
 				value: this.formatDateShort(publishedDate),
 				isDate: true,
 			});
 		if (updatedDate)
 			stats.push({
-				icon: "\u{1F504}",
+				icon: "🔄",
 				label: "Updated",
 				value: this.formatDateShort(updatedDate),
 				isDate: true,
@@ -563,7 +563,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 						<div class="progress-bar-slim">
 							<div class="progress-fill" style="width: ${progressPercent}%;"></div>
 						</div>
-						<span class="enhancement-text">\u{1F4D6} <strong>${progressLabel}</strong> \u{2022} \u{2728} ${this.formatNumber(
+						<span class="enhancement-text">📖 <strong>${progressLabel}</strong> • ✨ ${this.formatNumber(
 							enhanced,
 						)} enhanced</span>
 					</div>
@@ -584,7 +584,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 								novel.sourceUrl
 									? `<a class="action-btn" href="${this.escapeHtml(
 											novel.sourceUrl,
-										)}" target="_blank" rel="noreferrer">Open \u{2197}</a>`
+										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""
 							}
 						</div>
@@ -681,12 +681,12 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		};
 		const parts = [];
 		const enhanced = novel.enhancedChaptersCount ?? 0;
-		parts.push(`\u{2728} ${this.formatNumber(enhanced)} enhanced`);
+		parts.push(`✨ ${this.formatNumber(enhanced)} enhanced`);
 
 		const chapters =
 			getVal("totalChapters") || getVal("chapterCount") || null;
 		if (chapters) {
-			parts.push(`\u{1F4D6} ${this.formatNumber(chapters)} ch`);
+			parts.push(`📖 ${this.formatNumber(chapters)} ch`);
 		}
 
 		const words = getVal("words", 0);
@@ -694,12 +694,12 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const follows = getVal("follows", 0);
 		const reviews = getVal("reviews", 0);
 
-		if (words) parts.push(`\u{1F4DD} ${this.formatNumber(words)} words`);
-		if (favorites) parts.push(`\u{2B50} ${this.formatNumber(favorites)} favs`);
-		if (follows) parts.push(`\u{1F465} ${this.formatNumber(follows)} follows`);
-		if (reviews) parts.push(`\u{1F4AC} ${this.formatNumber(reviews)} reviews`);
+		if (words) parts.push(`📝 ${this.formatNumber(words)} words`);
+		if (favorites) parts.push(`⭐ ${this.formatNumber(favorites)} favs`);
+		if (follows) parts.push(`👥 ${this.formatNumber(follows)} follows`);
+		if (reviews) parts.push(`💬 ${this.formatNumber(reviews)} reviews`);
 
-		return parts.slice(0, 4).join(" \u{2022} ");
+		return parts.slice(0, 4).join(" • ");
 	}
 
 	static renderCardTags(novel) {
@@ -985,14 +985,14 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 				<div class="site-modal-section fanfic-modal-section">
 					<h4 class="modal-section-title">Statistics</h4>
 					<div class="site-stats-grid fanfic-stats-grid-large">
-						${renderStat("Chapters", this.formatNumber(totalChapters), "\u{1F4D6}")}
-						${renderStat("Words", this.formatNumber(words), "\u{1F4DD}")}
-						${renderStat("Reviews", this.formatNumber(reviews), "\u{1F4AC}")}
-						${renderStat("Favorites", this.formatNumber(favorites), "\u{2B50}")}
-						${renderStat("Follows", this.formatNumber(follows), "\u{1F465}")}
-						${renderStat("Published", formatDate(publishedDate), "\u{1F4C5}")}
-						${renderStat("Updated", formatDate(updatedDate), "\u{1F504}")}
-						${renderStat("Story ID", storyId, "\u{1F194}")}
+						${renderStat("Chapters", this.formatNumber(totalChapters), "📖")}
+						${renderStat("Words", this.formatNumber(words), "📝")}
+						${renderStat("Reviews", this.formatNumber(reviews), "💬")}
+						${renderStat("Favorites", this.formatNumber(favorites), "⭐")}
+						${renderStat("Follows", this.formatNumber(follows), "👥")}
+						${renderStat("Published", formatDate(publishedDate), "📅")}
+						${renderStat("Updated", formatDate(updatedDate), "🔄")}
+						${renderStat("Story ID", storyId, "🆔")}
 					</div>
 				</div>
 

@@ -31,14 +31,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		name: "Ranobes",
 		icon: "https://ranobes.net/favicon.ico",
 		iconFallback: "https://ranobes.top/favicon.ico",
-		emoji: "\u{1F343}",
+		emoji: "🍃",
 		color: "#4a7c4e",
 		// Pattern matches various ranobes URL formats and extracts the numeric novel ID:
-		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html \u{2192} captures 1206917
-		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html \u{2192} captures 1206917
+		// Novel page:  /novels/1206917-my-yandere-female-tycoon-wife.html → captures 1206917
+		// Chapter page: /my-yandere-female-tycoon-wife-1206917/2964516.html → captures 1206917
 
-		// Read page: /read-1206917.html \u{2192} captures 1206917
-		// Chapters list: /chapters/1206917/ \u{2192} captures 1206917
+		// Read page: /read-1206917.html → captures 1206917
+		// Chapters list: /chapters/1206917/ → captures 1206917
 		novelIdPattern:
 			/\/novels\/(\d+)-|\/[a-z0-9-]+-(\d+)\/|^\/read-(\d+)\.html|\/chapters\/(\d+)/,
 		primaryDomain: "ranobes.top",
@@ -65,7 +65,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -80,7 +80,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				defaultValue: true,
 				description: "Use HTML-aware enhancement to preserve formatting. Disable for plain-text mode.",
 			},
-			{ key: "_content", type: "section", label: "\u{1F4DD} Content Handling" },
+			{ key: "_content", type: "section", label: "📝 Content Handling" },
 			{
 				key: "stripTranslatorNotes",
 				label: "Move translator/author notes to box",
@@ -103,7 +103,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					{ value: "other", label: "Other" },
 				],
 			},
-			{ key: "_display", type: "section", label: "\u{1F3A8} Display" },
+			{ key: "_display", type: "section", label: "🎨 Display" },
 			{
 				key: "chapterFontSize",
 				label: "Enhanced chapter font size",
@@ -112,7 +112,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				min: 70,
 				max: 150,
 				step: 5,
-				description: "Font size percentage for enhanced chapter text (70\u{2013}150%).",
+				description: "Font size percentage for enhanced chapter text (70–150%).",
 			},
 		],
 	};
@@ -436,7 +436,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		chapterText = this.removeAdRelatedText(chapterText);
 
 		// Additional cleaning - check the first few lines for titles
-		const titleParts = chapterTitle.split(/[:\-\u{2013}\u{2014}]/);
+		const titleParts = chapterTitle.split(/[:\-–—]/);
 		const lines = chapterText.split("\n");
 		const headLines = lines.slice(0, 5); // Only look at first 5 lines
 		const filteredHeadLines = headLines.filter((line) => {
@@ -632,7 +632,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		});
 	}
 
-	/** Ranobes renders HTML chapter content \u{2014} HTML enhancement is preferred. */
+	/** Ranobes renders HTML chapter content — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}
@@ -749,7 +749,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						titleEl.childNodes[0]?.textContent?.trim();
 					metadata.title = titleText || titleEl.textContent.trim();
 					// Remove subtitle if present
-					metadata.title = metadata.title.split("\u{2022}")[0].trim();
+					metadata.title = metadata.title.split("•")[0].trim();
 				}
 
 				// Fallback title selectors

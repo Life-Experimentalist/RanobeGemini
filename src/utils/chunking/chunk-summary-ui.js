@@ -5,12 +5,12 @@
  *
  * Structure used for BOTH main and per-chunk groups:
  *
- *   .gemini-*-summary-group   (display:block  \u{2014} outer card)
- *     \u{251C}\u{2500}\u{2500} .rg-summary-label   (plain text label)
- *     \u{251C}\u{2500}\u{2500} .rg-summary-buttons (display:grid   \u{2014} equal-width button grid)
- *     \u{2502}     \u{251C}\u{2500}\u{2500} button
- *     \u{2502}     \u{2514}\u{2500}\u{2500} button ...
- *     \u{2514}\u{2500}\u{2500} .gemini-summary-text-container  (display:none \u{2192} block on reveal)
+ *   .gemini-*-summary-group   (display:block  — outer card)
+ *     ├── .rg-summary-label   (plain text label)
+ *     ├── .rg-summary-buttons (display:grid   — equal-width button grid)
+ *     │     ├── button
+ *     │     └── button ...
+ *     └── .gemini-summary-text-container  (display:none → block on reveal)
  *
  * Keeping label / buttons / text in separate divs prevents the
  * flex-child sizing issues that arose with a flat single-flex layout.
@@ -20,9 +20,9 @@ import { DEFAULT_CHUNK_SUMMARY_COUNT } from "./chunk-config.js";
 // eslint-disable-next-line no-unused-vars
 import { isDarkMode, getThemeColors } from "./chunk-ui.js";
 
-/* \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+/* ─────────────────────────────────────────────────────────────
    Internal helpers
-\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500} */
+───────────────────────────────────────────────────────────── */
 
 function buildCard(className, colors) {
 	const card = document.createElement("div");
@@ -162,9 +162,9 @@ function buildShortTextContainer(groupStart, groupEnd, colors, extraClass = "") 
 	return div;
 }
 
-/* \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+/* ─────────────────────────────────────────────────────────────
    Exported: per-chunk summary group (appears between N chunks)
-\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500} */
+───────────────────────────────────────────────────────────── */
 
 /**
  * Create a summary button group for a range of chunks
@@ -190,7 +190,7 @@ export function createSummaryButtonGroup(
 
 	card.appendChild(
 		buildLabel(
-			`Summary \u{B7} Chunks ${startIndex + 1}\u{2013}${endIndex + 1}`,
+			`Summary · Chunks ${startIndex + 1}–${endIndex + 1}`,
 			colors,
 		),
 	);
@@ -198,7 +198,7 @@ export function createSummaryButtonGroup(
 	const row = buildButtonRow();
 
 	const longBtn = buildButton(
-		"\u{1F4DD} Long Summary",
+		"📝 Long Summary",
 		"gemini-chunk-long-summary-btn",
 		colors.primary,
 		colors.onPrimary,
@@ -210,7 +210,7 @@ export function createSummaryButtonGroup(
 	row.appendChild(longBtn);
 
 	const shortBtn = buildButton(
-		"\u{2728} Short Summary",
+		"✨ Short Summary",
 		"gemini-chunk-short-summary-btn",
 		colors.surface,
 		colors.primary,
@@ -229,9 +229,9 @@ export function createSummaryButtonGroup(
 	return card;
 }
 
-/* \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+/* ─────────────────────────────────────────────────────────────
    Exported: main summary group (full chapter, shown at top)
-\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500} */
+───────────────────────────────────────────────────────────── */
 
 /**
  * Create the full-chapter summary button group shown above the content.
@@ -258,7 +258,7 @@ export function createMainSummaryGroup(
 
 	if (onEnhance) {
 		const enhanceBtn = buildButton(
-			"\u{26A1} Enhance Chapter",
+			"⚡ Enhance Chapter",
 			"gemini-enhance-btn",
 			colors.primary,
 			colors.onPrimary,
@@ -269,7 +269,7 @@ export function createMainSummaryGroup(
 	}
 
 	const longBtn = buildButton(
-		"\u{1F4DD} Long Summary",
+		"📝 Long Summary",
 		"gemini-main-long-summary-btn",
 		colors.primary,
 		colors.onPrimary,
@@ -279,7 +279,7 @@ export function createMainSummaryGroup(
 	row.appendChild(longBtn);
 
 	const shortBtn = buildButton(
-		"\u{2728} Short Summary",
+		"✨ Short Summary",
 		"gemini-main-short-summary-btn",
 		colors.surface,
 		colors.primary,
@@ -300,9 +300,9 @@ export function createMainSummaryGroup(
 	return card;
 }
 
-/* \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+/* ─────────────────────────────────────────────────────────────
    Exported: position calculation + insertion helpers
-\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500} */
+───────────────────────────────────────────────────────────── */
 
 /**
  * Calculate where to insert per-chunk summary groups.

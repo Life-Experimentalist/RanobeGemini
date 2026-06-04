@@ -20,7 +20,7 @@ import {
 } from "../site-settings-ui.js";
 import { debugError } from "../../utils/logger.js";
 
-// Theme \u{2014} centralized
+// Theme — centralized
 import {
 	DEFAULT_THEME as defaultTheme,
 	setThemeVariables,
@@ -133,7 +133,7 @@ function setupFilterControls() {
 
 			<div class="filter-group">
 				<button type="button" id="random-select-btn" class="filter-btn">
-					\u{1F3B2} Random
+					🎲 Random
 				</button>
             </div>
 
@@ -155,7 +155,7 @@ function setupFilterControls() {
                 <div class="tags-filter-container" id="tags-filter-container">
                     <button type="button" class="tags-dropdown-btn" id="tags-dropdown-btn">
                         <span id="tags-count">All Tags</span>
-                        <span class="dropdown-arrow">\u{25BC}</span>
+                        <span class="dropdown-arrow">▼</span>
                     </button>
                     <div class="tags-dropdown" id="tags-dropdown">
                         <div class="tags-dropdown-search">
@@ -184,7 +184,7 @@ function setupFilterControls() {
 
             <div class="filter-group">
                 <button type="button" id="sort-order-btn" class="sort-order-btn" title="Toggle sort order">
-                    <span id="sort-order-icon">\u{2193}</span>
+                    <span id="sort-order-icon">↓</span>
                 </button>
             </div>
         </div>
@@ -232,7 +232,7 @@ async function setupWebsiteSettingsModal() {
 		settingsBtn.id = "site-settings-btn";
 		settingsBtn.className = "shelf-settings-btn";
 		settingsBtn.type = "button";
-		settingsBtn.textContent = "\u{2699}\u{FE0F} Settings";
+		settingsBtn.textContent = "⚙️ Settings";
 		if (backLink && backLink.parentElement === header) {
 			header.insertBefore(settingsBtn, backLink);
 		} else {
@@ -260,13 +260,13 @@ async function setupWebsiteSettingsModal() {
 			<div class="modal-backdrop"></div>
 			<div class="modal-content settings-modal-content">
 				<button class="modal-close" id="site-settings-close">&times;</button>
-				<h2 style="margin-bottom: 8px;">\u{2699}\u{FE0F} ${definition.label} Settings</h2>
+				<h2 style="margin-bottom: 8px;">⚙️ ${definition.label} Settings</h2>
 				<p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-secondary, #999);">
 					Manage site-specific preferences for this library.
 				</p>
 				<div class="settings-tabs">
 					<button class="settings-tab active" data-tab="website-settings-panel">
-						\u{2699}\u{FE0F} Settings
+						⚙️ Settings
 					</button>
 				</div>
 				<div class="settings-tab-content" id="website-settings-panel">
@@ -398,12 +398,12 @@ function setupEventListeners() {
 			currentFilters.sortOrder =
 				currentFilters.sortOrder === "asc" ? "desc" : "asc";
 			document.getElementById("sort-order-icon").textContent =
-				currentFilters.sortOrder === "asc" ? "\u{2191}" : "\u{2193}";
+				currentFilters.sortOrder === "asc" ? "↑" : "↓";
 			applyFiltersAndSort();
 		});
 	}
 
-	// Random select button \u{2014} anti-repeat
+	// Random select button — anti-repeat
 	const _shelfPageRecentPicks = new Set();
 	const randomSelectBtn = document.getElementById("random-select-btn");
 	if (randomSelectBtn) {
@@ -614,7 +614,7 @@ function updateActiveFilters() {
 			filter.type
 		}" data-value="${escapeHtml(filter.value)}">
             ${escapeHtml(filter.label)}
-            <button type="button" class="remove-filter" aria-label="Remove filter">\u{D7}</button>
+            <button type="button" class="remove-filter" aria-label="Remove filter">×</button>
         </span>
     `,
 			)
@@ -911,13 +911,13 @@ function createNovelCard(novel) {
 							novel.lastChapterUrl ||
 							novel.sourceUrl,
 					)}" title="Continue reading">
-						\u{1F4D6} Continue
+						📖 Continue
 					</button>
 
                     <button class="btn-novel-menu" data-novel-id="${escapeHtml(
 						novel.id,
 					)}" title="More options">
-                        \u{22EE}
+                        ⋮
                     </button>
                 </div>
             </div>
@@ -963,7 +963,7 @@ function setupCardEventListeners() {
 		});
 	});
 
-	// Continue button \u{2014} use event.currentTarget to avoid inner-target issues
+	// Continue button — use event.currentTarget to avoid inner-target issues
 	document.querySelectorAll(".btn-continue").forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			const el = e.currentTarget || e.target.closest(".btn-continue");
@@ -1017,11 +1017,11 @@ function showNovelMenu(novelId, anchor) {
 	const menu = document.createElement("div");
 	menu.className = "novel-context-menu";
 	menu.innerHTML = `
-        <button class="menu-item" data-action="details">\u{1F4CB} View Details</button>
-        <button class="menu-item" data-action="source">\u{1F517} Open Source Page</button>
-        <button class="menu-item" data-action="refresh">\u{1F504} Refresh Metadata</button>
+        <button class="menu-item" data-action="details">📋 View Details</button>
+        <button class="menu-item" data-action="source">🔗 Open Source Page</button>
+        <button class="menu-item" data-action="refresh">🔄 Refresh Metadata</button>
         <hr>
-        <button class="menu-item danger" data-action="remove">\u{1F5D1}\u{FE0F} Remove from Library</button>
+        <button class="menu-item danger" data-action="remove">🗑️ Remove from Library</button>
     `;
 
 	// Position menu near anchor
@@ -1154,7 +1154,7 @@ function showError(message) {
 	if (container) {
 		container.innerHTML = `
             <div class="error-message">
-                <p>\u{26A0}\u{FE0F} ${escapeHtml(message)}</p>
+                <p>⚠️ ${escapeHtml(message)}</p>
                 <button onclick="location.reload()">Retry</button>
             </div>
         `;

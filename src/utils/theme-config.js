@@ -10,9 +10,9 @@
  * @module theme-config
  */
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 // Default theme settings object (stored in browser.storage)
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 
 export const DEFAULT_THEME = {
 	mode: "dark",
@@ -52,9 +52,9 @@ export const DEFAULT_THEME = {
 	timeCustomEnd: "18:00",
 };
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 // Preset Theme Skins
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 
 /**
  * Each preset defines both dark and light variants of CSS custom properties.
@@ -67,7 +67,7 @@ export const THEME_PRESETS = {
 	"material-dark": {
 		meta: {
 			name: "Material Dark",
-			emoji: "\u{1F311}",
+			emoji: "🌑",
 			group: "default",
 			animation: "none",
 		},
@@ -140,7 +140,7 @@ export const THEME_PRESETS = {
 	"material-light": {
 		meta: {
 			name: "Material Light",
-			emoji: "\u{2600}\u{FE0F}",
+			emoji: "☀️",
 			group: "default",
 			animation: "none",
 			defaultMode: "light",
@@ -212,7 +212,7 @@ export const THEME_PRESETS = {
 	},
 
 	ocean: {
-		meta: { name: "Ocean", emoji: "\u{1F30A}", group: "skin", animation: "waves" },
+		meta: { name: "Ocean", emoji: "🌊", group: "skin", animation: "waves" },
 		dark: {
 			"primary-color": "#00bcd4",
 			"primary-hover": "#00acc1",
@@ -282,7 +282,7 @@ export const THEME_PRESETS = {
 	forest: {
 		meta: {
 			name: "Forest",
-			emoji: "\u{1F332}",
+			emoji: "🌲",
 			group: "skin",
 			animation: "leaves",
 		},
@@ -355,7 +355,7 @@ export const THEME_PRESETS = {
 	sunset: {
 		meta: {
 			name: "Sunset",
-			emoji: "\u{1F305}",
+			emoji: "🌅",
 			group: "skin",
 			animation: "shimmer",
 		},
@@ -426,7 +426,7 @@ export const THEME_PRESETS = {
 	},
 
 	nord: {
-		meta: { name: "Nord", emoji: "\u{2744}\u{FE0F}", group: "skin", animation: "none" },
+		meta: { name: "Nord", emoji: "❄️", group: "skin", animation: "none" },
 		dark: {
 			"primary-color": "#88C0D0",
 			"primary-hover": "#81A1C1",
@@ -496,7 +496,7 @@ export const THEME_PRESETS = {
 	dracula: {
 		meta: {
 			name: "Dracula",
-			emoji: "\u{1F9DB}",
+			emoji: "🧛",
 			group: "skin",
 			animation: "none",
 		},
@@ -569,7 +569,7 @@ export const THEME_PRESETS = {
 	"solarized-dark": {
 		meta: {
 			name: "Solarized",
-			emoji: "\u{1F31E}",
+			emoji: "🌞",
 			group: "skin",
 			animation: "none",
 		},
@@ -642,7 +642,7 @@ export const THEME_PRESETS = {
 	cyberpunk: {
 		meta: {
 			name: "Cyberpunk",
-			emoji: "\u{1F306}",
+			emoji: "🌆",
 			group: "skin",
 			animation: "none",
 		},
@@ -715,7 +715,7 @@ export const THEME_PRESETS = {
 	"rose-gold": {
 		meta: {
 			name: "Rose Gold",
-			emoji: "\u{1F338}",
+			emoji: "🌸",
 			group: "skin",
 			animation: "none",
 		},
@@ -788,7 +788,7 @@ export const THEME_PRESETS = {
 	"ayu-mirage": {
 		meta: {
 			name: "Ayu Mirage",
-			emoji: "\u{1F3DC}\u{FE0F}",
+			emoji: "🏜️",
 			group: "skin",
 			animation: "none",
 		},
@@ -861,7 +861,7 @@ export const THEME_PRESETS = {
 	"high-contrast": {
 		meta: {
 			name: "High Contrast",
-			emoji: "\u{2B1B}",
+			emoji: "⬛",
 			group: "skin",
 			animation: "none",
 		},
@@ -934,7 +934,7 @@ export const THEME_PRESETS = {
 	"sepia-reader": {
 		meta: {
 			name: "Sepia Reader",
-			emoji: "\u{1F4DC}",
+			emoji: "📜",
 			group: "skin",
 			animation: "none",
 		},
@@ -1004,12 +1004,12 @@ export const THEME_PRESETS = {
 		},
 	},
 
-	// \u{2500}\u{2500} Creative Themes \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ── Creative Themes ──────────────────────────────────────
 
 	"tokyo-night": {
 		meta: {
 			name: "Tokyo Night",
-			emoji: "\u{1F5FC}",
+			emoji: "🗼",
 			group: "creative",
 			animation: "none",
 			defaultMode: "dark",
@@ -1083,7 +1083,7 @@ export const THEME_PRESETS = {
 	"catppuccin-mocha": {
 		meta: {
 			name: "Catppuccin Mocha",
-			emoji: "\u{1F319}",
+			emoji: "🌙",
 			group: "creative",
 			animation: "none",
 			defaultMode: "dark",
@@ -1157,7 +1157,7 @@ export const THEME_PRESETS = {
 	"catppuccin-latte": {
 		meta: {
 			name: "Catppuccin Latte",
-			emoji: "\u{2615}",
+			emoji: "☕",
 			group: "creative",
 			animation: "none",
 			defaultMode: "light",
@@ -1231,7 +1231,7 @@ export const THEME_PRESETS = {
 	synthwave: {
 		meta: {
 			name: "Synthwave",
-			emoji: "\u{1F306}",
+			emoji: "🌆",
 			group: "creative",
 			animation: "none",
 			defaultMode: "dark",
@@ -1305,7 +1305,7 @@ export const THEME_PRESETS = {
 	gruvbox: {
 		meta: {
 			name: "Gruvbox",
-			emoji: "\u{1FAB5}",
+			emoji: "🪵",
 			group: "creative",
 			animation: "none",
 			defaultMode: "dark",
@@ -1379,7 +1379,7 @@ export const THEME_PRESETS = {
 	"nord-snow": {
 		meta: {
 			name: "Nord Snow",
-			emoji: "\u{1F3D4}\u{FE0F}",
+			emoji: "🏔️",
 			group: "creative",
 			animation: "none",
 			defaultMode: "light",
@@ -1453,7 +1453,7 @@ export const THEME_PRESETS = {
 	"github-light": {
 		meta: {
 			name: "GitHub",
-			emoji: "\u{1F419}",
+			emoji: "🐙",
 			group: "creative",
 			animation: "none",
 			defaultMode: "light",
@@ -1525,9 +1525,9 @@ export const THEME_PRESETS = {
 	},
 };
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 // Helpers
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 
 /**
  * Convert hex colour to rgba string
@@ -1582,8 +1582,8 @@ function _inSchedule(start, end) {
 
 /**
  * Estimate [sunriseHour, sunsetHour] for the user's timezone using
- * Intl.DateTimeFormat \u{2014} no geolocation permission required.
- * Returns crude mid-latitude estimates: ~4.5h\u{2013}6h rise, ~18h\u{2013}20h set.
+ * Intl.DateTimeFormat — no geolocation permission required.
+ * Returns crude mid-latitude estimates: ~4.5h–6h rise, ~18h–20h set.
  * @returns {[number, number]}
  */
 function _getSunriseSunsetHours() {
@@ -1603,8 +1603,8 @@ function _getSunriseSunsetHours() {
 		const summerMonth = southern ? 11 : 5;
 		const monthDiff = Math.abs(((month - summerMonth + 18) % 12) - 6) / 6; // 0=summer, 1=winter
 		const seasonFactor = 1 - monthDiff;
-		const rise = 6 - 1.5 * seasonFactor; // 4.5h (summer) \u{2013} 6h (winter)
-		const set = 18 + 2 * seasonFactor; // 18h (winter) \u{2013} 20h (summer)
+		const rise = 6 - 1.5 * seasonFactor; // 4.5h (summer) – 6h (winter)
+		const set = 18 + 2 * seasonFactor; // 18h (winter) – 20h (summer)
 		return [rise, set];
 	} catch (_) {
 		return [6, 18];
@@ -1652,7 +1652,7 @@ export function resolveMode(mode, themeSettings = {}) {
  * Merges preset palette with any user overrides.
  *
  * @param {Object} theme - Stored themeSettings object
- * @returns {Object} CSS custom property map (key \u{2192} value)
+ * @returns {Object} CSS custom property map (key → value)
  */
 export function getThemePalette(theme) {
 	// `basePreset` is set when a custom preset is selected so that `preset`
@@ -1724,9 +1724,9 @@ export function getContentThemeColors(theme) {
 	};
 }
 
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 // Core: Apply theme to DOM
-// \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─────────────────────────────────────────────────────────────
 
 /**
  * Apply theme settings to the document root.
@@ -1831,7 +1831,7 @@ export async function applyThemeFromStorage() {
 			theme = result.themeSettings || DEFAULT_THEME;
 		}
 	} catch (_err) {
-		// storage unavailable \u{2014} use defaults
+		// storage unavailable — use defaults
 	}
 	setThemeVariables(theme);
 	return theme;
@@ -1858,7 +1858,7 @@ export function setupThemeListener() {
  * Get a flat list of all preset IDs and their display metadata.
  * Includes user-saved custom presets when `customPresets` is provided.
  *
- * @param {Object} [customPresets] - Optional map of id \u{2192} { name, emoji, palette }
+ * @param {Object} [customPresets] - Optional map of id → { name, emoji, palette }
  * @returns {Array<{id: string, name: string, emoji: string, group: string, custom?: boolean}>}
  */
 export function getPresetList(customPresets = {}) {
@@ -1872,7 +1872,7 @@ export function getPresetList(customPresets = {}) {
 	const custom = Object.entries(customPresets || {}).map(([id, preset]) => ({
 		id,
 		name: preset.name || id,
-		emoji: preset.emoji || "\u{1F3A8}",
+		emoji: preset.emoji || "🎨",
 		group: "custom",
 		custom: true,
 	}));

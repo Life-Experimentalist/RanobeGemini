@@ -39,7 +39,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 		isPrimary: true,
 		name: "Archive of Our Own",
 		icon: "https://archiveofourown.org/images/ao3_logos/logo_42.png",
-		emoji: "\u{1F4DA}",
+		emoji: "📚",
 		color: "#990000",
 		novelIdPattern: /\/works\/(\d+)/,
 		primaryDomain: "archiveofourown.org",
@@ -65,8 +65,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 	/** Configurable settings exposed in the Library Settings page. */
 	static SETTINGS_DEFINITION = {
 		fields: [
-			// \u{2500}\u{2500} Enhancement \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
-			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
+			// ── Enhancement ────────────────────────────────────────────────
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -81,7 +81,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 				defaultValue: true,
 				description: "Use HTML-aware enhancement to preserve formatting such as italics and scene breaks.",
 			},
-			{ key: "_context", type: "section", label: "\u{1F4DA} AI Context" },
+			{ key: "_context", type: "section", label: "📚 AI Context" },
 			{
 				key: "includeWorkTagsInContext",
 				label: "Include work tags in AI context",
@@ -103,7 +103,7 @@ export class AO3Handler extends BaseWebsiteHandler {
 				defaultValue: false,
 				description: "Include the author's chapter start/end notes as part of the enhancement input.",
 			},
-			{ key: "_bridges", type: "section", label: "\u{1F50C} Extension Bridges" },
+			{ key: "_bridges", type: "section", label: "🔌 Extension Bridges" },
 			{
 				key: "experimentalAo3BridgeEnabled",
 				label: "Enable experimental AO3 bridge adapter",
@@ -127,8 +127,8 @@ Please maintain:
 **AO3-Specific Formatting Rules:**
 - **Author Notes / End Notes** ("Author's Note", "A/N:", AO3 sub-headings labelled "Notes" or "End Notes"): Wrap in \`<div class="rg-author-note">\` with \`<hr class="section-divider">\` before and after. Summarise if lengthy; keep only plot-relevant context.
 - **Epigraphs, Poems & Song Lyrics**: Wrap any chapter-opening or closing verse, poem, or quoted lyric in \`<div class="rg-quote-box">\`, preserving line breaks exactly.
-- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "\u{2014} x years earlier \u{2014}", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
-- **Game / System Content** (crossover fics with game mechanics): Full stat windows \u{2192} \`<div class="game-stats-box">\`; short system messages \u{2192} \`<div class="rg-system-msg">\`; individual skill cards \u{2192} \`<div class="rg-skill-box">\`.
+- **Flashback / Memory Scenes**: When clearly marked ("[Flashback]", "— x years earlier —", explicitly italicised memory passages), wrap the block in \`<div class="rg-flashback">\`.
+- **Game / System Content** (crossover fics with game mechanics): Full stat windows → \`<div class="game-stats-box">\`; short system messages → \`<div class="rg-system-msg">\`; individual skill cards → \`<div class="rg-skill-box">\`.
 
 When enhancing, improve readability while fully respecting the author's original style and the work's creative intent.`;
 
@@ -161,7 +161,7 @@ When enhancing, improve readability while fully respecting the author's original
 		if (!hostMatch) return false;
 
 		// Handle both chapter-by-chapter pages and the full-work "waterfall" page.
-		// Path must be /works/{id} or /works/{id}/chapters/{id} \u{2014} query strings allowed.
+		// Path must be /works/{id} or /works/{id}/chapters/{id} — query strings allowed.
 		const path = window.location.pathname || "";
 		if (!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(path)) {
 			return false;
@@ -171,7 +171,7 @@ When enhancing, improve readability while fully respecting the author's original
 	}
 
 	/**
-	 * Detect AO3's "View Full Work" page \u{2014} all chapters on one long scrollable page.
+	 * Detect AO3's "View Full Work" page — all chapters on one long scrollable page.
 	 * URL: /works/{id}?view_full_work=true  (or view_adult=true&view_full_work=true, etc.)
 	 * @returns {boolean}
 	 */
@@ -389,7 +389,7 @@ When enhancing, improve readability while fully respecting the author's original
 		return [
 			{
 				text: "Copy",
-				emoji: "\u{1F4CB}",
+				emoji: "📋",
 				color: "#10b981",
 				onClick: async () => {
 					try {
@@ -530,7 +530,7 @@ When enhancing, improve readability while fully respecting the author's original
 				metadata.tags.push(`Category: ${category}`);
 			});
 
-			// Fandoms \u{2014} stored in metadata.fandoms and tags but NOT merged into genres
+			// Fandoms — stored in metadata.fandoms and tags but NOT merged into genres
 			const fandomEls = workMeta.querySelectorAll("dd.fandom a.tag");
 			fandomEls.forEach((el) => {
 				const fandom = el.textContent.trim();
@@ -615,7 +615,7 @@ When enhancing, improve readability while fully respecting the author's original
 					wordsEl.getAttribute("data-ao3e-original");
 				const wordsText = (originalWords || wordsEl.textContent)
 					.trim()
-					.replace(/[,\s\u{A0}]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s ]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.words = parseInt(wordsText, 10) || 0;
 			}
 
@@ -692,7 +692,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalComments || commentsEl.textContent
 				)
 					.trim()
-					.replace(/[,\s\u{A0}]/g, "");
+					.replace(/[,\s ]/g, "");
 				metadata.metadata.comments = parseInt(commentsText, 10) || 0;
 			}
 
@@ -703,7 +703,7 @@ When enhancing, improve readability while fully respecting the author's original
 					kudosEl.getAttribute("data-ao3e-original");
 				const kudosText = (originalKudos || kudosEl.textContent)
 					.trim()
-					.replace(/[,\s\u{A0}]/g, "");
+					.replace(/[,\s ]/g, "");
 				metadata.metadata.kudos = parseInt(kudosText, 10) || 0;
 			}
 
@@ -716,7 +716,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalBookmarks || bookmarksEl.textContent
 				)
 					.trim()
-					.replace(/[,\s\u{A0}]/g, "");
+					.replace(/[,\s ]/g, "");
 				metadata.metadata.bookmarks = parseInt(bookmarksText, 10) || 0;
 			}
 
@@ -727,7 +727,7 @@ When enhancing, improve readability while fully respecting the author's original
 				const originalHits = hitsEl.getAttribute("data-ao3e-original");
 				const hitsText = (originalHits || hitsEl.textContent)
 					.trim()
-					.replace(/[,\s\u{A0}]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s ]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
 			}
 
@@ -835,7 +835,7 @@ When enhancing, improve readability while fully respecting the author's original
 		if (this.isFullWorkPage()) {
 			const chaptersEl = document.querySelector("#chapters");
 			if (chaptersEl) {
-				debugLog("AO3: Full-work page \u{2014} returning #chapters as content area");
+				debugLog("AO3: Full-work page — returning #chapters as content area");
 				return chaptersEl;
 			}
 		}
@@ -1105,7 +1105,7 @@ When enhancing, improve readability while fully respecting the author's original
 	extractContent() {
 		debugLog("AO3: Extracting content...");
 
-		// \u{2500}\u{2500} Full-work "waterfall" page \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+		// ── Full-work "waterfall" page ────────────────────────────────────────
 		if (this.isFullWorkPage()) {
 			return this._extractFullWorkContent();
 		}
@@ -1198,7 +1198,7 @@ When enhancing, improve readability while fully respecting the author's original
 			clone.querySelectorAll("script, form, .landmark").forEach((el) => el.remove());
 			// Extract chapter heading
 			const heading = clone.querySelector("h3.title, h2.title")?.textContent?.trim() || "";
-			// Extract prose \u{2014} skip notes blocks (.preface, .end-notes)
+			// Extract prose — skip notes blocks (.preface, .end-notes)
 			const notesEls = clone.querySelectorAll(".preface, .notes, .end-notes, .module.notes");
 			notesEls.forEach((n) => n.remove());
 			const prose = clone.querySelector(".userstuff.module, .userstuff, div[role='article']");
@@ -1215,7 +1215,7 @@ When enhancing, improve readability while fully respecting the author's original
 		const contentArea = document.querySelector("#chapters") || document.querySelector("#workskin");
 		const metadata = this.getWorkMetadata();
 
-		debugLog(`AO3: Full-work extraction \u{2014} ${chapterEls.length} chapters, ${combinedText.length} chars`);
+		debugLog(`AO3: Full-work extraction — ${chapterEls.length} chapters, ${combinedText.length} chars`);
 
 		return {
 			found: true,
@@ -1257,12 +1257,12 @@ When enhancing, improve readability while fully respecting the author's original
 		return AO3Handler.DEFAULT_SITE_PROMPT;
 	}
 
-	/** AO3 renders structured HTML prose \u{2014} HTML enhancement is preferred. */
+	/** AO3 renders structured HTML prose — HTML enhancement is preferred. */
 	formatAfterEnhancement(contentArea) {
 		super.formatAfterEnhancement(contentArea);
 	}
 
-	/** AO3 renders structured HTML prose \u{2014} HTML enhancement is preferred. */
+	/** AO3 renders structured HTML prose — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

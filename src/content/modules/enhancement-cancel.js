@@ -34,7 +34,7 @@ export function handleCancelEnhancementRuntime({
 	}
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "\u{26A1} Enhance Chapter";
+		btn.textContent = "⚡ Enhance Chapter";
 		btn.disabled = false;
 		btn.classList.remove("loading");
 	});
@@ -91,7 +91,7 @@ export function handleProcessingCancelledMessageRuntime({
 	showStatusMessage,
 	cancelEnhanceButton,
 	clearTransientEnhancementBanners,
-	continueLabel = "\u{26A1} Continue Enhancement",
+	continueLabel = "⚡ Continue Enhancement",
 }) {
 	debugLog(
 		`Processing cancelled. ${message.processedChunks} chunks completed, ${message.remainingChunks} remaining.`,
@@ -126,8 +126,8 @@ export function handleApiKeyMissingRuntime({
 	debugError = () => {},
 	showStatusMessage,
 	openPopup,
-	messageText = "\u{26A0}\u{FE0F} API key is missing. Please configure it in the extension popup.",
-	buttonLabel = "\u{26A1} Enhance Chapter",
+	messageText = "⚠️ API key is missing. Please configure it in the extension popup.",
+	buttonLabel = "⚡ Enhance Chapter",
 }) {
 	debugError("[Content] API key is missing, halting processing");
 	showStatusMessage?.(messageText, "error", 10000);

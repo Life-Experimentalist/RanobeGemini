@@ -21,8 +21,8 @@ export class NovelCardRenderer {
 		return {
 			id: "default",
 			name: "Unknown Site",
-			icon: "\u{1F4D6}",
-			emoji: "\u{1F4D6}",
+			icon: "📖",
+			emoji: "📖",
 			color: "#666666",
 		};
 	}
@@ -110,10 +110,10 @@ export class NovelCardRenderer {
 		return `
 			<div class="novel-card-meta">
 				<span class="meta-item" title="Enhanced chapters">
-					\u{2728} ${novel.enhancedChaptersCount || 0}
+					✨ ${novel.enhancedChaptersCount || 0}
 				</span>
 				<span class="meta-item" title="Total chapters">
-					\u{1F4D6} ${novel.totalChapters || "?"}
+					📖 ${novel.totalChapters || "?"}
 				</span>
 			</div>
 		`;

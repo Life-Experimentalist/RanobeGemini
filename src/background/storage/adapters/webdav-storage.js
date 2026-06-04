@@ -6,7 +6,7 @@
 
 const CREDS_KEY = "webdavCredentials";
 
-// \u{2500}\u{2500}\u{2500} Credential helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─── Credential helpers ────────────────────────────────────────────────────────
 
 async function loadCredentials() {
 	const result = await browser.storage.local.get(CREDS_KEY);
@@ -28,7 +28,7 @@ export async function getWebdavCredentials() {
 	return loadCredentials();
 }
 
-// \u{2500}\u{2500}\u{2500} Internal HTTP helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─── Internal HTTP helpers ─────────────────────────────────────────────────────
 
 function authHeader(username, password) {
 	return "Basic " + btoa(`${username}:${password}`);
@@ -55,12 +55,12 @@ async function davRequest(method, url, { auth, body, headers = {} } = {}) {
 		body: body ?? undefined,
 	});
 	if (!resp.ok) {
-		throw new Error(`WebDAV ${method} ${url} \u{2192} ${resp.status} ${resp.statusText}`);
+		throw new Error(`WebDAV ${method} ${url} → ${resp.status} ${resp.statusText}`);
 	}
 	return resp;
 }
 
-// \u{2500}\u{2500}\u{2500} PROPFIND parser (minimal \u{2014} extracts file names and dates) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─── PROPFIND parser (minimal — extracts file names and dates) ─────────────────
 
 function parsePropfindXml(xmlText) {
 	const parser = new DOMParser();
@@ -91,7 +91,7 @@ function parsePropfindXml(xmlText) {
 		.filter((f) => !f.isCollection && f.name);
 }
 
-// \u{2500}\u{2500}\u{2500} Backup name helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─── Backup name helpers ───────────────────────────────────────────────────────
 
 const BACKUP_PREFIX = "ranobegemini_backup_";
 const CONTINUOUS_NAME = "ranobegemini_continuous.json";
@@ -110,7 +110,7 @@ function isBackupFile(name) {
 	return name.startsWith(BACKUP_PREFIX) && name.endsWith(".json");
 }
 
-// \u{2500}\u{2500}\u{2500} Adapter factory \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// ─── Adapter factory ───────────────────────────────────────────────────────────
 
 export function createWebdavStorageAdapter() {
 	async function requireCreds(options = {}) {
@@ -119,7 +119,7 @@ export function createWebdavStorageAdapter() {
 		const creds = await loadCredentials();
 		if (!creds?.serverUrl || !creds?.username) {
 			throw new Error(
-				"WebDAV credentials not configured. Set server URL and username in Library Settings \u{2192} Sync.",
+				"WebDAV credentials not configured. Set server URL and username in Library Settings → Sync.",
 			);
 		}
 		return creds;
@@ -135,7 +135,7 @@ export function createWebdavStorageAdapter() {
 				headers: { Authorization: auth, Depth: "0" },
 			});
 		} catch (_err) {
-			// Ignore \u{2014} directory will be created on first MKCOL
+			// Ignore — directory will be created on first MKCOL
 		}
 		// Attempt MKCOL (create collection); 405 Method Not Allowed means it already exists
 		const resp = await fetch(dirUrl, {
@@ -144,7 +144,7 @@ export function createWebdavStorageAdapter() {
 		});
 		if (!resp.ok && resp.status !== 405 && resp.status !== 301 && resp.status !== 302) {
 			// 405 = already exists, which is fine
-			throw new Error(`WebDAV MKCOL ${dirUrl} \u{2192} ${resp.status} ${resp.statusText}`);
+			throw new Error(`WebDAV MKCOL ${dirUrl} → ${resp.status} ${resp.statusText}`);
 		}
 	}
 
@@ -243,7 +243,7 @@ export function createWebdavStorageAdapter() {
 		},
 
 		async ensureAuth() {
-			// WebDAV uses basic auth \u{2014} verify credentials by doing a PROPFIND on the root
+			// WebDAV uses basic auth — verify credentials by doing a PROPFIND on the root
 			const creds = await loadCredentials();
 			if (!creds?.serverUrl) {
 				throw new Error("WebDAV credentials not configured.");

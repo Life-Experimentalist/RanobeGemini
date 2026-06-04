@@ -1,9 +1,9 @@
 /**
- * LoreWeave auto-integration \u{2014} fires after chapter enhancement completes.
+ * LoreWeave auto-integration — fires after chapter enhancement completes.
  *
  * Reads the loreWeaveAutoGraphify flag from storage. If enabled and a
  * LoreWeave backend is configured, sends the chapter text to the background
- * service worker for graphify processing. Fire-and-forget \u{2014} does not block
+ * service worker for graphify processing. Fire-and-forget — does not block
  * the enhancement UI.
  */
 
@@ -44,6 +44,6 @@ export async function maybeSendToLoreWeave(chapterText, novelMetadata) {
 			epochLabel,
 		});
 	} catch {
-		// Silently ignore \u{2014} never disrupt the reading experience
+		// Silently ignore — never disrupt the reading experience
 	}
 }

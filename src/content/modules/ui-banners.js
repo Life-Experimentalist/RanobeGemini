@@ -10,7 +10,7 @@ export function createToggleBannersButton({
 	const toggleButton = documentRef.createElement("button");
 	toggleButton.className = "gemini-toggle-banners-btn";
 	toggleButton.innerHTML =
-		'<span style="font-size: 20px;">\u{1F441}</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
+		'<span style="font-size: 20px;">👁</span> <span style="font-weight: 600;">Hide Ranobe Gemini</span>';
 	toggleButton.title = "Toggle visibility of Ranobe Gemini enhancement UI";
 
 	toggleButton.style.cssText = `
@@ -91,9 +91,9 @@ export function showProgressUpdatePromptRuntime({
 	header.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
 	const titleEl = documentRef.createElement("div");
 	titleEl.style.cssText = "font-weight:700;font-size:13px;color:#818cf8;flex:1;";
-	titleEl.textContent = "\u{1F4D6} Reading Progress";
+	titleEl.textContent = "📖 Reading Progress";
 	const closeBtn = documentRef.createElement("button");
-	closeBtn.textContent = "\u{D7}"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+	closeBtn.textContent = "×"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 	closeBtn.addEventListener("click", () => banner.remove());
 	header.appendChild(titleEl); header.appendChild(closeBtn); banner.appendChild(header);
 
@@ -171,9 +171,9 @@ export function showRereadingBannerRuntime({
 	header.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
 	const titleEl = documentRef.createElement("div");
 	titleEl.style.cssText = "font-weight:700;font-size:13px;color:#a855f7;flex:1;";
-	titleEl.textContent = "\u{267B}\u{FE0F} Re-reading Detection";
+	titleEl.textContent = "♻️ Re-reading Detection";
 	const closeBtn = documentRef.createElement("button");
-	closeBtn.textContent = "\u{D7}"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+	closeBtn.textContent = "×"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 	closeBtn.addEventListener("click", () => banner.remove());
 	header.appendChild(titleEl); header.appendChild(closeBtn); banner.appendChild(header);
 

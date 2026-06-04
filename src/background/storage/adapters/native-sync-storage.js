@@ -34,7 +34,7 @@ export function createNativeSyncStorageAdapter() {
 			const encoded = encodePayload(jsonStr);
 			if (encoded.length > MAX_PAYLOAD_BYTES) {
 				throw new Error(
-					"Library too large for native sync \u{2014} use Google Drive or Dropbox instead.",
+					"Library too large for native sync — use Google Drive or Dropbox instead.",
 				);
 			}
 

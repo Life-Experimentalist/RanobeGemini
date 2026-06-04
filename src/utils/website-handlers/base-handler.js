@@ -496,7 +496,7 @@ export class BaseWebsiteHandler {
 		return [];
 	}
 
-	// \u{2500}\u{2500}\u{2500} Shared utility methods \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+	// ─── Shared utility methods ──────────────────────────────────────────────────
 	// These were previously duplicated across every handler. All handlers inherit
 	// them from here. Handlers may still override any of these for site-specific
 	// behaviour; call super.method() when you want the base logic plus extras.
@@ -596,7 +596,7 @@ export class BaseWebsiteHandler {
 			if (skipPatterns.some((p) => src.includes(p))) continue;
 			return this.normalizeUrl(src) || null;
 		}
-		// Open Graph fallback \u{2014} reliable on most sites
+		// Open Graph fallback — reliable on most sites
 		const og = document.querySelector('meta[property="og:image"]');
 		return og?.getAttribute("content") || null;
 	}
@@ -642,7 +642,7 @@ export class BaseWebsiteHandler {
 		if (!html) return html;
 		// Temporarily replace HTML tags with unique placeholders so they are not affected
 		const tags = [];
-		const PH = "\u{FFFE}TAG"; // Private-use code point, safe in strings, won't appear in HTML
+		const PH = "￾TAG"; // Private-use code point, safe in strings, won't appear in HTML
 		let out = html.replace(/<[^>]+>/g, (tag) => {
 			tags.push(tag);
 			return `${PH}${tags.length - 1}|`;
@@ -652,7 +652,7 @@ export class BaseWebsiteHandler {
 			.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
 			.replace(/\*([^\s*][^*]*[^\s*])\*/g, "<em>$1</em>")
 			.replace(/\*([^\s*]+)\*/g, "<em>$1</em>");
-		// Restore HTML tags \u{2014} escape PH for use in regex
+		// Restore HTML tags — escape PH for use in regex
 		return out.replace(new RegExp(`${PH}(\\d+)\\|`, "g"), (_, i) => tags[parseInt(i)]);
 	}
 

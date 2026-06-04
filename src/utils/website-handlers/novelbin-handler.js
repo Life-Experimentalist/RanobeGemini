@@ -31,12 +31,12 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	static PRIORITY = 10;
 
 	static SHELF_METADATA = {
-		// Keep "novelbin" as shelfId \u{2014} changing it would break existing library data.
+		// Keep "novelbin" as shelfId — changing it would break existing library data.
 		id: "novelbin",
 		isPrimary: true,
 		name: "NovelBin",
 		icon: "https://novelbin.com/favicon.ico",
-		emoji: "\u{1F4DA}",
+		emoji: "📚",
 		color: "#6200ea",
 		novelIdPattern: /\/b\/([a-z0-9-]+)/i,
 		primaryDomain: "novelbin.com",
@@ -54,7 +54,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 
 	static SETTINGS_DEFINITION = {
 		fields: [
-			{ key: "_nav", type: "section", label: "\u{1F310} Domain" },
+			{ key: "_nav", type: "section", label: "🌐 Domain" },
 			{
 				key: "preferredDomain",
 				label: "Preferred Domain",
@@ -65,13 +65,13 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				options: [
 					{
 						value: "novelarrow",
-						label: "novelarrow.com (primary \u{2605})",
+						label: "novelarrow.com (primary ★)",
 					},
 					{ value: "novelbin", label: "novelbin.com (legacy)" },
 					{ value: "novelbin-me", label: "novelbin.me (mirror)" },
 				],
 			},
-			{ key: "_enhance", type: "section", label: "\u{2728} Enhancement" },
+			{ key: "_enhance", type: "section", label: "✨ Enhancement" },
 			{
 				key: "autoEnhanceEnabled",
 				label: "Auto-enhance chapters",
@@ -108,26 +108,26 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	/**
 	 * Called once by handler-manager on every page load.
 	 * Redirects novelbin.me (and any other mirror TLD) to novelbin.com,
-	 * matching the pattern used by fanfiction.ws \u{2192} fanfiction.net.
+	 * matching the pattern used by fanfiction.ws → fanfiction.net.
 	 */
 	static initialize() {
 		NovelbinHandler.normalizeURL().catch(() => {});
 	}
 
 	/**
-	 * Normalises mirror TLD domains (novelbin.me \u{2192} novelbin.com).
+	 * Normalises mirror TLD domains (novelbin.me → novelbin.com).
 	 * novelarrow.com is canonical and is NOT redirected.
 	 * @returns {Promise<boolean>}
 	 */
 	static async normalizeURL() {
 		const hostname = window.location.hostname;
-		// novelarrow.com \u{2014} primary canonical domain, never redirect
+		// novelarrow.com — primary canonical domain, never redirect
 		if (hostname === "novelarrow.com" || hostname === "www.novelarrow.com")
 			return false;
-		// novelbin.com \u{2014} legacy canonical, no redirect needed
+		// novelbin.com — legacy canonical, no redirect needed
 		if (hostname === "novelbin.com" || hostname === "www.novelbin.com")
 			return false;
-		// novelbin.me and other TLD mirrors \u{2192} redirect to novelbin.com
+		// novelbin.me and other TLD mirrors → redirect to novelbin.com
 		if (!hostname.includes("novelbin.")) return false;
 		const canonical = hostname.replace(/novelbin\.[a-z]+$/, "novelbin.com");
 		if (canonical === hostname) return false;
@@ -259,8 +259,8 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		try {
 			const path = new URL(url).pathname.replace(/\/$/, "");
 			const parts = path.split("/").filter(Boolean);
-			// NovelBin: /b/{novel}/{chapter}  \u{2192} parts = ["b", novel, chapter]
-			// NovelArrow: /chapter/{novel}/{chapter} \u{2192} parts = ["chapter", novel, chapter]
+			// NovelBin: /b/{novel}/{chapter}  → parts = ["b", novel, chapter]
+			// NovelArrow: /chapter/{novel}/{chapter} → parts = ["chapter", novel, chapter]
 			let novelSlug, chapterSlug;
 			if (parts[0] === "b" && parts.length >= 3) {
 				[, novelSlug, chapterSlug] = parts;
@@ -400,7 +400,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				return el;
 			}
 		}
-		// NovelArrow (Next.js/React SPA) \u{2014} try common React chapter content patterns
+		// NovelArrow (Next.js/React SPA) — try common React chapter content patterns
 		for (const sel of [
 			"#chapter-content",
 			"[data-testid='chapter-content']",
@@ -510,7 +510,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			}
 		}
 
-		// Chapter page \u{2014} use the content area as insertion point
+		// Chapter page — use the content area as insertion point
 		const contentEl = this.findContentArea();
 		if (contentEl) return { element: contentEl, position: "before" };
 
@@ -547,9 +547,9 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		};
 
 		try {
-			// \u{2500}\u{2500} NovelArrow (Next.js React) meta-tag extraction path \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+			// ── NovelArrow (Next.js React) meta-tag extraction path ──────────────
 			// When the background fetcher swaps in a novelarrow.com detail page, the
-			// React components aren't rendered \u{2014} only static <meta> tags are present.
+			// React components aren't rendered — only static <meta> tags are present.
 			// Detect this by checking og:site_name or the canonical URL.
 			const ogSiteName =
 				document
@@ -572,7 +572,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				const ogTitle = getMeta("property", "og:title");
 				metadata.title = ogTitle
 					? ogTitle
-							.replace(/\s*[|\-\u{2013}]\s*Read\s+Online.*$/i, "")
+							.replace(/\s*[|\-–]\s*Read\s+Online.*$/i, "")
 							.replace(/\s*on\s+Novel\s*Arrow\s*$/i, "")
 							.trim()
 					: null;
@@ -600,7 +600,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			const isChapter = this._isChapterPageDom();
 
 			if (!isDetail && isChapter) {
-				// Chapter page only \u{2014} return minimal partial metadata
+				// Chapter page only — return minimal partial metadata
 				metadata.needsDetailPage = true;
 				metadata.metadataIncomplete = true;
 
@@ -641,7 +641,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 					});
 				});
 
-			// Info-meta list \u{2014} each <li> has an <h3> label and content
+			// Info-meta list — each <li> has an <h3> label and content
 			const infoItems = Array.from(
 				document.querySelectorAll(
 					"ul.info.info-meta li, .info-meta li",
@@ -659,7 +659,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 						const g = a.textContent.trim();
 						if (
 							g &&
-							!g.includes("\u{BB}") &&
+							!g.includes("»") &&
 							g.toLowerCase() !== "see more"
 						)
 							metadata.genres.push(g);
@@ -686,7 +686,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 						const t = a.textContent.trim();
 						if (
 							t &&
-							!t.includes("\u{BB}") &&
+							!t.includes("»") &&
 							t.toLowerCase() !== "see more"
 						)
 							metadata.tags.push(t);
@@ -702,7 +702,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 						const t = a.textContent.trim();
 						if (
 							t &&
-							!t.includes("\u{BB}") &&
+							!t.includes("»") &&
 							t.toLowerCase() !== "see more" &&
 							!metadata.genres.includes(t)
 						)
@@ -710,7 +710,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 					});
 			}
 
-			// Description \u{2014} force-unhide before cloning so CSS-truncated content is captured
+			// Description — force-unhide before cloning so CSS-truncated content is captured
 			const descEl = document.querySelector(
 				"#novel-description-content, .desc-text",
 			);
@@ -731,7 +731,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				if (raw) metadata.description = raw;
 			}
 
-			// Cover image \u{2014} novelbin lazy-loads via data-src
+			// Cover image — novelbin lazy-loads via data-src
 			const coverImg = document.querySelector(
 				".books .book img.lazy, .book img[data-src], .book img",
 			);
@@ -741,7 +741,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 				".book img",
 			]);
 
-			// Main novel URL \u{2014} prefer the canonical <link> when present
+			// Main novel URL — prefer the canonical <link> when present
 			const canonical = document.querySelector('link[rel="canonical"]');
 			metadata.mainNovelUrl =
 				canonical?.getAttribute("href") || window.location.href;
@@ -802,14 +802,14 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		});
 	}
 
-	/** NovelBin renders HTML chapter content \u{2014} HTML enhancement is preferred. */
+	/** NovelBin renders HTML chapter content — HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}
 
 	/**
 	 * On NovelBin/NovelArrow chapter pages the library management bar is redundant
-	 * and clutters the reading experience \u{2014} only show it on the novel detail page.
+	 * and clutters the reading experience — only show it on the novel detail page.
 	 */
 	getNovelControlsConfig() {
 		if (this.isChapterPage()) {

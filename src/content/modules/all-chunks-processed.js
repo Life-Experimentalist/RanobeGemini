@@ -15,7 +15,7 @@ export function handleAllChunksProcessedRuntime({
 	);
 
 	documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-		btn.textContent = "\u{26A1} Re-enhance with Gemini";
+		btn.textContent = "⚡ Re-enhance with Gemini";
 		btn.disabled = false;
 		btn.classList.remove("loading");
 	});

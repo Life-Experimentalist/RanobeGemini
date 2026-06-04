@@ -138,7 +138,7 @@ export async function addCurrentNovelToLibraryRuntime({
 			metadataIncomplete: metadata?.metadataIncomplete ?? false,
 		});
 		if (!metadata) {
-			console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: ABORT \u{2014} no metadata");
+			console.log("[RG-Library-Debug] addCurrentNovelToLibraryRuntime: ABORT — no metadata");
 			return {
 				success: false,
 				error: "Could not extract novel metadata",

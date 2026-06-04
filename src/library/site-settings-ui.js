@@ -3,7 +3,7 @@
  *
  * Settings are auto-discovered from each handler's static SETTINGS_DEFINITION
  * property. To add settings for a new site, simply add SETTINGS_DEFINITION to
- * its handler class \u{2014} no changes needed here.
+ * its handler class — no changes needed here.
  */
 
 import { FanfictionHandler } from "../utils/website-handlers/fanfiction-handler.js";
@@ -42,7 +42,7 @@ export const WEBSITE_SETTINGS_DEFINITIONS = ALL_HANDLERS.filter(
 		label: meta.name,
 		icon: meta.icon || null, // website favicon/logo URL
 		invertIconInDarkMode: meta.invertIconInDarkMode || false,
-		emoji: meta.emoji || "\u{1F310}", // fallback emoji if icon fails or is absent
+		emoji: meta.emoji || "🌐", // fallback emoji if icon fails or is absent
 		description: `Site-specific settings for ${meta.name}.`,
 		fields: H.SETTINGS_DEFINITION.fields,
 	};
@@ -168,7 +168,7 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 		})
 		.join("");
 
-	// Render flat \u{2014} no inner <details> wrapper. The site card's own
+	// Render flat — no inner <details> wrapper. The site card's own
 	// expand/collapse is already one click; a second nested toggle was
 	// making settings invisible.
 	return `<div class="ls-handler-fields">${fieldsHtml}</div>`;

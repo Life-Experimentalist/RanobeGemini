@@ -88,7 +88,7 @@ export function renderStatusFilterButtons(container, settings = {}) {
 	// Build button HTML
 	const allBtn = `<button class="status-filter-btn ${
 		currentStatusFilter === "all" ? "active" : ""
-	}" data-status="all" title="All Novels">\u{1F4DA} All</button>`;
+	}" data-status="all" title="All Novels">📚 All</button>`;
 
 	const statusBtns = statuses
 		.filter((s) => !s.isRereadingOverlay) // RE_READING handled inline as overlay

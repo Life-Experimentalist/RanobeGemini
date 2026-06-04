@@ -80,7 +80,7 @@ export async function handleChunkProcessedRuntime({
 			documentRef
 				.querySelectorAll(".gemini-enhance-btn")
 				.forEach((btn) => {
-					btn.textContent = "\u{1F504} Re-enhance with Gemini";
+					btn.textContent = "🔄 Re-enhance with Gemini";
 					btn.disabled = false;
 					btn.classList.remove("loading");
 				});
@@ -107,7 +107,7 @@ export async function handleChunkProcessedRuntime({
 			);
 		}
 
-		// Use canonical URL so cross-domain cache hits work (e.g. novelarrow \u{2194} novelbin).
+		// Use canonical URL so cross-domain cache hits work (e.g. novelarrow ↔ novelbin).
 		await chunking.cache.saveChunkToCache(
 			cacheUrl || windowRef.location.href,
 			chunkIndex,
@@ -201,7 +201,7 @@ export async function handleChunkProcessedRuntime({
 		}
 
 		documentRef.querySelectorAll(".gemini-enhance-btn").forEach((btn) => {
-			btn.textContent = "\u{1F504} Re-enhance with Gemini";
+			btn.textContent = "🔄 Re-enhance with Gemini";
 			btn.disabled = false;
 			btn.classList.remove("loading");
 		});

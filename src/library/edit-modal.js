@@ -86,11 +86,11 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 				return;
 			}
 			if (start > end) {
-				if (qStatus) qStatus.textContent = "From chapter must be \u{2264} To chapter.";
+				if (qStatus) qStatus.textContent = "From chapter must be ≤ To chapter.";
 				return;
 			}
 			qAddBtn.disabled = true;
-			if (qStatus) qStatus.textContent = "Adding to queue\u{2026}";
+			if (qStatus) qStatus.textContent = "Adding to queue…";
 			try {
 				const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
 				await browser.runtime.sendMessage({
@@ -109,9 +109,9 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 						novelLastRead: novel.lastAccessedAt || novel.addedAt || 0,
 					},
 				});
-				if (qStatus) qStatus.textContent = `\u{2705} Added Ch\u{00A0}${start}\u{2013}${end} to queue.`;
+				if (qStatus) qStatus.textContent = `✅ Added Ch ${start}–${end} to queue.`;
 			} catch (err) {
-				if (qStatus) qStatus.textContent = `\u{274C} ${err.message}`;
+				if (qStatus) qStatus.textContent = `❌ ${err.message}`;
 			} finally {
 				qAddBtn.disabled = false;
 			}
@@ -156,7 +156,7 @@ function buildModalHTML(novel, handlerFields) {
 			<div class="edit-modal-panel">
 				<div class="edit-modal-header">
 					<h2 class="edit-modal-title">Edit Novel</h2>
-					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">\u{2715}</button>
+					<button class="edit-modal-close btn-icon" type="button" aria-label="Close">✕</button>
 				</div>
 				<div class="edit-modal-body">
 					${coverHtml}
@@ -182,7 +182,7 @@ function buildModalHTML(novel, handlerFields) {
 
 						${handlerFields.length > 0 ? buildHandlerFieldsHTML(handlerFields) : ""}
 
-						<div class="edit-modal-section-label">\u{1F578}\u{FE0F} LoreWeave</div>
+						<div class="edit-modal-section-label">🕸️ LoreWeave</div>
 						<div class="edit-modal-grid">
 							${buildTextField("loreWeaveDomainId", "Graph Domain ID", novel.loreWeaveDomainId || "", false, "lw_dom_my_novel")}
 						</div>
@@ -191,7 +191,7 @@ function buildModalHTML(novel, handlerFields) {
 							<a href="https://loreweave.vkrishna04.me" target="_blank" rel="noopener" style="color:var(--accent-color,#7c3aed)">loreweave.vkrishna04.me</a>
 						</p>
 
-						<div class="edit-modal-section-label">\u{1F525} Queue Chapters</div>
+						<div class="edit-modal-section-label">🔥 Queue Chapters</div>
 						<div class="edit-modal-grid" id="em-queue-grid">
 							${buildNumberField("em-qStart", "From Chapter", novel.lastReadChapter ? novel.lastReadChapter + 1 : 1, 1)}
 							${buildNumberField("em-qEnd", "To Chapter", novel.totalChapters || (novel.lastReadChapter ? novel.lastReadChapter + 10 : 10), 1)}
@@ -203,7 +203,7 @@ function buildModalHTML(novel, handlerFields) {
 								<span class="em-toggle-track"></span>
 							</label>
 						</div>
-						<button type="button" class="btn btn-secondary" id="em-qAddBtn" style="width:100%;margin-bottom:12px;">\u{FF0B} Add Chapter Range to Queue</button>
+						<button type="button" class="btn btn-secondary" id="em-qAddBtn" style="width:100%;margin-bottom:12px;">＋ Add Chapter Range to Queue</button>
 						<div id="em-qStatus" style="font-size:11px;color:var(--text-muted,#888);margin-bottom:4px;"></div>
 
 						<div class="edit-modal-actions">
@@ -382,7 +382,7 @@ function buildTagsSection(id, label, initialTags = [], placeholder = "") {
 			</div>
 			<div class="tags-input-row">
 				<input type="text" class="edit-input tags-input" id="tags-input-${id}"
-					placeholder="${escapeAttr(placeholder || "Add tag\u{2026}")}" />
+					placeholder="${escapeAttr(placeholder || "Add tag…")}" />
 				<button type="button" class="btn btn-secondary tags-add-btn" data-target="${id}">+</button>
 			</div>
 			<input type="hidden" id="${id}" name="${id}" value="${tagsJson}" />
@@ -453,7 +453,7 @@ function renderTagChips(fieldId, tags) {
 			(tag, i) =>
 				`<span class="tag-chip">
 					${escapeHtml(tag)}
-					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">\u{D7}</button>
+					<button type="button" class="tag-chip-remove" data-field="${fieldId}" data-index="${i}" aria-label="Remove ${escapeHtml(tag)}">×</button>
 				</span>`,
 		)
 		.join("");
@@ -525,7 +525,7 @@ async function handleSave(novel, handlerFields, form, container, opts) {
 	const saveBtn = form.querySelector("[type=submit]");
 	if (saveBtn) {
 		saveBtn.disabled = true;
-		saveBtn.textContent = "Saving\u{2026}";
+		saveBtn.textContent = "Saving…";
 	}
 
 	try {
@@ -591,7 +591,7 @@ function collectFormValues(novel, handlerFields, form) {
 		loreWeaveDomainId: get("loreWeaveDomainId") ?? novel.loreWeaveDomainId ?? "",
 	};
 
-	// Handler-specific fields \u{2192} merged into updates.metadata
+	// Handler-specific fields → merged into updates.metadata
 	const metadataUpdates = { ...(novel.metadata || {}) };
 	for (const field of handlerFields) {
 		const domId = `hf_${field.key}`;

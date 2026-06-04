@@ -1,5 +1,5 @@
 /**
- * Chronicle Storage \u{2014} per-novel accumulated story context.
+ * Chronicle Storage — per-novel accumulated story context.
  *
  * Storage key: rg_chronicle_{novelId}
  *
