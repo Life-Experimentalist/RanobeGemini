@@ -3357,6 +3357,22 @@ if (window.__RGInitDone) {
 					clearCachedEnhancementState();
 				}
 
+				// Reset injection flag so injectUI() can re-run for the new chapter.
+				hasExtractButton = false;
+
+				// Restore cached enhancement for the new chapter if available.
+				const spaChunkRestored = await tryRestoreChunkedCache();
+				if (!spaChunkRestored) {
+					const cachedData = await checkCachedContent();
+					if (cachedData?.enhancedContent) {
+						const spaCa = findContentArea();
+						if (spaCa) await replaceContentWithEnhancedVersion(cachedData);
+					}
+				}
+
+				// Re-inject Enhance/Summary controls for the new chapter.
+				await injectUI();
+
 				await autoExtractContent();
 			}, 400);
 		}
