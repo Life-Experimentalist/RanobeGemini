@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Library Settings Page Script
  * Standalone settings page for Ranobe Gemini library configuration.
  * Replaces the settings modal from library.html and library.js.
@@ -532,11 +532,11 @@ async function fetchOllamaModels(baseUrl) {
 
 function populateModelSelect(selectEl, models, savedValue) {
 	const prev = savedValue || selectEl.value;
-	selectEl.replaceChildren(); // safe clear — no innerHTML
+	selectEl.replaceChildren(); // safe clear \u{2014} no innerHTML
 	if (!models.length) {
 		const opt = document.createElement("option");
 		opt.value = "";
-		opt.textContent = "— no models found —";
+		opt.textContent = "\u{2014} no models found \u{2014}";
 		selectEl.appendChild(opt);
 		return;
 	}
@@ -668,7 +668,7 @@ async function loadLibraryModelSettings() {
 			if (poModel) {
 				poModel.value = primaryConfig.modelId || "";
 				if (!poModel.value && primaryConfig.modelId) {
-					// Model not in select yet — add a temporary option
+					// Model not in select yet \u{2014} add a temporary option
 					const opt = document.createElement("option");
 					opt.value = primaryConfig.modelId;
 					opt.textContent = primaryConfig.modelId;
@@ -1104,12 +1104,12 @@ function renderSiteSettingsCards() {
 		const siteDef = WEBSITE_SETTINGS_DEFINITIONS.find((d) => d.id === shelfId);
 		const hasSettings = Boolean(siteDef);
 
-		// ── Card wrapper ───────────────────────────────────────────────────
+		// \u{2500}\u{2500} Card wrapper \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 		const card = document.createElement("div");
 		card.className = "ls-site-card" + (isForceDisabled ? " ls-site-card--force-disabled" : "");
 		card.dataset.shelf = shelfId;
 
-		// ── Header ─────────────────────────────────────────────────────────
+		// \u{2500}\u{2500} Header \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 		const header = document.createElement("div");
 		header.className = "ls-site-card-header";
 
@@ -1125,7 +1125,7 @@ function renderSiteSettingsCards() {
 		} else {
 			const em = document.createElement("span");
 			em.className = "ls-site-icon-emoji";
-			em.textContent = shelf.emoji || regEntry.emoji || "📖";
+			em.textContent = shelf.emoji || regEntry.emoji || "\u{1F4D6}";
 			iconWrap.appendChild(em);
 		}
 		header.appendChild(iconWrap);
@@ -1167,14 +1167,14 @@ function renderSiteSettingsCards() {
 			const chevron = document.createElement("button");
 			chevron.className = "ls-site-card-chevron";
 			chevron.setAttribute("aria-expanded", "false");
-			chevron.textContent = "▾";
+			chevron.textContent = "\u{25BE}";
 			header.appendChild(chevron);
 		}
 
 		card.appendChild(header);
 
 		if (!isForceDisabled) {
-			// ── Auto-add sub-row ───────────────────────────────────────────
+			// \u{2500}\u{2500} Auto-add sub-row \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const aaRow = document.createElement("div");
 			aaRow.className = "ls-site-card-autoadd" + (isEnabled ? "" : " ls-hidden");
 
@@ -1217,7 +1217,7 @@ function renderSiteSettingsCards() {
 
 			card.appendChild(aaRow);
 
-			// ── Settings panel (open by default, collapsible) ─────────────
+			// \u{2500}\u{2500} Settings panel (open by default, collapsible) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			if (hasSettings) {
 				const settingsPanel = document.createElement("div");
 				// Start expanded so settings are immediately visible
@@ -1230,17 +1230,17 @@ function renderSiteSettingsCards() {
 				if (chevron) {
 					// Start in expanded state
 					chevron.setAttribute("aria-expanded", "true");
-					chevron.textContent = "▴";
+					chevron.textContent = "\u{25B4}";
 					chevron.addEventListener("click", () => {
 						const expanded = chevron.getAttribute("aria-expanded") === "true";
 						chevron.setAttribute("aria-expanded", String(!expanded));
-						chevron.textContent = expanded ? "▾" : "▴";
+						chevron.textContent = expanded ? "\u{25BE}" : "\u{25B4}";
 						settingsPanel.classList.toggle("ls-hidden", expanded);
 					});
 				}
 			}
 
-			// ── Enable toggle: save + request/revoke permission ────────────
+			// \u{2500}\u{2500} Enable toggle: save + request/revoke permission \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const enableToggle = card.querySelector(".site-enable-toggle");
 			if (enableToggle) {
 				enableToggle.addEventListener("change", async (e) => {
@@ -1275,7 +1275,7 @@ function renderSiteSettingsCards() {
 				});
 			}
 
-			// ── Auto-add toggle ────────────────────────────────────────────
+			// \u{2500}\u{2500} Auto-add toggle \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			aaInput.addEventListener("change", async (e) => {
 				const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
 				siteSettings[shelfId] = { ...current, autoAddEnabled: e.target.checked };
@@ -1288,7 +1288,7 @@ function renderSiteSettingsCards() {
 				);
 			});
 
-			// ── Status selects ─────────────────────────────────────────────
+			// \u{2500}\u{2500} Status selects \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			[chSel, nvSel].forEach((sel) => {
 				sel.addEventListener("change", async (e) => {
 					const mode = e.target.dataset.mode;
@@ -1301,7 +1301,7 @@ function renderSiteSettingsCards() {
 				});
 			});
 
-			// ── Per-site setting field changes ─────────────────────────────
+			// \u{2500}\u{2500} Per-site setting field changes \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			card.querySelectorAll("input[data-setting], select[data-setting], textarea[data-setting]").forEach((input) => {
 				const evtName = input.tagName === "TEXTAREA" ? "input" : "change";
 				let saveTimer = null;
@@ -1710,7 +1710,7 @@ function inferChapterHintFromUrl(url) {
 	return 0;
 }
 
-// ── Import Preview Modal ────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Import Preview Modal \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfirm }) {
 	document.getElementById("import-preview-modal")?.remove();
 
@@ -1725,7 +1725,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	const modal = document.createElement("div");
 	modal.style.cssText = "background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:10px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;";
 
-	// ── Header ──────────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Header \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const hdr = document.createElement("div");
 	hdr.style.cssText = "padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;";
 	const htitle = document.createElement("div");
@@ -1738,7 +1738,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	hdr.appendChild(closeX);
 	modal.appendChild(hdr);
 
-	// ── Breakdown chips ──────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Breakdown chips \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const chips = document.createElement("div");
 	chips.style.cssText = "padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);background:var(--bg-tertiary,#1f2937);";
 	const chipDefs = [
@@ -1755,7 +1755,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	}
 	modal.appendChild(chips);
 
-	// ── Tab bar ──────────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Tab bar \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const tabBar = document.createElement("div");
 	tabBar.style.cssText = "display:flex;border-bottom:1px solid var(--border-color,#333);padding:0 20px;background:var(--bg-secondary);";
 	const body = document.createElement("div");
@@ -1797,7 +1797,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		body.appendChild(sec);
 	}
 
-	// ── Tab: Ready ───────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Tab: Ready \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	{
 		const sec = sections["ready"];
 		if (toImport.length === 0) {
@@ -1823,7 +1823,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		}
 	}
 
-	// ── Tab: Existing ────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Tab: Existing \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const updateCheckboxes = [];
 	if (existingItems.length) {
 		const sec = sections["existing"];
@@ -1874,7 +1874,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		});
 	}
 
-	// ── Tab: Invalid ─────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Tab: Invalid \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	let invalidTextarea = null;
 	if (invalidUrls.length) {
 		const sec = sections["invalid"];
@@ -2029,7 +2029,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		invalidTextarea.className = "ls-textarea";
 		invalidTextarea.style.cssText = "width:100%;min-height:100px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box;";
 		invalidTextarea.value = invalidUrls.join("\n");
-		invalidTextarea.placeholder = "Edit URLs here, one per line…";
+		invalidTextarea.placeholder = "Edit URLs here, one per line\u{2026}";
 		invalidTextarea.spellcheck = false;
 		sec.appendChild(invalidTextarea);
 
@@ -2039,7 +2039,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		sec.appendChild(hint);
 	}
 
-	// ── Tab: Duplicates ──────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Tab: Duplicates \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	if (duplicateItems.length) {
 		const sec = sections["duplicates"];
 		const note = document.createElement("p");
@@ -2061,7 +2061,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	modal.appendChild(tabBar);
 	modal.appendChild(body);
 
-	// ── Progress bar (hidden until import starts) ─────────────────────────────
+	// \u{2500}\u{2500} Progress bar (hidden until import starts) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const progressWrap = document.createElement("div");
 	progressWrap.style.cssText = "padding:0 20px;display:none;border-top:1px solid var(--border-color,#333);";
 	const progressLbl = document.createElement("div");
@@ -2076,7 +2076,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	progressWrap.appendChild(progressBarWrap);
 	modal.appendChild(progressWrap);
 
-	// ── Footer ────────────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Footer \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const footer = document.createElement("div");
 	footer.style.cssText = "padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:space-between;align-items:center;gap:10px;";
 	const cancelBtn = document.createElement("button");
@@ -2139,7 +2139,7 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	activateTab(firstActive);
 }
 
-// ── Import runner (called by both old and new flows) ─────────────────────────
+// \u{2500}\u{2500} Import runner (called by both old and new flows) \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 async function _runImport({ toImport, forcedUpdateItems = [], correctedUrls = [], modalEl, urlImportStatus, progressLbl, progressBarFill }) {
 	const results = await addUrlsToLibrary(
 		correctedUrls,
@@ -2182,7 +2182,7 @@ async function _runImport({ toImport, forcedUpdateItems = [], correctedUrls = []
 	}
 }
 
-// ── Import Results Modal ────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Import Results Modal \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 function showImportResultsModal(results, allInputUrls = []) {
 	// Remove any existing modal
 	document.getElementById("import-results-modal")?.remove();
@@ -2278,7 +2278,7 @@ function showImportResultsModal(results, allInputUrls = []) {
 		tabBody.appendChild(sec);
 	}
 
-	// ── Failed section ────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Failed section \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	if (results.failedUrls.length) {
 		const sec = sections["failed"];
 		sec.appendChild(_importNote("These URLs opened as tabs but the extension could not extract novel data. The tabs were left open so you can inspect them. You can retry or open them manually."));
@@ -2291,14 +2291,14 @@ function showImportResultsModal(results, allInputUrls = []) {
 					{
 						label: "Retry",
 						onClick: async (rowEl, btn) => {
-							btn.textContent = "Retrying…";
+							btn.textContent = "Retrying\u{2026}";
 							btn.disabled = true;
 							const [ok, err] = await _retryImportUrl(item.url);
 							if (ok) {
 								rowEl.style.opacity = "0.4";
-								rowEl.querySelector(".ir-status").textContent = "✅ Added";
+								rowEl.querySelector(".ir-status").textContent = "\u{2705} Added";
 							} else {
-								rowEl.querySelector(".ir-status").textContent = "❌ " + err;
+								rowEl.querySelector(".ir-status").textContent = "\u{274C} " + err;
 								btn.textContent = "Retry";
 								btn.disabled = false;
 							}
@@ -2313,7 +2313,7 @@ function showImportResultsModal(results, allInputUrls = []) {
 		}
 	}
 
-	// ── Already in Library section ────────────────────────────────────────────
+	// \u{2500}\u{2500} Already in Library section \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	if (results.existingItems.length) {
 		const sec = sections["existing"];
 		sec.appendChild(_importNote("These novels are already in your library. You can update their metadata (title, chapters, cover) from the site, or keep what you have."));
@@ -2329,7 +2329,7 @@ function showImportResultsModal(results, allInputUrls = []) {
 					{
 						label: "Update Metadata",
 						onClick: async (rowEl, btn) => {
-							btn.textContent = "Updating…";
+							btn.textContent = "Updating\u{2026}";
 							btn.disabled = true;
 							const [ok, err] = await _retryImportUrl(item.importUrl || item.url, true);
 							if (ok) {
@@ -2351,7 +2351,7 @@ function showImportResultsModal(results, allInputUrls = []) {
 		}
 	}
 
-	// ── Duplicates section ────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Duplicates section \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	if (results.duplicateItems.length) {
 		const sec = sections["duplicate"];
 		sec.appendChild(_importNote("The same novel appeared multiple times in your input. Only the first occurrence was imported; these duplicates were ignored."));
@@ -2360,7 +2360,7 @@ function showImportResultsModal(results, allInputUrls = []) {
 		}
 	}
 
-	// ── Unsupported section ───────────────────────────────────────────────────
+	// \u{2500}\u{2500} Unsupported section \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	if (results.unsupportedItems.length) {
 		const sec = sections["unsupported"];
 		sec.appendChild(_importNote("These URLs are not from a supported site, or are not a novel/chapter page (e.g. AO3 series lists). They were skipped."));
@@ -2391,12 +2391,12 @@ function showImportResultsModal(results, allInputUrls = []) {
 	document.body.appendChild(overlay);
 }
 
-// ── Cross-site URL resolution via NovelArrow/NovelBin search ──────────────────────────────
+// \u{2500}\u{2500} Cross-site URL resolution via NovelArrow/NovelBin search \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 /**
  * Convert a URL slug or path into a plain text search query.
- * E.g. "back-then-i-adored-you" → "back then i adored you"
- *      "/back-then-i-adored-you.html" → "back then i adored you"
+ * E.g. "back-then-i-adored-you" \u{2192} "back then i adored you"
+ *      "/back-then-i-adored-you.html" \u{2192} "back then i adored you"
  */
 function _slugToQuery(url) {
 	try {
@@ -2427,7 +2427,7 @@ const SITE_SEARCH_CONFIGS = [
 		emoji: "\u{1F4DA}",
 		buildUrl: (q) => `https://novelarrow.com/search?q=${encodeURIComponent(q)}`,
 		parseResults(doc, limit) {
-			// NovelArrow is a Next.js React app — links to /novel/{slug} are the results.
+			// NovelArrow is a Next.js React app \u{2014} links to /novel/{slug} are the results.
 			const links = doc.querySelectorAll("a[href*='/novel/']");
 			const out = [];
 			const seen = new Set();
@@ -2596,7 +2596,7 @@ async function _retryImportUrl(url, forceUpdate = false) {
 	}
 }
 
-// forcedItems — items that skip the existence check (e.g. "update metadata" for already-saved novels).
+// forcedItems \u{2014} items that skip the existence check (e.g. "update metadata" for already-saved novels).
 // Each item must be: { url, originalUrl, novelId, shelfId }
 async function addUrlsToLibrary(urls, onProgress = null, forcedItems = []) {
 	const results = {
@@ -2744,7 +2744,7 @@ async function sendAddToLibraryMessage(tabId) {
 		} catch (err) {
 			lastError = err;
 		}
-		// Exponential-ish back-off: 1.5 s → 2 s → 2.5 s …
+		// Exponential-ish back-off: 1.5 s \u{2192} 2 s \u{2192} 2.5 s \u{2026}
 		await new Promise((r) => setTimeout(r, 1500 + attempt * 500));
 	}
 
@@ -3573,7 +3573,7 @@ function setupEventListeners() {
 		});
 	}
 
-	// Refresh models — Gemini primary
+	// Refresh models \u{2014} Gemini primary
 	const refreshModelsBtn = $("library-refresh-models");
 	if (refreshModelsBtn) {
 		refreshModelsBtn.addEventListener("click", async () => {
@@ -3591,28 +3591,28 @@ function setupEventListeners() {
 		});
 	}
 
-	// Refresh models — Gemini fallback
+	// Refresh models \u{2014} Gemini fallback
 	const fallbackRefreshBtn = $("fallback-refresh-models");
 	if (fallbackRefreshBtn) {
 		fallbackRefreshBtn.addEventListener("click", async () => {
 			const key = libraryApiKeys[0] || "";
 			if (!key) { showToast("Add a Gemini API key first", "error"); return; }
 			fallbackRefreshBtn.disabled = true;
-			fallbackRefreshBtn.textContent = "↻ Loading…";
+			fallbackRefreshBtn.textContent = "\u{21BB} Loading\u{2026}";
 			await updateLibraryModelSelector(key, "fallback");
 			fallbackRefreshBtn.disabled = false;
-			fallbackRefreshBtn.textContent = "↻ Refresh";
+			fallbackRefreshBtn.textContent = "\u{21BB} Refresh";
 		});
 	}
 
-	// Refresh models — Primary OpenAI-compatible
+	// Refresh models \u{2014} Primary OpenAI-compatible
 	const poRefreshBtn = $("primary-openai-refresh-models");
 	if (poRefreshBtn) {
 		poRefreshBtn.addEventListener("click", async () => {
 			const baseUrl = $("primary-openai-base-url")?.value?.trim();
 			const apiKey = $("primary-openai-key")?.value?.trim();
 			poRefreshBtn.disabled = true;
-			poRefreshBtn.textContent = "↻ Loading…";
+			poRefreshBtn.textContent = "\u{21BB} Loading\u{2026}";
 			const models = await fetchOpenAIModels(baseUrl, apiKey);
 			const sel = $("primary-openai-model");
 			const custom = $("primary-openai-model-custom");
@@ -3621,35 +3621,35 @@ function setupEventListeners() {
 				populateModelSelect(sel, models, saved);
 			}
 			poRefreshBtn.disabled = false;
-			poRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} models loaded` : "No models found — check URL and key", models.length ? "success" : "error");
+			poRefreshBtn.textContent = "\u{21BB} Models";
+			showToast(models.length ? `${models.length} models loaded` : "No models found \u{2014} check URL and key", models.length ? "success" : "error");
 		});
 	}
 
-	// Refresh models — Primary Ollama
+	// Refresh models \u{2014} Primary Ollama
 	const poOllamaRefreshBtn = $("primary-ollama-refresh-models");
 	if (poOllamaRefreshBtn) {
 		poOllamaRefreshBtn.addEventListener("click", async () => {
 			const baseUrl = $("primary-ollama-url")?.value?.trim() || "http://localhost:11434";
 			poOllamaRefreshBtn.disabled = true;
-			poOllamaRefreshBtn.textContent = "↻ Loading…";
+			poOllamaRefreshBtn.textContent = "\u{21BB} Loading\u{2026}";
 			const models = await fetchOllamaModels(baseUrl);
 			const sel = $("primary-ollama-model");
 			if (sel) populateModelSelect(sel, models, sel.value);
 			poOllamaRefreshBtn.disabled = false;
-			poOllamaRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+			poOllamaRefreshBtn.textContent = "\u{21BB} Models";
+			showToast(models.length ? `${models.length} Ollama models found` : "No models \u{2014} is Ollama running?", models.length ? "success" : "error");
 		});
 	}
 
-	// Refresh models — Fallback OpenAI-compatible
+	// Refresh models \u{2014} Fallback OpenAI-compatible
 	const foRefreshBtn = $("fallback-openai-refresh-models");
 	if (foRefreshBtn) {
 		foRefreshBtn.addEventListener("click", async () => {
 			const baseUrl = $("fallback-openai-base-url")?.value?.trim();
 			const apiKey = $("fallback-openai-key")?.value?.trim();
 			foRefreshBtn.disabled = true;
-			foRefreshBtn.textContent = "↻ Loading…";
+			foRefreshBtn.textContent = "\u{21BB} Loading\u{2026}";
 			const models = await fetchOpenAIModels(baseUrl, apiKey);
 			const sel = $("fallback-openai-model");
 			const custom = $("fallback-openai-model-custom");
@@ -3658,24 +3658,24 @@ function setupEventListeners() {
 				populateModelSelect(sel, models, saved);
 			}
 			foRefreshBtn.disabled = false;
-			foRefreshBtn.textContent = "↻ Models";
+			foRefreshBtn.textContent = "\u{21BB} Models";
 			showToast(models.length ? `${models.length} models loaded` : "No models found", models.length ? "success" : "error");
 		});
 	}
 
-	// Refresh models — Fallback Ollama
+	// Refresh models \u{2014} Fallback Ollama
 	const foOllamaRefreshBtn = $("fallback-ollama-refresh-models");
 	if (foOllamaRefreshBtn) {
 		foOllamaRefreshBtn.addEventListener("click", async () => {
 			const baseUrl = $("fallback-ollama-url")?.value?.trim() || "http://localhost:11434";
 			foOllamaRefreshBtn.disabled = true;
-			foOllamaRefreshBtn.textContent = "↻ Loading…";
+			foOllamaRefreshBtn.textContent = "\u{21BB} Loading\u{2026}";
 			const models = await fetchOllamaModels(baseUrl);
 			const sel = $("fallback-ollama-model");
 			if (sel) populateModelSelect(sel, models, sel.value);
 			foOllamaRefreshBtn.disabled = false;
-			foOllamaRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+			foOllamaRefreshBtn.textContent = "\u{21BB} Models";
+			showToast(models.length ? `${models.length} Ollama models found` : "No models \u{2014} is Ollama running?", models.length ? "success" : "error");
 		});
 	}
 
@@ -4058,7 +4058,7 @@ function setupEventListeners() {
 
 	// \u{2500}\u{2500} Google Drive \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
-	// ── Native Browser Sync ────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Native Browser Sync \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 	function showNativeSyncMsg(text, type) {
 		const el = $("nativeSyncMessage");
@@ -4073,16 +4073,16 @@ function setupEventListeners() {
 	if (nativeSyncNowBtn) {
 		nativeSyncNowBtn.addEventListener("click", async () => {
 			nativeSyncNowBtn.disabled = true;
-			nativeSyncNowBtn.textContent = "Syncing…";
+			nativeSyncNowBtn.textContent = "Syncing\u{2026}";
 			try {
 				const resp = await browser.runtime.sendMessage({ action: "nativeSyncNow" });
-				if (resp?.success) showNativeSyncMsg("✅ Synced to browser account!", "success");
+				if (resp?.success) showNativeSyncMsg("\u{2705} Synced to browser account!", "success");
 				else throw new Error(resp?.error || "Sync failed");
 			} catch (err) {
-				showNativeSyncMsg("❌ " + err.message, "error");
+				showNativeSyncMsg("\u{274C} " + err.message, "error");
 			} finally {
 				nativeSyncNowBtn.disabled = false;
-				nativeSyncNowBtn.textContent = "☁ Sync Now";
+				nativeSyncNowBtn.textContent = "\u{2601} Sync Now";
 			}
 		});
 	}
@@ -4091,20 +4091,20 @@ function setupEventListeners() {
 	if (nativeSyncRestoreBtn) {
 		nativeSyncRestoreBtn.addEventListener("click", async () => {
 			nativeSyncRestoreBtn.disabled = true;
-			nativeSyncRestoreBtn.textContent = "Restoring…";
+			nativeSyncRestoreBtn.textContent = "Restoring\u{2026}";
 			try {
 				const resp = await browser.runtime.sendMessage({ action: "nativeSyncRestore" });
 				if (resp?.success) {
-					showNativeSyncMsg("✅ Restored from browser sync!", "success");
+					showNativeSyncMsg("\u{2705} Restored from browser sync!", "success");
 					setTimeout(() => location.reload(), 1500);
 				} else {
 					throw new Error(resp?.error || "Restore failed");
 				}
 			} catch (err) {
-				showNativeSyncMsg("❌ " + err.message, "error");
+				showNativeSyncMsg("\u{274C} " + err.message, "error");
 			} finally {
 				nativeSyncRestoreBtn.disabled = false;
-				nativeSyncRestoreBtn.textContent = "↺ Restore from Sync";
+				nativeSyncRestoreBtn.textContent = "\u{21BA} Restore from Sync";
 			}
 		});
 	}
@@ -4116,10 +4116,10 @@ function setupEventListeners() {
 			nativeSyncClearBtn.disabled = true;
 			try {
 				const resp = await browser.runtime.sendMessage({ action: "nativeSyncClear" });
-				if (resp?.success) showNativeSyncMsg("✅ Sync data cleared.", "success");
+				if (resp?.success) showNativeSyncMsg("\u{2705} Sync data cleared.", "success");
 				else throw new Error(resp?.error || "Clear failed");
 			} catch (err) {
-				showNativeSyncMsg("❌ " + err.message, "error");
+				showNativeSyncMsg("\u{274C} " + err.message, "error");
 			} finally {
 				nativeSyncClearBtn.disabled = false;
 			}
@@ -4434,12 +4434,12 @@ function setupEventListeners() {
 	if (checkNowBtn) {
 		checkNowBtn.addEventListener("click", async () => {
 			checkNowBtn.disabled = true;
-			if (checkStatus) checkStatus.textContent = "Checking…";
+			if (checkStatus) checkStatus.textContent = "Checking\u{2026}";
 			try {
 				await browser.runtime.sendMessage({ action: "checkNovelsNow" });
-				if (checkStatus) checkStatus.textContent = "✅ Check complete";
+				if (checkStatus) checkStatus.textContent = "\u{2705} Check complete";
 			} catch (e) {
-				if (checkStatus) checkStatus.textContent = "❌ " + e.message;
+				if (checkStatus) checkStatus.textContent = "\u{274C} " + e.message;
 			} finally {
 				checkNowBtn.disabled = false;
 				setTimeout(() => { if (checkStatus) checkStatus.textContent = ""; }, 4000);
@@ -5294,7 +5294,7 @@ async function initDisplaySettingsTab() {
 }
 
 // \u{2500}\u{2500} Init \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
-// ── Queue panel ────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Queue panel \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 const STATUS_ICON = {
 	pending: "\u{23F3}",
@@ -5321,7 +5321,7 @@ async function initQueuePanel() {
 
 	if (!addBtn) return;
 
-	// ── Render job list ──────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Render job list \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	async function renderJobs() {
 		if (!jobList) return;
 		let jobs = [];
@@ -5342,7 +5342,7 @@ async function initQueuePanel() {
 		if (jobs.length === 0) {
 			const empty = document.createElement("p");
 			empty.className = "ls-section-desc";
-			empty.textContent = "No jobs queued. Add one below or from a novel’s edit modal.";
+			empty.textContent = "No jobs queued. Add one below or from a novel\u{2019}s edit modal.";
 			jobList.appendChild(empty);
 			return;
 		}
@@ -5368,7 +5368,7 @@ async function initQueuePanel() {
 				background:var(--bg-secondary);
 			`;
 
-			// ── Title row ────────────────────────────────────────────────────
+			// \u{2500}\u{2500} Title row \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const titleRow = document.createElement("div");
 			titleRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:6px;";
 			const statusSpan = document.createElement("span");
@@ -5379,13 +5379,13 @@ async function initQueuePanel() {
 			titleSpan.textContent = job.novelTitle || "(Unnamed novel)";
 			const chSpan = document.createElement("span");
 			chSpan.style.cssText = "color:var(--text-secondary);font-size:11px;flex-shrink:0;";
-			chSpan.textContent = `Ch ${job.startChapter}–${job.endChapter}`;
+			chSpan.textContent = `Ch ${job.startChapter}\u{2013}${job.endChapter}`;
 			titleRow.appendChild(statusSpan);
 			titleRow.appendChild(titleSpan);
 			titleRow.appendChild(chSpan);
 			card.appendChild(titleRow);
 
-			// ── Progress bar ─────────────────────────────────────────────────
+			// \u{2500}\u{2500} Progress bar \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			if (job.status === "running" || job.status === "paused" || job.status === "done") {
 				const bar = document.createElement("div");
 				bar.style.cssText = "background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:6px;";
@@ -5395,7 +5395,7 @@ async function initQueuePanel() {
 				card.appendChild(bar);
 			}
 
-			// ── Stats row ────────────────────────────────────────────────────
+			// \u{2500}\u{2500} Stats row \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const statsRow = document.createElement("div");
 			statsRow.style.cssText = "display:flex;gap:12px;margin-bottom:6px;font-size:11px;flex-wrap:wrap;";
 
@@ -5416,20 +5416,20 @@ async function initQueuePanel() {
 			if (job.status === "error" && job.error) {
 				const errSpan = document.createElement("span");
 				errSpan.style.cssText = "color:#ef4444;font-size:11px;";
-				errSpan.textContent = "⚠️ " + job.error.slice(0, 120);
+				errSpan.textContent = "\u{26A0}\u{FE0F} " + job.error.slice(0, 120);
 				statsRow.appendChild(errSpan);
 			}
 
 			if (job.status === "done" && skipped > 0) {
 				const note = document.createElement("div");
 				note.style.cssText = "color:#f59e0b;font-size:11px;margin-top:2px;";
-				note.textContent = `${skipped} chapter(s) skipped — too short or empty (< 100 words).`;
+				note.textContent = `${skipped} chapter(s) skipped \u{2014} too short or empty (< 100 words).`;
 				statsRow.appendChild(note);
 			}
 
 			card.appendChild(statsRow);
 
-			// ── Actions ──────────────────────────────────────────────────────
+			// \u{2500}\u{2500} Actions \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const actRow = document.createElement("div");
 			actRow.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;";
 
@@ -5446,12 +5446,12 @@ async function initQueuePanel() {
 			};
 
 			if (job.status === "running") {
-				actRow.appendChild(makeBtn("⏸ Pause", false, async () => {
+				actRow.appendChild(makeBtn("\u{23F8} Pause", false, async () => {
 					await browser.runtime.sendMessage({ action: "queue", subAction: "pause" });
 					await renderJobs();
 				}));
 			} else if (job.status === "paused" || job.status === "pending") {
-				actRow.appendChild(makeBtn("▶ Resume", false, async () => {
+				actRow.appendChild(makeBtn("\u{25B6} Resume", false, async () => {
 					await browser.runtime.sendMessage({ action: "queue", subAction: "resume" });
 					await renderJobs();
 				}));
@@ -5460,12 +5460,12 @@ async function initQueuePanel() {
 			if (job.status === "done") {
 				actRow.appendChild(makeBtn("View Summary", false, async () => {
 					if (resultView) resultView.style.display = "";
-					if (resultTitle) resultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+					if (resultTitle) resultTitle.textContent = `${job.novelTitle} \u{B7} Ch ${job.startChapter}\u{2013}${job.endChapter}`;
 					if (resultContent) resultContent.textContent = job.summary || "(No summary generated)";
 				}));
 			}
 
-			actRow.appendChild(makeBtn("❌ Remove", true, async () => {
+			actRow.appendChild(makeBtn("\u{274C} Remove", true, async () => {
 				await browser.runtime.sendMessage({ action: "queue", subAction: "cancel", jobId: job.id });
 				await renderJobs();
 			}));
@@ -5475,14 +5475,14 @@ async function initQueuePanel() {
 		}
 	}
 
-	// ── Add job ──────────────────────────────────────────────────────────────
+	// \u{2500}\u{2500} Add job \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	addBtn.addEventListener("click", async () => {
 		const firstUrl = document.getElementById("ls-qFirstUrl")?.value?.trim();
 		const start = parseInt(document.getElementById("ls-qStart")?.value, 10) || 1;
 		const end = parseInt(document.getElementById("ls-qEnd")?.value, 10) || 1;
 		const sendToLW = document.getElementById("ls-qSendToLW")?.checked ?? true;
 		if (!firstUrl) { showToast("Enter the first chapter URL", "warning"); return; }
-		if (start > end) { showToast("From chapter must be ≤ To chapter", "warning"); return; }
+		if (start > end) { showToast("From chapter must be \u{2264} To chapter", "warning"); return; }
 		try {
 			const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
 			await browser.runtime.sendMessage({
@@ -5499,7 +5499,7 @@ async function initQueuePanel() {
 					domainId: "",
 				},
 			});
-			showToast(`Job queued: Ch ${start}–${end}`, "success");
+			showToast(`Job queued: Ch ${start}\u{2013}${end}`, "success");
 			document.getElementById("ls-qFirstUrl").value = "";
 			await renderJobs();
 		} catch (e) {
@@ -5522,13 +5522,13 @@ async function initQueuePanel() {
 		}
 	}, 8000);
 
-	// Clean up on panel hide (tab switch) — best-effort
+	// Clean up on panel hide (tab switch) \u{2014} best-effort
 	document.getElementById("ls-nav")?.addEventListener("click", () => {
 		clearInterval(_refreshInterval);
 	});
 }
 
-// ── LoreWeave panel ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} LoreWeave panel \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 async function initLoreWeavePanel() {
 	const lsUrl = document.getElementById("ls-lwUrl");
 	const lsAuto = document.getElementById("ls-lwAutoGraphify");
@@ -5602,7 +5602,7 @@ async function initLoreWeavePanel() {
 	}
 }
 
-// ── Chat settings panel ─────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Chat settings panel \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 async function initChatPanel() {
 	const saveBtn = document.getElementById("ls-chatSettingsSaveBtn");
 	if (!saveBtn) return;

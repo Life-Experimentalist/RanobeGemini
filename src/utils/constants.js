@@ -383,8 +383,8 @@ export const EMOTION_EMOJIS = {
 	shaking: "\u{1F628}",
 };
 
-// ── LoreWeave integration ─────────────────────────────────────────────────────
-// All three are opt-in defaults — empty = feature disabled until user configures.
+// \u{2500}\u{2500} LoreWeave integration \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
+// All three are opt-in defaults \u{2014} empty = feature disabled until user configures.
 export const LOREWEAVE_DEFAULT_URL = ""; // e.g. "https://api.loreweave.example.com"
 export const LOREWEAVE_DEFAULT_DOMAIN_ID = ""; // e.g. "lw_dom_my_novel"
 export const LOREWEAVE_DEFAULT_TOKEN = ""; // LW_API_TOKEN on the server (empty = no auth)

@@ -403,7 +403,7 @@ function setupEventListeners() {
 		});
 	}
 
-	// Random select button — anti-repeat
+	// Random select button \u{2014} anti-repeat
 	const _shelfPageRecentPicks = new Set();
 	const randomSelectBtn = document.getElementById("random-select-btn");
 	if (randomSelectBtn) {

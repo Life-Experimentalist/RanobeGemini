@@ -254,7 +254,7 @@ function recordPersistent(level, args) {
 }
 
 /**
- * Error logger — always logs synchronously so DevTools shows the real call site.
+ * Error logger \u{2014} always logs synchronously so DevTools shows the real call site.
  * Errors are never gated on debug mode: they are always surfaced.
  * @param  {...any} args - Arguments to log as errors
  */
@@ -270,7 +270,7 @@ export function debugError(...args) {
 }
 
 /**
- * Warning logger — always logs synchronously so DevTools shows the real call site.
+ * Warning logger \u{2014} always logs synchronously so DevTools shows the real call site.
  * Warnings are never gated on debug mode: they are always surfaced.
  * @param  {...any} args
  */

@@ -3085,7 +3085,7 @@ if (window.__RGInitDone) {
 		}
 
 		// Use canonical URL so cache saved on novelarrow.com is found on novelbin.com
-		// and vice-versa (getCanonicalCacheUrl normalises both to novelbin.com/b/…).
+		// and vice-versa (getCanonicalCacheUrl normalises both to novelbin.com/b/\u{2026}).
 		const url = getCacheUrl();
 		const hasChunks = await chunking.cache.hasChunksInCache(url);
 		if (!hasChunks) {
@@ -3299,7 +3299,7 @@ if (window.__RGInitDone) {
 			const newUrl = window.location.href;
 			if (newUrl === lastUrl) return;
 
-			// Ignore hash-only changes — skip links like <a href="#main-content"> fire
+			// Ignore hash-only changes \u{2014} skip links like <a href="#main-content"> fire
 			// hashchange but don't navigate to a new page, and re-initing on them breaks
 			// the SPA by tearing down enhancement state mid-read.
 			try {
@@ -3320,7 +3320,7 @@ if (window.__RGInitDone) {
 				? currentHandler.findContentArea()
 				: null)
 				?? document.querySelector("#chr-content, .chr-c, article[data-chapter-id]");
-			// Prefer data-chapter-id (NovelArrow) — changes the instant React swaps
+			// Prefer data-chapter-id (NovelArrow) \u{2014} changes the instant React swaps
 			// the chapter. Fall back to a text slice for other SPA sites.
 			const oldContentFingerprint = _snapEl
 				? (_snapEl.getAttribute?.("data-chapter-id") || _snapEl.textContent.trim().slice(0, 300))
@@ -3567,7 +3567,7 @@ if (window.__RGInitDone) {
 		}
 
 		// For DEDICATED_PAGE-type handlers on novel info pages, show novel management UI
-		// instead of enhance/summarize buttons — but skip entirely if the user has
+		// instead of enhance/summarize buttons \u{2014} but skip entirely if the user has
 		// previously hidden the extension on this hostname (no DOM injection at all).
 		if (
 			!hasExtractButton &&

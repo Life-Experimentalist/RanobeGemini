@@ -395,7 +395,7 @@ export function cleanupChunkedUiBeforeInitRuntime({
 		existingMasterBanner.remove();
 	}
 
-	// Do NOT remove .gemini-main-summary-group here — the user wants that banner
+	// Do NOT remove .gemini-main-summary-group here \u{2014} the user wants that banner
 	// to stay visible when they click Enhance again, with the new enhancement UI
 	// appearing below it.
 }
@@ -473,7 +473,7 @@ export async function prepareChunkedViewRuntime({
 		);
 		if (chunking?.summaryUI) {
 			// Keep existing .gemini-main-summary-group elements (placed outside the
-			// content area by injectUI) — they hold the Enhance button and the user
+			// content area by injectUI) \u{2014} they hold the Enhance button and the user
 			// wants them to persist across re-enhancements. Only remove any stale
 			// summary group that is already INSIDE this contentArea to avoid duplicates.
 			contentArea
@@ -1249,14 +1249,14 @@ export async function restoreChunkedContentFromCacheRuntime({
 			chunking?.config?.DEFAULT_CHUNK_SUMMARY_COUNT ||
 			2;
 
-		// Only remove summary groups inside contentArea — the outer one (placed
+		// Only remove summary groups inside contentArea \u{2014} the outer one (placed
 		// before .select-text by injectUI) holds the Enhance button and must persist.
 		// The contentArea was already wiped by innerHTML="", so this is just a guard.
 		contentArea
 			.querySelectorAll(".gemini-main-summary-group")
 			.forEach((el) => el.remove());
 
-		// No onEnhance here — the outer summary group from injectUI handles that.
+		// No onEnhance here \u{2014} the outer summary group from injectUI handles that.
 		const mainSummaryGroup = chunking.summaryUI.createMainSummaryGroup(
 			totalChunks,
 			(indices) => summarizeChunkRange(indices, false),

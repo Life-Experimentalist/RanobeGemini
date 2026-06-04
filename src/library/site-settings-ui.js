@@ -168,7 +168,7 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 		})
 		.join("");
 
-	// Render flat — no inner <details> wrapper. The site card's own
+	// Render flat \u{2014} no inner <details> wrapper. The site card's own
 	// expand/collapse is already one click; a second nested toggle was
 	// making settings invisible.
 	return `<div class="ls-handler-fields">${fieldsHtml}</div>`;

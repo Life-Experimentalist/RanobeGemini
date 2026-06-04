@@ -323,7 +323,7 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 		if (webAuthErr.message?.includes("State mismatch") || webAuthErr.message?.includes("No auth code")) {
 			throw webAuthErr;
 		}
-		// browser.identity unavailable or blocked (e.g. mobile) — fall back to tab flow
+		// browser.identity unavailable or blocked (e.g. mobile) \u{2014} fall back to tab flow
 		try {
 			code = await launchOAuthTabFlow({
 				authEndpoint: AUTH_ENDPOINT,

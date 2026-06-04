@@ -54,7 +54,7 @@ Please maintain:
 
 When enhancing, improve readability while fully respecting the author's creative voice and the source material's original intent.`;
 
-	// Desktop handler owns URL normalization (m.→www. redirect logic).
+	// Desktop handler owns URL normalization (m.\u{2192}www. redirect logic).
 	// Override to prevent a second concurrent normalizeURL call on every FF page load.
 	static initialize() {}
 

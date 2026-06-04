@@ -1,5 +1,5 @@
 /**
- * Graphify service — extracts story entities from chapter text and ingests into LoreWeave.
+ * Graphify service \u{2014} extracts story entities from chapter text and ingests into LoreWeave.
  * Also saves results to the local story chronicle when chronicle is enabled.
  */
 

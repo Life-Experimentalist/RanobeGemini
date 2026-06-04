@@ -2760,7 +2760,7 @@ async function addUrlsToLibrary(urls = []) {
 }
 
 /**
- * Queue status widget — polls queue and shows a badge + click-to-open shortcut.
+ * Queue status widget \u{2014} polls queue and shows a badge + click-to-open shortcut.
  */
 function initQueueStatusWidget() {
 	const btn = elements.queueStatusBtn;
@@ -2820,7 +2820,7 @@ function setupEventListeners() {
 		);
 	}
 
-	// Random novel — anti-repeat: exclude recently picked novels until pool exhausted
+	// Random novel \u{2014} anti-repeat: exclude recently picked novels until pool exhausted
 	if (elements.libraryRandomBtn) {
 		elements.libraryRandomBtn.addEventListener("click", () => {
 			const pool = filterAndSortNovels();

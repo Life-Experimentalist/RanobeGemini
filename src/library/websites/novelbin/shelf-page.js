@@ -28,7 +28,7 @@ import {
 	recoverMissingNovelById,
 } from "../../shared-shelf-helpers.js";
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} State \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 let allNovels = [];
 let filteredNovels = [];
@@ -49,7 +49,7 @@ const modalNavigation = createModalNavigationController({
 	onOpenNovel: (novel, options) => showNovelModal(novel, options),
 });
 
-// ── Filter state ──────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Filter state \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 const FILTER_STORAGE_KEY = "rg_filters_novelbin";
 const DEFAULT_FILTERS = {
@@ -83,7 +83,7 @@ function persistFilters() {
 	}
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Utilities \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function escapeHtml(text) {
 	const div = document.createElement("div");
@@ -135,7 +135,7 @@ function sortAlpha(set) {
 	return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-// ── Taxonomy / filter option building ─────────────────────────────────────────
+// \u{2500}\u{2500} Taxonomy / filter option building \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function buildFilterOptions(novels) {
 	const languages = new Set();
@@ -166,7 +166,7 @@ function populateDynamicFilters() {
 	renderPillList("genres-filter", genres, filterState.genres, "genres");
 }
 
-// ── Multi-select pill list ────────────────────────────────────────────────────
+// \u{2500}\u{2500} Multi-select pill list \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function renderPillList(containerId, items, selectedValues, stateKey) {
 	const container = document.getElementById(containerId);
@@ -215,7 +215,7 @@ function syncPillListUI(containerId, selectedValues) {
 	});
 }
 
-// ── Active filter chips ───────────────────────────────────────────────────────
+// \u{2500}\u{2500} Active filter chips \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function renderActiveFilters() {
 	const container = document.getElementById("active-filters");
@@ -310,7 +310,7 @@ function applyFilterStateToUI() {
 	renderActiveFilters();
 }
 
-// ── Filter & sort ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Filter & sort \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function applyFiltersAndSort() {
 	filteredNovels = [...allNovels];
@@ -384,7 +384,7 @@ function applyFiltersAndSort() {
 	persistFilters();
 }
 
-// ── Render novels ─────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Render novels \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function renderNovels(novels = filteredNovels) {
 	const grid = document.getElementById("novel-grid");
@@ -427,7 +427,7 @@ function renderNovels(novels = filteredNovels) {
 
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Modal \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function showNovelModal(novel, options = {}) {
 	const modal = document.getElementById("novel-modal");
@@ -605,7 +605,7 @@ function showNovelModal(novel, options = {}) {
 			const domains = slug
 				? [
 					{ label: "novelbin.com", url: `https://novelbin.com/b/${slug}`, note: "" },
-					{ label: "novelbin.me", url: `https://novelbin.me/b/${slug}`, note: "(mirror — may be down)" },
+					{ label: "novelbin.me", url: `https://novelbin.me/b/${slug}`, note: "(mirror \u{2014} may be down)" },
 					{ label: "novelarrow.com", url: `https://novelarrow.com/novel/${slug}`, note: "(new site)" },
 				]
 				: [];
@@ -693,7 +693,7 @@ function showNovelModal(novel, options = {}) {
 	document.addEventListener("keydown", closeOnEscape);
 }
 
-// ── Analytics ─────────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Analytics \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function setInsightTarget(valueId, novel, text) {
 	const valueEl = document.getElementById(valueId);
@@ -864,7 +864,7 @@ function renderReadingStatusChart(buckets = {}, total = 0) {
 	summary.textContent = `${rereadCount.toLocaleString()} Rereading \u{2022} ${planCount.toLocaleString()} Plan to Read \u{2022} ${completedCount.toLocaleString()} Completed \u{2022} ${readingCount.toLocaleString()} Reading \u{2022} ${onHoldCount.toLocaleString()} On Hold`;
 }
 
-// ── Filter UI setup ───────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Filter UI setup \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function positionFilterDropdown() {
 	const dropdown = document.getElementById("filter-dropdown");
@@ -1002,7 +1002,7 @@ function setupFilters() {
 	renderActiveFilters();
 }
 
-// ── Library helpers ───────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Library helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 function showToast(message, type = "success") {
 	const toast = document.createElement("div");
@@ -1116,7 +1116,7 @@ async function applyDisplaySettings() {
 	if (activeFilters) activeFilters.style.display = s.showActiveFilters ? "" : "none";
 }
 
-// ── Initialization ────────────────────────────────────────────────────────────
+// \u{2500}\u{2500} Initialization \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 (async () => {
 	await applyThemeFromStorage();
@@ -1159,7 +1159,7 @@ async function applyDisplaySettings() {
 			});
 		}
 
-		// Wire card clicks → modal. NovelbinNovelCard.onCardClick dispatches a
+		// Wire card clicks \u{2192} modal. NovelbinNovelCard.onCardClick dispatches a
 		// custom event by default; override it here so clicks open the modal directly.
 		NovelbinNovelCard.onCardClick = (novel) => showNovelModal(novel);
 

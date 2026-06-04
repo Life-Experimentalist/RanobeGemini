@@ -83,7 +83,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				min: 50,
 				max: 200,
 				step: 10,
-				description: "Font size percentage for enhanced/summary content (50–200%).",
+				description: "Font size percentage for enhanced/summary content (50\u{2013}200%).",
 			},
 			{ key: "_css", type: "section", label: "\u{1F4BB} Custom CSS" },
 			{
@@ -443,7 +443,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		super.formatAfterEnhancement(contentArea);
 	}
 
-	/** ScribbleHub renders HTML chapter content — HTML enhancement is preferred. */
+	/** ScribbleHub renders HTML chapter content \u{2014} HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

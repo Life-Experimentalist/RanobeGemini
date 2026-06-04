@@ -177,7 +177,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 					</div>` : ""}
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Chapters</span>
-						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "—"}</span>
+						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "\u{2014}"}</span>
 					</div>
 					${rating ? `
 					<div class="novelbin-meta-group">

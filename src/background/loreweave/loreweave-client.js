@@ -1,5 +1,5 @@
 /**
- * LoreWeave API client — sends graph deltas to the LoreWeave backend.
+ * LoreWeave API client \u{2014} sends graph deltas to the LoreWeave backend.
  */
 
 const DEFAULT_TIMEOUT_MS = 30_000;

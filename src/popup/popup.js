@@ -1,4 +1,4 @@
-﻿// Simple popup script for Ranobe Gemini
+// Simple popup script for Ranobe Gemini
 
 import {
 	DEFAULT_PROMPT,
@@ -384,7 +384,7 @@ async function initializePopup() {
 		});
 	}
 
-	// ── Header: Toggle Gemini UI button ────────────────────────────────────
+	// \u{2500}\u{2500} Header: Toggle Gemini UI button \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 	const toggleGeminiUIHeaderBtn = document.getElementById("toggleGeminiUIHeaderBtn");
 	if (toggleGeminiUIHeaderBtn) {
 		// Sync initial button state with the active tab
@@ -400,7 +400,7 @@ async function initializePopup() {
 					? "Show Ranobe Gemini UI on this page"
 					: "Hide Ranobe Gemini UI on this page";
 			} catch {
-				// Tab has no content script — keep default appearance
+				// Tab has no content script \u{2014} keep default appearance
 			}
 		})();
 
@@ -420,7 +420,7 @@ async function initializePopup() {
 					toggleGeminiUIBtn.classList.toggle("ui-hidden", nowHidden);
 					toggleGeminiUIBtn.textContent = nowHidden
 						? "\u{1F441} Show Gemini UI"
-						: "\u{1F576}️ Hide Gemini UI";
+						: "\u{1F576}\u{FE0F} Hide Gemini UI";
 				}
 			} catch {
 				// Content script not available; ignore
@@ -447,7 +447,7 @@ async function initializePopup() {
 		});
 	}
 
-	// Shortcut links → Library Settings panels
+	// Shortcut links \u{2192} Library Settings panels
 	const LS_URL = browser.runtime.getURL("library/library-settings.html");
 	const shortcutMap = {
 		shortcutQueue: "loreweave",
@@ -472,7 +472,7 @@ async function initializePopup() {
 		});
 	}
 
-	// Obsolete elements (moved to Library Settings — kept as null so if-guards below don't throw)
+	// Obsolete elements (moved to Library Settings \u{2014} kept as null so if-guards below don't throw)
 	const topPSlider = document.getElementById("topPSlider");
 	const topPValue = document.getElementById("topPValue");
 	const topKSlider = document.getElementById("topKSlider");
@@ -2891,7 +2891,7 @@ async function initializePopup() {
 					}
 				}
 
-				// Add to Library button — fix text (no .btn-text span, set directly)
+				// Add to Library button \u{2014} fix text (no .btn-text span, set directly)
 				if (addToLibraryBtn) {
 					addToLibraryBtn.textContent = novelInfo.isInLibrary
 						? "\u{1F504} Update"
@@ -2900,7 +2900,7 @@ async function initializePopup() {
 					addToLibraryBtn.onclick = () => addCurrentNovelToLibrary?.();
 				}
 
-				// Toggle Gemini UI button — only meaningful on chapter/novel pages
+				// Toggle Gemini UI button \u{2014} only meaningful on chapter/novel pages
 				if (toggleGeminiUIBtn) {
 					if (novelInfo.isChapterPage || novelInfo.isNovelPage) {
 						toggleGeminiUIBtn.style.display = "inline-flex";
@@ -2908,7 +2908,7 @@ async function initializePopup() {
 						const isHidden = novelInfo.geminiUIHidden === true;
 						toggleGeminiUIBtn.textContent = isHidden
 							? "\u{1F441} Show Gemini UI"
-							: "\u{1F576}️ Hide Gemini UI";
+							: "\u{1F576}\u{FE0F} Hide Gemini UI";
 						toggleGeminiUIBtn.classList.toggle("ui-hidden", isHidden);
 						toggleGeminiUIBtn.onclick = async () => {
 							try {
@@ -2922,7 +2922,7 @@ async function initializePopup() {
 								toggleGeminiUIBtn.classList.toggle("ui-hidden", nowHidden);
 								toggleGeminiUIBtn.textContent = nowHidden
 									? "\u{1F441} Show Gemini UI"
-									: "\u{1F576}️ Hide Gemini UI";
+									: "\u{1F576}\u{FE0F} Hide Gemini UI";
 							} catch (e) {
 								// Content script may not be available; ignore silently
 							}
@@ -4446,7 +4446,7 @@ async function initializePopup() {
 					card.appendChild(cover);
 					card.appendChild(info);
 
-					// Continue-reading button — only shown when a URL is available
+					// Continue-reading button \u{2014} only shown when a URL is available
 					const continueUrl = novel.lastReadUrl || novel.sourceUrl || "";
 					if (continueUrl) {
 						const continueBtn = document.createElement("button");
@@ -7175,7 +7175,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 			// Initialize notifications badge on startup (content loads on tab switch)
 			updateNotificationBadge();
 
-			// ── LoreWeave tab ─────────────────────────────────────────────────────────
+			// \u{2500}\u{2500} LoreWeave tab \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const lwUrl = document.getElementById("lwUrl");
 			const lwDomain = document.getElementById("lwDomain");
 			const lwToken = document.getElementById("lwToken");
@@ -7270,27 +7270,27 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 			if (lwPingBtn) {
 				lwPingBtn.addEventListener("click", async () => {
 					if (!lwPingStatus) return;
-					lwPingStatus.textContent = "Testing…";
+					lwPingStatus.textContent = "Testing\u{2026}";
 					try {
 						const resp = await browser.runtime.sendMessage({
 							action: "loreweave-ping",
 							url: lwUrl ? lwUrl.value.trim() : "",
 						});
 						lwPingStatus.textContent = resp?.reachable
-							? "✓ Connected"
-							: "✗ Unreachable";
+							? "\u{2713} Connected"
+							: "\u{2717} Unreachable";
 					} catch {
-						lwPingStatus.textContent = "✗ Error";
+						lwPingStatus.textContent = "\u{2717} Error";
 					}
 				});
 			}
 
-			// Manual graphify — grab text from the active tab
+			// Manual graphify \u{2014} grab text from the active tab
 			if (lwGraphifyNow) {
 				lwGraphifyNow.addEventListener("click", async () => {
 					if (lwStatusBar) {
 						lwStatusBar.style.display = "block";
-						lwStatusBar.textContent = "Extracting…";
+						lwStatusBar.textContent = "Extracting\u{2026}";
 					}
 					try {
 						const [tab] = await browser.tabs.query({
@@ -7339,7 +7339,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 					}
 				});
 			}
-			// ── Queue tab ─────────────────────────────────────────────────────────────────
+			// \u{2500}\u{2500} Queue tab \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const qFirstUrl = document.getElementById("qFirstUrl");
 			const qStart = document.getElementById("qStart");
 			const qEnd = document.getElementById("qEnd");
@@ -7376,7 +7376,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 
 						const titleEl = document.createElement("div");
 						titleEl.style.cssText = "font-weight:bold;margin-bottom:3px;";
-						titleEl.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+						titleEl.textContent = `${job.novelTitle} \u{B7} Ch ${job.startChapter}\u{2013}${job.endChapter}`;
 
 						const statusEl = document.createElement("span");
 						statusEl.style.cssText = "font-size:11px;color:#999;";
@@ -7427,7 +7427,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 
 			async function showQueueResults(job) {
 				if (!qResultView || !qResultContent || !qResultTitle) return;
-				qResultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+				qResultTitle.textContent = `${job.novelTitle} \u{B7} Ch ${job.startChapter}\u{2013}${job.endChapter}`;
 				qResultContent.textContent = "Loading...";
 				qResultView.style.display = "block";
 
@@ -7531,7 +7531,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 				btn.addEventListener("click", refreshQueueList);
 			});
 
-			// ── Chat tab ──────────────────────────────────────────────────────────────────
+			// \u{2500}\u{2500} Chat tab \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			const chatMessages = document.getElementById("chatMessages");
 			const chatInput = document.getElementById("chatInput");
 			const chatSendBtn = document.getElementById("chatSendBtn");
@@ -7546,7 +7546,7 @@ ${metadata.hasDriveCredentials ? "\u{2705}" : "\u{274C}"} Drive Credentials
 					const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 					if (!tab) return;
 
-					// getNovelInfo is the same call "Now Reading" uses — always the
+					// getNovelInfo is the same call "Now Reading" uses \u{2014} always the
 					// most reliable source of novelId on the active tab.
 					const infoResp = await browser.tabs
 						.sendMessage(tab.id, { action: "getNovelInfo" })

@@ -1,7 +1,7 @@
 /**
  * Builds the Gemini extraction prompt for LoreWeave.
  *
- * Universal schema — works for any fiction style:
+ * Universal schema \u{2014} works for any fiction style:
  *   Entity types: character | place | group | item | concept | other
  *   Relation types: KNOWS | ALLIED | OPPOSED | LEADS | MENTORS |
  *                   OWNS | MEMBER_OF | LOCATED_AT | CREATED | RELATED_TO
@@ -46,7 +46,7 @@ export function buildGraphifyPrompt(
 		: "";
 
 	const priorIdsBlock = priorEntityIds.length
-		? `\n## Known entity IDs (REUSE these exact IDs — do not invent new IDs for the same entity)\n${priorEntityIds.slice(0, 60).join(", ")}\n`
+		? `\n## Known entity IDs (REUSE these exact IDs \u{2014} do not invent new IDs for the same entity)\n${priorEntityIds.slice(0, 60).join(", ")}\n`
 		: "";
 
 	return `You are a story knowledge-graph extractor for LoreWeave.
@@ -90,28 +90,28 @@ Return ONLY valid JSON. No markdown fences, no commentary, no trailing text.
 - All IDs: lowercase letters, digits, underscores only.
 - Entity IDs: lw_ent_ + romanised slug. SAME entity across chapters = SAME ID.
 - State form IDs: lw_sf_ + entity_slug + _ch + zero-padded chapter number.
-- epoch_order MUST be the integer ${epochOrder} — never a string.
+- epoch_order MUST be the integer ${epochOrder} \u{2014} never a string.
 - Include ALL known name variants, nicknames, titles, and alternate-language names as aliases.
 
 ## Entity types
-- character  — named person, cultivator, demon, god, AI, spirit, etc.
-- place      — named location, realm, dungeon, city, sect headquarters, plane
-- group      — named organisation, sect, guild, army, clan, kingdom
-- item       — named weapon, artifact, tool, cultivation manual, technique, skill book
-- concept    — cultivation stage, magic system, divine law, title, status effect, class
-- other      — any clearly named recurring element that does not fit above
+- character  \u{2014} named person, cultivator, demon, god, AI, spirit, etc.
+- place      \u{2014} named location, realm, dungeon, city, sect headquarters, plane
+- group      \u{2014} named organisation, sect, guild, army, clan, kingdom
+- item       \u{2014} named weapon, artifact, tool, cultivation manual, technique, skill book
+- concept    \u{2014} cultivation stage, magic system, divine law, title, status effect, class
+- other      \u{2014} any clearly named recurring element that does not fit above
 
 ## Relation types
-- KNOWS       — characters are mutually aware of each other
-- ALLIED      — cooperative, sworn companions, allies
-- OPPOSED     — enemies, rivals, antagonistic forces
-- LEADS       — source commands/leads target (person to group or superior to subordinate)
-- MENTORS     — source teaches/trains/guides target (one direction)
-- OWNS        — source possesses target item
-- MEMBER_OF   — source belongs to target group
-- LOCATED_AT  — source entity is at/from target place
-- CREATED     — source made/summoned/forged/discovered target entity
-- RELATED_TO  — any meaningful link that does not fit above
+- KNOWS       \u{2014} characters are mutually aware of each other
+- ALLIED      \u{2014} cooperative, sworn companions, allies
+- OPPOSED     \u{2014} enemies, rivals, antagonistic forces
+- LEADS       \u{2014} source commands/leads target (person to group or superior to subordinate)
+- MENTORS     \u{2014} source teaches/trains/guides target (one direction)
+- OWNS        \u{2014} source possesses target item
+- MEMBER_OF   \u{2014} source belongs to target group
+- LOCATED_AT  \u{2014} source entity is at/from target place
+- CREATED     \u{2014} source made/summoned/forged/discovered target entity
+- RELATED_TO  \u{2014} any meaningful link that does not fit above
 
 ## Rules
 - Include a state_form for EVERY entity that appears or is referenced.

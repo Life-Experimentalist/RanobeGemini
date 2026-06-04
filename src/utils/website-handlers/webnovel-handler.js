@@ -837,7 +837,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		return WebNovelHandler.DEFAULT_SITE_PROMPT;
 	}
 
-	/** WebNovel renders HTML chapter content — HTML enhancement is preferred. */
+	/** WebNovel renders HTML chapter content \u{2014} HTML enhancement is preferred. */
 	formatAfterEnhancement(contentArea) {
 		if (!contentArea) return;
 		contentArea.querySelectorAll("p").forEach((p) => {
@@ -846,7 +846,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 		});
 	}
 
-	/** WebNovel renders HTML chapter content — HTML enhancement is preferred. */
+	/** WebNovel renders HTML chapter content \u{2014} HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

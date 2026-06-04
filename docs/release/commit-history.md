@@ -1,7 +1,94 @@
 Mode: all
 Format: text
-Generated: 2026-06-03T14:04:26.124Z
-Total commits: 194
+Generated: 2026-06-04T04:40:24.427Z
+Total commits: 198
+
+[c5907a2] 2026-06-04 fix: re-inject UI and restore cache on SPA chapter navigation
+   fix: re-inject UI and restore cache on SPA chapter navigation
+   On pushState/replaceState navigation the old code only called
+   autoExtractContent(), leaving no Enhance button and no cache
+   restore for the new chapter. Now the SPA nav handler:
+   - resets hasExtractButton so injectUI() re-runs
+   - calls tryRestoreChunkedCache() / checkCachedContent() for the new URL
+   - calls injectUI() to re-inject controls before autoExtractContent()
+   This enables auto-enhance and cached-content display when navigating
+   Files:
+   - src/content/content.js
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[f18bf0b] 2026-06-04 feat: native browser sync, OAuth tab fallback, NovelBin/NovelArrow bug fixes
+   feat: native browser sync, OAuth tab fallback, NovelBin/NovelArrow bug fixes
+   Native Browser Sync:
+   - Add native-sync-storage.js adapter using browser.storage.sync (zero-config)
+   - Register in background.js as defaultProvider; existing Drive users unaffected
+   - Add Native Sync section to library-settings.html/.js (backup/restore/clear buttons)
+   - Default popup activeSync to "native-sync" for new users
+   OAuth tab fallback:
+   - Add launchOAuthTabFlow() + pendingAuthFlows Map to oauth-pkce.js
+   Files:
+   - landing/oauth-redirect.html
+   - src/background/background.js
+   - src/background/storage/adapters/native-sync-storage.js
+   - src/content/content.js
+   - src/content/modules/chunk-batch.js
+   - src/content/modules/chunk-events.js
+   - ... (10 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[5ae5ce1] 2026-06-04 docs: add design specs for auth-storage landing page proxy and native browser sync adapter
+   docs: add design specs for auth-storage landing page proxy and native browser sync adapter
+   Files:
+   - .gitignore
+   - .prettierrc
+   - CLAUDE.md
+   - docs/release/commit-history.md
+   - docs/superpowers/specs/2026-06-04-auth-storage-design.md
+   - docs/superpowers/specs/2026-06-04-native-sync-design.md
+   - ... (8 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[3f6fff5] 2026-06-03 feat: v5.0.0 — Chapter Queue, Story Chat, LoreWeave, NovelArrow, multi-cloud sync, popup redesign
+   feat: v5.0.0 — Chapter Queue, Story Chat, LoreWeave, NovelArrow, multi-cloud sync, popup redesign
+   Phase 10-15 roadmap complete. Full breakdown in docs/release/RELEASE_NOTES_5.0.0.md and CHANGELOG.md.
+   Added
+   - Chapter Queue: background fetch pipeline, queue management UI in popup
+   - Story Chat: AI Q&A popup tab using chronicle context from enhanced chapters
+   - LoreWeave: character/world knowledge graph from chapter summaries; background service + popup integration
+   - NovelArrow handler: dedicated handler for novelarrow.com (Next.js SPA) with /chapter/{slug}/{chapter} URL detection, article[data-chapter-id] extraction, TTS-safe in-place p.textContent replacement, proper SPA waitForChapterContent fingerprinting
+   - WebDAV, OneDrive (MS Graph), Dropbox storage adapters + shared OAuth PKCE helpers
+   Files:
+   - dev/build.js
+   - dev/emoji-tools.js
+   - dev/watch.js
+   - docs/release/CHANGELOG.md
+   - src/background/background.js
+   - src/background/loreweave/graphify-service.js
+   - ... (86 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
 
 [d8137ea] 2026-05-31 feat: redesign site settings + optional permissions + dynamic model fetching
    feat: redesign site settings + optional permissions + dynamic model fetching

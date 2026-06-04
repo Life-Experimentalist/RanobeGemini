@@ -220,7 +220,7 @@ async function autoUpdateNovelOnVisit() {
 		});
 
 		if (!metadata || !metadata.title) {
-			console.log("[RG-Library-Debug] ABORT: metadata.title is empty/null — cannot auto-add");
+			console.log("[RG-Library-Debug] ABORT: metadata.title is empty/null \u{2014} cannot auto-add");
 			debugLog("Could not extract novel metadata");
 			return;
 		}
@@ -451,7 +451,7 @@ async function autoUpdateNovelOnVisit() {
 
 				console.log("[RG-Library-Debug] calling addOrUpdateNovel", { id: novelData.id, shelfId: novelData.shelfId, title: novelData.title });
 				await novelLibrary.addOrUpdateNovel(novelData);
-				console.log("[RG-Library-Debug] addOrUpdateNovel SUCCESS — novel auto-added:", novelData.title);
+				console.log("[RG-Library-Debug] addOrUpdateNovel SUCCESS \u{2014} novel auto-added:", novelData.title);
 				debugLog("\u{1F4DA} Auto-added novel to library:", metadata.title);
 				showTimedBanner(
 					`Added to library: ${metadata.title}`,

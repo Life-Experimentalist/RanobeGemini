@@ -1,5 +1,5 @@
 /**
- * Queue Manager — processes chapter ranges in the background.
+ * Queue Manager \u{2014} processes chapter ranges in the background.
  *
  * Storage key: rg_queue
  * Job schema:
@@ -22,7 +22,7 @@ const MIN_CHAPTER_WORDS = 100;
 
 let _processing = false;
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Storage helpers \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function loadQueue() {
 	const stored = await browser.storage.local.get(QUEUE_KEY);
@@ -41,7 +41,7 @@ async function updateJobProgress(jobId, progressPatch) {
 	await saveQueue(queue);
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Public API \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 export async function enqueueJob(jobConfig) {
 	const id = `rg_job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -127,7 +127,7 @@ export async function getQueueStatus() {
 	return loadQueue();
 }
 
-// ─── Processing loop ─────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Processing loop \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function _processLoop() {
 	// eslint-disable-next-line no-constant-condition
@@ -190,7 +190,7 @@ async function _processChapters(job, config) {
 		const { content, nextUrl, words } = fetchResult;
 
 		if (!content || words < MIN_CHAPTER_WORDS) {
-			// Chapter was empty or too short — count as skipped, not failed
+			// Chapter was empty or too short \u{2014} count as skipped, not failed
 			const skipped = [...(current.progress.skippedChapters || []), chapterNum];
 			await updateJobProgress(job.id, { skippedChapters: skipped, current: chapterNum });
 		} else if (words < SHORT_CHAPTER_THRESHOLD_WORDS) {
@@ -298,7 +298,7 @@ async function _flushBuffer(batch, job, config) {
 	}
 }
 
-// ─── Chapter fetching ─────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} Chapter fetching \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function _fetchChapter(url, chapterNum) {
 	let lastErr;
@@ -345,7 +345,7 @@ async function _fetchChapter(url, chapterNum) {
 	return { content: "", nextUrl: null, words: 0 };
 }
 
-// ─── AI summary ───────────────────────────────────────────────────────────────
+// \u{2500}\u{2500}\u{2500} AI summary \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 
 async function _generateSummary(text, config, epochLabel) {
 	const prompt = `Summarise the following novel chapter(s) in 2-4 paragraphs covering: main events, character actions, key reveals, and important world-building. Label: ${epochLabel}.\n\n${text.slice(0, 80_000)}`;

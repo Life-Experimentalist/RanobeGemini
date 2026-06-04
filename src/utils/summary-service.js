@@ -43,7 +43,7 @@ const latestRequestByContainer = new WeakMap();
 
 /**
  * Strip residual markdown syntax from a plain-text string.
- * Called after HTML→text conversion to catch markers the AI left in the text
+ * Called after HTML\u{2192}text conversion to catch markers the AI left in the text
  * (e.g. **bold**, ## headings, - list bullets).
  */
 function stripMarkdown(text) {
@@ -59,11 +59,11 @@ function stripMarkdown(text) {
 		.replace(/~~([^~\n]+)~~/g, "$1")           // ~~strikethrough~~
 		.replace(/^\s*[-*+]\s+/gm, "")             // unordered list items
 		.replace(/^\s*\d+\.\s+/gm, "")             // ordered list items
-		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [link](url) → link text
+		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [link](url) \u{2192} link text
 		.replace(/^>\s*/gm, "")                    // > blockquotes
 		.replace(/^-{3,}\s*$/gm, "")               // --- horizontal rules
-		.replace(/\\\*/g, "*")                     // escaped * → *
-		.replace(/\\_/g, "_")                      // escaped _ → _
+		.replace(/\\\*/g, "*")                     // escaped * \u{2192} *
+		.replace(/\\_/g, "_")                      // escaped _ \u{2192} _
 		.trim();
 }
 

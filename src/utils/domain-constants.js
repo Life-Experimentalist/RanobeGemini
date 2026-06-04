@@ -94,8 +94,8 @@ HANDLER_CLASSES.forEach((HandlerClass) => {
 		const forceDisabled = HandlerClass.FORCE_DISABLED === true;
 
 		// Convert raw SUPPORTED_DOMAINS patterns to browser permission origins.
-		// Wildcard patterns (*.domain.com) → *://*.domain.com/*
-		// Exact domains (domain.com) → *://domain.com/*
+		// Wildcard patterns (*.domain.com) \u{2192} *://*.domain.com/*
+		// Exact domains (domain.com) \u{2192} *://domain.com/*
 		const permissionOrigins = domains.map((d) =>
 			d.startsWith("*.") ? `*://${d}/*` : `*://${d}/*`,
 		);

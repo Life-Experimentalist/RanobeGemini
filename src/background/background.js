@@ -2416,7 +2416,7 @@ if (typeof browser === "undefined") {
 							}
 						}
 					} catch (_chronicleErr) {
-						// Non-blocking — never disrupt summary flow
+						// Non-blocking \u{2014} never disrupt summary flow
 					}
 					sendResponse({ success: true, summary: summary });
 				})
@@ -2463,7 +2463,7 @@ if (typeof browser === "undefined") {
 							}
 						}
 					} catch (_chronicleErr) {
-						// Non-blocking — never disrupt summary flow
+						// Non-blocking \u{2014} never disrupt summary flow
 					}
 					sendResponse({ success: true, summary: summary });
 				})

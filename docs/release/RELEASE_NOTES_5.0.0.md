@@ -1,6 +1,6 @@
 # Ranobe Gemini v5.0.0 Release Notes
 
-Release date: May 21, 2026
+Release date: June 4, 2026
 Branch: main
 Status: Stable
 
@@ -12,6 +12,9 @@ v5.0.0 is the most substantial update since the extension's first public release
 
 Quick summary:
 
+- Native Browser Sync — zero-config `browser.storage.sync` adapter, works on all devices without any credential setup
+- OAuth mobile tab fallback — all cloud providers can now authenticate even when `browser.identity` is unavailable
+- NovelArrow/NovelBin reading experience overhauled: TTS-safe cache restore, ad-clean AI input, SPA chapter navigation fully re-initializes controls and cached content
 - Content runtime broken into focused modules (Phase 10); `content.js` significantly thinned
 - UI/UX filter panel overhaul and AI provider configuration redesign (Phase 11)
 - Swipe and drag gesture navigation for novel modals in the library (Phase 12)
@@ -85,7 +88,59 @@ Why this matters:
 - Users who do not use Google Drive can now sync to Microsoft OneDrive, Dropbox, or any self-hosted WebDAV server (Nextcloud, Seafile, etc.).
 - Multi-sync lets users back up to two destinations simultaneously (e.g., Drive + WebDAV) without extra manual steps.
 
-### 5. OAuth PKCE Infrastructure and OneDrive Bug Fixes (Phase 15)
+### 5. Native Browser Sync
+
+What changed:
+
+- Added `src/background/storage/adapters/native-sync-storage.js`: a zero-configuration sync adapter built on `browser.storage.sync`.
+- Registered as the default sync provider for new users — no credentials, app registrations, or external accounts required.
+- Chunked payload encoding (base64, 7 KB slices) keeps under the browser's 8 KB per-key limit. Maximum payload ~90 KB.
+- Library data syncs automatically across all same-browser-vendor devices where the extension is installed.
+- Existing users with Google Drive connected are unaffected; their `activeSync` setting continues to route to Drive.
+
+Why this matters:
+
+- Zero-config sync removes the biggest friction point for new users who just want their library to follow them across devices.
+- Works regardless of whether the extension is installed from the official store or side-loaded.
+
+### 6. OAuth Mobile Tab Fallback
+
+What changed:
+
+- Added `launchOAuthTabFlow()` to `oauth-pkce.js` as a universal fallback when `browser.identity.launchWebAuthFlow` is unavailable (Android, Firefox for Android, certain Linux environments).
+- The tab flow opens a browser tab to the OAuth provider's authorize URL, then listens for the auth code via `chrome.runtime.sendMessage` from the landing page.
+- Exported `pendingAuthFlows` Map allows background.js to resolve the correct promise when the landing page relays the token.
+- All three OAuth providers (Google Drive, OneDrive, Dropbox) automatically fall back to tab flow on any auth failure.
+- `landing/oauth-redirect.html` now validates `ext_id` by format regex (Chromium 32-char `[a-p]` or Firefox UUID) instead of a hardcoded allowlist, preserving security while supporting side-loaded extensions.
+
+Why this matters:
+
+- OAuth login now works on Android and environments where the identity API is unavailable or restricted.
+- Side-loaded extensions (not from the official store) can still use OAuth without listing a fixed extension ID.
+
+### 7. NovelArrow / NovelBin Reading Experience Fixes
+
+What changed:
+
+**TTS-safe cache restore:**
+- Enhanced content now restores correctly after page reload: the chunk element is first populated with the original HTML structure (so `<p>` nodes exist in the DOM), then the handler's `applyEnhancedContent` callback replaces paragraph text — exactly matching the live-enhancement path used by NovelArrow's built-in TTS.
+- Previously, cache restore wrote raw AI HTML (including `**headers**`, `<hr>` elements, emoji) directly to `innerHTML`, bypassing the TTS-safe replacement.
+
+**Ad contamination fix:**
+- `getCleanContentHTML()` now strips `.js-ad-slot` and `[data-ad-slot]` elements before the content is chunked and sent to Gemini.
+- Previously, NovelBin's chapter-top/bottom ad iframes were included in `data-original-chunk-html` and sent as part of the AI enhancement input.
+
+**Library controls on chapter pages:**
+- The library management bar (In Library / Update / Remove) no longer appears on chapter pages; it is shown only on novel detail pages.
+
+**Cross-domain cache (NovelBin ↔ NovelArrow):**
+- Cache keys now use a canonical `novelbin.com` URL regardless of which domain the chapter was read on. Enhancing a chapter on NovelArrow now shows the cached result when the same chapter is opened on NovelBin, and vice versa.
+
+**SPA chapter navigation:**
+- Navigating to the next or previous chapter via in-page pushState navigation now fully re-initializes: removes stale controls, resets the injection flag, attempts cache restore for the new chapter URL, re-injects the Enhance/Summary UI, and runs `autoExtractContent()` (which triggers auto-enhance if the novel has it enabled).
+- Previously, only `autoExtractContent()` was called on SPA nav — leaving no controls visible and no cached content displayed.
+
+### 9. OAuth PKCE Infrastructure and OneDrive Bug Fixes (Phase 15)
 
 What changed:
 
@@ -98,7 +153,7 @@ Why this matters:
 - Consistent, audited OAuth2 implementation across all providers reduces security risk.
 - OneDrive sync now works correctly from first use without silent failures.
 
-### 6. Popup Redesign
+### 10. Popup Redesign
 
 What changed:
 
@@ -110,7 +165,7 @@ What changed:
 - Config tab: cleaner section structure, no inline styles.
 - Novels tab: cleaner filter bar, section headings, empty states.
 
-### 7. Handler Improvements
+### 11. Handler Improvements
 
 **ScribbleHub:**
 
@@ -126,7 +181,7 @@ What changed:
 - Shelf icon updated to use ranobes.net favicon (with top fallback).
 - `DEFAULT_SITE_PROMPT` corrected for grammar and consistency.
 
-### 8. Bug Fixes
+### 12. Bug Fixes
 
 - **Popup fatal error fixed**: `shortSummaryPrompt is not defined` — missing `const shortSummaryPrompt = document.getElementById("shortSummaryPrompt")` declaration added.
 - **Popup stability fixes** (from Phase 10): dual-slot AI persistence and novel detection logic stabilized.
@@ -143,7 +198,9 @@ None. All changes are additive or internal refactors. Existing settings and libr
 
 ## Storage Provider Setup Notes
 
-The three new sync providers require user-supplied credentials:
+**Native Browser Sync** requires no setup — it works automatically using the browser's built-in sync mechanism.
+
+The following providers require user-supplied credentials:
 
 | Provider  | What to provide                                | Where                             |
 |-----------|------------------------------------------------|-----------------------------------|
@@ -152,6 +209,8 @@ The three new sync providers require user-supplied credentials:
 | WebDAV    | Server URL + username + password               | Library Settings &#8594; Sync &#8594; WebDAV    |
 
 None of these credentials leave the browser. Auth tokens are stored in `browser.storage.local`.
+
+All OAuth providers (Drive, OneDrive, Dropbox) now include a tab-based fallback flow for environments where `browser.identity.launchWebAuthFlow` is unavailable (Android, Firefox for Android, some Linux setups).
 
 ---
 
@@ -164,6 +223,7 @@ src/utils/dropbox.js
 src/background/storage/adapters/webdav-storage.js
 src/background/storage/adapters/onedrive-storage.js
 src/background/storage/adapters/dropbox-storage.js
+src/background/storage/adapters/native-sync-storage.js
 src/content/modules/novel-context.js
 docs/release/RELEASE_NOTES_5.0.0.md
 ```
@@ -172,4 +232,4 @@ docs/release/RELEASE_NOTES_5.0.0.md
 
 ## Quick Summary
 
-v5.0.0 completes the content runtime modularization, ships three new cloud sync providers (WebDAV / OneDrive / Dropbox), adds horizontal swipe navigation in library modals, overhauls the UI filter and AI provider panels, redesigns the popup for a minimal and compact feel, fixes a fatal popup boot error, and improves the ScribbleHub and Ranobes site handlers.
+v5.0.0 completes the content runtime modularization, ships four sync providers (Native Browser Sync, WebDAV, OneDrive, Dropbox) with zero-config as the default, adds an OAuth tab fallback for mobile and restricted environments, fixes NovelArrow/NovelBin reading experience (TTS cache restore, ad cleanup, SPA chapter navigation), adds horizontal swipe navigation in library modals, overhauls the UI filter and AI provider panels, redesigns the popup for a minimal and compact feel, fixes a fatal popup boot error, and improves the ScribbleHub and Ranobes site handlers.

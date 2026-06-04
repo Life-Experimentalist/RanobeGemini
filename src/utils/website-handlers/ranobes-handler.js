@@ -112,7 +112,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				min: 70,
 				max: 150,
 				step: 5,
-				description: "Font size percentage for enhanced chapter text (70–150%).",
+				description: "Font size percentage for enhanced chapter text (70\u{2013}150%).",
 			},
 		],
 	};
@@ -632,7 +632,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		});
 	}
 
-	/** Ranobes renders HTML chapter content — HTML enhancement is preferred. */
+	/** Ranobes renders HTML chapter content \u{2014} HTML enhancement is preferred. */
 	supportsTextOnlyEnhancement() {
 		return false;
 	}

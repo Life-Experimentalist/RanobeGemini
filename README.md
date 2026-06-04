@@ -67,7 +67,7 @@ Ranobe Gemini is a local-first browser extension that enhances chapter readabili
 - **Canvas Background Animations**: Five animation types (particles, snow, rain, falling leaves, fireflies) for library pages, color-synced to your theme.
 - **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
 - **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
-- **Cloud Sync — Google Drive, OneDrive, Dropbox, WebDAV**: OAuth-based backup to Google Drive or Microsoft OneDrive (PKCE); Dropbox API v2 with offline refresh tokens; any self-hosted WebDAV server (Nextcloud, Seafile, etc.). Multi-sync fan-out lets you write to two providers simultaneously.
+- **Cloud Sync — Native, Google Drive, OneDrive, Dropbox, WebDAV**: Zero-config Native Browser Sync via `browser.storage.sync` (default, no credentials needed); OAuth-based backup to Google Drive or Microsoft OneDrive (PKCE); Dropbox API v2 with offline refresh tokens; any self-hosted WebDAV server (Nextcloud, Seafile, etc.). Multi-sync fan-out lets you write to two providers simultaneously. All OAuth providers include a tab-based fallback for Android and restricted environments.
 - **True Web PWA Entry**: Installable landing web app (Android/Windows supported browsers) with secure extension presence detection and library handoff.
 - **Customizable Prompts**: Per-site and per-novel prompts for enhancement, summarization, and permanent instructions.
 - **Provider Selection**: Switch the active AI provider in popup settings (`Gemini`, `OpenAI-compatible`, `Ollama`) without changing core workflows.
@@ -232,7 +232,7 @@ Access the extension's settings via the toolbar icon:
 
 - **API Key**: Essential for the extension to function.
 - **AI Provider**: Select `Gemini`, `OpenAI-compatible`, or `Ollama` as the active runtime provider.
-- **Sync Provider**: Select the active storage sync backend (`Google Drive` baseline via `activeSync`).
+- **Sync Provider**: Select the active storage sync backend (`Native Browser Sync` is the default, no credentials required; `Google Drive`, `OneDrive`, `Dropbox`, and `WebDAV` are also available).
 - **Gemini Model**: Select the desired AI model.
 - **Prompts**: Customize the Enhancement, Summary, and Permanent prompts.
 - **Chunking**: Enable/disable automatic splitting of large chapters.

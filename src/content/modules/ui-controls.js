@@ -338,7 +338,7 @@ export async function createChapterPageNovelControls({
 				}
 				controlsContainer.appendChild(btn);
 			}
-		} catch (_e) { /* non-critical — custom buttons are optional */ }
+		} catch (_e) { /* non-critical \u{2014} custom buttons are optional */ }
 
 		if (isIncognitoActive()) {
 			const badge = documentRef.createElement("span");
@@ -587,7 +587,7 @@ export async function injectUI({
 		);
 	}
 
-	// Return elements to caller — DOM insertion is handled by insertMainUiBlocksRuntime
+	// Return elements to caller \u{2014} DOM insertion is handled by insertMainUiBlocksRuntime
 	// in content.js, which honours the handler's getUIInsertionPoint() for correct placement.
 	return { controlsContainer, mainSummaryGroup };
 }

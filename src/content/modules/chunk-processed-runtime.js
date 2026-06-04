@@ -107,7 +107,7 @@ export async function handleChunkProcessedRuntime({
 			);
 		}
 
-		// Use canonical URL so cross-domain cache hits work (e.g. novelarrow ↔ novelbin).
+		// Use canonical URL so cross-domain cache hits work (e.g. novelarrow \u{2194} novelbin).
 		await chunking.cache.saveChunkToCache(
 			cacheUrl || windowRef.location.href,
 			chunkIndex,

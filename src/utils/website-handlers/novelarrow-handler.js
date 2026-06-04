@@ -1,12 +1,12 @@
 /**
  * NovelArrow Website Content Handler
  *
- * Primary handler for novelarrow.com — the Next.js/React successor to NovelBin.
+ * Primary handler for novelarrow.com \u{2014} the Next.js/React successor to NovelBin.
  * Extends NovelbinHandler and overrides the parts where NovelArrow differs:
  *
  *   URL patterns
  *     Novel detail : /novel/{slug}
- *     Chapter      : /chapter/{novel-slug}/{chapter-slug}   ← different from NovelBin
+ *     Chapter      : /chapter/{novel-slug}/{chapter-slug}   \u{2190} different from NovelBin
  *
  *   DOM structure
  *     Chapter content : <article data-chapter-id="...">
@@ -19,11 +19,11 @@
  *
  *   SPA handling
  *     Overrides waitForChapterContent() to fingerprint article[data-chapter-id]
- *     instead of NovelBin's #chr-content — prevents premature re-init before
+ *     instead of NovelBin's #chr-content \u{2014} prevents premature re-init before
  *     React has swapped in the new chapter text.
  *
  * Shares the "novelbin" shelf id for backwards-compat with existing library data.
- * Priority 5 — beats NovelbinHandler (10) on novelarrow.com.
+ * Priority 5 \u{2014} beats NovelbinHandler (10) on novelarrow.com.
  */
 import { NovelbinHandler } from "./novelbin-handler.js";
 import { debugLog, debugError } from "../logger.js";
@@ -82,7 +82,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 	static DEFAULT_SITE_PROMPT =
 		"This is a web novel from NovelArrow. Please maintain the author's style while improving the translation quality. Keep paragraph breaks, dialogue formatting, and scene transitions intact. Preserve special formatting for emphasis, flashbacks, or internal monologue. Place any translator notes in a clearly separated box at the end.";
 
-	// No URL normalisation needed — novelarrow.com is always canonical.
+	// No URL normalisation needed \u{2014} novelarrow.com is always canonical.
 	static initialize() {}
 
 	canHandle() {
@@ -123,7 +123,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 	}
 
 	// -----------------------------------------------------------------------
-	// SPA — wait for the right content element to change
+	// SPA \u{2014} wait for the right content element to change
 	// -----------------------------------------------------------------------
 
 	async waitForChapterContent(timeoutMs = 8000, oldFingerprint = "") {
@@ -135,7 +135,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 				const chapterId = article.getAttribute("data-chapter-id") || "";
 				const text = article.textContent.trim();
 				if (text.length > 50) {
-					// Use data-chapter-id as primary fingerprint — it changes the moment
+					// Use data-chapter-id as primary fingerprint \u{2014} it changes the moment
 					// React swaps the chapter, before the full text is even rendered.
 					// Fall back to text comparison if oldFingerprint was a text slice.
 					const isNewChapter =
@@ -175,7 +175,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 			);
 			if (novelMeta?.content) return novelMeta.content;
 		}
-		// Novel detail page — try both layouts before falling back to parent
+		// Novel detail page \u{2014} try both layouts before falling back to parent
 		return (
 			this._extractNovelDetailTitle() ||
 			super.extractTitle()
@@ -191,14 +191,14 @@ export class NovelarrowHandler extends NovelbinHandler {
 		// Signed-in layout
 		const h1Classic = document.querySelector("h1.classic-novel-detail-title");
 		if (h1Classic?.textContent?.trim()) return h1Classic.textContent.trim();
-		// Signed-out layout — first h1 inside the main detail column
+		// Signed-out layout \u{2014} first h1 inside the main detail column
 		const h1Main = document.querySelector(".classic-detail-main h1");
 		if (h1Main?.textContent?.trim()) return h1Main.textContent.trim();
 		return null;
 	}
 
 	// -----------------------------------------------------------------------
-	// Metadata — handles both signed-in (legacy) and signed-out (new React) layout
+	// Metadata \u{2014} handles both signed-in (legacy) and signed-out (new React) layout
 	// -----------------------------------------------------------------------
 
 	extractNovelMetadata() {
@@ -237,14 +237,14 @@ export class NovelarrowHandler extends NovelbinHandler {
 				return metadata;
 			}
 
-			// ── Novel detail page ──────────────────────────────────────────────
+			// \u{2500}\u{2500} Novel detail page \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}
 			// Title: try DOM first (both layouts), then og:title fallback
 			metadata.title = this._extractNovelDetailTitle();
 			if (!metadata.title) {
 				const ogTitle = getMeta("property", "og:title");
 				metadata.title = ogTitle
 					? ogTitle
-							.replace(/\s*[|\-–]\s*Read\s+Online.*$/i, "")
+							.replace(/\s*[|\-\u{2013}]\s*Read\s+Online.*$/i, "")
 							.replace(/\s+Novel\s*$/i, "")
 							.trim()
 					: null;
@@ -360,7 +360,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 	applyEnhancedContent(contentArea, enhancedText) {
 		if (!contentArea || !enhancedText?.trim()) return 0;
 
-		// Collect only real content paragraphs — exclude any injected gemini elements
+		// Collect only real content paragraphs \u{2014} exclude any injected gemini elements
 		// so TTS enumeration of <p> nodes is never polluted by banner/button text.
 		const GEMINI_SELECTOR = [
 			".gemini-master-banner",
@@ -437,7 +437,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 		}
 
 		debugLog(
-			`NovelArrow: TTS-safe replacement — ${updated}/${existingPs.length} paragraphs` +
+			`NovelArrow: TTS-safe replacement \u{2014} ${updated}/${existingPs.length} paragraphs` +
 			` (${enhancedParas.length} enhanced paras parsed)`,
 		);
 		return updated;
@@ -448,7 +448,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 	// -----------------------------------------------------------------------
 
 	getUIInsertionPoint(contentArea) {
-		// Insert before the .select-text reader wrapper — this places banners
+		// Insert before the .select-text reader wrapper \u{2014} this places banners
 		// between the decorative chapter header (cover image + dividing line)
 		// and the actual paragraph text, so TTS enumeration of <p> nodes is
 		// unaffected by our injected elements.
