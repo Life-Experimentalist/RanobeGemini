@@ -72,7 +72,7 @@ npm run watch
 ## Project Structure
 
 ```
-RanobesGemini/
+RanobeGemini/
 ├── src/
 │   ├── background/        # Background scripts
 │   ├── content/          # Content scripts

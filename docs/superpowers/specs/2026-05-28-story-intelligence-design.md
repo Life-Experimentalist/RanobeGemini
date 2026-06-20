@@ -204,7 +204,7 @@ Update `TemporalEdge.relation_type` union to include all 10 types.
 
 ---
 
-## Files to create/modify (RanobesGemini)
+## Files to create/modify (RanobeGemini)
 
 | Action | File |
 |---|---|

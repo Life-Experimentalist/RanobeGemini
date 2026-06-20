@@ -224,4 +224,4 @@ Developed and maintained by [VKrishna04](https://github.com/VKrishna04) under th
 ---
 
 *Full changelog: [docs/release/CHANGELOG.md](CHANGELOG.md)*
-*Project repository: [Life-Experimentalist/RanobesGemini](https://github.com/Life-Experimentalist/RanobesGemini)*
+*Project repository: [Life-Experimentalist/RanobeGemini](https://github.com/Life-Experimentalist/RanobeGemini)*

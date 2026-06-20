@@ -234,7 +234,7 @@ Each backup now records:
 ## 🔗 Additional Resources
 
 - **Full Setup Guide**: https://ranobe.vkrishna04.me/drive-setup.html
-- **GitHub Repository**: https://github.com/Life-Experimentalist/RanobesGemini
+- **GitHub Repository**: https://github.com/Life-Experimentalist/RanobeGemini
 - **Bug Reports**: Open an issue on GitHub
 
 ---

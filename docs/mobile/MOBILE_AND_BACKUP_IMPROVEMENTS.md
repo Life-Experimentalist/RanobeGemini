@@ -801,5 +801,5 @@ No, OAuth tokens are intentionally excluded for security. You must re-authentica
 **Version:** 3.9.0+
 
 For more information, visit:
-- GitHub: [Life-Experimentalist/RanobesGemini](https://github.com/Life-Experimentalist/RanobesGemini)
+- GitHub: [Life-Experimentalist/RanobeGemini](https://github.com/Life-Experimentalist/RanobeGemini)
 - Website: [vkrishna04.me](https://vkrishna04.me)

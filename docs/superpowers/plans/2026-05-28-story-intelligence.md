@@ -891,7 +891,7 @@ uv run pytest -q
 
 Expected: all pass (was 71 before, should be same or more).
 
-- [ ] **Step 2: RanobesGemini lint + build**
+- [ ] **Step 2: RanobeGemini lint + build**
 
 ```powershell
 cd V:\Code\ProjectCode\RanobesGemini

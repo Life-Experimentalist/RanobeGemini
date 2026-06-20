@@ -85,7 +85,7 @@ We've completely redesigned the Google Drive backup setup for a clearer, more in
 ## 🔗 Resources
 
 **Full release notes & setup guide:**
-https://github.com/Life-Experimentalist/RanobesGemini/blob/main/docs/RELEASE_NOTES_3.8.0.md
+https://github.com/Life-Experimentalist/RanobeGemini/blob/main/docs/RELEASE_NOTES_3.8.0.md
 
 **OAuth Setup Tutorial:**
 https://ranobe.vkrishna04.me/drive-setup.html

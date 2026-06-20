@@ -1,4 +1,4 @@
-// Utility for structured logging and tracing in RanobesGemini
+// Utility for structured logging and tracing in RanobeGemini
 import * as logStore from "./log-store.js";
 
 /**
@@ -312,7 +312,7 @@ try {
 }
 
 /**
- * Logger class for RanobesGemini extension
+ * Logger class for RanobeGemini extension
  * Provides consistent logging with context, timestamps, and log levels
  */
 export class Logger {

@@ -1,9 +1,9 @@
-# RanobesGemini Documentation
+# RanobeGemini Documentation
 
 > **Index:**
 
-- [RanobesGemini Documentation](#ranobesgemini-documentation)
-	- [📚 Welcome to RanobesGemini Documentation](#-welcome-to-ranobesgemini-documentation)
+- [RanobeGemini Documentation](#ranobegemini-documentation)
+	- [📚 Welcome to RanobeGemini Documentation](#-welcome-to-ranobegemini-documentation)
 	- [🗂️ Documentation Structure](#️-documentation-structure)
 		- [🏗️ Architecture](#️-architecture)
 		- [✨ Features](#-features)
@@ -48,9 +48,9 @@
 
 ---
 
-## 📚 Welcome to RanobesGemini Documentation
+## 📚 Welcome to RanobeGemini Documentation
 
-This is the comprehensive documentation hub for the RanobesGemini Firefox extension - an AI-powered web novel enhancement tool using Google's Gemini AI.
+This is the comprehensive documentation hub for Ranobe Gemini, a local-first browser extension that enhances chapter readability, generates summaries, and manages a full reading library across multiple sites. It works with Gemini, any OpenAI-compatible endpoint, or a local Ollama model.
 
 ---
 
@@ -139,7 +139,7 @@ The documentation is organized into four main categories:
 
 ```mermaid
 mindmap
-  root((RanobesGemini))
+  root((RanobeGemini))
     Core Features
       AI Enhancement
       Content Summarization

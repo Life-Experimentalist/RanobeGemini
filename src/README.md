@@ -29,7 +29,7 @@ Upon activation, Ranobe Gemini scans the webpage for targeted content areas usin
 
 1. Download or clone the repository:
    ```
-   git clone https://github.com/Life-Experimentalist/RanobesGemini.git
+   git clone https://github.com/Life-Experimentalist/RanobeGemini.git
    ```
 2. Open Firefox and go to `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on" and select any file in this `FireFox` directory

@@ -67,7 +67,7 @@ Ranobe Gemini is a local-first browser extension that enhances chapter readabili
 - **Collapsible Content Sections**: Fight scenes, R18 content, and author notes can be hidden/shown on demand.
 - **Incognito Mode**: Temporarily pause library tracking without disabling the extension.
 - **Custom Content Box Types**: Define your own CSS classes and styling for special content blocks.
-- **Smart Chunking**: Automatically splits large chapters (10 K+ words) to avoid API timeouts, with pause/skip controls.
+- **Smart Chunking**: Automatically splits large chapters to avoid API timeouts, with pause/skip controls. The chunk size is configurable; the default is `DEFAULT_CHUNK_SIZE_WORDS` in `src/utils/constants.js`.
 - **Canvas Background Animations**: Five animation types (particles, snow, rain, falling leaves, fireflies) for library pages, color-synced to your theme.
 - **Theme System**: Multiple built-in themes (Tokyo Night, Catppuccin Mocha, Synthwave, and more) with auto dark/light scheduling.
 - **Rolling Backups**: Automatic backup rotation (up to 5 snapshots) in browser storage; one-click restore.
@@ -134,7 +134,6 @@ short version follows.
   Node 20 reached end-of-life in April 2026.
 - **npm**: 10 or newer
 - **Architecture**: x64 or ARM64
-- **Disk space**: ~50 MB for dependencies and build output
 
 No other toolchain is required — no native modules, no Python, no Docker.
 
