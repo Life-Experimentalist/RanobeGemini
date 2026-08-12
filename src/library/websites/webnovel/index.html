@@ -1,71 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>WebNovel - Novel Library</title>
 		<link rel="stylesheet" href="../shelf-page.css" />
-		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
+		<link rel="stylesheet" href="../../edit-modal.css" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../../../icons/icon.png"
+		/>
 	</head>
 
-	<body>
+	<body class="webnovel-page">
 		<div class="shelf-page-container">
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span class="shelf-page-color-bar" id="color-bar" style="background: #ff6600"></span>
-					<a href="https://www.webnovel.com" target="_blank" rel="noopener" title="Visit WebNovel"
-						style="text-decoration:none;">
-						<span class="shelf-page-icon" id="page-icon">📖</span>
+					<span
+						class="shelf-page-color-bar"
+						id="color-bar"
+						style="background: #ff6600"
+					></span>
+					<a
+						href="https://www.webnovel.com"
+						target="_blank"
+						rel="noopener"
+						title="Visit WebNovel"
+						style="display: inline-flex"
+					>
+						<img
+							src="https://www.webnovel.com/favicon.ico"
+							alt="WebNovel"
+							class="shelf-page-icon-img"
+							id="page-icon-img"
+						/>
 					</a>
+					<span
+						class="shelf-page-icon"
+						id="page-icon"
+						style="display: none"
+						>&#128214;</span
+					>
 					<h1 id="page-title">WebNovel</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
 				<a href="../../library.html" class="back-link">
-					← Back to Library
+					&#8592; Back to Library
 				</a>
 			</header>
 
-			<!-- Stats Summary -->
-			<div class="stats-summary">
-				<div class="stat-card">
-					<span class="stat-value" id="stats-novels">0</span>
-					<span class="stat-label">Novels</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-enhanced">0</span>
-					<span class="stat-label">Enhanced Chapters</span>
-				</div>
-				<div class="stat-card">
-					<span class="stat-value" id="stats-chapters">0</span>
-					<span class="stat-label">Total Chapters</span>
+			<!-- Analytics Section -->
+			<div class="analytics-section" id="analytics-section">
+				<div class="analytics-grid">
+					<!-- Stats Summary (cards generated from the shelf descriptor) -->
+					<div class="stats-summary" id="stats-summary"></div>
+
+					<!-- Detail Analytics -->
+					<div class="detail-analytics">
+						<h3>Library Insights</h3>
+						<div class="analytics-items" id="analytics-items"></div>
+						<div class="analytics-chart" id="status-chart-card">
+							<div class="chart-header">
+								<h4>Reading Status Mix</h4>
+								<span
+									class="chart-summary"
+									id="status-chart-summary"
+									>-</span
+								>
+							</div>
+							<div
+								class="bar-chart"
+								id="reading-status-chart"
+							></div>
+							<div
+								class="bar-chart-legend"
+								id="reading-status-legend"
+							></div>
+						</div>
+					</div>
 				</div>
 			</div>
 
 			<!-- Filters Section -->
 			<div class="filters-section">
-				<div class="filter-group">
-					<label for="sort-select">Sort by:</label>
-					<select id="sort-select">
-						<option value="recent">Recently Read</option>
-						<option value="added">Date Added</option>
-						<option value="title">Title</option>
-						<option value="chapters">Enhanced Chapters</option>
-					</select>
+				<div class="filter-dropdown-container">
+					<button class="filter-toggle-btn" id="filter-toggle-btn">
+						&#9881; Filters
+						<span
+							class="filter-badge"
+							id="filter-badge"
+							style="display: none"
+							>&#10003;</span
+						>
+					</button>
+					<div class="active-filters" id="active-filters"></div>
+
+					<!-- Filter controls are generated from the shelf descriptor -->
+					<div
+						class="filter-dropdown"
+						id="filter-dropdown"
+						style="display: none"
+					>
+						<div class="filter-grid" id="filter-grid"></div>
+					</div>
 				</div>
-				<div class="filter-group">
-					<label for="status-filter">Status:</label>
-					<select id="status-filter">
-						<option value="all">All</option>
-						<option value="ongoing">Ongoing</option>
-						<option value="completed">Completed</option>
-						<option value="hiatus">Hiatus</option>
-					</select>
-				</div>
-				<div class="filter-group search-input">
-					<label for="search-input">Search:</label>
-					<input type="text" id="search-input" placeholder="Search by title or author..." />
+
+				<div class="search-bar-container search-right">
+					<input
+						type="text"
+						id="search-input"
+						class="search-bar"
+						placeholder="Search by title or author..."
+					/>
 				</div>
 			</div>
 
@@ -77,11 +126,13 @@
 
 			<!-- Empty State -->
 			<div class="empty-state" id="empty-state" style="display: none">
-				<span class="empty-icon">📖</span>
+				<span class="empty-icon">&#128214;</span>
 				<h2>No novels from WebNovel yet!</h2>
 				<p>
 					Visit a chapter on
-					<a href="https://www.webnovel.com" target="_blank">webnovel.com</a>
+					<a href="https://www.webnovel.com" target="_blank"
+						>webnovel.com</a
+					>
 					to add novels to your library
 				</p>
 			</div>
@@ -90,20 +141,180 @@
 			<div class="novel-grid" id="novel-grid" style="display: none"></div>
 		</div>
 
-		<script src="../../../lib/browser-polyfill.min.js"></script>
-		<script type="module">
-			import { initShelfPage } from "../shelf-page.js";
-			// Initialize with WebNovel shelf configuration
-			document.addEventListener("DOMContentLoaded", () => {
-				initShelfPage("webnovel", {
-					id: "webnovel",
-					name: "WebNovel",
-					icon: "https://www.yueimg.com/en/favicon/favicon.d3f6a.ico",
-					color: "#ff6600",
-					primaryDomain: "www.webnovel.com",
-				});
-			});
-		</script>
-	</body>
+		<!-- Novel Detail Modal -->
+		<div class="modal" id="novel-modal" style="display: none">
+			<div class="modal-backdrop" id="modal-backdrop"></div>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div class="modal-title-section">
+						<img
+							id="modal-cover"
+							src=""
+							alt="Cover"
+							class="modal-cover-img"
+						/>
+						<div class="modal-header-text">
+							<h2 id="modal-title"></h2>
+							by
+							<p id="modal-author"></p>
+							<p id="modal-description"></p>
+						</div>
+					</div>
+					<div class="modal-header-controls">
+						<button
+							class="modal-header-library-btn modal-header-nav-btn"
+							id="modal-prev-btn"
+							title="Previous Novel"
+							aria-label="Previous Novel"
+						>
+							&#8592;
+						</button>
+						<button
+							class="modal-header-library-btn modal-header-nav-btn"
+							id="modal-next-btn"
+							title="Next Novel"
+							aria-label="Next Novel"
+						>
+							&#8594;
+						</button>
+						<button
+							class="modal-header-library-btn"
+							id="modal-open-library-header-btn"
+							title="All Libraries"
+						>
+							&#128218;
+						</button>
+						<button class="modal-close" id="modal-close-btn">
+							&times;
+						</button>
+					</div>
+				</div>
+				<div class="modal-body">
+					<div
+						class="reading-progress-container"
+						id="modal-reading-progress"
+					>
+						<div class="reading-progress-bar">
+							<div
+								class="reading-progress-fill"
+								id="modal-progress-fill"
+							></div>
+						</div>
+						<div
+							class="reading-progress-text"
+							id="modal-progress-text"
+						></div>
+					</div>
+					<div id="modal-metadata-container"></div>
+				</div>
+				<div class="modal-footer">
+					<div class="modal-status-section">
+						<div class="status-label">Reading Status:</div>
+						<div class="status-buttons">
+							<button
+								class="status-btn"
+								data-status="plan-to-read"
+								title="Plan to Read"
+							>
+								&#128203; To Read
+							</button>
+							<button
+								class="status-btn"
+								data-status="reading"
+								title="Currently Reading"
+							>
+								&#128214; Reading
+							</button>
+							<button
+								class="status-btn"
+								data-status="completed"
+								title="Completed"
+							>
+								&#9989; Completed
+							</button>
+							<button
+								class="status-btn"
+								data-status="on-hold"
+								title="On Hold"
+							>
+								&#9208; On Hold
+							</button>
+							<button
+								class="status-btn"
+								data-status="dropped"
+								title="Dropped"
+							>
+								&#10060; Dropped
+							</button>
+							<button
+								class="status-btn"
+								data-status="rereading"
+								title="Re-reading"
+							>
+								&#128260; Re-reading
+							</button>
+						</div>
+					</div>
+					<div class="modal-actions-divider"></div>
+					<div class="modal-actions-primary">
+						<a
+							id="modal-continue-btn"
+							class="btn btn-primary"
+							target="_blank"
+							>Continue Reading</a
+						>
+						<button
+							id="modal-open-library-btn"
+							class="btn btn-secondary"
+							title="View in All Libraries"
+						>
+							&#128218; All Libraries
+						</button>
+						<a
+							id="modal-read-btn"
+							class="btn btn-secondary"
+							target="_blank"
+							>View on WebNovel</a
+						>
+					</div>
+					<div class="modal-actions-secondary">
+						<button
+							id="modal-copy-info-btn"
+							class="btn btn-icon"
+							title="Copy novel name to clipboard"
+						>
+							&#128203; Copy Name
+						</button>
+						<button
+							id="modal-refresh-btn"
+							class="btn btn-icon"
+							title="Refresh metadata from source"
+						>
+							&#128260; Update
+						</button>
+						<button
+							id="modal-edit-btn"
+							class="btn btn-icon"
+							title="Edit novel details"
+						>
+							&#9999; Edit
+						</button>
+						<button
+							id="modal-remove-btn"
+							class="btn btn-icon btn-danger"
+							title="Remove from library"
+						>
+							&#128465; Remove
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
 
+		<!-- Inline Edit Modal Container -->
+		<div id="shelf-edit-modal"></div>
+
+		<script src="../../../lib/browser-polyfill.min.js"></script>
+		<script type="module" src="./shelf-page.js"></script>
+	</body>
 </html>

@@ -10,11 +10,13 @@
  * (which must exist in the page's HTML).
  */
 
+import { escapeHtml, escapeUrlAttr } from "../utils/html-escape.js";
 import {
 	NovelLibrary,
 	READING_STATUS,
 	READING_STATUS_INFO,
-} from "../../utils/novel-library.js";
+} from "../utils/novel-library.js";
+import { isLoreWeaveEnabled } from "../utils/loreweave-gate.js";
 
 const novelLibrary = new NovelLibrary();
 
@@ -53,6 +55,11 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 	container.innerHTML = buildModalHTML(novel, handlerFields);
 	container.style.display = "flex";
 
+	// LoreWeave is experimental and off by default. Its fields are dropped from
+	// the modal rather than disabled, so nothing about it is visible while off.
+	// Queuing chapters itself stays available — only the graphify step goes.
+	applyLoreWeaveGate(container);
+
 	// Populate dynamic fields (tags, toggles) after DOM insertion
 	populateHandlerFields(novel, handlerFields);
 
@@ -77,22 +84,35 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 	if (qAddBtn) {
 		qAddBtn.addEventListener("click", async () => {
 			const firstUrl = novel.lastReadUrl || novel.sourceUrl || "";
-			const start = parseInt(container.querySelector("#em-qStart")?.value, 10) || 1;
-			const end = parseInt(container.querySelector("#em-qEnd")?.value, 10) || 1;
-			const sendToLW = container.querySelector("#em-qSendToLW")?.checked ?? true;
-			const domainId = container.querySelector("#loreWeaveDomainId")?.value?.trim() || novel.loreWeaveDomainId || "";
+			const start =
+				parseInt(container.querySelector("#em-qStart")?.value, 10) || 1;
+			const end =
+				parseInt(container.querySelector("#em-qEnd")?.value, 10) || 1;
+			// Absent means the gate removed it, which means off.
+			const sendToLWEl = container.querySelector("#em-qSendToLW");
+			const sendToLW = sendToLWEl ? sendToLWEl.checked : false;
+			const domainId =
+				container.querySelector("#loreWeaveDomainId")?.value?.trim() ||
+				novel.loreWeaveDomainId ||
+				"";
 			if (!firstUrl) {
-				if (qStatus) qStatus.textContent = "No chapter URL available for this novel.";
+				if (qStatus)
+					qStatus.textContent =
+						"No chapter URL available for this novel.";
 				return;
 			}
 			if (start > end) {
-				if (qStatus) qStatus.textContent = "From chapter must be ≤ To chapter.";
+				if (qStatus)
+					qStatus.textContent = "From chapter must be ≤ To chapter.";
 				return;
 			}
 			qAddBtn.disabled = true;
 			if (qStatus) qStatus.textContent = "Adding to queue…";
 			try {
-				const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
+				const config = await browser.storage.local.get([
+					"loreWeaveUrl",
+					"loreWeaveWritingStyle",
+				]);
 				await browser.runtime.sendMessage({
 					action: "queue",
 					subAction: "add",
@@ -106,10 +126,12 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 						writingStyle: config.loreWeaveWritingStyle || "other",
 						loreWeaveUrl: config.loreWeaveUrl || "",
 						domainId,
-						novelLastRead: novel.lastAccessedAt || novel.addedAt || 0,
+						novelLastRead:
+							novel.lastAccessedAt || novel.addedAt || 0,
 					},
 				});
-				if (qStatus) qStatus.textContent = `✅ Added Ch ${start}–${end} to queue.`;
+				if (qStatus)
+					qStatus.textContent = `✅ Added Ch\u00A0${start}–${end} to queue.`;
 			} catch (err) {
 				if (qStatus) qStatus.textContent = `❌ ${err.message}`;
 			} finally {
@@ -134,6 +156,20 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 	cancelBtn?.addEventListener("click", close);
 }
 
+/**
+ * Remove every LoreWeave-specific element from an open modal when the
+ * experimental integration is off. A stored Graph Domain ID is left untouched —
+ * handleSave falls back to the novel's existing value when the field is gone.
+ *
+ * @param {HTMLElement} container
+ */
+async function applyLoreWeaveGate(container) {
+	if (await isLoreWeaveEnabled()) return;
+	container
+		.querySelectorAll("[data-loreweave-section]")
+		.forEach((el) => el.remove());
+}
+
 // ---------------------------------------------------------------------------
 // HTML Builder
 // ---------------------------------------------------------------------------
@@ -147,7 +183,7 @@ export function openInlineEditModal(novel, HandlerClass, opts = {}) {
 function buildModalHTML(novel, handlerFields) {
 	const coverHtml = novel.coverUrl
 		? `<div class="edit-modal-cover">
-			<img src="${escapeAttr(novel.coverUrl)}" alt="Cover" onerror="this.parentElement.style.display='none'" />
+			<img src="${escapeUrlAttr(novel.coverUrl)}" alt="Cover" data-img-fallback="hide-parent" />
 		</div>`
 		: "";
 
@@ -182,11 +218,11 @@ function buildModalHTML(novel, handlerFields) {
 
 						${handlerFields.length > 0 ? buildHandlerFieldsHTML(handlerFields) : ""}
 
-						<div class="edit-modal-section-label">🕸️ LoreWeave</div>
-						<div class="edit-modal-grid">
+						<div class="edit-modal-section-label" data-loreweave-section>🕸️ LoreWeave</div>
+						<div class="edit-modal-grid" data-loreweave-section>
 							${buildTextField("loreWeaveDomainId", "Graph Domain ID", novel.loreWeaveDomainId || "", false, "lw_dom_my_novel")}
 						</div>
-						<p class="edit-field-hint" style="font-size:11px;color:var(--text-muted,#888);margin:-4px 0 10px;">
+						<p class="edit-field-hint" data-loreweave-section style="font-size:11px;color:var(--text-muted,#888);margin:-4px 0 10px;">
 							One domain per novel. Create at
 							<a href="https://loreweave.vkrishna04.me" target="_blank" rel="noopener" style="color:var(--accent-color,#7c3aed)">loreweave.vkrishna04.me</a>
 						</p>
@@ -196,7 +232,7 @@ function buildModalHTML(novel, handlerFields) {
 							${buildNumberField("em-qStart", "From Chapter", novel.lastReadChapter ? novel.lastReadChapter + 1 : 1, 1)}
 							${buildNumberField("em-qEnd", "To Chapter", novel.totalChapters || (novel.lastReadChapter ? novel.lastReadChapter + 10 : 10), 1)}
 						</div>
-						<div class="edit-modal-toggle-row" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+						<div class="edit-modal-toggle-row" data-loreweave-section style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
 							<label style="font-size:12px;color:var(--text-secondary,#9ca3af);flex:1">Send to LoreWeave after processing</label>
 							<label class="em-toggle">
 								<input type="checkbox" id="em-qSendToLW" checked />
@@ -588,7 +624,8 @@ function collectFormValues(novel, handlerFields, form) {
 		totalChapters: getNum("totalChapters") ?? novel.totalChapters ?? 0,
 		genres: getTags("genres") ?? novel.genres ?? [],
 		tags: getTags("tags") ?? novel.tags ?? [],
-		loreWeaveDomainId: get("loreWeaveDomainId") ?? novel.loreWeaveDomainId ?? "",
+		loreWeaveDomainId:
+			get("loreWeaveDomainId") ?? novel.loreWeaveDomainId ?? "",
 	};
 
 	// Handler-specific fields → merged into updates.metadata
@@ -639,15 +676,6 @@ function getFieldValue(novel, field) {
 		return novel[field.key];
 	}
 	return novel.metadata?.[field.key];
-}
-
-function escapeHtml(str) {
-	return String(str ?? "")
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
 }
 
 function escapeAttr(str) {

@@ -319,7 +319,9 @@ export function ensureRandomSelectButton(
 			showToast("No novels available for random pick", "info");
 			return;
 		}
-		let candidates = pool.filter((n) => !_shelfRecentPicks.has(n.id || n.sourceUrl));
+		let candidates = pool.filter(
+			(n) => !_shelfRecentPicks.has(n.id || n.sourceUrl),
+		);
 		if (!candidates.length) {
 			_shelfRecentPicks.clear();
 			candidates = pool;
@@ -372,7 +374,8 @@ export function createModalNavigationController({
 		}
 		if (nextBtn) {
 			nextBtn.disabled =
-				!hasContext || currentContextIndex >= currentContextIds.length - 1;
+				!hasContext ||
+				currentContextIndex >= currentContextIds.length - 1;
 			nextBtn.style.display = hasContext ? "" : "none";
 		}
 	}
@@ -380,8 +383,10 @@ export function createModalNavigationController({
 	function syncContext(novelId, explicitContextIds = null) {
 		const resolvedIds = Array.isArray(explicitContextIds)
 			? explicitContextIds.filter(Boolean)
-			: (typeof getContextIds === "function" ? getContextIds(novelId) : [])
-				.filter(Boolean);
+			: (typeof getContextIds === "function"
+					? getContextIds(novelId)
+					: []
+				).filter(Boolean);
 
 		currentContextIds = resolvedIds;
 		currentContextIndex = novelId ? currentContextIds.indexOf(novelId) : -1;
@@ -469,7 +474,10 @@ export function bindModalSwipeNavigation({
 }) {
 	const modalEl =
 		typeof modal === "string" ? document.getElementById(modal) : modal;
-	if (!modalEl || (typeof onPrev !== "function" && typeof onNext !== "function")) {
+	if (
+		!modalEl ||
+		(typeof onPrev !== "function" && typeof onNext !== "function")
+	) {
 		return () => {};
 	}
 
@@ -539,7 +547,9 @@ export function bindModalSwipeNavigation({
 	swipeSurface.addEventListener("touchstart", handleTouchStart, {
 		passive: true,
 	});
-	swipeSurface.addEventListener("touchend", handleTouchEnd, { passive: true });
+	swipeSurface.addEventListener("touchend", handleTouchEnd, {
+		passive: true,
+	});
 	swipeSurface.addEventListener("touchcancel", handleTouchEnd, {
 		passive: true,
 	});
@@ -602,7 +612,8 @@ export function bindModalSwipeDismiss({
 	};
 
 	const resetSurface = () => {
-		swipeSurface.style.transition = "transform 160ms ease, opacity 160ms ease";
+		swipeSurface.style.transition =
+			"transform 160ms ease, opacity 160ms ease";
 		swipeSurface.style.transform = "";
 		swipeSurface.style.opacity = "";
 	};
@@ -668,7 +679,8 @@ export function bindModalSwipeDismiss({
 			deltaY >= minSwipeDistance &&
 			Math.abs(deltaX) <= maxHorizontalDrift
 		) {
-			swipeSurface.style.transition = "transform 120ms ease, opacity 120ms ease";
+			swipeSurface.style.transition =
+				"transform 120ms ease, opacity 120ms ease";
 			swipeSurface.style.transform = "translateY(160px)";
 			swipeSurface.style.opacity = "0";
 			setTimeout(() => {

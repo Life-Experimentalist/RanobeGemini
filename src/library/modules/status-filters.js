@@ -4,7 +4,10 @@
  */
 
 import { READING_STATUS_INFO } from "../../utils/novel-library.js";
-import { getAllStatuses, getDefaultRereadingOverlay } from "../status-machine.js";
+import {
+	getAllStatuses,
+	getDefaultRereadingOverlay,
+} from "../status-machine.js";
 
 let currentStatusFilter = "all";
 let onFilterChangeCallback = null;
@@ -18,9 +21,9 @@ let onFilterChangeCallback = null;
 export function initStatusFilters(container, settings, onChange) {
 	if (!container) return;
 	onFilterChangeCallback = onChange;
-	
+
 	renderStatusFilterButtons(container, settings);
-	
+
 	// Attach click listeners via event delegation on the container
 	container.addEventListener("click", (e) => {
 		const btn = e.target.closest(".status-filter-btn");
@@ -59,8 +62,8 @@ export function getStatusFilter() {
 
 /**
  * Set the current status filter programmatically
- * @param {string} status 
- * @param {HTMLElement} container 
+ * @param {string} status
+ * @param {HTMLElement} container
  */
 export function setStatusFilter(status, container) {
 	currentStatusFilter = status;
@@ -73,8 +76,8 @@ export function setStatusFilter(status, container) {
 
 /**
  * Render reading status filter buttons
- * @param {HTMLElement} container 
- * @param {Object} settings 
+ * @param {HTMLElement} container
+ * @param {Object} settings
  */
 export function renderStatusFilterButtons(container, settings = {}) {
 	if (!container) return;
@@ -105,7 +108,7 @@ export function renderStatusFilterButtons(container, settings = {}) {
 	const rrBtn = rereadingOverlay.enabled
 		? `<button class="status-filter-btn status-filter-rereading ${
 				currentStatusFilter === "_rereading" ? "active" : ""
-		  }" data-status="_rereading"
+			}" data-status="_rereading"
 			title="${rereadingOverlay.label} (overlay filter)"
 			style="--status-color:${rereadingOverlay.color};">${rereadingOverlay.label}</button>`
 		: "";

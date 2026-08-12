@@ -12,6 +12,7 @@ import {
 	novelLibrary,
 } from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
+import { escapeUrlAttr } from "../../../utils/html-escape.js";
 import { getBaseModalStyles, getAO3Styles } from "../modal-styles.js";
 
 /**
@@ -64,7 +65,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 		if (num === null || num === undefined) return "0";
 		const n =
 			typeof num === "string"
-				? parseInt(num.replace(/[,\s ]/g, ""), 10)
+				? parseInt(num.replace(/[,\s\u00A0]/g, ""), 10)
 				: num;
 		if (isNaN(n)) return "0";
 		if (n >= 1_000_000)
@@ -379,7 +380,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 								<div class="ao3-card-cover">
 									<img
 										class="novel-cover-img"
-										src="${safeCoverUrl}"
+										src="${escapeUrlAttr(safeCoverUrl)}"
 										alt="${this.escapeHtml(novel.title || "Novel cover")}"
 										data-fallback=""
 										loading="lazy"
@@ -409,7 +410,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 				<div class="ao3-card-status">
 					<span class="ao3-reading-status" style="background-color: ${statusInfo.color};">${statusInfo.label}</span>
-					${novel.sourceUrl ? `<a class="ao3-link-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer" title="Open on AO3">↗</a>` : ""}
+					${novel.sourceUrl ? `<a class="ao3-link-btn" href="${this.escapeUrlAttr(novel.sourceUrl)}" target="_blank" rel="noreferrer" title="Open on AO3">↗</a>` : ""}
 				</div>
 			</div>
 		`;
@@ -512,7 +513,8 @@ export class AO3CardRenderer extends NovelCardRenderer {
 
 		// Series data
 		const seriesInfo = getVal("series") || getVal("seriesInfo") || null;
-		const nextWorkUrl = getVal("nextWorkUrl") || getVal("nextWorkHref") || null;
+		const nextWorkUrl =
+			getVal("nextWorkUrl") || getVal("nextWorkHref") || null;
 		const nextWorkTitle = getVal("nextWorkTitle") || null;
 
 		// Extract arrays
@@ -681,11 +683,17 @@ export class AO3CardRenderer extends NovelCardRenderer {
 				<div class="ao3-modal-section">
 					<h4 class="modal-section-title">Series</h4>
 					<div class="ao3-series-info">
-						${typeof seriesInfo === "string"
-							? `<span class="tag tag-series">${this.escapeHtml(seriesInfo)}</span>`
-							: Array.isArray(seriesInfo)
-								? seriesInfo.map((s) => `<span class="tag tag-series">${this.escapeHtml(typeof s === "string" ? s : s.title || JSON.stringify(s))}</span>`).join("")
-								: `<span class="tag tag-series">${this.escapeHtml(seriesInfo.title || seriesInfo.name || "")}</span>${seriesInfo.part ? `<span class="tag tag-series-part">Part ${this.escapeHtml(String(seriesInfo.part))}</span>` : ""}`
+						${
+							typeof seriesInfo === "string"
+								? `<span class="tag tag-series">${this.escapeHtml(seriesInfo)}</span>`
+								: Array.isArray(seriesInfo)
+									? seriesInfo
+											.map(
+												(s) =>
+													`<span class="tag tag-series">${this.escapeHtml(typeof s === "string" ? s : s.title || JSON.stringify(s))}</span>`,
+											)
+											.join("")
+									: `<span class="tag tag-series">${this.escapeHtml(seriesInfo.title || seriesInfo.name || "")}</span>${seriesInfo.part ? `<span class="tag tag-series-part">Part ${this.escapeHtml(String(seriesInfo.part))}</span>` : ""}`
 						}
 					</div>
 				</div>`
@@ -698,7 +706,7 @@ export class AO3CardRenderer extends NovelCardRenderer {
 						? `
 				<div class="ao3-modal-section">
 					<h4 class="modal-section-title">Next in Series</h4>
-					<a href="${this.escapeHtml(nextWorkUrl)}" target="_blank" rel="noreferrer"
+					<a href="${this.escapeUrlAttr(nextWorkUrl)}" target="_blank" rel="noreferrer"
 					   class="ao3-next-work-link">
 						${nextWorkTitle ? this.escapeHtml(nextWorkTitle) : "Next Work"} →
 					</a>
@@ -747,10 +755,11 @@ export class AO3CardRenderer extends NovelCardRenderer {
 					<img
 						id="modal-cover"
 						class="modal-cover-img"
-						src="${safeCoverUrl}"
+						src="${escapeUrlAttr(safeCoverUrl)}"
 						alt="${this.escapeHtml(novel.title || "Novel cover")}"
 						loading="lazy"
-						onerror="this.closest('.modal-cover-container')?.remove();"
+						data-img-fallback="remove-closest"
+						data-fallback-target=".modal-cover-container"
 					/>
 				`;
 			} else {

@@ -115,7 +115,8 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 				const numVal = settings[field.key] ?? field.defaultValue ?? 0;
 				const minAttr = field.min != null ? ` min="${field.min}"` : "";
 				const maxAttr = field.max != null ? ` max="${field.max}"` : "";
-				const stepAttr = field.step != null ? ` step="${field.step}"` : "";
+				const stepAttr =
+					field.step != null ? ` step="${field.step}"` : "";
 				return `
 				<div class="ls-handler-field">
 					<div class="ls-handler-field-info">
@@ -134,10 +135,15 @@ export function renderWebsiteSettingsPanel(definition, settings = {}) {
 				// Guard: a boolean means the field was previously saved as a toggle
 				// (old renderer didn't support textarea). Treat that as empty.
 				const taVal = String(
-					typeof rawTa === "boolean" || rawTa === undefined || rawTa === null
+					typeof rawTa === "boolean" ||
+						rawTa === undefined ||
+						rawTa === null
 						? (field.defaultValue ?? "")
 						: rawTa,
-				).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+				)
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;");
 				const ph = (field.placeholder || "").replace(/"/g, "&quot;");
 				return `
 				<div class="ls-handler-field ls-handler-field--wide">

@@ -1,6 +1,5 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,7 +7,12 @@
 		<link rel="stylesheet" href="../shelf-page.css" />
 		<link rel="stylesheet" href="./style.css" />
 		<link rel="stylesheet" href="../../edit-modal.css" />
-		<link rel="icon" type="image/png" sizes="32x32" href="../../../icons/icon.png" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="../../../icons/icon.png"
+		/>
 	</head>
 
 	<body class="novelbin-page">
@@ -16,13 +20,31 @@
 			<!-- Page Header -->
 			<header class="shelf-page-header">
 				<div class="shelf-page-title">
-					<span class="shelf-page-color-bar" id="color-bar" style="background: #6200ea"></span>
-					<a href="https://novelbin.com" target="_blank" rel="noopener" title="Visit NovelBin"
-						style="display:inline-flex;">
-						<img src="https://novelbin.com/favicon.ico" alt="NovelBin"
-							class="shelf-page-icon-img" id="page-icon-img" />
+					<span
+						class="shelf-page-color-bar"
+						id="color-bar"
+						style="background: #6200ea"
+					></span>
+					<a
+						href="https://novelbin.com"
+						target="_blank"
+						rel="noopener"
+						title="Visit NovelBin"
+						style="display: inline-flex"
+					>
+						<img
+							src="https://novelbin.com/favicon.ico"
+							alt="NovelBin"
+							class="shelf-page-icon-img"
+							id="page-icon-img"
+						/>
 					</a>
-					<span class="shelf-page-icon" id="page-icon" style="display: none">&#128218;</span>
+					<span
+						class="shelf-page-icon"
+						id="page-icon"
+						style="display: none"
+						>&#128218;</span
+					>
 					<h1 id="page-title">NovelBin (NovelArrow)</h1>
 					<span class="novel-count" id="novel-count">(0 novels)</span>
 				</div>
@@ -34,74 +56,30 @@
 			<!-- Analytics Section -->
 			<div class="analytics-section" id="analytics-section">
 				<div class="analytics-grid">
-					<!-- Stats Summary -->
-					<div class="stats-summary">
-						<div class="stat-card">
-							<span class="stat-value" id="stats-novels">0</span>
-							<span class="stat-label">Novels</span>
-						</div>
-						<div class="stat-card">
-							<span class="stat-value" id="stats-enhanced">0</span>
-							<span class="stat-label">Enhanced Chapters</span>
-						</div>
-						<div class="stat-card">
-							<span class="stat-value" id="stats-words">0</span>
-							<span class="stat-label">Total Words</span>
-						</div>
-						<div class="stat-card">
-							<span class="stat-value" id="stats-completed">0</span>
-							<span class="stat-label">Completed</span>
-						</div>
-						<div class="stat-card">
-							<span class="stat-value" id="stats-ongoing">0</span>
-							<span class="stat-label">Ongoing</span>
-						</div>
-						<div class="stat-card">
-							<span class="stat-value" id="stats-reading">0%</span>
-							<span class="stat-label">Reading</span>
-						</div>
-					</div>
+					<!-- Stats Summary (cards generated from the shelf descriptor) -->
+					<div class="stats-summary" id="stats-summary"></div>
 
 					<!-- Detail Analytics -->
 					<div class="detail-analytics">
 						<h3>Library Insights</h3>
-						<div class="analytics-items">
-							<div class="analytics-item">
-								<span class="analytics-icon">&#128218;</span>
-								<div class="analytics-detail">
-									<span class="analytics-label">Most Chapters</span>
-									<span class="analytics-value" id="most-chapters">-</span>
-								</div>
-							</div>
-							<div class="analytics-item">
-								<span class="analytics-icon">&#128203;</span>
-								<div class="analytics-detail">
-									<span class="analytics-label">Longest Novel</span>
-									<span class="analytics-value" id="longest-novel">-</span>
-								</div>
-							</div>
-							<div class="analytics-item">
-								<span class="analytics-icon">&#127358;</span>
-								<div class="analytics-detail">
-									<span class="analytics-label">Newest Addition</span>
-									<span class="analytics-value" id="newest-addition">-</span>
-								</div>
-							</div>
-							<div class="analytics-item">
-								<span class="analytics-icon">&#127760;</span>
-								<div class="analytics-detail">
-									<span class="analytics-label">Languages</span>
-									<span class="analytics-value" id="language-count">-</span>
-								</div>
-							</div>
-						</div>
+						<div class="analytics-items" id="analytics-items"></div>
 						<div class="analytics-chart" id="status-chart-card">
 							<div class="chart-header">
 								<h4>Reading Status Mix</h4>
-								<span class="chart-summary" id="status-chart-summary">-</span>
+								<span
+									class="chart-summary"
+									id="status-chart-summary"
+									>-</span
+								>
 							</div>
-							<div class="bar-chart" id="reading-status-chart"></div>
-							<div class="bar-chart-legend" id="reading-status-legend"></div>
+							<div
+								class="bar-chart"
+								id="reading-status-chart"
+							></div>
+							<div
+								class="bar-chart-legend"
+								id="reading-status-legend"
+							></div>
 						</div>
 					</div>
 				</div>
@@ -112,77 +90,32 @@
 				<div class="filter-dropdown-container">
 					<button class="filter-toggle-btn" id="filter-toggle-btn">
 						&#9881; Filters
-						<span class="filter-badge" id="filter-badge" style="display: none">&#10003;</span>
+						<span
+							class="filter-badge"
+							id="filter-badge"
+							style="display: none"
+							>&#10003;</span
+						>
 					</button>
 					<div class="active-filters" id="active-filters"></div>
 
-					<div class="filter-dropdown" id="filter-dropdown" style="display: none">
-						<div class="filter-grid">
-							<div class="filter-item">
-								<label for="sort-select">Sort by:</label>
-								<select id="sort-select">
-									<option value="recent">Recently Read</option>
-									<option value="added">Date Added</option>
-									<option value="title">Title</option>
-									<option value="chapters">Enhanced Chapters</option>
-									<option value="words">Word Count</option>
-								</select>
-							</div>
-
-							<div class="filter-item">
-								<label for="work-status-filter">Work Status:</label>
-								<select id="work-status-filter">
-									<option value="all">All</option>
-									<option value="Ongoing">Ongoing</option>
-									<option value="Completed">Completed</option>
-									<option value="Hiatus">Hiatus</option>
-									<option value="Dropped">Dropped</option>
-								</select>
-							</div>
-
-							<div class="filter-item">
-								<label for="status-filter">Reading Status:</label>
-								<select id="status-filter">
-									<option value="all">All</option>
-									<option value="plan-to-read">Plan to Read</option>
-									<option value="reading">Currently Reading</option>
-									<option value="completed">Completed</option>
-									<option value="on-hold">On Hold</option>
-									<option value="dropped">Dropped</option>
-									<option value="re-reading">Re-reading</option>
-								</select>
-							</div>
-
-							<div class="filter-item">
-								<label for="language-filter">Language:</label>
-								<select id="language-filter">
-									<option value="all">All Languages</option>
-								</select>
-							</div>
-
-							<div class="filter-item">
-								<label>Genres:</label>
-								<div class="multi-dropdown">
-									<button type="button" class="multi-dropdown-toggle"
-										id="genres-dropdown-toggle">Choose Genres</button>
-									<div class="multi-dropdown-panel" id="genres-dropdown-panel">
-										<div class="filter-pill-list" id="genres-filter"></div>
-									</div>
-								</div>
-							</div>
-
-							<div class="filter-item full-width">
-								<button class="clear-filters-btn" id="clear-filters-btn">
-									Clear All Filters
-								</button>
-							</div>
-						</div>
+					<!-- Filter controls are generated from the shelf descriptor -->
+					<div
+						class="filter-dropdown"
+						id="filter-dropdown"
+						style="display: none"
+					>
+						<div class="filter-grid" id="filter-grid"></div>
 					</div>
 				</div>
 
 				<div class="search-bar-container search-right">
-					<input type="text" id="search-input" class="search-bar"
-						placeholder="Search by title or author..." />
+					<input
+						type="text"
+						id="search-input"
+						class="search-bar"
+						placeholder="Search by title or author..."
+					/>
 				</div>
 			</div>
 
@@ -198,7 +131,13 @@
 				<h2>No novels from NovelBin yet!</h2>
 				<p>
 					Visit a chapter on
-					<a href="https://novelbin.com" target="_blank">novelbin.com</a> / <a href="https://novelarrow.com" target="_blank">novelarrow.com</a>
+					<a href="https://novelbin.com" target="_blank"
+						>novelbin.com</a
+					>
+					/
+					<a href="https://novelarrow.com" target="_blank"
+						>novelarrow.com</a
+					>
 					to add novels to your library
 				</p>
 			</div>
@@ -213,29 +152,63 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<div class="modal-title-section">
-						<img id="modal-cover" src="" alt="Cover" class="modal-cover-img" />
+						<img
+							id="modal-cover"
+							src=""
+							alt="Cover"
+							class="modal-cover-img"
+						/>
 						<div class="modal-header-text">
 							<h2 id="modal-title"></h2>
-							by <p id="modal-author"></p>
+							by
+							<p id="modal-author"></p>
 							<p id="modal-description"></p>
 						</div>
 					</div>
 					<div class="modal-header-controls">
-						<button class="modal-header-library-btn modal-header-nav-btn" id="modal-prev-btn"
-							title="Previous Novel" aria-label="Previous Novel">&#8592;</button>
-						<button class="modal-header-library-btn modal-header-nav-btn" id="modal-next-btn"
-							title="Next Novel" aria-label="Next Novel">&#8594;</button>
-						<button class="modal-header-library-btn" id="modal-open-library-header-btn"
-							title="All Libraries">&#128218;</button>
-						<button class="modal-close" id="modal-close-btn">&times;</button>
+						<button
+							class="modal-header-library-btn modal-header-nav-btn"
+							id="modal-prev-btn"
+							title="Previous Novel"
+							aria-label="Previous Novel"
+						>
+							&#8592;
+						</button>
+						<button
+							class="modal-header-library-btn modal-header-nav-btn"
+							id="modal-next-btn"
+							title="Next Novel"
+							aria-label="Next Novel"
+						>
+							&#8594;
+						</button>
+						<button
+							class="modal-header-library-btn"
+							id="modal-open-library-header-btn"
+							title="All Libraries"
+						>
+							&#128218;
+						</button>
+						<button class="modal-close" id="modal-close-btn">
+							&times;
+						</button>
 					</div>
 				</div>
 				<div class="modal-body">
-					<div class="reading-progress-container" id="modal-reading-progress">
+					<div
+						class="reading-progress-container"
+						id="modal-reading-progress"
+					>
 						<div class="reading-progress-bar">
-							<div class="reading-progress-fill" id="modal-progress-fill"></div>
+							<div
+								class="reading-progress-fill"
+								id="modal-progress-fill"
+							></div>
 						</div>
-						<div class="reading-progress-text" id="modal-progress-text"></div>
+						<div
+							class="reading-progress-text"
+							id="modal-progress-text"
+						></div>
 					</div>
 					<div id="modal-metadata-container"></div>
 				</div>
@@ -243,34 +216,106 @@
 					<div class="modal-status-section">
 						<div class="status-label">Reading Status:</div>
 						<div class="status-buttons">
-							<button class="status-btn" data-status="plan-to-read" title="Plan to Read">&#128203; To Read</button>
-							<button class="status-btn" data-status="reading" title="Currently Reading">&#128214; Reading</button>
-							<button class="status-btn" data-status="completed" title="Completed">&#9989; Completed</button>
-							<button class="status-btn" data-status="on-hold" title="On Hold">&#9208; On Hold</button>
-							<button class="status-btn" data-status="dropped" title="Dropped">&#10060; Dropped</button>
-							<button class="status-btn" data-status="rereading" title="Re-reading">&#128260; Re-reading</button>
+							<button
+								class="status-btn"
+								data-status="plan-to-read"
+								title="Plan to Read"
+							>
+								&#128203; To Read
+							</button>
+							<button
+								class="status-btn"
+								data-status="reading"
+								title="Currently Reading"
+							>
+								&#128214; Reading
+							</button>
+							<button
+								class="status-btn"
+								data-status="completed"
+								title="Completed"
+							>
+								&#9989; Completed
+							</button>
+							<button
+								class="status-btn"
+								data-status="on-hold"
+								title="On Hold"
+							>
+								&#9208; On Hold
+							</button>
+							<button
+								class="status-btn"
+								data-status="dropped"
+								title="Dropped"
+							>
+								&#10060; Dropped
+							</button>
+							<button
+								class="status-btn"
+								data-status="rereading"
+								title="Re-reading"
+							>
+								&#128260; Re-reading
+							</button>
 						</div>
 					</div>
 					<div class="modal-actions-divider"></div>
 					<div class="modal-actions-primary">
-						<a id="modal-continue-btn" class="btn btn-primary" target="_blank">Continue Reading</a>
-						<button id="modal-open-library-btn" class="btn btn-secondary" title="View in All Libraries">&#128218; All Libraries</button>
-						<a id="modal-read-btn" class="btn btn-secondary" target="_blank">View on NovelBin</a>
+						<a
+							id="modal-continue-btn"
+							class="btn btn-primary"
+							target="_blank"
+							>Continue Reading</a
+						>
+						<button
+							id="modal-open-library-btn"
+							class="btn btn-secondary"
+							title="View in All Libraries"
+						>
+							&#128218; All Libraries
+						</button>
+						<a
+							id="modal-read-btn"
+							class="btn btn-secondary"
+							target="_blank"
+							>View on NovelBin</a
+						>
 					</div>
 					<div class="modal-actions-secondary">
-						<button id="modal-copy-info-btn" class="btn btn-icon" title="Copy novel name to clipboard">
+						<button
+							id="modal-copy-info-btn"
+							class="btn btn-icon"
+							title="Copy novel name to clipboard"
+						>
 							&#128203; Copy Name
 						</button>
-						<button id="modal-lncrawl-btn" class="btn btn-icon" title="Show lncrawl download commands for all domains">
+						<button
+							id="modal-lncrawl-btn"
+							class="btn btn-icon"
+							title="Show lncrawl download commands for all domains"
+						>
 							&#128229; LNCrawl
 						</button>
-						<button id="modal-refresh-btn" class="btn btn-icon" title="Refresh metadata from source">
+						<button
+							id="modal-refresh-btn"
+							class="btn btn-icon"
+							title="Refresh metadata from source"
+						>
 							&#128260; Update
 						</button>
-						<button id="modal-edit-btn" class="btn btn-icon" title="Edit novel details">
+						<button
+							id="modal-edit-btn"
+							class="btn btn-icon"
+							title="Edit novel details"
+						>
 							&#9999; Edit
 						</button>
-						<button id="modal-remove-btn" class="btn btn-icon btn-danger" title="Remove from library">
+						<button
+							id="modal-remove-btn"
+							class="btn btn-icon btn-danger"
+							title="Remove from library"
+						>
 							&#128465; Remove
 						</button>
 					</div>
@@ -279,17 +324,48 @@
 		</div>
 
 		<!-- Inline Edit Modal Container -->
-		
-	<!-- LNCrawl domain commands panel (toggled by modal-lncrawl-btn) -->
-	<div id="modal-lncrawl-panel" style="display:none;padding:10px 16px 12px;border-top:1px solid var(--border-color);background:var(--bg-tertiary);">
-		<p style="font-size:11px;color:var(--text-muted,#888);margin:0 0 8px;">Copy the command for a domain that works — paste it in a terminal where <code>lncrawl</code> is accessible:</p>
-		<div id="modal-lncrawl-cmds"></div>
-		<p style="font-size:10px;color:var(--text-muted,#888);margin:6px 0 0;">Don't have lncrawl? <a href="https://github.com/dipu-bd/lightnovel-crawler/releases" target="_blank" rel="noopener" style="color:var(--accent-color,#7c3aed);">Download from GitHub ↗</a></p>
-	</div>
-<div id="shelf-edit-modal"></div>
+
+		<!-- LNCrawl domain commands panel (toggled by modal-lncrawl-btn) -->
+		<div
+			id="modal-lncrawl-panel"
+			style="
+				display: none;
+				padding: 10px 16px 12px;
+				border-top: 1px solid var(--border-color);
+				background: var(--bg-tertiary);
+			"
+		>
+			<p
+				style="
+					font-size: 11px;
+					color: var(--text-muted, #888);
+					margin: 0 0 8px;
+				"
+			>
+				Copy the command for a domain that works — paste it in a
+				terminal where <code>lncrawl</code> is accessible:
+			</p>
+			<div id="modal-lncrawl-cmds"></div>
+			<p
+				style="
+					font-size: 10px;
+					color: var(--text-muted, #888);
+					margin: 6px 0 0;
+				"
+			>
+				Don't have lncrawl?
+				<a
+					href="https://github.com/dipu-bd/lightnovel-crawler/releases"
+					target="_blank"
+					rel="noopener"
+					style="color: var(--accent-color, #7c3aed)"
+					>Download from GitHub ↗</a
+				>
+			</p>
+		</div>
+		<div id="shelf-edit-modal"></div>
 
 		<script src="../../../lib/browser-polyfill.min.js"></script>
 		<script type="module" src="./shelf-page.js"></script>
 	</body>
-
 </html>

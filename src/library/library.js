@@ -1,10 +1,14 @@
-/* eslint-disable quotes */
 /* eslint-disable no-unused-vars */
 /**
  * Novel Library Page Script
  * Handles UI interactions and data loading for the library page
  */
 
+import { escapeHtml, escapeUrlAttr } from "../utils/html-escape.js";
+import { installImageFallbacks } from "../utils/img-fallback.js";
+// Side-effect import: watches body[data-bg-animation] and drives the canvas
+// animations. The CSS-only ones arrive with library.css.
+import "../utils/bg-animation.js";
 import {
 	novelLibrary,
 	SHELVES,
@@ -22,6 +26,8 @@ import {
 	CAROUSEL_ACTIVE_SITE_BONUS,
 	CAROUSEL_MIN_COUNT,
 	CAROUSEL_DEFAULT_MANUAL_COUNT,
+	DEFAULT_MODEL_ID,
+	geminiModelOptionsHtml,
 } from "../utils/constants.js";
 import { isSupportedDomain } from "../utils/domain-constants.js";
 import { debugLog, debugError } from "../utils/logger.js";
@@ -29,7 +35,6 @@ import {
 	filterEnabledShelves,
 	getSiteSettings,
 	getDefaultSiteSettings,
-	// eslint-disable-next-line no-unused-vars
 	isSiteEnabled,
 	saveSiteSettings,
 	SITE_SETTINGS_KEY,
@@ -150,7 +155,7 @@ import {
 } from "../utils/theme-config.js";
 
 // Track metadata refresh snapshots to show before/after banners
-// eslint-disable-next-line no-unused-vars
+
 const REFRESH_PREFIX = "rg-refresh-snapshot-";
 const REFRESH_TAB_TIMEOUT_MS = 18000; // Allow extra time for slower sites before auto-closing refresh tab
 const PENDING_SUMMARY_REVIEW_KEY = "rg_pending_summary_reviews";
@@ -186,7 +191,6 @@ function getRelativeTimeString(date) {
 	return `${years} year${years !== 1 ? "s" : ""} ago`;
 }
 
-// eslint-disable-next-line no-unused-vars
 function getRefreshTabTimeout(url) {
 	if (!url) return REFRESH_TAB_TIMEOUT_MS;
 
@@ -407,7 +411,6 @@ const elements = {
 
 	// Telemetry Settings
 	telemetryToggle: document.getElementById("telemetry-toggle"),
-	telemetryDetails: document.getElementById("telemetry-details"),
 	sendErrorsToggle: document.getElementById("send-errors-toggle"),
 	webhookUrl: document.getElementById("webhook-url"),
 
@@ -518,10 +521,7 @@ const elements = {
 		"library-reset-prompt-permanent",
 	),
 
-	// Telemetry Consent Modal
-	telemetryConsentModal: document.getElementById("telemetry-consent-modal"),
-	telemetryAcceptBtn: document.getElementById("telemetry-accept-btn"),
-	telemetryDeclineBtn: document.getElementById("telemetry-decline-btn"),
+	// Telemetry consent banner
 	telemetryBanner: document.getElementById("telemetry-banner"),
 	telemetryBannerDisable: document.getElementById("telemetry-banner-disable"),
 	telemetryBannerKeep: document.getElementById("telemetry-banner-keep"),
@@ -850,7 +850,7 @@ async function loadRollingBackups() {
 			btn.addEventListener("click", async () => {
 				const backup = await getRollingBackup(btn.dataset.key);
 				if (backup) {
-					downloadBackupAsFile(backup);
+					await downloadBackupAsFile(backup);
 				}
 			});
 		});
@@ -1541,11 +1541,6 @@ async function loadTelemetrySettings() {
 			elements.debugModeToggle.checked = debugResult.debugMode !== false;
 		}
 
-		// Always show telemetry details since it's opt-out
-		if (elements.telemetryDetails) {
-			elements.telemetryDetails.style.display = "block";
-		}
-
 		if (elements.sendErrorsToggle) {
 			elements.sendErrorsToggle.checked = !!config.sendErrorReports;
 		}
@@ -1726,7 +1721,7 @@ async function updateLibraryModelSelector(apiKey) {
 			const option = document.createElement("option");
 			option.value = model.id;
 			option.textContent = model.displayName;
-			if (!selectedModelId && model.id === "gemini-2.0-flash") {
+			if (!selectedModelId && model.id === DEFAULT_MODEL_ID) {
 				selectedModelId = model.id;
 			}
 			elements.libraryModelSelect.appendChild(option);
@@ -1764,7 +1759,7 @@ async function updateLibraryModelSelector(apiKey) {
 	} catch (error) {
 		debugError("Error updating model selector:", error);
 		elements.libraryModelSelect.innerHTML =
-			'<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option>';
+			geminiModelOptionsHtml(DEFAULT_MODEL_ID);
 	} finally {
 		elements.libraryModelSelect.disabled = false;
 	}
@@ -1786,11 +1781,9 @@ async function loadLibraryModelSettings() {
 		if (data.apiKey) {
 			await updateLibraryModelSelector(data.apiKey);
 		} else if (elements.libraryModelSelect) {
-			elements.libraryModelSelect.innerHTML = `
-				<option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
-				<option value="gemini-2.5-flash">Gemini 2.5 Flash (Faster)</option>
-				<option value="gemini-2.5-pro">Gemini 2.5 Pro (Better quality)</option>
-			`;
+			elements.libraryModelSelect.innerHTML = geminiModelOptionsHtml(
+				data.selectedModelId || DEFAULT_MODEL_ID,
+			);
 			if (data.selectedModelId) {
 				elements.libraryModelSelect.value = data.selectedModelId;
 			}
@@ -2053,7 +2046,7 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
 		// Check if it's a URL (starts with http:// or https://)
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<span class="shelf-icon shelf-icon-img ${className}">
-				<img src="${escapeHtml(icon)}" alt=""
+				<img src="${escapeUrlAttr(icon)}" alt=""
 					style="width: 1.5em; height: 1.5em; vertical-align: middle;">
 				<span class="icon-fallback" style="display: none;">${fallbackEmoji}</span>
 			</span>`;
@@ -2066,7 +2059,7 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
 	if (typeof icon === "object" && icon.url) {
 		const fallback = icon.fallback || fallbackEmoji;
 		return `<span class="shelf-icon shelf-icon-img ${className}">
-			<img src="${escapeHtml(icon.url)}" alt=""
+			<img src="${escapeUrlAttr(icon.url)}" alt=""
 				style="width: 1.5em; height: 1.5em; vertical-align: middle;">
 			<span class="icon-fallback" style="display: none;">${fallback}</span>
 		</span>`;
@@ -2081,7 +2074,7 @@ function renderShelfIcon(icon, className = "", fallbackEmoji = "📖") {
  * @param {string} emoji - Optional emoji fallback from shelf
  * @returns {string} The emoji/text to use
  */
-// eslint-disable-next-line no-unused-vars
+
 function getIconText(icon, emoji) {
 	if (!icon) return emoji || "📖";
 	// If it's a URL string, prefer emoji fallback instead of leaking URL text
@@ -2107,7 +2100,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 	if (typeof icon === "string") {
 		// Check if it's a URL
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
-			return `<img src="${escapeHtml(
+			return `<img src="${escapeUrlAttr(
 				icon,
 			)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallbackEmoji}</span>`;
@@ -2119,7 +2112,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
 	// If icon is an object with url and fallback
 	if (typeof icon === "object" && icon.url) {
 		const fallback = icon.fallback || fallbackEmoji;
-		return `<img src="${escapeHtml(
+		return `<img src="${escapeUrlAttr(
 			icon.url,
 		)}" alt="" class="placeholder-icon-img" style="width: 3rem; height: 3rem; object-fit: contain;">
 				<span class="placeholder-icon-fallback" style="display: none; font-size: 2rem;">${fallback}</span>`;
@@ -2133,7 +2126,7 @@ function renderShelfIconForPlaceholder(icon, fallbackEmoji = "📖") {
  * @param {string|Object} icon - Either an emoji string, URL string, or {url: string, fallback: string}
  * @returns {string} HTML string for the icon overlay
  */
-// eslint-disable-next-line no-unused-vars
+
 function renderShelfIconOverlay(icon) {
 	if (!icon) return '<span class="novel-icon-overlay">📖</span>';
 
@@ -2142,7 +2135,7 @@ function renderShelfIconOverlay(icon) {
 		// Check if it's a URL
 		if (icon.startsWith("http://") || icon.startsWith("https://")) {
 			return `<div class="novel-icon-overlay">
-				<img src="${escapeHtml(icon)}" alt="" class="overlay-icon-img">
+				<img src="${escapeUrlAttr(icon)}" alt="" class="overlay-icon-img">
 				<span class="overlay-icon-fallback" style="display: none;">📖</span>
 			</div>`;
 		}
@@ -2154,7 +2147,7 @@ function renderShelfIconOverlay(icon) {
 	if (typeof icon === "object" && icon.url) {
 		const fallback = icon.fallback || "📖";
 		return `<div class="novel-icon-overlay">
-				<img src="${escapeHtml(icon.url)}" alt="" class="overlay-icon-img">
+				<img src="${escapeUrlAttr(icon.url)}" alt="" class="overlay-icon-img">
 				<span class="overlay-icon-fallback" style="display: none;">${fallback}</span>
 			</div>`;
 	}
@@ -2211,7 +2204,6 @@ function createCoverPlaceholder(content, extraClasses = []) {
 	return placeholder;
 }
 
-// eslint-disable-next-line no-unused-vars
 function initCoverImage(imgEl, sources, placeholderContent) {
 	if (!imgEl) return;
 	const srcList = (sources || []).filter(Boolean);
@@ -2769,14 +2761,23 @@ function initQueueStatusWidget() {
 
 	const LS_URL = browser.runtime.getURL("library/library-settings.html");
 	btn.addEventListener("click", () => {
-		browser.tabs.create({ url: `${LS_URL}?tab=loreweave` });
+		// The Batch Queue lives in the Automation panel.
+		browser.tabs.create({ url: `${LS_URL}?tab=automation` });
 	});
 
 	async function refresh() {
 		try {
-			const resp = await browser.runtime.sendMessage({ action: "queue", subAction: "status" });
+			const resp = await browser.runtime.sendMessage({
+				action: "queue",
+				subAction: "status",
+			});
 			const jobs = resp?.result?.jobs || [];
-			const active = jobs.filter((j) => j.status === "running" || j.status === "pending" || j.status === "paused");
+			const active = jobs.filter(
+				(j) =>
+					j.status === "running" ||
+					j.status === "pending" ||
+					j.status === "paused",
+			);
 			if (active.length > 0) {
 				btn.style.display = "";
 				badge.textContent = String(active.length);
@@ -2788,8 +2789,22 @@ function initQueueStatusWidget() {
 		}
 	}
 
+	// Poll, but not while the tab is hidden. Every `refresh()` is a
+	// `sendMessage` to the background, which on Chromium wakes the service
+	// worker; a library tab left open in the background used to do that four
+	// times a minute forever, to update a badge nobody was looking at. Coming
+	// back to the tab refreshes immediately, so the badge is never stale when
+	// it is actually visible.
 	refresh();
-	setInterval(refresh, 15_000);
+	const pollTimer = setInterval(() => {
+		if (!document.hidden) refresh();
+	}, 15_000);
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden) refresh();
+	});
+	window.addEventListener("pagehide", () => clearInterval(pollTimer), {
+		once: true,
+	});
 }
 
 /**
@@ -2830,7 +2845,8 @@ function setupEventListeners() {
 				_recentRandomPicks.clear();
 				candidates = pool;
 			}
-			const pick = candidates[Math.floor(Math.random() * candidates.length)];
+			const pick =
+				candidates[Math.floor(Math.random() * candidates.length)];
 			_recentRandomPicks.add(pick.id);
 			if (_recentRandomPicks.size > Math.ceil(pool.length / 2)) {
 				const oldest = _recentRandomPicks.values().next().value;
@@ -3082,10 +3098,6 @@ function setupEventListeners() {
 					),
 					rollingBackupEnabled:
 						elements.rollingBackupToggle?.checked ?? true,
-					telemetryEnabled: elements.telemetryToggle?.checked ?? true,
-					sendErrorsEnabled:
-						elements.sendErrorsToggle?.checked ?? true,
-					webhookUrl: elements.webhookUrl?.value?.trim() ?? "",
 					apiKey,
 					selectedModelId,
 					modelEndpoint,
@@ -3134,9 +3146,6 @@ function setupEventListeners() {
 					autoHoldDays: settingsToSave.autoHoldDays,
 					rg_rolling_backup_enabled:
 						settingsToSave.rollingBackupEnabled,
-					telemetryEnabled: settingsToSave.telemetryEnabled,
-					sendErrorsEnabled: settingsToSave.sendErrorsEnabled,
-					webhookUrl: settingsToSave.webhookUrl,
 					apiKey: settingsToSave.apiKey,
 					selectedModelId: settingsToSave.selectedModelId,
 					modelEndpoint: settingsToSave.modelEndpoint,
@@ -3225,7 +3234,7 @@ function setupEventListeners() {
 							elements.backupIncludeCredentials?.checked ?? true,
 					});
 
-					downloadBackupAsFile(backup);
+					await downloadBackupAsFile(backup);
 					showNotification(
 						`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
 						"success",
@@ -4079,7 +4088,6 @@ function setupEventListeners() {
 		optOutTelemetry,
 		saveTelemetryConfig,
 		markFirstRunComplete,
-		closeModal,
 		showNotification,
 	});
 
@@ -4803,7 +4811,7 @@ function createNovelCardForShelf(novel, shelf) {
 		: "📖";
 
 	const coverHtml = novel.coverUrl
-		? `<img data-cover-src="${escapeHtml(
+		? `<img data-cover-src="${escapeUrlAttr(
 				novel.coverUrl,
 			)}" alt="Cover" class="novel-cover" loading="eager" fetchpriority="high" crossorigin="anonymous">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
@@ -4977,7 +4985,7 @@ function createNovelCard(novel) {
 		: renderShelfIcon(null, "site-icon");
 
 	// Fallback to extension logo if cover fails to load
-	// eslint-disable-next-line no-unused-vars
+
 	const fallbackLogo = browser.runtime.getURL("icons/logo-256.png");
 
 	// Generate placeholder content with icon image support
@@ -4986,7 +4994,7 @@ function createNovelCard(novel) {
 		: "📖";
 
 	const coverHtml = novel.coverUrl
-		? `<img data-cover-src="${escapeHtml(
+		? `<img data-cover-src="${escapeUrlAttr(
 				novel.coverUrl,
 			)}" alt="Cover" class="novel-cover" loading="eager" fetchpriority="high" crossorigin="anonymous">`
 		: `<div class="novel-cover-placeholder">${placeholderContent}</div>`;
@@ -5643,10 +5651,12 @@ function populateNovelMetadata(novel) {
 	// Genres section (ScribbleHub, Ranobes, etc.)
 	if (metadata.genres && metadata.genres.length > 0) {
 		hasAnyMetadata = true;
-		if (elements.modalGenresSection) elements.modalGenresSection.style.display = "block";
+		if (elements.modalGenresSection)
+			elements.modalGenresSection.style.display = "block";
 		renderTagList(elements.modalGenres, metadata.genres);
 	} else {
-		if (elements.modalGenresSection) elements.modalGenresSection.style.display = "none";
+		if (elements.modalGenresSection)
+			elements.modalGenresSection.style.display = "none";
 	}
 
 	// Additional Tags section (use additionalTags, freeformTags, or tags)
@@ -5662,25 +5672,48 @@ function populateNovelMetadata(novel) {
 
 	// Work Info section (status, language, year, translationStatus, translator)
 	const infoItems = [];
-	if (metadata.status) infoItems.push({ label: "Status", value: metadata.status });
-	if (metadata.translationStatus) infoItems.push({ label: "Translation", value: metadata.translationStatus });
-	if (metadata.language) infoItems.push({ label: "Language", value: metadata.language });
+	if (metadata.status)
+		infoItems.push({ label: "Status", value: metadata.status });
+	if (metadata.translationStatus)
+		infoItems.push({
+			label: "Translation",
+			value: metadata.translationStatus,
+		});
+	if (metadata.language)
+		infoItems.push({ label: "Language", value: metadata.language });
 	if (metadata.year) infoItems.push({ label: "Year", value: metadata.year });
-	if (metadata.translator) infoItems.push({ label: "Translator", value: metadata.translator });
-	if (metadata.chapterCount) infoItems.push({ label: "Chapters (Source)", value: metadata.chapterCount });
+	if (metadata.translator)
+		infoItems.push({ label: "Translator", value: metadata.translator });
+	if (metadata.chapterCount)
+		infoItems.push({
+			label: "Chapters (Source)",
+			value: metadata.chapterCount,
+		});
 	if (metadata.rating && typeof metadata.rating === "number") {
-		infoItems.push({ label: "Rating", value: `${metadata.rating.toFixed(1)} / 10` + (metadata.ratingCount ? ` (${formatNumber(metadata.ratingCount)} ratings)` : "") });
+		infoItems.push({
+			label: "Rating",
+			value:
+				`${metadata.rating.toFixed(1)} / 10` +
+				(metadata.ratingCount
+					? ` (${formatNumber(metadata.ratingCount)} ratings)`
+					: ""),
+		});
 	}
 	if (infoItems.length > 0) {
 		hasAnyMetadata = true;
-		if (elements.modalWorkInfoSection) elements.modalWorkInfoSection.style.display = "block";
+		if (elements.modalWorkInfoSection)
+			elements.modalWorkInfoSection.style.display = "block";
 		if (elements.modalWorkInfo) {
 			elements.modalWorkInfo.innerHTML = infoItems
-				.map((item) => `<div class="work-info-item"><span class="work-info-label">${escapeHtml(item.label)}</span><span class="work-info-value">${escapeHtml(String(item.value))}</span></div>`)
+				.map(
+					(item) =>
+						`<div class="work-info-item"><span class="work-info-label">${escapeHtml(item.label)}</span><span class="work-info-value">${escapeHtml(String(item.value))}</span></div>`,
+				)
 				.join("");
 		}
 	} else {
-		if (elements.modalWorkInfoSection) elements.modalWorkInfoSection.style.display = "none";
+		if (elements.modalWorkInfoSection)
+			elements.modalWorkInfoSection.style.display = "none";
 	}
 
 	// Work Stats section
@@ -5720,7 +5753,10 @@ function populateNovelMetadata(novel) {
 
 		elements.modalWorkStats.innerHTML = statDefs
 			.filter((d) => stats[d.key])
-			.map((d) => `<div class="work-stat-item"><span class="work-stat-value">${formatNumber(stats[d.key])}</span><span class="work-stat-label">${d.label}</span></div>`)
+			.map(
+				(d) =>
+					`<div class="work-stat-item"><span class="work-stat-value">${formatNumber(stats[d.key])}</span><span class="work-stat-label">${d.label}</span></div>`,
+			)
 			.join("");
 	} else {
 		elements.modalWorkStatsSection.style.display = "none";
@@ -5765,9 +5801,7 @@ async function handleRefreshMetadata() {
 	}
 
 	const confirmed = confirm(
-		// eslint-disable-next-line quotes
 		`Refresh metadata for "${novel.title}"?\n\n` +
-			// eslint-disable-next-line quotes
 			`This will open the novel's page to fetch the latest details from the source.`,
 	);
 
@@ -5846,7 +5880,7 @@ function getModalContextIds(source = "view") {
 }
 
 function setModalContext(context = {}) {
-	let ids = [];
+	let ids;
 	let index = -1;
 
 	if (Array.isArray(context.novelIds) && context.novelIds.length) {
@@ -6134,7 +6168,6 @@ async function handleImport(e) {
 			throw new Error("Invalid library backup file format");
 		}
 
-		// eslint-disable-next-line no-unused-vars
 		const novelCount = Object.keys(data.library.novels || {}).length;
 		// Handle toggle inputs
 		const inputs = document.querySelectorAll(
@@ -6292,13 +6325,10 @@ async function handleComprehensiveRestore(e) {
 			.join(", ");
 
 		const choice = confirm(
-			// eslint-disable-next-line quotes
 			`Comprehensive Backup Found\n\n` +
 				`Created: ${new Date(backup.timestamp).toLocaleString()}\n` +
 				`Contains: ${details}\n\n` +
-				// eslint-disable-next-line quotes
 				`Do you want to restore this backup?\n\n` +
-				// eslint-disable-next-line quotes
 				`⚠️ This will overwrite your current settings.`,
 		);
 
@@ -6562,11 +6592,9 @@ function displayDriveBackups(backups) {
  */
 async function handleRestoreSpecificBackup(backup) {
 	const confirm = window.confirm(
-		// eslint-disable-next-line quotes
 		`Restore backup "${backup.name}"?\n\n` +
 			`Created: ${new Date(backup.createdTime).toLocaleString()}\n` +
 			`Novels: ${backup.novelCount || 0}\n\n` +
-			// eslint-disable-next-line quotes
 			`⚠️ This will merge with your current library.`,
 	);
 
@@ -6736,7 +6764,7 @@ async function updateDriveUI() {
 /**
  * Connect to Google Drive via OAuth
  */
-// eslint-disable-next-line no-unused-vars
+
 async function handleConnectDrive() {
 	try {
 		if (!elements.connectDriveBtn) return;
@@ -7341,7 +7369,7 @@ async function initCarousel(novels) {
 		// Render small shelf icon for meta section - always show image icon, emoji only as final fallback
 		const shelfIconSmall = shelf?.icon
 			? shelf.icon.startsWith("http")
-				? `<img src="${escapeHtml(
+				? `<img src="${escapeUrlAttr(
 						shelf.icon,
 					)}" alt="" class="meta-icon" data-fallback-emoji="${escapeHtml(
 						shelfEmoji,
@@ -7393,7 +7421,7 @@ async function initCarousel(novels) {
 		item.innerHTML = `
 			<div class="carousel-item-image-wrapper">
 				${siteBadge ? `<div class="carousel-site-chip">${siteBadge}</div>` : ""}
-				<img data-cover-src="${escapeHtml(novel.coverUrl || "")}"
+				<img data-cover-src="${escapeUrlAttr(novel.coverUrl || "")}"
 					alt="${escapeHtml(novel.title)}"
 					class="carousel-cover"
 					loading="eager"
@@ -7736,11 +7764,6 @@ function closeModal(modal) {
 /**
  * Escape HTML to prevent XSS
  */
-function escapeHtml(text) {
-	const div = document.createElement("div");
-	div.textContent = text;
-	return div.innerHTML;
-}
 
 // ============================================
 // Notification Panel (Sidebar)
@@ -7900,7 +7923,7 @@ async function updateLibraryNotificationBadge() {
 	const badge = elements.notificationBellBadge;
 	if (!badge) return;
 
-	let unreadCount = 0;
+	let unreadCount;
 	try {
 		const response = await browser.runtime.sendMessage({
 			action: "getNotifications",
@@ -8206,6 +8229,10 @@ browser.storage.onChanged.addListener((changes, areaName) => {
 		}, 500);
 	}
 });
+
+// Cover images fall back declaratively via data-img-fallback; the MV3 CSP
+// blocks the inline onerror attributes this used to rely on.
+installImageFallbacks();
 
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", init);

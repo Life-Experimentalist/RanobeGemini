@@ -54,7 +54,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 				// Determine base URL if authorUrl is relative? Usually it's absolute or relative to site.
 				// Assuming absolute or handled by browser base if irrelevant.
 				// Ranobes authorUrl likely from metadata.
-				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+				authorEl.innerHTML = `<a href="${this.escapeUrlAttr(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
 					novel.author || "Unknown",
 				)}</a>`;
 			} else {
@@ -304,12 +304,12 @@ export class RanobesNovelCard extends NovelCardRenderer {
 		const fallbackCover = this.getFallbackCover(config);
 		// Use data attributes instead of inline onerror to avoid CSP violations
 		const coverMarkup = coverUrl
-			? `<img class="novel-cover-img" src="${this.escapeHtml(
+			? `<img class="novel-cover-img" src="${this.escapeUrlAttr(
 					coverUrl,
 				)}" alt="${this.escapeHtml(
 					novel.title,
 				)}" data-fallback="${fallbackCover}" loading="lazy">`
-			: "<div class=\"novel-cover-placeholder\">📚</div>";
+			: '<div class="novel-cover-placeholder">📚</div>';
 
 		const readingKeyRaw =
 			novel.readingStatus ||
@@ -449,7 +449,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 			<div class="ranobes-card-horizontal">
 				${
 					coverUrl
-						? `<img class="ranobes-bg-blur" src="${this.escapeHtml(
+						? `<img class="ranobes-bg-blur" src="${this.escapeUrlAttr(
 								coverUrl,
 							)}" alt="" aria-hidden="true" loading="lazy">`
 						: ""
@@ -503,7 +503,7 @@ export class RanobesNovelCard extends NovelCardRenderer {
 							}</span>
 							${
 								novel.sourceUrl
-									? `<a class="action-btn" href="${this.escapeHtml(
+									? `<a class="action-btn" href="${this.escapeUrlAttr(
 											novel.sourceUrl,
 										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""

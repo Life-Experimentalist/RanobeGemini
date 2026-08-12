@@ -1,5 +1,10 @@
 /**
  * Telemetry consent helpers for library runtime.
+ *
+ * Consent is asked once, inline, via the banner at the top of the library.
+ * Analytics stays off until it is answered — `getTelemetryConfig` defaults
+ * `enabled` to false — so the banner offers a choice rather than announcing
+ * something already happening.
  */
 
 export async function checkFirstRunConsentRuntime({
@@ -30,36 +35,8 @@ export function bindTelemetryConsentHandlers({
 	optOutTelemetry,
 	saveTelemetryConfig,
 	markFirstRunComplete,
-	closeModal,
 	showNotification,
 }) {
-	if (elements.telemetryAcceptBtn) {
-		elements.telemetryAcceptBtn.addEventListener("click", async () => {
-			await optInTelemetry();
-			await markFirstRunComplete();
-			closeModal(elements.telemetryConsentModal);
-			showNotification(
-				"Thank you for helping improve Ranobe Gemini!",
-				"success",
-			);
-		});
-	}
-
-	if (elements.telemetryDeclineBtn) {
-		elements.telemetryDeclineBtn.addEventListener("click", async () => {
-			await optOutTelemetry();
-			await markFirstRunComplete();
-			if (elements.telemetryToggle) {
-				elements.telemetryToggle.checked = false;
-			}
-			closeModal(elements.telemetryConsentModal);
-			showNotification(
-				"Analytics disabled. You can re-enable anytime in Settings.",
-				"info",
-			);
-		});
-	}
-
 	if (elements.telemetryBannerDisable) {
 		elements.telemetryBannerDisable.addEventListener("click", async () => {
 			await optOutTelemetry();

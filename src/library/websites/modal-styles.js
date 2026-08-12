@@ -545,4 +545,3 @@ export function getScribbleHubStyles() {
 		</style>
 	`;
 }
-
