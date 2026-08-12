@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ranobe Gemini is a cross-browser (Firefox/Chromium/Edge) extension that enhances web novel reading using AI. It is local-first: no backend, user-owned API keys, optional user-owned cloud sync. The current version is whatever `package.json` says — do not restate it here, it goes stale. v5.0.0 is packaged in `releases/`; work since that tag is under "Unreleased" in `docs/release/CHANGELOG.md`.
+Ranobe Gemini is a cross-browser (Firefox/Chromium/Edge) extension that enhances web novel reading using AI. It is local-first: no backend, user-owned API keys, optional user-owned cloud sync. The current version is whatever `package.json` says — do not restate it here, it goes stale. Packaged zips land in `releases/` (untracked; they are published as GitHub Release assets). Work since the newest tag is under "Unreleased" in `docs/release/CHANGELOG.md`.
 
 **Use PowerShell exclusively** — this is a Windows environment. Always use `npm run` scripts, never call `dev/*.js` scripts directly.
 
@@ -52,7 +52,8 @@ npm run publish           # Write commit history + full package + source zip
 - **`content.js`** is the DOM-injected entry point (still ~7k lines, top modularization target). It dynamically imports modules via `browser.runtime.getURL()` — no static `import` at the top. All modules live under `src/content/modules/`.
 - **`src/background/background.js`** must place the `browser` shim at the very top before any other code. It uses `import` (ES module background script).
 - **Handler auto-registration**: `dev/build.js` reads all `*-handler.js` files in `src/utils/website-handlers/` and generates `src/utils/website-handlers/handler-registry.js` and domain match patterns in the manifests. Never edit `handler-registry.js` or the `matches` array in manifests by hand.
-- **Manifests**: edit `src/manifest-firefox.json` and `src/manifest-chromium.json` only — the build merges version from `package.json`.
+- **Manifests**: edit `src/manifest-firefox.json` and `src/manifest-chromium.json` only.
+- **Version**: `src/manifest-chromium.json` is the single source of truth. To release, bump it there and run a build — `dev/build.js` propagates it to `manifest-firefox.json`, `package.json`, `src/library/manifest.webmanifest` and the generated `src/config/build-version.js`. Editing `package.json` directly does nothing; the next build overwrites it.
 - **Never edit** anything under `dist/` or `releases/` — these are build outputs.
 
 ### AI provider pattern
@@ -71,7 +72,7 @@ npm run publish           # Write commit history + full package + source zip
 
 ## Roadmap Authority
 
-`docs/overview/TECHNICAL_ROADMAP.md` is the authoritative technical roadmap. Phases 0–15 are all complete as of v5.0.0 — check the phase tables there rather than trusting a summary here.
+`docs/overview/TECHNICAL_ROADMAP.md` is the authoritative technical roadmap. Phases 0–15 were all complete as of v5.0.0 — check the phase tables there rather than trusting a summary here.
 
 The active work is `docs/development/PRODUCTION_READINESS_AUDIT.md`, which tracks every open finding with a severity and a resolution note. Read it before starting anything: a finding marked RESOLVED records what was actually done and why, and several original findings turned out to be wrong on investigation — those are corrected in place rather than deleted, so the document is also a record of what was checked.
 

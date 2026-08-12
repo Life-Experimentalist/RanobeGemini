@@ -1,7 +1,249 @@
 Mode: all
 Format: text
-Generated: 2026-06-04T09:53:05.268Z
-Total commits: 199
+Generated: 2026-08-12T17:38:32.273Z
+Total commits: 209
+
+[d3c4af8] 2026-08-12 docs: correct the claims that were wrong and record the audit
+   docs: correct the claims that were wrong and record the audit
+   The recurring defect across the docs tree was not staleness in general — it
+   was documents making claims about the build that were false, in the two
+   places where being wrong costs someone real time.
+   - The AMO reviewer build instructions did not work. They named
+   `npm run package-source` (the script is `package:source`), described
+   `npm run package` as calling a nonexistent `npm run archive`, referenced
+   `src/manifest.json` (there are two, neither named that), claimed Node v14,
+   Files:
+   - CLAUDE.md
+   - CONTRIBUTING.md
+   - README.md
+   - REVIEWER NOTES.md
+   - docs/WHATS_WHERE.md
+   - docs/architecture/ARCHITECTURE.md
+   - ... (21 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[340e3d9] 2026-08-12 fix(landing): serve the site's own assets and add the OAuth/library bridges
+   fix(landing): serve the site's own assets and add the OAuth/library bridges
+   - The PWA manifest's icons 404'd in production — they pointed outside the
+   deployed Pages root. The logos and favicons are now committed under
+   landing/assets/ and referenced from there.
+   - Every page hot-linked a 943 KB image from raw.githubusercontent.com as its
+   favicon. Replaced with a 32px and a 180px local file.
+   - Fonts are self-hosted rather than fetched from a third party, which also
+   means the privacy page's "no third-party requests" claim is now true.
+   Files:
+   - landing/architecture.html
+   - landing/assets/favicon-180.png
+   - landing/assets/favicon-32.png
+   - landing/assets/fonts/OFL-spacegrotesk.txt
+   - landing/assets/fonts/fonts.css
+   - landing/assets/fonts/spacegrotesk-400-latin-ext.woff2
+   - ... (27 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[8b025a7] 2026-08-12 test: add the test suite the repo never had
+   test: add the test suite the repo never had
+   No runner, no config, no spec files existed. `node --test` over
+   tests/**/*.test.mjs, 269 tests, run by ci.yml on every push and PR.
+   The website-handler half is the part that earned its place immediately.
+   Those eight handlers are the layer most exposed to breakage — every site can
+   change its markup without warning and nothing pinned their selectors. Ten
+   reduced HTML fixtures under tests/fixtures/ cover canHandle, isChapterPage,
+   title extraction, content extraction and per-site cleaning. Every fixture
+   Files:
+   - tests/backup-crypto.test.mjs
+   - tests/chat-settings.test.mjs
+   - tests/chunk-core.test.mjs
+   - tests/fixtures/README.md
+   - tests/fixtures/ao3-chapter.html
+   - tests/fixtures/ao3-full-work.html
+   - ... (22 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[744bd49] 2026-08-12 feat(content): reading typeface, chunking fixes, and dead-code removal
+   feat(content): reading typeface, chunking fixes, and dead-code removal
+   Content-script side of the audit.
+   - Bundles the four reading typefaces (Literata, Merriweather, Atkinson
+   Hyperlegible, Inter) plus their OFL 1.1 licence texts, so the chosen face
+   applies to enhanced chapter text with nothing fetched at read time.
+   dev/fetch-fonts.js refuses to write a family whose licence it cannot
+   verify.
+   - Chunk UI and chunk lifecycle: several status paths assigned values that
+   Files:
+   - src/content/content.css
+   - src/content/content.js
+   - src/content/debug-integration.js
+   - src/content/debug-utils.js
+   - src/content/gemini-styles.css
+   - src/content/landing-bridge.js
+   - ... (44 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[cf763f1] 2026-08-12 refactor(library,popup): unify the shelf pages and fix settings wiring
+   refactor(library,popup): unify the shelf pages and fix settings wiring
+   The five per-site shelf pages were five copies of the same page that had
+   drifted apart. They now share shelf-core.js with per-site configuration, so
+   each site keeps only the fields it actually has, and a fix to filtering or
+   card rendering lands once instead of five times.
+   Fixes that came out of the audit:
+   - Story Chat settings did nothing. Every toggle in the panel was written to
+   storage and read by nothing. Context sources, history depth and the
+   Files:
+   - src/library/edit-modal.css
+   - src/library/edit-modal.js
+   - src/library/library-settings.css
+   - src/library/library-settings.html
+   - src/library/library-settings.js
+   - src/library/library.css
+   - ... (43 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[d8f8be2] 2026-08-12 fix(core): security, permissions, and cross-browser hardening
+   fix(core): security, permissions, and cross-browser hardening
+   Background worker, shared utils, manifests and constants, from the
+   production-readiness audit. Findings and resolutions are recorded in
+   docs/development/PRODUCTION_READINESS_AUDIT.md.
+   Security:
+   - `externally_connectable` accepted messages from any page on the landing
+   domain, and the message handler did not verify the sender. Both are now
+   narrowed and checked.
+   Files:
+   - src/background/ai/providers/gemini-provider.js
+   - src/background/background.js
+   - src/background/dom-host.js
+   - src/background/dom-jobs.js
+   - src/background/dom-sandbox.js
+   - src/background/loreweave/chapter-scrape-job.js
+   - ... (59 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[26fc45e] 2026-08-12 build: migrate to ESLint 10 flat config and upgrade the toolchain
+   build: migrate to ESLint 10 flat config and upgrade the toolchain
+   ESLint 8 -> 10 is a migration, not a bump: 9 dropped .eslintrc.json as the
+   default format and 10 removed the compatibility path. eslint.config.mjs
+   replaces it. Two translations are not renames and are commented in place —
+   `env` becomes explicit languageOptions.globals (hence the `globals`
+   package), and `ignorePatterns` becomes a config object containing only
+   `ignores`, which is what makes it global rather than block-scoped.
+   `caughtErrors` is pinned back to ESLint 8's "none" deliberately. The 9
+   Files:
+   - .eslintrc.json
+   - .prettierignore
+   - .prettierrc
+   - dev/build.js
+   - dev/fetch-fonts.js
+   - dev/generate-manifest-domains.js
+   - ... (8 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[44f9dd8] 2026-08-12 ci: add a quality gate, modernize the runtime, and add Dependabot
+   ci: add a quality gate, modernize the runtime, and add Dependabot
+   Three things that all failed the same way — nothing was watching them.
+   **No gate existed.** A tag push went straight to the store-submission
+   workflow. ci.yml now runs lint, format:check, tests, the emoji scan, the
+   backup-contract validator and a both-target build on push to main and on
+   every PR, and asserts the build leaves tracked files under src/ clean (a
+   handler added without regenerating handler-registry.js fails here). It is a
+   workflow_call workflow so publish-addons.yml consumes it as a `needs:` gate
+   Files:
+   - .github/dependabot.yml
+   - .github/workflows/ci.yml
+   - .github/workflows/deploy-landing.yml
+   - .github/workflows/publish-addons.yml
+   - SECURITY.md
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[77288a5] 2026-08-12 chore(repo): stop tracking release zips and ignore build output
+   chore(repo): stop tracking release zips and ignore build output
+   67 zip files under releases/ were tracked deliberately, via an explicit
+   `!releases/*.zip` whitelist on .gitignore. That is 676 MB of blobs at HEAD
+   that every clone pays for, to distribute files GitHub already hosts for
+   free as Release assets.
+   The zips now go to the GitHub Release on a tag push, and
+   `npm run release:archive` has back-filled every historical version (26 tags
+   created, 67 assets, 675.9 MB), so no download URL is lost by this removal.
+   Files:
+   - .gitignore
+   - releases/RanobeGemini_v2.0.0.zip
+   - releases/RanobeGemini_v2.1.0.zip
+   - releases/RanobeGemini_v2.2.0.zip
+   - releases/RanobeGemini_v2.2.1.zip
+   - releases/RanobeGemini_v2.3.0.zip
+   - ... (62 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
+
+[739ddb1] 2026-06-04 v5.0.0 emoji fixes
+   v5.0.0 emoji fixes
+   Signed-off-by: Krishna GSVV <krishnagsvv@gmail.com>
+   Files:
+   - docs/superpowers/plans/2026-05-28-novelbin-ui-fixes.md
+   - src/background/background.js
+   - src/background/loreweave/chronicle-storage.js
+   - src/background/loreweave/graphify-prompt.js
+   - src/background/loreweave/graphify-service.js
+   - src/background/loreweave/loreweave-client.js
+   - ... (76 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
 
 [73eca36] 2026-06-04 release: v5.0.0 final — emoji encode, release packages, updated docs
    release: v5.0.0 final — emoji encode, release packages, updated docs
