@@ -8,12 +8,9 @@
 		<meta name="description"
 			content="Complete guide to content filters and collapsible sections in Ranobe Gemini. Learn how to control fight scenes, mature content, and author notes." />
 		<link rel="icon"
-			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			href="assets/favicon-32.png"
 			sizes="32x32" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet" />
+		<link rel="stylesheet" href="./assets/fonts/fonts.css" />
 		<link rel="stylesheet" href="./styles.css" />
 		<script type="module">
 			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
@@ -1052,7 +1049,7 @@
 		<header class="topbar">
 			<div class="brand">
 				<img class="logo-img"
-					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					src="assets/logo-96.png"
 					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong>Ranobe Gemini</strong>
@@ -1075,7 +1072,7 @@
 				<a href="./architecture.html">Architecture</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html" aria-current="page">Styles</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+				<a href="#" data-open-library title="Access your reading library">📚
 					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
@@ -1133,6 +1130,47 @@
 							<span class="cs-toggle-chip off">Expanded</span>
 						</div>
 					</div>
+
+					<h2 class="cs-section-title" style="margin-top: 32px">🔤 Reading Typeface</h2>
+					<p class="cs-section-desc">
+						Library Settings → General → Reading Text sets the font enhanced chapters are shown in.
+						Four typefaces ship inside the extension, so nothing is fetched while you read; three more
+						cost nothing because your device already has them.
+						We won't tell you one of these is read faster than the others — no font is, on any evidence
+						worth quoting. What differs is what each was drawn for, and which one <em>you</em> are used
+						to, which matters more than the rest of it put together.
+					</p>
+					<div class="cs-library-panel">
+						<div class="cs-library-panel-head">
+							<span>Typeface</span>
+							<span>What it was drawn for</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill">Literata</span>
+							<span>Serif commissioned for Google Play Books, for long-form screen reading.</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill">Merriweather</span>
+							<span>Screen serif with a large x-height and sturdy strokes.</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill">Atkinson Hyperlegible</span>
+							<span>Drawn by the Braille Institute for low vision — <code>I</code>, <code>l</code>
+								and <code>1</code> are pulled apart so they cannot be confused.</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill">Inter</span>
+							<span>Sans-serif for screens: tall x-height, open apertures.</span>
+						</div>
+						<div class="cs-library-filter-row">
+							<span class="cs-pill">Site default · Georgia · System sans</span>
+							<span>No download at all — keep the site's own font, or one your device already has.</span>
+						</div>
+					</div>
+					<p class="cs-section-desc">
+						All four bundled families are licensed under the SIL Open Font License 1.1, and each one's
+						licence text ships beside it in the extension package.
+					</p>
 				</section>
 
 				<!-- ── Section 1: Built-in Content Types ──────────────────────── -->
@@ -1402,7 +1440,7 @@
 							<!-- Gemini Detection -->
 							<rect class="diagram-box" x="10" y="20" width="140" height="70" rx="6" />
 							<text class="diagram-text" x="80" y="45" text-anchor="middle" font-weight="bold">
-								Gemini AI
+								AI Provider
 							</text>
 							<text class="diagram-label" x="80" y="65" text-anchor="middle">
 								Analyzes & marks
@@ -1482,7 +1520,7 @@
 						expanded, or disabled.
 					</p>
 
-					<button class="cs-cta-button" onclick="openLibrarySettings()">
+					<button class="cs-cta-button" data-open-library>
 						🔧 Open Library Settings
 					</button>
 
@@ -1609,7 +1647,7 @@
 								<div class="cs-chapter-meta">Site handler + Gemini + your Library settings decide what
 									starts collapsed.</div>
 							</div>
-							<button class="cs-cta-button" style="margin: 0;" onclick="openLibrarySettings()">⚙️ Tune In
+							<button class="cs-cta-button" style="margin: 0;" data-open-library>⚙️ Tune In
 								Library</button>
 						</div>
 
@@ -1740,8 +1778,8 @@
 						<h4>📖 Chapter Reading</h4>
 						<p>
 							Collapsible sections appear automatically in every
-							chapter you read. Gemini AI detects the content
-							types and marks them accordingly.
+							chapter you read. The AI provider you configured
+							detects the content types and marks them accordingly.
 						</p>
 					</div>
 
@@ -1789,7 +1827,7 @@
 								href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 								target="_blank" rel="noreferrer">Get for Edge</a>
 							<a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
-							<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open
+							<button class="btn ghost" type="button" data-open-library>Open
 								Library</button>
 						</div>
 					</div>
@@ -1809,7 +1847,7 @@
 				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
+				<a href="#" data-open-library>Library</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
 			</div>
@@ -1832,21 +1870,10 @@
 				localStorage.setItem("rg-theme-preference", theme);
 			}
 
-			function openLibrarySettings() {
-				if (typeof chrome !== "undefined" && chrome.runtime) {
-					chrome.runtime.sendMessage({ action: "openLibrary" });
-					return;
-				}
-
-				if (typeof browser !== "undefined" && browser.runtime) {
-					browser.runtime.sendMessage({ action: "openLibrary" });
-					return;
-				}
-
-				alert(
-					"📚 Library lives inside the Ranobe Gemini extension. Install it in Firefox or Chromium-based browsers to open the Library, tune content filters, and preview the exact in-chapter behavior.",
-				);
-			}
+			// openLibrarySettings() now lives in open-library.js, which talks to
+			// the extension's content-script bridge instead of guessing at
+			// chrome.runtime (unavailable on Gecko, and gone from Chromium now
+			// that externally_connectable has been removed).
 
 			const CUSTOM_BOX_TYPES_KEY = "rg_custom_box_types";
 
@@ -2007,6 +2034,7 @@
 		</script>
 		<script src="./version.js"></script>
 		<script src="./nav.js" defer></script>
+		<script src="./open-library.js" defer></script>
 	</body>
 
 </html>

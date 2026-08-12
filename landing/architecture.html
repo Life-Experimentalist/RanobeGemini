@@ -6,16 +6,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Architecture | Ranobe Gemini</title>
 		<meta name="description"
-			content="How Ranobe Gemini works: modular architecture, runtime flow, and backup/sync pipeline diagrams." />
+			content="How Ranobe Gemini works: modular architecture, the content-script runtime flow, the AI provider registry behind Gemini, OpenAI-compatible endpoints and Ollama, and the backup/sync pipeline." />
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/architecture.html" />
 		<meta name="theme-color" content="#0b1628" />
 		<link rel="icon"
-			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			href="assets/favicon-32.png"
 			sizes="32x32" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet" />
+		<link rel="stylesheet" href="./assets/fonts/fonts.css" />
 		<link rel="stylesheet" href="./styles.css" />
 		<style>
 			.diagram-shell {
@@ -195,7 +192,7 @@
 		<header class="topbar">
 			<div class="brand">
 				<img class="logo-img"
-					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					src="assets/logo-96.png"
 					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong>Ranobe Gemini</strong>
@@ -272,21 +269,28 @@
 						UI[Popup and Library UI] --> STATE[Storage and Settings]
 						SITES[Website Handlers] --> CONTENT[Content Script Runtime]
 						CONTENT --> BG[Background Orchestrator]
-						BG --> AI[Gemini Model Client]
-						BG --> DRIVE[Drive OAuth and Backup]
+						BG --> AI[AI Provider Registry]
+						AI --> GEM[Gemini]
+						AI --> OAI[OpenAI-compatible]
+						AI --> OLL[Ollama local]
+						BG --> DRIVE[Storage Orchestrator]
+						DRIVE --> DEST[Drive / OneDrive / Dropbox / WebDAV / Native sync]
 						STATE --> BG
 						STATE --> CONTENT
 					</div>
 					<pre
-						class="diagram-fallback">UI modules -> Shared settings/storage -> Background orchestrator -> AI client + Drive module, with content scripts and website handlers as isolated modules</pre>
+						class="diagram-fallback">UI modules -> Shared settings/storage -> Background orchestrator -> AI provider registry (Gemini, OpenAI-compatible, Ollama) + storage orchestrator (Drive, OneDrive, Dropbox, WebDAV, native sync), with content scripts and website handlers as isolated modules</pre>
 				</div>
 				<ul class="diagram-notes">
 					<li><strong>Website Handlers:</strong> One module per website keeps extraction logic isolated.</li>
 					<li><strong>Background Orchestrator:</strong> Centralizes API calls, alarms, and backup sync.</li>
 					<li><strong>Storage and Settings:</strong> Shared contract for popup, library, and content layers.
 					</li>
-					<li><strong>Drive OAuth and Backup:</strong> Optional module; disabled users still have full local
-						workflow.</li>
+					<li><strong>AI Provider Registry:</strong> One adapter per provider behind a shared
+						interface, so switching from Gemini to a local Ollama model changes a setting, not a
+						code path.</li>
+					<li><strong>Storage Orchestrator:</strong> Optional module selecting the sync destination
+						you configured; with it off you still have the full local workflow.</li>
 				</ul>
 			</section>
 

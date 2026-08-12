@@ -4,150 +4,20 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Ranobe Gemini - Login Complete</title>
+		<meta name="robots" content="noindex, nofollow" />
+		<title>Ranobe Gemini &mdash; Sign-in Complete</title>
+		<link rel="stylesheet" href="styles.css" />
 	</head>
 
 	<body>
-		<script>
-			(function () {
-				const queryParams = new URLSearchParams(window.location.search);
-				const hashParams = new URLSearchParams(window.location.hash.slice(1));
-				const accessToken = queryParams.get("access_token") || hashParams.get("access_token");
-				const authorizationCode = queryParams.get("code") || hashParams.get("code");
-				const state = queryParams.get("state") || hashParams.get("state");
-				const expiresIn = Number(queryParams.get("expires_in") || hashParams.get("expires_in") || 0);
+		<main class="oauth-redirect">
+			<h1>Ranobe Gemini</h1>
+			<p id="status" role="status" aria-live="polite">Finishing sign-in&hellip;</p>
+			<p id="detail" class="muted"></p>
+			<button id="open-library" type="button" hidden>Open Library</button>
+		</main>
 
-				if (!accessToken && !authorizationCode) {
-					document.body.innerText = "OAuth failed. No authorization response was received.";
-					return;
-				}
-
-				// Read ext_id only from query params (not hash, where access tokens land).
-			// Validate format: Chromium IDs are 32 chars [a-p], Firefox IDs are UUIDs.
-			const rawExtId = queryParams.get("ext_id") || "";
-			const extId = /^[a-p]{32}$/.test(rawExtId) ||
-				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(rawExtId)
-				? rawExtId : "";
-
-				const payload = { source: "ranobe-gemini-oauth" };
-				if (state) payload.state = state;
-				if (accessToken) {
-					payload.accessToken = accessToken;
-					payload.expiresAt = Date.now() + expiresIn * 1000;
-				}
-				if (authorizationCode) {
-					payload.authorizationCode = authorizationCode;
-				}
-
-				if (window.opener) {
-					window.opener.postMessage(payload, "*");
-				} else if (extId && typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
-					// Mobile tab fallback: no window.opener, relay token to extension via sendMessage
-					chrome.runtime.sendMessage(extId, payload);
-				}
-
-				document.body.innerText = "Login successful. You may close this tab.";
-
-				// When this page is the actual OAuth callback, stop here so the
-				// auth flow can resolve cleanly without a secondary navigation.
-				if (accessToken || authorizationCode) {
-					return;
-				}
-
-				const EXT_IDS = {
-					firefox: "33b0347d-8e94-40d6-a169-249716997cc6",
-					edge: "agbhdkiciomjlifhlfbjanpnhhokaimn",
-				};
-
-				function detectBrowser() {
-					const ua = navigator.userAgent.toLowerCase();
-					if (/firefox/.test(ua)) return "firefox";
-					if (/edg/.test(ua)) return "edge";
-					if (/chrome/.test(ua)) return "chrome";
-					return "unknown";
-				}
-
-				function dedupe(list) {
-					const seen = new Set();
-					return list.filter((candidate) => {
-						if (!candidate?.id) return false;
-						const key = `${candidate.scheme}://${candidate.id}`;
-						if (seen.has(key)) return false;
-						seen.add(key);
-						return true;
-					});
-				}
-
-				function probeExtension(candidate) {
-					return new Promise((resolve) => {
-						const iframe = document.createElement("iframe");
-						iframe.style.display = "none";
-						iframe.referrerPolicy = "no-referrer";
-						iframe.src = `${candidate.scheme}://${candidate.id}/library/library.html`;
-						let done = false;
-
-						const cleanup = () => {
-							if (iframe.parentNode) {
-								iframe.parentNode.removeChild(iframe);
-							}
-						};
-
-						iframe.onload = () => {
-							if (done) return;
-							done = true;
-							const libraryTarget = iframe.src;
-							cleanup();
-							resolve(libraryTarget);
-						};
-
-						iframe.onerror = () => {
-							if (done) return;
-							done = true;
-							cleanup();
-							resolve(null);
-						};
-
-						setTimeout(() => {
-							if (done) return;
-							done = true;
-							cleanup();
-							resolve(null);
-						}, 1200);
-
-						document.body.appendChild(iframe);
-					});
-				}
-
-				async function tryOpenLibrary() {
-					const searchParams = new URLSearchParams(window.location.search);
-					const extParam = searchParams.get("ext_id") || "";
-					const storedExtId = localStorage.getItem("rg_last_ext_id") || "";
-					const browser = detectBrowser();
-
-					const candidates = dedupe([
-						extParam && { scheme: "chrome-extension", id: extParam },
-						storedExtId && { scheme: "chrome-extension", id: storedExtId },
-						browser === "firefox"
-							? { scheme: "moz-extension", id: EXT_IDS.firefox }
-							: null,
-						browser === "edge" || browser === "chrome"
-							? { scheme: "chrome-extension", id: EXT_IDS.edge }
-							: null,
-					]);
-
-					for (const candidate of candidates) {
-						const url = await probeExtension(candidate);
-						if (!url) continue;
-						localStorage.setItem("rg_last_ext_id", candidate.id);
-						window.location.href = url;
-						return;
-					}
-				}
-
-				tryOpenLibrary();
-				setTimeout(() => window.close(), 800);
-			})();
-		</script>
+		<script src="oauth-redirect.js"></script>
 	</body>
 
 </html>

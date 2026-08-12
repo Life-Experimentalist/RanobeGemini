@@ -10,12 +10,9 @@
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/novel-status.html" />
 		<meta name="theme-color" content="#0b1628" />
 		<link rel="icon"
-			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			href="assets/favicon-32.png"
 			sizes="32x32" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet" />
+		<link rel="stylesheet" href="./assets/fonts/fonts.css" />
 		<link rel="stylesheet" href="./styles.css" />
 		<link rel="stylesheet" href="./styles-status.css" />
 		<!-- Mermaid diagram renderer -->
@@ -44,7 +41,7 @@
 		<header class="topbar">
 			<div class="brand">
 				<img class="logo-img"
-					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					src="assets/logo-96.png"
 					alt="Ranobe Gemini" />
 				<div class="meta">
 					<strong id="brandName">Ranobe Gemini</strong>
@@ -66,7 +63,7 @@
 				<a href="./architecture.html">Architecture</a>
 				<a href="./novel-status.html" aria-current="page">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+				<a href="#" data-open-library title="Access your reading library">📚
 					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
@@ -600,7 +597,7 @@
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 							target="_blank" rel="noreferrer">Get for Edge</a>
 						<a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
-						<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open Library</button>
+						<button class="btn ghost" type="button" data-open-library>Open Library</button>
 					</div>
 				</div>
 			</section>
@@ -618,7 +615,7 @@
 				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
+				<a href="#" data-open-library>Library</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
 			</div>
@@ -627,17 +624,7 @@
 		</footer>
 		<script src="./nav.js" defer></script>
 		<script src="./version.js"></script>
-		<script>
-			function openLibrarySettings() {
-				if (typeof chrome !== 'undefined' && chrome.runtime) {
-					chrome.runtime.sendMessage({ action: 'openLibrary' });
-				} else if (typeof browser !== 'undefined' && browser.runtime) {
-					browser.runtime.sendMessage({ action: 'openLibrary' });
-				} else {
-					alert('📚 Library is built into the Ranobe Gemini extension.\n\nInstall from Firefox or Edge to access your reading library, novel status, and content filter settings.\n\nhttps://github.com/Life-Experimentalist/RanobeGemini');
-				}
-			}
-		</script>
+		<script src="./open-library.js" defer></script>
 	</body>
 
 </html>
