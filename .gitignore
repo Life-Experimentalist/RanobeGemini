@@ -1,11 +1,12 @@
 desktop.ini
 node_modules/
 dist/
-releases/*
-!releases/*.zip
-!releases/source/
-releases/source/*
-!releases/source/*.zip
+# Build output. These used to be committed — ~694 MB of zips that every clone
+# pays for forever. They live in GitHub Release assets now, which are stored
+# outside git object storage and cost nothing.
+#   npm run release:archive            # show the plan
+#   npm run release:archive -- --yes   # tag, create releases, upload
+releases/
 .env
 .env.*
 !.env.example
@@ -35,3 +36,10 @@ graphify-out/*
 !graphify-out\.graphify_analysis.json
 .tmp/
 scratch/
+# Session scratch that keeps landing in the docs tree. Notes worth keeping get
+# a real filename under docs/; anything matching this is working residue.
+docs/**/last prompt.md
+docs/**/*.scratch.md
+.devprune.json
+.devprune-ignore
+ignore.devprune.json
