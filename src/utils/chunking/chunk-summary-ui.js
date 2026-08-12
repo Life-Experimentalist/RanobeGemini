@@ -131,10 +131,16 @@ function buildTextContainer(groupStart, groupEnd, colors, extraClass = "") {
 	return div;
 }
 
-function buildShortTextContainer(groupStart, groupEnd, colors, extraClass = "") {
+function buildShortTextContainer(
+	groupStart,
+	groupEnd,
+	colors,
+	extraClass = "",
+) {
 	const div = document.createElement("div");
 	div.className =
-		"gemini-short-summary-text-container" + (extraClass ? " " + extraClass : "");
+		"gemini-short-summary-text-container" +
+		(extraClass ? " " + extraClass : "");
 	div.setAttribute("data-group-start", String(groupStart));
 	div.setAttribute("data-group-end", String(groupEnd));
 	div.style.cssText = `
@@ -291,10 +297,20 @@ export function createMainSummaryGroup(
 
 	card.appendChild(row);
 	card.appendChild(
-		buildTextContainer(0, totalChunks - 1, colors, "gemini-main-summary-text"),
+		buildTextContainer(
+			0,
+			totalChunks - 1,
+			colors,
+			"gemini-main-summary-text",
+		),
 	);
 	card.appendChild(
-		buildShortTextContainer(0, totalChunks - 1, colors, "gemini-main-short-summary-text"),
+		buildShortTextContainer(
+			0,
+			totalChunks - 1,
+			colors,
+			"gemini-main-short-summary-text",
+		),
 	);
 
 	return card;

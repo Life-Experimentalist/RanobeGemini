@@ -6,6 +6,8 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
+import { READING_FONTS, READING_FONT_DEFAULT } from "../constants.js";
 
 export class RanobesHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -71,14 +73,16 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description: "Automatically run Enhance when a Ranobes chapter loads.",
+				description:
+					"Automatically run Enhance when a Ranobes chapter loads.",
 			},
 			{
 				key: "htmlEnhancementMode",
 				label: "HTML enhancement mode",
 				type: "toggle",
 				defaultValue: true,
-				description: "Use HTML-aware enhancement to preserve formatting. Disable for plain-text mode.",
+				description:
+					"Use HTML-aware enhancement to preserve formatting. Disable for plain-text mode.",
 			},
 			{ key: "_content", type: "section", label: "📝 Content Handling" },
 			{
@@ -86,14 +90,16 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				label: "Move translator/author notes to box",
 				type: "toggle",
 				defaultValue: true,
-				description: "Prompt the AI to collect translator and author notes into a separate box at the end rather than leaving them inline.",
+				description:
+					"Prompt the AI to collect translator and author notes into a separate box at the end rather than leaving them inline.",
 			},
 			{
 				key: "languageHint",
 				label: "Source language hint",
 				type: "select",
 				defaultValue: "auto",
-				description: "Hint the AI about the source language for better transliteration of names and terms.",
+				description:
+					"Hint the AI about the source language for better transliteration of names and terms.",
 				options: [
 					{ value: "auto", label: "Auto-detect" },
 					{ value: "russian", label: "Russian" },
@@ -112,7 +118,22 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				min: 70,
 				max: 150,
 				step: 5,
-				description: "Font size percentage for enhanced chapter text (70–150%).",
+				description:
+					"Font size percentage for enhanced chapter text (70–150%).",
+			},
+			{
+				key: "readingFont",
+				label: "Reading typeface",
+				type: "select",
+				defaultValue: READING_FONT_DEFAULT,
+				// Built from the shared list rather than restated, so a face
+				// added in constants.js appears here without a second edit.
+				options: READING_FONTS.map((f) => ({
+					value: f.id,
+					label: f.label,
+				})),
+				description:
+					"Overrides the global reading typeface on Ranobes only.",
 			},
 		],
 	};
@@ -135,14 +156,14 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	// Return true if this handler can handle the current website
 	canHandle() {
 		return (
-			window.location.hostname.includes("ranobes.net") ||
-			window.location.hostname.includes("ranobes.com") ||
-			window.location.hostname.includes("ranobes.top") ||
-			window.location.hostname.includes("ranobes.org")
+			pageLocation().hostname.includes("ranobes.net") ||
+			pageLocation().hostname.includes("ranobes.com") ||
+			pageLocation().hostname.includes("ranobes.top") ||
+			pageLocation().hostname.includes("ranobes.org")
 		);
 	}
 
-	isChapterPath(pathname = window.location.pathname) {
+	isChapterPath(pathname = pageLocation().pathname) {
 		// Known Ranobes chapter URL patterns:
 		// /read-1206917.html
 		// /novel-slug-1206917/2964516.html
@@ -151,7 +172,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		if (/^\/[a-z0-9-]+-\d+\/\d+(?:-[^/]+)?\.html$/i.test(pathname)) {
 			return true;
 		}
-		if (/^\/[a-z0-9-]+-\d+\/chapter-\d+(?:-[^/]+)?\.html$/i.test(pathname)) {
+		if (
+			/^\/[a-z0-9-]+-\d+\/chapter-\d+(?:-[^/]+)?\.html$/i.test(pathname)
+		) {
 			return true;
 		}
 		return false;
@@ -159,7 +182,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 	// Check if current page is a chapter page (not a listing/index page)
 	isChapterPage() {
-		const pathname = window.location.pathname;
+		const pathname = pageLocation().pathname;
 		if (/^\/chapters\/\d+\/?$/.test(pathname)) {
 			return false;
 		}
@@ -218,7 +241,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	 * @returns {boolean} True if this is a novel info/description page
 	 */
 	isNovelPage() {
-		if (/^\/chapters\/\d+\/?$/.test(window.location.pathname)) {
+		if (/^\/chapters\/\d+\/?$/.test(pageLocation().pathname)) {
 			return false;
 		}
 		// Novel info pages typically have the .r-fullstory structure
@@ -228,7 +251,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Check URL pattern for novel pages
 		// e.g., /novels/123456-novel-name.html
-		if (window.location.pathname.match(/\/novels\/\d+-[^/]+\.html$/)) {
+		if (pageLocation().pathname.match(/\/novels\/\d+-[^/]+\.html$/)) {
 			return true;
 		}
 
@@ -241,7 +264,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	 * @param {string} url - The novel or chapter URL
 	 * @returns {string} Unique novel ID
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		try {
 			const urlObj = new URL(url);
 			const path = urlObj.pathname;
@@ -284,7 +307,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	getNovelPageUrl() {
 		// If already on novel page, return current URL
 		if (this.isNovelPage()) {
-			return window.location.href;
+			return pageLocation().href;
 		}
 
 		// Primary: Extract from category breadcrumb (most reliable on chapter pages)
@@ -427,10 +450,16 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 		// Clone and strip standard noise + Ranobes-specific title elements
 		const contentClone = this.cloneAndCleanContent(contentArea, [
-			"h1", "h2", "h3.title", ".story-title", ".chapter-title",
+			"h1",
+			"h2",
+			"h3.title",
+			".story-title",
+			".chapter-title",
 		]);
 
-		let chapterText = this.cleanExtractedText(contentClone.innerText || contentClone.textContent || "");
+		let chapterText = this.cleanExtractedText(
+			contentClone.innerText || contentClone.textContent || "",
+		);
 
 		// Remove ad-related text patterns from the content
 		chapterText = this.removeAdRelatedText(chapterText);
@@ -485,7 +514,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				document.querySelector(".options-left")?.textContent || "",
 				document.querySelector("h1.title")?.textContent || "",
 				document.title || "",
-				window.location.pathname || "",
+				pageLocation().pathname || "",
 			];
 
 			let currentChapter = null;
@@ -499,7 +528,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 
 			// URL fallback: /slug-id/123456.html is often chapter sequence.
 			if (currentChapter == null) {
-				const urlMatch = window.location.pathname.match(
+				const urlMatch = pageLocation().pathname.match(
 					/\/[a-z0-9-]+-\d+\/(\d+)(?:-[^/]+)?\.html$/i,
 				);
 				if (urlMatch) {
@@ -577,10 +606,20 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			/googletag\.[^;]*;/gi,
 			/<ins\s+class="adsbygoogle"[^>]*>.*?<\/ins>/gi,
 
-			// Common ad placeholder text
-			/\[?\s*advertisement\s*\]?/gi,
-			/\[?\s*sponsored\s*(content|link|post)?\s*\]?/gi,
-			/\[?\s*ad\s*\]?/gi,
+			// Ad placeholder markers. These MUST stay anchored — either to a
+			// bracket pair or to a whole line. The previous version of this
+			// list had a bare `/\[?\s*ad\s*\]?/gi`, and because every part of
+			// it except the literal `ad` was optional, it matched the letters
+			// "ad" *anywhere*: "He had already walked the road ahead" came out
+			// as "He halrey walked the roahe". Every Ranobes chapter went
+			// through this. The same flaw applied to the unanchored
+			// "advertisement" and "sponsored" patterns, which quietly deleted
+			// those words out of ordinary prose.
+			/^[^\S\n]*\[?[^\S\n]*(?:advertisement|sponsored(?:[^\S\n]+(?:content|link|post))?|ads?)[^\S\n]*\]?[^\S\n]*$/gim,
+			// The optional leading space is what keeps "Read the [ad] notice."
+			// from coming out as "Read the  notice." with a doubled gap — the
+			// bracket takes one of its two neighbouring spaces with it.
+			/[^\S\n]?\[[^\S\n]*(?:advertisement|sponsored(?:[^\S\n]+(?:content|link|post))?|ads?)[^\S\n]*\]/gi,
 
 			// Script-like content that may leak into text
 			/function\s*\([^)]*\)\s*\{[^}]*adsbygoogle[^}]*\}/gi,
@@ -732,7 +771,9 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					let desc = descMeta.getAttribute("content").trim();
 					if (desc) {
 						// Remove "Novel Title #Chapter X" pattern from start
-						desc = desc.replace(/^.+?#Chapter\s*\d+\s*/i, "").trim();
+						desc = desc
+							.replace(/^.+?#Chapter\s*\d+\s*/i, "")
+							.trim();
 						if (desc && desc.length > 20) {
 							metadata.description = desc;
 						}
@@ -867,7 +908,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 				}
 
 				// Set main novel URL to current page for novel pages
-				metadata.mainNovelUrl = window.location.href;
+				metadata.mainNovelUrl = pageLocation().href;
 
 				const bookmarkTrigger = document.querySelector(
 					".bookmark--trigger[data-tabs]",
@@ -977,7 +1018,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 					try {
 						metadata.coverUrl = new URL(
 							src,
-							window.location.href,
+							pageLocation().href,
 						).href;
 					} catch (e) {
 						// Invalid URL
@@ -997,7 +1038,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 						try {
 							metadata.coverUrl = new URL(
 								match[1],
-								window.location.href,
+								pageLocation().href,
 							).href;
 						} catch (e) {
 							// Invalid URL
@@ -1032,7 +1073,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 							try {
 								metadata.coverUrl = new URL(
 									src,
-									window.location.href,
+									pageLocation().href,
 								).href;
 								break;
 							} catch (e) {
@@ -1067,7 +1108,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 
 		try {
@@ -1118,7 +1159,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	 */
 	getPageTheme() {
 		// Check URL for dark template
-		const urlPath = window.location.href;
+		const urlPath = pageLocation().href;
 		if (urlPath.includes("/Dark-AMOLED/") || urlPath.includes("Dark")) {
 			return "dark";
 		}
@@ -1201,11 +1242,11 @@ export class RanobesHandler extends BaseWebsiteHandler {
 	getMetadataSourceUrl() {
 		// If already on a novel page, use the current URL directly
 		if (this.isNovelPage()) {
-			return window.location.href;
+			return pageLocation().href;
 		}
 
 		// Extract novel ID from current URL
-		const match = window.location.href.match(
+		const match = pageLocation().href.match(
 			this.constructor.SHELF_METADATA.novelIdPattern,
 		);
 		if (!match) {
@@ -1217,7 +1258,7 @@ export class RanobesHandler extends BaseWebsiteHandler {
 		if (!novelId) return null;
 
 		// Use current hostname to preserve the user's preferred domain
-		const domain = window.location.hostname || "ranobes.top";
+		const domain = pageLocation().hostname || "ranobes.top";
 		return `https://${domain}/novels/${novelId}/`;
 	}
 

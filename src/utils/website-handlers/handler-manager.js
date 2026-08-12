@@ -7,6 +7,7 @@ import { BaseWebsiteHandler } from "./base-handler.js";
 import { validateHandlerContractRuntime } from "./handler-contract.js";
 import { HANDLER_MODULES } from "./handler-registry.js";
 import { debugLog } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 import {
 	getSiteSettings,
 	getDomainSettings,
@@ -148,7 +149,7 @@ export class HandlerManager {
 	 * @returns {Object|null} The appropriate handler for the current site or null if none matches
 	 */
 	async getHandlerForCurrentSite() {
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		const handlers = await this.loadHandlers();
 		const siteSettings = await getSiteSettings();
 		const domainSettings = await getDomainSettings();

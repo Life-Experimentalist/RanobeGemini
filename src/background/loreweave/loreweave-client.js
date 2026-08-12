@@ -1,24 +1,35 @@
 /**
  * LoreWeave API client — sends graph deltas to the LoreWeave backend.
+ *
+ * This is the single place where traffic leaves the browser for LoreWeave, so
+ * it re-checks the experimental gate itself. Callers check it too; this is the
+ * backstop that makes "off means no network" true regardless of call path.
  */
+
+import {
+	isLoreWeaveEnabled,
+	LOREWEAVE_DISABLED_MESSAGE,
+} from "../../utils/loreweave-gate.js";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /**
  * POST a graph delta to /lw_api/ingest.
- * @param {string} baseUrl  - e.g. "https://loreweave.vkrishna04.me"
- * @param {Object} delta    - IngestDelta (domain_id, extracted_entities, state_forms, temporal_edges)
- * @param {string} [token]  - Optional bearer token (LW_API_TOKEN on the server)
- * @param {string} [userId] - Client UUID for the shared instance (SponsorBlock-style)
+ * @param {string} baseUrl      - e.g. "https://loreweave.vkrishna04.me"
+ * @param {Object} delta        - IngestDelta (domain_id, extracted_entities, state_forms, temporal_edges)
+ * @param {string} [accountKey] - Secret account key (identity + auth in one, SponsorBlock-style)
  * @returns {Promise<{status: string, domain_id: string}>}
  */
-export async function postIngestDelta(baseUrl, delta, token, userId) {
+export async function postIngestDelta(baseUrl, delta, accountKey) {
+	if (!(await isLoreWeaveEnabled())) {
+		throw new Error(LOREWEAVE_DISABLED_MESSAGE);
+	}
+
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 	try {
 		const headers = { "Content-Type": "application/json" };
-		if (token) headers["Authorization"] = `Bearer ${token}`;
-		if (userId) headers["X-LW-User-ID"] = userId;
+		if (accountKey) headers["Authorization"] = `Bearer ${accountKey}`;
 
 		const res = await fetch(`${baseUrl}/lw_api/ingest`, {
 			method: "POST",
@@ -42,6 +53,7 @@ export async function postIngestDelta(baseUrl, delta, token, userId) {
  * @returns {Promise<boolean>}
  */
 export async function pingLoreWeave(baseUrl) {
+	if (!(await isLoreWeaveEnabled())) return false;
 	try {
 		const res = await fetch(`${baseUrl}/health`, {
 			method: "GET",

@@ -4,6 +4,13 @@
  * using HTTP basic auth. Credentials are stored in browser.storage.local.
  */
 
+import {
+	find,
+	findAll,
+	parseMarkup,
+	textContent,
+} from "../../../utils/mini-dom.js";
+
 const CREDS_KEY = "webdavCredentials";
 
 // ─── Credential helpers ────────────────────────────────────────────────────────
@@ -13,7 +20,12 @@ async function loadCredentials() {
 	return result?.[CREDS_KEY] || null;
 }
 
-export async function saveWebdavCredentials({ serverUrl, username, password, path = "/" }) {
+export async function saveWebdavCredentials({
+	serverUrl,
+	username,
+	password,
+	path = "/",
+}) {
 	const normalized = serverUrl.replace(/\/+$/, "");
 	await browser.storage.local.set({
 		[CREDS_KEY]: { serverUrl: normalized, username, password, path },
@@ -55,7 +67,9 @@ async function davRequest(method, url, { auth, body, headers = {} } = {}) {
 		body: body ?? undefined,
 	});
 	if (!resp.ok) {
-		throw new Error(`WebDAV ${method} ${url} → ${resp.status} ${resp.statusText}`);
+		throw new Error(
+			`WebDAV ${method} ${url} → ${resp.status} ${resp.statusText}`,
+		);
 	}
 	return resp;
 }
@@ -63,23 +77,24 @@ async function davRequest(method, url, { auth, body, headers = {} } = {}) {
 // ─── PROPFIND parser (minimal — extracts file names and dates) ─────────────────
 
 function parsePropfindXml(xmlText) {
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(xmlText, "application/xml");
-	const responses = Array.from(doc.querySelectorAll("response, d\\:response"));
+	// Parsed with mini-dom rather than DOMParser: this adapter runs in the
+	// background, and on Chromium that is a service worker with no DOMParser.
+	// Matching is by local name so any namespace prefix (d:, D:, dav:) works.
+	const doc = parseMarkup(xmlText);
+	const responses = findAll(doc, "response");
 
 	return responses
 		.map((r) => {
-			const href = r.querySelector("href, d\\:href")?.textContent?.trim() || "";
+			const href = textContent(find(r, "href")).trim();
 			const displayName =
-				r.querySelector("displayname, d\\:displayname")?.textContent?.trim() ||
-				href.split("/").pop() || "";
-			const lastModified =
-				r.querySelector("getlastmodified, d\\:getlastmodified")?.textContent?.trim() || "";
+				textContent(find(r, "displayname")).trim() ||
+				href.split("/").pop() ||
+				"";
+			const lastModified = textContent(find(r, "getlastmodified")).trim();
 			const contentLength =
-				r.querySelector("getcontentlength, d\\:getcontentlength")?.textContent?.trim() || "0";
+				textContent(find(r, "getcontentlength")).trim() || "0";
 			const isCollection =
-				r.querySelector("collection, d\\:collection") != null ||
-				href.endsWith("/");
+				find(r, "collection") != null || href.endsWith("/");
 			return {
 				href,
 				name: displayName,
@@ -142,9 +157,16 @@ export function createWebdavStorageAdapter() {
 			method: "MKCOL",
 			headers: { Authorization: auth },
 		});
-		if (!resp.ok && resp.status !== 405 && resp.status !== 301 && resp.status !== 302) {
+		if (
+			!resp.ok &&
+			resp.status !== 405 &&
+			resp.status !== 301 &&
+			resp.status !== 302
+		) {
 			// 405 = already exists, which is fine
-			throw new Error(`WebDAV MKCOL ${dirUrl} → ${resp.status} ${resp.statusText}`);
+			throw new Error(
+				`WebDAV MKCOL ${dirUrl} → ${resp.status} ${resp.statusText}`,
+			);
 		}
 	}
 
@@ -218,7 +240,9 @@ export function createWebdavStorageAdapter() {
 			const creds = await requireCreds(options);
 			const auth = authHeader(creds.username, creds.password);
 			// fileId is the full URL for WebDAV
-			const url = fileId.startsWith("http") ? fileId : backupUrl(creds, options.customPath, fileId);
+			const url = fileId.startsWith("http")
+				? fileId
+				: backupUrl(creds, options.customPath, fileId);
 			const resp = await davRequest("GET", url, { auth });
 			return resp.text();
 		},
@@ -234,7 +258,9 @@ export function createWebdavStorageAdapter() {
 			const auth = authHeader(creds.username, creds.password);
 			const url = backupUrl(creds, customPath, CONTINUOUS_NAME);
 			try {
-				const resp = await fetch(url, { headers: { Authorization: auth } });
+				const resp = await fetch(url, {
+					headers: { Authorization: auth },
+				});
 				if (!resp.ok) return null;
 				return { id: url, name: CONTINUOUS_NAME };
 			} catch (_err) {

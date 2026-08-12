@@ -29,7 +29,9 @@ const EXTENSION_BRIDGES = [
 ];
 
 function normalizeReadingStatus(rawValue) {
-	const normalized = String(rawValue || "").trim().toLowerCase();
+	const normalized = String(rawValue || "")
+		.trim()
+		.toLowerCase();
 	if (!normalized) return null;
 
 	if (/(complete|completed|finished|done)/.test(normalized)) {

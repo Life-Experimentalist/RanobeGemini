@@ -6,6 +6,7 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 import {
 	formatNovelInfo,
 	resolveExportTemplate,
@@ -14,6 +15,23 @@ import {
 
 /** Storage key for library settings (to read global copy template) */
 const LIBRARY_SETTINGS_KEY = "rg_library_settings";
+
+/**
+ * The chapter sections of a full-work ("view_full_work") page.
+ *
+ * The `:not(.preface)` is load-bearing. AO3 nests a `div.chapter.preface.group`
+ * *inside* every `div.chapter`, to hold the chapter heading and the author's
+ * notes. Without the exclusion this selector counts each chapter twice, which
+ * had two visible effects: the reported `totalChapters` was double the real
+ * number, and a single-chapter work opened with `?view_full_work=true` matched
+ * the "more than one chapter" test and took the full-work extraction path.
+ *
+ * Both `isFullWorkPage()` and `_extractFullWorkContent()` must use the same
+ * selector — if they disagree, one decides a page is a full work and the other
+ * finds nothing on it — so it lives here rather than being written twice.
+ */
+const FULL_WORK_CHAPTER_SELECTOR =
+	"#chapters .chapter:not(.preface), #chapters div[id^='chapter']:not(.preface)";
 
 export class AO3Handler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -72,14 +90,16 @@ export class AO3Handler extends BaseWebsiteHandler {
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description: "Automatically run Enhance when an AO3 chapter loads.",
+				description:
+					"Automatically run Enhance when an AO3 chapter loads.",
 			},
 			{
 				key: "htmlEnhancementMode",
 				label: "HTML enhancement mode",
 				type: "toggle",
 				defaultValue: true,
-				description: "Use HTML-aware enhancement to preserve formatting such as italics and scene breaks.",
+				description:
+					"Use HTML-aware enhancement to preserve formatting such as italics and scene breaks.",
 			},
 			{ key: "_context", type: "section", label: "📚 AI Context" },
 			{
@@ -87,21 +107,24 @@ export class AO3Handler extends BaseWebsiteHandler {
 				label: "Include work tags in AI context",
 				type: "toggle",
 				defaultValue: true,
-				description: "Pass the work's tags (fandom, relationships, warnings) to the AI for better enhancement.",
+				description:
+					"Pass the work's tags (fandom, relationships, warnings) to the AI for better enhancement.",
 			},
 			{
 				key: "includeWorkSummaryInContext",
 				label: "Include work summary in AI context",
 				type: "toggle",
 				defaultValue: true,
-				description: "Pass the work summary to the AI so it understands the story context.",
+				description:
+					"Pass the work summary to the AI so it understands the story context.",
 			},
 			{
 				key: "includeChapterNotesInContext",
 				label: "Include chapter notes in AI context",
 				type: "toggle",
 				defaultValue: false,
-				description: "Include the author's chapter start/end notes as part of the enhancement input.",
+				description:
+					"Include the author's chapter start/end notes as part of the enhancement input.",
 			},
 			{ key: "_bridges", type: "section", label: "🔌 Extension Bridges" },
 			{
@@ -109,7 +132,8 @@ export class AO3Handler extends BaseWebsiteHandler {
 				label: "Enable experimental AO3 bridge adapter",
 				type: "toggle",
 				defaultValue: false,
-				description: "Allows an external extension to provide reading status via data-rg-ao3-bridge-status.",
+				description:
+					"Allows an external extension to provide reading status via data-rg-ao3-bridge-status.",
 			},
 			// Note: AO3 natively supports EPUB/MOBI/PDF/HTML download via
 			// the built-in Download button, so no custom download settings needed.
@@ -156,13 +180,13 @@ When enhancing, improve readability while fully respecting the author's original
 	// Return true if this handler can handle the current website
 	canHandle() {
 		const hostMatch =
-			window.location.hostname.includes("archiveofourown.org") ||
-			window.location.hostname.includes("ao3.org");
+			pageLocation().hostname.includes("archiveofourown.org") ||
+			pageLocation().hostname.includes("ao3.org");
 		if (!hostMatch) return false;
 
 		// Handle both chapter-by-chapter pages and the full-work "waterfall" page.
 		// Path must be /works/{id} or /works/{id}/chapters/{id} — query strings allowed.
-		const path = window.location.pathname || "";
+		const path = pageLocation().pathname || "";
 		if (!/^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(path)) {
 			return false;
 		}
@@ -176,11 +200,17 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @returns {boolean}
 	 */
 	isFullWorkPage() {
-		const params = new URLSearchParams(window.location.search);
+		const params = new URLSearchParams(pageLocation().search);
 		if (!params.get("view_full_work")) return false;
 		// Must have multiple chapter sections in the DOM
-		const chapters = document.querySelectorAll("#chapters .chapter, #chapters div[id^='chapter']");
-		return chapters.length > 1 && !!(document.querySelector("dl.work.meta") || document.querySelector("dl.stats"));
+		const chapters = document.querySelectorAll(FULL_WORK_CHAPTER_SELECTOR);
+		return (
+			chapters.length > 1 &&
+			!!(
+				document.querySelector("dl.work.meta") ||
+				document.querySelector("dl.stats")
+			)
+		);
 	}
 
 	/**
@@ -189,7 +219,7 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @returns {boolean}
 	 */
 	isChapterPage() {
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 		// Strictly require canonical AO3 work/chapter routes.
 		const isWork = /^\/works\/\d+(?:\/chapters\/\d+)?\/?$/.test(url);
 		// Check for chapter content on page - include newer AO3 structures
@@ -225,7 +255,7 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @returns {boolean}
 	 */
 	isSingleChapterWork() {
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 		// Works without /chapters/ but with content
 		const isSingleWork =
 			/^\/works\/\d+\/?$/.test(url) || /^\/works\/\d+\?/.test(url);
@@ -256,7 +286,7 @@ When enhancing, improve readability while fully respecting the author's original
 	 * @param {string} url - The work or chapter URL
 	 * @returns {string} Unique novel ID
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		// Extract work ID from URL: /works/12345 or /works/12345/chapters/67890
 		const match = url.match(/\/works\/(\d+)/);
 		if (match) {
@@ -278,11 +308,11 @@ When enhancing, improve readability while fully respecting the author's original
 	 */
 	getNovelPageUrl() {
 		// Extract work ID and return the base work URL
-		const match = window.location.href.match(/\/works\/(\d+)/);
+		const match = pageLocation().href.match(/\/works\/(\d+)/);
 		if (match) {
 			return `https://archiveofourown.org/works/${match[1]}`;
 		}
-		return window.location.href;
+		return pageLocation().href;
 	}
 
 	/**
@@ -384,7 +414,7 @@ When enhancing, improve readability while fully respecting the author's original
 			/* intentional: fall back to default template */
 		}
 
-		const workId = window.location.href.match(/\/works\/(\d+)/)?.[1] || "";
+		const workId = pageLocation().href.match(/\/works\/(\d+)/)?.[1] || "";
 
 		return [
 			{
@@ -413,7 +443,7 @@ When enhancing, improve readability while fully respecting the author's original
 								author,
 								shelfId: "ao3",
 								id: `ao3-${workId}`,
-								sourceUrl: window.location.href,
+								sourceUrl: pageLocation().href,
 							},
 							exportTemplate,
 						);
@@ -472,7 +502,7 @@ When enhancing, improve readability while fully respecting the author's original
 		};
 
 		// Extract work ID from URL
-		const workIdMatch = window.location.href.match(/works\/(\d+)/);
+		const workIdMatch = pageLocation().href.match(/works\/(\d+)/);
 		if (workIdMatch) {
 			metadata.metadata.workId = workIdMatch[1];
 		}
@@ -615,7 +645,7 @@ When enhancing, improve readability while fully respecting the author's original
 					wordsEl.getAttribute("data-ao3e-original");
 				const wordsText = (originalWords || wordsEl.textContent)
 					.trim()
-					.replace(/[,\s ]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.words = parseInt(wordsText, 10) || 0;
 			}
 
@@ -692,7 +722,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalComments || commentsEl.textContent
 				)
 					.trim()
-					.replace(/[,\s ]/g, "");
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.comments = parseInt(commentsText, 10) || 0;
 			}
 
@@ -703,7 +733,7 @@ When enhancing, improve readability while fully respecting the author's original
 					kudosEl.getAttribute("data-ao3e-original");
 				const kudosText = (originalKudos || kudosEl.textContent)
 					.trim()
-					.replace(/[,\s ]/g, "");
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.kudos = parseInt(kudosText, 10) || 0;
 			}
 
@@ -716,7 +746,7 @@ When enhancing, improve readability while fully respecting the author's original
 					originalBookmarks || bookmarksEl.textContent
 				)
 					.trim()
-					.replace(/[,\s ]/g, "");
+					.replace(/[,\s\u00A0]/g, "");
 				metadata.metadata.bookmarks = parseInt(bookmarksText, 10) || 0;
 			}
 
@@ -727,7 +757,7 @@ When enhancing, improve readability while fully respecting the author's original
 				const originalHits = hitsEl.getAttribute("data-ao3e-original");
 				const hitsText = (originalHits || hitsEl.textContent)
 					.trim()
-					.replace(/[,\s ]/g, ""); // Remove commas, spaces, and non-breaking spaces
+					.replace(/[,\s\u00A0]/g, ""); // Remove commas, spaces, and non-breaking spaces
 				metadata.metadata.hits = parseInt(hitsText, 10) || 0;
 			}
 
@@ -788,7 +818,7 @@ When enhancing, improve readability while fully respecting the author's original
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 
 		try {
@@ -835,7 +865,9 @@ When enhancing, improve readability while fully respecting the author's original
 		if (this.isFullWorkPage()) {
 			const chaptersEl = document.querySelector("#chapters");
 			if (chaptersEl) {
-				debugLog("AO3: Full-work page — returning #chapters as content area");
+				debugLog(
+					"AO3: Full-work page — returning #chapters as content area",
+				);
 				return chaptersEl;
 			}
 		}
@@ -1174,7 +1206,7 @@ When enhancing, improve readability while fully respecting the author's original
 	 */
 	_extractFullWorkContent() {
 		const chapterEls = document.querySelectorAll(
-			"#chapters .chapter, #chapters div[id^='chapter']",
+			FULL_WORK_CHAPTER_SELECTOR,
 		);
 		if (!chapterEls.length) {
 			return {
@@ -1186,8 +1218,11 @@ When enhancing, improve readability while fully respecting the author's original
 			};
 		}
 
-		const workTitle = document.querySelector(".preface h2.title.heading")?.textContent?.trim()
-			|| document.title.replace(/\s*\[Archive of Our Own\]$/, "").trim();
+		const workTitle =
+			document
+				.querySelector(".preface h2.title.heading")
+				?.textContent?.trim() ||
+			document.title.replace(/\s*\[Archive of Our Own\]$/, "").trim();
 
 		let combinedHtml = "";
 		let combinedText = "";
@@ -1195,13 +1230,22 @@ When enhancing, improve readability while fully respecting the author's original
 		for (const chEl of chapterEls) {
 			const clone = chEl.cloneNode(true);
 			// Remove scripts / forms
-			clone.querySelectorAll("script, form, .landmark").forEach((el) => el.remove());
+			clone
+				.querySelectorAll("script, form, .landmark")
+				.forEach((el) => el.remove());
 			// Extract chapter heading
-			const heading = clone.querySelector("h3.title, h2.title")?.textContent?.trim() || "";
+			const heading =
+				clone
+					.querySelector("h3.title, h2.title")
+					?.textContent?.trim() || "";
 			// Extract prose — skip notes blocks (.preface, .end-notes)
-			const notesEls = clone.querySelectorAll(".preface, .notes, .end-notes, .module.notes");
+			const notesEls = clone.querySelectorAll(
+				".preface, .notes, .end-notes, .module.notes",
+			);
 			notesEls.forEach((n) => n.remove());
-			const prose = clone.querySelector(".userstuff.module, .userstuff, div[role='article']");
+			const prose = clone.querySelector(
+				".userstuff.module, .userstuff, div[role='article']",
+			);
 			if (!prose) continue;
 
 			if (heading) {
@@ -1212,10 +1256,14 @@ When enhancing, improve readability while fully respecting the author's original
 			combinedText += (prose.textContent || "").trim() + "\n";
 		}
 
-		const contentArea = document.querySelector("#chapters") || document.querySelector("#workskin");
+		const contentArea =
+			document.querySelector("#chapters") ||
+			document.querySelector("#workskin");
 		const metadata = this.getWorkMetadata();
 
-		debugLog(`AO3: Full-work extraction — ${chapterEls.length} chapters, ${combinedText.length} chars`);
+		debugLog(
+			`AO3: Full-work extraction — ${chapterEls.length} chapters, ${combinedText.length} chars`,
+		);
 
 		return {
 			found: true,

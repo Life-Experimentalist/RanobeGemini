@@ -15,32 +15,27 @@
 		"1024": "icons/logo-1024.png"
 	},
 	"permissions": [
-		"activeTab",
-		"storage",
-		"tabs",
-		"notifications",
-		"contextMenus",
 		"alarms",
+		"contextMenus",
 		"downloads",
-		"identity"
+		"identity",
+		"notifications",
+		"offscreen",
+		"sidePanel",
+		"storage",
+		"tabs"
 	],
-	"externally_connectable": {
-		"ids": [
-			"*"
-		],
-		"matches": [
-			"*://ranobe.vkrishna04.me/*"
-		]
-	},
 	"host_permissions": [
-		"https://www.googleapis.com/*",
-		"https://accounts.google.com/*"
+		"https://generativelanguage.googleapis.com/*",
+		"https://oauth2.googleapis.com/*",
+		"https://www.googleapis.com/*"
 	],
 	"optional_host_permissions": [
 		"*://*.ao3.org/*",
 		"*://*.archiveofourown.org/*",
 		"*://*.fanfiction.net/*",
 		"*://*.fanfiction.ws/*",
+		"*://*.novelarrow.com/*",
 		"*://*.novelbin.com/*",
 		"*://*.novelbin.me/*",
 		"*://*.ranobes.com/*",
@@ -89,15 +84,18 @@
 				"*://*.scribblehub.com/*",
 				"*://*.webnovel.com/*"
 			],
-			"js": [
-				"lib/browser-polyfill.min.js",
-				"content/content.js"
-			],
+			"js": ["lib/browser-polyfill.min.js", "content/content.js"],
 			"css": [
 				"content/content.css",
-				"content/gemini-styles.css"
+				"content/gemini-styles.css",
+				"fonts/fonts.css"
 			],
 			"run_at": "document_idle"
+		},
+		{
+			"matches": ["https://ranobe.vkrishna04.me/*"],
+			"js": ["lib/browser-polyfill.min.js", "content/landing-bridge.js"],
+			"run_at": "document_start"
 		}
 	],
 	"commands": {
@@ -131,15 +129,19 @@
 				"icons/*.png",
 				"utils/*.js",
 				"utils/website-handlers/*.js",
-				"utils/chunking/**/*.js",
+				"utils/chunking/*.js",
 				"content/content.*",
 				"content/modules/*.js",
-				"config/config.js",
+				"config/*.js",
 				"popup/*.html",
 				"popup/*.js",
 				"library/*.html",
 				"library/*.css",
-				"library/*.js"
+				"library/*.js",
+				"library/modules/*.js",
+				"library/websites/*.js",
+				"fonts/*.css",
+				"fonts/*.woff2"
 			],
 			"matches": [
 				"*://*.ao3.org/*",
@@ -157,5 +159,8 @@
 				"*://*.webnovel.com/*"
 			]
 		}
-	]
+	],
+	"content_security_policy": {
+		"extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+	}
 }

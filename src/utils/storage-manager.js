@@ -4,11 +4,13 @@
  */
 
 import { debugLog, debugError } from "./logger.js";
+import { ENHANCED_CACHE_EXPIRY_DAYS } from "./constants.js";
 
 export class StorageManager {
 	constructor() {
 		this.DB_KEY_PREFIX = "rg_enhanced_";
-		this.CACHE_EXPIRY_DAYS = 7; // Cache entries older than this will be cleaned up
+		// Cache entries older than this will be cleaned up
+		this.CACHE_EXPIRY_DAYS = ENHANCED_CACHE_EXPIRY_DAYS;
 	}
 
 	/**

@@ -1,4 +1,7 @@
-import { DEFAULT_MODEL_ENDPOINT } from "../../../utils/constants.js";
+import {
+	DEFAULT_MODEL_ENDPOINT,
+	DEFAULT_MODEL_ID,
+} from "../../../utils/constants.js";
 
 export function createGeminiProviderAdapter({
 	initConfig,
@@ -56,7 +59,7 @@ export function createGeminiProviderAdapter({
 			const selectedModelId =
 				config.selectedModelId ||
 				endpoint.split("/").pop().split(":")[0] ||
-				"gemini-2.5-flash";
+				DEFAULT_MODEL_ID;
 
 			return [
 				{

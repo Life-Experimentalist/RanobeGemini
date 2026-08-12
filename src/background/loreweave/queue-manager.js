@@ -13,6 +13,9 @@
 
 import { graphifyChapter } from "./graphify-service.js";
 import { saveChapterRecord } from "./chronicle-storage.js";
+import { runDomJob } from "../dom-host.js";
+import { isLoreWeaveEnabled } from "../../utils/loreweave-gate.js";
+import { DEFAULT_MODEL_ENDPOINT } from "../../utils/constants.js";
 
 const QUEUE_KEY = "rg_queue";
 const SHORT_CHAPTER_THRESHOLD_WORDS = 1600;
@@ -55,7 +58,10 @@ export async function enqueueJob(jobConfig) {
 		status: "pending",
 		progress: {
 			current: 0,
-			total: Math.max(1, (jobConfig.endChapter || 1) - (jobConfig.startChapter || 1) + 1),
+			total: Math.max(
+				1,
+				(jobConfig.endChapter || 1) - (jobConfig.startChapter || 1) + 1,
+			),
 			processedChapters: [],
 			failedChapters: [],
 			skippedChapters: [],
@@ -130,13 +136,16 @@ export async function getQueueStatus() {
 // ─── Processing loop ─────────────────────────────────────────────────────────
 
 async function _processLoop() {
-	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const queue = await loadQueue();
 		// Priority: sort pending jobs by novelLastRead descending (most-recently-read first)
-		const candidates = queue.jobs.filter(
-			(j) => j.status === "pending" || j.status === "running",
-		).sort((a, b) => (b.novelLastRead || b.createdAt || 0) - (a.novelLastRead || a.createdAt || 0));
+		const candidates = queue.jobs
+			.filter((j) => j.status === "pending" || j.status === "running")
+			.sort(
+				(a, b) =>
+					(b.novelLastRead || b.createdAt || 0) -
+					(a.novelLastRead || a.createdAt || 0),
+			);
 		const nextJob = candidates[0] || null;
 		if (!nextJob || nextJob.status === "paused") break;
 
@@ -184,15 +193,24 @@ async function _processChapters(job, config) {
 		try {
 			fetchResult = await _fetchChapter(currentUrl, chapterNum);
 		} catch (fetchErr) {
-			console.warn(`[Queue] Fetch threw for ch ${chapterNum}:`, fetchErr?.message);
+			console.warn(
+				`[Queue] Fetch threw for ch ${chapterNum}:`,
+				fetchErr?.message,
+			);
 			fetchResult = { content: "", nextUrl: null, words: 0 };
 		}
 		const { content, nextUrl, words } = fetchResult;
 
 		if (!content || words < MIN_CHAPTER_WORDS) {
 			// Chapter was empty or too short — count as skipped, not failed
-			const skipped = [...(current.progress.skippedChapters || []), chapterNum];
-			await updateJobProgress(job.id, { skippedChapters: skipped, current: chapterNum });
+			const skipped = [
+				...(current.progress.skippedChapters || []),
+				chapterNum,
+			];
+			await updateJobProgress(job.id, {
+				skippedChapters: skipped,
+				current: chapterNum,
+			});
 		} else if (words < SHORT_CHAPTER_THRESHOLD_WORDS) {
 			buffer.push({ chapterNum, content, words });
 			bufferWords += words;
@@ -203,11 +221,23 @@ async function _processChapters(job, config) {
 						...(current.progress.processedChapters || []),
 						...buffer.map((b) => b.chapterNum),
 					];
-					await updateJobProgress(job.id, { processedChapters: processed, current: chapterNum });
+					await updateJobProgress(job.id, {
+						processedChapters: processed,
+						current: chapterNum,
+					});
 				} catch (flushErr) {
-					const failed = [...(current.progress.failedChapters || []), ...buffer.map((b) => b.chapterNum)];
-					await updateJobProgress(job.id, { failedChapters: failed, current: chapterNum });
-					console.warn(`[Queue] Flush failed for batch ending at ch ${chapterNum}:`, flushErr?.message);
+					const failed = [
+						...(current.progress.failedChapters || []),
+						...buffer.map((b) => b.chapterNum),
+					];
+					await updateJobProgress(job.id, {
+						failedChapters: failed,
+						current: chapterNum,
+					});
+					console.warn(
+						`[Queue] Flush failed for batch ending at ch ${chapterNum}:`,
+						flushErr?.message,
+					);
 				}
 				buffer.length = 0;
 				bufferWords = 0;
@@ -220,23 +250,50 @@ async function _processChapters(job, config) {
 						...(current.progress.processedChapters || []),
 						...buffer.map((b) => b.chapterNum),
 					];
-					await updateJobProgress(job.id, { processedChapters: processed });
+					await updateJobProgress(job.id, {
+						processedChapters: processed,
+					});
 				} catch (bufFlushErr) {
-					const failed = [...(current.progress.failedChapters || []), ...buffer.map((b) => b.chapterNum)];
+					const failed = [
+						...(current.progress.failedChapters || []),
+						...buffer.map((b) => b.chapterNum),
+					];
 					await updateJobProgress(job.id, { failedChapters: failed });
-					console.warn(`[Queue] Flush failed for buffer:`, bufFlushErr?.message);
+					console.warn(
+						`[Queue] Flush failed for buffer:`,
+						bufFlushErr?.message,
+					);
 				}
 				buffer.length = 0;
 				bufferWords = 0;
 			}
 			try {
-				await _flushBuffer([{ chapterNum, content, words }], job, config);
-				const processed = [...(current.progress.processedChapters || []), chapterNum];
-				await updateJobProgress(job.id, { processedChapters: processed, current: chapterNum });
+				await _flushBuffer(
+					[{ chapterNum, content, words }],
+					job,
+					config,
+				);
+				const processed = [
+					...(current.progress.processedChapters || []),
+					chapterNum,
+				];
+				await updateJobProgress(job.id, {
+					processedChapters: processed,
+					current: chapterNum,
+				});
 			} catch (singleFlushErr) {
-				const failed = [...(current.progress.failedChapters || []), chapterNum];
-				await updateJobProgress(job.id, { failedChapters: failed, current: chapterNum });
-				console.warn(`[Queue] Flush failed for ch ${chapterNum}:`, singleFlushErr?.message);
+				const failed = [
+					...(current.progress.failedChapters || []),
+					chapterNum,
+				];
+				await updateJobProgress(job.id, {
+					failedChapters: failed,
+					current: chapterNum,
+				});
+				console.warn(
+					`[Queue] Flush failed for ch ${chapterNum}:`,
+					singleFlushErr?.message,
+				);
 			}
 		}
 
@@ -267,32 +324,53 @@ async function _flushBuffer(batch, job, config) {
 		console.warn(`[Queue] Summary failed for ${epochLabel}:`, err.message);
 	}
 
-	if (job.options.sendToLoreWeave && job.novelId) {
+	// The queue itself is not a LoreWeave feature — only this step is, so it is
+	// the only part the experimental gate switches off.
+	const graphifyAllowed =
+		job.options.sendToLoreWeave &&
+		job.novelId &&
+		(await isLoreWeaveEnabled());
+
+	if (graphifyAllowed) {
 		try {
 			const graphifyConfig = {
 				...config,
-				loreWeaveUrl: job.options.loreWeaveUrl || config.loreWeaveUrl || "",
-				loreWeaveDomainId: job.options.domainId || config.loreWeaveDomainId || "",
+				loreWeaveUrl:
+					job.options.loreWeaveUrl || config.loreWeaveUrl || "",
+				loreWeaveDomainId:
+					job.options.domainId || config.loreWeaveDomainId || "",
 				loreWeaveWritingStyle: job.options.writingStyle,
 				loreWeaveChronicleEnabled: true,
 				loreWeaveNovelId: job.novelId,
 			};
-			if (graphifyConfig.loreWeaveUrl && graphifyConfig.loreWeaveDomainId) {
-				await graphifyChapter(combinedText, graphifyConfig, firstChapter, epochLabel);
+			if (
+				graphifyConfig.loreWeaveUrl &&
+				graphifyConfig.loreWeaveDomainId
+			) {
+				await graphifyChapter(
+					combinedText,
+					graphifyConfig,
+					firstChapter,
+					epochLabel,
+				);
 			}
 		} catch (err) {
-			console.warn(`[Queue] Graphify failed for ${epochLabel}:`, err.message);
+			console.warn(
+				`[Queue] Graphify failed for ${epochLabel}:`,
+				err.message,
+			);
 		}
 	}
 
 	for (const { chapterNum } of batch) {
 		await saveChapterRecord(job.novelId, chapterNum, {
 			chapterLabel: `Chapter ${String(chapterNum).padStart(4, "0")}`,
-			summary: batch.length > 1 ? `[Batch ${epochLabel}] ${summary}` : summary,
+			summary:
+				batch.length > 1 ? `[Batch ${epochLabel}] ${summary}` : summary,
 			shortSummary: "",
 			entities: [],
 			edges: [],
-			graphified: job.options.sendToLoreWeave,
+			graphified: graphifyAllowed,
 			domainId: job.options.domainId || config.loreWeaveDomainId || "",
 		});
 	}
@@ -305,43 +383,24 @@ async function _fetchChapter(url, chapterNum) {
 	for (let attempt = 0; attempt <= CHAPTER_FETCH_RETRY; attempt++) {
 		try {
 			if (attempt > 0) {
-				await new Promise((r) => setTimeout(r, CHAPTER_FETCH_BACKOFF_MS));
+				await new Promise((r) =>
+					setTimeout(r, CHAPTER_FETCH_BACKOFF_MS),
+				);
 			}
 			const res = await fetch(url, { credentials: "omit" });
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const html = await res.text();
-			const doc = new DOMParser().parseFromString(html, "text/html");
-
-			const contentEl =
-				doc.querySelector("#chr-content") ||
-				doc.querySelector(".chr-c") ||
-				doc.querySelector("article") ||
-				doc.querySelector(".chapter-content") ||
-				doc.body;
-
-			contentEl
-				?.querySelectorAll("script,style,ins,[class*=ads],[id*=ads]")
-				.forEach((el) => el.remove());
-
-			const content = (contentEl?.innerText || contentEl?.textContent || "").trim();
-			const words = content.split(/\s+/).filter(Boolean).length;
-
-			const nextEl =
-				doc.querySelector('a.js-chapter-nav[data-chapter-nav="next"]') ||
-				doc.querySelector('a[rel="next"]') ||
-				doc.querySelector(".chr-nav a:last-child");
-			let nextUrl =
-				nextEl?.getAttribute("data-chapter-url") || nextEl?.href || null;
-			if (nextUrl && !nextUrl.startsWith("http")) {
-				nextUrl = new URL(nextUrl, url).href;
-			}
-
-			return { content, nextUrl, words };
+			// Parsing runs through the DOM host: this module executes in the
+			// background, which on Chromium is a service worker with no DOMParser.
+			return await runDomJob("parseLoreWeaveChapter", { html, url });
 		} catch (err) {
 			lastErr = err;
 		}
 	}
-	console.warn(`[Queue] Failed to fetch chapter ${chapterNum}:`, lastErr?.message);
+	console.warn(
+		`[Queue] Failed to fetch chapter ${chapterNum}:`,
+		lastErr?.message,
+	);
 	return { content: "", nextUrl: null, words: 0 };
 }
 
@@ -368,9 +427,7 @@ async function _generateSummary(text, config, epochLabel) {
 async function _summarizeGemini(prompt, config) {
 	const apiKey = config.apiKey;
 	if (!apiKey) return "";
-	const modelEndpoint =
-		config.modelEndpoint ||
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+	const modelEndpoint = config.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
 	const res = await fetch(`${modelEndpoint}?key=${apiKey}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -387,10 +444,14 @@ async function _summarizeGemini(prompt, config) {
 async function _summarizeOpenAI(prompt, config) {
 	const apiKey = config.openAiApiKey || config.apiKey;
 	if (!apiKey) return "";
-	const endpoint = config.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
+	const endpoint =
+		config.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
 	const res = await fetch(endpoint, {
 		method: "POST",
-		headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		},
 		body: JSON.stringify({
 			model: config.openAiModel || "gpt-4o-mini",
 			messages: [{ role: "user", content: prompt }],
@@ -404,7 +465,8 @@ async function _summarizeOpenAI(prompt, config) {
 }
 
 async function _summarizeOllama(prompt, config) {
-	const endpoint = config.ollamaEndpoint || "http://localhost:11434/api/generate";
+	const endpoint =
+		config.ollamaEndpoint || "http://localhost:11434/api/generate";
 	const model = config.ollamaModel || "llama3.1:8b";
 	const res = await fetch(endpoint, {
 		method: "POST",

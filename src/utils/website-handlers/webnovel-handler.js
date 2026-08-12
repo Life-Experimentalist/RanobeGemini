@@ -10,6 +10,7 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 
 export class WebNovelHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -87,17 +88,50 @@ When enhancing, improve readability and grammar while respecting the author's or
 		this.processedChapters = new Set();
 
 		// Track current chapter for URL monitoring
-		this.lastUrl = window.location.href;
+		this.lastUrl = pageLocation().href;
 
-		// Start monitoring for new chapters (infinite scroll)
-		this.startChapterMonitoring();
+		// Handles for the monitors started by startChapterMonitoring().
+		this.chapterObserver = null;
+		this.urlPollTimer = null;
+		this.initialInjectTimer = null;
+
+		// Monitoring is deliberately NOT started here. HandlerManager.loadHandlers()
+		// constructs *every* handler class on *every* supported site to ask which
+		// one can handle the page, so anything the constructor starts also runs on
+		// Ranobes, AO3 and FanFiction. This used to leave a 1s poll and a
+		// document.body subtree MutationObserver running on all of them for the
+		// life of the tab, firing on every DOM mutation to query `.cha-content`
+		// selectors that only exist on WebNovel.
+		if (this.canHandle()) {
+			this.startChapterMonitoring();
+		}
+	}
+
+	/**
+	 * Stop the infinite-scroll monitors. Idempotent, so it is safe to call from
+	 * both an explicit teardown and a pagehide handler.
+	 */
+	cleanup() {
+		this.chapterObserver?.disconnect();
+		this.chapterObserver = null;
+		if (this.urlPollTimer !== null) {
+			clearInterval(this.urlPollTimer);
+			this.urlPollTimer = null;
+		}
+		// The deferred first sweep has to be cancelled too. It is a one-shot, so
+		// it looked harmless, but a handler torn down inside its first second
+		// still fired it — reaching into a DOM the caller had already discarded.
+		if (this.initialInjectTimer !== null) {
+			clearTimeout(this.initialInjectTimer);
+			this.initialInjectTimer = null;
+		}
 	}
 
 	// Return true if this handler can handle the current website
 	canHandle() {
 		return (
-			window.location.hostname.includes("webnovel.com") ||
-			window.location.hostname.includes("webnovel.co")
+			pageLocation().hostname.includes("webnovel.com") ||
+			pageLocation().hostname.includes("webnovel.co")
 		);
 	}
 
@@ -107,7 +141,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 */
 	isChapterPage() {
 		// Chapter URLs contain /chapter/ or have .cha-content elements
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 		if (url.includes("/chapter/")) {
 			return true;
 		}
@@ -121,7 +155,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * @returns {boolean}
 	 */
 	isNovelPage() {
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 		// Novel pages have /book/NUMBER format without /chapter/
 		const isBookPage =
 			/^\/book\/\d+/.test(url) && !url.includes("/chapter/");
@@ -139,7 +173,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * @param {string} url - The novel or chapter URL
 	 * @returns {string} Unique novel ID
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		// Extract book ID from URL: /book/12345
 		const match = url.match(/\/book\/(\d+)/);
 		if (match) {
@@ -161,11 +195,11 @@ When enhancing, improve readability and grammar while respecting the author's or
 	getNovelPageUrl() {
 		// If already on novel page, return current URL
 		if (this.isNovelPage()) {
-			return window.location.href;
+			return pageLocation().href;
 		}
 
 		// Extract book ID from chapter URL
-		const match = window.location.href.match(/\/book\/(\d+)/);
+		const match = pageLocation().href.match(/\/book\/(\d+)/);
 		if (match) {
 			return `https://www.webnovel.com/book/${match[1]}`;
 		}
@@ -324,7 +358,7 @@ When enhancing, improve readability and grammar while respecting the author's or
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 
 		try {
@@ -373,27 +407,31 @@ When enhancing, improve readability and grammar while respecting the author's or
 	 * This finds ALL chapter containers on the page and injects buttons for each
 	 */
 	startChapterMonitoring() {
+		// Already running — don't stack a second observer and poll on top.
+		if (this.chapterObserver || this.urlPollTimer !== null) return;
+
 		// Initial check after a delay to ensure DOM is ready
-		setTimeout(() => {
+		this.initialInjectTimer = setTimeout(() => {
+			this.initialInjectTimer = null;
 			this.injectButtonsForAllChapters();
 		}, 1000);
 
 		// Monitor for new chapters being added (infinite scroll)
-		const observer = new MutationObserver(() => {
+		this.chapterObserver = new MutationObserver(() => {
 			this.injectButtonsForAllChapters();
 		});
 
 		// Observe the main content area for new chapters
 		const contentArea =
 			document.querySelector(".g_ad_scroll_area") || document.body;
-		observer.observe(contentArea, {
+		this.chapterObserver.observe(contentArea, {
 			childList: true,
 			subtree: true,
 		});
 
 		// Also monitor URL changes to detect manual navigation
-		setInterval(() => {
-			const currentUrl = window.location.href;
+		this.urlPollTimer = setInterval(() => {
+			const currentUrl = pageLocation().href;
 			if (currentUrl !== this.lastUrl) {
 				debugLog("WebNovel: URL changed via navigation");
 				this.lastUrl = currentUrl;
@@ -402,6 +440,13 @@ When enhancing, improve readability and grammar while respecting the author's or
 				this.injectButtonsForAllChapters();
 			}
 		}, 1000);
+
+		// The document can go into the back/forward cache with these still
+		// running; pagehide is the one teardown event that fires in both the
+		// bfcache and the plain-unload case.
+		window.addEventListener("pagehide", () => this.cleanup(), {
+			once: true,
+		});
 	}
 
 	/**

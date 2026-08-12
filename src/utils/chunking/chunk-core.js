@@ -4,6 +4,23 @@
  */
 
 import { DEFAULT_CHUNK_SIZE_WORDS, MIN_CHUNK_WORDS } from "./chunk-config.js";
+import { findOutermost, outerHTML, parseMarkup } from "../mini-dom.js";
+
+/** Block-level tags treated as paragraph boundaries. */
+const BLOCK_TAGS = [
+	"p",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"li",
+	"blockquote",
+	"pre",
+];
+const BLOCK_SELECTOR = BLOCK_TAGS.join(", ");
+const BLOCK_TAG_SET = new Set(BLOCK_TAGS);
 
 /**
  * Count words in text (HTML-aware, emoji-aware)
@@ -54,10 +71,8 @@ function extractParagraphs(htmlContent) {
 				`<body>${htmlContent}</body>`,
 				"text/html",
 			);
-			const blockSelector =
-				"p, h1, h2, h3, h4, h5, h6, li, blockquote, pre";
 			const allBlocks = Array.from(
-				doc.body.querySelectorAll(blockSelector),
+				doc.body.querySelectorAll(BLOCK_SELECTOR),
 			);
 
 			// Keep only blocks that have no block-element ancestor (avoids
@@ -65,7 +80,7 @@ function extractParagraphs(htmlContent) {
 			const outerBlocks = allBlocks.filter((el) => {
 				let parent = el.parentElement;
 				while (parent && parent !== doc.body) {
-					if (parent.matches(blockSelector)) return false;
+					if (parent.matches(BLOCK_SELECTOR)) return false;
 					parent = parent.parentElement;
 				}
 				return true;
@@ -87,47 +102,76 @@ function extractParagraphs(htmlContent) {
 		}
 	}
 
-	// ── Fallback: regex-based extraction ─────────────────────────────────────
-	// NOTE: this regex cannot see through nesting, so a wrapper <div> will
-	// consume all inner <p> tags.  It is kept only as a best-effort fallback.
+	// ── Fallback: mini-dom extraction (no DOM required) ──────────────────────
+	// Chromium's MV3 background is a service worker, so DOMParser is absent
+	// there. mini-dom understands nesting, so a wrapper <div> no longer
+	// swallows the <p> tags inside it the way the old regex did.
 	const paragraphs = [];
-	const blockRegex =
-		/<(p|div|h[1-6]|li|blockquote|pre|section|article)\b[^>]*>([\s\S]*?)<\/\1>|<br\s*\/?>/gi;
+	const push = (content) => {
+		const trimmed = content.trim();
+		if (!trimmed) return;
+		const wordCount = countWords(trimmed);
+		if (wordCount > 0) paragraphs.push({ content: trimmed, wordCount });
+	};
 
-	let lastIndex = 0;
-	let match;
+	const root = parseMarkup(htmlContent);
+	const blocks = findOutermost(root, BLOCK_TAG_SET);
 
-	while ((match = blockRegex.exec(htmlContent)) !== null) {
-		if (match.index > lastIndex) {
-			const textBefore = htmlContent
-				.substring(lastIndex, match.index)
-				.trim();
-			if (textBefore) {
-				const wordCount = countWords(textBefore);
-				if (wordCount > 0)
-					paragraphs.push({ content: textBefore, wordCount });
-			}
+	let cursor = 0;
+	for (const block of blocks) {
+		if (block.start > cursor) {
+			push(htmlContent.slice(cursor, block.start));
 		}
-
-		const fullTag = match[0];
-		if (!fullTag.toLowerCase().startsWith("<br")) {
-			const wordCount = countWords(fullTag);
-			if (wordCount > 0) paragraphs.push({ content: fullTag, wordCount });
-		}
-
-		lastIndex = blockRegex.lastIndex;
+		push(outerHTML(block, htmlContent));
+		cursor = block.end;
 	}
-
-	if (lastIndex < htmlContent.length) {
-		const textAfter = htmlContent.substring(lastIndex).trim();
-		if (textAfter) {
-			const wordCount = countWords(textAfter);
-			if (wordCount > 0)
-				paragraphs.push({ content: textAfter, wordCount });
-		}
+	if (cursor < htmlContent.length) {
+		push(htmlContent.slice(cursor));
 	}
 
 	return paragraphs;
+}
+
+/**
+ * Split any chunk that still exceeds the target, and renumber the result.
+ *
+ * A paragraph is indivisible at a block boundary, so one enormous paragraph can
+ * carry a chunk far past the target — which is how a chapter ends up exceeding
+ * the model's context and failing the whole request. Those chunks are split
+ * again on word boundaries in their plain text.
+ *
+ * Every return path of `splitByParagraphs` goes through here. The two-way split
+ * used to return directly, so a chapter of one short paragraph followed by one
+ * very long one produced a chunk nearly twice the target.
+ *
+ * @param {Array<{content: string, wordCount: number, paragraphCount?: number}>} chunks
+ * @param {number} chunkSizeWords
+ * @returns {Array<{index: number, content: string, wordCount: number, paragraphCount: number}>}
+ */
+function enforceChunkSize(chunks, chunkSizeWords) {
+	const finalChunks = [];
+	for (const chunk of chunks) {
+		if (chunk.wordCount > chunkSizeWords) {
+			const plainText = chunk.content
+				.replace(/<[^>]*>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim();
+			for (const sub of splitPlainTextByWords(
+				plainText,
+				chunkSizeWords,
+			)) {
+				finalChunks.push({
+					index: finalChunks.length,
+					content: sub.content,
+					wordCount: sub.wordCount,
+					paragraphCount: 1,
+				});
+			}
+		} else {
+			finalChunks.push({ ...chunk, index: finalChunks.length });
+		}
+	}
+	return finalChunks;
 }
 
 /**
@@ -152,14 +196,17 @@ function splitByParagraphs(content, chunkSizeWords) {
 
 	// Rule 1: If total < chunk size, return all as single chunk
 	if (totalWords <= chunkSizeWords) {
-		return [
-			{
-				index: 0,
-				content: content.trim(),
-				wordCount: totalWords,
-				paragraphCount: paragraphs.length,
-			},
-		];
+		return enforceChunkSize(
+			[
+				{
+					index: 0,
+					content: content.trim(),
+					wordCount: totalWords,
+					paragraphCount: paragraphs.length,
+				},
+			],
+			chunkSizeWords,
+		);
 	}
 
 	// Rule 2: If total < 2x chunk size, split into 2 balanced chunks
@@ -200,7 +247,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 			});
 		}
 
-		return chunks;
+		return enforceChunkSize(chunks, chunkSizeWords);
 	}
 
 	// Rule 3: Multiple chunks - group paragraphs until reaching target size
@@ -311,30 +358,7 @@ function splitByParagraphs(content, chunkSizeWords) {
 		});
 	}
 
-	// Post-process: any chunk that still exceeds the target (e.g. a single
-	// enormous paragraph that can't be split at a block boundary) is split
-	// further using word-based splitting on its plain-text content.
-	const finalChunks = [];
-	for (const chunk of chunks) {
-		if (chunk.wordCount > chunkSizeWords) {
-			const plainText = chunk.content
-				.replace(/<[^>]*>/g, " ")
-				.replace(/\s+/g, " ")
-				.trim();
-			const subChunks = splitPlainTextByWords(plainText, chunkSizeWords);
-			for (const sub of subChunks) {
-				finalChunks.push({
-					index: finalChunks.length,
-					content: sub.content,
-					wordCount: sub.wordCount,
-					paragraphCount: 1,
-				});
-			}
-		} else {
-			finalChunks.push({ ...chunk, index: finalChunks.length });
-		}
-	}
-	return finalChunks;
+	return enforceChunkSize(chunks, chunkSizeWords);
 }
 
 /**

@@ -220,7 +220,7 @@ async function fetchFreshChapterCount(novel) {
 		const handlerManager = (
 			await import("../utils/website-handlers/handler-manager.js")
 		).default;
- 
+
 		const handler = await handlerManager.getHandlerByDomain(
 			new URL(novel.sourceUrl).hostname,
 		);

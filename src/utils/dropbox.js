@@ -39,7 +39,9 @@ async function setStored(map) {
 
 export async function saveDropboxConfig({ clientId, folderPath }) {
 	const normalized = (folderPath || DEFAULT_FOLDER).replace(/\/+$/, "");
-	await setStored({ [CONFIG_KEY]: { clientId, folderPath: normalized || DEFAULT_FOLDER } });
+	await setStored({
+		[CONFIG_KEY]: { clientId, folderPath: normalized || DEFAULT_FOLDER },
+	});
 }
 
 export async function getDropboxConfig() {
@@ -96,7 +98,9 @@ async function getValidAccessToken({ interactive = true } = {}) {
 	}
 
 	if (!interactive) {
-		throw new Error("Dropbox authentication required but interactive mode disabled.");
+		throw new Error(
+			"Dropbox authentication required but interactive mode disabled.",
+		);
 	}
 
 	const { verifier, challenge } = await createPkcePair();
@@ -141,7 +145,10 @@ export async function ensureDropboxAccessToken({ interactive = true } = {}) {
 		return await getValidAccessToken({ interactive });
 	} catch (err) {
 		await setStored({
-			[AUTH_ERROR_KEY]: { message: err?.message || String(err), at: Date.now() },
+			[AUTH_ERROR_KEY]: {
+				message: err?.message || String(err),
+				at: Date.now(),
+			},
 		});
 		throw err;
 	}
@@ -256,20 +263,31 @@ export async function listDropboxBackups(options = {}) {
 	const token = await ensureDropboxAccessToken({ interactive: false });
 	const folder = folderPrefix(options.customPath);
 
-	let entries = [];
+	let entries;
 	try {
-		const data = await dbxRequest("/files/list_folder", { path: folder }, token);
+		const data = await dbxRequest(
+			"/files/list_folder",
+			{ path: folder },
+			token,
+		);
 		entries = data.entries || [];
 		// Handle pagination
 		let cursor = data.cursor;
 		while (data.has_more && cursor) {
-			const more = await dbxRequest("/files/list_folder/continue", { cursor }, token);
+			const more = await dbxRequest(
+				"/files/list_folder/continue",
+				{ cursor },
+				token,
+			);
 			entries = entries.concat(more.entries || []);
 			cursor = more.cursor;
 			if (!more.has_more) break;
 		}
 	} catch (err) {
-		if (err?.message?.includes("not_found") || err?.message?.includes("path/not_found")) {
+		if (
+			err?.message?.includes("not_found") ||
+			err?.message?.includes("path/not_found")
+		) {
 			return [];
 		}
 		throw err;
@@ -277,7 +295,9 @@ export async function listDropboxBackups(options = {}) {
 
 	return entries
 		.filter((e) => e[".tag"] === "file" && isBackupFile(e.name))
-		.sort((a, b) => new Date(b.server_modified) - new Date(a.server_modified))
+		.sort(
+			(a, b) => new Date(b.server_modified) - new Date(a.server_modified),
+		)
 		.map((f) => ({
 			id: f.id,
 			name: f.name,
@@ -290,7 +310,9 @@ export async function listDropboxBackups(options = {}) {
 export async function downloadDropboxBackup(fileId) {
 	const token = await ensureDropboxAccessToken({ interactive: false });
 	// fileId can be a Dropbox file id or a path
-	const arg = fileId.startsWith("/") ? { path: fileId } : { path: `id:${fileId}` };
+	const arg = fileId.startsWith("/")
+		? { path: fileId }
+		: { path: `id:${fileId}` };
 	const resp = await fetch(`${CONTENT_BASE}/files/download`, {
 		method: "POST",
 		headers: {

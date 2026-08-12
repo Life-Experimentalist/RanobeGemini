@@ -49,21 +49,21 @@ const latestRequestByContainer = new WeakMap();
 function stripMarkdown(text) {
 	if (!text) return text;
 	return text
-		.replace(/^#{1,6}\s+/gm, "")              // # headings
-		.replace(/\*\*\*([^*\n]+)\*\*\*/g, "$1")   // ***bold-italic***
-		.replace(/\*\*([^*\n]+)\*\*/g, "$1")        // **bold**
-		.replace(/__([^_\n]+)__/g, "$1")            // __bold__
-		.replace(/\*([^*\n]+)\*/g, "$1")            // *italic*
-		.replace(/_([^_\n]+)_/g, "$1")             // _italic_
-		.replace(/`([^`\n]+)`/g, "$1")             // `inline code`
-		.replace(/~~([^~\n]+)~~/g, "$1")           // ~~strikethrough~~
-		.replace(/^\s*[-*+]\s+/gm, "")             // unordered list items
-		.replace(/^\s*\d+\.\s+/gm, "")             // ordered list items
-		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [link](url) → link text
-		.replace(/^>\s*/gm, "")                    // > blockquotes
-		.replace(/^-{3,}\s*$/gm, "")               // --- horizontal rules
-		.replace(/\\\*/g, "*")                     // escaped * → *
-		.replace(/\\_/g, "_")                      // escaped _ → _
+		.replace(/^#{1,6}\s+/gm, "") // # headings
+		.replace(/\*\*\*([^*\n]+)\*\*\*/g, "$1") // ***bold-italic***
+		.replace(/\*\*([^*\n]+)\*\*/g, "$1") // **bold**
+		.replace(/__([^_\n]+)__/g, "$1") // __bold__
+		.replace(/\*([^*\n]+)\*/g, "$1") // *italic*
+		.replace(/_([^_\n]+)_/g, "$1") // _italic_
+		.replace(/`([^`\n]+)`/g, "$1") // `inline code`
+		.replace(/~~([^~\n]+)~~/g, "$1") // ~~strikethrough~~
+		.replace(/^\s*[-*+]\s+/gm, "") // unordered list items
+		.replace(/^\s*\d+\.\s+/gm, "") // ordered list items
+		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [link](url) → link text
+		.replace(/^>\s*/gm, "") // > blockquotes
+		.replace(/^-{3,}\s*$/gm, "") // --- horizontal rules
+		.replace(/\\\*/g, "*") // escaped * → *
+		.replace(/\\_/g, "_") // escaped _ → _
 		.trim();
 }
 
@@ -487,7 +487,11 @@ async function summarize(chunkIndices, isShort) {
 		// Determine container
 		const startIdx = Math.min(...chunkIndices);
 		const endIdx = Math.max(...chunkIndices);
-		const summaryTextContainer = findSummaryContainer(startIdx, endIdx, isShort);
+		const summaryTextContainer = findSummaryContainer(
+			startIdx,
+			endIdx,
+			isShort,
+		);
 		const requestToken = Symbol(requestKey);
 		if (summaryTextContainer) {
 			latestRequestByContainer.set(summaryTextContainer, requestToken);
@@ -591,7 +595,7 @@ async function summarize(chunkIndices, isShort) {
 							"API key is missing. Opening settings page…",
 							"error",
 						);
-						// eslint-disable-next-line no-undef
+
 						browser.runtime.sendMessage({ action: "openPopup" });
 						if (summaryTextContainer) {
 							summaryTextContainer.textContent =

@@ -9,6 +9,14 @@
 
 import { debugLog, debugError } from "./logger.js";
 import { COMPREHENSIVE_BACKUP_KEYS } from "./constants.js";
+import {
+	decryptBackupEnvelope,
+	encryptBackupEnvelope,
+	getBackupKey,
+	getOrCreateBackupKey,
+	isBackupEncryptionEnabled,
+	isEncryptedEnvelope,
+} from "./backup-crypto.js";
 
 const ROLLING_BACKUP_KEY = "rg_rolling_backup";
 const ROLLING_BACKUP_METADATA_KEY = "rg_rolling_backup_meta";
@@ -434,7 +442,7 @@ export async function deleteRollingBackup(key) {
 export function parseOAuthCredentials(jsonString) {
 	try {
 		// Trim whitespace to handle any formatting (single-line or multi-line)
-		const trimmedJson = jsonString.trim().replace(/^﻿/, "");
+		const trimmedJson = jsonString.trim().replace(/^\uFEFF/, "");
 		let parsed;
 		try {
 			parsed = JSON.parse(trimmedJson);
@@ -580,16 +588,43 @@ function detectBrowser() {
 }
 
 /**
- * Export backup as downloadable file
+ * Export backup as downloadable file.
+ *
+ * Encryption is decided here rather than at each of the six call sites, so
+ * turning it on in Settings covers every export button in the extension
+ * without any of them knowing it happened. Plaintext stays the default.
+ *
  * @param {Object} backup - Backup data
  * @param {string} filename - Optional filename
+ * @param {Object} options
+ * @param {boolean} [options.encrypt] - Force encryption on/off, overriding the setting
+ * @param {string} [options.passphrase] - Encrypt with this passphrase instead of the stored key
+ * @returns {Promise<{filename: string, encrypted: boolean}>}
  */
-export function downloadBackupAsFile(backup, filename = null) {
+export async function downloadBackupAsFile(
+	backup,
+	filename = null,
+	options = {},
+) {
+	const encrypt = options.encrypt ?? (await isBackupEncryptionEnabled());
+	const date = new Date().toISOString().split("T")[0];
+
+	let payload = backup;
+	if (encrypt || options.passphrase) {
+		const secret = options.passphrase
+			? { passphrase: options.passphrase }
+			: { key: (await getOrCreateBackupKey()).key };
+		payload = await encryptBackupEnvelope(backup, secret);
+	}
+
+	const encrypted = payload !== backup;
 	const name =
 		filename ||
-		`ranobe-gemini-backup-${new Date().toISOString().split("T")[0]}.json`;
+		(encrypted
+			? `ranobe-gemini-backup-${date}.encrypted.json`
+			: `ranobe-gemini-backup-${date}.json`);
 
-	const blob = new Blob([JSON.stringify(backup, null, 2)], {
+	const blob = new Blob([JSON.stringify(payload, null, 2)], {
 		type: "application/json",
 	});
 
@@ -600,26 +635,49 @@ export function downloadBackupAsFile(backup, filename = null) {
 	a.click();
 
 	URL.revokeObjectURL(url);
-	debugLog("✓ Backup downloaded:", name);
+	debugLog(
+		`✓ Backup downloaded (${encrypted ? "encrypted" : "plaintext"}):`,
+		name,
+	);
+	return { filename: name, encrypted };
 }
 
 /**
- * Read backup from uploaded file
+ * Read backup from uploaded file.
+ *
+ * Detects an encrypted envelope and unwraps it with the stored key, so a
+ * user restoring on the browser that made the backup never sees the
+ * encryption at all. On a different browser there is no key, and the thrown
+ * message tells them to paste their recovery code.
+ *
  * @param {File} file - File object
+ * @param {Object} options
+ * @param {string} [options.passphrase] - For passphrase-protected backups
  * @returns {Promise<Object>} Parsed backup data
  */
-export async function readBackupFromFile(file) {
-	return new Promise((resolve, reject) => {
+export async function readBackupFromFile(file, options = {}) {
+	const text = await new Promise((resolve, reject) => {
 		const reader = new FileReader();
-		reader.onload = (e) => {
-			try {
-				const data = JSON.parse(e.target.result);
-				resolve(data);
-			} catch (error) {
-				reject(new Error(`Invalid JSON file: ${error.message}`));
-			}
-		};
+		reader.onload = (e) => resolve(e.target.result);
 		reader.onerror = () => reject(new Error("Failed to read file"));
 		reader.readAsText(file);
 	});
+
+	let data;
+	try {
+		data = JSON.parse(text);
+	} catch (error) {
+		throw new Error(`Invalid JSON file: ${error.message}`, {
+			cause: error,
+		});
+	}
+
+	if (!isEncryptedEnvelope(data)) return data;
+
+	const secret = options.passphrase
+		? { passphrase: options.passphrase }
+		: { key: await getBackupKey() };
+	const decrypted = await decryptBackupEnvelope(data, secret);
+	debugLog("✓ Encrypted backup decrypted:", data.hint);
+	return decrypted;
 }

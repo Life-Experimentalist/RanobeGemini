@@ -1791,6 +1791,26 @@ export function setThemeVariables(theme) {
 	// Set data-theme-preset for CSS selectors if needed
 	root.setAttribute("data-theme-preset", theme?.preset || "material-dark");
 
+	// Background animation. Presets declare one via `meta.animation`; both the
+	// CSS-only animations (bg-animations.css) and the canvas engine
+	// (utils/bg-animation.js) key off this attribute, so a page that wants
+	// animations only has to import them — nothing else has to be wired up.
+	if (typeof document !== "undefined") {
+		const animation = theme?.bgAnimation || "none";
+		if (document.body) {
+			document.body.setAttribute("data-bg-animation", animation);
+		} else {
+			// The theme is often applied from <head> to avoid a flash of the
+			// default palette, which is before <body> exists.
+			document.addEventListener(
+				"DOMContentLoaded",
+				() =>
+					document.body?.setAttribute("data-bg-animation", animation),
+				{ once: true },
+			);
+		}
+	}
+
 	// Apply palette as CSS custom properties
 	Object.entries(palette).forEach(([key, value]) => {
 		root.style.setProperty(`--${key}`, value);

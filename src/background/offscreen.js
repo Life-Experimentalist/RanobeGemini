@@ -1,47 +1,32 @@
 /**
- * Offscreen Document Script for Ranobe Gemini
+ * Offscreen document host (Chromium/Edge only).
  *
- * This script runs in an offscreen document (Chrome/Edge 109+) and sends
- * periodic messages to keep the service worker alive during long operations.
+ * Chromium's MV3 background is a service worker, so it has no `document` and no
+ * `DOMParser`. This offscreen page provides the missing DOM: the worker sends a
+ * job here, we run it against a real document, and send plain JSON back.
  *
- * The offscreen document approach is more reliable than alarms because:
- * 1. It doesn't depend on minimum alarm intervals
- * 2. It can send messages more frequently (every 20 seconds)
- * 3. It persists as long as the document exists
+ * Firefox has no `chrome.offscreen` and does not need it — its MV3 background
+ * is an event page, so `background/dom-host.js` runs the same jobs inline.
+ *
+ * The document is created lazily on the first job and closed again once idle;
+ * see `background/dom-host.js`.
  */
 
-const KEEPALIVE_INTERVAL = 20000; // 20 seconds - well under the 30 second timeout
-import { debugLog, debugError } from "../utils/logger.js";
-/**
- * Send keepalive message to service worker
- * Uses postMessage to the service worker registration
- */
-async function sendKeepAlive() {
-	try {
-		const registration = await navigator.serviceWorker.ready;
-		if (registration.active) {
-			registration.active.postMessage({
-				type: "keepAlive",
-				timestamp: Date.now(),
+import { debugError } from "../utils/logger.js";
+import { OFFSCREEN_TARGET, runJob } from "./dom-jobs.js";
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+	if (!message || message.target !== OFFSCREEN_TARGET) return false;
+
+	runJob(message.op, message.payload)
+		.then((result) => sendResponse({ success: true, result }))
+		.catch((error) => {
+			debugError(`[Offscreen] Job "${message.op}" failed:`, error);
+			sendResponse({
+				success: false,
+				error: error?.message || String(error),
 			});
-		}
-	} catch (error) {
-		// Service worker might not be ready yet, that's okay
-		debugError("[Offscreen] Service worker not ready:", error.message);
-	}
-}
+		});
 
-// Start the keepalive interval
-debugLog("[Offscreen] Keep-alive document loaded, starting heartbeat...");
-setInterval(sendKeepAlive, KEEPALIVE_INTERVAL);
-
-// Send initial keepalive immediately
-sendKeepAlive();
-
-// Listen for messages from service worker (for potential commands)
-navigator.serviceWorker.addEventListener("message", (event) => {
-	if (event.data?.type === "ping") {
-		// Respond to ping with pong
-		event.source?.postMessage({ type: "pong", timestamp: Date.now() });
-	}
+	return true; // response is async
 });

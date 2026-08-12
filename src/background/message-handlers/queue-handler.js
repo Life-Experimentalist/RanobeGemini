@@ -20,19 +20,30 @@ export default {
 
 		const dispatch = () => {
 			switch (subAction) {
-				case "add":    return enqueueJob(message.job);
-				case "pause":  return pauseQueue();
-				case "resume": return resumeQueue();
-				case "cancel": return cancelJob(message.jobId);
-				case "status": return getQueueStatus();
-				case "start":  return startQueue();
-				default:       return Promise.resolve({ error: `Unknown subAction: ${subAction}` });
+				case "add":
+					return enqueueJob(message.job);
+				case "pause":
+					return pauseQueue();
+				case "resume":
+					return resumeQueue();
+				case "cancel":
+					return cancelJob(message.jobId);
+				case "status":
+					return getQueueStatus();
+				case "start":
+					return startQueue();
+				default:
+					return Promise.resolve({
+						error: `Unknown subAction: ${subAction}`,
+					});
 			}
 		};
 
 		dispatch()
 			.then((result) => sendResponse({ success: true, result }))
-			.catch((err) => sendResponse({ success: false, error: err.message }));
+			.catch((err) =>
+				sendResponse({ success: false, error: err.message }),
+			);
 
 		return true;
 	},

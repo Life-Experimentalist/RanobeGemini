@@ -27,6 +27,7 @@
  */
 import { NovelbinHandler } from "./novelbin-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 
 export class NovelarrowHandler extends NovelbinHandler {
 	static SUPPORTED_DOMAINS = ["novelarrow.com", "www.novelarrow.com"];
@@ -86,7 +87,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 	static initialize() {}
 
 	canHandle() {
-		const h = window.location.hostname;
+		const h = pageLocation().hostname;
 		return h === "novelarrow.com" || h === "www.novelarrow.com";
 	}
 
@@ -95,13 +96,13 @@ export class NovelarrowHandler extends NovelbinHandler {
 	// -----------------------------------------------------------------------
 
 	/** NovelArrow chapter: /chapter/{novel-slug}/{chapter-slug} */
-	_isChapterPageUrl(pathname = window.location.pathname) {
+	_isChapterPageUrl(pathname = pageLocation().pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
 		return parts.length >= 3 && parts[0] === "chapter";
 	}
 
 	/** NovelArrow detail: /novel/{slug} */
-	_isDetailPageUrl(pathname = window.location.pathname) {
+	_isDetailPageUrl(pathname = pageLocation().pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
 		return parts.length === 2 && parts[0] === "novel";
 	}
@@ -111,14 +112,16 @@ export class NovelarrowHandler extends NovelbinHandler {
 	 *   /chapter/{novel-slug}/{chapter-slug}
 	 *   /novel/{slug}
 	 */
-	_novelSlug(url = window.location.href) {
+	_novelSlug(url = pageLocation().href) {
 		try {
 			const path = new URL(url).pathname;
 			const chap = path.match(/^\/chapter\/([a-z0-9-]+)\//i);
 			if (chap) return chap[1];
 			const nov = path.match(/^\/novel\/([a-z0-9-]+)/i);
 			if (nov) return nov[1];
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		return null;
 	}
 
@@ -176,10 +179,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 			if (novelMeta?.content) return novelMeta.content;
 		}
 		// Novel detail page — try both layouts before falling back to parent
-		return (
-			this._extractNovelDetailTitle() ||
-			super.extractTitle()
-		);
+		return this._extractNovelDetailTitle() || super.extractTitle();
 	}
 
 	/**
@@ -189,7 +189,9 @@ export class NovelarrowHandler extends NovelbinHandler {
 	 */
 	_extractNovelDetailTitle() {
 		// Signed-in layout
-		const h1Classic = document.querySelector("h1.classic-novel-detail-title");
+		const h1Classic = document.querySelector(
+			"h1.classic-novel-detail-title",
+		);
 		if (h1Classic?.textContent?.trim()) return h1Classic.textContent.trim();
 		// Signed-out layout — first h1 inside the main detail column
 		const h1Main = document.querySelector(".classic-detail-main h1");
@@ -260,7 +262,8 @@ export class NovelarrowHandler extends NovelbinHandler {
 			);
 			if (coverImgLegacy) {
 				metadata.coverUrl =
-					coverImgLegacy.dataset.src || coverImgLegacy.getAttribute("src");
+					coverImgLegacy.dataset.src ||
+					coverImgLegacy.getAttribute("src");
 			}
 			if (!metadata.coverUrl) {
 				// New layout: large cover img inside the hero section
@@ -269,7 +272,8 @@ export class NovelarrowHandler extends NovelbinHandler {
 				);
 				if (coverImgNew) {
 					metadata.coverUrl =
-						coverImgNew.dataset.src || coverImgNew.getAttribute("src");
+						coverImgNew.dataset.src ||
+						coverImgNew.getAttribute("src");
 				}
 			}
 			if (!metadata.coverUrl) {
@@ -282,9 +286,9 @@ export class NovelarrowHandler extends NovelbinHandler {
 			);
 			if (descEl) {
 				const dc = descEl.cloneNode(true);
-				dc.querySelectorAll("button, .showmore, [role='button']").forEach(
-					(e) => e.remove(),
-				);
+				dc.querySelectorAll(
+					"button, .showmore, [role='button']",
+				).forEach((e) => e.remove());
 				const raw = dc.textContent.trim();
 				if (raw.length > 20) metadata.description = raw;
 			}
@@ -313,7 +317,8 @@ export class NovelarrowHandler extends NovelbinHandler {
 				"[class*='tracking-'] span, span[class*='font-bold']",
 			);
 			if (chapterBadge) {
-				const chMatch = chapterBadge.textContent.match(/(\d+)\s*Chapter/i);
+				const chMatch =
+					chapterBadge.textContent.match(/(\d+)\s*Chapter/i);
 				if (chMatch) metadata.chapterCount = parseInt(chMatch[1], 10);
 			}
 
@@ -323,7 +328,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 			// Canonical URL
 			const canonical = document.querySelector('link[rel="canonical"]');
 			metadata.mainNovelUrl =
-				canonical?.getAttribute("href") || window.location.href;
+				canonical?.getAttribute("href") || pageLocation().href;
 		} catch (err) {
 			debugError("NovelArrow: Error extracting metadata:", err);
 		}
@@ -438,7 +443,7 @@ export class NovelarrowHandler extends NovelbinHandler {
 
 		debugLog(
 			`NovelArrow: TTS-safe replacement — ${updated}/${existingPs.length} paragraphs` +
-			` (${enhancedParas.length} enhanced paras parsed)`,
+				` (${enhancedParas.length} enhanced paras parsed)`,
 		);
 		return updated;
 	}
@@ -455,7 +460,8 @@ export class NovelarrowHandler extends NovelbinHandler {
 		const readerWrapper = document.querySelector(
 			"div.select-text, [class*='select-text']",
 		);
-		if (readerWrapper) return { element: readerWrapper, position: "before" };
+		if (readerWrapper)
+			return { element: readerWrapper, position: "before" };
 
 		const article =
 			contentArea ?? document.querySelector("article[data-chapter-id]");
@@ -500,17 +506,23 @@ export class NovelarrowHandler extends NovelbinHandler {
 					link.textContent ||
 					""
 				).toLowerCase();
-				if (!prevUrl && (label.includes("prev") || label.includes("previous"))) {
+				if (
+					!prevUrl &&
+					(label.includes("prev") || label.includes("previous"))
+				) {
 					prevUrl = link.href;
 				}
-				if (!nextUrl && (label.includes("next") || label.includes("forward"))) {
+				if (
+					!nextUrl &&
+					(label.includes("next") || label.includes("forward"))
+				) {
 					nextUrl = link.href;
 				}
 				if (prevUrl && nextUrl) break;
 			}
 
 			let currentChapter = null;
-			const fromUrl = window.location.pathname.match(/chapter-(\d+)/i);
+			const fromUrl = pageLocation().pathname.match(/chapter-(\d+)/i);
 			if (fromUrl) currentChapter = parseInt(fromUrl[1], 10);
 
 			return {

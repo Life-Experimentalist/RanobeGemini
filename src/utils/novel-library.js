@@ -765,8 +765,8 @@ export class NovelLibrary {
 			skippedDuplicates: 0,
 			unsupported: 0,
 			// Detailed lists for the results modal
-			existingItems: [],   // { url, novelId, title, lastReadChapter, totalChapters, importUrl }
-			duplicateItems: [],  // { url, novelId }
+			existingItems: [], // { url, novelId, title, lastReadChapter, totalChapters, importUrl }
+			duplicateItems: [], // { url, novelId }
 			unsupportedItems: [], // { url }
 		};
 
@@ -794,7 +794,11 @@ export class NovelLibrary {
 					title: existing.title || identity.novelId,
 					lastReadChapter: existing.lastReadChapter || 0,
 					totalChapters: existing.totalChapters || 0,
-					importUrl: this.buildCanonicalImportUrl(identity.shelf, identity.siteNovelId, url),
+					importUrl: this.buildCanonicalImportUrl(
+						identity.shelf,
+						identity.siteNovelId,
+						url,
+					),
 				});
 				continue;
 			}
@@ -1974,6 +1978,7 @@ export class NovelLibrary {
 			continuousBackupCheckInterval:
 				allData.continuousBackupCheckInterval,
 			fontSize: allData.fontSize,
+			readingFont: allData.readingFont,
 
 			// Model merge mode
 			modelMergeMode: allData.modelMergeMode,
@@ -2040,6 +2045,7 @@ export class NovelLibrary {
 					"continuousBackupCheckInterval",
 					"modelMergeMode",
 					"fontSize",
+					"readingFont",
 				];
 
 				for (const key of settingKeys) {

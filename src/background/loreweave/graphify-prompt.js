@@ -23,14 +23,17 @@ export function buildGraphifyPrompt(
 	epochLabel,
 	options = {},
 ) {
-	const { priorEntityIds = [], priorContext = "", writingStyle = "other" } = options;
+	const {
+		priorEntityIds = [],
+		priorContext = "",
+		writingStyle = "other",
+	} = options;
 	const chPad = String(epochOrder).padStart(4, "0");
 
 	const styleHints = {
 		xianxia:
 			"This is a xianxia/cultivation novel. Treat cultivation realms, techniques, and sect names as `concept` or `group` entities. Characters often have many aliases and titles.",
-		litrpg:
-			"This is a LitRPG/system novel. Treat skill names, class titles, and system notifications as `concept` entities. Named gear is `item`.",
+		litrpg: "This is a LitRPG/system novel. Treat skill names, class titles, and system notifications as `concept` entities. Named gear is `item`.",
 		fantasy:
 			"This is a western fantasy novel. Magic schools, divine laws, and world-specific terms are `concept` entities.",
 		romance:

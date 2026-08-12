@@ -11,6 +11,8 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
+import { READING_FONTS, READING_FONT_DEFAULT } from "../constants.js";
 
 export class ScribbleHubHandler extends BaseWebsiteHandler {
 	// Static properties for domain management
@@ -50,14 +52,16 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				label: "Auto-enhance chapters",
 				type: "toggle",
 				defaultValue: false,
-				description: "Automatically run Enhance when a ScribbleHub chapter loads.",
+				description:
+					"Automatically run Enhance when a ScribbleHub chapter loads.",
 			},
 			{
 				key: "htmlEnhancementMode",
 				label: "HTML enhancement mode",
 				type: "toggle",
 				defaultValue: true,
-				description: "Use HTML-aware enhancement to preserve author formatting and special elements.",
+				description:
+					"Use HTML-aware enhancement to preserve author formatting and special elements.",
 			},
 			{ key: "_content", type: "section", label: "📝 Content Handling" },
 			{
@@ -65,14 +69,16 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				label: "Include author paragraph notes",
 				type: "toggle",
 				defaultValue: true,
-				description: "Include inline author comments (italicised notes between paragraphs) in the enhancement context.",
+				description:
+					"Include inline author comments (italicised notes between paragraphs) in the enhancement context.",
 			},
 			{
 				key: "skipMatureContent",
 				label: "Skip mature content blocks",
 				type: "toggle",
 				defaultValue: false,
-				description: "Do not enhance paragraphs that are inside ScribbleHub mature content containers.",
+				description:
+					"Do not enhance paragraphs that are inside ScribbleHub mature content containers.",
 			},
 			{ key: "_display", type: "section", label: "🎨 Display" },
 			{
@@ -83,7 +89,22 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				min: 50,
 				max: 200,
 				step: 10,
-				description: "Font size percentage for enhanced/summary content (50–200%).",
+				description:
+					"Font size percentage for enhanced/summary content (50–200%).",
+			},
+			{
+				key: "readingFont",
+				label: "Reading typeface",
+				type: "select",
+				defaultValue: READING_FONT_DEFAULT,
+				// Built from the shared list rather than restated, so a face
+				// added in constants.js appears here without a second edit.
+				options: READING_FONTS.map((f) => ({
+					value: f.id,
+					label: f.label,
+				})),
+				description:
+					"Overrides the global reading typeface on ScribbleHub only.",
 			},
 			{ key: "_css", type: "section", label: "💻 Custom CSS" },
 			{
@@ -91,8 +112,10 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				label: "Global CSS override",
 				type: "textarea",
 				defaultValue: "",
-				description: "CSS applied globally to all ScribbleHub pages while the extension is active.",
-				placeholder: "body { font-family: 'Georgia'; }\n.chapter { line-height: 1.8; }",
+				description:
+					"CSS applied globally to all ScribbleHub pages while the extension is active.",
+				placeholder:
+					"body { font-family: 'Georgia'; }\n.chapter { line-height: 1.8; }",
 			},
 			{
 				key: "logoCSS",
@@ -130,7 +153,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 
 	// Return true if this handler can handle the current website
 	canHandle() {
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		return (
 			hostname.includes("scribblehub.com") ||
 			hostname === "scribblehub.com"
@@ -143,7 +166,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 * @returns {boolean}
 	 */
 	isChapterPage() {
-		const pathname = window.location.pathname;
+		const pathname = pageLocation().pathname;
 
 		// Check URL pattern for chapter pages
 		if (pathname.includes("/read/") && pathname.includes("/chapter/")) {
@@ -180,7 +203,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 * @returns {boolean}
 	 */
 	isNovelPage() {
-		const pathname = window.location.pathname;
+		const pathname = pageLocation().pathname;
 
 		// Check URL pattern for novel/series pages
 		if (pathname.includes("/series/") && !pathname.includes("/chapter/")) {
@@ -279,12 +302,21 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		const chapterTitle = this.extractTitle();
 
 		const contentClone = this.cloneAndCleanContent(contentArea, [
-			".ta_c_bm", ".chapter_stats", ".c_set", "#my_popupreading",
-			".nav_chp_fi", ".prenext", ".next_nav_links",
-			".ad_336", ".align_banner", "[id^='div-gpt']",
+			".ta_c_bm",
+			".chapter_stats",
+			".c_set",
+			"#my_popupreading",
+			".nav_chp_fi",
+			".prenext",
+			".next_nav_links",
+			".ad_336",
+			".align_banner",
+			"[id^='div-gpt']",
 		]);
 
-		let chapterText = this.cleanExtractedText(contentClone.innerText || contentClone.textContent || "")
+		let chapterText = this.cleanExtractedText(
+			contentClone.innerText || contentClone.textContent || "",
+		)
 			.replace(/Previous\s*Next/gi, "")
 			.trim();
 
@@ -490,7 +522,8 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		try {
 			const isOnChapterPage = this.isChapterPage();
 			const isOnNovelPage = this.isNovelPage();
-			const parseCompactNumber = (valueText) => this.parseCompactNumber(valueText);
+			const parseCompactNumber = (valueText) =>
+				this.parseCompactNumber(valueText);
 
 			debugLog(
 				`ScribbleHub: Extracting metadata (chapter: ${isOnChapterPage}, novel: ${isOnNovelPage})`,
@@ -719,7 +752,9 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 				}
 
 				// Status from .fic_status or spec items
-				const statusEl = document.querySelector(".fic_status a, .wi_fic_stats a[href*='ongoing'], .wi_fic_stats a[href*='completed']");
+				const statusEl = document.querySelector(
+					".fic_status a, .wi_fic_stats a[href*='ongoing'], .wi_fic_stats a[href*='completed']",
+				);
 				if (statusEl) {
 					metadata.status = statusEl.textContent.trim();
 				}
@@ -729,11 +764,13 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 					const authorId = document.querySelector("#authorid");
 					if (authorId) {
 						const authorLink = authorId.querySelector("a");
-						metadata.author = (authorLink || authorId).textContent.trim();
+						metadata.author = (
+							authorLink || authorId
+						).textContent.trim();
 					}
 				}
 
-				metadata.mainNovelUrl = window.location.href;
+				metadata.mainNovelUrl = pageLocation().href;
 			}
 
 			// Mark incomplete metadata when we only had access to a chapter page
@@ -794,7 +831,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 
 		try {
@@ -853,7 +890,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 * @param {string} url
 	 * @returns {string}
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		const seriesMatch = url.match(/\/series\/(\d+)\//);
 		if (seriesMatch) {
 			return `scribblehub-${seriesMatch[1]}`;
@@ -876,7 +913,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 */
 	getNovelPageUrl() {
 		if (this.isNovelPage()) {
-			return window.location.href;
+			return pageLocation().href;
 		}
 
 		// Primary: Extract from .chp_byauthor (most reliable on chapter pages)
@@ -897,7 +934,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		}
 
 		// Last resort: Construct from URL pattern
-		const readMatch = window.location.pathname.match(
+		const readMatch = pageLocation().pathname.match(
 			/\/read\/(\d+)-([^/]+)\//,
 		);
 		if (readMatch) {
@@ -914,7 +951,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 	 */
 	getCurrentChapterUrl() {
 		if (this.isChapterPage()) {
-			return window.location.href;
+			return pageLocation().href;
 		}
 		return null;
 	}
@@ -937,7 +974,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 			: null;
 
 		return {
-			url: window.location.href,
+			url: pageLocation().href,
 			title: titleText,
 			chapterNumber: chapterNumber,
 			timestamp: Date.now(),
@@ -1020,7 +1057,7 @@ export class ScribbleHubHandler extends BaseWebsiteHandler {
 		// /s/12345/story-title/
 		// /story/12345
 		// /series/12345/
-		const match = window.location.href.match(/\/(?:s|story|series)\/(\d+)/);
+		const match = pageLocation().href.match(/\/(?:s|story|series)\/(\d+)/);
 		if (!match) {
 			return null;
 		}

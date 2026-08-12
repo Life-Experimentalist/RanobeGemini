@@ -3,6 +3,7 @@
  * Creates and manages UI elements for individual chunks
  */
 
+import { escapeHtml } from "../html-escape.js";
 import { getContentThemeColors } from "../theme-config.js";
 
 /**
@@ -111,9 +112,10 @@ export function createChunkBanner(
 	const isFromCache = cacheInfo?.fromCache === true || status === "cached";
 	const cacheTimestamp = cacheInfo?.timestamp;
 
-	// Status icon and text
-	let statusIcon = "⏳";
-	let statusText = "Pending";
+	// Status icon and text. The switch below has an exhaustive `default`, so
+	// every path assigns before these are read.
+	let statusIcon;
+	let statusText;
 
 	// Cache time display
 	let cacheTimeText = "";
@@ -831,12 +833,6 @@ export function createMasterBanner(
  * @param {string} str - String to escape
  * @returns {string} Escaped HTML
  */
-function escapeHtml(str) {
-	if (!str) return "";
-	const div = document.createElement("div");
-	div.textContent = str;
-	return div.innerHTML;
-}
 
 export default {
 	createChunkBanner,
