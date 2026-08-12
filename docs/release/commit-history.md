@@ -1,7 +1,31 @@
 Mode: all
 Format: text
-Generated: 2026-06-04T04:40:24.427Z
-Total commits: 198
+Generated: 2026-06-04T09:53:05.268Z
+Total commits: 199
+
+[73eca36] 2026-06-04 release: v5.0.0 final — emoji encode, release packages, updated docs
+   release: v5.0.0 final — emoji encode, release packages, updated docs
+   - Emoji encode all source files (BOM escape fix in library-settings.js, popup.js)
+   - Build and package: RanobeGemini_v5.0.0_chromium.zip, _firefox.zip, _source.zip
+   - Update RELEASE_NOTES_5.0.0.md: add Native Sync, OAuth tab fallback, NovelBin/NovelArrow fixes (sections 5-8, renumber 9-12)
+   - Update README.md: Native Browser Sync as default, OAuth tab fallback note
+   - Update landing/index.html: "Native sync & rolling backups" feature card
+   - Write commit-history.md through this commit
+   Files:
+   - README.md
+   - docs/release/RELEASE_NOTES_5.0.0.md
+   - docs/release/commit-history.md
+   - landing/index.html
+   - releases/RanobeGemini_v5.0.0_chromium.zip
+   - releases/RanobeGemini_v5.0.0_firefox.zip
+   - ... (37 more)
+   Package:
+   - name: ranobe-gemini
+   - version: 5.0.0
+   Manifests:
+   - src/manifest-firefox.json: 5.0.0
+   - src/manifest-chromium.json: 5.0.0
+   - src/library/manifest.webmanifest: 5.0.0
 
 [c5907a2] 2026-06-04 fix: re-inject UI and restore cache on SPA chapter navigation
    fix: re-inject UI and restore cache on SPA chapter navigation

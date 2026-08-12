@@ -85,32 +85,26 @@ chrome.runtime.sendMessage({
 
 ### Current Content Modules
 
-| Module              | File                     | Purpose                                     |
-| ------------------- | ------------------------ | ------------------------------------------- |
-| Library Integration | `library-integration.js` | "Add to Library" button + metadata fetching |
-| *(more coming)*     | `*.js`                   | Other features...                           |
+Everything under `src/content/modules/`. The larger ones: `ui-controls.js` and
+`ui-elements-runtime.js` (injected buttons, including "Add to Library"),
+`novel-context.js` (novel identity and lifecycle), `ai-runtime.js`,
+`summary-service.js`, `chat-runtime.js`, `loreweave-integration.js`
+(experimental). Run `npm run docs:graphify` for the current full list.
 
 ### How Main Content Script Uses Modules
 
 ```javascript
 // Instead of: content.js containing 1000+ lines of logic
-// Each feature is: self-contained module
+// Each feature is: self-contained module, loaded when first needed
 
-import { initializeModules } from "./modules/index.js";
-
-// When handler detected on current page:
-const results = await initializeModules(
-  handler,
-  handlerDomain,
-  handlerType
-);
-
-// Returns status of each module:
-// {
-//   "library-integration": { enabled: true, success: true },
-//   ... (more modules)
-// }
+const url = browser.runtime.getURL("content/modules/ui-controls.js");
+const controls = await import(url);
 ```
+
+`content.js` is injected as a classic script, so modules are pulled in with a
+dynamic `import()` against `browser.runtime.getURL()` — never a static `import`
+at the top of the file. A module that fails to load is caught at its call site
+and does not take the rest of the content script down.
 
 ---
 

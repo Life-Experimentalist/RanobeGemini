@@ -164,10 +164,25 @@ Optional capability hooks (discovered at runtime, warning-only when absent):
 | `extractNovelMetadata()`        | Rich metadata extraction for library/update flows |
 | `getMetadataSourceUrl()`        | Dedicated metadata source page support            |
 | `processRemoteMetadata()`       | Normalize remote metadata payloads                |
-| `getProposedLibrarySettings()`  | Site-level library settings schema                |
+| `getProposedLibrarySettings()`  | Legacy schema — **not** how you add a setting (see below) |
 | `getChapterUIConfig()`          | Chapter UI customization hooks                    |
 | `getCustomButtons()`            | Additional control buttons                        |
 | `injectCustomUI()`              | Post-render UI injection                          |
+
+### Adding a user-facing setting for your site
+
+Use the **static `SETTINGS_DEFINITION = { fields: [...] }`** property. The
+Library renders those fields on your site's card in Settings -> Sites and saves
+the values into the per-site store keyed by shelf id, which `content.js` reads.
+Field types are `toggle`, `number`, `text`, `select`, `textarea`, and `section`
+(a heading, not a value) — see `src/library/site-settings-ui.js`.
+
+Do **not** use `getProposedLibrarySettings()` for this. It is a separate schema
+returned by the `getHandlerSettings` background message, keyed by domain rather
+than shelf id, and nothing in the shipped extension consumes it. A setting
+declared there fails silently: it saves, the UI shows it, and it applies to
+nothing. That was a real shipped bug — UX-7 in
+[PRODUCTION_READINESS_AUDIT.md](../development/PRODUCTION_READINESS_AUDIT.md).
 
 Here's a template for your new handler:
 

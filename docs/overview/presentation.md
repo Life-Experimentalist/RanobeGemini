@@ -82,7 +82,7 @@ style: |
 
 #### Enhancing Web Novel Translations with AI
 
-![bg right:40% 80%](../src/icons/logo-1024.png)
+![bg right:40% 80%](../../src/icons/logo-1024.png)
 
 ---
 
@@ -145,7 +145,7 @@ A Firefox extension that enhances the reading experience on web novel sites usin
 
 #### Extension Popup
 
-![width:300px](../src/icons/popup-example.png)
+![width:300px](../../src/icons/popup-example.png)
 
 </div>
 
@@ -189,7 +189,7 @@ A Firefox extension that enhances the reading experience on web novel sites usin
 
 # User Experience Flow
 
-![width:800px](../src/icons/UX_FLow.png)
+![width:800px](../../src/icons/UX_Flow.png)
 
 ---
 
@@ -735,14 +735,14 @@ Content chunking, proportional token allocation, automatic retries, and fallback
 
 <div>
 
-  [README](../README.md)
-  [NEW WEBSITES](guides/ADDING_NEW_WEBSITES.md)
+  [README](../../README.md)
+  [NEW WEBSITES](../guides/ADDING_NEW_WEBSITES.md)
 
 </div>
 <div>
 
-  [CONTRIBUTING](../CONTRIBUTING.md)
-  [ARCHITECTURE](architecture/ARCHITECTURE.md)
+  [CONTRIBUTING](../../CONTRIBUTING.md)
+  [ARCHITECTURE](../architecture/ARCHITECTURE.md)
 
 </div>
 </div>

@@ -3,6 +3,7 @@
 > **Index:**
 
 - [Changelog](#changelog)
+  - [Unreleased](#unreleased)
   - [5.0.0 - 2026-06-03](#500---2026-06-03)
   - [4.6.0 - 2026-03-25](#460---2026-03-25)
     - [Highlights](#highlights)
@@ -135,6 +136,194 @@
 All notable changes to the RanobeGemini extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## Unreleased
+
+Work since the 5.0.0 tag, from a full production-readiness audit. Findings and
+their resolutions are recorded in
+[PRODUCTION_READINESS_AUDIT.md](../development/PRODUCTION_READINESS_AUDIT.md).
+
+### Changed
+
+- **LoreWeave is now experimental and off by default.** 5.0.0 shipped it as a
+  headline feature while its content-side integration was not actually wired up.
+  It is now behind an explicit opt-in (Settings -> Experimental) and documented as
+  experimental everywhere it is mentioned, rather than presented as finished.
+- **Story Chat settings now take effect.** Every toggle in the Chat settings
+  panel was previously written to storage and read by nothing — see UX-6 in the
+  audit. Context sources, history depth, and the LoreWeave gate are all honoured;
+  the web-search toggle, which had no implementation behind it at all, was
+  removed.
+- **Telemetry consent no longer misstates the default.** A dialog that could not
+  be opened told users analytics was "enabled by default" when it defaults to
+  off. Removed, and its collect/never-collect disclosure moved to Library
+  Settings -> Analytics & Diagnostics, which previously had toggles but no
+  statement of what is sent.
+- **The five per-site shelf pages are unified** behind a shared core with
+  per-site configuration, so each site keeps the fields it actually has.
+- **The default model is now Gemini 3 Flash Preview**, with Gemini 2.5 Flash as
+  the fallback. The model list itself moved into `src/utils/constants.js`: the
+  same three `<option>` blocks had been pasted across four files and had already
+  drifted apart, and the per-model context budget was an if/else chain in
+  `background.js` that silently dropped any unlisted model to the default. Both
+  now travel with the model definition. This list is only the no-API-key
+  fallback — once a key is saved the dropdowns are filled from Google's live
+  `models` endpoint.
+- **CI now builds on a Node version that still exists.** Every workflow pinned
+  Node 20, which reached end-of-life in April 2026 — the gate that decides
+  whether a release may ship to the stores was running on a runtime that no
+  longer receives security fixes. All three workflows now use Node 24, the
+  Active LTS line, and `package.json` raises its `engines.node` floor to
+  `>=22.13.0` (the oldest line still supported, and the oldest ESLint 10
+  accepts). Node 26 is Current rather than LTS, so it is deliberately not used.
+  The pinned action majors were bumped alongside it and each version was
+  verified against the GitHub API rather than assumed: `actions/checkout@v7`,
+  `actions/setup-node@v7`, `actions/upload-artifact@v7`, `configure-pages@v6`,
+  `upload-pages-artifact@v5`, `deploy-pages@v5`. checkout v7's breaking change
+  only affects fork-PR checkout under `pull_request_target` / `workflow_run`,
+  neither of which these workflows use.
+- **Dependabot now watches both things CI depends on.** There was no
+  `.github/dependabot.yml` at all, which is how the Node line went end-of-life
+  unnoticed. It now tracks npm devDependencies and the GitHub Actions majors on
+  a weekly schedule, grouped so the toolchain arrives as one reviewable PR
+  rather than six, with a cooldown so a freshly published version has time to be
+  yanked or patched before it reaches a PR.
+- **ESLint 8 -> 10, on flat config.** `.eslintrc.json` is replaced by
+  `eslint.config.mjs`; ESLint 9 dropped the rc format as the default and 10
+  removed the compatibility path, so this was a migration rather than a bump.
+  `env` became explicit `languageOptions.globals` and `ignorePatterns` became a
+  global `ignores` block. The upgrade paid for itself immediately — see Fixed.
+  `caughtErrors` is pinned back to ESLint 8's `"none"` deliberately: the 9
+  default flags every `catch (e) { return null; }`, and ~150 of those would have
+  buried the warnings that mean something.
+- **Dependency upgrades**: archiver 5 -> 8 (ESM-only, and it dropped the callable
+  default export, so all three packaging scripts now construct `ZipArchive`
+  directly), dotenv 16 -> 17, prettier 3.9, globals 17, linkedom 0.18. The stale
+  `brace-expansion` override was removed rather than re-pinned — it forced 2.1.4
+  while `minimatch@10` needs `^5.0.8` and its ESM named export, which broke
+  `npm run package` outright. `npm audit` reports 0 vulnerabilities without it.
+
+### Added
+
+- **A reading typeface you can choose, bundled with the extension.** Library ->
+  Settings -> General -> Reading Text now offers a typeface for enhanced
+  chapter text: Literata, Merriweather, Atkinson Hyperlegible or Inter, all
+  shipped inside the extension, plus Georgia, your system's own sans, and the
+  site's default for anyone who wants no change at all. Nothing is downloaded
+  while you read. The honest version of why these four: there is no font that is
+  simply read faster than another, so each is described by what it was actually
+  drawn for — Literata for long-form screen reading, Merriweather for a large
+  x-height, Atkinson Hyperlegible for pulling `I`, `l` and `1` apart, Inter for
+  open apertures on screens — and the choice is left to the reader, whose own
+  familiarity with a face matters more than any of it. Every bundled family is
+  SIL Open Font License 1.1; the licence text ships beside the files and
+  `dev/fetch-fonts.js` refuses to write a family whose licence it cannot verify.
+  ScribbleHub and Ranobes can also override the choice for that site alone, from
+  their cards in Library -> Settings -> Sites.
+- **Optional encrypted backups (AES-GCM-256), off by default.** Turning on
+  Library -> Settings -> Local Backups -> *Encrypt backup files* wraps exported
+  files and cloud backups (Drive, OneDrive, Dropbox, WebDAV) in an authenticated
+  envelope. The 256-bit key is generated on the machine and never leaves it; a
+  Crockford-base32 recovery code carries it to another browser, because
+  `browser.storage.sync` rides the Firefox or Chrome account and never crosses
+  between them. Plaintext export stays the default, import auto-detects the
+  envelope, and backups made before this existed still restore. Native browser
+  sync is deliberately excluded: it writes to `browser.storage.sync`, which is
+  where the key lives, so encrypting there would be decorative.
+- **A test suite.** 266 tests under `tests/`, run with `node --test`. That now
+  includes extraction tests for all eight website handlers, driven by reduced
+  HTML fixtures in `tests/fixtures/` — the layer most exposed to a site changing
+  its markup, and previously the layer with nothing pinning it. Each fixture
+  deliberately carries markup the handler is meant to strip plus one sentence of
+  ordinary prose, so a test fails both when extraction loses content and when it
+  mangles it.
+- **A CI quality gate** (`.github/workflows/ci.yml`) running lint, format check,
+  tests, emoji scan, and a both-target build on every push and pull request. A
+  release tag can no longer publish without passing it.
+- **A `.prettierignore`**, so formatting stops at the edge of vendored and
+  generated code — `npm run format` had been un-minifying the bundled
+  `browser-polyfill.min.js`.
+- **`SECURITY.md`** — private vulnerability reporting, and an explicit statement
+  of what data leaves the browser and where it goes.
+
+### Fixed
+
+- **Per-site settings did nothing.** The custom CSS, font size, and any other
+  field a site card exposes in Library -> Settings -> Sites were saved correctly
+  and then read from the wrong place: the content script asked the background for
+  the handler's proposed-settings schema, which is a different, metadata-only
+  list keyed by domain rather than by shelf id. Both mismatches resolved to
+  `undefined`, so the settings applied silently to nothing and nothing was
+  logged. The content script now reads the same per-site store the Library writes
+  to, and a test fails the build if the two ever diverge again. Ranobes' font
+  size field, which uses a different key name, is honoured too.
+- **The landing origin was authored in three places that had to agree.** The
+  OAuth redirect URI, the background worker's sender guard, and the
+  landing-bridge match pattern in both manifests were each typed out separately,
+  and the manifest synchroniser deliberately skipped the bridge entry. If they
+  drifted, the bridge would run on a page the worker then refused to hear — an
+  OAuth sign-in that hangs on mobile with no error on either side. The guard and
+  both manifests are now derived from the single constant, and the chain is
+  asserted by tests.
+- **Ranobes chapters were being corrupted before the model ever saw them.** The
+  ad-stripping pass carried an unanchored pattern whose every part except the
+  letters `ad` was optional, so it matched "ad" anywhere in the text: *"He had
+  already walked the road ahead"* was handed over as *"He halrey walked the
+  roahe"*. The neighbouring "advertisement" and "sponsored" patterns had the same
+  flaw and quietly deleted those words out of prose. Markers must now be anchored
+  to a whole line or to a bracket pair.
+- **FanFiction chapters were titled from the browser tab.** The shared
+  `extractContent()` read `document.title` instead of calling the handler's own
+  `extractTitle()`, so every handler that did not also override `extractContent()`
+  had its title logic bypassed — chapters came through as *"Story, a fandom
+  fanfic | FanFiction"*. The same method also read text off the live element
+  rather than the cleaned copy, so ad slots and inline scripts sitting inside the
+  content area were sent to the model as part of the chapter.
+- **An import cycle that only worked by alphabetical accident.** The FanFiction
+  handler reached `domain-constants.js`, which imports every handler class,
+  which reached the FanFiction handler again. It threw on load whenever that
+  module happened to be evaluated first; nothing but import ordering was keeping
+  FanFiction working.
+- **AO3 reported double the chapter count on full-work pages**, and opened
+  single-chapter works down the multi-chapter path, because AO3 nests a
+  `.chapter.preface` block inside every `.chapter`.
+- **Permissions the extension asked for but did not need** have been dropped from
+  both manifests, and the ones it does need are now declared in one place rather
+  than being kept in step by hand.
+- **Several timers and observers outlived the page that started them.** The worst
+  was a background heartbeat that sat just under Chromium's service-worker idle
+  timeout and so pinned the worker awake for the entire browser session — to
+  write a debug line one time in ten. The WebNovel handler's infinite-scroll
+  monitors also ran on every other supported site, because the handler registry
+  constructs every handler on every page to ask which one fits.
+- **The library page had an unclosed `<div>`**, which browsers were silently
+  recovering from — it swallowed `</body>`, so the page's scripts sat inside a
+  positioned flex container rather than at body level.
+- **The AMO source package shipped local scratch files and left out the config
+  its own reviewer instructions need.** It archived whole directories, so
+  untracked working notes inside `docs/` went along for the ride, while the
+  ESLint config was absent even though the reviewer notes say to run
+  `npm run lint`.
+- **The PWA manifest's icons 404'd in production** — they pointed outside the
+  deployed Pages root.
+- **The landing site hot-linked a 943 KB image** from `raw.githubusercontent.com`
+  as its favicon, on every page.
+- **The AMO reviewer build instructions did not work** — wrong script names, a
+  nonexistent step, and a manifest path that does not exist.
+- **Deleting a custom Story Chat box type removed the wrong one.** The index was
+  read as `+e.target.closest("[data-idx]")?.dataset.idx ?? +e.target.dataset.idx`
+  — but unary `+` binds tighter than `??`, so that is `NaN ?? …`, which is `NaN`.
+  The fallback was unreachable, and whenever the click landed on a child with no
+  `[data-idx]` ancestor the resulting `splice(NaN, 1)` deleted the *first* entry
+  instead of the one clicked. Found by ESLint 10's
+  `no-constant-binary-expression`.
+- **Four `catch` blocks threw away the error they were reporting on.** Each
+  wrapped a failure in a new `Error` without passing `{ cause }`, so the
+  underlying reason — a crypto failure in `backup-crypto.js`, a restore failure
+  in `comprehensive-backup.js`, a graphify call, a native-sync write — was
+  unavailable to anyone debugging from the message alone.
 
 ---
 

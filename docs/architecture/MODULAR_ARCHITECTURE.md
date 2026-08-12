@@ -114,9 +114,14 @@ By separating message handlers into individual modules, the main background scri
 ```filetree
 src/content/
 ├── content.js                 # Main content script (orchestrator)
-└── modules/                   # Content feature modules
-    ├── index.js               # Module registry and initializer
-    ├── library-integration.js  # Add to Library functionality
+└── modules/                   # Content feature modules, imported on demand
+    ├── ui-controls.js         # Injected buttons, incl. Add to Library
+    ├── ui-elements-runtime.js # Banner and control lifecycle
+    ├── novel-context.js       # Novel identity and lifecycle
+    ├── ai-runtime.js          # Enhancement calls into the background
+    ├── summary-service.js     # Summaries
+    ├── chat-runtime.js        # Story Chat
+    ├── loreweave-integration.js # Experimental, off by default
     └── [new-modules].js       # Add new modules here
 ```
 
@@ -131,84 +136,30 @@ Content modules allow different features to be independently initialized, disabl
 
 ### How It Works
 
-1. **Module Registration** (`modules/index.js`):
+`content.js` is injected as a classic script, so it cannot use a static
+`import` at the top of the file. Modules are pulled in on demand with a dynamic
+`import()` against an extension URL:
 
-   ```javascript
-   const modules = [
-     {
-       name: "library-integration",
-       instance: libraryIntegration,
-       enabled: true,
-     },
-   ];
-   ```
+```javascript
+const url = browser.runtime.getURL("content/modules/ui-controls.js");
+const controls = await import(url);
+```
 
-2. **Module Initialization** (in main `content.js`):
+There is no registry and no manifest of modules — a module is reachable exactly
+when some call site imports it. A failed import is caught at that call site and
+does not take the rest of the content script down.
 
-   ```javascript
-   import { initializeModules } from "./modules/index.js";
-
-   // When handler is detected
-   const results = await initializeModules(
-     handler,
-     handlerDomain,
-     handlerType
-   );
-   ```
-
-3. **Module Implementation** (`modules/library-integration.js`):
-
-   ```javascript
-   class LibraryIntegration {
-     async initialize(handler, handlerDomain, handlerType) {
-       // Setup logic
-       return true; // initialization successful
-     }
-
-     destroy() {
-       // Cleanup logic
-     }
-   }
-
-   export default new LibraryIntegration();
-   ```
+Modules export plain functions and receive whatever context they need as
+arguments; they do not reach back into `content.js` globals. `novel-context.js`
+is the pattern to copy: it takes a single `ctx` object, and every key it
+destructures is one it actually uses.
 
 ### Adding a New Content Module
 
-1. Create file: `src/content/modules/my-feature.js`
-2. Implement the module class:
-
-   ```javascript
-   class MyFeature {
-     constructor() {
-       this.isInitialized = false;
-     }
-
-     async initialize(handler, handlerDomain, handlerType) {
-       // Feature setup
-       this.isInitialized = true;
-       return true;
-     }
-
-     destroy() {
-       // Cleanup
-       this.isInitialized = false;
-     }
-   }
-
-   export default new MyFeature();
-   ```
-
-3. Register in `modules/index.js`:
-
-   ```javascript
-   import myFeature from "./my-feature.js";
-
-   const modules = [
-     { name: "library-integration", instance: libraryIntegration, enabled: true },
-     { name: "my-feature", instance: myFeature, enabled: true },  // Add here
-   ];
-   ```
+1. Create file: `src/content/modules/my-feature.js` exporting named functions.
+2. Import it from the call site in `content.js` that needs it, using the
+   dynamic form above.
+3. Nothing else — no registration step, and no build step to run.
 
 ---
 
@@ -220,9 +171,9 @@ Content modules allow different features to be independently initialized, disabl
 │                   (content.js)                              │
 │                                                             │
 │  ┌────────────────────────────────────────────────────┐   │
-│  │      Modules Manager (modules/index.js)            │   │
+│  │   modules/, imported on demand via getURL()        │   │
 │  │                                                    │   │
-│  │  ├─ library-integration                           │   │
+│  │  ├─ ui-controls                                   │   │
 │  │  │   ├─ Inject "Add to Library" button            │   │
 │  │  │   └─ Handle click → fetch metadata             │   │
 │  │  │                                                │   │
@@ -406,16 +357,9 @@ chrome.runtime.sendMessage(
 ### Test content module
 
 ```javascript
-// In content script after handler detection
-import { initializeModules } from "./modules/index.js";
-
-const results = await initializeModules(
-  handler,
-  handlerDomain,
-  handlerType
-);
-
-console.log("Module initialization results:", results);
+// In the page console, on a supported chapter page
+const url = browser.runtime.getURL("content/modules/ui-controls.js");
+console.log(Object.keys(await import(url)));
 ```
 
 ---

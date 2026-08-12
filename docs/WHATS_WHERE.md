@@ -149,67 +149,28 @@ if (['fetchNovelMetadata', 'getHandlerSettings'].includes(message.action)) {
 
 #### Library Integration
 
-**File**: `src/content/modules/library-integration.js`
-**What**:
-- Injects "Add to Library" button on chapter pages
-- Handles button clicks
-- Fetches metadata from background
-- Adds novel to library
-- Provides status feedback (loading, success, error)
+The "Add to Library" button lives in `src/content/modules/ui-controls.js`, which
+builds it alongside the other injected buttons. The popup has its own copy
+(`src/popup/popup.js`), since it can act on a page it did not inject into.
 
-**Lifecycle**:
-
-```logs
-initialize() → Inject button, setup listeners
-handleAddToLibrary() → Fetch metadata, add to library
-setButtonState() → Update button UI
-destroy() → Cleanup and remove button
-```
+There was once a separate `library-integration.js` that injected its own button
+through a module registry at `modules/index.js`. `ui-controls.js` superseded it,
+nothing imported the registry, and both were removed — if you find them
+described in an older doc, that doc is stale.
 
 ### How to Add New Module
 
-1. Create: `src/content/modules/my-feature.js`
-2. Implement:
-
-   ```javascript
-   class MyFeature {
-     async initialize(handler, handlerDomain, handlerType) {
-       // Setup
-       return true; // Success
-     }
-
-     destroy() {
-       // Cleanup
-     }
-   }
-
-   export default new MyFeature();
-   ```
-
-3. Register in: `src/content/modules/index.js`
-
-   ```javascript
-   import myFeature from "./my-feature.js";
-   const modules = [..., {name: "my-feature", instance: myFeature, enabled: true}];
-   ```
-
-### Module Registry/Initializer
-
-**File**: `src/content/modules/index.js`
-**What**:
-- Manages all content modules
-- Auto-initializes modules when handler detected
-- Can enable/disable modules
-- Handles cleanup
-
-**Functions**:
+Content modules are dynamically imported by `content.js` at the point they are
+needed, via `browser.runtime.getURL()` — there is no registry to register with:
 
 ```javascript
-initializeModules(handler, domain, type)  // Goes through all enabled modules
-getModuleStatus()                          // Returns status of each
-toggleModule(name, enable)                 // Enable/disable specific module
-cleanupAllModules()                        // Cleanup all
+const url = browser.runtime.getURL("content/modules/my-feature.js");
+const myFeature = await import(url);
 ```
+
+Write the module as plain exported functions taking whatever context they need.
+Do not add a static `import` at the top of `content.js`; it is injected as a
+classic script and the dynamic form is what makes module loading work there.
 
 ---
 

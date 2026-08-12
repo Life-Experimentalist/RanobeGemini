@@ -1,5 +1,8 @@
 # Implementation Guide: Metadata Fetching & Handler Settings
 
+> **Historical record — February 2026.** Not maintained; describes the systems as
+> designed at the time. See [`README.md`](./README.md) in this directory.
+
 ## Overview
 
 This guide explains how the new metadata fetching and handler settings systems work, and how to integrate them into your workflow.

@@ -63,6 +63,13 @@ npm run publish            # Refresh commit history, then build/package/source b
 - **Source builds**: `dist/dist-{platform}/` directories
 - **Releases**: `releases/RanobeGemini_v{VERSION}_{platform}.zip`
 
+Both directories are gitignored. Packaged zips are distributed as **GitHub
+Release assets**, not as commits — release assets live outside git object
+storage, so they cost nothing against clone size and still get a permanent
+public download URL. `publish-addons.yml` attaches them on every tag push;
+`npm run release:archive` back-fills older versions from a local `releases/`
+folder (dry-run by default, `-- --yes` to apply).
+
 ### Workflow
 
 #### For Development

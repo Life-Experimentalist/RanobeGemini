@@ -1,5 +1,11 @@
 # Complete Google Drive Backup Implementation Guide
 
+> **Historical record — February 2026.** Despite the title, this is not a current
+> setup guide: it describes the Drive work as it stood at the end of one session.
+> The flow that actually runs today is diagrammed in
+> [`../architecture/DATA_FLOWS.md`](../architecture/DATA_FLOWS.md#oauth-flows).
+> See [`README.md`](./README.md) in this directory.
+
 This document provides everything you need to properly set up and ship Ranobe Gemini with Google Drive backup functionality.
 
 ## Table of Contents

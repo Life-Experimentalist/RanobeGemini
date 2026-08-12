@@ -3,14 +3,23 @@
 This file is the authoritative technical roadmap for evolving Ranobe Gemini.
 It is written as an execution guide for contributors and AI agents.
 
-> **Last Updated:** 2026-04-20
-> **Current Version:** 5.0.0
+> **Last Updated:** 2026-08-12
+> **Current Version:** see `package.json` — it is the source of truth, and a
+> copy of it here goes stale the moment someone bumps it without reading this far.
 
 ## Current State (Verified)
 
+Line counts below were measured on 2026-08-12. They are the reason a phase gets
+opened or closed, so they are worth re-measuring rather than trusting.
+
 - Runtime is already organized under `src/`.
-- `src/background/background.js` has already been reduced significantly (about 4k lines) compared to earlier state.
-- The major remaining hotspot is `src/content/content.js` (10k+ lines) and must be the top modularization target.
+- Phases 0 through 15 are all closed. See the phase tables below for what each
+  one actually delivered.
+- The remaining size hotspots are **not** in the content script any more:
+  `src/library/library.js` (~8.2k lines) and `src/popup/popup.js` (~7.3k lines)
+  are now the two largest files in the tree. Neither has a roadmap phase yet.
+- `src/content/content.js` is ~5.4k lines, down from the 10k+ that made it the
+  Phase 10 target. `src/background/background.js` is ~4.4k.
 - Core behavior is local-first: no backend processing owned by this project.
 - User data and processing stay on user devices/browser context, user Gemini keys, and user cloud storage (for backups).
 - Telemetry is optional, anonymized, and only active with explicit user consent (shown at first library open).
@@ -124,6 +133,8 @@ Track both planned and actual effort per unit.
 | 13: Storage Adapter Expansion        | 3          | 7-10           | 14       | completed   |
 | 14: Popup UI Overhaul                | 3          | 5-8            | 10       | completed   |
 | 15: Maintenance & Security Fixes     | 2          | 2-4            | 6        | completed   |
+| 16: Library/Popup Thinning           | 4          | 8-11           | 14       | planned     |
+| 17: Test Strategy Depth              | 4          | 9-13           | 16       | planned     |
 
 ### Rolling Prompt Tracker
 
@@ -589,3 +600,65 @@ Resolve CSP violations, runtime initialization errors, and security hardening to
 | ----- | --------------------------------------------------------- | -------------- | ------------ | ------------- |
 | 15-U1 | CSP & Runtime error hotfixes                             | 1-2            | ✅ complete   | CSP inline-handler blocks resolved; popup TDZ error fixed; dynamic imports removed from SW context. |
 | 15-U2 | OneDrive path-construction bugfix + roadmap housekeeping  | 1-2            | ✅ complete   | ensureFolder double-colon URL bug fixed; Phase 10/11/15 summary table corrected; 0 errors. |
+
+## Phase 16: Library and Popup Orchestrator Thinning
+
+### Objective
+
+Phase 10 moved `content.js` from 10k+ lines to ~5.4k. That made it no longer the
+largest file in the tree — but the roadmap never named a successor, so the two
+files that overtook it were never assigned an owner. `src/library/library.js`
+(~8.2k lines) and `src/popup/popup.js` (~7.3k) are now the size hotspots.
+
+Apply the pattern Phase 1 and Phase 10 already proved: extract into modules under
+a `modules/` directory beside the entry point, keep the entry point as a
+delegator with a narrow fallback, and validate parity with lint + build + tests
+after each slice rather than at the end.
+
+| Unit  | Scope                                                                   | Target Prompts | Status     | Exit Criteria                                                              |
+| ----- | ----------------------------------------------------------------------- | -------------- | ---------- | -------------------------------------------------------------------------- |
+| 16-U1 | Measure and carve `library.js` into named concerns before moving code   | 1-2            | 🔲 planned | A written split map: every top-level function assigned to a target module   |
+| 16-U2 | Extract library shelf rendering + filter state into modules             | 2-3            | 🔲 planned | `library.js` under 6k lines; shelf pages unaffected; gate green             |
+| 16-U3 | Extract library settings panels (AI, storage, display) into modules     | 2-3            | 🔲 planned | `library.js` under 4k lines; every settings tab still saves and reloads     |
+| 16-U4 | Extract popup settings + provider wiring into `src/popup/modules/`      | 2-3            | 🔲 planned | `popup.js` under 4k lines; popup↔content message contract unchanged         |
+
+### Notes
+
+`popup.js` is the riskier of the two: it owns the message contract that
+`content.js` answers, and Phase 1 lost two message actions (`getSiteHandlerInfo`,
+`testExtraction`) to exactly this kind of refactor before 1-U5i restored them.
+Write the contract test before moving the code, not after.
+
+## Phase 17: Test Strategy Depth
+
+### Objective
+
+The suite covers 210 cases and runs in CI, but its coverage is uneven in a way
+that matters: the parts most likely to break silently are the parts least
+covered. Site handlers change when a site changes its markup — which happens
+without warning and without a code change on our side — and nothing currently
+catches it.
+
+| Unit  | Scope                                                             | Target Prompts | Status     | Exit Criteria                                                                       |
+| ----- | ----------------------------------------------------------------- | -------------- | ---------- | ----------------------------------------------------------------------------------- |
+| 17-U1 | HTML fixtures + extraction tests for every site handler (TEST-1)  | 3-4            | ✅ complete | One captured fixture per supported site; title/content/chapter-nav asserted per handler |
+| 17-U2 | Message-contract tests across popup ↔ background ↔ content        | 2-3            | 🔲 planned | Every action name a sender dispatches has an asserted receiver                        |
+| 17-U3 | Chunking pipeline tests over boundary-sized inputs                | 2-3            | 🔲 planned | Under-limit, exactly-at-limit, and multi-chunk inputs reassemble in order             |
+| 17-U4 | Storage adapter contract tests against a fake transport           | 2-3            | 🔲 planned | Each adapter satisfies the same interface suite; no live network in tests             |
+
+### Notes
+
+17-U1 is the highest-value unit here and the reason the phase exists. Fixtures
+should be captured from real pages and committed, trimmed to the extraction-
+relevant subtree — a full page dump is both a licensing question and unreadable
+in a diff.
+
+**17-U1 is done, and it paid for itself immediately.** Ten fixtures under
+`tests/fixtures/` (see the README there for the update rule) and 30 tests in
+`tests/website-handlers.test.mjs`. Writing them surfaced four defects that
+reading the same code had not: an unanchored ad-strip regex mangling every
+Ranobes chapter, a base-class `extractContent()` that ignored every subclass's
+`extractTitle()` and skipped the cleaning step, an import cycle through
+`domain-constants.js` that only loaded because of alphabetical ordering, and an
+AO3 selector counting each chapter twice. All four are written up as TEST-1a–d
+in the audit.
