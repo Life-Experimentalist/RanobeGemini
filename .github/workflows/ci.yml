@@ -1,0 +1,80 @@
+# The gate CLAUDE.md requires before any change is considered finished, run
+# where it cannot be skipped. `workflow_call` is what lets publish-addons.yml
+# depend on this instead of re-declaring the same steps — a tagged release and
+# a pull request are then checked by exactly the same job.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # 24 is the Active LTS line (Krypton). Node 20 went end-of-life in
+      # April 2026, so CI was building on an unsupported runtime that no longer
+      # receives security fixes. 26 is Current, not LTS — deliberately not used.
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Enforceable as of the BUILD-8 normalization pass. `.prettierignore`
+      # holds the exclusions that pass depends on — notably the vendored
+      # browser-polyfill bundle, which Prettier will otherwise un-minify.
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test
+        run: npm test
+
+      # Emoji in source must be escape-encoded; raw literals survive a local
+      # build but arrive mojibaked in the store packages.
+      - name: Emoji encoding scan
+        run: npm run emoji:scan
+
+      # The backup envelope is a compatibility promise: files exported by older
+      # versions must still restore. This checks the runtime writer, the
+      # canonical schema, and the landing-site proxy still agree. It skips the
+      # sample-file check, since `sample/` holds a real export and is gitignored.
+      - name: Backup compatibility contract
+        run: npm run validate:backup-contract
+
+      # No secrets are supplied, so this also proves the build still works for
+      # a contributor cloning the repo with no .env of their own.
+      - name: Build both targets
+        run: npm run build
+
+      # The generated registry and manifest match patterns are build outputs
+      # committed to the tree. If a handler was added without rebuilding, the
+      # working tree is dirty here and the PR is wrong.
+      - name: Verify generated files are committed
+        run: |
+          if [ -n "$(git status --porcelain src/)" ]; then
+            echo "::error::Build modified tracked files under src/. Run 'npm run build' and commit the result."
+            git status --porcelain src/
+            git diff -- src/
+            exit 1
+          fi
