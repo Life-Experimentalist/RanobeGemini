@@ -1,0 +1,52 @@
+# Keeps the two things CI depends on from silently rotting: the npm devDeps
+# that lint/format/build the extension, and the pinned action majors in
+# .github/workflows. Both were last bumped by hand, which is how CI ended up
+# building on a Node line that had already gone end-of-life.
+#
+# There are no runtime dependencies to update — the extension ships plain
+# JS plus a vendored `browser-polyfill.min.js`, so everything here is tooling.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # One PR for the whole dev toolchain instead of one per package. A lint or
+    # formatter bump is only ever reviewed as "did the gate stay green", and
+    # that question is the same whether it is one package or six.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    # A freshly published version is the one most likely to be yanked or
+    # patched within days. Waiting lets that shake out before it reaches a PR.
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Action majors move together often enough (the Node-24 runtime bump took
+    # every actions/* repo at once) that separate PRs would just be noise.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+    cooldown:
+      default-days: 5
+      semver-major-days: 14

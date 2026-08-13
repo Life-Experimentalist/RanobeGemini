@@ -10,16 +10,31 @@ permissions:
   contents: read
 
 jobs:
+  # A tag push used to go straight to the stores. Nothing checked that the
+  # thing being published built cleanly or passed its tests first, and a store
+  # submission is not something you can take back.
+  gate:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: gate
     runs-on: ubuntu-latest
+    # Needed to attach the built zips to the tag's GitHub Release. The zips
+    # used to be committed to `releases/`; they are gitignored now and live in
+    # Release assets, which are stored outside git object storage.
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
+      # Must match ci.yml — the gate proving this build is green runs there, and
+      # a store submission built on a different runtime than the one that was
+      # tested is not actually gated. 24 is the Active LTS line.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -52,9 +67,21 @@ jobs:
         run: npm run publish:stores
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: addon-packages
           path: |
             releases/**/*.zip
           if-no-files-found: error
+
+      # The permanent archive. Workflow artifacts expire after 90 days;
+      # Release assets do not, and they get stable public download URLs.
+      - name: Attach packages to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --title "$TAG" --generate-notes
+          gh release upload "$TAG" releases/*.zip releases/source/*.zip --clobber
