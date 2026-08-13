@@ -9,7 +9,9 @@ const SOURCE_DIR = "../dist/dist-firefox";
 const RELEASES_DIR = "../releases";
 const EXCLUDE_PATTERNS = ["node_modules/**", "*.tmp", "*.log", ".DS_Store"];
 
-// Check and install dependencies automatically
+// Check and install dependencies automatically.
+// Returns the ZipArchive class: archiver 8 is ESM and dropped the callable
+// `archiver("zip", opts)` default export in favour of named format classes.
 function ensureDependencies() {
 	try {
 		require.resolve("archiver");
@@ -19,7 +21,7 @@ function ensureDependencies() {
 			execSync("npm install archiver --save-dev", { stdio: "inherit" });
 			console.log("✅ archiver installed successfully");
 			// Re-require after installation
-			return require("archiver");
+			return require("archiver").ZipArchive;
 		} catch (installError) {
 			console.error(
 				"❌ Failed to install archiver:",
@@ -28,7 +30,7 @@ function ensureDependencies() {
 			process.exit(1);
 		}
 	}
-	return require("archiver");
+	return require("archiver").ZipArchive;
 }
 
 // Cross-platform path handling
@@ -62,7 +64,7 @@ function getExtensionInfo() {
 
 // Main packaging function
 async function packageExtension() {
-	const archiver = ensureDependencies();
+	const ZipArchive = ensureDependencies();
 	const { name, version } = getExtensionInfo();
 	const packageName = `${name}_v${version}_firefox.zip`;
 	const outputPath = resolvePath(RELEASES_DIR, packageName);
@@ -79,7 +81,7 @@ async function packageExtension() {
 	}
 
 	const output = fs.createWriteStream(outputPath);
-	const archive = archiver("zip", { zlib: { level: 9 } });
+	const archive = new ZipArchive({ zlib: { level: 9 } });
 
 	return new Promise((resolve, reject) => {
 		output.on("close", () => {

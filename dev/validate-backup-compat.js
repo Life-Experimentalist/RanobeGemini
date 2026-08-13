@@ -102,11 +102,9 @@ function main() {
 	const runtimeVersion = getRuntimeBackupVersion();
 	const canonicalSchema = readJson(CANONICAL_SCHEMA_PATH);
 	const landingSchemaProxy = readJson(LANDING_SCHEMA_PROXY_PATH);
-	const sampleBackup = readJson(SAMPLE_BACKUP_PATH);
 
 	assertCanonicalSchemaEnvelope(canonicalSchema);
 	assertLandingProxyRef(landingSchemaProxy);
-	assertSampleBackup(sampleBackup, runtimeVersion);
 
 	console.log("Runtime backup version:", runtimeVersion);
 	console.log(
@@ -114,7 +112,20 @@ function main() {
 		REQUIRED_ENVELOPE_KEYS.length,
 	);
 	console.log("Landing schema proxy reference is valid.");
-	console.log("Sample backup envelope/version checks passed.");
+
+	// `sample/` is gitignored — it holds a real export with real reading history,
+	// which is exactly why it is not committed. Checking it when it happens to be
+	// there is useful; failing without it made this script impossible to pass on
+	// a clean checkout, including in CI.
+	if (fs.existsSync(SAMPLE_BACKUP_PATH)) {
+		assertSampleBackup(readJson(SAMPLE_BACKUP_PATH), runtimeVersion);
+		console.log("Sample backup envelope/version checks passed.");
+	} else {
+		console.log(
+			`Sample backup not present (${path.relative(ROOT_DIR, SAMPLE_BACKUP_PATH)}) — skipped.`,
+		);
+	}
+
 	console.log("Backup compatibility contract validation passed.");
 }
 

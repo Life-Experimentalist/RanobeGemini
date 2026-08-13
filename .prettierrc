@@ -7,17 +7,5 @@
 	"endOfLine": "lf",
 	"arrowParens": "always",
 	"bracketSpacing": true,
-	"proseWrap": "preserve",
-	"overrides": [
-		{
-			"files": [
-				"src/manifest-chromium.json",
-				"src/manifest-firefox.json",
-				"src/lib/browser-polyfill.min.js"
-			],
-			"options": {
-				"insertFinalNewline": false
-			}
-		}
-	]
+	"proseWrap": "preserve"
 }

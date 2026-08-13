@@ -1,7 +1,7 @@
 {
 	"name": "ranobe-gemini",
 	"version": "5.0.0",
-	"description": "Enhances reading experience for web novels using Gemini AI",
+	"description": "Local-first browser extension that enhances web novel and fanfiction reading with the AI provider of your choice",
 	"scripts": {
 		"build": "node dev/build.js",
 		"build:firefox": "node dev/build.js --firefox",
@@ -12,11 +12,13 @@
 		"package:source": "node dev/build.js --source",
 		"publish": "npm run commits:write && node dev/build.js --package --source",
 		"publish:stores": "node dev/publish-addon-stores.js",
+		"release:archive": "node dev/publish-release-assets.js",
 		"update-domains": "node dev/build.js --update",
 		"watch": "npm run build && node dev/watch.js",
 		"validate:backup-contract": "node dev/validate-backup-compat.js",
 		"docs:visualize": "node dev/generate-doc-visualizers.js",
 		"docs:graphify": "graphify update",
+		"fonts:fetch": "node dev/fetch-fonts.js",
 		"emoji:scan": "node dev/emoji-tools.js scan",
 		"emoji:repair": "node dev/emoji-tools.js repair",
 		"emoji:repair:dry": "node dev/emoji-tools.js repair --dry-run",
@@ -25,6 +27,7 @@
 		"commits:all": "node dev/commit-history.js --all",
 		"commits:write": "node dev/commit-history.js --all --output docs/release/commit-history.md",
 		"commits:versions": "node dev/commit-history.js --versions",
+		"test": "node --test \"tests/**/*.test.mjs\"",
 		"lint": "eslint src/**/*.js",
 		"lint:fix": "eslint src/**/*.js --fix",
 		"format": "prettier --write \"src/**/*.{js,json,css,html}\"",
@@ -34,24 +37,14 @@
 		"webextension-polyfill": "^0.12.0"
 	},
 	"devDependencies": {
-		"archiver": "^5.3.2",
-		"dotenv": "^16.4.5",
-		"eslint": "^8.57.0",
-		"prettier": "^3.2.5"
+		"@eslint/js": "^10.0.1",
+		"archiver": "^8.0.0",
+		"dotenv": "^17.4.2",
+		"eslint": "^10.8.1",
+		"globals": "^17.11.0",
+		"linkedom": "^0.18.13",
+		"prettier": "^3.9.6"
 	},
-	"overrides": {
-		"brace-expansion": "^2.0.3"
-	},
-	"files": [
-		".vscode",
-		"dev/",
-		"src/",
-		"docs/",
-		"releases/",
-		"package-firefox.js",
-		"LICENSE.md",
-		"README.md"
-	],
 	"readme": "README.md",
 	"author": {
 		"name": "VKrishna04",
@@ -69,6 +62,9 @@
 	"homepage": "https://github.com/Life-Experimentalist/RanobeGemini#readme",
 	"private": true,
 	"type": "commonjs",
+	"engines": {
+		"node": ">=22.13.0"
+	},
 	"badges": [
 		{
 			"description": "Apache-2.0 License",
@@ -123,12 +119,18 @@
 	"icon": "src/icons/icon.png",
 	"keywords": [
 		"browser-extension",
+		"firefox-addon",
+		"chrome-extension",
 		"web-novels",
-		"gemini-ai",
+		"fanfiction",
+		"ao3",
+		"scribblehub",
 		"reading-enhancement",
 		"summarization",
 		"grammar-correction",
-		"ao3",
-		"fanfiction"
+		"gemini",
+		"openai-compatible",
+		"ollama",
+		"local-first"
 	]
 }

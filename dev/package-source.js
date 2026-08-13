@@ -2,16 +2,18 @@
 const fs = require("fs");
 const path = require("path");
 
-// Check and install archiver if needed
+// Check and install archiver if needed.
+// Returns the ZipArchive class: archiver 8 is ESM and dropped the callable
+// `archiver("zip", opts)` default export in favour of named format classes.
 function ensureArchiver() {
 	try {
-		return require("archiver");
+		return require("archiver").ZipArchive;
 	} catch (e) {
 		console.log("⚠️  archiver not found. Installing...");
 		const { execSync } = require("child_process");
 		execSync("npm install archiver --save-dev", { stdio: "inherit" });
 		console.log("✅ archiver installed successfully");
-		return require("archiver");
+		return require("archiver").ZipArchive;
 	}
 }
 
@@ -42,7 +44,7 @@ function getExtensionInfo() {
 
 // Create source package zip
 async function packageSource() {
-	const archiver = ensureArchiver();
+	const ZipArchive = ensureArchiver();
 
 	console.log("📦 Packaging source code for AMO submission...\n");
 
@@ -77,12 +79,36 @@ async function packageSource() {
 		"LICENSE.md",
 		"README.md",
 		".editorconfig",
+		// REVIEWER NOTES.md tells reviewers to run `npm run lint`, which is
+		// `eslint src/**/*.js` and reads its rules from eslint.config.mjs (the
+		// flat config that replaced .eslintrc.json in the ESLint 10 upgrade).
+		// Without these two the instruction fails on a clean unzip of this
+		// very archive.
+		"eslint.config.mjs",
+		".prettierrc",
 		"REVIEWER NOTES.md",
 	];
 
+	// The include list is an allowlist of *directories*, which does not stop
+	// untracked working files living inside one of them from being swept in —
+	// `docs/guides/last prompt.md` is half a megabyte of local scratch sitting in
+	// `docs/`, gitignored but very much on disk. These are the same patterns
+	// .gitignore excludes, applied again here because a source archive built from
+	// a working tree is not the same thing as a git export.
+	const isScratch = (entryName) => {
+		const p = entryName.replace(/\\/g, "/");
+		return (
+			/(^|\/)last prompt\.md$/i.test(p) ||
+			/\.scratch\.md$/i.test(p) ||
+			/(^|\/)(node_modules|\.tmp|scratch|sample)(\/|$)/.test(p) ||
+			/(^|\/)\.(DS_Store|graphify_.*)$/i.test(p) ||
+			/(^|\/)(desktop\.ini|Thumbs\.db)$/i.test(p)
+		);
+	};
+
 	return new Promise((resolve, reject) => {
 		const output = fs.createWriteStream(outputPath);
-		const archive = archiver("zip", { zlib: { level: 9 } });
+		const archive = new ZipArchive({ zlib: { level: 9 } });
 
 		output.on("close", () => {
 			const sizeInMB = (archive.pointer() / (1024 * 1024)).toFixed(2);
@@ -110,7 +136,9 @@ async function packageSource() {
 			if (fs.existsSync(itemPath)) {
 				const stats = fs.statSync(itemPath);
 				if (stats.isDirectory()) {
-					archive.directory(itemPath, item);
+					archive.directory(itemPath, item, (entry) =>
+						isScratch(entry.name) ? false : entry,
+					);
 					console.log(`  ✓ ${item}`);
 				} else {
 					archive.file(itemPath, { name: item });

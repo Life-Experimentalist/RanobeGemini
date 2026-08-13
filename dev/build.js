@@ -29,7 +29,9 @@ const HANDLERS_DIR = path.join(SRC_DIR, "utils", "website-handlers");
 const CONSTANTS_FILE = path.join(SRC_DIR, "utils", "constants.js");
 
 // Load local environment variables for build-time secret injection.
-dotenv.config({ path: path.join(ROOT_DIR, ".env") });
+// `quiet` suppresses the banner dotenv 17 prints on every load — it would
+// otherwise announce the number of injected secrets on each build line.
+dotenv.config({ path: path.join(ROOT_DIR, ".env"), quiet: true });
 
 const ASSETS_TO_COPY = [
 	"icons",
@@ -40,6 +42,7 @@ const ASSETS_TO_COPY = [
 	"utils",
 	"library",
 	"lib",
+	"fonts",
 ];
 
 const BUILD_SECRET_ENV_MAP = [
@@ -106,8 +109,17 @@ function copyFileWithRetries(srcPath, destPath, maxAttempts = 5) {
 	}
 }
 
-// Files that should never be copied into the dist output.
-const BUILD_SKIP_FILES = new Set(["desktop.ini", "thumbs.db", ".ds_store"]);
+// Files that should never be copied into the dist output. The promotional
+// pages under src/icons/ are authoring tools for the store listings — shipping
+// them inside the extension package is dead weight users download.
+const BUILD_SKIP_FILES = new Set([
+	"desktop.ini",
+	"thumbs.db",
+	".ds_store",
+	"promotional-tile-1400x560.html",
+	"promotional-tile-440x280.html",
+	"screenshots-gallery.html",
+]);
 
 // Helper: Copy directory recursively
 function copyDir(src, dest) {
@@ -226,18 +238,17 @@ ${handlerFiles.map((f) => `	"${f}",`).join("\n")}
 	);
 }
 
-// Task: Update Domains
+// Task: Sync the manifest blocks that must not drift between platforms.
+// Runs on every build so a hand-edit can never survive into a package.
 function updateDomains() {
-	console.log("🔍 Updating manifest domains...");
 	try {
-		// We run the script directly to ensure it uses its own logic
 		execSync(
 			`node "${path.join(__dirname, "generate-manifest-domains.js")}"`,
 			{ stdio: "inherit" },
 		);
-		console.log("✅ Domains updated successfully.");
 	} catch (error) {
-		console.error("❌ Failed to update domains:", error.message);
+		// A desynced manifest ships broken permissions — fail the build.
+		throw new Error(`Manifest sync failed: ${error.message}`);
 	}
 }
 
@@ -326,16 +337,17 @@ function build(platform) {
 			: "manifest-chromium.json";
 	const manifestPath = path.join(SRC_DIR, manifestFile);
 
-	if (!fs.existsSync(platformDist)) {
-		fs.mkdirSync(platformDist, { recursive: true });
+	// Always start from an empty output directory. Copying over a previous
+	// build leaves files that no longer exist in src/ — they survive into the
+	// packaged zip and ship to users indefinitely.
+	if (fs.existsSync(platformDist)) {
+		fs.rmSync(platformDist, { recursive: true, force: true });
 	}
+	fs.mkdirSync(platformDist, { recursive: true });
 
-	// Load and update manifest
-	const packageJson = JSON.parse(
-		fs.readFileSync(path.join(ROOT_DIR, "package.json"), "utf8"),
-	);
+	// Load manifest; version already comes from the authoritative source manifest.
 	const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-	manifest.version = packageJson.version;
+	manifest.version = readAuthoritativeVersion();
 
 	fs.writeFileSync(
 		path.join(platformDist, "manifest.json"),
@@ -378,12 +390,28 @@ async function packagePlatform(platform, version) {
 	}
 }
 
-// Task: Sync source manifest files with package.json version
+// The chromium manifest is the single source of truth for the extension version.
+// Everything else (package.json, the firefox manifest, the webmanifest, and the
+// generated build-version.js constant) is derived from it.
+const VERSION_SOURCE_PATH = path.join(SRC_DIR, "manifest-chromium.json");
+
+function readAuthoritativeVersion() {
+	const manifest = JSON.parse(fs.readFileSync(VERSION_SOURCE_PATH, "utf8"));
+	const version = manifest.version;
+	if (!/^\d+\.\d+\.\d+$/.test(version || "")) {
+		throw new Error(
+			`src/manifest-chromium.json has an invalid "version": ${JSON.stringify(version)}. Expected MAJOR.MINOR.PATCH.`,
+		);
+	}
+	return version;
+}
+
+// Task: Propagate the authoritative manifest version to every derived surface
 function syncSourceManifests(version) {
 	try {
-		console.log(`🔁 Syncing source manifests to v${version}...`);
+		console.log(`🔁 Propagating manifest version v${version}...`);
 		const firefoxPath = path.join(SRC_DIR, "manifest-firefox.json");
-		const chromiumPath = path.join(SRC_DIR, "manifest-chromium.json");
+		const packagePath = path.join(ROOT_DIR, "package.json");
 		const webmanifestPath = path.join(
 			SRC_DIR,
 			"library",
@@ -392,35 +420,45 @@ function syncSourceManifests(version) {
 
 		if (fs.existsSync(firefoxPath)) {
 			const m = JSON.parse(fs.readFileSync(firefoxPath, "utf8"));
-			m.version = version;
-			fs.writeFileSync(
-				firefoxPath,
-				JSON.stringify(m, null, "\t"),
-				"utf8",
-			);
-			console.log("✅ Updated src/manifest-firefox.json");
+			if (m.version !== version) {
+				m.version = version;
+				fs.writeFileSync(
+					firefoxPath,
+					JSON.stringify(m, null, "\t"),
+					"utf8",
+				);
+				console.log("✅ Updated src/manifest-firefox.json");
+			}
 		}
 
-		if (fs.existsSync(chromiumPath)) {
-			const m = JSON.parse(fs.readFileSync(chromiumPath, "utf8"));
-			m.version = version;
-			fs.writeFileSync(
-				chromiumPath,
-				JSON.stringify(m, null, "\t"),
-				"utf8",
-			);
-			console.log("✅ Updated src/manifest-chromium.json");
+		if (fs.existsSync(packagePath)) {
+			const raw = fs.readFileSync(packagePath, "utf8");
+			const pkg = JSON.parse(raw);
+			if (pkg.version !== version) {
+				// Rewrite only the version line so npm's formatting is preserved.
+				fs.writeFileSync(
+					packagePath,
+					raw.replace(
+						/("version"\s*:\s*")[^"]*(")/,
+						`$1${version}$2`,
+					),
+					"utf8",
+				);
+				console.log("✅ Updated package.json");
+			}
 		}
 
 		if (fs.existsSync(webmanifestPath)) {
 			const m = JSON.parse(fs.readFileSync(webmanifestPath, "utf8"));
-			m.version = version;
-			fs.writeFileSync(
-				webmanifestPath,
-				JSON.stringify(m, null, "\t"),
-				"utf8",
-			);
-			console.log("✅ Updated src/library/manifest.webmanifest");
+			if (m.version !== version) {
+				m.version = version;
+				fs.writeFileSync(
+					webmanifestPath,
+					JSON.stringify(m, null, "\t"),
+					"utf8",
+				);
+				console.log("✅ Updated src/library/manifest.webmanifest");
+			}
 		}
 
 		// Write build-time version constant for the settings UI
@@ -458,27 +496,25 @@ async function main() {
 
 	if (options.clean) clean();
 
-	// Always generate handler registry, but only update domains if explicitly requested or during packaging
+	// Generated artefacts are refreshed on every build so hand-edits to the
+	// handler registry or the shared manifest blocks can never reach a package.
 	generateHandlerRegistry();
-	if (options.update || options.package) updateDomains();
+	updateDomains();
 
 	const platforms = [];
 	if (options.all || options.firefox) platforms.push("firefox");
 	if (options.all || options.chromium) platforms.push("chromium");
 
-	const packageJson = JSON.parse(
-		fs.readFileSync(path.join(ROOT_DIR, "package.json"), "utf8"),
-	);
-
-	// Always sync source manifests with package.json version on every build
-	syncSourceManifests(packageJson.version);
+	// src/manifest-chromium.json is authoritative; propagate it everywhere else.
+	const version = readAuthoritativeVersion();
+	syncSourceManifests(version);
 	assertNoHardcodedSecretsInSource();
 	validateRequiredBuildSecrets();
 
 	for (const platform of platforms) {
 		build(platform);
 		if (options.package) {
-			await packagePlatform(platform, packageJson.version);
+			await packagePlatform(platform, version);
 		}
 	}
 
