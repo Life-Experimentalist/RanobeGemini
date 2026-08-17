@@ -40,7 +40,9 @@ async function setStored(map) {
 }
 
 export async function saveOnedriveConfig({ clientId, folderPath }) {
-	await setStored({ [CONFIG_KEY]: { clientId, folderPath: folderPath || DEFAULT_FOLDER } });
+	await setStored({
+		[CONFIG_KEY]: { clientId, folderPath: folderPath || DEFAULT_FOLDER },
+	});
 }
 
 export async function getOnedriveConfig() {
@@ -97,7 +99,9 @@ async function getValidAccessToken({ interactive = true } = {}) {
 	}
 
 	if (!interactive) {
-		throw new Error("OneDrive authentication required but interactive mode disabled.");
+		throw new Error(
+			"OneDrive authentication required but interactive mode disabled.",
+		);
 	}
 
 	const { verifier, challenge } = await createPkcePair();
@@ -143,7 +147,10 @@ export async function ensureOnedriveAccessToken({ interactive = true } = {}) {
 		return token;
 	} catch (err) {
 		await setStored({
-			[AUTH_ERROR_KEY]: { message: err?.message || String(err), at: Date.now() },
+			[AUTH_ERROR_KEY]: {
+				message: err?.message || String(err),
+				at: Date.now(),
+			},
 		});
 		throw err;
 	}
@@ -168,13 +175,18 @@ async function graphRequest(method, path, { token, body, headers = {} } = {}) {
 	});
 	if (!resp.ok) {
 		const text = await resp.text().catch(() => "");
-		throw new Error(`OneDrive Graph ${method} ${path} → ${resp.status}: ${text}`);
+		throw new Error(
+			`OneDrive Graph ${method} ${path} → ${resp.status}: ${text}`,
+		);
 	}
 	return resp;
 }
 
 async function ensureFolder(token, folderPath) {
-	const pathSegments = folderPath.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+	const pathSegments = folderPath
+		.replace(/^\/+|\/+$/g, "")
+		.split("/")
+		.filter(Boolean);
 	if (!pathSegments.length) return "/me/drive/root";
 
 	const encodedPath = pathSegments.map(encodeURIComponent).join("/");
@@ -238,7 +250,8 @@ function isBackupFile(name) {
 export async function uploadOnedriveBackup(backupData, options = {}) {
 	const token = await ensureOnedriveAccessToken({ interactive: true });
 	const config = await getOnedriveConfig();
-	const folderPath = options.customPath || config?.folderPath || DEFAULT_FOLDER;
+	const folderPath =
+		options.customPath || config?.folderPath || DEFAULT_FOLDER;
 
 	const folderRef = await ensureFolder(token, folderPath);
 	const fileName = timestampedName();
@@ -285,7 +298,8 @@ export async function uploadOnedriveBackup(backupData, options = {}) {
 export async function listOnedriveBackups(options = {}) {
 	const token = await ensureOnedriveAccessToken({ interactive: false });
 	const config = await getOnedriveConfig();
-	const folderPath = options.customPath || config?.folderPath || DEFAULT_FOLDER;
+	const folderPath =
+		options.customPath || config?.folderPath || DEFAULT_FOLDER;
 
 	const folderRef = await ensureFolder(token, folderPath);
 	const childrenPath = `${folderRef}/children`;
@@ -295,8 +309,10 @@ export async function listOnedriveBackups(options = {}) {
 
 	return (data.value || [])
 		.filter((f) => isBackupFile(f.name))
-		.sort((a, b) =>
-			new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime),
+		.sort(
+			(a, b) =>
+				new Date(b.lastModifiedDateTime) -
+				new Date(a.lastModifiedDateTime),
 		)
 		.map((f) => ({
 			id: f.id,
@@ -308,9 +324,13 @@ export async function listOnedriveBackups(options = {}) {
 
 export async function downloadOnedriveBackup(fileId) {
 	const token = await ensureOnedriveAccessToken({ interactive: false });
-	const resp = await graphRequest("GET", `/me/drive/items/${fileId}/content`, {
-		token,
-	});
+	const resp = await graphRequest(
+		"GET",
+		`/me/drive/items/${fileId}/content`,
+		{
+			token,
+		},
+	);
 	return resp.text();
 }
 
@@ -322,7 +342,8 @@ export async function getLatestOnedriveBackup(options = {}) {
 export async function getContinuousOnedriveBackup(options = {}) {
 	const token = await ensureOnedriveAccessToken({ interactive: false });
 	const config = await getOnedriveConfig();
-	const folderPath = options.customPath || config?.folderPath || DEFAULT_FOLDER;
+	const folderPath =
+		options.customPath || config?.folderPath || DEFAULT_FOLDER;
 	const folderRef = await ensureFolder(token, folderPath);
 
 	try {

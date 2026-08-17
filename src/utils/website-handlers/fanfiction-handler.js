@@ -7,13 +7,17 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
-import { SITE_SETTINGS_KEY } from "../site-settings.js";
+// Imported from constants.js rather than site-settings.js on purpose: this
+// handler is reachable from domain-constants.js, and going through
+// site-settings.js closes an import cycle back onto this very module.
+import { SITE_SETTINGS_KEY } from "../constants.js";
 import {
 	formatNovelInfo,
 	DEFAULT_EXPORT_TEMPLATE,
 	resolveExportTemplate,
 } from "../novel-copy-format.js";
 import { readExtensionBridgeStatus } from "../extension-bridges.js";
+import { pageLocation } from "../dom-env.js";
 
 /** Storage key for library settings (to read global copy template) */
 const LIBRARY_SETTINGS_KEY = "rg_library_settings";
@@ -179,7 +183,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 */
 	static async normalizeURL() {
 		try {
-			const { hostname, pathname, search, hash } = window.location;
+			const { hostname, pathname, search, hash } = pageLocation();
 			const isFanfictionHost =
 				hostname.endsWith("fanfiction.net") ||
 				hostname.endsWith("fanfiction.ws");
@@ -196,7 +200,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			let preference = "auto"; // Default to device-based routing
 			let preferredTld = "net"; // Default to .net
 			try {
-				const params = new URLSearchParams(window.location.search);
+				const params = new URLSearchParams(pageLocation().search);
 				const overridePref = params.get("rg_view");
 				if (overridePref) {
 					preference = overridePref === "www" ? "www" : "m";
@@ -208,7 +212,7 @@ When enhancing, improve readability while fully respecting the author's creative
 					}
 					// Keep override tab-scoped and avoid leaking rg_view in copied/shared links.
 					try {
-						const cleanUrl = new URL(window.location.href);
+						const cleanUrl = new URL(pageLocation().href);
 						cleanUrl.searchParams.delete("rg_view");
 						window.history.replaceState(
 							{},
@@ -328,8 +332,8 @@ When enhancing, improve readability while fully respecting the author's creative
 
 	// Return true if this handler can handle the current website
 	canHandle() {
-		const hostname = window.location.hostname;
-		const path = window.location.pathname;
+		const hostname = pageLocation().hostname;
+		const path = pageLocation().pathname;
 		// Exclude mobile version (m.fanfiction.net)
 		if (hostname === "m.fanfiction.net") {
 			return false;
@@ -346,7 +350,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @returns {boolean}
 	 */
 	isChapterPage() {
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 		if (url.startsWith("/u/")) return false;
 		// Story pages have /s/ in the URL
 		const isStoryUrl = /^\/s\/\d+/.test(url);
@@ -383,7 +387,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @param {string} url - The story URL
 	 * @returns {string} Unique novel ID
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		// Extract story ID from URL: /s/12345/...
 		const match = url.match(/\/s\/(\d+)/);
 		if (match) {
@@ -405,11 +409,11 @@ When enhancing, improve readability while fully respecting the author's creative
 	 */
 	getNovelPageUrl() {
 		// Extract story ID and return the base story URL (chapter 1)
-		const match = window.location.href.match(/\/s\/(\d+)/);
+		const match = pageLocation().href.match(/\/s\/(\d+)/);
 		if (match) {
 			return `https://www.fanfiction.net/s/${match[1]}/1/`;
 		}
-		return window.location.href;
+		return pageLocation().href;
 	}
 
 	/**
@@ -458,7 +462,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	async getCustomChapterButtons() {
 		if (!this.isChapterPage()) return [];
 
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		const isMobile =
 			hostname === "m.fanfiction.net" || hostname === "m.fanfiction.ws";
 		const isFFSite =
@@ -498,7 +502,7 @@ When enhancing, improve readability while fully respecting the author's creative
 				emoji: isMobile ? "🖥️" : "📱",
 				color: "#5a9fd4",
 				onClick: async () => {
-					const url = new URL(window.location.href);
+					const url = new URL(pageLocation().href);
 					const tld = url.hostname.endsWith(".ws") ? "ws" : "net";
 					const targetSubdomain = isMobile ? "www" : "m";
 					url.hostname = `${targetSubdomain}.fanfiction.${tld}`;
@@ -511,7 +515,7 @@ When enhancing, improve readability while fully respecting the author's creative
 
 		// ── Copy button (badge style — copies formatted name) ────────────────
 		if (siteConf.showCopyButton !== false) {
-			const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1] || "";
+			const storyId = pageLocation().href.match(/\/s\/(\d+)/)?.[1] || "";
 			buttons.push({
 				text: "Copy",
 				emoji: "📋",
@@ -550,7 +554,7 @@ When enhancing, improve readability while fully respecting the author's creative
 							const title = this.extractTitle();
 							const author = this.extractAuthor();
 							const storyId =
-								window.location.href.match(/\/s\/(\d+)/)?.[1] ||
+								pageLocation().href.match(/\/s\/(\d+)/)?.[1] ||
 								"";
 							const text = formatNovelInfo(
 								{
@@ -569,7 +573,7 @@ When enhancing, improve readability while fully respecting the author's creative
 						}
 					}
 					window.open(
-						`https://fichub.net/?b=1&q=${encodeURIComponent(window.location.href)}`,
+						`https://fichub.net/?b=1&q=${encodeURIComponent(pageLocation().href)}`,
 						"_blank",
 					);
 				},
@@ -1215,7 +1219,7 @@ When enhancing, improve readability while fully respecting the author's creative
 		try {
 			const title = this.extractTitle();
 			const author = this.extractAuthor();
-			const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1];
+			const storyId = pageLocation().href.match(/\/s\/(\d+)/)?.[1];
 
 			if (!title || !author || !storyId) {
 				return null;
@@ -1262,7 +1266,7 @@ When enhancing, improve readability while fully respecting the author's creative
 		};
 
 		// Detect if this is a crossover based on URL (initial check, will be refined below)
-		const currentUrl = window.location.href;
+		const currentUrl = pageLocation().href;
 		let isCrossoverDetected = currentUrl.includes("/crossovers/");
 
 		// Extract story ID from URL
@@ -1284,13 +1288,13 @@ When enhancing, improve readability while fully respecting the author's creative
 							imgLarge.getAttribute("data-original") ||
 							imgLarge.src;
 						if (src && src.startsWith("/")) {
-							src = window.location.origin + src;
+							src = pageLocation().origin + src;
 						}
 						metadata.coverUrl = src;
 					} else {
 						let src = coverImg.src;
 						if (src && src.startsWith("/")) {
-							src = window.location.origin + src;
+							src = pageLocation().origin + src;
 						}
 						metadata.coverUrl = src;
 					}
@@ -1993,7 +1997,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 
 		try {
@@ -2111,7 +2115,7 @@ When enhancing, improve readability while fully respecting the author's creative
 		// Check if the enhanced text contains HTML tags (like <p>...</p>)
 		const hasHTMLTags = /<p>|<\/p>|<br>|<div>/.test(enhancedText);
 
-		let enhancedParagraphs = [];
+		let enhancedParagraphs;
 
 		if (hasHTMLTags) {
 			// Parse HTML content to extract paragraph text
@@ -2241,7 +2245,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 */
 	getMetadataSourceUrl() {
 		// For desktop, metadata is embedded
-		const match = window.location.href.match(/\/s\/(\d+)/);
+		const match = pageLocation().href.match(/\/s\/(\d+)/);
 		if (match) {
 			return `https://www.fanfiction.net/s/${match[1]}/1/`;
 		}

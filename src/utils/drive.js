@@ -303,13 +303,17 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 		const redirectUrl = await launchDriveWebAuthFlow(authUrl);
 		const parsed = parseOAuthRedirectUrl(redirectUrl);
 		if (parsed.state !== state) {
-			const err = createDriveAuthError("State mismatch during Drive auth.");
+			const err = createDriveAuthError(
+				"State mismatch during Drive auth.",
+			);
 			await setAuthError(err);
 			throw err;
 		}
 		code = parsed.code;
 		if (!code) {
-			const err = createDriveAuthError("No auth code returned from Drive.");
+			const err = createDriveAuthError(
+				"No auth code returned from Drive.",
+			);
 			await setAuthError(err);
 			throw err;
 		}
@@ -320,7 +324,10 @@ export async function ensureDriveAccessToken({ interactive = false } = {}) {
 			});
 		}
 	} catch (webAuthErr) {
-		if (webAuthErr.message?.includes("State mismatch") || webAuthErr.message?.includes("No auth code")) {
+		if (
+			webAuthErr.message?.includes("State mismatch") ||
+			webAuthErr.message?.includes("No auth code")
+		) {
 			throw webAuthErr;
 		}
 		// browser.identity unavailable or blocked (e.g. mobile) — fall back to tab flow

@@ -99,16 +99,14 @@ export async function handleFetchMetadata(message, sendResponse) {
 			return false;
 		}
 
-		// Allow handler to post-process metadata
-		const processed = handler.processRemoteMetadata?.(metadata) || metadata;
-
 		debugLog(
 			`[MetadataHandler] Successfully fetched and validated metadata for ${handlerDomain}`,
 		);
 
+		// processRemoteMetadata() is already applied inside MetadataFetcher.
 		sendResponse({
 			success: true,
-			metadata: processed,
+			metadata,
 		});
 		return false; // Synchronous response sent
 	} catch (error) {

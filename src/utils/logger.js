@@ -35,7 +35,9 @@ const _DEDUPE_PRUNE_INTERVAL = 500;
 
 function _safeKeyFromArgs(args) {
 	try {
-		return args.map((a) => (typeof a === "string" ? a : safeStringify(a))).join(" || ");
+		return args
+			.map((a) => (typeof a === "string" ? a : safeStringify(a)))
+			.join(" || ");
 	} catch (e) {
 		return String(args);
 	}
@@ -173,7 +175,9 @@ export function debugLog(...args) {
 			try {
 				originalConsoleLog(...truncatedArgs);
 				recordPersistent("debug", truncatedArgs);
-			} catch (_) { /* swallow */ }
+			} catch (_) {
+				/* swallow */
+			}
 		}
 	}
 
@@ -199,7 +203,9 @@ export function debugLog(...args) {
 				getTruncationSettings()
 					.then((settings) => {
 						const truncatedArgs = settings.enabled
-							? args.map((arg) => formatOutput(arg, settings.length))
+							? args.map((arg) =>
+									formatOutput(arg, settings.length),
+								)
 							: args;
 						_logNow(truncatedArgs);
 					})
@@ -265,7 +271,11 @@ export function debugError(...args) {
 		originalConsoleError(...args);
 		recordPersistent("error", args);
 	} catch (_) {
-		try { originalConsoleError(...args); } catch (__) { /* swallow */ }
+		try {
+			originalConsoleError(...args);
+		} catch (__) {
+			/* swallow */
+		}
 	}
 }
 
@@ -281,7 +291,11 @@ export function debugWarn(...args) {
 		console.warn(...args);
 		recordPersistent("warn", args);
 	} catch (_) {
-		try { console.warn(...args); } catch (__) { /* swallow */ }
+		try {
+			console.warn(...args);
+		} catch (__) {
+			/* swallow */
+		}
 	}
 }
 
@@ -405,7 +419,8 @@ export class Logger {
 		if (data !== undefined) {
 			let dataToLog;
 			try {
-				dataToLog = typeof data === "object" ? JSON.stringify(data) : data;
+				dataToLog =
+					typeof data === "object" ? JSON.stringify(data) : data;
 			} catch (e) {
 				dataToLog = "[Circular or large object]";
 			}

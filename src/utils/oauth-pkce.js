@@ -73,11 +73,32 @@ export async function launchOAuthPkceFlow({
 	});
 
 	const redirectedUrl = new URL(redirected);
+
+	const error = redirectedUrl.searchParams.get("error");
+	if (error) {
+		const description =
+			redirectedUrl.searchParams.get("error_description") || "";
+		throw new Error(
+			`OAuth flow was rejected: ${error}${description ? ` — ${description}` : ""}`,
+		);
+	}
+
+	// The authorization server must echo back the exact `state` we generated.
+	// Without this check a redirect crafted by a third party could inject an
+	// authorization code belonging to an attacker-controlled account, and the
+	// token it mints would be silently stored as the user's own.
+	const returnedState = redirectedUrl.searchParams.get("state");
+	if (returnedState !== state) {
+		throw new Error(
+			"OAuth state mismatch — the response did not come from the request we started. Aborting.",
+		);
+	}
+
 	const code = redirectedUrl.searchParams.get("code");
 	if (!code) {
-		throw new Error(
-			`OAuth flow did not return a code. Response: ${redirected}`,
-		);
+		// The raw redirect can carry tokens in the fragment, so it is not safe
+		// to include in an error message that may be logged or displayed.
+		throw new Error("OAuth flow did not return an authorization code.");
 	}
 	return code;
 }
@@ -179,10 +200,6 @@ export async function launchOAuthTabFlow({
 	timeoutMs = 120_000,
 }) {
 	const state = getRandomString(16);
-	const extId = browser.runtime.id;
-	const redirectWithExt = redirectUri.includes("?")
-		? `${redirectUri}&ext_id=${encodeURIComponent(extId)}`
-		: `${redirectUri}?ext_id=${encodeURIComponent(extId)}`;
 
 	const query = new URLSearchParams({
 		response_type: "code",
@@ -195,15 +212,12 @@ export async function launchOAuthTabFlow({
 		...extra,
 	});
 
-	// Build auth URL and inject ext_id into the redirect_uri param so landing page
-	// knows which extension to sendMessage to on mobile (where window.opener is null).
-	const authUrl = `${authEndpoint}?${query.toString()}`;
-	const authUrlWithExt = authUrl.replace(
-		encodeURIComponent(redirectUri),
-		encodeURIComponent(redirectWithExt),
-	);
-
-	const tab = await browser.tabs.create({ url: authUrlWithExt });
+	// The redirect lands on the project site, where content/landing-bridge.js
+	// forwards the code back to the background script. The bridge knows its own
+	// extension ID, so nothing needs to be smuggled through the redirect URI.
+	const tab = await browser.tabs.create({
+		url: `${authEndpoint}?${query.toString()}`,
+	});
 
 	return new Promise((resolve, reject) => {
 		const cleanup = (tabId) => {
@@ -225,7 +239,11 @@ export async function launchOAuthTabFlow({
 			if (code) {
 				resolve(code);
 			} else {
-				reject(new Error("OAuth tab flow: no authorization code received."));
+				reject(
+					new Error(
+						"OAuth tab flow: no authorization code received.",
+					),
+				);
 			}
 		});
 	});

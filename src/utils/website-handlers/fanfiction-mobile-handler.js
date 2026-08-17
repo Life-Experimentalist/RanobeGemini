@@ -14,6 +14,7 @@
  */
 import { FanfictionHandler } from "./fanfiction-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 
 export class FanfictionMobileHandler extends FanfictionHandler {
 	// Static properties for domain management
@@ -70,7 +71,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @returns {boolean}
 	 */
 	canHandle() {
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		// ONLY handle m.fanfiction.net
 		return hostname === "m.fanfiction.net";
 	}
@@ -87,7 +88,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * @returns {boolean} True only if on an actual chapter page
 	 */
 	isChapterPage() {
-		const url = window.location.pathname;
+		const url = pageLocation().pathname;
 
 		// Rule 1: Exclude user profile pages
 		if (url.startsWith("/u/")) {
@@ -324,7 +325,7 @@ When enhancing, improve readability while fully respecting the author's creative
 			}
 
 			// Extract story ID from URL
-			const storyIdMatch = window.location.href.match(/\/s\/(\d+)/);
+			const storyIdMatch = pageLocation().href.match(/\/s\/(\d+)/);
 			if (storyIdMatch) {
 				metadata.metadata.storyId = storyIdMatch[1];
 			}
@@ -707,7 +708,7 @@ When enhancing, improve readability while fully respecting the author's creative
 		// Insert placeholder before we await anything so layout doesn't jump later
 		storyMainDiv.parentNode.insertBefore(summaryEl, storyMainDiv);
 
-		const storyId = window.location.href.match(/\/s\/(\d+)/)?.[1];
+		const storyId = pageLocation().href.match(/\/s\/(\d+)/)?.[1];
 		if (!storyId) {
 			summaryEl.remove();
 			return;
@@ -1040,7 +1041,7 @@ When enhancing, improve readability while fully respecting the author's creative
 	 * Redirect m.fanfiction.net -> www.fanfiction.net for full metadata
 	 */
 	getMetadataSourceUrl() {
-		const match = window.location.href.match(/\/s\/(\d+)/);
+		const match = pageLocation().href.match(/\/s\/(\d+)/);
 		if (match) {
 			// Always fetch from desktop version for complete metadata
 			return `https://www.fanfiction.net/s/${match[1]}/1/`;

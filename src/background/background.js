@@ -3,12 +3,16 @@ import { debugLog, debugError } from "../utils/logger.js";
 import {
 	DEFAULT_PROMPT,
 	DEFAULT_MODEL_ENDPOINT,
+	DEFAULT_MODEL_ID,
+	getModelContextTokens,
 	DEFAULT_PERMANENT_PROMPT,
 	DEFAULT_SUMMARY_PROMPT,
 	DEFAULT_SHORT_SUMMARY_PROMPT,
 	DEFAULT_CHUNK_SIZE_WORDS,
 	KEEP_ALIVE_ALARM_INTERVAL_MINUTES,
 	NOVEL_CHAPTER_CHECK_ALARM_NAME,
+	OAUTH_REDIRECT_URIS,
+	READING_FONT_DEFAULT,
 } from "../utils/constants.js";
 import chunkingSystem from "../utils/chunking/index.js";
 import {
@@ -19,6 +23,10 @@ import {
 	createRollingBackup,
 	listRollingBackups,
 } from "../utils/comprehensive-backup.js";
+import {
+	maybeDecryptFromTransport,
+	maybeEncryptForTransport,
+} from "../utils/backup-crypto.js";
 import { novelLibrary } from "../utils/novel-library.js";
 import { notificationManager } from "../utils/notification-manager.js";
 import {
@@ -42,6 +50,7 @@ import { createOnedriveStorageAdapter } from "./storage/adapters/onedrive-storag
 import { createDropboxStorageAdapter } from "./storage/adapters/dropbox-storage.js";
 import { createNativeSyncStorageAdapter } from "./storage/adapters/native-sync-storage.js";
 import { pendingAuthFlows } from "../utils/oauth-pkce.js";
+import { downloadText } from "../utils/download-data.js";
 
 // Gemini safety settings — set all categories to BLOCK_NONE so mature/violent
 // novel content is not refused by the safety filter.
@@ -56,6 +65,50 @@ const GEMINI_SAFETY_SETTINGS = [
 // This must be at the very top before any other code
 if (typeof browser === "undefined") {
 	globalThis.browser = chrome;
+}
+
+// The only web origin allowed to talk to this worker, via the landing bridge
+// content script. Compared as a full origin so a lookalike host such as
+// ranobe.vkrishna04.me.example.com can never match.
+//
+// Derived from the canonical OAuth redirect URI rather than re-typed: the same
+// origin also has to appear in the landing-bridge `matches` of both manifests,
+// and `dev/generate-manifest-domains.js` stamps those from this very constant.
+// One edit in constants.js therefore moves the guard and both manifests together.
+const LANDING_ORIGIN = new URL(OAUTH_REDIRECT_URIS.web).origin;
+
+function originOf(url) {
+	try {
+		return new URL(url).origin;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Open the library, reusing an already-open tab instead of stacking duplicates.
+ *
+ * Single implementation shared by the keyboard command, the context menu and
+ * the `openLibrary` message, so all three behave the same.
+ *
+ * @param {string} [hash] - Optional fragment, e.g. "#settings".
+ * @returns {Promise<browser.tabs.Tab>}
+ */
+async function openLibraryTab(hash = "") {
+	const base = browser.runtime.getURL("library/library.html");
+	const url = hash ? `${base}${hash}` : base;
+
+	const existing = await browser.tabs.query({ url: `${base}*` });
+	if (existing.length > 0) {
+		const tab = existing[0];
+		await browser.tabs.update(tab.id, { active: true, url });
+		if (tab.windowId !== undefined) {
+			await browser.windows.update(tab.windowId, { focused: true });
+		}
+		return tab;
+	}
+
+	return browser.tabs.create({ url });
 }
 
 // Wrap in async IIFE to allow top-level await in service workers
@@ -74,47 +127,16 @@ if (typeof browser === "undefined") {
 		adapters: {
 			"native-sync": nativeSyncAdapter,
 			"google-drive": createGoogleDriveStorageAdapter(),
-			"webdav": createWebdavStorageAdapter(),
-			"onedrive": createOnedriveStorageAdapter(),
-			"dropbox": createDropboxStorageAdapter(),
+			webdav: createWebdavStorageAdapter(),
+			onedrive: createOnedriveStorageAdapter(),
+			dropbox: createDropboxStorageAdapter(),
 		},
 	});
 
-	if (browser.runtime?.onMessageExternal?.addListener) {
-		browser.runtime.onMessageExternal.addListener(
-			(request, sender, sendResponse) => {
-				const senderUrl = sender?.url || sender?.origin || "";
-				const isLandingPage =
-					!senderUrl ||
-					senderUrl.startsWith("https://ranobe.vkrishna04.me/") ||
-					senderUrl.startsWith("http://ranobe.vkrishna04.me/");
-
-				if (!isLandingPage) return;
-
-				// Mobile tab OAuth relay: landing page sends back the auth code
-				if (request?.source === "ranobe-gemini-oauth" && request?.state) {
-					const resolver = pendingAuthFlows.get(request.state);
-					if (resolver) {
-						pendingAuthFlows.delete(request.state);
-						resolver(request);
-					}
-					sendResponse({ received: true });
-					return true;
-				}
-
-				if (request?.type !== "EXTERNAL_PING") return;
-
-				const manifest = browser.runtime.getManifest();
-				sendResponse({
-					installed: true,
-					version: manifest.version,
-					extensionId: browser.runtime.id,
-					libraryUrl: browser.runtime.getURL("library/library.html"),
-				});
-				return true;
-			},
-		);
-	}
+	// Landing-page communication runs through content/landing-bridge.js, which is
+	// injected only on the project site. `externally_connectable` is deliberately
+	// not declared: it is unsupported for web pages on Gecko, and it would expose
+	// this listener to any page or extension able to reach it.
 
 	const updateNotificationBadge = () => {
 		try {
@@ -374,11 +396,6 @@ if (typeof browser === "undefined") {
 		saveAs = false,
 		retention = DEFAULT_BACKUP_RETENTION,
 	}) {
-		const downloadsApi = browser.downloads || chrome?.downloads;
-		if (!downloadsApi) {
-			throw new Error("Downloads API not available");
-		}
-
 		const data = await novelLibrary.exportLibrary();
 		const timestamp = new Date()
 			.toISOString()
@@ -387,19 +404,11 @@ if (typeof browser === "undefined") {
 		const filenameOnly = `rg-backup-${timestamp}.json`;
 		const filename = folder ? `${folder}/${filenameOnly}` : filenameOnly;
 
-		const blob = new Blob([JSON.stringify(data, null, 2)], {
-			type: "application/json",
-		});
-		const url = URL.createObjectURL(blob);
-
-		const downloadId = await downloadsApi.download({
-			url,
+		const downloadId = await downloadText({
+			text: JSON.stringify(data, null, 2),
 			filename,
 			saveAs,
 		});
-
-		// Clean up object URL after a short delay
-		setTimeout(() => URL.revokeObjectURL(url), 30000);
 
 		// Update history and persist
 		const stored = await browser.storage.local.get("backupHistory");
@@ -428,7 +437,11 @@ if (typeof browser === "undefined") {
 		variant = "versioned",
 	}) {
 		const data = await novelLibrary.exportLibrary();
-		const blob = new Blob([JSON.stringify(data, null, 2)], {
+		// Encrypted only if the user turned it on; otherwise this returns
+		// `data` unchanged and the uploaded file is the same plain JSON it
+		// has always been.
+		const payload = await maybeEncryptForTransport(data);
+		const blob = new Blob([JSON.stringify(payload, null, 2)], {
 			type: "application/json",
 		});
 
@@ -626,7 +639,7 @@ if (typeof browser === "undefined") {
 		const mergeMode = prefs.driveAutoRestoreMergeMode || "merge";
 		const shouldMerge = mergeMode !== "replace";
 
-		let latestFile = null;
+		let latestFile;
 		if (backupMode === "continuous") {
 			const result = await storageSync.getContinuousBackup();
 			latestFile = result.file;
@@ -660,7 +673,7 @@ if (typeof browser === "undefined") {
 		}
 
 		const backupResult = await storageSync.downloadBackup(latestFile.id);
-		const backupData = backupResult.data;
+		const backupData = await maybeDecryptFromTransport(backupResult.data);
 		if (!backupData?.library || !backupData?.version) {
 			return { success: false, skipped: true, reason: "invalid-backup" };
 		}
@@ -918,10 +931,13 @@ if (typeof browser === "undefined") {
 			// Normalise provider fields from new primaryModelConfig if present
 			const pc = data.primaryModelConfig;
 			let aiProvider = data.aiProvider || "gemini";
-			let openAiEndpoint = data.openAiEndpoint || "https://api.openai.com/v1/chat/completions";
+			let openAiEndpoint =
+				data.openAiEndpoint ||
+				"https://api.openai.com/v1/chat/completions";
 			let openAiModel = data.openAiModel || "gpt-4o-mini";
 			let openAiApiKey = data.openAiApiKey || "";
-			let ollamaEndpoint = data.ollamaEndpoint || "http://localhost:11434/api/generate";
+			let ollamaEndpoint =
+				data.ollamaEndpoint || "http://localhost:11434/api/generate";
 			let ollamaModel = data.ollamaModel || "llama3.1:8b";
 			let modelEndpoint = data.modelEndpoint || DEFAULT_MODEL_ENDPOINT;
 
@@ -934,7 +950,8 @@ if (typeof browser === "undefined") {
 					if (pc.apiKey) openAiApiKey = pc.apiKey;
 				} else if (pc.provider === "ollama") {
 					aiProvider = "ollama";
-					if (pc.baseUrl) ollamaEndpoint = pc.baseUrl + "/api/generate";
+					if (pc.baseUrl)
+						ollamaEndpoint = pc.baseUrl + "/api/generate";
 					if (pc.modelId) ollamaModel = pc.modelId;
 				} else {
 					aiProvider = "gemini";
@@ -955,8 +972,10 @@ if (typeof browser === "undefined") {
 				currentApiKeyIndex: data.currentApiKeyIndex || 0,
 				defaultPrompt: data.defaultPrompt || DEFAULT_PROMPT,
 				summaryPrompt: data.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
-				shortSummaryPrompt: data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
-				permanentPrompt: data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
+				shortSummaryPrompt:
+					data.shortSummaryPrompt || DEFAULT_SHORT_SUMMARY_PROMPT,
+				permanentPrompt:
+					data.permanentPrompt || DEFAULT_PERMANENT_PROMPT,
 				temperature: data.temperature || 0.7,
 				topP: data.topP !== undefined ? data.topP : 0.95,
 				topK: data.topK !== undefined ? data.topK : 40,
@@ -975,6 +994,7 @@ if (typeof browser === "undefined") {
 				chunkSizeWords: data.chunkSizeWords || DEFAULT_CHUNK_SIZE_WORDS,
 				useEmoji: data.useEmoji || false,
 				fontSize: data.fontSize || 100,
+				readingFont: data.readingFont || READING_FONT_DEFAULT,
 			};
 
 			// Apply override for fallback routing (only provider-routing fields)
@@ -1012,6 +1032,7 @@ if (typeof browser === "undefined") {
 				chunkSizeWords: DEFAULT_CHUNK_SIZE_WORDS, // Word-based chunk size — fallback default
 				useEmoji: false,
 				fontSize: 100,
+				readingFont: READING_FONT_DEFAULT,
 			};
 		}
 	}
@@ -1066,7 +1087,8 @@ if (typeof browser === "undefined") {
 		if (fc.provider === "openai") {
 			return {
 				aiProvider: "openai-compatible",
-				openAiEndpoint: fc.baseUrl || "https://api.openai.com/v1/chat/completions",
+				openAiEndpoint:
+					fc.baseUrl || "https://api.openai.com/v1/chat/completions",
 				openAiModel: fc.modelId || "gpt-4o-mini",
 				openAiApiKey: fc.apiKey || "",
 			};
@@ -1074,7 +1096,9 @@ if (typeof browser === "undefined") {
 		if (fc.provider === "ollama") {
 			return {
 				aiProvider: "ollama",
-				ollamaEndpoint: fc.baseUrl ? fc.baseUrl + "/api/generate" : "http://localhost:11434/api/generate",
+				ollamaEndpoint: fc.baseUrl
+					? fc.baseUrl + "/api/generate"
+					: "http://localhost:11434/api/generate",
 				ollamaModel: fc.modelId || "llama3.1:8b",
 			};
 		}
@@ -1095,10 +1119,13 @@ if (typeof browser === "undefined") {
 			return await provider[method](payload);
 		} catch (primaryErr) {
 			const config = await initConfig();
-			if (!config.fallbackModelEnabled || !config.fallbackModelConfig) throw primaryErr;
+			if (!config.fallbackModelEnabled || !config.fallbackModelConfig)
+				throw primaryErr;
 			const override = buildFallbackOverride(config.fallbackModelConfig);
 			if (!override) throw primaryErr;
-			debugLog(`Primary provider failed (${primaryErr.message}). Trying fallback provider: ${config.fallbackModelConfig.provider}`);
+			debugLog(
+				`Primary provider failed (${primaryErr.message}). Trying fallback provider: ${config.fallbackModelConfig.provider}`,
+			);
 			_configOverride = override;
 			aiProviderRegistry = null; // force re-resolve with new aiProvider
 			try {
@@ -1429,13 +1456,50 @@ if (typeof browser === "undefined") {
 
 	// Handle messages from content script
 	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		debugLog("Background received message:", message);
+		if (!message || typeof message.action !== "string") return;
+		debugLog("Background received message:", message.action);
 
 		if (message.action === "ping") {
 			sendResponse({
 				success: true,
 				message: "Background script is alive",
 			});
+			return true;
+		}
+
+		// OAuth authorization code relayed by content/landing-bridge.js on
+		// platforms without `identity.launchWebAuthFlow`. Accepted only from the
+		// project site, and only when `state` matches a flow this worker started
+		// — which is what stops an unrelated page from injecting a code.
+		if (message.action === "oauthTabRelay") {
+			const senderOrigin = sender?.origin || originOf(sender?.url);
+			if (senderOrigin !== LANDING_ORIGIN) {
+				sendResponse({ success: false, error: "Unrecognised sender." });
+				return true;
+			}
+
+			const resolver = pendingAuthFlows.get(message.state);
+			if (!resolver) {
+				sendResponse({
+					success: false,
+					error: "No matching auth flow.",
+				});
+				return true;
+			}
+
+			pendingAuthFlows.delete(message.state);
+			resolver({ authorizationCode: message.authorizationCode });
+			sendResponse({ success: true });
+			return true;
+		}
+
+		// Requested by the popup, the shelf pages, and the landing-page bridge.
+		if (message.action === "openLibrary") {
+			openLibraryTab(typeof message.hash === "string" ? message.hash : "")
+				.then(() => sendResponse({ success: true }))
+				.catch((error) =>
+					sendResponse({ success: false, error: error.message }),
+				);
 			return true;
 		}
 
@@ -1540,7 +1604,8 @@ if (typeof browser === "undefined") {
 		if (message.action === "downloadDriveBackup") {
 			storageSync
 				.downloadBackup(message.fileId)
-				.then(({ data }) => sendResponse({ success: true, data }))
+				.then(({ data }) => maybeDecryptFromTransport(data))
+				.then((data) => sendResponse({ success: true, data }))
 				.catch((error) =>
 					sendResponse({
 						success: false,
@@ -1556,7 +1621,9 @@ if (typeof browser === "undefined") {
 					const backupResult = await storageSync.downloadBackup(
 						message.fileId,
 					);
-					const backupData = backupResult.data;
+					const backupData = await maybeDecryptFromTransport(
+						backupResult.data,
+					);
 					if (!backupData?.library || !backupData?.version) {
 						sendResponse({
 							success: false,
@@ -1639,6 +1706,11 @@ if (typeof browser === "undefined") {
 			(async () => {
 				try {
 					const data = await novelLibrary.exportLibrary();
+					// Not encrypted, on purpose. This adapter writes to
+					// browser.storage.sync, which is the same store the
+					// encryption key is mirrored into — encrypting there
+					// would be theatre, and base64 would cost a third more
+					// bytes against a hard 100KB quota. See backup-crypto.js.
 					const blob = new Blob([JSON.stringify(data)], {
 						type: "application/json",
 					});
@@ -1656,10 +1728,15 @@ if (typeof browser === "undefined") {
 				try {
 					const latest = await nativeSyncAdapter.getLatestBackup();
 					if (!latest?.id) {
-						sendResponse({ success: false, error: "No native sync backup found." });
+						sendResponse({
+							success: false,
+							error: "No native sync backup found.",
+						});
 						return;
 					}
-					const jsonStr = await nativeSyncAdapter.downloadBackup(latest.id);
+					const jsonStr = await nativeSyncAdapter.downloadBackup(
+						latest.id,
+					);
 					const backupData = JSON.parse(jsonStr);
 					await novelLibrary.importLibrary(backupData, true);
 					sendResponse({ success: true });
@@ -2397,22 +2474,28 @@ if (typeof browser === "undefined") {
 				.then(async (summary) => {
 					// Save summary to chronicle if enabled
 					try {
-						const chronicleConfig = await browser.storage.local.get([
-							"loreWeaveChronicleEnabled",
-							"loreWeaveNovelId",
-						]);
+						const chronicleConfig = await browser.storage.local.get(
+							["loreWeaveChronicleEnabled", "loreWeaveNovelId"],
+						);
 						if (
 							chronicleConfig.loreWeaveChronicleEnabled &&
 							chronicleConfig.loreWeaveNovelId &&
 							message.chapterNum
 						) {
 							const chronicleStoreKey = `rg_chronicle_${chronicleConfig.loreWeaveNovelId}`;
-							const storedChronicle = await browser.storage.local.get(chronicleStoreKey);
-							const chronicle = storedChronicle[chronicleStoreKey];
+							const storedChronicle =
+								await browser.storage.local.get(
+									chronicleStoreKey,
+								);
+							const chronicle =
+								storedChronicle[chronicleStoreKey];
 							if (chronicle?.chapters?.[message.chapterNum]) {
-								chronicle.chapters[message.chapterNum].summary = summary;
+								chronicle.chapters[message.chapterNum].summary =
+									summary;
 								chronicle.lastUpdated = Date.now();
-								await browser.storage.local.set({ [chronicleStoreKey]: chronicle });
+								await browser.storage.local.set({
+									[chronicleStoreKey]: chronicle,
+								});
 							}
 						}
 					} catch (_chronicleErr) {
@@ -2444,22 +2527,29 @@ if (typeof browser === "undefined") {
 				.then(async (summary) => {
 					// Save summary to chronicle if enabled
 					try {
-						const chronicleConfig = await browser.storage.local.get([
-							"loreWeaveChronicleEnabled",
-							"loreWeaveNovelId",
-						]);
+						const chronicleConfig = await browser.storage.local.get(
+							["loreWeaveChronicleEnabled", "loreWeaveNovelId"],
+						);
 						if (
 							chronicleConfig.loreWeaveChronicleEnabled &&
 							chronicleConfig.loreWeaveNovelId &&
 							message.chapterNum
 						) {
 							const chronicleStoreKey = `rg_chronicle_${chronicleConfig.loreWeaveNovelId}`;
-							const storedChronicle = await browser.storage.local.get(chronicleStoreKey);
-							const chronicle = storedChronicle[chronicleStoreKey];
+							const storedChronicle =
+								await browser.storage.local.get(
+									chronicleStoreKey,
+								);
+							const chronicle =
+								storedChronicle[chronicleStoreKey];
 							if (chronicle?.chapters?.[message.chapterNum]) {
-								chronicle.chapters[message.chapterNum].shortSummary = summary;
+								chronicle.chapters[
+									message.chapterNum
+								].shortSummary = summary;
 								chronicle.lastUpdated = Date.now();
-								await browser.storage.local.set({ [chronicleStoreKey]: chronicle });
+								await browser.storage.local.set({
+									[chronicleStoreKey]: chronicle,
+								});
 							}
 						}
 					} catch (_chronicleErr) {
@@ -2538,7 +2628,9 @@ if (typeof browser === "undefined") {
 		if (message.action === "checkNovelsNow") {
 			handleNovelUpdateAlarm()
 				.then(() => sendResponse({ success: true }))
-				.catch((err) => sendResponse({ success: false, error: err.message }));
+				.catch((err) =>
+					sendResponse({ success: false, error: err.message }),
+				);
 			return true;
 		}
 
@@ -2627,33 +2719,29 @@ if (typeof browser === "undefined") {
 			// Load latest config
 			currentConfig = await initConfig();
 
-			// Default values
-			let maxContextSize = 16000; // Default for gemini-2.5-flash
-			let maxOutputTokens = currentConfig.maxOutputTokens || 8192;
+			const maxOutputTokens = currentConfig.maxOutputTokens || 8192;
 
-			// Model-specific values
 			const modelId =
 				currentConfig.selectedModelId ||
 				currentConfig.modelEndpoint?.split("/").pop().split(":")[0] ||
-				"gemini-2.5-flash";
+				DEFAULT_MODEL_ID;
 
-			// Set appropriate context sizes based on model
-			if (modelId.includes("gemini-2.5-pro")) {
-				maxContextSize = 1000000; // 1M token context for Gemini 2.5 Pro
-			} else if (modelId.includes("gemini-2.5-flash")) {
-				maxContextSize = 16000; // 16k token context for Gemini 2.5 Flash
-			} else if (modelId.includes("gemini-2.0-flash")) {
-				maxContextSize = 32000; // 32k token context for Gemini 2.0 Flash
-			}
+			// Budgets live with the model list in constants.js. This used to be
+			// an if/else chain here, which meant every new model silently fell
+			// through to the default budget instead of getting its own.
+			const maxContextSize = getModelContextTokens(modelId);
 
 			// Get font size setting (default 100%)
 			const fontSize = currentConfig.fontSize || 100;
+			const readingFont =
+				currentConfig.readingFont || READING_FONT_DEFAULT;
 
 			return {
 				modelId,
 				maxContextSize,
 				maxOutputTokens,
 				fontSize,
+				readingFont,
 			};
 		} catch (error) {
 			debugError("Error determining model info:", error);
@@ -2663,6 +2751,7 @@ if (typeof browser === "undefined") {
 				maxContextSize: 16000,
 				maxOutputTokens: 8192,
 				fontSize: 100,
+				readingFont: READING_FONT_DEFAULT,
 			};
 		}
 	}
@@ -4225,9 +4314,7 @@ if (typeof browser === "undefined") {
 
 		switch (command) {
 			case "open-library":
-				browser.tabs.create({
-					url: browser.runtime.getURL("library/library.html"),
-				});
+				openLibraryTab();
 				break;
 
 			case "enhance-page":
@@ -4312,9 +4399,7 @@ if (typeof browser === "undefined") {
 	browser.contextMenus.onClicked.addListener((info, _tab) => {
 		switch (info.menuItemId) {
 			case "openNovelLibrary":
-				browser.tabs.create({
-					url: browser.runtime.getURL("library/library.html"),
-				});
+				openLibraryTab();
 				break;
 			case "openSettings":
 				browser.tabs.create({
@@ -4327,12 +4412,12 @@ if (typeof browser === "undefined") {
 	// Log the extension startup
 	debugLog("Ranobe Gemini extension initialized");
 
-	// Fallback heartbeat using setInterval (less reliable in MV3, but works as backup)
-	// Primary keep-alive is handled by chrome.alarms above
-	setInterval(() => {
-		// Only log occasionally to reduce noise
-		if (Math.random() < 0.1) {
-			debugLog("[Fallback] Background script heartbeat (setInterval)");
-		}
-	}, 25000);
+	// There used to be a 25s `setInterval` heartbeat here, described as a
+	// fallback for the alarms-based keep-alive. It was worse than useless: its
+	// body only wrote a debug log one time in ten, and firing every 25s is
+	// under Chromium's 30s service-worker idle timeout, so it reset that timer
+	// forever and pinned the worker awake for the entire browser session. That
+	// is the exact cost MV3 exists to avoid, paid for a log line. The real
+	// keep-alive is `setupKeepAliveAlarm()` above, which wakes the worker only
+	// when there is something to do.
 })();

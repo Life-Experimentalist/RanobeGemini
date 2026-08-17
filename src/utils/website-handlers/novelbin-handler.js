@@ -14,6 +14,7 @@
  */
 import { BaseWebsiteHandler } from "./base-handler.js";
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 
 export class NovelbinHandler extends BaseWebsiteHandler {
 	static SUPPORTED_DOMAINS = [
@@ -120,7 +121,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 * @returns {Promise<boolean>}
 	 */
 	static async normalizeURL() {
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		// novelarrow.com — primary canonical domain, never redirect
 		if (hostname === "novelarrow.com" || hostname === "www.novelarrow.com")
 			return false;
@@ -131,13 +132,13 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 		if (!hostname.includes("novelbin.")) return false;
 		const canonical = hostname.replace(/novelbin\.[a-z]+$/, "novelbin.com");
 		if (canonical === hostname) return false;
-		const target = window.location.href.replace(hostname, canonical);
+		const target = pageLocation().href.replace(hostname, canonical);
 		window.location.replace(target);
 		return true;
 	}
 
 	canHandle() {
-		const h = window.location.hostname;
+		const h = pageLocation().hostname;
 		return NovelbinHandler.SUPPORTED_DOMAINS.some((d) => {
 			if (d.startsWith("*.")) return h.endsWith(d.slice(1));
 			return h === d;
@@ -153,7 +154,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 *   NovelBin:   /b/{slug}       (2 segments, first = "b")
 	 *   NovelArrow: /novel/{slug}   (2 segments, first = "novel")
 	 */
-	_isDetailPageUrl(pathname = window.location.pathname) {
+	_isDetailPageUrl(pathname = pageLocation().pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
 		return parts.length === 2 && (parts[0] === "b" || parts[0] === "novel");
 	}
@@ -163,7 +164,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 *   NovelBin:   /b/{slug}/{chapter-slug}     (3+ segments, first = "b")
 	 *   NovelArrow: /novel/{slug}/{chapter-id}   (3+ segments, first = "novel")
 	 */
-	_isChapterPageUrl(pathname = window.location.pathname) {
+	_isChapterPageUrl(pathname = pageLocation().pathname) {
 		const parts = pathname.replace(/\/$/, "").split("/").filter(Boolean);
 		return parts.length >= 3 && (parts[0] === "b" || parts[0] === "novel");
 	}
@@ -203,7 +204,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	/**
 	 * Called after pushState/replaceState navigation to allow the handler to
 	 * reset any cached page-type state. isChapterPage() re-evaluates from
-	 * window.location.pathname on each call, so no reset is needed here.
+	 * pageLocation().pathname on each call, so no reset is needed here.
 	 */
 	refreshForCurrentUrl() {
 		return this.isChapterPage();
@@ -219,7 +220,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 
 	/** True when running on novelarrow.com. */
 	get _isNovelarrow() {
-		const h = window.location.hostname;
+		const h = pageLocation().hostname;
 		return h === "novelarrow.com" || h === "www.novelarrow.com";
 	}
 
@@ -227,7 +228,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 * Extract the novel slug from any supported URL.
 	 * Handles both /b/{slug} (NovelBin) and /novel/{slug} (NovelArrow).
 	 */
-	_novelSlug(url = window.location.href) {
+	_novelSlug(url = pageLocation().href) {
 		try {
 			const match = new URL(url).pathname.match(
 				/\/(?:b|novel)\/([a-z0-9-]+)/i,
@@ -243,7 +244,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 * Always uses "novelbin-{slug}" regardless of which domain was visited,
 	 * so novelarrow.com visits merge into existing novelbin library entries.
 	 */
-	generateNovelId(url = window.location.href) {
+	generateNovelId(url = pageLocation().href) {
 		const slug = this._novelSlug(url);
 		return slug ? `novelbin-${slug}` : null;
 	}
@@ -255,7 +256,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 *
 	 * Format: https://novelbin.com/b/{novelSlug}/{chapterSlug}
 	 */
-	getCanonicalCacheUrl(url = window.location.href) {
+	getCanonicalCacheUrl(url = pageLocation().href) {
 		try {
 			const path = new URL(url).pathname.replace(/\/$/, "");
 			const parts = path.split("/").filter(Boolean);
@@ -357,7 +358,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 
 	/** Normalize lastReadUrl before it is stored. */
 	getLastReadUrl() {
-		return this._normalizeDomain(window.location.href);
+		return this._normalizeDomain(pageLocation().href);
 	}
 
 	// -------------------------------------------------------------------------
@@ -478,7 +479,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			let currentChapter = null;
 			const titleText = this.extractTitle();
 			const fromTitle = titleText.match(/chapter[- _]*(\d+)/i);
-			const fromUrl = window.location.pathname.match(/chapter-(\d+)/i);
+			const fromUrl = pageLocation().pathname.match(/chapter-(\d+)/i);
 			const numMatch = fromTitle || fromUrl;
 			if (numMatch) currentChapter = parseInt(numMatch[1], 10);
 
@@ -527,7 +528,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 	 * Called in two contexts:
 	 *   1. From the content script on the current page
 	 *   2. From the background MetadataFetcher after it has swapped document.body
-	 *      with the fetched detail-page HTML (window.location still points to the
+	 *      with the fetched detail-page HTML (pageLocation() still points to the
 	 *      chapter URL in context 2, so we use DOM-based detection here).
 	 */
 	extractNovelMetadata() {
@@ -562,7 +563,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			const isNovelarrowPage =
 				ogSiteName.toLowerCase().includes("novel arrow") ||
 				canonicalHref.includes("novelarrow.com") ||
-				(window.location?.hostname || "").includes("novelarrow");
+				(pageLocation()?.hostname || "").includes("novelarrow");
 
 			if (isNovelarrowPage) {
 				const getMeta = (attr, val) =>
@@ -732,9 +733,6 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			}
 
 			// Cover image — novelbin lazy-loads via data-src
-			const coverImg = document.querySelector(
-				".books .book img.lazy, .book img[data-src], .book img",
-			);
 			metadata.coverUrl = this.extractCoverUrl([
 				".books .book img.lazy",
 				".book img[data-src]",
@@ -744,7 +742,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			// Main novel URL — prefer the canonical <link> when present
 			const canonical = document.querySelector('link[rel="canonical"]');
 			metadata.mainNovelUrl =
-				canonical?.getAttribute("href") || window.location.href;
+				canonical?.getAttribute("href") || pageLocation().href;
 		} catch (error) {
 			debugError("NovelBin: Error extracting metadata:", error);
 		}
@@ -766,7 +764,7 @@ export class NovelbinHandler extends BaseWebsiteHandler {
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 	}
 

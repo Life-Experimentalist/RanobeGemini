@@ -3,6 +3,7 @@
  * The abstract class that all website-specific handlers should extend
  */
 import { debugLog, debugError } from "../logger.js";
+import { pageLocation } from "../dom-env.js";
 import {
 	DEFAULT_BANNERS_VISIBLE,
 	UI_MOBILE_BREAKPOINT_PX,
@@ -21,6 +22,12 @@ export class BaseWebsiteHandler {
 	 * Settings definition for the library settings page.
 	 * null = no configurable settings for this handler.
 	 * Subclasses override this with a { fields: [...] } object.
+	 *
+	 * THIS is the one that reaches the reader. The Library renders these fields
+	 * on the site's card and saves the values into the per-site settings store
+	 * (`SITE_SETTINGS_KEY`, keyed by shelf id), which `content.js` reads.
+	 * `getProposedLibrarySettings()` below is a separate, unrelated schema — see
+	 * the warning on it before putting a setting there by mistake.
 	 */
 	static SETTINGS_DEFINITION = null;
 
@@ -272,12 +279,32 @@ export class BaseWebsiteHandler {
 		);
 	}
 
-	// Extract the full content of the chapter
+	/**
+	 * Extract the full content of the chapter.
+	 *
+	 * Handlers that need site-specific cleaning override this; the ones that
+	 * don't (FanFiction desktop and mobile) get this path, so it has to do the
+	 * two things a caller is entitled to assume. It used to do neither:
+	 *
+	 * - It read `document.title` directly instead of calling `this.extractTitle()`,
+	 *   which made every subclass's carefully-written `extractTitle()` dead code
+	 *   unless that subclass also overrode `extractContent()`. FanFiction's, which
+	 *   digs the story name out of `#profile_top`, was never reached — chapters
+	 *   were titled "Story, a fandom fanfic | FanFiction" instead.
+	 * - It read `innerText` off the live element, so scripts, ad slots and
+	 *   `<ins>` blocks sitting inside the content area went straight into the
+	 *   text handed to the model.
+	 */
 	extractContent() {
-		// Get title from the page
-		const title = document.title;
+		let title;
+		try {
+			title = this.extractTitle();
+		} catch {
+			// `extractTitle()` is abstract. A subclass that never implemented it
+			// should still get content back rather than an exception.
+			title = document.title;
+		}
 
-		// Find the content area
 		const contentArea = this.findContentArea();
 		if (!contentArea) {
 			return {
@@ -288,8 +315,10 @@ export class BaseWebsiteHandler {
 			};
 		}
 
-		// Extract text content
-		const content = contentArea.innerText;
+		const clone = this.cloneAndCleanContent(contentArea);
+		const content = this.cleanExtractedText(
+			clone.innerText || clone.textContent || "",
+		);
 
 		return {
 			found: content.length > 100,
@@ -331,7 +360,7 @@ export class BaseWebsiteHandler {
 	// This can be overridden by website-specific handlers
 	getSiteSpecificPrompt() {
 		// Get stored prompt for this site if it exists
-		const hostname = window.location.hostname;
+		const hostname = pageLocation().hostname;
 		const storedPrompt = this.getStoredSitePrompt(hostname);
 
 		if (storedPrompt) {
@@ -366,7 +395,7 @@ export class BaseWebsiteHandler {
 	// Get site identifier for the prompt UI
 	getSiteIdentifier() {
 		// Default implementation returns hostname
-		return window.location.hostname;
+		return pageLocation().hostname;
 	}
 
 	/**
@@ -384,7 +413,7 @@ export class BaseWebsiteHandler {
 			tags: [],
 			status: null,
 			description: null,
-			originalUrl: window.location.href,
+			originalUrl: pageLocation().href,
 		};
 	}
 
@@ -442,9 +471,19 @@ export class BaseWebsiteHandler {
 	}
 
 	/**
-	 * Get handler-proposed library settings
-	 * Handlers can propose custom settings that appear in library UI
-	 * Settings are only shown when the handler is enabled for a novel
+	 * Get handler-proposed library settings.
+	 *
+	 * WARNING — this is NOT how you add a user-facing setting. Nothing in the
+	 * shipped extension currently consumes this. It is returned by the
+	 * `getHandlerSettings` background message, keyed by *domain*, as a schema
+	 * (`key -> {type, default, label}`) rather than as values. It is not
+	 * rendered by the Library and it is not read by `content.js`.
+	 *
+	 * Declaring a setting here and expecting it to take effect is exactly the
+	 * bug recorded as UX-7 in PRODUCTION_READINESS_AUDIT.md — it fails silently,
+	 * because the lookup simply returns undefined. Use the static
+	 * `SETTINGS_DEFINITION` above instead.
+	 *
 	 * @returns {Object} Settings schema as { key: { type, enum, default, label, description, ... } }
 	 *                   Empty object means no custom settings for this handler
 	 */
@@ -561,10 +600,10 @@ export class BaseWebsiteHandler {
 	 * Resolve a possibly-relative URL against the current page (or an explicit base).
 	 * Returns null if the input is falsy; returns the input unchanged on error.
 	 * @param {string|null} url
-	 * @param {string} [base=window.location.href]
+	 * @param {string} [base=pageLocation().href]
 	 * @returns {string|null}
 	 */
-	normalizeUrl(url, base = window.location.href) {
+	normalizeUrl(url, base = pageLocation().href) {
 		if (!url) return null;
 		try {
 			return new URL(url, base).href;
@@ -591,7 +630,11 @@ export class BaseWebsiteHandler {
 		for (const sel of selectors) {
 			const el = root.querySelector(sel);
 			if (!el) continue;
-			const src = el.dataset?.src || el.getAttribute("src") || el.getAttribute("data-original") || "";
+			const src =
+				el.dataset?.src ||
+				el.getAttribute("src") ||
+				el.getAttribute("data-original") ||
+				"";
 			if (!src) continue;
 			if (skipPatterns.some((p) => src.includes(p))) continue;
 			return this.normalizeUrl(src) || null;
@@ -624,10 +667,14 @@ export class BaseWebsiteHandler {
 		const base = parseFloat(match[1]);
 		if (Number.isNaN(base)) return null;
 		switch ((match[2] || "").toLowerCase()) {
-			case "k": return Math.round(base * 1_000);
-			case "m": return Math.round(base * 1_000_000);
-			case "b": return Math.round(base * 1_000_000_000);
-			default:  return Math.round(base);
+			case "k":
+				return Math.round(base * 1_000);
+			case "m":
+				return Math.round(base * 1_000_000);
+			case "b":
+				return Math.round(base * 1_000_000_000);
+			default:
+				return Math.round(base);
 		}
 	}
 
@@ -653,7 +700,10 @@ export class BaseWebsiteHandler {
 			.replace(/\*([^\s*][^*]*[^\s*])\*/g, "<em>$1</em>")
 			.replace(/\*([^\s*]+)\*/g, "<em>$1</em>");
 		// Restore HTML tags — escape PH for use in regex
-		return out.replace(new RegExp(`${PH}(\\d+)\\|`, "g"), (_, i) => tags[parseInt(i)]);
+		return out.replace(
+			new RegExp(`${PH}(\\d+)\\|`, "g"),
+			(_, i) => tags[parseInt(i)],
+		);
 	}
 
 	/**
@@ -681,14 +731,16 @@ export class BaseWebsiteHandler {
 	/**
 	 * Get a fallback novel ID by base-64-hashing the URL path.
 	 * Handlers should prefer their own ID schemes; use this only as a last resort.
-	 * @param {string} [url=window.location.href]
+	 * @param {string} [url=pageLocation().href]
 	 * @param {string} prefix - Handler-specific prefix, e.g. "mysite"
 	 * @returns {string}
 	 */
-	generateFallbackNovelId(url = window.location.href, prefix = "novel") {
+	generateFallbackNovelId(url = pageLocation().href, prefix = "novel") {
 		try {
 			const pathname = new URL(url).pathname;
-			const hash = btoa(pathname).substring(0, 16).replace(/[^a-zA-Z0-9]/g, "");
+			const hash = btoa(pathname)
+				.substring(0, 16)
+				.replace(/[^a-zA-Z0-9]/g, "");
 			return `${prefix}-${hash}`;
 		} catch {
 			return `${prefix}-${Date.now()}`;

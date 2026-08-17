@@ -13,16 +13,23 @@ const DEFAULT_ACTIVE_SYNC_PROVIDER = "google-drive";
  */
 async function readSyncDestinations(browserRef, defaultProvider) {
 	try {
-		if (!browserRef?.storage?.local?.get) return [{ providerId: defaultProvider }];
+		if (!browserRef?.storage?.local?.get)
+			return [{ providerId: defaultProvider }];
 		const stored = await browserRef.storage.local.get([
 			"syncDestinations",
 			"activeSync",
 		]);
 
 		// New multi-sync format
-		if (Array.isArray(stored?.syncDestinations) && stored.syncDestinations.length) {
+		if (
+			Array.isArray(stored?.syncDestinations) &&
+			stored.syncDestinations.length
+		) {
 			return stored.syncDestinations
-				.filter((d) => d && typeof d.providerId === "string" && d.providerId)
+				.filter(
+					(d) =>
+						d && typeof d.providerId === "string" && d.providerId,
+				)
 				.map((d) => ({ ...d }));
 		}
 
@@ -51,7 +58,10 @@ export function createStorageSyncOrchestrator({
 	}
 
 	async function getActiveSyncProviderId() {
-		const destinations = await readSyncDestinations(browserRef, defaultProvider);
+		const destinations = await readSyncDestinations(
+			browserRef,
+			defaultProvider,
+		);
 		const primary = destinations[0]?.providerId || defaultProvider;
 		return registry.has(primary) ? primary : defaultProvider;
 	}
@@ -75,13 +85,21 @@ export function createStorageSyncOrchestrator({
 	 * Returns results from each destination.
 	 */
 	async function uploadBackup(backupBlob, options = {}) {
-		const destinations = await readSyncDestinations(browserRef, defaultProvider);
-		const validDestinations = destinations.filter((d) => registry.has(d.providerId));
+		const destinations = await readSyncDestinations(
+			browserRef,
+			defaultProvider,
+		);
+		const validDestinations = destinations.filter((d) =>
+			registry.has(d.providerId),
+		);
 
 		if (!validDestinations.length) {
 			// Fall back to default provider
 			const adapter = registry.get(defaultProvider);
-			if (!adapter) throw new Error(`No adapter for default provider '${defaultProvider}'.`);
+			if (!adapter)
+				throw new Error(
+					`No adapter for default provider '${defaultProvider}'.`,
+				);
 			const result = await adapter.uploadBackup(backupBlob, options);
 			return { providerId: defaultProvider, ...result };
 		}
@@ -96,12 +114,18 @@ export function createStorageSyncOrchestrator({
 			const adapter = registry.get(dest.providerId);
 			if (adapter) {
 				adapter
-					.uploadBackup(backupBlob, { ...options, customPath: dest.customPath })
+					.uploadBackup(backupBlob, {
+						...options,
+						customPath: dest.customPath,
+					})
 					.catch(() => {});
 			}
 		}
 
-		const result = await primaryAdapter.uploadBackup(backupBlob, primaryOpts);
+		const result = await primaryAdapter.uploadBackup(
+			backupBlob,
+			primaryOpts,
+		);
 		return { providerId: primary.providerId, ...result };
 	}
 

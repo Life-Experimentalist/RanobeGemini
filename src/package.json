@@ -1,0 +1,6 @@
+{
+	"//": "Not a package. Node resolves module type from the nearest package.json, so this marks src/**/*.js as ES modules — which is what the browser already loads them as. Without it Node treats them as CommonJS and test files cannot import them. dev/*.js stays CommonJS under the root package.json. Not copied into dist/ (see ASSETS_TO_COPY in dev/build.js).",
+	"name": "ranobe-gemini-src",
+	"private": true,
+	"type": "module"
+}

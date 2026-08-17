@@ -4,9 +4,13 @@
  */
 
 import { SHELF_REGISTRY } from "./domain-constants.js";
+import { SITE_SETTINGS_KEY, DOMAIN_SETTINGS_KEY } from "./constants.js";
 
-export const SITE_SETTINGS_KEY = "siteSettingsApi";
-export const DOMAIN_SETTINGS_KEY = "rg_domain_settings";
+// Re-exported so existing importers keep working. New code should prefer
+// importing these from `constants.js` directly — anything reachable from
+// `domain-constants.js` (which is every handler) *must*, because importing
+// them from here recreates the cycle they were moved out of.
+export { SITE_SETTINGS_KEY, DOMAIN_SETTINGS_KEY };
 
 let cachedDefaults = null;
 let cachedDomainDefaults = null;

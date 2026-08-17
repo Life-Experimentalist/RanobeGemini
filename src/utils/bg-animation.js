@@ -462,8 +462,12 @@ function init() {
 	}
 }
 
-if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", init);
-} else {
-	init();
+// Guarded so the module can be imported from a non-DOM context (tests, and
+// Chromium's MV3 service worker) without throwing at load time.
+if (typeof document !== "undefined") {
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", init);
+	} else {
+		init();
+	}
 }

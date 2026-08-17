@@ -1,13 +1,15 @@
 <!doctype html>
-<html>
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<title>Ranobe Gemini - Keep Alive</title>
-		</head>
-
-		<body>
-			<!-- This offscreen document keeps the service worker alive during long operations -->
-			<!-- It has no visible UI - it runs in the background -->
-			<script src="offscreen.js"></script>
-		</body>
+		<title>Ranobe Gemini — DOM host</title>
+	</head>
+	<body>
+		<!--
+			Invisible offscreen document. Chromium's MV3 background is a service
+			worker with no DOM, so page-scraping jobs are executed here instead.
+			See background/dom-host.js. Created on demand, closed when idle.
+		-->
+		<script type="module" src="offscreen.js"></script>
+	</body>
 </html>
