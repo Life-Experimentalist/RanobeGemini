@@ -39,7 +39,7 @@
 	--ls-sidebar-bg: var(--bg-secondary, #111827);
 	--ls-header-height: 64px;
 	--ls-nav-hover: rgba(128, 128, 128, 0.12);
-	--ls-nav-active: rgba(128, 128, 128, 0.20);
+	--ls-nav-active: rgba(128, 128, 128, 0.2);
 	--ls-section-radius: 10px;
 	--ls-input-radius: 7px;
 	--ls-focus-ring: 0 0 0 2px rgba(99, 102, 241, 0.5);
@@ -63,7 +63,9 @@ body {
 	height: 100%;
 	background: var(--bg-primary, #0f172a);
 	color: var(--text-primary, #e5e7eb);
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+		sans-serif;
 	font-size: 14px;
 	line-height: 1.5;
 	overflow: hidden;
@@ -179,7 +181,9 @@ textarea {
 	font-size: 13px;
 	font-weight: 500;
 	text-align: left;
-	transition: background var(--ls-transition), color var(--ls-transition);
+	transition:
+		background var(--ls-transition),
+		color var(--ls-transition);
 	position: relative;
 }
 
@@ -398,6 +402,39 @@ textarea {
 	line-height: 1.4;
 }
 
+/* Analytics disclosure. Reads as a quoted panel rather than another form row,
+   because it is a statement rather than something to change. */
+.ls-telemetry-details {
+	margin-top: 16px;
+	padding: 14px 16px;
+	border-radius: 8px;
+	background: var(--bg-tertiary);
+	border: 1px solid var(--border-color);
+}
+
+.ls-telemetry-details-title {
+	margin: 0 0 8px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.ls-telemetry-details-title + .ls-telemetry-details-list {
+	margin-bottom: 14px;
+}
+
+.ls-telemetry-details-list:last-child {
+	margin-bottom: 0;
+}
+
+.ls-telemetry-details-list {
+	margin: 0;
+	padding-left: 18px;
+	font-size: 11px;
+	line-height: 1.6;
+	color: var(--text-secondary);
+}
+
 /* Shared base for inputs, selects, textareas */
 .ls-input,
 .ls-select,
@@ -411,7 +448,10 @@ textarea {
 	color: var(--text-primary);
 	font-size: 13px;
 	line-height: 1.5;
-	transition: border-color var(--ls-transition), box-shadow var(--ls-transition), background-color var(--ls-transition);
+	transition:
+		border-color var(--ls-transition),
+		box-shadow var(--ls-transition),
+		background-color var(--ls-transition);
 	appearance: none;
 }
 
@@ -526,11 +566,13 @@ textarea {
 	outline: none;
 	cursor: pointer;
 	border: none;
-	background: linear-gradient(to right,
-			#6366f1 0%,
-			#6366f1 var(--slider-fill),
-			var(--bg-tertiary, #1f2937) var(--slider-fill),
-			var(--bg-tertiary, #1f2937) 100%);
+	background: linear-gradient(
+		to right,
+		#6366f1 0%,
+		#6366f1 var(--slider-fill),
+		var(--bg-tertiary, #1f2937) var(--slider-fill),
+		var(--bg-tertiary, #1f2937) 100%
+	);
 }
 
 .ls-range::-webkit-slider-thumb {
@@ -540,12 +582,16 @@ textarea {
 	border-radius: 50%;
 	background: #6366f1;
 	cursor: pointer;
-	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 2px 6px rgba(0, 0, 0, 0.4);
+	box-shadow:
+		0 0 0 3px rgba(99, 102, 241, 0.25),
+		0 2px 6px rgba(0, 0, 0, 0.4);
 	transition: box-shadow 0.15s;
 }
 
 .ls-range::-webkit-slider-thumb:hover {
-	box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.35), 0 2px 8px rgba(0, 0, 0, 0.5);
+	box-shadow:
+		0 0 0 5px rgba(99, 102, 241, 0.35),
+		0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .ls-range::-moz-range-thumb {
@@ -559,7 +605,9 @@ textarea {
 }
 
 .ls-range:focus-visible::-webkit-slider-thumb {
-	box-shadow: 0 0 0 4px #6366f1, 0 0 0 6px rgba(99, 102, 241, 0.25);
+	box-shadow:
+		0 0 0 4px #6366f1,
+		0 0 0 6px rgba(99, 102, 241, 0.25);
 }
 
 /* Inline row (input + button side by side) */
@@ -683,15 +731,15 @@ textarea {
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.ls-toggle input:checked+.ls-toggle-track {
+.ls-toggle input:checked + .ls-toggle-track {
 	background: #6366f1;
 }
 
-.ls-toggle input:checked+.ls-toggle-track::after {
+.ls-toggle input:checked + .ls-toggle-track::after {
 	transform: translateX(18px);
 }
 
-.ls-toggle input:focus-visible+.ls-toggle-track {
+.ls-toggle input:focus-visible + .ls-toggle-track {
 	box-shadow: var(--ls-focus-ring);
 }
 
@@ -723,7 +771,9 @@ textarea {
 	border: 2px solid var(--border-color, #374151);
 	border-radius: 4px;
 	cursor: pointer;
-	transition: background 0.15s, border-color 0.15s;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
 	position: relative;
 }
 
@@ -738,7 +788,7 @@ textarea {
 }
 
 .ls-checkbox-label input[type="checkbox"]:checked::after {
-	content: '';
+	content: "";
 	position: absolute;
 	left: 3px;
 	top: 0px;
@@ -751,7 +801,7 @@ textarea {
 }
 
 .ls-radio-label input[type="radio"]:checked::after {
-	content: '';
+	content: "";
 	position: absolute;
 	top: 3px;
 	left: 3px;
@@ -789,7 +839,10 @@ textarea {
 	font-size: 13px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: background var(--ls-transition), transform var(--ls-transition), box-shadow var(--ls-transition);
+	transition:
+		background var(--ls-transition),
+		transform var(--ls-transition),
+		box-shadow var(--ls-transition);
 	white-space: nowrap;
 }
 
@@ -926,7 +979,9 @@ textarea {
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 	transform: translateY(20px);
 	opacity: 0;
-	transition: opacity 0.3s, transform 0.3s;
+	transition:
+		opacity 0.3s,
+		transform 0.3s;
 	pointer-events: none;
 }
 
@@ -1026,8 +1081,14 @@ textarea {
 }
 
 @keyframes ls-fade-in {
-	from { opacity: 0; transform: translateY(4px); }
-	to   { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 /* Legacy tab classes — kept in case old HTML paths still reference them */
@@ -1050,7 +1111,9 @@ textarea {
 	font-size: 13px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: background var(--ls-transition), color var(--ls-transition),
+	transition:
+		background var(--ls-transition),
+		color var(--ls-transition),
 		border-color var(--ls-transition);
 }
 
@@ -1697,7 +1760,9 @@ textarea {
 	cursor: pointer;
 	border: 2px solid var(--border-color);
 	border-radius: 8px;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 	position: relative;
 	overflow: hidden;
 }
@@ -1709,7 +1774,7 @@ textarea {
 	height: 0;
 }
 
-.backup-mode-card input[type="radio"]:checked~.backup-mode-card-body {
+.backup-mode-card input[type="radio"]:checked ~ .backup-mode-card-body {
 	background: rgba(66, 133, 244, 0.12);
 	border-color: #4285f4;
 }
@@ -1887,7 +1952,10 @@ textarea {
 	color: var(--text-primary);
 	cursor: pointer;
 	font-size: 13px;
-	transition: background 0.2s, border-color 0.2s, color 0.2s;
+	transition:
+		background 0.2s,
+		border-color 0.2s,
+		color 0.2s;
 	white-space: nowrap;
 	line-height: 1.4;
 }
@@ -1958,14 +2026,14 @@ textarea {
 }
 
 /* ── Advanced theme section ───────────────────────────────────────────────────*/
-.ls-theme-advanced>summary {
+.ls-theme-advanced > summary {
 	font-size: 12px;
 	color: var(--text-secondary);
 	cursor: pointer;
 	padding: 4px 0;
 }
 
-.ls-theme-advanced[open]>summary {
+.ls-theme-advanced[open] > summary {
 	color: var(--primary-color);
 }
 
@@ -2025,7 +2093,9 @@ textarea {
 	font-size: 14px;
 	padding: 2px 6px;
 	border-radius: 4px;
-	transition: background 0.15s, color 0.15s;
+	transition:
+		background 0.15s,
+		color 0.15s;
 	flex-shrink: 0;
 }
 

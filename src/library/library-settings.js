@@ -25,7 +25,13 @@ import {
 	CAROUSEL_MIN_COUNT,
 	CAROUSEL_DEFAULT_MANUAL_COUNT,
 	DEFAULT_MODEL_ID,
+	DEFAULT_BACKUP_MODEL_ID,
 	DEFAULT_MODEL_ENDPOINT,
+	geminiModelOptionsHtml,
+	fillGeminiModelSelect,
+	READING_FONT_DEFAULT,
+	fillReadingFontSelect,
+	getReadingFontStack,
 } from "../utils/constants.js";
 import {
 	isSupportedDomain,
@@ -59,8 +65,19 @@ import {
 	deleteRollingBackup,
 	BACKUP_OPTIONS,
 } from "../utils/comprehensive-backup.js";
+import {
+	getRecoveryCode,
+	isBackupEncryptionEnabled,
+	setBackupEncryptionEnabled,
+	setBackupKeyFromRecoveryCode,
+} from "../utils/backup-crypto.js";
 import { libraryBackupManager } from "../utils/library-backup-manager.js";
 import { getTelemetryConfig, saveTelemetryConfig } from "../utils/telemetry.js";
+import {
+	CHAT_SETTINGS_KEY,
+	getChatSettings,
+	normalizeChatSettings,
+} from "../utils/chat-settings.js";
 import {
 	formatExportFilename,
 	EXPORT_TOKENS,
@@ -74,27 +91,73 @@ import {
 	createBoxType,
 	generateCSSForBoxTypes,
 } from "../utils/custom-box-types.js";
+import {
+	isLoreWeaveEnabled,
+	setLoreWeaveEnabled,
+} from "../utils/loreweave-gate.js";
 
 // ── Navigation tabs definition ────────────────────────────────────────────────
 const SETTINGS_TABS = [
 	// Core / API
 	{ id: "general", icon: "💾", label: "General", panelId: "panel-general" },
-	{ id: "ai-providers", icon: "🤖", label: "AI Providers", panelId: "panel-ai-providers" },
+	{
+		id: "ai-providers",
+		icon: "🤖",
+		label: "AI Providers",
+		panelId: "panel-ai-providers",
+	},
 	{ id: "prompts", icon: "✍️", label: "Prompts", panelId: "panel-prompts" },
 	// Reading / Display
-	{ id: "statuses", icon: "📋", label: "Statuses", panelId: "panel-statuses" },
+	{
+		id: "statuses",
+		icon: "📋",
+		label: "Statuses",
+		panelId: "panel-statuses",
+	},
 	{ id: "copy", icon: "📋", label: "Copy Format", panelId: "panel-copy" },
 	// Content processing (merged filters + boxes)
-	{ id: "content-processing", icon: "🎨", label: "Content", panelId: "panel-content-processing" },
+	{
+		id: "content-processing",
+		icon: "🎨",
+		label: "Content",
+		panelId: "panel-content-processing",
+	},
 	// Library management
 	{ id: "sites", icon: "🌐", label: "Sites", panelId: "panel-sites" },
-	{ id: "automation", icon: "⚡", label: "Automation", panelId: "panel-automation" },
+	{
+		id: "automation",
+		icon: "⚡",
+		label: "Automation",
+		panelId: "panel-automation",
+	},
 	{ id: "backups", icon: "☁️", label: "Backups", panelId: "panel-backups" },
 	// Story tools (Queue + Chat merged into LoreWeave/AI-Providers panels)
-	{ id: "loreweave", icon: "🕸️", label: "LoreWeave", panelId: "panel-loreweave" },
+	{
+		id: "loreweave",
+		icon: "🕸️",
+		label: "LoreWeave",
+		panelId: "panel-loreweave",
+	},
 	// Advanced
-	{ id: "advanced", icon: "⚙️", label: "Advanced", panelId: "panel-advanced" },
+	{
+		id: "advanced",
+		icon: "⚙️",
+		label: "Advanced",
+		panelId: "panel-advanced",
+	},
 ];
+
+// Resolved once in init(), before the nav is rendered. While false the LoreWeave
+// tab is not rendered and its panel is never activated, so the experimental
+// integration is invisible rather than merely inert.
+let loreWeaveTabVisible = false;
+
+/** Tabs the user can actually reach, in nav order. */
+function visibleTabs() {
+	return SETTINGS_TABS.filter(
+		(tab) => tab.id !== "loreweave" || loreWeaveTabVisible,
+	);
+}
 
 // ── Theme — centralized ───────────────────────────────────────────────────────
 import {
@@ -167,8 +230,9 @@ function renderNav() {
 	const nav = $("ls-nav");
 	if (!nav) return;
 
-	nav.innerHTML = SETTINGS_TABS.map(
-		(tab) => `
+	nav.innerHTML = visibleTabs()
+		.map(
+			(tab) => `
 		<button
 			class="ls-nav-item"
 			data-tab="${tab.id}"
@@ -180,7 +244,8 @@ function renderNav() {
 			<span class="ls-nav-label">${tab.label}</span>
 		</button>
 	`,
-	).join("");
+		)
+		.join("");
 
 	nav.querySelectorAll(".ls-nav-item").forEach((btn) => {
 		btn.addEventListener("click", () => activateTab(btn.dataset.tab));
@@ -197,7 +262,7 @@ function activateTab(tabId) {
 	document.querySelectorAll(".ls-panel").forEach((panel) => {
 		panel.classList.remove("active");
 	});
-	const tab = SETTINGS_TABS.find((t) => t.id === tabId);
+	const tab = visibleTabs().find((t) => t.id === tabId);
 	if (tab) {
 		const panel = $(tab.panelId);
 		if (panel) panel.classList.add("active");
@@ -212,12 +277,16 @@ function activateTab(tabId) {
 function activateTabFromUrl() {
 	const params = new URLSearchParams(window.location.search);
 	const tab = params.get("tab");
-	const found = SETTINGS_TABS.find((t) => t.id === tab);
-	activateTab(found ? found.id : SETTINGS_TABS[0].id);
+	const tabs = visibleTabs();
+	// ?tab=loreweave with the integration off falls through to the first tab.
+	const found = tabs.find((t) => t.id === tab);
+	activateTab(found ? found.id : tabs[0].id);
 }
 
-// Expose activateTab globally so inline onclick="activateTab(...)" in HTML works
-window.activateTab = activateTab;
+// NOTE: activateTab used to be exposed on `window` for inline
+// `onclick="activateTab(...)"` attributes in library-settings.html. Those
+// attributes are gone (and would never fire under the MV3 extension-page CSP,
+// which forbids `unsafe-inline`), so the global is no longer published.
 
 // ── AI Provider per-slot switcher ─────────────────────────────────────────────
 function initAiProviderTabs() {
@@ -235,7 +304,10 @@ function initAiProviderTabs() {
 	const fallbackConfig = $("fallback-model-config");
 	if (fallbackToggle && fallbackConfig) {
 		fallbackToggle.addEventListener("change", () => {
-			fallbackConfig.classList.toggle("ls-hidden", !fallbackToggle.checked);
+			fallbackConfig.classList.toggle(
+				"ls-hidden",
+				!fallbackToggle.checked,
+			);
 		});
 	}
 }
@@ -255,7 +327,11 @@ function switchProviderConfig(slot, provider) {
 	if (slot === "primary") {
 		const badge = $("primary-provider-badge");
 		if (badge) {
-			const labels = { gemini: "Gemini", openai: "OpenAI", ollama: "Ollama" };
+			const labels = {
+				gemini: "Gemini",
+				openai: "OpenAI",
+				ollama: "Ollama",
+			};
 			badge.textContent = labels[provider] ?? provider;
 		}
 	}
@@ -263,11 +339,13 @@ function switchProviderConfig(slot, provider) {
 
 /** Set active class on provider tab pills for a slot. */
 function syncProviderTabs(slot, provider) {
-	document.querySelectorAll(`.ls-provider-tab[data-slot="${slot}"]`).forEach((btn) => {
-		const active = btn.dataset.provider === provider;
-		btn.classList.toggle("active", active);
-		btn.setAttribute("aria-pressed", active ? "true" : "false");
-	});
+	document
+		.querySelectorAll(`.ls-provider-tab[data-slot="${slot}"]`)
+		.forEach((btn) => {
+			const active = btn.dataset.provider === provider;
+			btn.classList.toggle("active", active);
+			btn.setAttribute("aria-pressed", active ? "true" : "false");
+		});
 }
 
 // ── Version badge ─────────────────────────────────────────────────────────────
@@ -447,6 +525,16 @@ async function loadLibraryThemeControls() {
 			updateSliderFill(fsSl);
 		}
 
+		// Reading typeface
+		const rfSel = $("library-reading-font");
+		if (rfSel) {
+			const stored = await browser.storage.local.get("readingFont");
+			const id = stored.readingFont || READING_FONT_DEFAULT;
+			fillReadingFontSelect(rfSel, id);
+			// Preview in the control itself, so picking a face shows the face.
+			rfSel.style.fontFamily = getReadingFontStack(id);
+		}
+
 		setThemeVariables(theme);
 
 		// ── Auto-behavior panel ────────────────────────────────────────────────
@@ -479,7 +567,10 @@ async function fetchLibraryModels(apiKey) {
 		);
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 		const data = await response.json();
-		const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(/\/[^/]+:generateContent$/, "");
+		const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(
+			/\/[^/]+:generateContent$/,
+			"",
+		);
 		return (data.models || [])
 			.filter(
 				(m) =>
@@ -503,7 +594,9 @@ async function fetchLibraryModels(apiKey) {
 async function fetchOpenAIModels(baseUrl, apiKey) {
 	if (!baseUrl || !apiKey) return [];
 	try {
-		const modelsUrl = baseUrl.replace(/\/chat\/completions\/?$/, "").replace(/\/$/, "") + "/models";
+		const modelsUrl =
+			baseUrl.replace(/\/chat\/completions\/?$/, "").replace(/\/$/, "") +
+			"/models";
 		const res = await fetch(modelsUrl, {
 			headers: { Authorization: `Bearer ${apiKey}` },
 		});
@@ -524,7 +617,10 @@ async function fetchOllamaModels(baseUrl) {
 		const res = await fetch(url);
 		if (!res.ok) return [];
 		const data = await res.json();
-		return (data.models || []).map((m) => ({ id: m.name, displayName: m.name }));
+		return (data.models || []).map((m) => ({
+			id: m.name,
+			displayName: m.name,
+		}));
 	} catch {
 		return [];
 	}
@@ -607,11 +703,7 @@ async function updateLibraryModelSelector(apiKey, slot = "primary") {
 		}
 	} catch (err) {
 		debugError(`Error updating ${slot} model selector:`, err);
-		sel.innerHTML = `
-			<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-			<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-			<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-		`;
+		sel.innerHTML = geminiModelOptionsHtml(sel.value);
 	} finally {
 		sel.disabled = false;
 	}
@@ -636,7 +728,7 @@ async function loadLibraryModelSettings() {
 		// ── Primary Slot ──
 		const primaryConfig = data.primaryModelConfig || {
 			provider: "gemini",
-			modelId: data.selectedModelId || "gemini-2.5-flash",
+			modelId: data.selectedModelId || DEFAULT_MODEL_ID,
 		};
 		const primaryProviderSel = $("primary-provider-select");
 		if (primaryProviderSel) {
@@ -650,17 +742,16 @@ async function loadLibraryModelSettings() {
 			} else {
 				const sel = $("library-model-select");
 				if (sel) {
-					sel.innerHTML = `
-						<option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
-						<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-						<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-					`;
+					sel.innerHTML = geminiModelOptionsHtml(
+						primaryConfig.modelId,
+					);
 					sel.value = primaryConfig.modelId;
 				}
 			}
 		} else if (primaryConfig.provider === "openai") {
 			if ($("primary-openai-base-url"))
-				$("primary-openai-base-url").value = primaryConfig.baseUrl || "";
+				$("primary-openai-base-url").value =
+					primaryConfig.baseUrl || "";
 			// Populate custom text input always; try to match select option too
 			const poModel = $("primary-openai-model");
 			const poCustom = $("primary-openai-model-custom");
@@ -706,7 +797,7 @@ async function loadLibraryModelSettings() {
 
 		const fallbackConfig = data.fallbackModelConfig || {
 			provider: "gemini",
-			modelId: "gemini-2.0-flash",
+			modelId: DEFAULT_BACKUP_MODEL_ID,
 		};
 		const fallbackProviderSel = $("fallback-provider-select");
 		if (fallbackProviderSel) {
@@ -720,17 +811,16 @@ async function loadLibraryModelSettings() {
 			} else {
 				const sel = $("fallback-gemini-model");
 				if (sel) {
-					sel.innerHTML = `
-						<option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-						<option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-						<option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-					`;
+					sel.innerHTML = geminiModelOptionsHtml(
+						fallbackConfig.modelId,
+					);
 					sel.value = fallbackConfig.modelId;
 				}
 			}
 		} else if (fallbackConfig.provider === "openai") {
 			if ($("fallback-openai-base-url"))
-				$("fallback-openai-base-url").value = fallbackConfig.baseUrl || "";
+				$("fallback-openai-base-url").value =
+					fallbackConfig.baseUrl || "";
 			if ($("fallback-openai-model"))
 				$("fallback-openai-model").value = fallbackConfig.modelId || "";
 			if ($("fallback-openai-key"))
@@ -965,9 +1055,6 @@ async function loadTelemetrySettings() {
 		const webhookIn = $("webhook-url");
 		if (webhookIn) webhookIn.value = config.customWebhookUrl || "";
 
-		const telDetails = document.getElementById("telemetry-details");
-		if (telDetails) telDetails.style.display = "block";
-
 		const debugResult = await browser.storage.local.get("debugMode");
 		const debugToggle = $("library-debug-mode");
 		if (debugToggle) debugToggle.checked = debugResult.debugMode !== false;
@@ -1095,18 +1182,24 @@ function renderSiteSettingsCards() {
 
 	shelves.forEach((regEntry) => {
 		const shelfId = regEntry.id;
-		const shelf = SHELVES[shelfId.toUpperCase()] || SHELVES[shelfId] || regEntry;
-		const shelfSett = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+		const shelf =
+			SHELVES[shelfId.toUpperCase()] || SHELVES[shelfId] || regEntry;
+		const shelfSett =
+			siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
 		const isForceDisabled = regEntry.forceDisabled === true;
 		const isEnabled = !isForceDisabled && shelfSett.enabled !== false;
 		const autoAddEnabled = shelfSett.autoAddEnabled !== false;
 		const permissionOrigins = regEntry.permissionOrigins || [];
-		const siteDef = WEBSITE_SETTINGS_DEFINITIONS.find((d) => d.id === shelfId);
+		const siteDef = WEBSITE_SETTINGS_DEFINITIONS.find(
+			(d) => d.id === shelfId,
+		);
 		const hasSettings = Boolean(siteDef);
 
 		// ── Card wrapper ───────────────────────────────────────────────────
 		const card = document.createElement("div");
-		card.className = "ls-site-card" + (isForceDisabled ? " ls-site-card--force-disabled" : "");
+		card.className =
+			"ls-site-card" +
+			(isForceDisabled ? " ls-site-card--force-disabled" : "");
 		card.dataset.shelf = shelfId;
 
 		// ── Header ─────────────────────────────────────────────────────────
@@ -1176,7 +1269,8 @@ function renderSiteSettingsCards() {
 		if (!isForceDisabled) {
 			// ── Auto-add sub-row ───────────────────────────────────────────
 			const aaRow = document.createElement("div");
-			aaRow.className = "ls-site-card-autoadd" + (isEnabled ? "" : " ls-hidden");
+			aaRow.className =
+				"ls-site-card-autoadd" + (isEnabled ? "" : " ls-hidden");
 
 			const aaLbl = document.createElement("span");
 			aaLbl.className = "ls-site-autoadd-label";
@@ -1199,7 +1293,8 @@ function renderSiteSettingsCards() {
 			chLbl.className = "ls-site-autoadd-label";
 			chLbl.textContent = "On chapter:";
 			const chSel = _makeStatusSelect(
-				shelfId, "chapter",
+				shelfId,
+				"chapter",
 				shelfSett.autoAddStatusChapter || READING_STATUS.READING,
 			);
 			aaRow.appendChild(chLbl);
@@ -1209,7 +1304,8 @@ function renderSiteSettingsCards() {
 			nvLbl.className = "ls-site-autoadd-label";
 			nvLbl.textContent = "On novel:";
 			const nvSel = _makeStatusSelect(
-				shelfId, "novel",
+				shelfId,
+				"novel",
 				shelfSett.autoAddStatusNovel || READING_STATUS.PLAN_TO_READ,
 			);
 			aaRow.appendChild(nvLbl);
@@ -1223,7 +1319,10 @@ function renderSiteSettingsCards() {
 				// Start expanded so settings are immediately visible
 				settingsPanel.className = "ls-site-card-settings";
 				const stored = siteSettings[shelfId] || {};
-				settingsPanel.innerHTML = renderWebsiteSettingsPanel(siteDef, stored);
+				settingsPanel.innerHTML = renderWebsiteSettingsPanel(
+					siteDef,
+					stored,
+				);
 				card.appendChild(settingsPanel);
 
 				const chevron = header.querySelector(".ls-site-card-chevron");
@@ -1232,8 +1331,12 @@ function renderSiteSettingsCards() {
 					chevron.setAttribute("aria-expanded", "true");
 					chevron.textContent = "▴";
 					chevron.addEventListener("click", () => {
-						const expanded = chevron.getAttribute("aria-expanded") === "true";
-						chevron.setAttribute("aria-expanded", String(!expanded));
+						const expanded =
+							chevron.getAttribute("aria-expanded") === "true";
+						chevron.setAttribute(
+							"aria-expanded",
+							String(!expanded),
+						);
 						chevron.textContent = expanded ? "▾" : "▴";
 						settingsPanel.classList.toggle("ls-hidden", expanded);
 					});
@@ -1247,10 +1350,16 @@ function renderSiteSettingsCards() {
 					const wantEnabled = e.target.checked;
 					if (wantEnabled && permissionOrigins.length) {
 						try {
-							const granted = await browser.permissions.request({ origins: permissionOrigins });
+							const granted = await browser.permissions.request({
+								origins: permissionOrigins,
+							});
 							if (!granted) {
 								e.target.checked = false;
-								showToast("Permission denied for " + (shelf.name || shelfId), "error");
+								showToast(
+									"Permission denied for " +
+										(shelf.name || shelfId),
+									"error",
+								);
 								return;
 							}
 						} catch (err) {
@@ -1259,12 +1368,20 @@ function renderSiteSettingsCards() {
 							return;
 						}
 					} else if (!wantEnabled && permissionOrigins.length) {
-						browser.permissions.remove({ origins: permissionOrigins }).catch(() => {});
+						browser.permissions
+							.remove({ origins: permissionOrigins })
+							.catch(() => {});
 					}
 					const aaRowEl = card.querySelector(".ls-site-card-autoadd");
-					if (aaRowEl) aaRowEl.classList.toggle("ls-hidden", !wantEnabled);
-					const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-					siteSettings[shelfId] = { ...current, enabled: wantEnabled };
+					if (aaRowEl)
+						aaRowEl.classList.toggle("ls-hidden", !wantEnabled);
+					const current =
+						siteSettings[shelfId] ||
+						getDefaultSiteSettings(shelfId);
+					siteSettings[shelfId] = {
+						...current,
+						enabled: wantEnabled,
+					};
 					await saveSiteSettings(siteSettings);
 					showToast(
 						wantEnabled
@@ -1277,8 +1394,12 @@ function renderSiteSettingsCards() {
 
 			// ── Auto-add toggle ────────────────────────────────────────────
 			aaInput.addEventListener("change", async (e) => {
-				const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
-				siteSettings[shelfId] = { ...current, autoAddEnabled: e.target.checked };
+				const current =
+					siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+				siteSettings[shelfId] = {
+					...current,
+					autoAddEnabled: e.target.checked,
+				};
 				await saveSiteSettings(siteSettings);
 				showToast(
 					e.target.checked
@@ -1292,9 +1413,12 @@ function renderSiteSettingsCards() {
 			[chSel, nvSel].forEach((sel) => {
 				sel.addEventListener("change", async (e) => {
 					const mode = e.target.dataset.mode;
-					const current = siteSettings[shelfId] || getDefaultSiteSettings(shelfId);
+					const current =
+						siteSettings[shelfId] ||
+						getDefaultSiteSettings(shelfId);
 					const updated = { ...current };
-					if (mode === "chapter") updated.autoAddStatusChapter = e.target.value;
+					if (mode === "chapter")
+						updated.autoAddStatusChapter = e.target.value;
 					else updated.autoAddStatusNovel = e.target.value;
 					siteSettings[shelfId] = updated;
 					await saveSiteSettings(siteSettings);
@@ -1302,8 +1426,11 @@ function renderSiteSettingsCards() {
 			});
 
 			// ── Per-site setting field changes ─────────────────────────────
-			card.querySelectorAll("input[data-setting], select[data-setting], textarea[data-setting]").forEach((input) => {
-				const evtName = input.tagName === "TEXTAREA" ? "input" : "change";
+			card.querySelectorAll(
+				"input[data-setting], select[data-setting], textarea[data-setting]",
+			).forEach((input) => {
+				const evtName =
+					input.tagName === "TEXTAREA" ? "input" : "change";
 				let saveTimer = null;
 				input.addEventListener(evtName, async (e) => {
 					const sid = e.target.dataset.shelf;
@@ -1311,15 +1438,28 @@ function renderSiteSettingsCards() {
 					if (!sid || !settKey) return;
 					let val;
 					if (e.target.type === "checkbox") val = e.target.checked;
-					else if (e.target.type === "number") val = parseFloat(e.target.value) || 0;
+					else if (e.target.type === "number")
+						val = parseFloat(e.target.value) || 0;
 					else val = e.target.value;
-					siteSettings[sid] = { ...(siteSettings[sid] || {}), [settKey]: val };
+					siteSettings[sid] = {
+						...(siteSettings[sid] || {}),
+						[settKey]: val,
+					};
 					// Debounce save for textarea/number to avoid hammering storage
 					if (saveTimer) clearTimeout(saveTimer);
-					saveTimer = setTimeout(async () => {
-						await saveSiteSettings(siteSettings);
-						showToast((shelf.name || sid) + " setting saved", "success");
-					}, e.target.type === "number" || e.target.tagName === "TEXTAREA" ? 600 : 0);
+					saveTimer = setTimeout(
+						async () => {
+							await saveSiteSettings(siteSettings);
+							showToast(
+								(shelf.name || sid) + " setting saved",
+								"success",
+							);
+						},
+						e.target.type === "number" ||
+							e.target.tagName === "TEXTAREA"
+							? 600
+							: 0,
+					);
 				});
 			});
 		}
@@ -1405,7 +1545,7 @@ async function loadRollingBackups() {
 	listEl.querySelectorAll(".rolling-download").forEach((btn) => {
 		btn.addEventListener("click", async () => {
 			const backup = await getRollingBackup(btn.dataset.key);
-			if (backup) downloadBackupAsFile(backup);
+			if (backup) await downloadBackupAsFile(backup);
 		});
 	});
 
@@ -1711,7 +1851,12 @@ function inferChapterHintFromUrl(url) {
 }
 
 // ── Import Preview Modal ────────────────────────────────────────────────────────
-function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfirm }) {
+function showImportPreviewModal({
+	prepared,
+	invalidUrls,
+	totalExtracted,
+	onConfirm,
+}) {
 	document.getElementById("import-preview-modal")?.remove();
 
 	const toImport = prepared.toImport || [];
@@ -1720,18 +1865,22 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	const overlay = document.createElement("div");
 	overlay.id = "import-preview-modal";
-	overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";
+	overlay.style.cssText =
+		"position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";
 
 	const modal = document.createElement("div");
-	modal.style.cssText = "background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:10px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;";
+	modal.style.cssText =
+		"background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:10px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;";
 
 	// ── Header ──────────────────────────────────────────────────────────────
 	const hdr = document.createElement("div");
-	hdr.style.cssText = "padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;";
+	hdr.style.cssText =
+		"padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;";
 	const htitle = document.createElement("div");
 	htitle.innerHTML = `<div style="font-size:15px;font-weight:700;color:var(--text-primary)">Review URLs Before Import</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${totalExtracted} URL(s) extracted from your text</div>`;
 	const closeX = document.createElement("button");
-	closeX.style.cssText = "background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;";
+	closeX.style.cssText =
+		"background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px;";
 	closeX.textContent = "✕";
 	closeX.addEventListener("click", () => overlay.remove());
 	hdr.appendChild(htitle);
@@ -1740,11 +1889,20 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	// ── Breakdown chips ──────────────────────────────────────────────────────
 	const chips = document.createElement("div");
-	chips.style.cssText = "padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);background:var(--bg-tertiary,#1f2937);";
+	chips.style.cssText =
+		"padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);background:var(--bg-tertiary,#1f2937);";
 	const chipDefs = [
 		{ n: toImport.length, label: "ready to import", color: "#22c55e" },
-		{ n: existingItems.length, label: "already in library", color: "#f59e0b" },
-		{ n: invalidUrls.length, label: "invalid / unsupported", color: "#ef4444" },
+		{
+			n: existingItems.length,
+			label: "already in library",
+			color: "#f59e0b",
+		},
+		{
+			n: invalidUrls.length,
+			label: "invalid / unsupported",
+			color: "#ef4444",
+		},
 		{ n: duplicateItems.length, label: "duplicates", color: "#8b5cf6" },
 	];
 	for (const { n, label, color } of chipDefs) {
@@ -1757,7 +1915,8 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	// ── Tab bar ──────────────────────────────────────────────────────────────
 	const tabBar = document.createElement("div");
-	tabBar.style.cssText = "display:flex;border-bottom:1px solid var(--border-color,#333);padding:0 20px;background:var(--bg-secondary);";
+	tabBar.style.cssText =
+		"display:flex;border-bottom:1px solid var(--border-color,#333);padding:0 20px;background:var(--bg-secondary);";
 	const body = document.createElement("div");
 	body.style.cssText = "flex:1;overflow-y:auto;padding:16px 20px;";
 
@@ -1766,16 +1925,32 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	const tabDefs = [
 		{ id: "ready", label: `✅ Ready (${toImport.length})`, show: true },
-		{ id: "existing", label: `📚 In Library (${existingItems.length})`, show: existingItems.length > 0 },
-		{ id: "invalid", label: `❌ Invalid (${invalidUrls.length})`, show: invalidUrls.length > 0 },
-		{ id: "duplicates", label: `♻️ Duplicates (${duplicateItems.length})`, show: duplicateItems.length > 0 },
+		{
+			id: "existing",
+			label: `📚 In Library (${existingItems.length})`,
+			show: existingItems.length > 0,
+		},
+		{
+			id: "invalid",
+			label: `❌ Invalid (${invalidUrls.length})`,
+			show: invalidUrls.length > 0,
+		},
+		{
+			id: "duplicates",
+			label: `♻️ Duplicates (${duplicateItems.length})`,
+			show: duplicateItems.length > 0,
+		},
 	].filter((t) => t.show || t.id === "ready");
 
 	function activateTab(id) {
 		tabBtns.forEach((b) => {
 			const active = b.dataset.tid === id;
-			b.style.borderBottom = active ? "2px solid var(--accent-color,#7c3aed)" : "2px solid transparent";
-			b.style.color = active ? "var(--accent-color,#7c3aed)" : "var(--text-secondary)";
+			b.style.borderBottom = active
+				? "2px solid var(--accent-color,#7c3aed)"
+				: "2px solid transparent";
+			b.style.color = active
+				? "var(--accent-color,#7c3aed)"
+				: "var(--text-secondary)";
 			b.style.fontWeight = active ? "600" : "400";
 		});
 		for (const [sid, sec] of Object.entries(sections)) {
@@ -1785,7 +1960,8 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	for (const t of tabDefs) {
 		const btn = document.createElement("button");
-		btn.style.cssText = "background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;font-size:12px;cursor:pointer;white-space:nowrap;";
+		btn.style.cssText =
+			"background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;font-size:12px;cursor:pointer;white-space:nowrap;";
 		btn.textContent = t.label;
 		btn.dataset.tid = t.id;
 		btn.addEventListener("click", () => activateTab(t.id));
@@ -1802,19 +1978,23 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		const sec = sections["ready"];
 		if (toImport.length === 0) {
 			const p = document.createElement("p");
-			p.style.cssText = "color:var(--text-secondary);font-size:13px;margin:0;";
+			p.style.cssText =
+				"color:var(--text-secondary);font-size:13px;margin:0;";
 			p.textContent = "No new novels to import. Check the other tabs.";
 			sec.appendChild(p);
 		} else {
 			const note = document.createElement("p");
-			note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;";
+			note.style.cssText =
+				"font-size:12px;color:var(--text-secondary);margin:0 0 10px;";
 			note.textContent = `${toImport.length} novel(s) will be imported.`;
 			sec.appendChild(note);
 			const ul = document.createElement("div");
-			ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;";
+			ul.style.cssText =
+				"display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;";
 			for (const item of toImport) {
 				const row = document.createElement("div");
-				row.style.cssText = "font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #22c55e;";
+				row.style.cssText =
+					"font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #22c55e;";
 				row.textContent = item.originalUrl || item.url;
 				row.title = item.originalUrl || item.url;
 				ul.appendChild(row);
@@ -1828,12 +2008,15 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	if (existingItems.length) {
 		const sec = sections["existing"];
 		const note = document.createElement("p");
-		note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
-		note.textContent = "These novels are already in your library. Tick the ones you want to re-import to refresh metadata (title, chapter count, cover).";
+		note.style.cssText =
+			"font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
+		note.textContent =
+			"These novels are already in your library. Tick the ones you want to re-import to refresh metadata (title, chapter count, cover).";
 		sec.appendChild(note);
 
 		const selAll = document.createElement("label");
-		selAll.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;cursor:pointer;";
+		selAll.style.cssText =
+			"display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);margin-bottom:8px;cursor:pointer;";
 		const selAllCb = document.createElement("input");
 		selAllCb.type = "checkbox";
 		selAll.appendChild(selAllCb);
@@ -1841,10 +2024,12 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		sec.appendChild(selAll);
 
 		const ul = document.createElement("div");
-		ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;";
+		ul.style.cssText =
+			"display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;";
 		for (const item of existingItems) {
 			const row = document.createElement("label");
-			row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#333);border-left:3px solid #f59e0b;cursor:pointer;";
+			row.style.cssText =
+				"display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;border:1px solid var(--border-color,#333);border-left:3px solid #f59e0b;cursor:pointer;";
 			const cb = document.createElement("input");
 			cb.type = "checkbox";
 			cb.dataset.importUrl = item.importUrl || item.url;
@@ -1853,11 +2038,13 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 			const info = document.createElement("div");
 			info.style.cssText = "flex:1;min-width:0;";
 			const t = document.createElement("div");
-			t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			t.style.cssText =
+				"font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 			t.textContent = item.title;
 			t.title = item.title;
 			const s = document.createElement("div");
-			s.style.cssText = "font-size:10px;color:var(--text-secondary);margin-top:1px;";
+			s.style.cssText =
+				"font-size:10px;color:var(--text-secondary);margin-top:1px;";
 			s.textContent = item.totalChapters
 				? `Ch. ${item.lastReadChapter}/${item.totalChapters} · ${item.novelId}`
 				: item.novelId;
@@ -1870,7 +2057,9 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 		sec.appendChild(ul);
 
 		selAllCb.addEventListener("change", () => {
-			updateCheckboxes.forEach((c) => { c.checked = selAllCb.checked; });
+			updateCheckboxes.forEach((c) => {
+				c.checked = selAllCb.checked;
+			});
 		});
 	}
 
@@ -1893,25 +2082,30 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 		// Per-URL rows with "Find on NovelArrow" button
 		const perUrlList = document.createElement("div");
-		perUrlList.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-bottom:10px;";
+		perUrlList.style.cssText =
+			"display:flex;flex-direction:column;gap:6px;margin-bottom:10px;";
 
 		for (const url of invalidUrls) {
 			const rowEl = document.createElement("div");
-			rowEl.style.cssText = "display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border-color,#333);border-left:3px solid #ef4444;border-radius:6px;background:var(--bg-secondary);";
+			rowEl.style.cssText =
+				"display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border-color,#333);border-left:3px solid #ef4444;border-radius:6px;background:var(--bg-secondary);";
 
 			const urlText = document.createElement("span");
-			urlText.style.cssText = "flex:1;font-size:11px;font-family:monospace;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			urlText.style.cssText =
+				"flex:1;font-size:11px;font-family:monospace;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 			urlText.textContent = url;
 			urlText.title = url;
 
 			const findBtn = document.createElement("button");
 			findBtn.className = "ls-btn ls-btn-secondary ls-btn-sm";
-			findBtn.style.cssText = "flex-shrink:0;font-size:11px;white-space:nowrap;";
+			findBtn.style.cssText =
+				"flex-shrink:0;font-size:11px;white-space:nowrap;";
 			findBtn.textContent = "🔍 Find on supported sites";
 
 			// Search results dropdown
 			const dropdown = document.createElement("div");
-			dropdown.style.cssText = "display:none;position:absolute;z-index:10000;background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.5);width:360px;max-height:260px;overflow-y:auto;";
+			dropdown.style.cssText =
+				"display:none;position:absolute;z-index:10000;background:var(--bg-secondary,#111827);border:1px solid var(--border-color,#333);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.5);width:360px;max-height:260px;overflow-y:auto;";
 			rowEl.style.position = "relative";
 
 			findBtn.addEventListener("click", async () => {
@@ -1920,60 +2114,83 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 				dropdown.style.display = "none";
 				try {
 					const query = _slugToQuery(url);
-					if (!query) { findBtn.textContent = "No title found"; return; }
+					if (!query) {
+						findBtn.textContent = "No title found";
+						return;
+					}
 					const siteGroups = await searchSupportedSites(query);
 					dropdown.innerHTML = "";
 
 					if (!siteGroups.length) {
 						const none = document.createElement("div");
-						none.style.cssText = "padding:12px;font-size:12px;color:var(--text-secondary);text-align:center;";
+						none.style.cssText =
+							"padding:12px;font-size:12px;color:var(--text-secondary);text-align:center;";
 						none.textContent = `No matches found for: "${query}"`;
 						dropdown.appendChild(none);
 					} else {
 						const hdr = document.createElement("div");
-						hdr.style.cssText = "padding:6px 10px;font-size:10px;font-weight:700;color:var(--text-muted,#6b7280);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border-color,#333);";
+						hdr.style.cssText =
+							"padding:6px 10px;font-size:10px;font-weight:700;color:var(--text-muted,#6b7280);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border-color,#333);";
 						hdr.textContent = `Results for "${query}"`;
 						dropdown.appendChild(hdr);
 
 						for (const group of siteGroups) {
 							// Site label
 							const siteHdr = document.createElement("div");
-							siteHdr.style.cssText = "padding:4px 10px;font-size:10px;font-weight:700;color:var(--accent-color,#7c3aed);background:var(--bg-tertiary);border-bottom:1px solid var(--border-color,#333);";
+							siteHdr.style.cssText =
+								"padding:4px 10px;font-size:10px;font-weight:700;color:var(--accent-color,#7c3aed);background:var(--bg-tertiary);border-bottom:1px solid var(--border-color,#333);";
 							siteHdr.textContent = `${group.emoji} ${group.site}`;
 							dropdown.appendChild(siteHdr);
 
 							for (const r of group.results) {
 								const item = document.createElement("div");
-								item.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border-color,#333);";
-								item.addEventListener("mouseenter", () => { item.style.background = "var(--bg-tertiary)"; });
-								item.addEventListener("mouseleave", () => { item.style.background = ""; });
+								item.style.cssText =
+									"display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border-color,#333);";
+								item.addEventListener("mouseenter", () => {
+									item.style.background =
+										"var(--bg-tertiary)";
+								});
+								item.addEventListener("mouseleave", () => {
+									item.style.background = "";
+								});
 
 								if (r.cover) {
 									const thumb = document.createElement("img");
 									thumb.src = r.cover;
-									thumb.style.cssText = "width:32px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0;";
-									thumb.onerror = () => { thumb.style.display = "none"; };
+									thumb.style.cssText =
+										"width:32px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0;";
+									thumb.onerror = () => {
+										thumb.style.display = "none";
+									};
 									item.appendChild(thumb);
 								}
 
 								const info = document.createElement("div");
 								info.style.cssText = "flex:1;min-width:0;";
 								const t = document.createElement("div");
-								t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+								t.style.cssText =
+									"font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 								t.textContent = r.title;
 								const sub = document.createElement("div");
-								sub.style.cssText = "font-size:10px;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+								sub.style.cssText =
+									"font-size:10px;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 								sub.textContent = r.author || r.url;
 								info.appendChild(t);
 								info.appendChild(sub);
 
 								const useBtn = document.createElement("button");
-								useBtn.className = "ls-btn ls-btn-primary ls-btn-sm";
-								useBtn.style.cssText = "font-size:10px;flex-shrink:0;";
+								useBtn.className =
+									"ls-btn ls-btn-primary ls-btn-sm";
+								useBtn.style.cssText =
+									"font-size:10px;flex-shrink:0;";
 								useBtn.textContent = "Use";
 								useBtn.addEventListener("click", () => {
-									const lines = (invalidTextarea.value || "").split("\n");
-									const idx = lines.findIndex((l) => l.trim() === url);
+									const lines = (
+										invalidTextarea.value || ""
+									).split("\n");
+									const idx = lines.findIndex(
+										(l) => l.trim() === url,
+									);
 									if (idx !== -1) lines[idx] = r.url;
 									else lines.push(r.url);
 									invalidTextarea.value = lines.join("\n");
@@ -2000,7 +2217,10 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 					}, 2000);
 					return;
 				} finally {
-					if (findBtn.textContent !== "✅ Replaced" && findBtn.textContent !== "❌ Search failed") {
+					if (
+						findBtn.textContent !== "✅ Replaced" &&
+						findBtn.textContent !== "❌ Search failed"
+					) {
 						findBtn.textContent = "🔍 Find on supported sites";
 					}
 					findBtn.disabled = false;
@@ -2008,9 +2228,14 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 			});
 
 			// Close dropdown on outside click
-			document.addEventListener("click", (e) => {
-				if (!rowEl.contains(e.target)) dropdown.style.display = "none";
-			}, { once: false, capture: false });
+			document.addEventListener(
+				"click",
+				(e) => {
+					if (!rowEl.contains(e.target))
+						dropdown.style.display = "none";
+				},
+				{ once: false, capture: false },
+			);
 
 			rowEl.appendChild(urlText);
 			rowEl.appendChild(findBtn);
@@ -2021,21 +2246,25 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 		// Editable textarea for batch editing
 		const textareaLabel = document.createElement("p");
-		textareaLabel.style.cssText = "font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 4px;";
+		textareaLabel.style.cssText =
+			"font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 4px;";
 		textareaLabel.textContent = "Or edit all at once (one URL per line):";
 		sec.appendChild(textareaLabel);
 
 		invalidTextarea = document.createElement("textarea");
 		invalidTextarea.className = "ls-textarea";
-		invalidTextarea.style.cssText = "width:100%;min-height:100px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box;";
+		invalidTextarea.style.cssText =
+			"width:100%;min-height:100px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box;";
 		invalidTextarea.value = invalidUrls.join("\n");
 		invalidTextarea.placeholder = "Edit URLs here, one per line…";
 		invalidTextarea.spellcheck = false;
 		sec.appendChild(invalidTextarea);
 
 		const hint = document.createElement("p");
-		hint.style.cssText = "font-size:11px;color:var(--text-muted,#6b7280);margin:6px 0 0;";
-		hint.textContent = "Corrected URLs will be re-validated on import. Supported: NovelArrow, Ranobes, ScribbleHub, FanFiction, AO3 (works only), WebNovel.";
+		hint.style.cssText =
+			"font-size:11px;color:var(--text-muted,#6b7280);margin:6px 0 0;";
+		hint.textContent =
+			"Corrected URLs will be re-validated on import. Supported: NovelArrow, Ranobes, ScribbleHub, FanFiction, AO3 (works only), WebNovel.";
 		sec.appendChild(hint);
 	}
 
@@ -2043,14 +2272,18 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	if (duplicateItems.length) {
 		const sec = sections["duplicates"];
 		const note = document.createElement("p");
-		note.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
-		note.textContent = "The same novel appeared more than once in your input. Only the first occurrence is imported; these extras are ignored.";
+		note.style.cssText =
+			"font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;";
+		note.textContent =
+			"The same novel appeared more than once in your input. Only the first occurrence is imported; these extras are ignored.";
 		sec.appendChild(note);
 		const ul = document.createElement("div");
-		ul.style.cssText = "display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;";
+		ul.style.cssText =
+			"display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;";
 		for (const item of duplicateItems) {
 			const row = document.createElement("div");
-			row.style.cssText = "font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-secondary);border-left:3px solid #8b5cf6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			row.style.cssText =
+				"font-size:11px;padding:5px 8px;border-radius:4px;background:var(--bg-tertiary);color:var(--text-secondary);border-left:3px solid #8b5cf6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 			row.textContent = item.url;
 			row.title = item.url;
 			ul.appendChild(row);
@@ -2063,14 +2296,18 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	// ── Progress bar (hidden until import starts) ─────────────────────────────
 	const progressWrap = document.createElement("div");
-	progressWrap.style.cssText = "padding:0 20px;display:none;border-top:1px solid var(--border-color,#333);";
+	progressWrap.style.cssText =
+		"padding:0 20px;display:none;border-top:1px solid var(--border-color,#333);";
 	const progressLbl = document.createElement("div");
-	progressLbl.style.cssText = "font-size:11px;color:var(--text-secondary);padding:8px 0 4px;";
+	progressLbl.style.cssText =
+		"font-size:11px;color:var(--text-secondary);padding:8px 0 4px;";
 	progressLbl.textContent = "Importing…";
 	const progressBarWrap = document.createElement("div");
-	progressBarWrap.style.cssText = "background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:8px;";
+	progressBarWrap.style.cssText =
+		"background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:8px;";
 	const progressBarFill = document.createElement("div");
-	progressBarFill.style.cssText = "background:#22c55e;height:100%;width:0%;transition:width 0.3s;";
+	progressBarFill.style.cssText =
+		"background:#22c55e;height:100%;width:0%;transition:width 0.3s;";
 	progressBarWrap.appendChild(progressBarFill);
 	progressWrap.appendChild(progressLbl);
 	progressWrap.appendChild(progressBarWrap);
@@ -2078,16 +2315,18 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 
 	// ── Footer ────────────────────────────────────────────────────────────────
 	const footer = document.createElement("div");
-	footer.style.cssText = "padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:space-between;align-items:center;gap:10px;";
+	footer.style.cssText =
+		"padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:space-between;align-items:center;gap:10px;";
 	const cancelBtn = document.createElement("button");
 	cancelBtn.className = "ls-btn ls-btn-secondary";
 	cancelBtn.textContent = "Cancel";
 	cancelBtn.addEventListener("click", () => overlay.remove());
 	const importBtn = document.createElement("button");
 	importBtn.className = "ls-btn ls-btn-primary";
-	const importBtnBase = toImport.length > 0
-		? `Import ${toImport.length} Novel${toImport.length !== 1 ? "s" : ""} →`
-		: "Import Selected →";
+	const importBtnBase =
+		toImport.length > 0
+			? `Import ${toImport.length} Novel${toImport.length !== 1 ? "s" : ""} →`
+			: "Import Selected →";
 	importBtn.textContent = importBtnBase;
 
 	importBtn.addEventListener("click", async () => {
@@ -2130,25 +2369,44 @@ function showImportPreviewModal({ prepared, invalidUrls, totalExtracted, onConfi
 	modal.appendChild(footer);
 
 	overlay.appendChild(modal);
-	overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+	overlay.addEventListener("click", (e) => {
+		if (e.target === overlay) overlay.remove();
+	});
 	document.body.appendChild(overlay);
 
 	// Activate first tab that has content
-	const firstActive = tabDefs.find((t) => t.id === "invalid" && invalidUrls.length > 0)?.id
-		|| (toImport.length > 0 ? "ready" : tabDefs[0]?.id);
+	const firstActive =
+		tabDefs.find((t) => t.id === "invalid" && invalidUrls.length > 0)?.id ||
+		(toImport.length > 0 ? "ready" : tabDefs[0]?.id);
 	activateTab(firstActive);
 }
 
 // ── Import runner (called by both old and new flows) ─────────────────────────
-async function _runImport({ toImport, forcedUpdateItems = [], correctedUrls = [], modalEl, urlImportStatus, progressLbl, progressBarFill }) {
+async function _runImport({
+	toImport,
+	forcedUpdateItems = [],
+	correctedUrls = [],
+	modalEl,
+	urlImportStatus,
+	progressLbl,
+	progressBarFill,
+}) {
 	const results = await addUrlsToLibrary(
 		correctedUrls,
 		(progress) => {
 			if (progressLbl) {
 				const cur = progress.processed ?? 0;
-				const total = (progress.queued ?? 0) + (toImport.length || 0) + (forcedUpdateItems.length || 0);
-				const done = cur + ((toImport.length || 0) + (forcedUpdateItems.length || 0)) - (progress.queued ?? 0);
-				const pct = total ? Math.round((Math.max(0, done) / total) * 100) : 0;
+				const total =
+					(progress.queued ?? 0) +
+					(toImport.length || 0) +
+					(forcedUpdateItems.length || 0);
+				const done =
+					cur +
+					((toImport.length || 0) + (forcedUpdateItems.length || 0)) -
+					(progress.queued ?? 0);
+				const pct = total
+					? Math.round((Math.max(0, done) / total) * 100)
+					: 0;
 				progressLbl.textContent = `Importing ${progress.processed}/${progress.queued + (toImport.length || 0) + (forcedUpdateItems.length || 0)} · Added ${progress.added} · Failed ${progress.failed}…`;
 				if (progressBarFill) progressBarFill.style.width = pct + "%";
 			}
@@ -2178,7 +2436,10 @@ async function _runImport({ toImport, forcedUpdateItems = [], correctedUrls = []
 	if (hasIssues) {
 		showImportResultsModal(results, []);
 	} else {
-		showToast(`✅ Import complete. Added ${results.added} novel(s).`, "success");
+		showToast(
+			`✅ Import complete. Added ${results.added} novel(s).`,
+			"success",
+		);
 	}
 }
 
@@ -2203,12 +2464,14 @@ function showImportResultsModal(results, allInputUrls = []) {
 
 	// Header
 	const header = document.createElement("div");
-	header.style.cssText = "padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;gap:12px;";
+	header.style.cssText =
+		"padding:16px 20px;border-bottom:1px solid var(--border-color,#333);display:flex;align-items:center;justify-content:space-between;gap:12px;";
 	const title = document.createElement("h2");
 	title.style.cssText = "margin:0;font-size:16px;color:var(--text-primary);";
 	title.textContent = "Import Results";
 	const closeBtn = document.createElement("button");
-	closeBtn.style.cssText = "background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;";
+	closeBtn.style.cssText =
+		"background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;";
 	closeBtn.textContent = "✕";
 	closeBtn.addEventListener("click", () => overlay.remove());
 	header.appendChild(title);
@@ -2217,13 +2480,34 @@ function showImportResultsModal(results, allInputUrls = []) {
 
 	// Summary chips
 	const summary = document.createElement("div");
-	summary.style.cssText = "padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);";
+	summary.style.cssText =
+		"padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border-color,#333);";
 	const chipData = [
-		{ label: `✅ ${results.added} added`, color: "#22c55e", show: results.added > 0 },
-		{ label: `❌ ${results.failed} failed`, color: "#ef4444", show: results.failed > 0 },
-		{ label: `📚 ${results.existingItems.length} already in library`, color: "#f59e0b", show: results.existingItems.length > 0 },
-		{ label: `♻️ ${results.duplicateItems.length} duplicates`, color: "#8b5cf6", show: results.duplicateItems.length > 0 },
-		{ label: `🚫 ${results.unsupportedItems.length} unsupported`, color: "#6b7280", show: results.unsupportedItems.length > 0 },
+		{
+			label: `✅ ${results.added} added`,
+			color: "#22c55e",
+			show: results.added > 0,
+		},
+		{
+			label: `❌ ${results.failed} failed`,
+			color: "#ef4444",
+			show: results.failed > 0,
+		},
+		{
+			label: `📚 ${results.existingItems.length} already in library`,
+			color: "#f59e0b",
+			show: results.existingItems.length > 0,
+		},
+		{
+			label: `♻️ ${results.duplicateItems.length} duplicates`,
+			color: "#8b5cf6",
+			show: results.duplicateItems.length > 0,
+		},
+		{
+			label: `🚫 ${results.unsupportedItems.length} unsupported`,
+			color: "#6b7280",
+			show: results.unsupportedItems.length > 0,
+		},
 	];
 	for (const { label, color, show } of chipData) {
 		if (!show) continue;
@@ -2237,14 +2521,31 @@ function showImportResultsModal(results, allInputUrls = []) {
 	// Tab nav
 	const tabs = [];
 	const tabDefs = [
-		{ id: "failed", label: `❌ Failed (${results.failedUrls.length})`, show: results.failedUrls.length > 0 },
-		{ id: "existing", label: `📚 In Library (${results.existingItems.length})`, show: results.existingItems.length > 0 },
-		{ id: "duplicate", label: `♻️ Duplicates (${results.duplicateItems.length})`, show: results.duplicateItems.length > 0 },
-		{ id: "unsupported", label: `🚫 Unsupported (${results.unsupportedItems.length})`, show: results.unsupportedItems.length > 0 },
+		{
+			id: "failed",
+			label: `❌ Failed (${results.failedUrls.length})`,
+			show: results.failedUrls.length > 0,
+		},
+		{
+			id: "existing",
+			label: `📚 In Library (${results.existingItems.length})`,
+			show: results.existingItems.length > 0,
+		},
+		{
+			id: "duplicate",
+			label: `♻️ Duplicates (${results.duplicateItems.length})`,
+			show: results.duplicateItems.length > 0,
+		},
+		{
+			id: "unsupported",
+			label: `🚫 Unsupported (${results.unsupportedItems.length})`,
+			show: results.unsupportedItems.length > 0,
+		},
 	].filter((t) => t.show);
 
 	const tabBar = document.createElement("div");
-	tabBar.style.cssText = "display:flex;gap:0;border-bottom:1px solid var(--border-color,#333);padding:0 20px;";
+	tabBar.style.cssText =
+		"display:flex;gap:0;border-bottom:1px solid var(--border-color,#333);padding:0 20px;";
 	const tabBody = document.createElement("div");
 	tabBody.style.cssText = "flex:1;overflow-y:auto;padding:16px 20px;";
 
@@ -2253,8 +2554,12 @@ function showImportResultsModal(results, allInputUrls = []) {
 	function activateTab(id) {
 		tabs.forEach((t) => {
 			const active = t.dataset.tabId === id;
-			t.style.borderBottom = active ? "2px solid var(--accent-color,#7c3aed)" : "2px solid transparent";
-			t.style.color = active ? "var(--accent-color,#7c3aed)" : "var(--text-secondary)";
+			t.style.borderBottom = active
+				? "2px solid var(--accent-color,#7c3aed)"
+				: "2px solid transparent";
+			t.style.color = active
+				? "var(--accent-color,#7c3aed)"
+				: "var(--text-secondary)";
 			t.style.fontWeight = active ? "600" : "400";
 		});
 		for (const [sid, sec] of Object.entries(sections)) {
@@ -2264,7 +2569,8 @@ function showImportResultsModal(results, allInputUrls = []) {
 
 	for (const tab of tabDefs) {
 		const btn = document.createElement("button");
-		btn.style.cssText = "background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;";
+		btn.style.cssText =
+			"background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;";
 		btn.textContent = tab.label;
 		btn.dataset.tabId = tab.id;
 		btn.addEventListener("click", () => activateTab(tab.id));
@@ -2281,13 +2587,14 @@ function showImportResultsModal(results, allInputUrls = []) {
 	// ── Failed section ────────────────────────────────────────────────────────
 	if (results.failedUrls.length) {
 		const sec = sections["failed"];
-		sec.appendChild(_importNote("These URLs opened as tabs but the extension could not extract novel data. The tabs were left open so you can inspect them. You can retry or open them manually."));
+		sec.appendChild(
+			_importNote(
+				"These URLs opened as tabs but the extension could not extract novel data. The tabs were left open so you can inspect them. You can retry or open them manually.",
+			),
+		);
 		for (const item of results.failedUrls) {
-			sec.appendChild(_importRow(
-				item.url,
-				item.error || "Unknown error",
-				"error",
-				[
+			sec.appendChild(
+				_importRow(item.url, item.error || "Unknown error", "error", [
 					{
 						label: "Retry",
 						onClick: async (rowEl, btn) => {
@@ -2296,9 +2603,11 @@ function showImportResultsModal(results, allInputUrls = []) {
 							const [ok, err] = await _retryImportUrl(item.url);
 							if (ok) {
 								rowEl.style.opacity = "0.4";
-								rowEl.querySelector(".ir-status").textContent = "✅ Added";
+								rowEl.querySelector(".ir-status").textContent =
+									"✅ Added";
 							} else {
-								rowEl.querySelector(".ir-status").textContent = "❌ " + err;
+								rowEl.querySelector(".ir-status").textContent =
+									"❌ " + err;
 								btn.textContent = "Retry";
 								btn.disabled = false;
 							}
@@ -2308,35 +2617,41 @@ function showImportResultsModal(results, allInputUrls = []) {
 						label: "Open URL",
 						onClick: () => browser.tabs.create({ url: item.url }),
 					},
-				],
-			));
+				]),
+			);
 		}
 	}
 
 	// ── Already in Library section ────────────────────────────────────────────
 	if (results.existingItems.length) {
 		const sec = sections["existing"];
-		sec.appendChild(_importNote("These novels are already in your library. You can update their metadata (title, chapters, cover) from the site, or keep what you have."));
+		sec.appendChild(
+			_importNote(
+				"These novels are already in your library. You can update their metadata (title, chapters, cover) from the site, or keep what you have.",
+			),
+		);
 		for (const item of results.existingItems) {
 			const subtitle = item.totalChapters
 				? `Ch. ${item.lastReadChapter}/${item.totalChapters} · ${item.novelId}`
 				: item.novelId;
-			sec.appendChild(_importRow(
-				item.title,
-				subtitle,
-				"existing",
-				[
+			sec.appendChild(
+				_importRow(item.title, subtitle, "existing", [
 					{
 						label: "Update Metadata",
 						onClick: async (rowEl, btn) => {
 							btn.textContent = "Updating…";
 							btn.disabled = true;
-							const [ok, err] = await _retryImportUrl(item.importUrl || item.url, true);
+							const [ok, err] = await _retryImportUrl(
+								item.importUrl || item.url,
+								true,
+							);
 							if (ok) {
 								rowEl.style.opacity = "0.4";
-								rowEl.querySelector(".ir-status").textContent = "✅ Updated";
+								rowEl.querySelector(".ir-status").textContent =
+									"✅ Updated";
 							} else {
-								rowEl.querySelector(".ir-status").textContent = "❌ " + err;
+								rowEl.querySelector(".ir-status").textContent =
+									"❌ " + err;
 								btn.textContent = "Update Metadata";
 								btn.disabled = false;
 							}
@@ -2344,29 +2659,51 @@ function showImportResultsModal(results, allInputUrls = []) {
 					},
 					{
 						label: "Open in Library",
-						onClick: () => browser.tabs.create({ url: browser.runtime.getURL("library/library.html") }),
+						onClick: () =>
+							browser.tabs.create({
+								url: browser.runtime.getURL(
+									"library/library.html",
+								),
+							}),
 					},
-				],
-			));
+				]),
+			);
 		}
 	}
 
 	// ── Duplicates section ────────────────────────────────────────────────────
 	if (results.duplicateItems.length) {
 		const sec = sections["duplicate"];
-		sec.appendChild(_importNote("The same novel appeared multiple times in your input. Only the first occurrence was imported; these duplicates were ignored."));
+		sec.appendChild(
+			_importNote(
+				"The same novel appeared multiple times in your input. Only the first occurrence was imported; these duplicates were ignored.",
+			),
+		);
 		for (const item of results.duplicateItems) {
-			sec.appendChild(_importRow(item.url, item.novelId, "duplicate", []));
+			sec.appendChild(
+				_importRow(item.url, item.novelId, "duplicate", []),
+			);
 		}
 	}
 
 	// ── Unsupported section ───────────────────────────────────────────────────
 	if (results.unsupportedItems.length) {
 		const sec = sections["unsupported"];
-		sec.appendChild(_importNote("These URLs are not from a supported site, or are not a novel/chapter page (e.g. AO3 series lists). They were skipped."));
+		sec.appendChild(
+			_importNote(
+				"These URLs are not from a supported site, or are not a novel/chapter page (e.g. AO3 series lists). They were skipped.",
+			),
+		);
 		for (const item of results.unsupportedItems) {
 			if (!item.url) continue;
-			sec.appendChild(_importRow(item.url, "Not a supported novel URL", "unsupported", []));
+			sec.appendChild(
+				_importRow(
+					item.url,
+					"Not a supported novel URL",
+					"unsupported",
+					[],
+				),
+			);
 		}
 	}
 
@@ -2378,7 +2715,8 @@ function showImportResultsModal(results, allInputUrls = []) {
 
 	// Footer
 	const footer = document.createElement("div");
-	footer.style.cssText = "padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:flex-end;";
+	footer.style.cssText =
+		"padding:12px 20px;border-top:1px solid var(--border-color,#333);display:flex;justify-content:flex-end;";
 	const doneBtn = document.createElement("button");
 	doneBtn.className = "ls-btn ls-btn-primary ls-btn-sm";
 	doneBtn.textContent = "Done";
@@ -2387,7 +2725,9 @@ function showImportResultsModal(results, allInputUrls = []) {
 	modal.appendChild(footer);
 
 	overlay.appendChild(modal);
-	overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+	overlay.addEventListener("click", (e) => {
+		if (e.target === overlay) overlay.remove();
+	});
 	document.body.appendChild(overlay);
 }
 
@@ -2402,12 +2742,13 @@ function _slugToQuery(url) {
 	try {
 		const pathname = new URL(url).pathname;
 		// Strip leading slash, file extension, common prefixes like /b/
-		const raw = pathname
-			.replace(/^\/+/, "")
-			.replace(/\.html?$/i, "")
-			.replace(/^b\//, "")
-			.split("/")
-			.pop() || "";
+		const raw =
+			pathname
+				.replace(/^\/+/, "")
+				.replace(/\.html?$/i, "")
+				.replace(/^b\//, "")
+				.split("/")
+				.pop() || "";
 		return raw.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
 	} catch {
 		return "";
@@ -2425,7 +2766,8 @@ const SITE_SEARCH_CONFIGS = [
 		shelfId: "novelbin",
 		label: "NovelBin (NovelArrow)",
 		emoji: "📚",
-		buildUrl: (q) => `https://novelarrow.com/search?q=${encodeURIComponent(q)}`,
+		buildUrl: (q) =>
+			`https://novelarrow.com/search?q=${encodeURIComponent(q)}`,
 		parseResults(doc, limit) {
 			// NovelArrow is a Next.js React app — links to /novel/{slug} are the results.
 			const links = doc.querySelectorAll("a[href*='/novel/']");
@@ -2434,7 +2776,9 @@ const SITE_SEARCH_CONFIGS = [
 			for (const a of links) {
 				const href = a.getAttribute("href") || "";
 				if (!href.match(/\/novel\/[a-z0-9-]+$/i)) continue;
-				const url = href.startsWith("http") ? href : `https://novelarrow.com${href}`;
+				const url = href.startsWith("http")
+					? href
+					: `https://novelarrow.com${href}`;
 				if (seen.has(url)) continue;
 				seen.add(url);
 				out.push({
@@ -2447,16 +2791,27 @@ const SITE_SEARCH_CONFIGS = [
 			}
 			// Fallback: search novelbin.com if novelarrow returns nothing
 			if (!out.length) {
-				const rows = doc.querySelectorAll(".col-novel-main .list-novel .row");
+				const rows = doc.querySelectorAll(
+					".col-novel-main .list-novel .row",
+				);
 				for (const row of rows) {
 					const a = row.querySelector("h3.novel-title a");
 					if (!a) continue;
 					const href = a.getAttribute("href") || "";
 					out.push({
 						title: a.getAttribute("title") || a.textContent.trim(),
-						url: href.startsWith("http") ? href : `https://novelbin.com${href}`,
-						author: row.querySelector(".author")?.textContent?.replace(/\s+/g, " ").trim() || "",
-						cover: row.querySelector("img.cover")?.getAttribute("src") || "",
+						url: href.startsWith("http")
+							? href
+							: `https://novelbin.com${href}`,
+						author:
+							row
+								.querySelector(".author")
+								?.textContent?.replace(/\s+/g, " ")
+								.trim() || "",
+						cover:
+							row
+								.querySelector("img.cover")
+								?.getAttribute("src") || "",
 					});
 					if (out.length >= limit) break;
 				}
@@ -2470,18 +2825,24 @@ const SITE_SEARCH_CONFIGS = [
 		emoji: "🌏",
 		buildUrl: (q) => `https://ranobes.net/search/${encodeURIComponent(q)}/`,
 		parseResults(doc, limit) {
-			const articles = doc.querySelectorAll("article.block.story.shortstory");
+			const articles = doc.querySelectorAll(
+				"article.block.story.shortstory",
+			);
 			const out = [];
 			for (const a of articles) {
 				const titleEl = a.querySelector("h2.title a");
 				if (!titleEl) continue;
 				const href = titleEl.getAttribute("href") || "";
-				const url = href.startsWith("http") ? href : `https://ranobes.net${href}`;
+				const url = href.startsWith("http")
+					? href
+					: `https://ranobes.net${href}`;
 				// Cover is a CSS background-image on figure.cover
 				let cover = "";
 				const fig = a.querySelector("figure.cover");
 				if (fig) {
-					const m = (fig.getAttribute("style") || "").match(/url\(["']?([^"')]+)["']?\)/);
+					const m = (fig.getAttribute("style") || "").match(
+						/url\(["']?([^"')]+)["']?\)/,
+					);
 					if (m) cover = m[1];
 				}
 				out.push({
@@ -2511,13 +2872,18 @@ async function searchSupportedSites(query, limitPerSite = 4) {
 			.map(([id]) => id),
 	);
 
-	const activeConfigs = SITE_SEARCH_CONFIGS.filter((c) => enabledIds.has(c.shelfId));
+	const activeConfigs = SITE_SEARCH_CONFIGS.filter((c) =>
+		enabledIds.has(c.shelfId),
+	);
 	if (!activeConfigs.length) return [];
 
 	const results = await Promise.allSettled(
 		activeConfigs.map(async (cfg) => {
 			const url = cfg.buildUrl(query.trim());
-			const resp = await fetch(url, { credentials: "omit", headers: { Accept: "text/html" } });
+			const resp = await fetch(url, {
+				credentials: "omit",
+				headers: { Accept: "text/html" },
+			});
 			if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 			const html = await resp.text();
 			const doc = new DOMParser().parseFromString(html, "text/html");
@@ -2536,12 +2902,18 @@ async function searchSupportedSites(query, limitPerSite = 4) {
 
 function _importNote(text) {
 	const p = document.createElement("p");
-	p.style.cssText = "font-size:12px;color:var(--text-secondary);margin:0 0 12px;line-height:1.5;";
+	p.style.cssText =
+		"font-size:12px;color:var(--text-secondary);margin:0 0 12px;line-height:1.5;";
 	p.textContent = text;
 	return p;
 }
 
-const TYPE_COLOR = { error: "#ef4444", existing: "#f59e0b", duplicate: "#8b5cf6", unsupported: "#6b7280" };
+const TYPE_COLOR = {
+	error: "#ef4444",
+	existing: "#f59e0b",
+	duplicate: "#8b5cf6",
+	unsupported: "#6b7280",
+};
 
 function _importRow(title, subtitle, type, actions) {
 	const row = document.createElement("div");
@@ -2554,11 +2926,13 @@ function _importRow(title, subtitle, type, actions) {
 	const info = document.createElement("div");
 	info.style.cssText = "flex:1;min-width:0;";
 	const t = document.createElement("div");
-	t.style.cssText = "font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+	t.style.cssText =
+		"font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 	t.textContent = title;
 	const s = document.createElement("div");
 	s.className = "ir-status";
-	s.style.cssText = "font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+	s.style.cssText =
+		"font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 	s.textContent = subtitle;
 	info.appendChild(t);
 	info.appendChild(s);
@@ -2705,7 +3079,8 @@ function waitForTabComplete(tabId, timeoutMs = 30000) {
 	return new Promise((resolve, reject) => {
 		let timeoutId;
 		const onUpdated = (updatedTabId, changeInfo) => {
-			if (updatedTabId !== tabId || changeInfo.status !== "complete") return;
+			if (updatedTabId !== tabId || changeInfo.status !== "complete")
+				return;
 			browser.tabs.onUpdated.removeListener(onUpdated);
 			if (timeoutId) clearTimeout(timeoutId);
 			resolve();
@@ -2750,7 +3125,9 @@ async function sendAddToLibraryMessage(tabId) {
 
 	return {
 		success: false,
-		error: lastError?.message || "Content script did not respond after 6 attempts",
+		error:
+			lastError?.message ||
+			"Content script did not respond after 6 attempts",
 	};
 }
 
@@ -3440,6 +3817,17 @@ function setupEventListeners() {
 		});
 	}
 
+	// Reading typeface
+	const rfSel = $("library-reading-font");
+	if (rfSel) {
+		rfSel.addEventListener("change", async () => {
+			const id = rfSel.value || READING_FONT_DEFAULT;
+			rfSel.style.fontFamily = getReadingFontStack(id);
+			await browser.storage.local.set({ readingFont: id });
+			showToast("Reading typeface saved", "success");
+		});
+	}
+
 	// Hidden mode <select> change — kept for backward compat; pills also fire this
 	const themeMode = $("library-theme-mode");
 	if (themeMode) {
@@ -3596,7 +3984,10 @@ function setupEventListeners() {
 	if (fallbackRefreshBtn) {
 		fallbackRefreshBtn.addEventListener("click", async () => {
 			const key = libraryApiKeys[0] || "";
-			if (!key) { showToast("Add a Gemini API key first", "error"); return; }
+			if (!key) {
+				showToast("Add a Gemini API key first", "error");
+				return;
+			}
 			fallbackRefreshBtn.disabled = true;
 			fallbackRefreshBtn.textContent = "↻ Loading…";
 			await updateLibraryModelSelector(key, "fallback");
@@ -3622,7 +4013,12 @@ function setupEventListeners() {
 			}
 			poRefreshBtn.disabled = false;
 			poRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} models loaded` : "No models found — check URL and key", models.length ? "success" : "error");
+			showToast(
+				models.length
+					? `${models.length} models loaded`
+					: "No models found — check URL and key",
+				models.length ? "success" : "error",
+			);
 		});
 	}
 
@@ -3630,7 +4026,9 @@ function setupEventListeners() {
 	const poOllamaRefreshBtn = $("primary-ollama-refresh-models");
 	if (poOllamaRefreshBtn) {
 		poOllamaRefreshBtn.addEventListener("click", async () => {
-			const baseUrl = $("primary-ollama-url")?.value?.trim() || "http://localhost:11434";
+			const baseUrl =
+				$("primary-ollama-url")?.value?.trim() ||
+				"http://localhost:11434";
 			poOllamaRefreshBtn.disabled = true;
 			poOllamaRefreshBtn.textContent = "↻ Loading…";
 			const models = await fetchOllamaModels(baseUrl);
@@ -3638,7 +4036,12 @@ function setupEventListeners() {
 			if (sel) populateModelSelect(sel, models, sel.value);
 			poOllamaRefreshBtn.disabled = false;
 			poOllamaRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+			showToast(
+				models.length
+					? `${models.length} Ollama models found`
+					: "No models — is Ollama running?",
+				models.length ? "success" : "error",
+			);
 		});
 	}
 
@@ -3659,7 +4062,12 @@ function setupEventListeners() {
 			}
 			foRefreshBtn.disabled = false;
 			foRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} models loaded` : "No models found", models.length ? "success" : "error");
+			showToast(
+				models.length
+					? `${models.length} models loaded`
+					: "No models found",
+				models.length ? "success" : "error",
+			);
 		});
 	}
 
@@ -3667,7 +4075,9 @@ function setupEventListeners() {
 	const foOllamaRefreshBtn = $("fallback-ollama-refresh-models");
 	if (foOllamaRefreshBtn) {
 		foOllamaRefreshBtn.addEventListener("click", async () => {
-			const baseUrl = $("fallback-ollama-url")?.value?.trim() || "http://localhost:11434";
+			const baseUrl =
+				$("fallback-ollama-url")?.value?.trim() ||
+				"http://localhost:11434";
 			foOllamaRefreshBtn.disabled = true;
 			foOllamaRefreshBtn.textContent = "↻ Loading…";
 			const models = await fetchOllamaModels(baseUrl);
@@ -3675,7 +4085,12 @@ function setupEventListeners() {
 			if (sel) populateModelSelect(sel, models, sel.value);
 			foOllamaRefreshBtn.disabled = false;
 			foOllamaRefreshBtn.textContent = "↻ Models";
-			showToast(models.length ? `${models.length} Ollama models found` : "No models — is Ollama running?", models.length ? "success" : "error");
+			showToast(
+				models.length
+					? `${models.length} Ollama models found`
+					: "No models — is Ollama running?",
+				models.length ? "success" : "error",
+			);
 		});
 	}
 
@@ -3688,10 +4103,15 @@ function setupEventListeners() {
 			const match = stored.availableModels?.find(
 				(m) => m.id === selectedId,
 			);
-			const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(/\/[^/]+:generateContent$/, "");
+			const baseEndpoint = DEFAULT_MODEL_ENDPOINT.replace(
+				/\/[^/]+:generateContent$/,
+				"",
+			);
 			const endpoint =
 				match?.endpoint ||
-				(selectedId ? `${baseEndpoint}/${selectedId}:generateContent` : "");
+				(selectedId
+					? `${baseEndpoint}/${selectedId}:generateContent`
+					: "");
 			setLibraryModelEndpoint(endpoint);
 			await browser.storage.local.set({
 				selectedModelId: selectedId,
@@ -3765,54 +4185,85 @@ function setupEventListeners() {
 				const updates = {};
 
 				// Temperature (shared)
-				if (tempSlider) updates.customTemperature = parseFloat(tempSlider.value);
+				if (tempSlider)
+					updates.customTemperature = parseFloat(tempSlider.value);
 
 				// ── Primary slot ──
-				const primaryProvider = $("primary-provider-select")?.value ?? "gemini";
+				const primaryProvider =
+					$("primary-provider-select")?.value ?? "gemini";
 				let primaryConfig = { provider: primaryProvider };
 				if (primaryProvider === "gemini") {
 					const sel = $("library-model-select");
 					const ep = $("library-model-endpoint");
-					primaryConfig.modelId = sel?.value ?? "gemini-2.5-flash";
-					primaryConfig.endpoint = ep?.value || `https://generativelanguage.googleapis.com/v1beta/models/${primaryConfig.modelId}:generateContent`;
+					primaryConfig.modelId = sel?.value ?? DEFAULT_MODEL_ID;
+					primaryConfig.endpoint =
+						ep?.value ||
+						`https://generativelanguage.googleapis.com/v1beta/models/${primaryConfig.modelId}:generateContent`;
 					// Keep legacy keys in sync for existing code
 					updates.selectedModelId = primaryConfig.modelId;
 					updates.modelEndpoint = primaryConfig.endpoint;
 				} else if (primaryProvider === "openai") {
-					primaryConfig.baseUrl = $("primary-openai-base-url")?.value ?? "";
+					primaryConfig.baseUrl =
+						$("primary-openai-base-url")?.value ?? "";
 					// Prefer select; fall back to custom text input
-					primaryConfig.modelId = $("primary-openai-model")?.value || $("primary-openai-model-custom")?.value || "";
+					primaryConfig.modelId =
+						$("primary-openai-model")?.value ||
+						$("primary-openai-model-custom")?.value ||
+						"";
 					primaryConfig.apiKey = $("primary-openai-key")?.value ?? "";
 				} else if (primaryProvider === "ollama") {
-					primaryConfig.baseUrl = $("primary-ollama-url")?.value ?? "http://localhost:11434";
-					primaryConfig.modelId = $("primary-ollama-model")?.value ?? "";
+					primaryConfig.baseUrl =
+						$("primary-ollama-url")?.value ??
+						"http://localhost:11434";
+					primaryConfig.modelId =
+						$("primary-ollama-model")?.value ?? "";
 				}
 				updates.primaryModelConfig = primaryConfig;
 
 				// ── Fallback slot ──
-				const fallbackEnabled = $("fallback-model-enabled")?.checked ?? false;
+				const fallbackEnabled =
+					$("fallback-model-enabled")?.checked ?? false;
 				updates.fallbackModelEnabled = fallbackEnabled;
 				if (fallbackEnabled) {
-					const fallbackProvider = $("fallback-provider-select")?.value ?? "gemini";
+					const fallbackProvider =
+						$("fallback-provider-select")?.value ?? "gemini";
 					let fallbackConfig = { provider: fallbackProvider };
 					if (fallbackProvider === "gemini") {
-						fallbackConfig.modelId = $("fallback-gemini-model")?.value ?? "gemini-2.0-flash";
+						fallbackConfig.modelId =
+							$("fallback-gemini-model")?.value ??
+							DEFAULT_BACKUP_MODEL_ID;
 						// Keep legacy backupModelId in sync
 						updates.backupModelId = fallbackConfig.modelId;
 					} else if (fallbackProvider === "openai") {
-						fallbackConfig.baseUrl = $("fallback-openai-base-url")?.value ?? "";
-						fallbackConfig.modelId = $("fallback-openai-model")?.value || $("fallback-openai-model-custom")?.value || "";
-						fallbackConfig.apiKey = $("fallback-openai-key")?.value ?? "";
+						fallbackConfig.baseUrl =
+							$("fallback-openai-base-url")?.value ?? "";
+						fallbackConfig.modelId =
+							$("fallback-openai-model")?.value ||
+							$("fallback-openai-model-custom")?.value ||
+							"";
+						fallbackConfig.apiKey =
+							$("fallback-openai-key")?.value ?? "";
 					} else if (fallbackProvider === "ollama") {
-						fallbackConfig.baseUrl = $("fallback-ollama-url")?.value ?? "http://localhost:11434";
-						fallbackConfig.modelId = $("fallback-ollama-model")?.value ?? "";
+						fallbackConfig.baseUrl =
+							$("fallback-ollama-url")?.value ??
+							"http://localhost:11434";
+						fallbackConfig.modelId =
+							$("fallback-ollama-model")?.value ?? "";
 					}
 
 					// Validate: fallback model must differ from primary model
-					const sameProvider = fallbackConfig.provider === (primaryConfig.provider || "gemini");
-					const sameModel = sameProvider && fallbackConfig.modelId && fallbackConfig.modelId === primaryConfig.modelId;
+					const sameProvider =
+						fallbackConfig.provider ===
+						(primaryConfig.provider || "gemini");
+					const sameModel =
+						sameProvider &&
+						fallbackConfig.modelId &&
+						fallbackConfig.modelId === primaryConfig.modelId;
 					if (sameModel) {
-						showToast("⚠️ Fallback model must differ from the primary model.", "warning");
+						showToast(
+							"⚠️ Fallback model must differ from the primary model.",
+							"warning",
+						);
 						return;
 					}
 
@@ -3837,7 +4288,9 @@ function setupEventListeners() {
 			popupDefaultSort.value = res.novelLibrarySort || "recent";
 		});
 		popupDefaultSort.addEventListener("change", () => {
-			browser.storage.local.set({ novelLibrarySort: popupDefaultSort.value });
+			browser.storage.local.set({
+				novelLibrarySort: popupDefaultSort.value,
+			});
 		});
 	}
 
@@ -3854,12 +4307,14 @@ function setupEventListeners() {
 
 			if (!extracted.length) {
 				showToast("❌ No URLs found in the text.", "error");
-				if (urlImportStatus) urlImportStatus.textContent = "No URLs found.";
+				if (urlImportStatus)
+					urlImportStatus.textContent = "No URLs found.";
 				return;
 			}
 
 			// Classify before any tab is opened (fast path)
-			if (urlImportStatus) urlImportStatus.textContent = "Analysing URLs…";
+			if (urlImportStatus)
+				urlImportStatus.textContent = "Analysing URLs…";
 			urlImportBtn.disabled = true;
 			urlImportBtn.textContent = "⏳ Analysing…";
 
@@ -3867,15 +4322,20 @@ function setupEventListeners() {
 				const supported = filterSupportedUrls(extracted);
 				// All extracted URLs that didn't pass filterSupportedUrls
 				const supportedSet = new Set(supported);
-				const unsupportedFromFilter = extracted.filter((u) => !supportedSet.has(u));
+				const unsupportedFromFilter = extracted.filter(
+					(u) => !supportedSet.has(u),
+				);
 
 				// Deep classify the supported ones
-				const prepared = await novelLibrary.prepareUrlsForImport(supported);
+				const prepared =
+					await novelLibrary.prepareUrlsForImport(supported);
 
 				// Collect ALL invalid URLs: failed domain filter + failed identity extraction
 				const invalidUrls = [
 					...unsupportedFromFilter,
-					...(prepared.unsupportedItems || []).map((i) => i.url).filter(Boolean),
+					...(prepared.unsupportedItems || [])
+						.map((i) => i.url)
+						.filter(Boolean),
 				];
 
 				if (urlImportStatus) urlImportStatus.textContent = "Ready.";
@@ -3886,7 +4346,12 @@ function setupEventListeners() {
 					prepared,
 					invalidUrls,
 					totalExtracted: extracted.length,
-					onConfirm: async ({ toImport, forcedUpdateItems, correctedUrls, modalEl }) => {
+					onConfirm: async ({
+						toImport,
+						forcedUpdateItems,
+						correctedUrls,
+						modalEl,
+					}) => {
 						await _runImport({
 							toImport,
 							forcedUpdateItems,
@@ -3899,7 +4364,9 @@ function setupEventListeners() {
 			} catch (err) {
 				urlImportBtn.disabled = false;
 				urlImportBtn.textContent = "➕ Add URLs to Library";
-				if (urlImportStatus) urlImportStatus.textContent = "Analysis failed: " + err.message;
+				if (urlImportStatus)
+					urlImportStatus.textContent =
+						"Analysis failed: " + err.message;
 				showToast("❌ Analysis failed: " + err.message, "error");
 			}
 		});
@@ -3943,9 +4410,9 @@ function setupEventListeners() {
 					includeCredentials:
 						$("backupIncludeCredentials")?.checked ?? true,
 				});
-				downloadBackupAsFile(backup);
+				const { encrypted } = await downloadBackupAsFile(backup);
 				showToast(
-					`✅ Full backup downloaded (${backup.metadata.novelCount} novels)`,
+					`✅ Full backup downloaded (${backup.metadata.novelCount} novels${encrypted ? ", encrypted" : ""})`,
 					"success",
 				);
 			} catch (err) {
@@ -4003,6 +4470,99 @@ function setupEventListeners() {
 				showToast(`❌ Restore failed: ${err.message}`, "error");
 			}
 			e.target.value = "";
+		});
+	}
+
+	// ── Backup Encryption ──────────────────────────────────────────────────────
+
+	const encryptToggle = $("backupEncryptEnabled");
+	const encryptDetails = $("backupEncryptDetails");
+	const recoveryCodeField = $("backupRecoveryCode");
+
+	async function refreshEncryptionUi() {
+		const enabled = await isBackupEncryptionEnabled();
+		if (encryptToggle) encryptToggle.checked = enabled;
+		if (encryptDetails)
+			encryptDetails.classList.toggle("ls-hidden", !enabled);
+		if (recoveryCodeField) {
+			recoveryCodeField.value = (await getRecoveryCode()) || "";
+		}
+	}
+
+	if (encryptToggle) {
+		refreshEncryptionUi();
+
+		encryptToggle.addEventListener("change", async (e) => {
+			try {
+				const { enabled, isNewKey } = await setBackupEncryptionEnabled(
+					e.target.checked,
+				);
+				await refreshEncryptionUi();
+				if (enabled && isNewKey) {
+					showToast(
+						"🔒 Encryption on. Save your recovery code — without it, an encrypted backup cannot be opened on another browser.",
+						"success",
+					);
+				} else if (enabled) {
+					showToast("🔒 Encryption on.", "success");
+				} else {
+					showToast(
+						"Encryption off. New backups will be plain JSON.",
+						"info",
+					);
+				}
+			} catch (err) {
+				debugError("Failed to toggle backup encryption:", err);
+				showToast(`❌ ${err.message}`, "error");
+				await refreshEncryptionUi();
+			}
+		});
+	}
+
+	const copyCodeBtn = $("copyBackupRecoveryCode");
+	if (copyCodeBtn) {
+		copyCodeBtn.addEventListener("click", async () => {
+			const code = recoveryCodeField?.value;
+			if (!code) {
+				showToast(
+					"No recovery code yet — turn encryption on first.",
+					"info",
+				);
+				return;
+			}
+			try {
+				await navigator.clipboard.writeText(code);
+				showToast("✅ Recovery code copied.", "success");
+			} catch {
+				// Clipboard permission can be refused; the field is selectable.
+				recoveryCodeField.select();
+				showToast("Select and copy the code manually.", "info");
+			}
+		});
+	}
+
+	const applyCodeBtn = $("applyBackupRecoveryCode");
+	if (applyCodeBtn) {
+		applyCodeBtn.addEventListener("click", async () => {
+			const input = $("backupRecoveryCodeInput");
+			const status = $("backupRecoveryCodeStatus");
+			const code = input?.value?.trim();
+			if (!code) {
+				if (status) status.textContent = "Paste a recovery code first.";
+				return;
+			}
+			try {
+				await setBackupKeyFromRecoveryCode(code);
+				if (input) input.value = "";
+				if (status)
+					status.textContent =
+						"Code accepted. Encrypted backups made with it will now open here.";
+				await refreshEncryptionUi();
+				showToast("✅ Recovery code applied.", "success");
+			} catch (err) {
+				if (status) status.textContent = err.message;
+				showToast(`❌ ${err.message}`, "error");
+			}
 		});
 	}
 
@@ -4064,9 +4624,12 @@ function setupEventListeners() {
 		const el = $("nativeSyncMessage");
 		if (!el) return;
 		el.textContent = text;
-		el.className = "ls-alert ls-alert-" + (type === "error" ? "warn" : (type || "info"));
+		el.className =
+			"ls-alert ls-alert-" + (type === "error" ? "warn" : type || "info");
 		el.style.display = "block";
-		setTimeout(() => { el.style.display = "none"; }, 5000);
+		setTimeout(() => {
+			el.style.display = "none";
+		}, 5000);
 	}
 
 	const nativeSyncNowBtn = $("nativeSyncNowBtn");
@@ -4075,8 +4638,14 @@ function setupEventListeners() {
 			nativeSyncNowBtn.disabled = true;
 			nativeSyncNowBtn.textContent = "Syncing…";
 			try {
-				const resp = await browser.runtime.sendMessage({ action: "nativeSyncNow" });
-				if (resp?.success) showNativeSyncMsg("✅ Synced to browser account!", "success");
+				const resp = await browser.runtime.sendMessage({
+					action: "nativeSyncNow",
+				});
+				if (resp?.success)
+					showNativeSyncMsg(
+						"✅ Synced to browser account!",
+						"success",
+					);
 				else throw new Error(resp?.error || "Sync failed");
 			} catch (err) {
 				showNativeSyncMsg("❌ " + err.message, "error");
@@ -4093,9 +4662,14 @@ function setupEventListeners() {
 			nativeSyncRestoreBtn.disabled = true;
 			nativeSyncRestoreBtn.textContent = "Restoring…";
 			try {
-				const resp = await browser.runtime.sendMessage({ action: "nativeSyncRestore" });
+				const resp = await browser.runtime.sendMessage({
+					action: "nativeSyncRestore",
+				});
 				if (resp?.success) {
-					showNativeSyncMsg("✅ Restored from browser sync!", "success");
+					showNativeSyncMsg(
+						"✅ Restored from browser sync!",
+						"success",
+					);
 					setTimeout(() => location.reload(), 1500);
 				} else {
 					throw new Error(resp?.error || "Restore failed");
@@ -4112,11 +4686,19 @@ function setupEventListeners() {
 	const nativeSyncClearBtn = $("nativeSyncClearBtn");
 	if (nativeSyncClearBtn) {
 		nativeSyncClearBtn.addEventListener("click", async () => {
-			if (!confirm("Clear all native browser sync data? This cannot be undone.")) return;
+			if (
+				!confirm(
+					"Clear all native browser sync data? This cannot be undone.",
+				)
+			)
+				return;
 			nativeSyncClearBtn.disabled = true;
 			try {
-				const resp = await browser.runtime.sendMessage({ action: "nativeSyncClear" });
-				if (resp?.success) showNativeSyncMsg("✅ Sync data cleared.", "success");
+				const resp = await browser.runtime.sendMessage({
+					action: "nativeSyncClear",
+				});
+				if (resp?.success)
+					showNativeSyncMsg("✅ Sync data cleared.", "success");
 				else throw new Error(resp?.error || "Clear failed");
 			} catch (err) {
 				showNativeSyncMsg("❌ " + err.message, "error");
@@ -4442,7 +5024,9 @@ function setupEventListeners() {
 				if (checkStatus) checkStatus.textContent = "❌ " + e.message;
 			} finally {
 				checkNowBtn.disabled = false;
-				setTimeout(() => { if (checkStatus) checkStatus.textContent = ""; }, 4000);
+				setTimeout(() => {
+					if (checkStatus) checkStatus.textContent = "";
+				}, 4000);
 			}
 		});
 	}
@@ -4580,12 +5164,18 @@ function setupEventListeners() {
 		});
 	}
 
-	const wordCountThresholdInput = document.getElementById("wordCountThreshold");
+	const wordCountThresholdInput =
+		document.getElementById("wordCountThreshold");
 	if (wordCountThresholdInput) {
 		wordCountThresholdInput.addEventListener("change", async () => {
-			const newThreshold = parseInt(wordCountThresholdInput.value || "25", 10);
+			const newThreshold = parseInt(
+				wordCountThresholdInput.value || "25",
+				10,
+			);
 			if (!isNaN(newThreshold) && newThreshold >= 5) {
-				await browser.storage.local.set({ wordCountThreshold: newThreshold });
+				await browser.storage.local.set({
+					wordCountThreshold: newThreshold,
+				});
 			}
 		});
 	}
@@ -4977,9 +5567,14 @@ async function initContentBoxesTab() {
 		});
 		container.querySelectorAll(".cb-delete-btn").forEach((el) => {
 			el.addEventListener("click", (e) => {
-				const i =
-					+e.target.closest("[data-idx]")?.dataset.idx ??
-					+e.target.dataset.idx;
+				// Coerce *after* the fallback, not before: unary `+` binds
+				// tighter than `??`, so the old form produced `NaN ?? …`, which
+				// is NaN — the fallback was unreachable and `splice(NaN, 1)`
+				// silently deleted entry 0 instead of the one clicked.
+				const i = Number(
+					e.target.closest("[data-idx]")?.dataset.idx ??
+						e.target.dataset.idx,
+				);
 				if (confirm(`Delete "${boxTypes[i]?.name}"?`)) {
 					boxTypes.splice(i, 1);
 					saveAndRender();
@@ -5265,7 +5860,10 @@ const DEFAULT_DISPLAY_SETTINGS = {
 
 async function initDisplaySettingsTab() {
 	const result = await browser.storage.local.get(DISPLAY_SETTINGS_KEY);
-	const settings = { ...DEFAULT_DISPLAY_SETTINGS, ...(result[DISPLAY_SETTINGS_KEY] || {}) };
+	const settings = {
+		...DEFAULT_DISPLAY_SETTINGS,
+		...(result[DISPLAY_SETTINGS_KEY] || {}),
+	};
 
 	const toolbarEl = document.getElementById("display-show-filter-toolbar");
 	const sortEl = document.getElementById("display-show-sort-filter");
@@ -5321,12 +5919,24 @@ async function initQueuePanel() {
 
 	if (!addBtn) return;
 
+	// Fetch + enhance is core; the graphify step is not. Hide its toggle and
+	// force it off so a queued job cannot ask for a step that cannot run.
+	const sendToLWRow = document.getElementById("ls-qSendToLWRow");
+	const sendToLW = document.getElementById("ls-qSendToLW");
+	if (!loreWeaveTabVisible) {
+		if (sendToLWRow) sendToLWRow.style.display = "none";
+		if (sendToLW) sendToLW.checked = false;
+	}
+
 	// ── Render job list ──────────────────────────────────────────────────────
 	async function renderJobs() {
 		if (!jobList) return;
-		let jobs = [];
+		let jobs;
 		try {
-			const resp = await browser.runtime.sendMessage({ action: "queue", subAction: "status" });
+			const resp = await browser.runtime.sendMessage({
+				action: "queue",
+				subAction: "status",
+			});
 			jobs = resp?.result?.jobs || [];
 		} catch (_e) {
 			jobList.innerHTML = "";
@@ -5342,14 +5952,20 @@ async function initQueuePanel() {
 		if (jobs.length === 0) {
 			const empty = document.createElement("p");
 			empty.className = "ls-section-desc";
-			empty.textContent = "No jobs queued. Add one below or from a novel’s edit modal.";
+			empty.textContent =
+				"No jobs queued. Add one below or from a novel’s edit modal.";
 			jobList.appendChild(empty);
 			return;
 		}
 
 		for (const job of jobs) {
 			const prog = job.progress || {};
-			const total = prog.total ?? Math.max(1, (job.endChapter || 1) - (job.startChapter || 1) + 1);
+			const total =
+				prog.total ??
+				Math.max(
+					1,
+					(job.endChapter || 1) - (job.startChapter || 1) + 1,
+				);
 			const done = (prog.processedChapters || []).length;
 			const skipped = (prog.skippedChapters || []).length;
 			const failed = (prog.failedChapters || []).length;
@@ -5370,15 +5986,18 @@ async function initQueuePanel() {
 
 			// ── Title row ────────────────────────────────────────────────────
 			const titleRow = document.createElement("div");
-			titleRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:6px;";
+			titleRow.style.cssText =
+				"display:flex;align-items:center;gap:8px;margin-bottom:6px;";
 			const statusSpan = document.createElement("span");
 			statusSpan.textContent = icon;
 			statusSpan.style.cssText = `font-size:14px;color:${color};flex-shrink:0;`;
 			const titleSpan = document.createElement("span");
-			titleSpan.style.cssText = "font-weight:600;flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+			titleSpan.style.cssText =
+				"font-weight:600;flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
 			titleSpan.textContent = job.novelTitle || "(Unnamed novel)";
 			const chSpan = document.createElement("span");
-			chSpan.style.cssText = "color:var(--text-secondary);font-size:11px;flex-shrink:0;";
+			chSpan.style.cssText =
+				"color:var(--text-secondary);font-size:11px;flex-shrink:0;";
 			chSpan.textContent = `Ch ${job.startChapter}–${job.endChapter}`;
 			titleRow.appendChild(statusSpan);
 			titleRow.appendChild(titleSpan);
@@ -5386,9 +6005,14 @@ async function initQueuePanel() {
 			card.appendChild(titleRow);
 
 			// ── Progress bar ─────────────────────────────────────────────────
-			if (job.status === "running" || job.status === "paused" || job.status === "done") {
+			if (
+				job.status === "running" ||
+				job.status === "paused" ||
+				job.status === "done"
+			) {
 				const bar = document.createElement("div");
-				bar.style.cssText = "background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:6px;";
+				bar.style.cssText =
+					"background:var(--bg-tertiary);border-radius:3px;height:5px;overflow:hidden;margin-bottom:6px;";
 				const fill = document.createElement("div");
 				fill.style.cssText = `background:${color};height:100%;width:${pct}%;transition:width 0.3s;`;
 				bar.appendChild(fill);
@@ -5397,7 +6021,8 @@ async function initQueuePanel() {
 
 			// ── Stats row ────────────────────────────────────────────────────
 			const statsRow = document.createElement("div");
-			statsRow.style.cssText = "display:flex;gap:12px;margin-bottom:6px;font-size:11px;flex-wrap:wrap;";
+			statsRow.style.cssText =
+				"display:flex;gap:12px;margin-bottom:6px;font-size:11px;flex-wrap:wrap;";
 
 			const addStat = (label, value, color) => {
 				const s = document.createElement("span");
@@ -5410,7 +6035,8 @@ async function initQueuePanel() {
 				if (skipped) addStat("skipped", skipped, "#f59e0b");
 				if (failed) addStat("failed", failed, "#ef4444");
 				addStat(`/ ${total} total`, "", "var(--text-secondary)");
-				if (job.status === "running") addStat(`(${pct}%)`, "", "#3b82f6");
+				if (job.status === "running")
+					addStat(`(${pct}%)`, "", "#3b82f6");
 			}
 
 			if (job.status === "error" && job.error) {
@@ -5422,7 +6048,8 @@ async function initQueuePanel() {
 
 			if (job.status === "done" && skipped > 0) {
 				const note = document.createElement("div");
-				note.style.cssText = "color:#f59e0b;font-size:11px;margin-top:2px;";
+				note.style.cssText =
+					"color:#f59e0b;font-size:11px;margin-top:2px;";
 				note.textContent = `${skipped} chapter(s) skipped — too short or empty (< 100 words).`;
 				statsRow.appendChild(note);
 			}
@@ -5435,7 +6062,9 @@ async function initQueuePanel() {
 
 			const makeBtn = (label, danger, onClick) => {
 				const b = document.createElement("button");
-				b.className = "ls-btn ls-btn-sm " + (danger ? "ls-btn-danger" : "ls-btn-secondary");
+				b.className =
+					"ls-btn ls-btn-sm " +
+					(danger ? "ls-btn-danger" : "ls-btn-secondary");
 				b.textContent = label;
 				b.addEventListener("click", async () => {
 					b.disabled = true;
@@ -5446,29 +6075,50 @@ async function initQueuePanel() {
 			};
 
 			if (job.status === "running") {
-				actRow.appendChild(makeBtn("⏸ Pause", false, async () => {
-					await browser.runtime.sendMessage({ action: "queue", subAction: "pause" });
-					await renderJobs();
-				}));
+				actRow.appendChild(
+					makeBtn("⏸ Pause", false, async () => {
+						await browser.runtime.sendMessage({
+							action: "queue",
+							subAction: "pause",
+						});
+						await renderJobs();
+					}),
+				);
 			} else if (job.status === "paused" || job.status === "pending") {
-				actRow.appendChild(makeBtn("▶ Resume", false, async () => {
-					await browser.runtime.sendMessage({ action: "queue", subAction: "resume" });
-					await renderJobs();
-				}));
+				actRow.appendChild(
+					makeBtn("▶ Resume", false, async () => {
+						await browser.runtime.sendMessage({
+							action: "queue",
+							subAction: "resume",
+						});
+						await renderJobs();
+					}),
+				);
 			}
 
 			if (job.status === "done") {
-				actRow.appendChild(makeBtn("View Summary", false, async () => {
-					if (resultView) resultView.style.display = "";
-					if (resultTitle) resultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
-					if (resultContent) resultContent.textContent = job.summary || "(No summary generated)";
-				}));
+				actRow.appendChild(
+					makeBtn("View Summary", false, async () => {
+						if (resultView) resultView.style.display = "";
+						if (resultTitle)
+							resultTitle.textContent = `${job.novelTitle} · Ch ${job.startChapter}–${job.endChapter}`;
+						if (resultContent)
+							resultContent.textContent =
+								job.summary || "(No summary generated)";
+					}),
+				);
 			}
 
-			actRow.appendChild(makeBtn("❌ Remove", true, async () => {
-				await browser.runtime.sendMessage({ action: "queue", subAction: "cancel", jobId: job.id });
-				await renderJobs();
-			}));
+			actRow.appendChild(
+				makeBtn("❌ Remove", true, async () => {
+					await browser.runtime.sendMessage({
+						action: "queue",
+						subAction: "cancel",
+						jobId: job.id,
+					});
+					await renderJobs();
+				}),
+			);
 
 			card.appendChild(actRow);
 			jobList.appendChild(card);
@@ -5478,13 +6128,26 @@ async function initQueuePanel() {
 	// ── Add job ──────────────────────────────────────────────────────────────
 	addBtn.addEventListener("click", async () => {
 		const firstUrl = document.getElementById("ls-qFirstUrl")?.value?.trim();
-		const start = parseInt(document.getElementById("ls-qStart")?.value, 10) || 1;
-		const end = parseInt(document.getElementById("ls-qEnd")?.value, 10) || 1;
-		const sendToLW = document.getElementById("ls-qSendToLW")?.checked ?? true;
-		if (!firstUrl) { showToast("Enter the first chapter URL", "warning"); return; }
-		if (start > end) { showToast("From chapter must be ≤ To chapter", "warning"); return; }
+		const start =
+			parseInt(document.getElementById("ls-qStart")?.value, 10) || 1;
+		const end =
+			parseInt(document.getElementById("ls-qEnd")?.value, 10) || 1;
+		const sendToLW =
+			loreWeaveTabVisible &&
+			(document.getElementById("ls-qSendToLW")?.checked ?? true);
+		if (!firstUrl) {
+			showToast("Enter the first chapter URL", "warning");
+			return;
+		}
+		if (start > end) {
+			showToast("From chapter must be ≤ To chapter", "warning");
+			return;
+		}
 		try {
-			const config = await browser.storage.local.get(["loreWeaveUrl", "loreWeaveWritingStyle"]);
+			const config = await browser.storage.local.get([
+				"loreWeaveUrl",
+				"loreWeaveWritingStyle",
+			]);
 			await browser.runtime.sendMessage({
 				action: "queue",
 				subAction: "add",
@@ -5528,6 +6191,28 @@ async function initQueuePanel() {
 	});
 }
 
+// ── Experimental features (Advanced panel) ──────────────────────────────────────
+/**
+ * Wires the LoreWeave master switch. Turning it on or off changes which tabs and
+ * panels exist, so the page reloads rather than trying to rebuild them in place.
+ */
+function initExperimentalPanel() {
+	const toggle = document.getElementById("ls-experimentalLoreWeave");
+	if (!toggle) return;
+
+	toggle.checked = loreWeaveTabVisible;
+	toggle.addEventListener("change", async () => {
+		await setLoreWeaveEnabled(toggle.checked);
+		showToast(
+			toggle.checked
+				? "LoreWeave enabled — reloading settings"
+				: "LoreWeave disabled — reloading settings",
+			"success",
+		);
+		setTimeout(() => window.location.reload(), 600);
+	});
+}
+
 // ── LoreWeave panel ─────────────────────────────────────────────────────────────
 async function initLoreWeavePanel() {
 	const lsUrl = document.getElementById("ls-lwUrl");
@@ -5543,31 +6228,47 @@ async function initLoreWeavePanel() {
 
 	if (!lsUrl) return;
 
-	// Load or generate LoreWeave user ID (SponsorBlock-style UUID)
+	// Load LoreWeave settings (account key synced cross-device via browser account)
 	try {
-		const stored = await browser.storage.local.get([
-			"loreWeaveUrl", "loreWeaveAutoGraphify", "loreWeaveChronicleEnabled",
-			"loreWeaveUsePriorContext", "loreWeaveWritingStyle", "loreWeaveUserId",
+		const [stored, synced] = await Promise.all([
+			browser.storage.local.get([
+				"loreWeaveUrl",
+				"loreWeaveAutoGraphify",
+				"loreWeaveChronicleEnabled",
+				"loreWeaveUsePriorContext",
+				"loreWeaveWritingStyle",
+			]),
+			browser.storage.sync.get(["loreWeaveAccountKey"]),
 		]);
 		if (lsUrl) lsUrl.value = stored.loreWeaveUrl || "";
 		if (lsAuto) lsAuto.checked = !!stored.loreWeaveAutoGraphify;
-		if (lsChronicle) lsChronicle.checked = !!stored.loreWeaveChronicleEnabled;
+		if (lsChronicle)
+			lsChronicle.checked = !!stored.loreWeaveChronicleEnabled;
 		if (lsPrior) lsPrior.checked = !!stored.loreWeaveUsePriorContext;
-		if (lsStyle && stored.loreWeaveWritingStyle) lsStyle.value = stored.loreWeaveWritingStyle;
+		if (lsStyle && stored.loreWeaveWritingStyle)
+			lsStyle.value = stored.loreWeaveWritingStyle;
 
-		let userId = stored.loreWeaveUserId;
-		if (!userId) {
-			userId = crypto.randomUUID ? crypto.randomUUID() : `lw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-			await browser.storage.local.set({ loreWeaveUserId: userId });
-		}
-		if (lsUserIdEl) lsUserIdEl.textContent = userId;
-	} catch (_e) { /* non-critical */ }
+		const accountKey = synced.loreWeaveAccountKey || "";
+		if (lsUserIdEl)
+			lsUserIdEl.textContent = accountKey
+				? accountKey.slice(0, 8) + "…"
+				: "(not set)";
+	} catch (_e) {
+		/* non-critical */
+	}
 
-	if (lsCopyUid && lsUserIdEl) {
-		lsCopyUid.addEventListener("click", () => {
-			navigator.clipboard.writeText(lsUserIdEl.textContent).then(() => {
-				showToast("User ID copied", "success");
-			}).catch(() => {});
+	if (lsCopyUid) {
+		lsCopyUid.addEventListener("click", async () => {
+			try {
+				const synced = await browser.storage.sync.get([
+					"loreWeaveAccountKey",
+				]);
+				const key = synced.loreWeaveAccountKey || "";
+				await navigator.clipboard.writeText(key);
+				showToast("Account key copied", "success");
+			} catch {
+				showToast("Copy failed", "error");
+			}
 		});
 	}
 
@@ -5587,16 +6288,31 @@ async function initLoreWeavePanel() {
 	if (lsPing) {
 		lsPing.addEventListener("click", async () => {
 			const url = lsUrl?.value?.trim();
-			if (!url) { showToast("Enter a backend URL first", "warning"); return; }
-			if (lsPingStatus) { lsPingStatus.textContent = "Testing…"; lsPingStatus.style.display = "block"; }
+			if (!url) {
+				showToast("Enter a backend URL first", "warning");
+				return;
+			}
+			if (lsPingStatus) {
+				lsPingStatus.textContent = "Testing…";
+				lsPingStatus.style.display = "block";
+			}
 			try {
-				const resp = await browser.runtime.sendMessage({ action: "loreweave:ping", url });
+				const resp = await browser.runtime.sendMessage({
+					action: "loreweave-ping",
+					url,
+				});
 				if (lsPingStatus) {
-					lsPingStatus.textContent = resp?.success ? "✅ Connected" : "❌ " + (resp?.error || "Failed");
+					// `success` only means the check ran; `reachable` is the answer.
+					lsPingStatus.textContent = resp?.reachable
+						? "✅ Connected"
+						: "❌ " + (resp?.error || "Not reachable");
 					lsPingStatus.style.display = "block";
 				}
 			} catch (e) {
-				if (lsPingStatus) { lsPingStatus.textContent = "❌ " + e.message; lsPingStatus.style.display = "block"; }
+				if (lsPingStatus) {
+					lsPingStatus.textContent = "❌ " + e.message;
+					lsPingStatus.style.display = "block";
+				}
 			}
 		});
 	}
@@ -5607,38 +6323,33 @@ async function initChatPanel() {
 	const saveBtn = document.getElementById("ls-chatSettingsSaveBtn");
 	if (!saveBtn) return;
 
-	const CHAT_SETTINGS_KEY = "rg_chat_settings";
-	const defaults = {
-		useCurrentChapter: true,
-		useChronicle: true,
-		useLoreWeave: true,
-		useWebSearch: false,
-		maxHistory: 6,
-	};
-
 	try {
-		const stored = await browser.storage.local.get(CHAT_SETTINGS_KEY);
-		const s = { ...defaults, ...(stored[CHAT_SETTINGS_KEY] || {}) };
+		const s = await getChatSettings();
 		const useChapter = document.getElementById("ls-chatUseCurrentChapter");
 		const useChronicle = document.getElementById("ls-chatUseChronicle");
 		const useLW = document.getElementById("ls-chatUseLoreWeave");
-		const useWeb = document.getElementById("ls-chatUseWebSearch");
 		const maxHist = document.getElementById("ls-chatMaxHistory");
 		if (useChapter) useChapter.checked = s.useCurrentChapter;
 		if (useChronicle) useChronicle.checked = s.useChronicle;
 		if (useLW) useLW.checked = s.useLoreWeave;
-		if (useWeb) useWeb.checked = s.useWebSearch;
 		if (maxHist) maxHist.value = s.maxHistory;
-	} catch (_e) { /* non-critical */ }
+	} catch (_e) {
+		/* non-critical */
+	}
 
 	saveBtn.addEventListener("click", async () => {
-		const s = {
-			useCurrentChapter: document.getElementById("ls-chatUseCurrentChapter")?.checked ?? true,
-			useChronicle: document.getElementById("ls-chatUseChronicle")?.checked ?? true,
-			useLoreWeave: document.getElementById("ls-chatUseLoreWeave")?.checked ?? true,
-			useWebSearch: document.getElementById("ls-chatUseWebSearch")?.checked ?? false,
-			maxHistory: parseInt(document.getElementById("ls-chatMaxHistory")?.value, 10) || 6,
-		};
+		// Normalized on the way in so the stored blob can never hold a value
+		// the chat handler would have to defend against.
+		const s = normalizeChatSettings({
+			useCurrentChapter: document.getElementById(
+				"ls-chatUseCurrentChapter",
+			)?.checked,
+			useChronicle: document.getElementById("ls-chatUseChronicle")
+				?.checked,
+			useLoreWeave: document.getElementById("ls-chatUseLoreWeave")
+				?.checked,
+			maxHistory: document.getElementById("ls-chatMaxHistory")?.value,
+		});
 		await browser.storage.local.set({ [CHAT_SETTINGS_KEY]: s });
 		showToast("Chat settings saved", "success");
 	});
@@ -5647,10 +6358,21 @@ async function initChatPanel() {
 async function init() {
 	debugLog("⚙️ Library Settings page initialising…");
 
+	// Must be resolved before the nav is built — it decides whether the
+	// LoreWeave tab exists at all.
+	loreWeaveTabVisible = await isLoreWeaveEnabled();
+
 	// Build navigation
 	renderNav();
 	activateTabFromUrl();
 	initAiProviderTabs(); // Wire up provider switcher in AI Providers panel
+
+	// The two Gemini model <select>s ship empty in library-settings.html so the
+	// list lives in exactly one place. Fill them before the stored settings are
+	// applied, or setting .value below finds no matching option and silently
+	// leaves the select blank.
+	fillGeminiModelSelect($("library-model-select"), DEFAULT_MODEL_ID);
+	fillGeminiModelSelect($("fallback-gemini-model"), DEFAULT_BACKUP_MODEL_ID);
 
 	// Apply theme ASAP to prevent flash
 	await applyTheme();
@@ -5704,10 +6426,12 @@ async function init() {
 	// Display Settings tab (hidden panel kept for JS compat)
 	await initDisplaySettingsTab();
 
-	// New story-tool panels moved from popup
+	// New story-tool panels moved from popup. The queue is a core feature and
+	// always wires up; the LoreWeave panel is only wired when it is reachable.
 	await initQueuePanel();
-	await initLoreWeavePanel();
+	if (loreWeaveTabVisible) await initLoreWeavePanel();
 	await initChatPanel();
+	initExperimentalPanel();
 
 	// Wire up all event listeners
 	setupEventListeners();

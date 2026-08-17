@@ -4,7 +4,10 @@
  */
 
 import { NovelCardRenderer } from "../novel-card-base.js";
-import { READING_STATUS, READING_STATUS_INFO } from "../../../utils/novel-library.js";
+import {
+	READING_STATUS,
+	READING_STATUS_INFO,
+} from "../../../utils/novel-library.js";
 import { loadImageWithCache } from "../../../utils/image-cache.js";
 import { getBaseModalStyles, getNovelbinStyles } from "../modal-styles.js";
 
@@ -29,8 +32,10 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 		const metadata = novel.metadata || {};
 
 		const getVal = (key, fallback = null) => {
-			if (novel[key] !== undefined && novel[key] !== null) return novel[key];
-			if (metadata[key] !== undefined && metadata[key] !== null) return metadata[key];
+			if (novel[key] !== undefined && novel[key] !== null)
+				return novel[key];
+			if (metadata[key] !== undefined && metadata[key] !== null)
+				return metadata[key];
 			return fallback;
 		};
 
@@ -38,30 +43,44 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 		const workStatus = getVal("status") || "";
 		const language = getVal("language") || "";
 		const totalChapters = getVal("totalChapters") || 0;
-		const lastRead = novel.lastReadChapter || getVal("lastReadChapter") || 0;
+		const lastRead =
+			novel.lastReadChapter || getVal("lastReadChapter") || 0;
 		const enhanced = novel.enhancedChaptersCount ?? 0;
-		const genres = Array.isArray(metadata.genres) ? metadata.genres : (Array.isArray(novel.genres) ? novel.genres : []);
+		const genres = Array.isArray(metadata.genres)
+			? metadata.genres
+			: Array.isArray(novel.genres)
+				? novel.genres
+				: [];
 
-		const readingKeyRaw = novel.readingStatus || READING_STATUS.PLAN_TO_READ;
+		const readingKeyRaw =
+			novel.readingStatus || READING_STATUS.PLAN_TO_READ;
 		const normalizedKey = readingKeyRaw.replace(/_/g, "-");
-		const statusInfo = READING_STATUS_INFO[normalizedKey] || READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
+		const statusInfo =
+			READING_STATUS_INFO[normalizedKey] ||
+			READING_STATUS_INFO[READING_STATUS.PLAN_TO_READ];
 
-		const safeRead = totalChapters ? Math.min(lastRead, totalChapters) : lastRead;
-		const progressPct = totalChapters ? Math.min(100, Math.round((safeRead / totalChapters) * 100)) : 0;
+		const safeRead = totalChapters
+			? Math.min(lastRead, totalChapters)
+			: lastRead;
+		const progressPct = totalChapters
+			? Math.min(100, Math.round((safeRead / totalChapters) * 100))
+			: 0;
 
-		const workStatusClass = workStatus.toLowerCase() === "ongoing"
-			? "status-ongoing"
-			: workStatus.toLowerCase() === "completed"
-				? "status-completed"
-				: workStatus.toLowerCase() === "hiatus"
-					? "status-hiatus"
-					: "";
+		const workStatusClass =
+			workStatus.toLowerCase() === "ongoing"
+				? "status-ongoing"
+				: workStatus.toLowerCase() === "completed"
+					? "status-completed"
+					: workStatus.toLowerCase() === "hiatus"
+						? "status-hiatus"
+						: "";
 
 		const coverHtml = coverUrl
-			? `<img class="nb-cover-img" src="${this.escapeHtml(coverUrl)}" alt="${this.escapeHtml(novel.title)}" loading="lazy" data-fallback="${this.escapeHtml(this.getFallbackCover(this.shelfConfig))}">`
+			? `<img class="nb-cover-img" src="${this.escapeUrlAttr(coverUrl)}" alt="${this.escapeHtml(novel.title)}" loading="lazy" data-fallback="${this.escapeHtml(this.getFallbackCover(this.shelfConfig))}">`
 			: `<div class="nb-cover-placeholder">📚</div>`;
 
-		const genreHtml = genres.slice(0, MAX_CARD_GENRES)
+		const genreHtml = genres
+			.slice(0, MAX_CARD_GENRES)
 			.map((g) => `<span class="nb-genre">${this.escapeHtml(g)}</span>`)
 			.join("");
 
@@ -70,7 +89,7 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 			: `<strong>${enhanced}</strong> enhanced`;
 
 		card.innerHTML = `
-			${coverUrl ? `<img class="nb-card-bg" src="${this.escapeHtml(coverUrl)}" alt="" aria-hidden="true" loading="lazy">` : ""}
+			${coverUrl ? `<img class="nb-card-bg" src="${this.escapeUrlAttr(coverUrl)}" alt="" aria-hidden="true" loading="lazy">` : ""}
 			<div class="nb-cover-wrap">
 				${coverHtml}
 				<span class="nb-reading-badge" style="background:${statusInfo.color};">${statusInfo.label}</span>
@@ -104,15 +123,17 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 	}
 
 	static _setupImageErrorHandlers(container) {
-		container.querySelectorAll("img.nb-cover-img[data-fallback]").forEach((img) => {
-			const fallback = img.getAttribute("data-fallback");
-			loadImageWithCache(img, img.src, fallback).catch(() => {
-				if (fallback && img.src !== fallback) img.src = fallback;
+		container
+			.querySelectorAll("img.nb-cover-img[data-fallback]")
+			.forEach((img) => {
+				const fallback = img.getAttribute("data-fallback");
+				loadImageWithCache(img, img.src, fallback).catch(() => {
+					if (fallback && img.src !== fallback) img.src = fallback;
+				});
+				img.addEventListener("error", function () {
+					if (fallback && this.src !== fallback) this.src = fallback;
+				});
 			});
-			img.addEventListener("error", function () {
-				if (fallback && this.src !== fallback) this.src = fallback;
-			});
-		});
 	}
 
 	static renderModalMetadata(novel) {
@@ -122,27 +143,38 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 		const metadata = novel.metadata || {};
 
 		const getVal = (key, fallback = null) => {
-			if (novel[key] !== undefined && novel[key] !== null) return novel[key];
-			if (metadata[key] !== undefined && metadata[key] !== null) return metadata[key];
+			if (novel[key] !== undefined && novel[key] !== null)
+				return novel[key];
+			if (metadata[key] !== undefined && metadata[key] !== null)
+				return metadata[key];
 			return fallback;
 		};
 
 		const status = getVal("status", "Unknown");
 		const language = getVal("language", "");
 		const totalChapters = getVal("totalChapters") ?? null;
-		const genres = Array.isArray(metadata.genres) ? metadata.genres : (Array.isArray(novel.genres) ? novel.genres : []);
-		const tags = Array.isArray(metadata.tags) ? metadata.tags : (Array.isArray(novel.tags) ? novel.tags : []);
+		const genres = Array.isArray(metadata.genres)
+			? metadata.genres
+			: Array.isArray(novel.genres)
+				? novel.genres
+				: [];
+		const tags = Array.isArray(metadata.tags)
+			? metadata.tags
+			: Array.isArray(novel.tags)
+				? novel.tags
+				: [];
 		const views = getVal("views", 0);
 		const rating = getVal("rating", "");
 		const updatedAt = getVal("updatedAt") || getVal("updateTime") || "";
 		const source = getVal("source") || "";
 
 		const statusLower = status.toLowerCase();
-		const statusChipClass = statusLower === "completed"
-			? "chip-completed"
-			: statusLower === "hiatus"
-				? "chip-hiatus"
-				: "chip-ongoing";
+		const statusChipClass =
+			statusLower === "completed"
+				? "chip-completed"
+				: statusLower === "hiatus"
+					? "chip-hiatus"
+					: "chip-ongoing";
 
 		const renderStat = (label, value, icon = "") => {
 			if (!value && value !== 0) return "";
@@ -154,13 +186,15 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 			`;
 		};
 
-		const updatedText = updatedAt ? (() => {
-			try {
-				return new Date(updatedAt).toLocaleDateString();
-			} catch {
-				return updatedAt;
-			}
-		})() : "";
+		const updatedText = updatedAt
+			? (() => {
+					try {
+						return new Date(updatedAt).toLocaleDateString();
+					} catch {
+						return updatedAt;
+					}
+				})()
+			: "";
 
 		container.innerHTML = `
 			${getBaseModalStyles()}${getNovelbinStyles()}
@@ -170,60 +204,87 @@ export class NovelbinNovelCard extends NovelCardRenderer {
 						<span class="novelbin-meta-label">Status</span>
 						<span class="novelbin-chip ${statusChipClass}">${this.escapeHtml(status)}</span>
 					</div>
-					${language ? `
+					${
+						language
+							? `
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Language</span>
 						<span class="novelbin-meta-value">${this.escapeHtml(language)}</span>
-					</div>` : ""}
+					</div>`
+							: ""
+					}
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Chapters</span>
 						<span class="novelbin-meta-value">${totalChapters != null ? this.formatNumber(totalChapters) : "—"}</span>
 					</div>
-					${rating ? `
+					${
+						rating
+							? `
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Rating</span>
 						<span class="novelbin-chip">${this.escapeHtml(rating)}</span>
-					</div>` : ""}
-					${source ? `
+					</div>`
+							: ""
+					}
+					${
+						source
+							? `
 					<div class="novelbin-meta-group">
 						<span class="novelbin-meta-label">Source</span>
 						<span class="novelbin-meta-value">${this.escapeHtml(source)}</span>
-					</div>` : ""}
+					</div>`
+							: ""
+					}
 				</div>
 
-				${(views || updatedText) ? `
+				${
+					views || updatedText
+						? `
 				<div class="site-modal-section">
 					<h4 class="novelbin-section-title">Statistics</h4>
 					<div class="site-stats-grid">
 						${renderStat("Views", this.formatNumber(views), "👁️")}
 						${updatedText ? renderStat("Updated", updatedText, "🔄") : ""}
 					</div>
-				</div>` : ""}
+				</div>`
+						: ""
+				}
 
-				${genres.length ? `
+				${
+					genres.length
+						? `
 				<div class="site-modal-section">
 					<h4 class="novelbin-section-title">Genres</h4>
 					<div class="novelbin-genres-row">
 						${genres.map((g) => `<span class="novelbin-genre-tag">${this.escapeHtml(g)}</span>`).join("")}
 					</div>
-				</div>` : ""}
-				${tags.length ? `
+				</div>`
+						: ""
+				}
+				${
+					tags.length
+						? `
 				<div class="site-modal-section">
 					<h4 class="novelbin-section-title">Tags</h4>
 					<div class="novelbin-genres-row">
 						${tags.map((t) => `<span class="novelbin-genre-tag novelbin-tag">${this.escapeHtml(t)}</span>`).join("")}
 					</div>
-				</div>` : ""}
+				</div>`
+						: ""
+				}
 			</div>
 		`;
 	}
 
 	static formatNumber(num) {
 		if (num === null || num === undefined) return "0";
-		const n = typeof num === "string" ? parseInt(num.replace(/,/g, ""), 10) : num;
+		const n =
+			typeof num === "string" ? parseInt(num.replace(/,/g, ""), 10) : num;
 		if (isNaN(n)) return "0";
-		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-		if (n >= 10_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+		if (n >= 1_000_000)
+			return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+		if (n >= 10_000)
+			return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
 		if (n >= 1_000) return n.toLocaleString();
 		return n.toString();
 	}

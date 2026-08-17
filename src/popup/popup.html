@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en">
-
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,17 +13,38 @@
 			<p>Initializing...</p>
 		</div>
 		<div class="container">
-
 			<!-- Header -->
 			<div class="header">
 				<div class="header-brand">
-					<img src="../icons/logo-48.png" alt="Ranobe Gemini" class="header-logo" />
+					<img
+						src="../icons/logo-48.png"
+						alt="Ranobe Gemini"
+						class="header-logo"
+					/>
 					<span class="header-title">Ranobe Gemini</span>
 				</div>
 				<div class="header-actions">
-					<button id="toggleGeminiUIHeaderBtn" class="header-icon-btn toggle-gemini-header-btn" title="Hide Ranobe Gemini UI on this page">&#128065;</button>
-					<button id="quickSettingsBtn" class="header-icon-btn" title="Library Settings">&#9881;&#65039;</button>
-					<button id="quickLibraryBtn" class="header-icon-btn" title="Open Full Library">&#128218;</button>
+					<button
+						id="toggleGeminiUIHeaderBtn"
+						class="header-icon-btn toggle-gemini-header-btn"
+						title="Hide Ranobe Gemini UI on this page"
+					>
+						&#128065;
+					</button>
+					<button
+						id="quickSettingsBtn"
+						class="header-icon-btn"
+						title="Library Settings"
+					>
+						&#9881;&#65039;
+					</button>
+					<button
+						id="quickLibraryBtn"
+						class="header-icon-btn"
+						title="Open Full Library"
+					>
+						&#128218;
+					</button>
 				</div>
 			</div>
 
@@ -48,105 +68,223 @@
 			<div class="tabs">
 				<button class="tab-btn active" data-tab="novels">Novels</button>
 				<button class="tab-btn" data-tab="chat">Chat</button>
-				<button class="tab-btn" data-tab="notifications" id="notificationsTabBtn">
+				<button
+					class="tab-btn"
+					data-tab="notifications"
+					id="notificationsTabBtn"
+				>
 					Alerts
-					<span id="notificationBadge" class="notification-badge" style="display:none">0</span>
+					<span
+						id="notificationBadge"
+						class="notification-badge"
+						style="display: none"
+						>0</span
+					>
 				</button>
 			</div>
 
 			<!-- ── Novels Tab ──────────────────────────────────────────────── -->
 			<div id="novels" class="tab-content active">
-
 				<!-- Incognito quick-toggle -->
 				<div class="incognito-bar" id="incognitoBar">
 					<label class="check-label incognito-label">
 						<input type="checkbox" id="incognitoEnabled" />
-						<span class="incognito-text">&#128575;&#65039; Incognito — pause tracking</span>
+						<span class="incognito-text"
+							>&#128575;&#65039; Incognito — pause tracking</span
+						>
 					</label>
 				</div>
 
 				<div class="filter-bar">
-					<button class="novel-filter-btn active" data-filter="all">All</button>
-					<button class="novel-filter-btn" data-filter="reading">Reading</button>
-					<button class="novel-filter-btn" data-filter="up-to-date">Up-to-date</button>
-					<button class="novel-filter-btn" data-filter="completed">Done</button>
-					<button class="novel-filter-btn" data-filter="on-hold">Hold</button>
+					<button class="novel-filter-btn active" data-filter="all">
+						All
+					</button>
+					<button class="novel-filter-btn" data-filter="reading">
+						Reading
+					</button>
+					<button class="novel-filter-btn" data-filter="up-to-date">
+						Up-to-date
+					</button>
+					<button class="novel-filter-btn" data-filter="completed">
+						Done
+					</button>
+					<button class="novel-filter-btn" data-filter="on-hold">
+						Hold
+					</button>
 				</div>
 
 				<section class="novels-section">
 					<div class="section-row">
 						<h3 class="section-heading">Now Reading</h3>
-						<span id="pageStatusBadge" class="status-badge" style="display:none"></span>
+						<span
+							id="pageStatusBadge"
+							class="status-badge"
+							style="display: none"
+						></span>
 					</div>
 					<div id="currentNovelInfo">
 						<!-- Placeholder shown when no novel is detected -->
-						<div class="no-current-novel" id="notSupportedMessage" style="display:none">
+						<div
+							class="no-current-novel"
+							id="notSupportedMessage"
+							style="display: none"
+						>
 							<p class="empty-icon">&#128214;</p>
 							<p id="notSupportedText">No novel on this page</p>
-							<p class="empty-hint">Visit a supported site to see current novel</p>
+							<p class="empty-hint">
+								Visit a supported site to see current novel
+							</p>
 						</div>
 
 						<!-- Current novel card — shown when a novel is detected -->
-						<div id="currentNovelCard" class="current-novel-card" style="display:none">
+						<div
+							id="currentNovelCard"
+							class="current-novel-card"
+							style="display: none"
+						>
 							<!-- Title row -->
 							<div class="current-novel-title-row">
-								<div id="currentNovelTitle" class="current-novel-title"></div>
+								<div
+									id="currentNovelTitle"
+									class="current-novel-title"
+								></div>
 								<div class="current-novel-tags">
-									<span id="currentPageTypeTag" class="tag tag-page-type" style="display:none"></span>
-									<span id="currentStatusTag" class="tag tag-status" style="display:none"></span>
+									<span
+										id="currentPageTypeTag"
+										class="tag tag-page-type"
+										style="display: none"
+									></span>
+									<span
+										id="currentStatusTag"
+										class="tag tag-status"
+										style="display: none"
+									></span>
 								</div>
 							</div>
 
 							<!-- Chapter info -->
-							<div id="currentChapterInfo" class="current-chapter-info" style="display:none">
+							<div
+								id="currentChapterInfo"
+								class="current-chapter-info"
+								style="display: none"
+							>
 								<span class="chapter-icon">&#128366;</span>
-								<span id="currentChapterText" class="current-chapter-text"></span>
+								<span
+									id="currentChapterText"
+									class="current-chapter-text"
+								></span>
 							</div>
 
 							<!-- Progress bar -->
-							<div id="currentProgressBar" class="current-progress-bar" style="display:none">
+							<div
+								id="currentProgressBar"
+								class="current-progress-bar"
+								style="display: none"
+							>
 								<div class="progress-track">
-									<div id="currentProgressFill" class="progress-fill" style="width:0%"></div>
+									<div
+										id="currentProgressFill"
+										class="progress-fill"
+										style="width: 0%"
+									></div>
 								</div>
-								<span id="currentProgressPercent" class="progress-percent" style="display:none">0%</span>
+								<span
+									id="currentProgressPercent"
+									class="progress-percent"
+									style="display: none"
+									>0%</span
+								>
 							</div>
 
 							<!-- Library details (shown only when in library) -->
-							<div id="libraryDetails" style="display:none">
+							<div id="libraryDetails" style="display: none">
 								<div class="library-detail-row">
 									<label class="detail-label">Status</label>
-									<select id="readingStatusSelect" class="compact-select">
-										<option value="reading">&#128214; Reading</option>
-										<option value="up-to-date">&#10024; Up to Date</option>
-										<option value="completed">&#9989; Completed</option>
-										<option value="plan-to-read">&#128203; Plan to Read</option>
-										<option value="on-hold">&#9208;&#65039; On Hold</option>
-										<option value="dropped">&#10060; Dropped</option>
+									<select
+										id="readingStatusSelect"
+										class="compact-select"
+									>
+										<option value="reading">
+											&#128214; Reading
+										</option>
+										<option value="up-to-date">
+											&#10024; Up to Date
+										</option>
+										<option value="completed">
+											&#9989; Completed
+										</option>
+										<option value="plan-to-read">
+											&#128203; Plan to Read
+										</option>
+										<option value="on-hold">
+											&#9208;&#65039; On Hold
+										</option>
+										<option value="dropped">
+											&#10060; Dropped
+										</option>
 									</select>
 								</div>
-								<div id="enhancedCountRow" class="library-detail-row" style="display:none">
+								<div
+									id="enhancedCountRow"
+									class="library-detail-row"
+									style="display: none"
+								>
 									<label class="detail-label">Enhanced</label>
-									<span id="enhancedCountValue" class="detail-value"></span>
+									<span
+										id="enhancedCountValue"
+										class="detail-value"
+									></span>
 								</div>
-								<div id="genresRow" class="library-detail-row" style="display:none">
+								<div
+									id="genresRow"
+									class="library-detail-row"
+									style="display: none"
+								>
 									<label class="detail-label">Genres</label>
-									<div id="genresList" class="genres-list"></div>
+									<div
+										id="genresList"
+										class="genres-list"
+									></div>
 								</div>
 							</div>
 
 							<!-- Action buttons -->
 							<div class="current-novel-actions">
-								<button id="addToLibraryBtn" class="action-btn primary" style="display:none">&#43; Add to Library</button>
-								<button id="openNovelBtn" class="action-btn secondary" style="display:none">&#128279; Open Novel</button>
-								<button id="toggleGeminiUIBtn" class="action-btn toggle-ui-btn" style="display:none" title="Toggle Ranobe Gemini UI on the page">&#128065; Hide Gemini UI</button>
+								<button
+									id="addToLibraryBtn"
+									class="action-btn primary"
+									style="display: none"
+								>
+									&#43; Add to Library
+								</button>
+								<button
+									id="openNovelBtn"
+									class="action-btn secondary"
+									style="display: none"
+								>
+									&#128279; Open Novel
+								</button>
+								<button
+									id="toggleGeminiUIBtn"
+									class="action-btn toggle-ui-btn"
+									style="display: none"
+									title="Toggle Ranobe Gemini UI on the page"
+								>
+									&#128065; Hide Gemini UI
+								</button>
 							</div>
 						</div>
 
 						<!-- Default placeholder when no novel/chapter detected -->
-						<div class="no-current-novel" id="defaultNovelPlaceholder">
+						<div
+							class="no-current-novel"
+							id="defaultNovelPlaceholder"
+						>
 							<p class="empty-icon">&#128214;</p>
 							<p>No novel on this page</p>
-							<p class="empty-hint">Visit a supported site to see current novel</p>
+							<p class="empty-hint">
+								Visit a supported site to see current novel
+							</p>
 						</div>
 					</div>
 				</section>
@@ -155,14 +293,29 @@
 					<div class="section-row">
 						<h3 class="section-heading">
 							Library
-							<span class="count-badge" id="novelCountBadge">0</span>
+							<span class="count-badge" id="novelCountBadge"
+								>0</span
+							>
 						</h3>
-						<button id="refreshNovels" class="icon-action-btn" title="Refresh">&#8635;</button>
+						<button
+							id="refreshNovels"
+							class="icon-action-btn"
+							title="Refresh"
+						>
+							&#8635;
+						</button>
 					</div>
 					<div class="novels-controls-row">
 						<div class="view-btns">
-							<button class="novel-view-btn active" data-view="list">List</button>
-							<button class="novel-view-btn" data-view="grid">Grid</button>
+							<button
+								class="novel-view-btn active"
+								data-view="list"
+							>
+								List
+							</button>
+							<button class="novel-view-btn" data-view="grid">
+								Grid
+							</button>
 						</div>
 						<div class="sort-row">
 							<span class="sort-label">Sort:</span>
@@ -178,26 +331,38 @@
 						<div class="novels-empty">
 							<p class="empty-icon">&#128218;</p>
 							<p>No novels yet</p>
-							<p class="empty-hint">Open full library to add novels</p>
+							<p class="empty-hint">
+								Open full library to add novels
+							</p>
 						</div>
 					</div>
 				</section>
 
 				<!-- Quick-links to Library Settings features -->
 				<div class="settings-shortcuts">
-					<a href="#" class="settings-shortcut-item" id="shortcutQueue">
+					<a
+						href="#"
+						class="settings-shortcut-item"
+						id="shortcutQueue"
+					>
 						<span class="shortcut-icon">&#128293;</span>
 						<span class="shortcut-label">Chapter Queue</span>
 						<span class="shortcut-arrow">&#8594;</span>
 					</a>
-					<a href="#" class="settings-shortcut-item" id="shortcutLoreweave">
+					<a
+						href="#"
+						class="settings-shortcut-item"
+						id="shortcutLoreweave"
+					>
 						<span class="shortcut-icon">&#127760;</span>
 						<span class="shortcut-label">LoreWeave Graph</span>
 						<span class="shortcut-arrow">&#8594;</span>
 					</a>
 					<a href="#" class="settings-shortcut-item" id="shortcutAI">
 						<span class="shortcut-icon">&#129302;</span>
-						<span class="shortcut-label">AI Providers &amp; Models</span>
+						<span class="shortcut-label"
+							>AI Providers &amp; Models</span
+						>
 						<span class="shortcut-arrow">&#8594;</span>
 					</a>
 				</div>
@@ -216,7 +381,9 @@
 
 			<!-- ── Chat Tab ───────────────────────────────────────────────── -->
 			<div class="tab-content" id="chat">
-				<div class="chat-context-bar" id="chatContextInfo">Detecting novel…</div>
+				<div class="chat-context-bar" id="chatContextInfo">
+					Detecting novel…
+				</div>
 
 				<div class="chat-messages" id="chatMessages"></div>
 
@@ -228,17 +395,22 @@
 						placeholder="Ask about this novel…"
 						autocomplete="off"
 					/>
-					<button id="chatSendBtn" class="chat-send-btn" title="Send">&#10148;</button>
+					<button id="chatSendBtn" class="chat-send-btn" title="Send">
+						&#10148;
+					</button>
 				</div>
 
 				<div class="chat-toolbar">
-					<button id="chatClearBtn" class="chat-clear-btn">Clear</button>
+					<button id="chatClearBtn" class="chat-clear-btn">
+						Clear
+					</button>
 					<a
 						href="#"
 						id="chatSettingsLink"
 						class="chat-settings-link"
 						title="Chat Settings in Library Settings"
-					>&#9881;&#65039; Settings</a>
+						>&#9881;&#65039; Settings</a
+					>
 				</div>
 			</div>
 
@@ -248,24 +420,50 @@
 					<div class="notifications-stats">
 						<span id="totalNotifs">0</span> total
 						<span class="notif-stat-sep">&middot;</span>
-						<span id="unreadNotifs" class="notif-unread-count">0</span> unread
+						<span id="unreadNotifs" class="notif-unread-count"
+							>0</span
+						>
+						unread
 					</div>
 					<div class="notifications-tab-actions">
-						<button id="markAllReadBtn" class="notif-action-btn">&#10003; Read All</button>
-						<button id="clearNotificationsBtn" class="notif-action-btn notif-action-danger">&#128465; Clear</button>
+						<button id="markAllReadBtn" class="notif-action-btn">
+							&#10003; Read All
+						</button>
+						<button
+							id="clearNotificationsBtn"
+							class="notif-action-btn notif-action-danger"
+						>
+							&#128465; Clear
+						</button>
 					</div>
 				</div>
 				<div class="notifications-filter-bar">
-					<button class="notification-filter-btn active" data-filter="all">All</button>
-					<button class="notification-filter-btn" data-filter="success">Success</button>
-					<button class="notification-filter-btn" data-filter="error">Errors</button>
-					<button class="notification-filter-btn" data-filter="info">Info</button>
+					<button
+						class="notification-filter-btn active"
+						data-filter="all"
+					>
+						All
+					</button>
+					<button
+						class="notification-filter-btn"
+						data-filter="success"
+					>
+						Success
+					</button>
+					<button class="notification-filter-btn" data-filter="error">
+						Errors
+					</button>
+					<button class="notification-filter-btn" data-filter="info">
+						Info
+					</button>
 				</div>
 				<div id="notificationsContainer" class="notifications-list">
 					<div class="no-notifications">
 						<p class="empty-icon-lg">&#128237;</p>
 						<p>No notifications yet</p>
-						<p class="description">Notifications appear as you use the extension</p>
+						<p class="description">
+							Notifications appear as you use the extension
+						</p>
 					</div>
 				</div>
 			</div>
@@ -273,10 +471,13 @@
 			<!-- Resize -->
 			<div class="size-indicator" id="sizeIndicator"></div>
 			<!-- NOTICE: DO NOT TOUCH THIS DIV -->
-			<div class="resize-handle" id="resize-handle" title="Drag to resize"></div>
+			<div
+				class="resize-handle"
+				id="resize-handle"
+				title="Drag to resize"
+			></div>
 		</div>
 		<script src="../lib/browser-polyfill.min.js"></script>
 		<script src="popup.js" type="module"></script>
 	</body>
-
 </html>

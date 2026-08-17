@@ -55,7 +55,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const authorUrl = novel.metadata?.authorUrl;
 		if (authorEl) {
 			if (authorUrl) {
-				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+				authorEl.innerHTML = `<a href="${this.escapeUrlAttr(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
 					novel.author || "Unknown",
 				)}</a>`;
 			} else {
@@ -352,7 +352,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 		const coverUrl = novel.coverUrl || getVal("coverUrl") || "";
 		const fallbackCover = this.getFallbackCover(config);
 		const coverMarkup = coverUrl
-			? `<img class="novel-cover-img" src="${this.escapeHtml(coverUrl)}" alt="${this.escapeHtml(novel.title)}" data-fallback="${this.escapeHtml(fallbackCover)}" loading="lazy">`
+			? `<img class="novel-cover-img" src="${this.escapeUrlAttr(coverUrl)}" alt="${this.escapeHtml(novel.title)}" data-fallback="${this.escapeHtml(fallbackCover)}" loading="lazy">`
 			: `<div class="novel-cover-placeholder">${config.emoji || "✨"}</div>`;
 
 		// Essential metadata
@@ -457,7 +457,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 			<div class="scribblehub-card-horizontal">
 				${
 					coverUrl
-						? `<img class="scribblehub-bg-blur" src="${this.escapeHtml(coverUrl)}" alt="" aria-hidden="true" loading="lazy">`
+						? `<img class="scribblehub-bg-blur" src="${this.escapeUrlAttr(coverUrl)}" alt="" aria-hidden="true" loading="lazy">`
 						: ""
 				}
 				<div class="scribblehub-cover-wrapper">
@@ -499,7 +499,7 @@ export class ScribbleHubNovelCard extends NovelCardRenderer {
 							<span class="status-pill-small" style="background: ${statusInfo.color};">${statusInfo.label}</span>
 							${
 								novel.sourceUrl
-									? `<a class="action-btn" href="${this.escapeHtml(novel.sourceUrl)}" target="_blank" rel="noreferrer">Open ↗</a>`
+									? `<a class="action-btn" href="${this.escapeUrlAttr(novel.sourceUrl)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""
 							}
 						</div>

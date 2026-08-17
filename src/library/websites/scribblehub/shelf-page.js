@@ -1,1852 +1,382 @@
 /**
- * ScribbleHub Shelf Page Script
- * Handles filtering, sorting, rendering, and navigation for the ScribbleHub library view
+ * @fileoverview ScribbleHub shelf.
+ *
+ * ScribbleHub carries a numeric star rating, view/favourite/follow/review
+ * counts and fandom tags, so it declares nine stat cards and the popularity
+ * sorts. Everything generic lives in `../shelf-core.js`.
+ *
+ * Two controls from the old hand-written page are gone on purpose:
+ *   - the K/K+/T/M content-rating select, which compared those letters against
+ *     ScribbleHub's numeric star rating and so could never match anything;
+ *   - the Characters pill list, which the handler never populates.
  */
 
-import { ScribbleHubNovelCard } from "./novel-card.js";
+import ScribbleHubNovelCard from "./novel-card.js";
 import { ScribbleHubHandler } from "../../../utils/website-handlers/scribblehub-handler.js";
-import { NovelCardRenderer } from "../novel-card-base.js";
-import { openInlineEditModal } from "../../edit-modal.js";
+import { READING_STATUS } from "../../../utils/novel-library.js";
+import { initShelfPage } from "../shelf-core.js";
 import {
-	READING_STATUS,
-	READING_STATUS_INFO,
-	updateNovelInLibrary,
-	novelLibrary,
-} from "../../../utils/novel-library.js";
-import { loadImageWithCache } from "../../../utils/image-cache.js";
-import {
-	resolveExportTemplate,
-	formatExportFilename,
-} from "../../../utils/novel-copy-format.js";
-import {
-	applyThemeFromStorage,
-	setupThemeListener,
-} from "../../../utils/theme-config.js";
-import {
-	bindModalSwipeDismiss,
-	createModalNavigationController,
-	recoverMissingNovelById,
-} from "../../shared-shelf-helpers.js";
+	FILTER_KINDS,
+	formatNumber,
+	maxBy,
+	normalizeReadingStatus,
+	sumField,
+} from "../shelf-filter-engine.js";
 
-const CANONICAL_LABELS = new Map();
+/** One spelling of word count for the whole page. */
+const wordsOf = (novel) =>
+	novel.metadata?.words || novel.stats?.words || novel.words || 0;
 
-const CATEGORY_LOOKUP = {
-	genres: new Set(),
-	tags: new Set(),
+const chaptersOf = (novel) =>
+	novel.metadata?.totalChapters || novel.totalChapters || 0;
+
+const ratingOf = (novel) => {
+	const raw = novel.metadata?.rating ?? novel.rating;
+	const value = parseFloat(raw);
+	return Number.isNaN(value) ? 0 : value;
 };
 
-const MAX_CHARACTERS = 15;
+const workStatusOf = (novel) =>
+	(novel.metadata?.status || novel.status || "").toLowerCase();
 
-// Initialize taxonomy categories from handler definition
-const TAXONOMY = ScribbleHubHandler.SHELF_METADATA?.taxonomy || [
-	{ id: "genres", label: "Genres", type: "array" },
-	{ id: "tags", label: "Tags", type: "array" },
-	{ id: "status", label: "Status", type: "string" },
+/** ScribbleHub lists fandoms and tags in both the old and new shapes. */
+const listOf = (novel, key) => [
+	...(Array.isArray(novel.metadata?.[key]) ? novel.metadata[key] : []),
+	...(Array.isArray(novel[key]) ? novel[key] : []),
 ];
 
-TAXONOMY.forEach((tax) => {
-	CATEGORY_LOOKUP[tax.id] = new Set();
-});
+/** A stat that lives on either `stats` or `metadata`. */
+const statOf = (novel, key) => novel.stats?.[key] || novel.metadata?.[key] || 0;
 
-const MAX_FANDOMS = 10;
-
-// State for filtering and rendering
-let allNovels = [];
-let filteredNovels = [];
-
-const modalNavigation = createModalNavigationController({
-	getContextIds: (novelId) => {
-		const visibleNovels = filteredNovels.length > 0 ? filteredNovels : allNovels;
-		const visibleIds = visibleNovels.map((novel) => novel.id);
-		if (novelId && visibleIds.includes(novelId)) return visibleIds;
-		const allIds = allNovels.map((novel) => novel.id);
-		if (novelId && allIds.includes(novelId)) return allIds;
-		return visibleIds.length > 0 ? visibleIds : allIds;
-	},
-	findNovelById: (novelId) =>
-		filteredNovels.find((novel) => novel.id === novelId) ||
-		allNovels.find((novel) => novel.id === novelId) ||
-		null,
-	onOpenNovel: (novel, options) => showNovelModal(novel, options),
-});
-
-const FILTER_STORAGE_KEY = "rg_filters_scribblehub";
-const DEFAULT_FILTERS = {
-	search: "",
-	readingStatus: "all",
-	status: "all",
-	genres: [],
-	tags: [],
-	tagsMode: "any",
-	wordCountMin: "",
-	wordCountMax: "",
-	sort: "recent",
+const timeOf = (value) => {
+	if (!value) return 0;
+	if (typeof value === "number") return value;
+	const parsed = Date.parse(value);
+	return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-let filterState = { ...DEFAULT_FILTERS };
-
-function resetTaxonomy() {
-	CANONICAL_LABELS.clear();
-	Object.values(CATEGORY_LOOKUP).forEach((set) => set.clear());
-}
-
-function registerLabel(label, category) {
-	if (!label) return "";
-	const cleaned = label.toString().trim();
-	if (!cleaned) return "";
-	const lower = cleaned.toLowerCase();
-	if (!CANONICAL_LABELS.has(lower)) {
-		CANONICAL_LABELS.set(lower, cleaned);
-	}
-	if (category && CATEGORY_LOOKUP[category]) {
-		CATEGORY_LOOKUP[category].add(lower);
-	}
-	return CANONICAL_LABELS.get(lower) || cleaned;
-}
-
-function canonicalizeLabel(label, category) {
-	return registerLabel(label, category);
-}
-
-function categorizeLabel(label) {
-	const lower = label.toLowerCase();
-	for (const key of Object.keys(CATEGORY_LOOKUP)) {
-		if (CATEGORY_LOOKUP[key].has(lower)) return key;
-	}
-	return null;
-}
-
-function sortAlpha(list = []) {
-	return [...list].sort((a, b) => a.localeCompare(b));
-}
-
-function buildTaxonomyFromNovels(novels) {
-	resetTaxonomy();
-	novels.forEach((novel) => {
-		const metadata = novel.metadata || {};
-
-		TAXONOMY.forEach((tax) => {
-			const key = tax.id;
-			// Check both top-level and nested metadata
-			const values = novel[key] || metadata[key] || [];
-			if (Array.isArray(values)) {
-				values.forEach((v) => registerLabel(v, key));
-			}
-		});
-	});
-}
-
-function loadSavedFilters() {
-	try {
-		const saved = localStorage.getItem(FILTER_STORAGE_KEY);
-		if (saved) {
-			filterState = { ...DEFAULT_FILTERS, ...JSON.parse(saved) };
-		}
-	} catch (error) {
-		console.warn("[ScribbleHub Shelf] Failed to load saved filters", error);
-		filterState = { ...DEFAULT_FILTERS };
-	}
-}
-
-function persistFilters() {
-	try {
-		localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filterState));
-	} catch (error) {
-		console.warn("[ScribbleHub Shelf] Failed to save filters", error);
-	}
-}
-
-function applyFilterStateToUI() {
-	const searchInput = document.getElementById("search-input");
-	if (searchInput) {
-		searchInput.value = filterState.search || "";
-	}
-
-	const bindValue = (id, value) => {
-		const el = document.getElementById(id);
-		if (el) {
-			el.value = value;
-		}
-	};
-
-	bindValue("status-filter", filterState.status);
-	bindValue("sort-select", filterState.sort);
-	bindValue("wordcount-min", filterState.wordCountMin || "");
-	bindValue("wordcount-max", filterState.wordCountMax || "");
-
-	const tagMatchSelect = document.getElementById("tags-match-mode");
-	if (tagMatchSelect) {
-		tagMatchSelect.value = filterState.tagsMode || "any";
-	}
-
-	TAXONOMY.forEach((tax) => {
-		const elementId = `${tax.id}-filter`;
-		syncMultiSelectUI(elementId, filterState[tax.id] || []);
-	});
-
-	renderActiveFilters();
-}
-
-function renderActiveFilters() {
-	const container = document.getElementById("active-filters");
-	if (!container) return;
-	updateDropdownLabels();
-
-	const chips = [];
-	const addChip = (key, label, value = "") =>
-		chips.push({ key, label, value });
-
-	if (filterState.search) addChip("search", `Search: ${filterState.search}`);
-	if (filterState.rating && filterState.rating !== "all")
-		addChip("rating", `Rating: ${filterState.rating}`);
-	if (filterState.readingStatus && filterState.readingStatus !== "all")
-		addChip("readingStatus", `Reading: ${filterState.readingStatus}`);
-	if (filterState.workStatus && filterState.workStatus !== "all")
-		addChip("workStatus", `Status: ${filterState.workStatus}`);
-	if (filterState.storyType && filterState.storyType !== "all")
-		addChip("storyType", `Type: ${filterState.storyType}`);
-	if (filterState.language && filterState.language !== "all")
-		addChip("language", `Language: ${filterState.language}`);
-
-	(filterState.fandoms || []).forEach((fandom) => {
-		addChip("fandoms", `Fandom: ${fandom}`, fandom);
-	});
-
-	(filterState.genres || []).forEach((genre) => {
-		addChip("genres", `Genre: ${genre}`, genre);
-	});
-
-	(filterState.characters || []).forEach((character) => {
-		addChip("characters", `Character: ${character}`, character);
-	});
-
-	const minWords = parseInt(filterState.wordCountMin, 10);
-	if (!Number.isNaN(minWords) && minWords > 0) {
-		addChip("wordCountMin", `Words ≥ ${minWords.toLocaleString()}`);
-	}
-
-	const maxWords = parseInt(filterState.wordCountMax, 10);
-	if (!Number.isNaN(maxWords) && maxWords > 0) {
-		addChip("wordCountMax", `Words ≤ ${maxWords.toLocaleString()}`);
-	}
-
-	(filterState.tags || []).forEach((tag) => {
-		addChip("tags", `Tag: ${tag}`, tag);
-	});
-
-	if ((filterState.tags || []).length && filterState.tagsMode === "all") {
-		addChip("tagsMode", "Tags: all must match");
-	}
-
-	container.innerHTML = "";
-	chips.forEach((chip) => {
-		const el = document.createElement("span");
-		el.className = "filter-chip";
-		el.innerHTML = `<strong>${escapeHtml(
-			chip.label,
-		)}</strong> <button aria-label="Clear filter" data-key="${
-			chip.key
-		}" data-value="${chip.value ? escapeHtml(chip.value) : ""}">×</button>`;
-		container.appendChild(el);
-	});
-
-	container.querySelectorAll("button").forEach((btn) => {
-		btn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			clearFilter(btn.dataset.key, btn.dataset.value);
-		});
-	});
-
-	updateFilterBadge(chips.length);
-}
-
-function updateFilterBadge(count) {
-	const badge = document.getElementById("filter-badge");
-	if (!badge) return;
-	badge.textContent = count;
-	badge.style.display = count > 0 ? "inline-block" : "none";
-}
-
-function updateDropdownLabels() {
-	const setLabel = (id, base, count = 0) => {
-		const el = document.getElementById(id);
-		if (!el) return;
-		el.textContent = count > 0 ? `${base} (${count})` : base;
-	};
-
-	setLabel(
-		"fandoms-dropdown-toggle",
-		"Choose Fandoms",
-		(filterState.fandoms || []).length,
-	);
-	setLabel(
-		"genres-dropdown-toggle",
-		"Choose Genres",
-		(filterState.genres || []).length,
-	);
-	setLabel(
-		"characters-dropdown-toggle",
-		"Choose Characters",
-		(filterState.characters || []).length,
-	);
-	const tagsCount = (filterState.tags || []).length;
-	const baseTagsLabel =
-		filterState.tagsMode === "all" ? "Tags (AND)" : "Choose Tags";
-	setLabel("tags-dropdown-toggle", baseTagsLabel, tagsCount);
-}
-
-function clearFilter(key, value) {
-	switch (key) {
-		case "search":
-			filterState.search = "";
-			break;
-		case "rating":
-			filterState.rating = "all";
-			break;
-		case "readingStatus":
-			filterState.readingStatus = "all";
-			break;
-		case "workStatus":
-			filterState.workStatus = "all";
-			break;
-		case "storyType":
-			filterState.storyType = "all";
-			break;
-		case "language":
-			filterState.language = "all";
-			break;
-		case "fandoms":
-			filterState.fandoms = filterState.fandoms.filter(
-				(f) => f !== value,
-			);
-			break;
-		case "genres":
-			filterState.genres = filterState.genres.filter((g) => g !== value);
-			break;
-		case "characters":
-			filterState.characters = filterState.characters.filter(
-				(c) => c !== value,
-			);
-			break;
-		case "wordCountMin":
-			filterState.wordCountMin = "";
-			break;
-		case "wordCountMax":
-			filterState.wordCountMax = "";
-			break;
-		case "tags":
-			filterState.tags = filterState.tags.filter((t) => t !== value);
-			break;
-		case "tagsMode":
-			filterState.tagsMode = "any";
-			break;
-		default:
-			break;
-	}
-
-	applyFilterStateToUI();
-	persistFilters();
-	applyFiltersAndSort();
-}
-
-function syncMultiSelectUI(containerId, selectedValues, options = {}) {
-	const container = document.getElementById(containerId);
-	if (!container) return;
-	const { maxSelection } = options;
-	container.querySelectorAll("input[type='checkbox']").forEach((input) => {
-		const isChecked = selectedValues.includes(input.value);
-		input.checked = isChecked;
-		const pill = input.closest(".filter-pill");
-		pill?.classList.toggle("active", isChecked);
-	});
-
-	if (maxSelection) {
-		const selectedCount = selectedValues.length;
-		container
-			.querySelectorAll("input[type='checkbox']")
-			.forEach((input) => {
-				const pill = input.closest(".filter-pill");
-				const shouldDisable =
-					!input.checked && selectedCount >= maxSelection;
-				input.disabled = shouldDisable;
-				pill?.classList.toggle("disabled", shouldDisable);
-			});
-	}
-}
-
-function renderPillList(
-	containerId,
-	items,
-	selectedValues,
-	stateKey,
-	options = {},
-) {
-	const container = document.getElementById(containerId);
-	if (!container) return;
-
-	if (!items || items.length === 0) {
-		container.innerHTML = '<span class="filter-chip">No options</span>';
-		return;
-	}
-
-	container.innerHTML = items
-		.map((item) => {
-			const safe = escapeHtml(item);
-			const isActive = selectedValues.includes(item);
-			return `
-				<label class="filter-pill ${isActive ? "active" : ""}">
-					<input type="checkbox" value="${safe}" ${isActive ? "checked" : ""} />
-					<span>${safe}</span>
-				</label>
-			`;
-		})
-		.join("");
-
-	const { maxSelection } = options;
-	const enforceLimit = () => {
-		if (!maxSelection) return;
-		const selected = filterState[stateKey] || [];
-		const selectedCount = selected.length;
-		container
-			.querySelectorAll("input[type='checkbox']")
-			.forEach((input) => {
-				const pill = input.closest(".filter-pill");
-				const shouldDisable =
-					!input.checked && selectedCount >= maxSelection;
-				input.disabled = shouldDisable;
-				pill?.classList.toggle("disabled", shouldDisable);
-			});
-	};
-
-	container.querySelectorAll("input[type='checkbox']").forEach((input) => {
-		input.addEventListener("change", (e) => {
-			const value = e.target.value;
-			const current = new Set(filterState[stateKey] || []);
-			if (e.target.checked) {
-				if (maxSelection && current.size >= maxSelection) {
-					e.target.checked = false;
-					return;
-				}
-				current.add(value);
-			} else {
-				current.delete(value);
-			}
-			filterState[stateKey] = [...current];
-			persistFilters();
-			renderActiveFilters();
-			applyFiltersAndSort();
-			enforceLimit();
-		});
-	});
-
-	enforceLimit();
-}
-
-function buildFilterOptionsFromNovels(novels) {
-	const languages = new Set();
-	const fandoms = new Set();
-	const genres = new Set();
-	const characters = new Set();
-	const tags = new Set();
-	const contentTypes = new Set();
-
-	novels.forEach((novel) => {
-		const metadata = novel.metadata || {};
-		if (metadata.language) languages.add(metadata.language);
-
-		const buckets = categorizeNovelAttributes(novel);
-		(buckets.fandoms || new Set()).forEach((fandom) => fandoms.add(fandom));
-		(buckets.genres || new Set()).forEach((genre) => genres.add(genre));
-		(buckets.characters || new Set()).forEach((character) =>
-			characters.add(character),
-		);
-		(buckets.contentTypes || new Set()).forEach((type) =>
-			contentTypes.add(type),
-		);
-		(buckets.tags || new Set()).forEach((tag) => tags.add(tag));
-	});
-
-	const miscTags = new Set(
-		[...tags].filter(
-			(tag) =>
-				!fandoms.has(tag) &&
-				!genres.has(tag) &&
-				!characters.has(tag) &&
-				!contentTypes.has(tag),
-		),
-	);
-	contentTypes.forEach((type) => miscTags.add(type));
-
-	return {
-		languages: sortAlpha(languages),
-		fandoms: sortAlpha(fandoms),
-		genres: sortAlpha(genres),
-		characters: sortAlpha(characters),
-		tags: sortAlpha(miscTags),
-	};
-}
-
-function populateDynamicFilters() {
-	const { languages, fandoms, genres, characters, tags } =
-		buildFilterOptionsFromNovels(allNovels);
-
-	const languageSelect = document.getElementById("language-filter");
-	if (languageSelect) {
-		languageSelect.innerHTML =
-			'<option value="all">All Languages</option>' +
-			(languages.length
-				? languages
-						.map(
-							(lang) =>
-								`<option value="${escapeHtml(
-									lang,
-								)}">${escapeHtml(lang)}</option>`,
-						)
-						.join("")
-				: '<option value="all" disabled>No languages found</option>');
-		languageSelect.value =
-			filterState.language === "all" ? "all" : filterState.language;
-	}
-
-	renderPillList("fandoms-filter", fandoms, filterState.fandoms, "fandoms", {
-		maxSelection: MAX_FANDOMS,
-	});
-	renderPillList("genres-filter", genres, filterState.genres, "genres");
-	renderPillList(
-		"characters-filter",
-		characters,
-		filterState.characters,
-		"characters",
-		{ maxSelection: MAX_CHARACTERS },
-	);
-	renderPillList("tags-filter", tags, filterState.tags, "tags");
-	applyFilterStateToUI();
-}
-
-function renderNovels(novels = filteredNovels) {
-	const grid = document.getElementById("novel-grid");
-	const emptyState = document.getElementById("empty-state");
-	const loadingState = document.getElementById("loading-state");
-	const novelCount = document.getElementById("novel-count");
-
-	if (!grid) return;
-
-	if (!novels || novels.length === 0) {
-		grid.style.display = "none";
-		if (emptyState) emptyState.style.display = "block";
-		if (novelCount) novelCount.textContent = "(0 novels)";
-		return;
-	}
-
-	if (loadingState) loadingState.style.display = "none";
-	if (emptyState) emptyState.style.display = "none";
-	grid.style.display = "grid";
-
-	grid.innerHTML = "";
-	novels.forEach((novel) => {
-		try {
-			const renderer = ScribbleHubNovelCard || NovelCardRenderer;
-			const cardElement = renderer.renderCard(novel);
-			grid.appendChild(cardElement);
-		} catch (error) {
-			console.error("Error rendering novel card:", error);
-			const fallbackCard = document.createElement("div");
-			fallbackCard.className = "novel-card";
-			fallbackCard.dataset.novelId = novel.id;
-			fallbackCard.innerHTML = `
-				<div class="novel-card-info">
-					<h3 class="novel-title">${novel.title}</h3>
-					<p class="novel-author">${novel.author || "Unknown"}</p>
-				</div>
-			`;
-			grid.appendChild(fallbackCard);
-		}
-	});
-
-	if (novelCount)
-		novelCount.textContent = `(${novels.length} ${
-			novels.length === 1 ? "novel" : "novels"
-		})`;
-
-	grid.querySelectorAll(".novel-card").forEach((card) => {
-		card.addEventListener("click", (e) => {
-			if (!e.target.closest("button, a")) {
-				const novelId = card.dataset.novelId;
-				const novel = novels.find((n) => n.id === novelId);
-				if (novel) {
-					showNovelModal(novel);
-				}
-			}
-		});
-	});
-}
-
-function showNovelModal(novel, options = {}) {
-	const modal = document.getElementById("novel-modal");
-	if (!modal) return;
-
-	modalNavigation.syncContext(novel.id, options.contextIds);
-
-	// Keep a shareable deep-link URL for this modal.
-	try {
-		const params = new URLSearchParams(window.location.search);
-		params.set("novel", novel.id);
-		params.set("openModal", "1");
-		history.replaceState(
-			null,
-			"",
-			`${window.location.pathname}?${params.toString()}`,
-		);
-	} catch (_err) {
-		// non-critical
-	}
-
-	const titleEl = document.getElementById("modal-title");
-	if (titleEl) titleEl.textContent = novel.title || "";
-
-	const authorEl = document.getElementById("modal-author");
-	const authorUrl = novel.metadata?.authorUrl;
-	if (authorEl) {
-		if (authorUrl) {
-			authorEl.innerHTML = `<a href="${authorUrl}" target="_blank" rel="noreferrer">${escapeHtml(
-				novel.author || "Unknown",
-			)}</a>`;
-		} else {
-			authorEl.textContent = `${novel.author || "Unknown"}`;
-		}
-	}
-
-	const descriptionEl = document.getElementById("modal-description");
-	if (descriptionEl) {
-		descriptionEl.textContent = "";
-		if (novel.description) {
-			novel.description.split(/\n/).forEach((line, i, arr) => {
-				descriptionEl.appendChild(document.createTextNode(line));
-				if (i < arr.length - 1)
-					descriptionEl.appendChild(document.createElement("br"));
-			});
-		}
-	}
-
-	const coverImg = document.getElementById("modal-cover");
-	if (coverImg && novel.coverUrl) {
-		loadImageWithCache(coverImg, novel.coverUrl).catch(() => {});
-		coverImg.style.display = "block";
-		coverImg.addEventListener("error", () => {
-			coverImg.style.display = "none";
-		});
-	} else if (coverImg) {
-		coverImg.style.display = "none";
-	}
-
-	// Set up action buttons
-	const continueBtn = document.getElementById("modal-continue-btn");
-	if (continueBtn) {
-		const lastReadUrl = novel.lastReadUrl || novel.sourceUrl;
-		if (lastReadUrl) {
-			continueBtn.href = lastReadUrl;
-			continueBtn.style.display = "inline-flex";
-		} else {
-			continueBtn.style.display = "none";
-		}
-	}
-
-	const readBtn = document.getElementById("modal-read-btn");
-	if (readBtn && novel.sourceUrl) {
-		readBtn.href = novel.sourceUrl;
-		readBtn.textContent = "View on Site";
-	}
-
-	// Refresh button
-	const refreshBtn = document.getElementById("modal-refresh-btn");
-	if (refreshBtn) {
-		refreshBtn.onclick = () => {
-			refreshNovelMetadata(novel);
-			closeModal();
-		};
-	}
-
-	// Edit button
-	const editBtn = document.getElementById("modal-edit-btn");
-	if (editBtn) {
-		editBtn.onclick = () => {
-			openEditModal(novel);
-			closeModal();
-		};
-	}
-
-	// Remove button
-	const removeBtn = document.getElementById("modal-remove-btn");
-	if (removeBtn) {
-		removeBtn.onclick = async () => {
-			if (
-				confirm(
-					`Are you sure you want to remove "${novel.title}" from your library?`,
-				)
-			) {
-				await removeNovelFromLibrary(novel.id);
-				closeModal();
-			}
-		};
-	}
-
-	// "All Libraries" button — opens main library.html with this novel's detail panel
-	const openLibraryBtn = document.getElementById("modal-open-library-btn");
-	if (openLibraryBtn) {
-		openLibraryBtn.onclick = () => {
-			const libraryUrl = browser.runtime.getURL(
-				`library/library.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
-			);
-			window.open(libraryUrl, "_blank");
-		};
-	}
-
-	// Header library button (top-right of modal) — same as "All Libraries"
-	const openLibraryHeaderBtn = document.getElementById(
-		"modal-open-library-header-btn",
-	);
-	if (openLibraryHeaderBtn) {
-		openLibraryHeaderBtn.onclick = () => {
-			const libraryUrl = browser.runtime.getURL(
-				`library/library.html?novel=${encodeURIComponent(novel.id)}&openModal=1`,
-			);
-			window.open(libraryUrl, "_blank");
-		};
-	}
-
-	if (ScribbleHubNovelCard && ScribbleHubNovelCard.renderModalMetadata) {
-		ScribbleHubNovelCard.renderModalMetadata(novel);
-	}
-
-	// Setup reading status buttons
-	const statusButtons = document.querySelectorAll(".status-btn");
-	const currentStatus = normalizeModalStatus(novel.readingStatus);
-
-	statusButtons.forEach((btn) => {
-		const status = normalizeModalStatus(btn.getAttribute("data-status"));
-
-		// Set active state
-		if (status === currentStatus) {
-			btn.classList.add("active");
-		} else {
-			btn.classList.remove("active");
-		}
-
-		// Add click handler
-		btn.onclick = async () => {
-			const updatedNovel = { ...novel, readingStatus: status };
-			await updateNovelInLibrary(updatedNovel);
-			const idx = allNovels.findIndex((n) => n.id === novel.id);
-			if (idx >= 0) allNovels[idx] = updatedNovel;
-			const filteredIdx = filteredNovels.findIndex(
-				(n) => n.id === novel.id,
-			);
-			if (filteredIdx >= 0) filteredNovels[filteredIdx] = updatedNovel;
-
-			applyFiltersAndSort();
-
-			// Update button states
-			statusButtons.forEach((b) => {
-				if (
-					normalizeModalStatus(b.getAttribute("data-status")) ===
-					status
-				) {
-					b.classList.add("active");
-				} else {
-					b.classList.remove("active");
-				}
-			});
-		};
-	});
-
-	// Copy novel name button
-	// Copy novel filename button
-	const copyInfoBtn = document.getElementById("modal-copy-info-btn");
-	if (copyInfoBtn) {
-		copyInfoBtn.onclick = async () => {
-			try {
-				const settings = await novelLibrary.getSettings();
-				const template = resolveExportTemplate(
-					settings?.novelCopyFormats,
-					novel.shelfId,
+export const descriptor = {
+	shelfId: "scribblehub",
+	filterStorageKey: "rg_filters_scribblehub",
+	cardRenderer: ScribbleHubNovelCard,
+	handler: ScribbleHubHandler,
+	randomPick: true,
+
+	filters: [
+		{ kind: FILTER_KINDS.SEARCH, key: "search", label: "Search" },
+		{
+			kind: FILTER_KINDS.SELECT,
+			key: "workStatus",
+			label: "Work Status",
+			allLabel: "All",
+			options: [
+				{ value: "Completed", label: "Completed" },
+				{ value: "Ongoing", label: "Ongoing" },
+				{ value: "Hiatus", label: "Hiatus" },
+				{ value: "Dropped", label: "Dropped" },
+			],
+			value: (novel) => novel.metadata?.status || novel.status || "",
+		},
+		{
+			kind: FILTER_KINDS.SELECT,
+			key: "readingStatus",
+			label: "Reading Status",
+			allLabel: "All",
+			options: [
+				{ value: READING_STATUS.PLAN_TO_READ, label: "Plan to Read" },
+				{ value: READING_STATUS.READING, label: "Currently Reading" },
+				{ value: READING_STATUS.COMPLETED, label: "Completed" },
+				{ value: READING_STATUS.ON_HOLD, label: "On Hold" },
+				{ value: READING_STATUS.DROPPED, label: "Dropped" },
+				{ value: READING_STATUS.RE_READING, label: "Re-reading" },
+			],
+			match: (novel, wanted) =>
+				normalizeReadingStatus(novel.readingStatus) === wanted,
+		},
+		{
+			kind: FILTER_KINDS.SELECT,
+			key: "storyType",
+			label: "Story Type",
+			allLabel: "All Types",
+			options: [
+				{ value: "single", label: "Single Fandom" },
+				{ value: "crossover", label: "Crossover" },
+			],
+			match: (novel, wanted) => {
+				const crossover =
+					novel.metadata?.isCrossover === true ||
+					listOf(novel, "fandoms").length > 1;
+				return wanted === "crossover" ? crossover : !crossover;
+			},
+		},
+		{
+			kind: FILTER_KINDS.SELECT,
+			key: "language",
+			label: "Language",
+			allLabel: "All Languages",
+			value: (novel) => novel.metadata?.language || novel.language || "",
+		},
+		{
+			kind: FILTER_KINDS.MULTI,
+			key: "fandoms",
+			label: "Fandoms",
+			toggleLabel: "Choose Fandoms",
+			searchable: true,
+			values: (novel) => listOf(novel, "fandoms"),
+		},
+		{
+			kind: FILTER_KINDS.MULTI,
+			key: "genres",
+			label: "Genres",
+			toggleLabel: "Choose Genres",
+			// ScribbleHub has always required every selected genre to match.
+			mode: "all",
+			values: (novel) => listOf(novel, "genres"),
+		},
+		{
+			kind: FILTER_KINDS.MULTI,
+			key: "tags",
+			label: "Tags",
+			toggleLabel: "Choose Tags",
+			modeSelectable: true,
+			searchable: true,
+			values: (novel) => listOf(novel, "tags"),
+		},
+		{
+			kind: FILTER_KINDS.RANGE,
+			key: "wordCount",
+			label: "Word Count Range",
+			hint: "Leave blank for no limit",
+			value: wordsOf,
+		},
+	],
+
+	sorts: [
+		{
+			value: "recent",
+			label: "Recently Read",
+			compare: (a, b) =>
+				(b.lastAccessedAt || 0) - (a.lastAccessedAt || 0),
+		},
+		{
+			value: "added",
+			label: "Date Added",
+			compare: (a, b) => (b.addedAt || 0) - (a.addedAt || 0),
+		},
+		{
+			value: "title",
+			label: "Title",
+			compare: (a, b) => (a.title || "").localeCompare(b.title || ""),
+		},
+		{
+			value: "chapters",
+			label: "Enhanced Chapters",
+			compare: (a, b) =>
+				(b.enhancedChaptersCount || 0) - (a.enhancedChaptersCount || 0),
+		},
+		{
+			value: "words",
+			label: "Word Count",
+			compare: (a, b) => wordsOf(b) - wordsOf(a),
+		},
+		{
+			value: "rating",
+			label: "Rating",
+			compare: (a, b) => ratingOf(b) - ratingOf(a),
+		},
+		{
+			value: "favorites",
+			label: "Favorites",
+			compare: (a, b) => statOf(b, "favorites") - statOf(a, "favorites"),
+		},
+		{
+			value: "follows",
+			label: "Follows",
+			compare: (a, b) => statOf(b, "follows") - statOf(a, "follows"),
+		},
+		{
+			value: "reviews",
+			label: "Reviews",
+			compare: (a, b) => statOf(b, "reviews") - statOf(a, "reviews"),
+		},
+		{
+			value: "published",
+			label: "Published Date",
+			compare: (a, b) =>
+				timeOf(b.metadata?.publishedDate || b.publishedDate) -
+				timeOf(a.metadata?.publishedDate || a.publishedDate),
+		},
+		{
+			value: "updated",
+			label: "Updated Date",
+			compare: (a, b) =>
+				timeOf(b.metadata?.updatedDate || b.updatedDate) -
+				timeOf(a.metadata?.updatedDate || a.updatedDate),
+		},
+		{
+			value: "status",
+			label: "Work Status",
+			compare: (a, b) => workStatusOrder(a) - workStatusOrder(b),
+		},
+	],
+
+	stats: [
+		{
+			id: "stats-novels",
+			label: "Novels",
+			compute: (novels) => novels.length.toLocaleString(),
+		},
+		{
+			id: "stats-enhanced",
+			label: "Enhanced Chapters",
+			compute: (novels) =>
+				sumField(novels, "enhancedChaptersCount").toLocaleString(),
+		},
+		{
+			id: "stats-words",
+			label: "Total Words",
+			compute: (novels) =>
+				formatNumber(novels.reduce((sum, n) => sum + wordsOf(n), 0)),
+		},
+		{
+			id: "stats-avg-words",
+			label: "Avg Words",
+			compute: (novels) => {
+				if (!novels.length) return "-";
+				const total = novels.reduce((sum, n) => sum + wordsOf(n), 0);
+				return formatNumber(Math.round(total / novels.length));
+			},
+		},
+		{
+			id: "stats-completed",
+			label: "Completed",
+			compute: (novels) =>
+				novels
+					.filter((n) => workStatusOf(n) === "completed")
+					.length.toLocaleString(),
+		},
+		{
+			id: "stats-avgrating",
+			label: "Avg Rating",
+			compute: (novels) => {
+				const rated = novels.filter((n) => ratingOf(n) > 0);
+				if (!rated.length) return "-";
+				const total = rated.reduce((sum, n) => sum + ratingOf(n), 0);
+				return (total / rated.length).toFixed(1);
+			},
+		},
+		{
+			id: "stats-reading",
+			label: "Reading",
+			compute: (novels) => {
+				if (!novels.length) return "0%";
+				const reading = novels.filter(
+					(n) =>
+						normalizeReadingStatus(n.readingStatus) ===
+						READING_STATUS.READING,
+				).length;
+				return `${Math.round((reading / novels.length) * 100)}%`;
+			},
+		},
+		{
+			id: "stats-languages",
+			label: "Languages",
+			compute: (novels) => String(countLanguages(novels) || "-"),
+		},
+		{
+			id: "stats-avglength",
+			label: "Avg Chapters",
+			compute: (novels) => {
+				if (!novels.length) return "-";
+				const total = novels.reduce((sum, n) => sum + chaptersOf(n), 0);
+				return (total / novels.length).toFixed(1);
+			},
+		},
+	],
+
+	insights: [
+		{
+			id: "highest-rated",
+			label: "Highest Rated",
+			icon: "⭐",
+			pick: (novels) => {
+				const novel = maxBy(novels, ratingOf);
+				return { novel, text: novel?.title || "-" };
+			},
+		},
+		{
+			id: "most-popular",
+			label: "Most Popular",
+			icon: "\u{1F4C8}",
+			pick: (novels) => {
+				const novel = maxBy(
+					novels,
+					(n) => n.metadata?.views || n.views || 0,
 				);
-				const text = formatExportFilename(novel, template);
-				await navigator.clipboard.writeText(text);
-				copyInfoBtn.textContent = "✅ Copied!";
-				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy";
-				}, 2000);
-			} catch (err) {
-				copyInfoBtn.textContent = "❌ Failed";
-				setTimeout(() => {
-					copyInfoBtn.textContent = "📋 Copy";
-				}, 2000);
-			}
-		};
-	}
+				return { novel, text: novel?.title || "-" };
+			},
+		},
+		{
+			id: "language-count",
+			label: "Languages",
+			icon: "\u{1F310}",
+			pick: (novels) => ({
+				novel: null,
+				text: String(countLanguages(novels) || "-"),
+			}),
+		},
+		{
+			// Was chapter count, which made this a duplicate of Most Chapters.
+			id: "longest-novel",
+			label: "Longest Novel",
+			icon: "\u{1F4CF}",
+			pick: (novels) => {
+				const novel = maxBy(novels, wordsOf);
+				return { novel, text: novel?.title || "-" };
+			},
+		},
+		{
+			id: "newest-addition",
+			label: "Newest Addition",
+			icon: "\u{1F195}",
+			pick: (novels) => {
+				const novel = maxBy(novels, (n) =>
+					n.addedAt
+						? n.addedAt
+						: timeOf(n.metadata?.updatedDate || n.updatedDate),
+				);
+				return { novel, text: novel?.title || "-" };
+			},
+		},
+		{
+			id: "most-chapters",
+			label: "Most Chapters",
+			icon: "\u{1F4DA}",
+			pick: (novels) => {
+				const novel = maxBy(novels, chaptersOf);
+				return { novel, text: novel?.title || "-" };
+			},
+		},
+	],
+};
 
-	// Update reading progress bar
-	{
-		const total = novel.totalChapters || 0;
-		const read = novel.lastReadChapter || 0;
-		const pct =
-			total > 0 ? Math.min(Math.round((read / total) * 100), 100) : 0;
-		const wordCount =
-			novel.stats?.wordCount ??
-			novel.metadata?.wordCount ??
-			novel.metadata?.words ??
-			0;
-		const wordStr =
-			wordCount > 0 ? ` · ~${wordCount.toLocaleString()} words` : "";
-		const fill = document.getElementById("modal-progress-fill");
-		const text = document.getElementById("modal-progress-text");
-		if (fill) fill.style.width = pct + "%";
-		if (text)
-			text.textContent =
-				total > 0
-					? `Ch. ${read} / ${total} (${pct}%)${wordStr}`
-					: wordStr
-						? wordStr.trim()
-						: "";
-	}
-
-	// CSS is now handled in shelf-page.css
-
-	modal.style.display = "flex";
-
-	const closeBtn = document.getElementById("modal-close-btn");
-	const backdrop = document.getElementById("modal-backdrop");
-
-	function closeModal() {
-		modal.style.display = "none";
-	}
-
-	if (typeof modal._swipeCleanup === "function") {
-		modal._swipeCleanup();
-	}
-	modal._swipeCleanup = bindModalSwipeDismiss({
-		modal,
-		onDismiss: closeModal,
-	});
-
-	closeBtn.addEventListener("click", closeModal);
-	backdrop.addEventListener("click", closeModal);
-
-	const closeOnEscape = (e) => {
-		if (e.key === "Escape") {
-			closeModal();
-			document.removeEventListener("keydown", closeOnEscape);
-		}
-	};
-	document.addEventListener("keydown", closeOnEscape);
+/** @param {object[]} novels */
+function countLanguages(novels) {
+	return new Set(
+		novels
+			.map((n) => n.metadata?.language || n.language)
+			.filter(Boolean)
+			.map((l) => String(l).trim().toLowerCase()),
+	).size;
 }
 
-function fandomTypeFilter(novels, fandomType = filterState.storyType) {
-	if (!fandomType || fandomType === "all") return novels;
-
-	return novels.filter((novel) => {
-		const isCrossover =
-			novel.sourceUrl?.includes("/crossovers/") ||
-			novel.metadata?.isCrossover === true ||
-			(novel.metadata?.fandoms && novel.metadata.fandoms.length > 1);
-		return fandomType === "crossover" ? isCrossover : !isCrossover;
-	});
-}
-
-function ratingFilter(novels, selectedRating = filterState.rating) {
-	if (!selectedRating || selectedRating === "all") return novels;
-	const normalizedSelected = selectedRating.toLowerCase();
-	return novels.filter((novel) => {
-		const rawRating = novel.metadata?.rating ?? novel.rating ?? "";
-		const rating = rawRating.toString().trim().toLowerCase();
-		return rating === normalizedSelected;
-	});
-}
-
-function applyFiltersAndSort() {
-	filteredNovels = [...allNovels];
-
-	const {
-		search,
-		rating,
-		readingStatus,
-		workStatus,
-		storyType,
-		language,
-		fandoms,
-		genres,
-		characters,
-		tags,
-		tagsMode,
-		wordCountMin,
-		wordCountMax,
-		sort,
-	} = filterState;
-
-	if (search) {
-		const query = search.toLowerCase();
-		filteredNovels = filteredNovels.filter((n) => {
-			const metadata = n.metadata || {};
-			const toArray = (value) =>
-				Array.isArray(value) ? value : value ? [String(value)] : [];
-			const searchableText = [
-				n.title,
-				n.author,
-				n.description,
-				...toArray(n.tags),
-				...toArray(n.genres),
-				...toArray(metadata.additionalTags),
-				...toArray(metadata.fandoms),
-				...toArray(metadata.characters),
-				...toArray(metadata.relationships),
-				...toArray(metadata.warnings),
-				...toArray(metadata.categories),
-				...toArray(metadata.tags),
-			]
-				.filter(Boolean)
-				.join(" ")
-				.toLowerCase();
-			return searchableText.includes(query);
-		});
-	}
-
-	filteredNovels = ratingFilter(filteredNovels, rating);
-
-	if (readingStatus && readingStatus !== "all") {
-		filteredNovels = filteredNovels.filter((n) => {
-			const normalized = normalizeReadingStatus(n.readingStatus);
-			return normalized === readingStatus;
-		});
-	}
-
-	if (workStatus && workStatus !== "all") {
-		filteredNovels = filteredNovels.filter((n) => n.status === workStatus);
-	}
-
-	filteredNovels = fandomTypeFilter(filteredNovels, storyType);
-
-	if (language && language !== "all") {
-		const targetLang = language.toLowerCase();
-		filteredNovels = filteredNovels.filter(
-			(n) => (n.metadata?.language || "").toLowerCase() === targetLang,
-		);
-	}
-
-	if (Array.isArray(fandoms) && fandoms.length > 0) {
-		filteredNovels = filteredNovels.filter((n) => {
-			const storyFandoms = [...categorizeNovelAttributes(n).fandoms];
-			return storyFandoms.some((f) => fandoms.includes(f));
-		});
-	}
-
-	if (Array.isArray(genres) && genres.length > 0) {
-		filteredNovels = filteredNovels.filter((n) => {
-			const storyGenres = getNovelGenres(n);
-			return genres.every((genre) => storyGenres.includes(genre));
-		});
-	}
-
-	if (Array.isArray(characters) && characters.length > 0) {
-		filteredNovels = filteredNovels.filter((n) => {
-			const storyCharacters = getNovelCharacters(n);
-			return characters.every((character) =>
-				storyCharacters.includes(character),
-			);
-		});
-	}
-
-	if (Array.isArray(tags) && tags.length > 0) {
-		filteredNovels = filteredNovels.filter((n) => {
-			const storyTags = getNovelTags(n);
-			if (tagsMode === "all") {
-				return tags.every((tag) => storyTags.includes(tag));
-			}
-			return storyTags.some((tag) => tags.includes(tag));
-		});
-	}
-
-	const minWords = parseInt(wordCountMin, 10);
-	const maxWords = parseInt(wordCountMax, 10);
-	filteredNovels = filteredNovels.filter((n) => {
-		const words = n.stats?.words || n.metadata?.words || 0;
-		if (!Number.isNaN(minWords) && minWords > 0 && words < minWords)
-			return false;
-		if (!Number.isNaN(maxWords) && maxWords > 0 && words > maxWords)
-			return false;
-		return true;
-	});
-
-	if (sort) {
-		filteredNovels.sort((a, b) => {
-			const getStat = (n, key) =>
-				n.stats?.[key] || n.metadata?.[key] || 0;
-
-			switch (sort) {
-				case "recent":
-					return (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0);
-				case "added":
-					return (b.addedAt || 0) - (a.addedAt || 0);
-				case "title":
-					return a.title.localeCompare(b.title);
-				case "chapters":
-					return (
-						(b.enhancedChaptersCount || 0) -
-						(a.enhancedChaptersCount || 0)
-					);
-				case "words":
-					return getStat(b, "words") - getStat(a, "words");
-				case "favorites":
-					return getStat(b, "favorites") - getStat(a, "favorites");
-				case "follows":
-					return getStat(b, "follows") - getStat(a, "follows");
-				case "reviews":
-					return getStat(b, "reviews") - getStat(a, "reviews");
-				case "published":
-					return (
-						getStat(b, "publishedDate") -
-						getStat(a, "publishedDate")
-					);
-				case "updated":
-					return (
-						getStat(b, "updatedDate") - getStat(a, "updatedDate")
-					);
-				case "status":
-					return (
-						getWorkStatusOrder(a.status) -
-						getWorkStatusOrder(b.status)
-					);
-				default:
-					return 0;
-			}
-		});
-	}
-
-	renderActiveFilters();
-	renderNovels();
-	updateAnalytics(filteredNovels);
-	persistFilters();
-}
-
-function getWorkStatusOrder(status) {
+/** @param {object} novel */
+function workStatusOrder(novel) {
 	const order = { completed: 0, ongoing: 1 };
-	return order[status] ?? 99;
+	return order[workStatusOf(novel)] ?? 99;
 }
 
-function normalizeReadingStatus(status) {
-	if (!status) return "";
-	const normalized = status.toLowerCase().replace(/_/g, "-");
-	switch (normalized) {
-		case "currently-reading":
-		case "in-progress":
-			return READING_STATUS.READING;
-		case "rereading":
-			return READING_STATUS.RE_READING;
-		default:
-			return normalized;
-	}
-}
-
-function normalizeModalStatus(status) {
-	if (!status) return READING_STATUS.PLAN_TO_READ;
-	return normalizeReadingStatus(status) || READING_STATUS.PLAN_TO_READ;
-}
-
-function categorizeNovelAttributes(novel) {
-	const metadata = novel.metadata || {};
-	const buckets = {
-		genres: new Set(),
-		tags: new Set(),
-	};
-
-	const addValue = (value, forcedCategory) => {
-		if (!value) return;
-		const canonical = canonicalizeLabel(value, forcedCategory);
-		const category = forcedCategory || categorizeLabel(canonical) || "tags";
-		if (buckets[category]) {
-			buckets[category].add(canonical);
-		} else {
-			buckets.tags.add(canonical);
-		}
-	};
-
-	const addList = (list, forcedCategory) => {
-		(list || []).forEach((item) => addValue(item, forcedCategory));
-	};
-
-	addList(metadata.genres, "genres");
-	addList(novel.genres, "genres");
-	addList(metadata.tags, "tags");
-	addList(novel.tags, "tags");
-
-	// Keep tags bucket for misc only (exclude items already categorized elsewhere)
-	[...buckets.tags].forEach((tag) => {
-		if (buckets.genres.has(tag)) {
-			buckets.tags.delete(tag);
-		}
-	});
-
-	return buckets;
-}
-
-function getNovelTags(novel) {
-	const buckets = categorizeNovelAttributes(novel);
-	return [...buckets.tags];
-}
-
-function getNovelGenres(novel) {
-	return [...categorizeNovelAttributes(novel).genres];
-}
-
-function getNovelCharacters(novel) {
-	// ScribbleHub doesn't have character taxonomy data
-	const metadata = novel.metadata || {};
-	return metadata.characters || novel.characters || [];
-}
-
-function escapeHtml(text) {
-	const div = document.createElement("div");
-	div.textContent = text;
-	return div.innerHTML;
-}
-
-function setInsightTarget(valueId, novel, text) {
-	const valueEl = document.getElementById(valueId);
-	if (!valueEl) return;
-	valueEl.textContent = text || "-";
-	const item = valueEl.closest(".analytics-item");
-	if (!item) return;
-	if (novel && novel.id) {
-		item.dataset.novelId = novel.id;
-		item.classList.add("analytics-clickable");
-		item.setAttribute("role", "button");
-		item.tabIndex = 0;
-	} else {
-		item.removeAttribute("data-novel-id");
-		item.classList.remove("analytics-clickable");
-		item.removeAttribute("role");
-		item.removeAttribute("tabindex");
-	}
-}
-
-function setupInsightClicks() {
-	const container = document.querySelector(".analytics-items");
-	if (!container || container.dataset.bound === "true") return;
-	container.dataset.bound = "true";
-
-	const openFromItem = (item) => {
-		if (!item?.dataset?.novelId) return;
-		const novel = allNovels.find((n) => n.id === item.dataset.novelId);
-		if (novel) showNovelModal(novel);
-	};
-
-	container.addEventListener("click", (event) => {
-		const item = event.target.closest(".analytics-item");
-		openFromItem(item);
-	});
-
-	container.addEventListener("keydown", (event) => {
-		if (event.key !== "Enter" && event.key !== " ") return;
-		const item = event.target.closest(".analytics-item");
-		if (!item?.dataset?.novelId) return;
-		event.preventDefault();
-		openFromItem(item);
-	});
-}
-
-function updateAnalytics(novels) {
-	if (!novels || novels.length === 0) {
-		document.getElementById("stats-novels").textContent = "0";
-		document.getElementById("stats-enhanced").textContent = "0";
-		document.getElementById("stats-words").textContent = "0";
-		document.getElementById("stats-avg-words").textContent = "-";
-		document.getElementById("stats-reading").textContent = "0%";
-		document.getElementById("stats-avgrating").textContent = "-";
-		document.getElementById("stats-completed").textContent = "0";
-		document.getElementById("stats-languages").textContent = "-";
-		document.getElementById("stats-avglength").textContent = "-";
-		setInsightTarget("most-popular", null, "-");
-		setInsightTarget("highest-rated", null, "-");
-		setInsightTarget("longest-novel", null, "-");
-		setInsightTarget("newest-addition", null, "-");
-		setInsightTarget("most-chapters", null, "-");
-		document.getElementById("language-count").textContent = "-";
-
-		renderReadingStatusChart({});
-		return;
-	}
-
-	const totalNovels = novels.length;
-	const totalEnhanced = novels.reduce(
-		(sum, n) => sum + (n.enhancedChaptersCount || 0),
-		0,
-	);
-	const totalWords = novels.reduce(
-		(sum, n) => sum + (n.metadata?.words || n.words || 0),
-		0,
-	);
-	const avgWords = totalNovels > 0 ? Math.round(totalWords / totalNovels) : 0;
-	const readingBuckets = novels.reduce((acc, novel) => {
-		const key =
-			normalizeReadingStatus(novel.readingStatus) ||
-			READING_STATUS.PLAN_TO_READ;
-		acc[key] = (acc[key] || 0) + 1;
-		return acc;
-	}, {});
-	const readingCount =
-		readingBuckets[READING_STATUS.READING] ||
-		readingBuckets["reading"] ||
-		0;
-	const readingPercent = Math.round((readingCount / totalNovels) * 100);
-
-	// ScribbleHub-specific stats
-	const completedWorks = novels.filter(
-		(n) =>
-			(n.metadata?.status || n.status || "").toLowerCase() ===
-			"completed",
-	).length;
-
-	// Calculate average rating from ScribbleHub novels with rating field
-	let totalRating = 0;
-	let ratedCount = 0;
-	novels.forEach((n) => {
-		const rating = n.metadata?.rating || n.rating;
-		if (rating && !isNaN(rating)) {
-			totalRating += parseFloat(rating);
-			ratedCount++;
-		}
-	});
-	const avgRating =
-		ratedCount > 0 ? (totalRating / ratedCount).toFixed(1) : "-";
-
-	// Find novels by metrics
-	const mostPopular = novels.reduce((max, n) => {
-		const views = n.metadata?.views || n.views || 0;
-		const maxViews = max.metadata?.views || max.views || 0;
-		return views > maxViews ? n : max;
-	}, {});
-
-	const highestRated = novels.reduce((max, n) => {
-		const rating = parseFloat(n.metadata?.rating || n.rating || 0);
-		const maxRating = parseFloat(max.metadata?.rating || max.rating || 0);
-		return rating > maxRating ? n : max;
-	}, {});
-
-	const longestNovel = novels.reduce((max, n) => {
-		const chapters = n.metadata?.totalChapters || n.totalChapters || 0;
-		const maxChapters =
-			max.metadata?.totalChapters || max.totalChapters || 0;
-		return chapters > maxChapters ? n : max;
-	}, {});
-
-	const mostChapters = novels.reduce((max, n) => {
-		const chapters = n.metadata?.totalChapters || n.totalChapters || 0;
-		const maxChapters =
-			max.metadata?.totalChapters || max.totalChapters || 0;
-		return chapters > maxChapters ? n : max;
-	}, {});
-
-	const newestAddition = novels.reduce((newest, n) => {
-		const dateStr =
-			n.metadata?.updatedDate ||
-			n.updatedDate ||
-			n.metadata?.addedDate ||
-			n.addedDate ||
-			"1970-01-01";
-		const newestStr =
-			newest.metadata?.updatedDate ||
-			newest.updatedDate ||
-			newest.metadata?.addedDate ||
-			newest.addedDate ||
-			"1970-01-01";
-		return new Date(dateStr) > new Date(newestStr) ? n : newest;
-	}, {});
-
-	// Count unique languages
-	const languages = new Set();
-	novels.forEach((n) => {
-		const lang = n.metadata?.language || n.language;
-		if (lang) languages.add(lang);
-	});
-
-	// Calculate average chapter count
-	let totalChapters = 0;
-	novels.forEach((n) => {
-		totalChapters += n.metadata?.totalChapters || n.totalChapters || 0;
-	});
-	const avgChapterCount =
-		totalNovels > 0 ? (totalChapters / totalNovels).toFixed(1) : "-";
-
-	// Update UI elements
-	document.getElementById("stats-novels").textContent =
-		totalNovels.toLocaleString();
-	document.getElementById("stats-enhanced").textContent =
-		totalEnhanced.toLocaleString();
-	document.getElementById("stats-words").textContent =
-		formatNumber(totalWords);
-	document.getElementById("stats-avg-words").textContent =
-		formatNumber(avgWords);
-	document.getElementById("stats-completed").textContent =
-		completedWorks.toLocaleString();
-	document.getElementById("stats-reading").textContent = readingPercent + "%";
-	document.getElementById("stats-avgrating").textContent = avgRating;
-	document.getElementById("stats-languages").textContent =
-		languages.size || "-";
-	document.getElementById("stats-avglength").textContent = avgChapterCount;
-
-	// Update detail analytics
-	setInsightTarget(
-		"most-popular",
-		mostPopular?.id ? mostPopular : null,
-		mostPopular?.title || "-",
-	);
-	setInsightTarget(
-		"highest-rated",
-		highestRated?.id ? highestRated : null,
-		highestRated?.title || "-",
-	);
-	setInsightTarget(
-		"longest-novel",
-		longestNovel?.id ? longestNovel : null,
-		longestNovel?.title || "-",
-	);
-	setInsightTarget(
-		"newest-addition",
-		newestAddition?.id ? newestAddition : null,
-		newestAddition?.title || "-",
-	);
-	setInsightTarget(
-		"most-chapters",
-		mostChapters?.id ? mostChapters : null,
-		mostChapters?.title || "-",
-	);
-	document.getElementById("language-count").textContent =
-		languages.size || "-";
-
-	renderReadingStatusChart(readingBuckets, totalNovels);
-}
-
-function renderReadingStatusChart(buckets = {}, total = 0) {
-	const chart = document.getElementById("reading-status-chart");
-	const legend = document.getElementById("reading-status-legend");
-	const summary = document.getElementById("status-chart-summary");
-	if (!chart || !legend || !summary) return;
-
-	chart.innerHTML = "";
-	legend.innerHTML = "";
-
-	const totalCount =
-		total || Object.values(buckets).reduce((sum, val) => sum + val, 0);
-	const entries = Object.entries(buckets).filter(([, count]) => count > 0);
-
-	if (!entries.length || !totalCount) {
-		summary.textContent = "No stories yet";
-		return;
-	}
-
-	entries.forEach(([key, count]) => {
-		const info = READING_STATUS_INFO[key] || {};
-		const label = info.label || key.replace(/_/g, " ");
-		const segment = document.createElement("div");
-		segment.className = "bar-segment";
-		segment.style.background = info.color || "var(--primary-color)";
-		segment.style.flex = count;
-		segment.title = `${label}: ${count}`;
-		chart.appendChild(segment);
-
-		const percent = Math.round((count / totalCount) * 100);
-		const legendItem = document.createElement("div");
-		legendItem.className = "bar-legend-item";
-		legendItem.innerHTML = `<span class="legend-swatch" style="background:${
-			info.color || "var(--primary-color)"
-		}"></span><span>${escapeHtml(label)} (${percent}%)</span>`;
-		legend.appendChild(legendItem);
-	});
-
-	const completedKey = READING_STATUS.COMPLETED || "completed";
-	const readingKey = READING_STATUS.READING || "reading";
-	const plantoreadKey = READING_STATUS.PLAN_TO_READ || "plan-to-read";
-	const onHoldKey = READING_STATUS.ON_HOLD || "on-hold";
-	const rereadingKey = READING_STATUS.REREADING || "rereading";
-	const completedCount = buckets[completedKey] || buckets.completed || 0;
-	const readingCount = buckets[readingKey] || buckets.reading || 0;
-	const plantoreadCount = buckets[plantoreadKey] || buckets.plantoread || 0;
-	const onHoldCount = buckets[onHoldKey] || buckets.onHold || 0;
-	const rereadingCount = buckets[rereadingKey] || buckets.rereading || 0;
-
-	summary.textContent = `${rereadingCount.toLocaleString()} Rereading • ${plantoreadCount.toLocaleString()} Plan to Read • ${completedCount.toLocaleString()} Completed • ${readingCount.toLocaleString()} Reading • ${onHoldCount.toLocaleString()} on Hold`;
-}
-
-function formatNumber(num) {
-	if (!num) return "0";
-	if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
-	if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-	return num.toString();
-}
-
-function positionFilterDropdown() {
-	const dropdown = document.getElementById("filter-dropdown");
-	const button = document.getElementById("filter-toggle-btn");
-	if (!dropdown || !button) return;
-
-	const wasHidden =
-		getComputedStyle(dropdown).display === "none" ||
-		dropdown.style.display === "none";
-
-	if (wasHidden) {
-		dropdown.style.visibility = "hidden";
-		dropdown.style.display = "block";
-	}
-
-	const buttonRect = button.getBoundingClientRect();
-	const viewportWidth = window.innerWidth;
-	const viewportHeight = window.innerHeight;
-	const minPadding = 12;
-
-	const measuredWidth = dropdown.offsetWidth || 440;
-	const clampedWidth = Math.min(
-		Math.max(measuredWidth, 320),
-		viewportWidth - minPadding * 2,
-	);
-	dropdown.style.width = `${clampedWidth}px`;
-
-	const dropdownHeight = dropdown.offsetHeight || 0;
-	let left = buttonRect.right - clampedWidth;
-	left = Math.max(left, minPadding);
-	left = Math.min(left, viewportWidth - clampedWidth - minPadding);
-
-	let top = buttonRect.bottom + 8;
-	let placeAbove = false;
-	if (top + dropdownHeight > viewportHeight - minPadding) {
-		const spaceAbove = buttonRect.top - 8;
-		if (spaceAbove >= dropdownHeight) {
-			placeAbove = true;
-			top = buttonRect.top - dropdownHeight - 8;
-		}
-	}
-
-	dropdown.style.position = "fixed";
-	dropdown.style.left = `${left}px`;
-	dropdown.style.right = "auto";
-	dropdown.style.top = placeAbove
-		? `${Math.max(minPadding, top)}px`
-		: `${Math.min(buttonRect.bottom + 8, viewportHeight - minPadding)}px`;
-	dropdown.style.bottom = "auto";
-
-	if (wasHidden) {
-		dropdown.style.display = "none";
-		dropdown.style.visibility = "";
-	}
-}
-
-function setupFandomFilter() {
-	const fandomFilter = document.getElementById("fandom-filter");
-	const ratingFilterEl = document.getElementById("rating-filter");
-	const sortSelect = document.getElementById("sort-select");
-	const statusFilter = document.getElementById("status-filter");
-	const workStatusFilter = document.getElementById("work-status-filter");
-	const languageFilter = document.getElementById("language-filter");
-	const searchInput = document.getElementById("search-input");
-	const wordMinInput = document.getElementById("wordcount-min");
-	const wordMaxInput = document.getElementById("wordcount-max");
-	const backBtn = document.getElementById("back-to-all");
-	const filterToggleBtn = document.getElementById("filter-toggle-btn");
-	const filterDropdown = document.getElementById("filter-dropdown");
-	const clearFiltersBtn = document.getElementById("clear-filters-btn");
-	const tagsMatchSelect = document.getElementById("tags-match-mode");
-	const multiDropdowns = [
-		{
-			toggleId: "fandoms-dropdown-toggle",
-			panelId: "fandoms-dropdown-panel",
-		},
-		{
-			toggleId: "genres-dropdown-toggle",
-			panelId: "genres-dropdown-panel",
-		},
-		{
-			toggleId: "characters-dropdown-toggle",
-			panelId: "characters-dropdown-panel",
-		},
-		{ toggleId: "tags-dropdown-toggle", panelId: "tags-dropdown-panel" },
-	];
-
-	const closeAllPanels = () => {
-		multiDropdowns.forEach(({ panelId }) => {
-			const panel = document.getElementById(panelId);
-			if (panel) panel.style.display = "none";
-		});
-	};
-
-	multiDropdowns.forEach(({ toggleId, panelId }) => {
-		const toggle = document.getElementById(toggleId);
-		const panel = document.getElementById(panelId);
-		if (!toggle || !panel) return;
-		panel.style.display = "none";
-		toggle.addEventListener("click", (e) => {
-			e.stopPropagation();
-			const isOpen = panel.style.display === "block";
-			closeAllPanels();
-			panel.style.display = isOpen ? "none" : "block";
-		});
-	});
-
-	if (filterDropdown && !filterDropdown.style.display) {
-		filterDropdown.style.display = "none";
-	}
-
-	const bindSelect = (element, key) => {
-		if (!element) return;
-		element.value = filterState[key];
-		element.addEventListener("change", (e) => {
-			filterState[key] = e.target.value;
-			persistFilters();
-			renderActiveFilters();
-			applyFiltersAndSort();
-		});
-	};
-
-	if (filterToggleBtn && filterDropdown) {
-		filterToggleBtn.addEventListener("click", () => {
-			const isVisible = filterDropdown.style.display !== "none";
-			if (isVisible) {
-				filterDropdown.style.display = "none";
-				filterToggleBtn.classList.remove("active");
-				closeAllPanels();
-				return;
-			}
-			filterDropdown.style.display = "block";
-			positionFilterDropdown();
-			filterToggleBtn.classList.add("active");
-		});
-
-		window.addEventListener("resize", () => {
-			if (filterDropdown.style.display !== "none") {
-				positionFilterDropdown();
-			}
-		});
-
-		document.addEventListener("click", (e) => {
-			const clickedInsideDropdown = filterDropdown.contains(e.target);
-			const clickedToggle = filterToggleBtn.contains(e.target);
-			const clickedPanel = multiDropdowns.some(
-				({ toggleId, panelId }) => {
-					const toggle = document.getElementById(toggleId);
-					const panel = document.getElementById(panelId);
-					return (
-						(toggle && toggle.contains(e.target)) ||
-						(panel && panel.contains(e.target))
-					);
-				},
-			);
-
-			if (!clickedInsideDropdown && !clickedToggle && !clickedPanel) {
-				filterDropdown.style.display = "none";
-				filterToggleBtn.classList.remove("active");
-				closeAllPanels();
-			}
-		});
-	}
-
-	if (clearFiltersBtn) {
-		clearFiltersBtn.addEventListener("click", () => {
-			filterState = { ...DEFAULT_FILTERS };
-			applyFilterStateToUI();
-			renderActiveFilters();
-			applyFiltersAndSort();
-
-			if (filterDropdown) filterDropdown.style.display = "none";
-			if (filterToggleBtn) filterToggleBtn.classList.remove("active");
-		});
-	}
-
-	bindSelect(fandomFilter, "storyType");
-	bindSelect(ratingFilterEl, "rating");
-	bindSelect(sortSelect, "sort");
-	bindSelect(statusFilter, "readingStatus");
-	bindSelect(workStatusFilter, "workStatus");
-	bindSelect(languageFilter, "language");
-	bindSelect(tagsMatchSelect, "tagsMode");
-
-	const bindNumberInput = (input, key) => {
-		if (!input) return;
-		input.value = filterState[key] || "";
-		input.addEventListener("input", (e) => {
-			filterState[key] = e.target.value.trim();
-			persistFilters();
-			renderActiveFilters();
-			applyFiltersAndSort();
-		});
-	};
-
-	bindNumberInput(wordMinInput, "wordCountMin");
-	bindNumberInput(wordMaxInput, "wordCountMax");
-
-	if (searchInput) {
-		searchInput.value = filterState.search;
-		let debounce;
-		searchInput.addEventListener("input", (e) => {
-			clearTimeout(debounce);
-			debounce = setTimeout(() => {
-				filterState.search = e.target.value.trim();
-				persistFilters();
-				renderActiveFilters();
-				applyFiltersAndSort();
-			}, 200);
-		});
-		ensureRandomSelectButton();
-	}
-
-	if (backBtn) {
-		backBtn.addEventListener("click", () => {
-			location.reload();
-		});
-	}
-
-	renderActiveFilters();
-}
-
-void setupFandomFilter;
-
-function ensureRandomSelectButton() {
-	const searchInput = document.getElementById("search-input");
-	if (!searchInput) return;
-	if (document.getElementById("random-select-btn")) return;
-	const container = searchInput.parentElement;
-	if (!container) return;
-
-	const button = document.createElement("button");
-	button.type = "button";
-	button.id = "random-select-btn";
-	button.className = "btn btn-secondary random-select-btn";
-	button.textContent = "🎲 Random";
-	button.title = "Pick a random novel from current filters";
-
-	button.addEventListener("click", () => {
-		const pool = filteredNovels.length ? filteredNovels : allNovels;
-		if (!pool.length) {
-			showToast("No novels available for random pick", "info");
-			return;
-		}
-		const pick = pool[Math.floor(Math.random() * pool.length)];
-		showNovelModal(pick);
-	});
-
-	container.insertBefore(button, searchInput);
-}
-
-// Initialize the shelf page with async data loading
-(async () => {
-	await applyThemeFromStorage();
-	setupThemeListener();
-
-	const loadingState = document.getElementById("loading-state");
-	const emptyState = document.getElementById("empty-state");
-	const novelGrid = document.getElementById("novel-grid");
-
-	try {
-		const storage = await browser.storage.local.get("rg_novel_library");
-		const fullLibrary = storage["rg_novel_library"] || {};
-		const novelsList = fullLibrary.novels || {};
-		const allStoredNovels = Object.values(novelsList);
-
-		allNovels = allStoredNovels.filter(
-			(n) => n && n.shelfId === "scribblehub",
-		);
-		filteredNovels = [...allNovels];
-		buildTaxonomyFromNovels(allNovels);
-		if (
-			ScribbleHubNovelCard &&
-			typeof ScribbleHubNovelCard.primeTaxonomy === "function"
-		) {
-			ScribbleHubNovelCard.primeTaxonomy(allNovels);
-		}
-		loadSavedFilters();
-
-		if (allNovels.length === 0) {
-			if (loadingState) loadingState.style.display = "none";
-			if (emptyState) emptyState.style.display = "block";
-			if (novelGrid) novelGrid.style.display = "none";
-			return;
-		}
-
-		if (loadingState) loadingState.style.display = "none";
-		if (emptyState) emptyState.style.display = "none";
-		if (novelGrid) novelGrid.style.display = "grid";
-
-		const pageIconImg = document.getElementById("page-icon-img");
-		const pageIcon = document.getElementById("page-icon");
-		if (pageIconImg) {
-			pageIconImg.style.display = "inline-block";
-			if (pageIcon) pageIcon.style.display = "none";
-			pageIconImg.addEventListener("error", () => {
-				pageIconImg.style.display = "none";
-				if (pageIcon) pageIcon.style.display = "inline-block";
-			});
-			pageIconImg.addEventListener("load", () => {
-				pageIconImg.style.display = "inline-block";
-				if (pageIcon) pageIcon.style.display = "none";
-			});
-		}
-
-		populateDynamicFilters();
-		await applyDisplaySettings();
-		setupInsightClicks();
-		applyFiltersAndSort();
-		modalNavigation.bind();
-		openNovelFromQuery();
-	} catch (error) {
-		console.error(
-			"[ScribbleHub Shelf] CRITICAL ERROR during initialization:",
-			error,
-		);
-		if (loadingState) loadingState.style.display = "none";
-		if (emptyState) {
-			emptyState.style.display = "block";
-			const h2 = emptyState.querySelector("h2");
-			if (h2) h2.textContent = `Error: ${error.message}`;
-		}
-		if (novelGrid) novelGrid.style.display = "none";
-	}
-})();
-
-async function applyDisplaySettings() {
-	const result = await browser.storage.local.get("libraryDisplayOptions");
-	const s = {
-		showFilterToolbar: true,
-		showSortFilter: true,
-		showStatusFilter: true,
-		showActiveFilters: true,
-		...(result.libraryDisplayOptions || {}),
-	};
-	const container = document.querySelector(".filter-dropdown-container");
-	if (!container) return;
-	if (!s.showFilterToolbar) {
-		container.style.display = "none";
-		return;
-	}
-	const sortItem = document.getElementById("sort-select")?.closest(".filter-item");
-	if (sortItem) sortItem.style.display = s.showSortFilter ? "" : "none";
-	const statusItem = document.getElementById("status-filter")?.closest(".filter-item");
-	if (statusItem) statusItem.style.display = s.showStatusFilter ? "" : "none";
-	const activeFilters = document.getElementById("active-filters");
-	if (activeFilters) activeFilters.style.display = s.showActiveFilters ? "" : "none";
-}
-
-function openNovelFromQuery() {
-	try {
-		const params = new URLSearchParams(window.location.search);
-		const novelId = params.get("novel");
-		if (!novelId) return;
-		const novel = allNovels.find((n) => n && n.id === novelId);
-		if (novel) {
-			showNovelModal(novel);
-		} else {
-			recoverMissingNovelById(novelId, {
-				showToast,
-				onImported: async (result) => {
-					if (result?.shelfId && result.shelfId !== "scribblehub") {
-						const targetUrl = browser.runtime.getURL(
-							`library/websites/${result.shelfId}/index.html?novel=${encodeURIComponent(novelId)}&openModal=1`,
-						);
-						window.open(targetUrl, "_blank");
-						return;
-					}
-					const library = await novelLibrary.getLibrary();
-					allNovels = Object.values(library.novels || {}).filter(
-						(n) => n && n.shelfId === "scribblehub",
-					);
-					const imported = allNovels.find(
-						(n) => n && n.id === novelId,
-					);
-					if (imported) {
-						applyFiltersAndSort();
-						showNovelModal(imported);
-					}
-				},
-			});
-		}
-	} catch (_err) {
-		// ignore
-	}
-}
-
-// Initialization is handled by the IIFE above — no additional DOMContentLoaded hook needed.
-
-// Helper functions for modal action buttons
-function showToast(message, type = "success") {
-	const toast = document.createElement("div");
-	toast.className = `toast toast-${type}`;
-	toast.textContent = message;
-	toast.style.cssText = `
-		position: fixed;
-		bottom: 20px;
-		right: 20px;
-		padding: 12px 24px;
-		border-radius: 8px;
-		color: white;
-		font-weight: 500;
-		z-index: 10000;
-		animation: slideIn 0.3s ease;
-		background-color: ${
-			type === "success"
-				? "#10b981"
-				: type === "error"
-					? "#ef4444"
-					: "#3b82f6"
-		};
-	`;
-	document.body.appendChild(toast);
-	setTimeout(() => {
-		toast.style.animation = "slideOut 0.3s ease";
-		setTimeout(() => toast.remove(), 300);
-	}, 3000);
-}
-
-async function removeNovelFromLibrary(novelId) {
-	try {
-		const result = await browser.storage.local.get("rg_novel_library");
-		const library = result.rg_novel_library || { novels: {} };
-
-		if (library.novels && library.novels[novelId]) {
-			delete library.novels[novelId];
-			await browser.storage.local.set({ rg_novel_library: library });
-
-			// Refresh the display
-			allNovels = allNovels.filter((n) => n.id !== novelId);
-			updateAnalytics(allNovels);
-			applyFiltersAndSort();
-
-			showToast("Novel removed from library", "success");
-		}
-	} catch (error) {
-		console.error("[ScribbleHub Shelf] Error removing novel:", error);
-		showToast("Failed to remove novel", "error");
-	}
-}
-
-function refreshNovelMetadata(novel) {
-	const url = novel?.url || novel?.sourceUrl || "";
-	if (!url) {
-		showToast("No source URL available for refresh", "error");
-		return;
-	}
-	window.open(url, "_blank", "noopener,noreferrer");
-	showToast("Opened source page to refresh metadata", "info");
-}
-
-function openEditModal(novel) {
-	if (!novel?.id) {
-		showToast("Missing novel id for edit", "error");
-		return;
-	}
-	openInlineEditModal(novel, ScribbleHubHandler, {
-		onSaved: (updatedNovel) => {
-			const idx = allNovels.findIndex((n) => n?.id === updatedNovel.id);
-			if (idx >= 0) allNovels[idx] = updatedNovel;
-			const fi = filteredNovels.findIndex(
-				(n) => n?.id === updatedNovel.id,
-			);
-			if (fi >= 0) filteredNovels[fi] = updatedNovel;
-		},
-		showToast,
-	});
+// Guarded so the descriptor above can be imported and tested outside a browser.
+if (typeof document !== "undefined") {
+	initShelfPage(descriptor);
 }

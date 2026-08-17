@@ -67,7 +67,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const authorUrl = novel.metadata?.authorUrl;
 		if (authorEl) {
 			if (authorUrl) {
-				authorEl.innerHTML = `<a href="${this.escapeHtml(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
+				authorEl.innerHTML = `<a href="${this.escapeUrlAttr(authorUrl)}" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">${this.escapeHtml(
 					novel.author || "Unknown",
 				)}</a>`;
 			} else {
@@ -348,7 +348,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 		const fallbackCover = this.getFallbackCover(config);
 		// Use data attributes instead of inline onerror to avoid CSP violations
 		const coverMarkup = coverUrl
-			? `<img class="novel-cover-img" src="${this.escapeHtml(
+			? `<img class="novel-cover-img" src="${this.escapeUrlAttr(
 					coverUrl,
 				)}" alt="${this.escapeHtml(
 					novel.title,
@@ -529,7 +529,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 			<div class="fanfic-card-horizontal">
 				${
 					coverUrl
-						? `<img class="fanfic-bg-blur" src="${this.escapeHtml(
+						? `<img class="fanfic-bg-blur" src="${this.escapeUrlAttr(
 								coverUrl,
 							)}" alt="" aria-hidden="true" loading="lazy">`
 						: ""
@@ -582,7 +582,7 @@ export class FanFictionNovelCard extends NovelCardRenderer {
 							}</span>
 							${
 								novel.sourceUrl
-									? `<a class="action-btn" href="${this.escapeHtml(
+									? `<a class="action-btn" href="${this.escapeUrlAttr(
 											novel.sourceUrl,
 										)}" target="_blank" rel="noreferrer">Open ↗</a>`
 									: ""

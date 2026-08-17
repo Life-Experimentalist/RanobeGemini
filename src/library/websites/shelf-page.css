@@ -71,8 +71,9 @@
 }
 
 body {
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-		Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+		Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 	background-color: var(--bg-primary);
 	color: var(--text-primary);
 	line-height: 1.6;
@@ -140,7 +141,11 @@ body {
 	text-decoration: none;
 	padding: 8px 18px;
 	border-radius: var(--radius-md);
-	background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+	background: linear-gradient(
+		135deg,
+		var(--primary-color),
+		var(--primary-hover)
+	);
 	box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 	font-weight: 600;
 	font-size: 0.9rem;
@@ -148,7 +153,11 @@ body {
 }
 
 .back-link:hover {
-	background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+	background: linear-gradient(
+		135deg,
+		var(--primary-hover),
+		var(--primary-color)
+	);
 	transform: translateY(-1px);
 	box-shadow: 0 4px 14px rgba(139, 92, 246, 0.45);
 }
@@ -405,7 +414,6 @@ body {
 }
 
 @media (max-width: 600px) {
-
 	.modal-close,
 	.modal-header-library-btn,
 	.modal-header-nav-btn {
@@ -423,9 +431,11 @@ body {
 .settings-modal-content {
 	max-width: 800px;
 	padding: var(--spacing-lg);
-	background: linear-gradient(160deg,
-			var(--bg-secondary) 0%,
-			var(--bg-tertiary) 100%);
+	background: linear-gradient(
+		160deg,
+		var(--bg-secondary) 0%,
+		var(--bg-tertiary) 100%
+	);
 }
 
 .settings-tabs {
@@ -538,11 +548,11 @@ body {
 	border-radius: 50%;
 }
 
-.toggle-switch input:checked+.toggle-slider {
+.toggle-switch input:checked + .toggle-slider {
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.toggle-switch input:checked+.toggle-slider:before {
+.toggle-switch input:checked + .toggle-slider:before {
 	transform: translateX(24px);
 }
 
@@ -558,7 +568,7 @@ body {
 	bottom: 3px;
 }
 
-.toggle-switch.toggle-switch-sm input:checked+.toggle-slider:before {
+.toggle-switch.toggle-switch-sm input:checked + .toggle-slider:before {
 	transform: translateX(18px);
 }
 
@@ -865,9 +875,11 @@ body {
 }
 
 .chip-crossover {
-	background: linear-gradient(135deg,
-			rgba(102, 126, 234, 0.2),
-			rgba(118, 75, 162, 0.2));
+	background: linear-gradient(
+		135deg,
+		rgba(102, 126, 234, 0.2),
+		rgba(118, 75, 162, 0.2)
+	);
 	color: #a5b3ff;
 	border: 1px solid rgba(118, 75, 162, 0.3);
 }
@@ -1021,9 +1033,11 @@ body {
 	width: 80px;
 	height: 110px;
 	border-radius: var(--radius-sm);
-	background: linear-gradient(135deg,
-			var(--bg-tertiary) 0%,
-			var(--bg-secondary) 100%);
+	background: linear-gradient(
+		135deg,
+		var(--bg-tertiary) 0%,
+		var(--bg-secondary) 100%
+	);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1251,15 +1265,6 @@ body {
 	font-size: 0.875rem;
 	color: var(--text-muted);
 	white-space: normal;
-}
-
-/* Shelf Filters Row */
-.shelf-filters-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--spacing-md);
-	width: 100%;
 }
 
 .search-group {
@@ -1534,9 +1539,11 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(135deg,
-			var(--bg-tertiary) 0%,
-			var(--bg-secondary) 100%);
+	background: linear-gradient(
+		135deg,
+		var(--bg-tertiary) 0%,
+		var(--bg-secondary) 100%
+	);
 	font-size: 3rem;
 	color: var(--text-muted);
 }
@@ -1702,7 +1709,7 @@ body {
 }
 
 /* Background blur image (separate from cover) */
-.fanfic-card-horizontal>.fanfic-bg-blur {
+.fanfic-card-horizontal > .fanfic-bg-blur {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -1743,7 +1750,11 @@ body {
 	align-items: center;
 	justify-content: center;
 	font-size: 40px;
-	background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+	background: linear-gradient(
+		135deg,
+		var(--bg-tertiary) 0%,
+		var(--bg-secondary) 100%
+	);
 	color: var(--text-muted);
 }
 
@@ -1828,7 +1839,11 @@ body {
 
 .progress-fill {
 	height: 100%;
-	background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+	background: linear-gradient(
+		90deg,
+		var(--primary-color) 0%,
+		var(--primary-hover) 100%
+	);
 	border-radius: 3px;
 }
 
@@ -2087,7 +2102,9 @@ body {
 
 	.analytics-item.analytics-clickable {
 		cursor: pointer;
-		transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+		transition:
+			transform var(--transition-fast),
+			box-shadow var(--transition-fast);
 	}
 
 	.analytics-item.analytics-clickable:hover {
@@ -2202,11 +2219,6 @@ body {
 		gap: var(--spacing-md);
 	}
 
-	.shelf-filters-row {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
 	.filter-group {
 		width: 100%;
 	}
@@ -2223,8 +2235,7 @@ body {
 		min-width: auto;
 	}
 
-	.novel-grid,
-	#shelf-novels-grid {
+	.novel-grid {
 		grid-template-columns: 1fr;
 	}
 
@@ -2413,6 +2424,221 @@ body {
 	border-top: 1px solid var(--border-color);
 }
 
+/* ── Fandom browser (shelf-fandom-nav.js) ──────────────────────────────────
+   Shared so any shelf declaring a filter section gets a working layout.
+   Sites that want their own palette override these in their own stylesheet. */
+
+.fandom-grid-header {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-sm);
+	padding: var(--spacing-sm);
+	background: var(--bg-tertiary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+}
+
+.fandom-grid-title {
+	margin: 0;
+	color: var(--text-primary);
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.fandom-grid-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+}
+
+.fandom-grid-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	margin-left: auto;
+}
+
+.fandom-match-select {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	background: var(--bg-card);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	color: var(--text-primary);
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.fandom-match-select:hover,
+.fandom-match-select:focus {
+	border-color: var(--primary-color);
+	outline: none;
+}
+
+.fandom-view-toggle {
+	display: inline-flex;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+}
+
+.view-toggle-btn {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	background: var(--bg-card);
+	border: none;
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.view-toggle-btn:hover {
+	color: var(--text-primary);
+}
+
+.view-toggle-btn.active {
+	background: var(--primary-color);
+	color: #fff;
+}
+
+.clear-fandoms-btn {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	background: var(--error-color);
+	border: none;
+	border-radius: var(--radius-sm);
+	color: #fff;
+	font-size: 0.85rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.clear-fandoms-btn:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+}
+
+/* Exactly one of the two views is on screen at a time. */
+.fandom-grid-container[data-view="dropdown"],
+.fandom-dropdown-list[data-view="grid"] {
+	display: none;
+}
+
+.fandom-dropdown-list {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--spacing-xs);
+	max-height: min(320px, 45vh);
+	overflow-y: auto;
+}
+
+.fandom-dropdown-list .filter-pill {
+	justify-content: space-between;
+}
+
+.pill-count {
+	background: var(--bg-tertiary);
+	color: var(--text-secondary);
+	font-size: 0.75rem;
+	padding: 2px 6px;
+	border-radius: var(--radius-sm);
+}
+
+.fandom-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--spacing-sm);
+	max-height: min(320px, 45vh);
+	overflow-y: auto;
+}
+
+.fandom-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--spacing-xs);
+	padding: var(--spacing-sm) var(--spacing-md);
+	background: var(--bg-card);
+	border: 2px solid var(--border-color);
+	border-radius: var(--radius-md);
+	text-align: left;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	/* Anchors the selected badge below. */
+	position: relative;
+	overflow: hidden;
+}
+
+.fandom-card:hover {
+	border-color: var(--primary-color);
+	background: var(--bg-card-hover);
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-md);
+}
+
+.fandom-card.selected {
+	border-color: var(--primary-color);
+	background: var(--bg-card-hover);
+}
+
+/* A tick in the corner: the border alone reads as a hover state on a grid
+   where several cards can be selected at once. */
+.fandom-card.selected::before {
+	content: "\2713";
+	position: absolute;
+	top: var(--spacing-xs);
+	right: var(--spacing-xs);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	background: var(--primary-color);
+	border-radius: 50%;
+	color: #fff;
+	font-size: 12px;
+	font-weight: bold;
+}
+
+.fandom-card.selected:hover {
+	border-color: var(--primary-hover);
+}
+
+.fandom-name {
+	color: var(--text-primary);
+	font-size: 0.95rem;
+	font-weight: 600;
+	line-height: 1.3;
+	word-break: break-word;
+	/* Leaves room for the selected badge. */
+	max-width: calc(100% - 24px);
+}
+
+.fandom-count {
+	color: var(--text-muted);
+	font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+	.fandom-grid {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	}
+
+	.fandom-grid-header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.fandom-grid-controls {
+		width: 100%;
+		justify-content: space-between;
+	}
+}
+
 .filter-item {
 	display: flex;
 	flex-direction: column;
@@ -2527,6 +2753,23 @@ body {
 	overflow-y: auto;
 }
 
+/* In-panel filter for pill lists long enough to need one (AO3 tags). */
+.multi-dropdown-search {
+	width: 100%;
+	margin-bottom: var(--spacing-sm);
+	padding: 6px 10px;
+	background: var(--bg-primary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	color: var(--text-primary);
+	font-size: 0.85rem;
+}
+
+.multi-dropdown-search:focus {
+	outline: none;
+	border-color: var(--primary-color);
+}
+
 .rating-badge {
 	display: inline-flex;
 	align-items: center;
@@ -2565,13 +2808,6 @@ body {
 	min-height: 36px;
 }
 
-.tag-filter-shell {
-	position: relative;
-	display: inline-flex;
-	flex-direction: column;
-	gap: var(--spacing-xs);
-}
-
 .tag-match-row {
 	display: flex;
 	align-items: center;
@@ -2597,40 +2833,6 @@ body {
 	outline: none;
 	border-color: var(--primary-color);
 	box-shadow: 0 0 0 3px rgba(92, 124, 250, 0.1);
-}
-
-.tag-filter-toggle {
-	padding: var(--spacing-sm) var(--spacing-md);
-	background: var(--bg-tertiary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	color: var(--text-primary);
-	font-size: 0.9rem;
-	cursor: pointer;
-	text-align: left;
-	transition: all var(--transition-fast);
-}
-
-.tag-filter-toggle:hover {
-	border-color: var(--primary-color);
-	background: var(--bg-card-hover);
-}
-
-.tag-filter-panel {
-	position: absolute;
-	top: calc(100% + 6px);
-	right: 0;
-	left: auto;
-	min-width: 240px;
-	max-width: min(320px, 80vw);
-	max-height: min(260px, 50vh);
-	padding: var(--spacing-sm);
-	background: var(--bg-secondary);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-md);
-	box-shadow: var(--shadow-lg);
-	z-index: 1100;
-	overflow-y: auto;
 }
 
 .filter-pill {
@@ -2755,7 +2957,11 @@ body {
 }
 
 .ao3-modal-header {
-	background: linear-gradient(135deg, rgba(153, 0, 0, 0.1) 0%, rgba(102, 0, 0, 0.05) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(153, 0, 0, 0.1) 0%,
+		rgba(102, 0, 0, 0.05) 100%
+	);
 	border-bottom: 1px solid rgba(153, 0, 0, 0.2);
 }
 
@@ -2788,7 +2994,11 @@ body {
 		linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
 		linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
 	background-size: 16px 16px;
-	background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+	background-position:
+		0 0,
+		0 8px,
+		8px -8px,
+		-8px 0px;
 }
 
 .ao3-modal-placeholder-content {
@@ -3038,7 +3248,11 @@ body {
 /* Light mode adjustments for AO3 */
 @media (prefers-color-scheme: light) {
 	.ao3-modal-header {
-		background: linear-gradient(135deg, rgba(153, 0, 0, 0.08) 0%, rgba(102, 0, 0, 0.03) 100%);
+		background: linear-gradient(
+			135deg,
+			rgba(153, 0, 0, 0.08) 0%,
+			rgba(102, 0, 0, 0.03) 100%
+		);
 	}
 
 	.ao3-modal-row.primary-meta {

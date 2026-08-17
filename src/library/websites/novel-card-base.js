@@ -7,6 +7,7 @@ import {
 	READING_STATUS,
 	READING_STATUS_INFO,
 } from "../../utils/novel-library.js";
+import { escapeHtml, escapeUrlAttr } from "../../utils/html-escape.js";
 
 /**
  * Base novel card renderer class
@@ -48,9 +49,10 @@ export class NovelCardRenderer {
 		card.innerHTML = `
 			${this.renderBackgroundIcon(config)}
 			<div class="novel-card-cover">
-				<img src="${this.escapeHtml(coverUrl)}"
+				<img src="${this.escapeUrlAttr(coverUrl)}"
 					 alt="${this.escapeHtml(novel.title)}"
-					 onerror="this.src='${this.getFallbackCover(config)}'; this.onerror=null;">
+					 data-img-fallback="src"
+					 data-fallback-src="${this.escapeUrlAttr(this.getFallbackCover(config))}">
 				<div class="novel-card-overlay">
 					<span class="reading-status-badge" style="background: ${statusInfo.color}">
 						${statusInfo.label}
@@ -88,7 +90,7 @@ export class NovelCardRenderer {
 		if (config.icon.startsWith("http")) {
 			return `
 				<div class="novel-card-bg-icon">
-					<img src="${this.escapeHtml(config.icon)}" alt="" aria-hidden="true">
+					<img src="${this.escapeUrlAttr(config.icon)}" alt="" aria-hidden="true">
 				</div>
 			`;
 		}
@@ -189,15 +191,23 @@ export class NovelCardRenderer {
 	}
 
 	/**
-	 * Escape HTML to prevent XSS
+	 * Escape HTML to prevent XSS. Safe for both text nodes and quoted attributes.
 	 * @param {string} text - Text to escape
 	 * @returns {string} Escaped text
 	 */
 	static escapeHtml(text) {
-		if (!text) return "";
-		const div = document.createElement("div");
-		div.textContent = text;
-		return div.innerHTML;
+		return escapeHtml(text);
+	}
+
+	/**
+	 * Escape a URL for a quoted href/src attribute, dropping unsafe schemes
+	 * such as `javascript:`. Novel URLs are scraped from remote pages, so they
+	 * must never be trusted as link targets.
+	 * @param {string} url - URL to escape
+	 * @returns {string} Escaped URL, or "" if the scheme is not safe
+	 */
+	static escapeUrlAttr(url) {
+		return escapeUrlAttr(url);
 	}
 }
 
