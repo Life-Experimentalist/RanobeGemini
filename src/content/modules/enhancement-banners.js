@@ -131,7 +131,10 @@ export function applyStoredVisibilityRuntime({
 	documentRef = document,
 	currentHandler,
 }) {
-	const currentlyHidden = shouldBannersBeHiddenRuntime({ documentRef, currentHandler });
+	const currentlyHidden = shouldBannersBeHiddenRuntime({
+		documentRef,
+		currentHandler,
+	});
 	if (currentlyHidden === shouldBeHidden) return;
 	toggleBannerNodes(documentRef, !shouldBeHidden);
 	if (shouldBeHidden) {

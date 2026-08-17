@@ -59,6 +59,14 @@ let hasCachedContent = false; // Track if cached content exists
 let enhancementCancelRequested = false; // Track if user cancels enhancement
 let cancelEnhanceButton = null;
 let currentFontSize = 100; // Font size percentage (default 100%)
+// Reading typeface id, one of the ids in READING_FONTS. Left empty until the
+// worker answers with the stored choice: an unknown id resolves to no font
+// stack, which is exactly what "Site default" does, so there is no default
+// constant to re-type here.
+let currentReadingFont = "";
+// Replaced by getReadingFontStack() once constants.js loads; until then every
+// id maps to "site default", so the page is never styled with a guess.
+let resolveReadingFontStack = () => "";
 let siteSettings = null; // Per-site enable/disable settings
 let siteSettingsModule = null; // Site settings helper module
 let extensionBridgesModule = null; // Extension bridge helpers
@@ -155,7 +163,6 @@ if (window.__RGInitDone) {
 	// Incognito mode when active, automatic library add/update/progress are suppressed
 	let incognitoMode = { enabled: false, expiresAt: null };
 
-	// eslint-disable-next-line no-inner-declarations
 	function isIncognitoActive() {
 		if (!incognitoMode.enabled) return false;
 		if (incognitoMode.expiresAt && Date.now() >= incognitoMode.expiresAt) {
@@ -169,14 +176,12 @@ if (window.__RGInitDone) {
 		return true;
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function applyReadAloudHiding(root = document) {
 		loadReadAloudUiModule()
 			.then((mod) => mod?.applyReadAloudHiding?.(root))
 			.catch(() => {});
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	async function loadReadAloudUiSetting() {
 		const mod = await loadReadAloudUiModule();
 		if (mod?.loadReadAloudUiSetting) {
@@ -185,7 +190,6 @@ if (window.__RGInitDone) {
 		return null;
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function initReadAloudUiObserver() {
 		loadReadAloudUiModule()
 			.then((mod) => mod?.initReadAloudUiObserver?.())
@@ -241,6 +245,9 @@ if (window.__RGInitDone) {
 						mod.CACHE_RESTORE_RETRY_MS ||
 						chunkBehaviorDefaults.cacheRestoreRetryMs,
 				};
+				if (typeof mod.getReadingFontStack === "function") {
+					resolveReadingFontStack = mod.getReadingFontStack;
+				}
 				if (keepAliveHeartbeat) restartKeepAlive();
 			}
 		} catch (_err) {
@@ -539,7 +546,6 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function applyDebugFlag(enabled) {
 		debugModeEnabled = !!enabled;
 	}
@@ -699,10 +705,11 @@ if (window.__RGInitDone) {
 		try {
 			const overlay = document.getElementById("rg-status-overlay");
 			if (overlay) overlay.remove();
-		} catch (e) { /* swallow */ }
+		} catch (e) {
+			/* swallow */
+		}
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function clearKeepAliveTimers() {
 		if (keepAliveHeartbeat) {
 			clearInterval(keepAliveHeartbeat);
@@ -714,7 +721,6 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function scheduleReconnect(reason) {
 		if (keepAliveReconnectTimer) return;
 		if (keepAliveRetryCount >= keepAliveConfig.maxRetries) return;
@@ -732,7 +738,6 @@ if (window.__RGInitDone) {
 		);
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function startKeepAlivePort(trigger = "initial") {
 		if (keepAlivePort) return;
 		clearKeepAliveTimers();
@@ -775,7 +780,6 @@ if (window.__RGInitDone) {
 		}
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function restartKeepAlive() {
 		keepAlivePort = null;
 		keepAliveRetryCount = 0;
@@ -783,7 +787,6 @@ if (window.__RGInitDone) {
 		startKeepAlivePort("config-change");
 	}
 
-	// eslint-disable-next-line no-inner-declarations
 	function ensureKeepAlivePort() {
 		if (!keepAlivePort) {
 			startKeepAlivePort();
@@ -797,7 +800,7 @@ if (window.__RGInitDone) {
 	let isMobileDevice = false;
 
 	// Function to detect if user is on a mobile device
-	// eslint-disable-next-line no-inner-declarations, no-useless-escape
+
 	function detectMobileDevice() {
 		// Check if using a mobile device based on user agent
 		const userAgent =
@@ -945,7 +948,7 @@ if (window.__RGInitDone) {
 			"p, div, li, blockquote, pre, section, article, h1, h2, h3, h4, h5, h6";
 		const blockNodes = Array.from(tempDiv.querySelectorAll(blockSelector));
 
-		let paragraphs = [];
+		let paragraphs;
 
 		if (blockNodes.length > 0) {
 			paragraphs = blockNodes
@@ -1352,7 +1355,9 @@ if (window.__RGInitDone) {
 			const map = stored[RG_VISIBILITY_KEY] || {};
 			map[hostname] = isHidden;
 			await browser.storage.local.set({ [RG_VISIBILITY_KEY]: map });
-		} catch (_e) { /* non-critical */ }
+		} catch (_e) {
+			/* non-critical */
+		}
 	}
 
 	async function restoreVisibilityState() {
@@ -1368,7 +1373,9 @@ if (window.__RGInitDone) {
 					currentHandler,
 				});
 			}
-		} catch (_e) { /* non-critical */ }
+		} catch (_e) {
+			/* non-critical */
+		}
 	}
 
 	async function handleToggleBannersVisibility(callerBtn = null) {
@@ -1437,9 +1444,11 @@ if (window.__RGInitDone) {
 			return 1;
 		}
 
-		let chunks = [];
-		let chunkSummaryCount = 2;
-		let chunkSizeWords = chunking?.config?.DEFAULT_CHUNK_SIZE_WORDS || 2000;
+		// No initializers: the catch below returns, so nothing reaches the reads
+		// past it without having been assigned inside the try.
+		let chunks;
+		let chunkSummaryCount;
+		let chunkSizeWords;
 
 		try {
 			const chunkConfig = await chunking.config.getChunkConfig();
@@ -1736,17 +1745,24 @@ if (window.__RGInitDone) {
 			// For TTS-safe handlers (e.g. NovelArrow): delegate paragraph injection to
 			// the handler's own applyEnhancedContent so its HTML-parsing and gemini-element
 			// filtering logic is used (avoids the broken \n{2,} split on AI HTML output).
-			applyEnhancedChunkContent: currentHandler?.supportsTextOnlyEnhancement?.()
-				? (chunkContentEl, enhancedHtml) => {
-					if (typeof currentHandler?.applyEnhancedContent === "function") {
-						const count = currentHandler.applyEnhancedContent(
-							chunkContentEl,
-							enhancedHtml,
-						);
-						debugLog(`[TTS-safe chunk] Handler applied ${count} paragraphs`);
-					}
-				}
-				: null,
+			applyEnhancedChunkContent:
+				currentHandler?.supportsTextOnlyEnhancement?.()
+					? (chunkContentEl, enhancedHtml) => {
+							if (
+								typeof currentHandler?.applyEnhancedContent ===
+								"function"
+							) {
+								const count =
+									currentHandler.applyEnhancedContent(
+										chunkContentEl,
+										enhancedHtml,
+									);
+								debugLog(
+									`[TTS-safe chunk] Handler applied ${count} paragraphs`,
+								);
+							}
+						}
+					: null,
 		});
 	}
 
@@ -1765,7 +1781,6 @@ if (window.__RGInitDone) {
 		});
 	}
 
-	// eslint-disable-next-line no-unused-vars
 	function renderSummaryOutput(container, summary, summaryType) {
 		if (summaryRuntimeModule?.renderSummaryOutputRuntime) {
 			summaryRuntimeModule.renderSummaryOutputRuntime({
@@ -1921,7 +1936,9 @@ if (window.__RGInitDone) {
 
 		// For short summaries, render into the body child div (keeps the "Quick Summary" label intact)
 		const summaryRenderTarget = isShort
-			? (summaryTextContainer?.querySelector(".gemini-short-summary-body") || summaryTextContainer)
+			? summaryTextContainer?.querySelector(
+					".gemini-short-summary-body",
+				) || summaryTextContainer
 			: summaryTextContainer;
 
 		try {
@@ -2397,33 +2414,19 @@ if (window.__RGInitDone) {
 		const handlerShelfId = currentHandler?.constructor?.SHELF_METADATA?.id;
 		if (!handlerShelfId) return;
 
-		// getHandlerByDomain matches against SUPPORTED_DOMAINS (real hostnames), not shelf IDs.
-		const handlerDomain =
-			currentHandler?.constructor?.SHELF_METADATA?.primaryDomain ||
-			currentHandler?.constructor?.SUPPORTED_DOMAINS?.[0] ||
-			handlerShelfId;
-
 		try {
-			// Fetch handler settings from background
-			const response = await sendMessageWithRetry(
-				{
-					action: "getHandlerSettings",
-					handlerDomain,
-				},
-				2,
-				500,
-			); // Reduced retries and delay for non-critical operation
-
-			if (!response || !response.success || !response.settings) {
-				debugLog(
-					`No custom CSS settings available for ${handlerShelfId}`,
-				);
-				return;
-			}
-
+			// The fields declared in a handler's SETTINGS_DEFINITION are saved by
+			// the Library settings page into the per-site settings store, keyed by
+			// shelf id — not into the handler's getProposedLibrarySettings()
+			// schema, which is a separate, metadata-only list. Read the store the
+			// UI actually writes to; anything else silently reads nothing.
 			const handlerSettings =
-				response.settings[handlerShelfId]?.validated ||
-				response.settings[handlerShelfId]?.proposed ||
+				(siteSettings && siteSettings[handlerShelfId]) ||
+				(siteSettingsModule?.getSiteSettings
+					? (await siteSettingsModule.getSiteSettings())[
+							handlerShelfId
+						]
+					: null) ||
 				{};
 
 			// Extract CSS fields
@@ -2458,9 +2461,12 @@ if (window.__RGInitDone) {
 				}
 			}
 
-			// Load per-handler font size
-			if (handlerSettings.fontSize !== undefined) {
-				const handlerFontSize = parseInt(handlerSettings.fontSize, 10);
+			// Load per-handler font size. The Ranobes handler names its field
+			// `chapterFontSize`; both mean the same thing here.
+			const rawFontSize =
+				handlerSettings.fontSize ?? handlerSettings.chapterFontSize;
+			if (rawFontSize !== undefined) {
+				const handlerFontSize = parseInt(rawFontSize, 10);
 				if (
 					!isNaN(handlerFontSize) &&
 					handlerFontSize >= 50 &&
@@ -2471,6 +2477,16 @@ if (window.__RGInitDone) {
 						`Using handler-specific font size: ${currentFontSize}%`,
 					);
 				}
+			}
+
+			// Load per-handler reading font. An id this build does not know
+			// resolves to the site default rather than to a broken stack, so a
+			// setting saved by a newer version degrades quietly.
+			if (handlerSettings.readingFont) {
+				currentReadingFont = handlerSettings.readingFont;
+				debugLog(
+					`Using handler-specific reading font: ${currentReadingFont}`,
+				);
 			}
 		} catch (error) {
 			// Silently fail for CSS injection - not critical
@@ -2704,6 +2720,30 @@ if (window.__RGInitDone) {
 	let chunkBatchModule = null;
 	let domIntegrationModule = null;
 
+	// LoreWeave auto-graphify. Loaded on demand after an enhancement lands; the
+	// module itself checks the experimental gate and the auto-graphify flag, so
+	// with LoreWeave off this import is the only cost and nothing is sent.
+	let loreWeaveModule = null;
+
+	async function notifyLoreWeave(chapterText) {
+		try {
+			if (!loreWeaveModule) {
+				loreWeaveModule = await import(
+					browser.runtime.getURL(
+						"content/modules/loreweave-integration.js",
+					)
+				);
+			}
+			const context = extractNovelContext();
+			await loreWeaveModule.maybeSendToLoreWeave(chapterText, {
+				chapter: context?.chapterNumber,
+			});
+		} catch (error) {
+			// Never let an optional integration disrupt reading.
+			debugError("LoreWeave notification failed:", error);
+		}
+	}
+
 	async function loadChunkBatchModule() {
 		if (chunkBatchModule) return chunkBatchModule;
 		try {
@@ -2794,7 +2834,9 @@ if (window.__RGInitDone) {
 				READING_STATUS,
 				buildNovelDataFromMetadata,
 				cacheNovelData,
-				deriveReadingStatusFromProgress: uiElementsRuntimeModule?.deriveReadingStatusFromProgressRuntime ?? (() => null),
+				deriveReadingStatusFromProgress:
+					uiElementsRuntimeModule?.deriveReadingStatusFromProgressRuntime ??
+					(() => null),
 				loadNovelLibrary,
 				protectFromThemeExtensions,
 			});
@@ -2948,7 +2990,6 @@ if (window.__RGInitDone) {
 		}
 	}
 
-
 	// Check if current page has cached enhanced content
 	async function checkCachedContent() {
 		if (!storageManager) return false;
@@ -3025,19 +3066,24 @@ if (window.__RGInitDone) {
 			enableCopyOnContentArea,
 			showStatusMessage,
 			debugLog,
-			applyEnhancedChunkContent: currentHandler?.supportsTextOnlyEnhancement?.()
-				? (chunkContentEl, enhancedHtml) => {
-					if (typeof currentHandler?.applyEnhancedContent === "function") {
-						const count = currentHandler.applyEnhancedContent(
-							chunkContentEl,
-							enhancedHtml,
-						);
-						debugLog(
-							`[TTS-safe cache restore] Handler applied ${count} paragraphs`,
-						);
-					}
-				}
-				: null,
+			applyEnhancedChunkContent:
+				currentHandler?.supportsTextOnlyEnhancement?.()
+					? (chunkContentEl, enhancedHtml) => {
+							if (
+								typeof currentHandler?.applyEnhancedContent ===
+								"function"
+							) {
+								const count =
+									currentHandler.applyEnhancedContent(
+										chunkContentEl,
+										enhancedHtml,
+									);
+								debugLog(
+									`[TTS-safe cache restore] Handler applied ${count} paragraphs`,
+								);
+							}
+						}
+					: null,
 		});
 	}
 
@@ -3305,25 +3351,34 @@ if (window.__RGInitDone) {
 			try {
 				const oldU = new URL(lastUrl);
 				const newU = new URL(newUrl);
-				if (oldU.pathname + oldU.search === newU.pathname + newU.search) {
+				if (
+					oldU.pathname + oldU.search ===
+					newU.pathname + newU.search
+				) {
 					lastUrl = newUrl;
 					return;
 				}
-			} catch { /* ignore malformed URLs */ }
+			} catch {
+				/* ignore malformed URLs */
+			}
 
 			lastUrl = newUrl;
 
 			// Snapshot old content before the debounce so waitForChapterContent
 			// can detect when the SPA has actually swapped in new chapter text.
 			// Use the handler's own findContentArea() so every site gets the right element.
-			const _snapEl = (typeof currentHandler?.findContentArea === "function"
-				? currentHandler.findContentArea()
-				: null)
-				?? document.querySelector("#chr-content, .chr-c, article[data-chapter-id]");
+			const _snapEl =
+				(typeof currentHandler?.findContentArea === "function"
+					? currentHandler.findContentArea()
+					: null) ??
+				document.querySelector(
+					"#chr-content, .chr-c, article[data-chapter-id]",
+				);
 			// Prefer data-chapter-id (NovelArrow) — changes the instant React swaps
 			// the chapter. Fall back to a text slice for other SPA sites.
 			const oldContentFingerprint = _snapEl
-				? (_snapEl.getAttribute?.("data-chapter-id") || _snapEl.textContent.trim().slice(0, 300))
+				? _snapEl.getAttribute?.("data-chapter-id") ||
+					_snapEl.textContent.trim().slice(0, 300)
 				: "";
 
 			clearTimeout(debounceTimer);
@@ -3336,21 +3391,33 @@ if (window.__RGInitDone) {
 
 				if (!currentHandler.isChapterPage()) return;
 
-				debugLog("[NavObserver] Chapter URL changed, re-initialising UI for:", newUrl);
+				debugLog(
+					"[NavObserver] Chapter URL changed, re-initialising UI for:",
+					newUrl,
+				);
 
 				// For SPA-heavy sites (e.g. NovelBin), wait for chapter content
 				// to load asynchronously before clearing UI and re-injecting.
-				if (typeof currentHandler.waitForChapterContent === "function") {
-					const found = await currentHandler.waitForChapterContent(6000, oldContentFingerprint);
+				if (
+					typeof currentHandler.waitForChapterContent === "function"
+				) {
+					const found = await currentHandler.waitForChapterContent(
+						6000,
+						oldContentFingerprint,
+					);
 					if (!found) {
-						debugLog("[NavObserver] Timed out waiting for chapter content on SPA navigation.");
+						debugLog(
+							"[NavObserver] Timed out waiting for chapter content on SPA navigation.",
+						);
 						return;
 					}
 				}
 
 				const oldControls = document.getElementById("gemini-controls");
 				if (oldControls) oldControls.remove();
-				const oldChapterControls = document.getElementById("rg-chapter-novel-controls");
+				const oldChapterControls = document.getElementById(
+					"rg-chapter-novel-controls",
+				);
 				if (oldChapterControls) oldChapterControls.remove();
 
 				if (typeof clearCachedEnhancementState === "function") {
@@ -3366,7 +3433,8 @@ if (window.__RGInitDone) {
 					const cachedData = await checkCachedContent();
 					if (cachedData?.enhancedContent) {
 						const spaCa = findContentArea();
-						if (spaCa) await replaceContentWithEnhancedVersion(cachedData);
+						if (spaCa)
+							await replaceContentWithEnhancedVersion(cachedData);
 					}
 				}
 
@@ -3433,6 +3501,10 @@ if (window.__RGInitDone) {
 			if (modelInfo && modelInfo.fontSize) {
 				currentFontSize = modelInfo.fontSize;
 				debugLog(`Font size setting loaded: ${currentFontSize}%`);
+			}
+			if (modelInfo && modelInfo.readingFont) {
+				currentReadingFont = modelInfo.readingFont;
+				debugLog(`Reading font setting loaded: ${currentReadingFont}`);
 			}
 		} catch (error) {
 			debugLog("Could not load font size setting:", error);
@@ -3576,10 +3648,13 @@ if (window.__RGInitDone) {
 		) {
 			let uiHiddenForHost = false;
 			try {
-				const stored = await browser.storage.local.get(RG_VISIBILITY_KEY);
+				const stored =
+					await browser.storage.local.get(RG_VISIBILITY_KEY);
 				const map = stored[RG_VISIBILITY_KEY] || {};
 				uiHiddenForHost = map[window.location.hostname] === true;
-			} catch { /* non-critical, default to inject */ }
+			} catch {
+				/* non-critical, default to inject */
+			}
 			if (!uiHiddenForHost) {
 				injectNovelPageUI();
 			}
@@ -3705,13 +3780,15 @@ if (window.__RGInitDone) {
 		}
 	}
 
-
 	/**
 	 * Manually check and update novel with change detection and display
 	 */
 	async function manuallyCheckAndUpdateNovel(existingNovel, currentMetadata) {
 		if (novelContextModule?.manuallyCheckAndUpdateNovel) {
-			return novelContextModule.manuallyCheckAndUpdateNovel(existingNovel, currentMetadata);
+			return novelContextModule.manuallyCheckAndUpdateNovel(
+				existingNovel,
+				currentMetadata,
+			);
 		}
 	}
 
@@ -3725,7 +3802,6 @@ if (window.__RGInitDone) {
 			return novelContextModule.getNovelIdFromCurrentPage();
 		}
 	}
-
 
 	// Find the content area using handlers or generic approach
 	function findContentArea() {
@@ -3760,12 +3836,6 @@ if (window.__RGInitDone) {
 
 		return null;
 	}
-
-
-
-
-
-
 
 	// Function to add initial word count display below the buttons
 	function addInitialWordCountDisplay(contentArea) {
@@ -3818,7 +3888,6 @@ if (window.__RGInitDone) {
 			return novelContextModule.handleNovelAddUpdate();
 		}
 	}
-
 
 	/**
 	 * Update chapter progression in library
@@ -3985,21 +4054,29 @@ if (window.__RGInitDone) {
 					currentHandler?.getNovelControlsConfig?.() || {};
 				if (controlsConfig.showControls === false) return;
 
-				const novelControls = await runtime.createChapterPageNovelControls({
-					controlsConfig,
-					HANDLER_TYPES,
-					getHandlerType,
-					getNovelIdFromCurrentPage,
-					getReadingStatusOptions,
-					showTimedBanner: (msg, type, duration) => showStatusMessage(msg, type, duration),
-					isIncognitoActive: () => incognitoMode?.enabled === true,
-					handleChapterControlsToggleBanners: handleToggleBannersVisibility,
-					manuallyCheckAndUpdateNovel: manuallyCheckAndUpdateNovel,
-					handleNovelAddUpdate: handleNovelAddUpdate,
-				});
+				const novelControls =
+					await runtime.createChapterPageNovelControls({
+						controlsConfig,
+						HANDLER_TYPES,
+						getHandlerType,
+						getNovelIdFromCurrentPage,
+						getReadingStatusOptions,
+						showTimedBanner: (msg, type, duration) =>
+							showStatusMessage(msg, type, duration),
+						isIncognitoActive: () =>
+							incognitoMode?.enabled === true,
+						handleChapterControlsToggleBanners:
+							handleToggleBannersVisibility,
+						manuallyCheckAndUpdateNovel:
+							manuallyCheckAndUpdateNovel,
+						handleNovelAddUpdate: handleNovelAddUpdate,
+					});
 
 				if (novelControls) {
-					runtime.placeChapterNovelControls(novelControls, controlsConfig);
+					runtime.placeChapterNovelControls(
+						novelControls,
+						controlsConfig,
+					);
 					debugLog(
 						"Ranobe Gemini: Novel controls added for chapter page",
 					);
@@ -4025,7 +4102,9 @@ if (window.__RGInitDone) {
 
 			if (!document.getElementById("gemini-controls")) {
 				if (isChapter) {
-					debugWarn("Ranobe Gemini: Main UI missing, re-injecting...");
+					debugWarn(
+						"Ranobe Gemini: Main UI missing, re-injecting...",
+					);
 					await injectUI();
 					return;
 				} else if (
@@ -4287,7 +4366,9 @@ if (window.__RGInitDone) {
 			showWorkInProgressBanner,
 			handleReenhanceChunk,
 			getEnhancementCancelRequested: () => enhancementCancelRequested,
-			setEnhancementCancelRequested: (val) => { enhancementCancelRequested = val; },
+			setEnhancementCancelRequested: (val) => {
+				enhancementCancelRequested = val;
+			},
 			isCachedContent,
 			hasCachedContent,
 			onResetChunkCacheFlags: () => {
@@ -4389,6 +4470,8 @@ if (window.__RGInitDone) {
 					debugError,
 					applyPostEnhancementFormatting,
 					currentFontSize,
+					currentReadingFontStack:
+						resolveReadingFontStack(currentReadingFont),
 					removeOriginalWordCount,
 					modelInfo,
 					isCachedContent,
@@ -4410,6 +4493,9 @@ if (window.__RGInitDone) {
 					updateChapterProgression,
 				},
 			);
+
+			// Fire-and-forget: the reader does not wait on graphify.
+			notifyLoreWeave(enhancedContentText);
 
 			return true;
 		} catch (error) {
@@ -5060,12 +5146,15 @@ if (window.__RGInitDone) {
 				(typeof currentHandler.generateNovelId === "function"
 					? currentHandler.generateNovelId(window.location.href)
 					: null);
-			console.log("[RG-Library-Debug] handleAddToLibrary fallback: calling addOrUpdateNovel", {
-				novelId,
-				shelfId,
-				title: metadata.title,
-				needsDetailPage: metadata.needsDetailPage ?? false,
-			});
+			console.log(
+				"[RG-Library-Debug] handleAddToLibrary fallback: calling addOrUpdateNovel",
+				{
+					novelId,
+					shelfId,
+					title: metadata.title,
+					needsDetailPage: metadata.needsDetailPage ?? false,
+				},
+			);
 			const result = await novelLibrary.addOrUpdateNovel({
 				id: novelId,
 				shelfId,
@@ -5077,7 +5166,9 @@ if (window.__RGInitDone) {
 				lastReadUrl: window.location.href,
 				readingStatus: inferredReadingStatus,
 				totalChapters:
-					metadata.totalChapters || metadata.chapterCount || metadata.metadata?.totalChapters,
+					metadata.totalChapters ||
+					metadata.chapterCount ||
+					metadata.metadata?.totalChapters,
 				chapterTitle: metadata.chapterTitle,
 				source: metadata.source || currentHandler.getSiteIdentifier(),
 				sourceUrl: metadata.sourceUrl || window.location.href,
@@ -5097,7 +5188,14 @@ if (window.__RGInitDone) {
 				description: metadata.description,
 			});
 
-			console.log("[RG-Library-Debug] handleAddToLibrary fallback: SUCCESS", { id: result?.id, shelfId: result?.shelfId, title: result?.title });
+			console.log(
+				"[RG-Library-Debug] handleAddToLibrary fallback: SUCCESS",
+				{
+					id: result?.id,
+					shelfId: result?.shelfId,
+					title: result?.title,
+				},
+			);
 			const cachedNovel = cacheNovelData(result);
 			logNotification({
 				type: "success",
@@ -5291,25 +5389,50 @@ if (window.__RGInitDone) {
 		});
 	}
 
+	/**
+	 * Answer for `getNovelContext`. Story Chat uses `chapterText` as one of its
+	 * context sources, so extraction failure has to be survivable: the caller
+	 * still gets the identity fields and simply loses that one source.
+	 */
+	function buildNovelContextResponse() {
+		const novelData = getLastKnownNovelData?.();
+
+		let chapterText = "";
+		try {
+			const extracted = extractContent();
+			if (extracted?.found) chapterText = extracted.text || "";
+		} catch (err) {
+			debugError("getNovelContext: chapter extraction failed", err);
+		}
+
+		return {
+			novelId: getNovelIdFromCurrentPage?.() || null,
+			novelTitle: novelData?.title || document.title || null,
+			chapterNum: novelData?.currentChapter || null,
+			chapterText,
+		};
+	}
+
 	// Register all content message handlers via the message-router module
 	loadMessageRouterModule().then((router) => {
 		if (!router) {
 			// Fallback: inline ping-only listener so the extension doesn't go silent
-			browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-				if (message.action === "ping") {
-					sendResponse({ success: true, message: "Content script is alive" });
-					return true;
-				}
-				if (message.action === "getNovelContext") {
-					const id = getNovelIdFromCurrentPage?.() || null;
-					const novelData = getLastKnownNovelData?.();
-					const title = novelData?.title || document.title || null;
-					const chapterNum = novelData?.currentChapter || null;
-					sendResponse({ novelId: id, novelTitle: title, chapterNum });
+			browser.runtime.onMessage.addListener(
+				(message, _sender, sendResponse) => {
+					if (message.action === "ping") {
+						sendResponse({
+							success: true,
+							message: "Content script is alive",
+						});
+						return true;
+					}
+					if (message.action === "getNovelContext") {
+						sendResponse(buildNovelContextResponse());
+						return false;
+					}
 					return false;
-				}
-				return false;
-			});
+				},
+			);
 			return;
 		}
 		router.registerContentMessageHandlers({
@@ -5327,11 +5450,7 @@ if (window.__RGInitDone) {
 			handleUpdateNovelReadingStatus,
 			handleToggleBannersVisibility,
 			handleGetNovelContext(sendResponse) {
-				const id = getNovelIdFromCurrentPage?.() || null;
-				const novelData = getLastKnownNovelData?.();
-				const title = novelData?.title || document.title || null;
-				const chapterNum = novelData?.currentChapter || null;
-				sendResponse({ novelId: id, novelTitle: title, chapterNum });
+				sendResponse(buildNovelContextResponse());
 				return false;
 			},
 		});

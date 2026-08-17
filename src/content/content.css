@@ -344,7 +344,6 @@ html[data-darkreader-mode] .dark-mode-icon {
 
 /* Dark mode styling - applied based on various site-specific dark mode classes */
 @media (prefers-color-scheme: dark) {
-
 	#summary-display-long,
 	#summary-display-short {
 		background-color: #2b2b2b;
@@ -390,7 +389,6 @@ html[data-darkreader-mode] #summary-display-short {
 
 /* Summary heading dark mode */
 @media (prefers-color-scheme: dark) {
-
 	#summary-display-long h3,
 	#summary-display-short h3 {
 		color: #8ab4f8;
@@ -588,7 +586,7 @@ button.ranobes-gemini-btn:disabled {
 
 /* Updated game stats box styling */
 .game-stats-box {
-	font-family: 'Courier New', monospace;
+	font-family: "Courier New", monospace;
 	white-space: pre-line;
 	background-color: rgba(35, 35, 35, 0.95);
 	border: 1px solid rgba(100, 100, 100, 0.8);
@@ -669,7 +667,12 @@ html[data-darkreader-mode] .game-stats-box {
 hr.section-divider {
 	border: none;
 	height: 2px;
-	background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.5), transparent);
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(128, 128, 128, 0.5),
+		transparent
+	);
 	margin: 30px auto;
 	width: 80%;
 	max-width: 500px;
@@ -681,14 +684,23 @@ body.dark-theme .section-divider,
 [data-theme="dark"] .section-divider,
 .dark-mode .section-divider,
 html[data-darkreader-mode] .section-divider {
-	background: linear-gradient(90deg, transparent, rgba(180, 180, 180, 0.4), transparent);
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(180, 180, 180, 0.4),
+		transparent
+	);
 }
 
 @media (prefers-color-scheme: light) {
-
 	.section-divider,
 	hr.section-divider {
-		background: linear-gradient(90deg, transparent, rgba(100, 100, 100, 0.3), transparent);
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgba(100, 100, 100, 0.3),
+			transparent
+		);
 	}
 }
 
@@ -729,7 +741,7 @@ html[data-darkreader-mode] .section-divider {
 
 /* System Notification / Pop-up / Announcement box */
 .rg-system-msg {
-	font-family: 'Courier New', Courier, monospace;
+	font-family: "Courier New", Courier, monospace;
 	background-color: rgba(5, 12, 30, 0.97);
 	border: 1px solid rgba(55, 135, 255, 0.45);
 	border-radius: 6px;
@@ -739,7 +751,9 @@ html[data-darkreader-mode] .section-divider {
 	white-space: pre-line;
 	font-size: 13.5px;
 	line-height: 1.6;
-	box-shadow: 0 0 14px rgba(55, 135, 255, 0.12), inset 0 0 18px rgba(55, 135, 255, 0.04);
+	box-shadow:
+		0 0 14px rgba(55, 135, 255, 0.12),
+		inset 0 0 18px rgba(55, 135, 255, 0.04);
 	box-sizing: border-box;
 	width: 100%;
 	text-align: left !important;
@@ -747,7 +761,7 @@ html[data-darkreader-mode] .section-divider {
 
 /* Quote / Poetry / Song Lyrics / Epigraph box */
 .rg-quote-box {
-	font-family: Georgia, 'Times New Roman', Times, serif;
+	font-family: Georgia, "Times New Roman", Times, serif;
 	background: transparent;
 	border: none;
 	border-left: 3px solid rgba(160, 155, 145, 0.55);
@@ -857,7 +871,6 @@ html[data-darkreader-mode] .rg-system-msg,
 
 /* ── Responsive tweaks ── */
 @media screen and (max-width: 768px) {
-
 	.rg-author-note,
 	.rg-system-msg,
 	.rg-skill-box,
@@ -875,7 +888,6 @@ html[data-darkreader-mode] .rg-system-msg,
 
 /* Mobile and responsive design adjustments */
 @media screen and (max-width: 768px) {
-
 	/* Adjust controls for smaller screens */
 	#gemini-controls {
 		display: flex;
@@ -1026,7 +1038,7 @@ html[data-darkreader-mode] .rg-system-msg,
 		align-items: stretch !important;
 	}
 
-	.gemini-main-summary-group>div:first-child {
+	.gemini-main-summary-group > div:first-child {
 		width: 100% !important;
 		text-align: center !important;
 		margin-bottom: 4px !important;
@@ -1063,7 +1075,7 @@ html[data-darkreader-mode] .rg-system-msg,
 	}
 
 	/* Progress bar enhancements for mobile */
-	.gemini-wip-banner>div:nth-child(2) {
+	.gemini-wip-banner > div:nth-child(2) {
 		height: 12px !important;
 		border-radius: 6px !important;
 		margin: 12px 0 !important;
@@ -1103,6 +1115,33 @@ html[data-darkreader-mode] .rg-system-msg,
 	-webkit-user-select: text !important;
 }
 
+/* ── Reading typeface ───────────────────────────────────────────────── */
+/* content.js sets the chosen face inline on the content area, but most novel
+   sites style the paragraphs directly rather than the container, and a direct
+   rule beats an inherited value — so without this the setting would appear to
+   do nothing on half the supported sites. Only the prose elements inherit;
+   the extension's own banners and buttons keep their own typography. */
+[data-showing-enhanced="true"] p,
+[data-showing-enhanced="true"] blockquote,
+[data-showing-enhanced="true"] li,
+[data-showing-enhanced="true"] h1,
+[data-showing-enhanced="true"] h2,
+[data-showing-enhanced="true"] h3 {
+	font-family: inherit;
+}
+
+.gemini-chunk-banner,
+.gemini-enhanced-banner,
+.gemini-master-banner,
+.gemini-wip-banner {
+	font-family:
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		sans-serif;
+}
+
 /* Restore non-selectable UX on Gemini UI controls inside enhanced areas */
 .gemini-chunk-banner button,
 .gemini-enhanced-banner button,
@@ -1120,7 +1159,9 @@ html[data-darkreader-mode] .rg-system-msg,
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
-	transition: background-color 0.2s, transform 0.1s;
+	transition:
+		background-color 0.2s,
+		transform 0.1s;
 }
 
 .gemini-toggle-btn:hover {
@@ -1152,7 +1193,6 @@ html[data-darkreader-mode] .rg-system-msg,
 
 /* Smaller mobile devices - additional adjustments */
 @media (max-width: 480px) {
-
 	.gemini-button,
 	.gemini-enhance-btn {
 		font-size: 15px !important;
@@ -1168,7 +1208,7 @@ html[data-darkreader-mode] .rg-system-msg,
 	}
 
 	/* Adjust word count displays for small screens */
-	.gemini-wip-banner>div>div {
+	.gemini-wip-banner > div > div {
 		flex-direction: column !important;
 		gap: 8px !important;
 	}
@@ -1251,8 +1291,6 @@ html[data-darkreader-mode] .rg-system-msg,
 	}
 }
 
-
-
 /* ──────────────────────────────────────────────────────────────────
    Collapsible Content Sections (fight scenes, R18, author notes, custom)
    ────────────────────────────────────────────────────────────────── */
@@ -1322,7 +1360,6 @@ html[data-darkreader-mode] .rg-system-msg,
 
 /* Light-mode adjustments — override inline dark colours */
 @media (prefers-color-scheme: light) {
-
 	.rg-collapsible-summary-block,
 	.rg-collapsible-content {
 		color: inherit;

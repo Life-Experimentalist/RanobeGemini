@@ -88,25 +88,32 @@ export function showProgressUpdatePromptRuntime({
 	}
 
 	const header = documentRef.createElement("div");
-	header.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
+	header.style.cssText =
+		"display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
 	const titleEl = documentRef.createElement("div");
-	titleEl.style.cssText = "font-weight:700;font-size:13px;color:#818cf8;flex:1;";
+	titleEl.style.cssText =
+		"font-weight:700;font-size:13px;color:#818cf8;flex:1;";
 	titleEl.textContent = "📖 Reading Progress";
 	const closeBtn = documentRef.createElement("button");
-	closeBtn.textContent = "×"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+	closeBtn.textContent = "×";
+	closeBtn.style.cssText =
+		"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 	closeBtn.addEventListener("click", () => banner.remove());
-	header.appendChild(titleEl); header.appendChild(closeBtn); banner.appendChild(header);
+	header.appendChild(titleEl);
+	header.appendChild(closeBtn);
+	banner.appendChild(header);
 
 	if (novelTitle) {
 		const nTitle = documentRef.createElement("div");
-		nTitle.style.cssText = "font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
+		nTitle.style.cssText =
+			"font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
 		nTitle.textContent = novelTitle;
 		banner.appendChild(nTitle);
 	}
 
 	const message = documentRef.createElement("div");
 	message.style.cssText = "font-size:13px;color:#cbd5e1;line-height:1.5;";
-	message.textContent = storedChapter 
+	message.textContent = storedChapter
 		? `Saved progress: Chapter ${storedChapter}. You are now on Chapter ${currentChapter}.${totalChapters ? ` (of ${totalChapters})` : ""} Update progress?`
 		: `No saved progress. You are on Chapter ${currentChapter}.${totalChapters ? ` (of ${totalChapters})` : ""} Save progress?`;
 	banner.appendChild(message);
@@ -114,15 +121,31 @@ export function showProgressUpdatePromptRuntime({
 	const actions = documentRef.createElement("div");
 	actions.style.cssText = "display:flex;gap:8px;";
 	const updateBtn = documentRef.createElement("button");
-	updateBtn.textContent = storedChapter ? `Update to Ch. ${currentChapter}` : `Save Ch. ${currentChapter}`;
-	updateBtn.style.cssText = "background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
-	
+	updateBtn.textContent = storedChapter
+		? `Update to Ch. ${currentChapter}`
+		: `Save Ch. ${currentChapter}`;
+	updateBtn.style.cssText =
+		"background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background 0.15s;";
+
 	updateBtn.addEventListener("click", async () => {
 		try {
-			await onUpdateProgress?.(novelId, currentChapter, windowRef.location.href, totalChapters);
-			showTimedBanner?.(`Progress updated to Chapter ${currentChapter}`, "success", bannerConfig?.quickMs);
+			await onUpdateProgress?.(
+				novelId,
+				currentChapter,
+				windowRef.location.href,
+				totalChapters,
+			);
+			showTimedBanner?.(
+				`Progress updated to Chapter ${currentChapter}`,
+				"success",
+				bannerConfig?.quickMs,
+			);
 		} catch (err) {
-			showTimedBanner?.("Failed to update progress", "warning", bannerConfig?.quickMs);
+			showTimedBanner?.(
+				"Failed to update progress",
+				"warning",
+				bannerConfig?.quickMs,
+			);
 		} finally {
 			banner.remove();
 		}
@@ -130,13 +153,18 @@ export function showProgressUpdatePromptRuntime({
 
 	const ignoreBtn = documentRef.createElement("button");
 	ignoreBtn.textContent = "Dismiss";
-	ignoreBtn.style.cssText = "background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;";
+	ignoreBtn.style.cssText =
+		"background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;";
 	ignoreBtn.addEventListener("click", () => banner.remove());
 
-	actions.appendChild(updateBtn); actions.appendChild(ignoreBtn); banner.appendChild(actions);
+	actions.appendChild(updateBtn);
+	actions.appendChild(ignoreBtn);
+	banner.appendChild(actions);
 	documentRef.body.appendChild(banner);
 
-	setTimeout(() => { if (banner.parentElement) banner.remove(); }, PROGRESS_PROMPT_TIMEOUT_MS);
+	setTimeout(() => {
+		if (banner.parentElement) banner.remove();
+	}, PROGRESS_PROMPT_TIMEOUT_MS);
 }
 
 export function showRereadingBannerRuntime({
@@ -168,18 +196,25 @@ export function showRereadingBannerRuntime({
 	`;
 
 	const header = documentRef.createElement("div");
-	header.style.cssText = "display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
+	header.style.cssText =
+		"display:flex;align-items:flex-start;justify-content:space-between;gap:8px;";
 	const titleEl = documentRef.createElement("div");
-	titleEl.style.cssText = "font-weight:700;font-size:13px;color:#a855f7;flex:1;";
+	titleEl.style.cssText =
+		"font-weight:700;font-size:13px;color:#a855f7;flex:1;";
 	titleEl.textContent = "♻️ Re-reading Detection";
 	const closeBtn = documentRef.createElement("button");
-	closeBtn.textContent = "×"; closeBtn.style.cssText = "background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
+	closeBtn.textContent = "×";
+	closeBtn.style.cssText =
+		"background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;";
 	closeBtn.addEventListener("click", () => banner.remove());
-	header.appendChild(titleEl); header.appendChild(closeBtn); banner.appendChild(header);
+	header.appendChild(titleEl);
+	header.appendChild(closeBtn);
+	banner.appendChild(header);
 
 	if (novelTitle) {
 		const nTitle = documentRef.createElement("div");
-		nTitle.style.cssText = "font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
+		nTitle.style.cssText =
+			"font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;";
 		nTitle.textContent = novelTitle;
 		banner.appendChild(nTitle);
 	}
@@ -193,15 +228,25 @@ export function showRereadingBannerRuntime({
 	actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;";
 	const jumpBtn = documentRef.createElement("button");
 	jumpBtn.textContent = `Continue Ch. ${lastReadChapter}`;
-	jumpBtn.style.cssText = "background:#7c3aed;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;";
+	jumpBtn.style.cssText =
+		"background:#7c3aed;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;";
 	const rereadingBtn = documentRef.createElement("button");
 	rereadingBtn.textContent = "Start Re-reading";
-	rereadingBtn.style.cssText = "background:transparent;color:#d8b4fe;border:1px solid #7c3aed;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;";
+	rereadingBtn.style.cssText =
+		"background:transparent;color:#d8b4fe;border:1px solid #7c3aed;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;";
 
-	jumpBtn.addEventListener("click", () => { onJumpToChapter?.(lastReadUrl); banner.remove(); });
-	rereadingBtn.addEventListener("click", () => { onStartRereading?.(novelId); banner.remove(); });
+	jumpBtn.addEventListener("click", () => {
+		onJumpToChapter?.(lastReadUrl);
+		banner.remove();
+	});
+	rereadingBtn.addEventListener("click", () => {
+		onStartRereading?.(novelId);
+		banner.remove();
+	});
 
-	actions.appendChild(jumpBtn); actions.appendChild(rereadingBtn); banner.appendChild(actions);
+	actions.appendChild(jumpBtn);
+	actions.appendChild(rereadingBtn);
+	banner.appendChild(actions);
 	documentRef.body.appendChild(banner);
 }
 
@@ -213,7 +258,11 @@ export function deriveReadingStatusFromProgressRuntime(current, total) {
 	return "PLAN_TO_READ";
 }
 
-export function shouldShowProgressPromptRuntime(novelId, progressPromptState, TIMEOUT_MS) {
+export function shouldShowProgressPromptRuntime(
+	novelId,
+	progressPromptState,
+	TIMEOUT_MS,
+) {
 	const lastShown = progressPromptState.get(novelId);
 	if (!lastShown) return true;
 	return Date.now() - lastShown > TIMEOUT_MS;

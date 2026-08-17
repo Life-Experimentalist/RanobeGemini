@@ -378,6 +378,7 @@ export function applyEnhancedPresentationRuntime({
 	contentArea,
 	applyPostEnhancementFormatting,
 	currentFontSize,
+	currentReadingFontStack = "",
 }) {
 	if (!contentArea) return;
 
@@ -386,6 +387,11 @@ export function applyEnhancedPresentationRuntime({
 	if (currentFontSize && currentFontSize !== 100) {
 		contentArea.style.fontSize = `${currentFontSize}%`;
 	}
+
+	// An empty stack is the "Site default" choice, and it has to clear rather
+	// than skip: the reader may be switching back after picking a face, and the
+	// inline style set by the previous choice would otherwise stick.
+	contentArea.style.fontFamily = currentReadingFontStack || "";
 }
 
 export function resolveNormalizedEnhancementPayloadRuntime({
@@ -476,7 +482,7 @@ export function applyEnhancedContentToAreaRuntime({
 		return { newContent: "" };
 	}
 
-	let newContent = "";
+	let newContent;
 
 	if (
 		supportsTextOnly &&
@@ -714,6 +720,7 @@ export async function runEnhancedReplacementFlowRuntime({
 	debugError = () => {},
 	applyPostEnhancementFormatting,
 	currentFontSize,
+	currentReadingFontStack = "",
 	removeOriginalWordCount,
 	modelInfo,
 	isCachedContent,
@@ -754,6 +761,7 @@ export async function runEnhancedReplacementFlowRuntime({
 		contentArea,
 		applyPostEnhancementFormatting,
 		currentFontSize,
+		currentReadingFontStack,
 	});
 
 	persistEnhancedContentAttributesRuntime({

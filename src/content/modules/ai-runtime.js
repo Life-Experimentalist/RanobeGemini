@@ -49,7 +49,7 @@ export async function handleEnhanceClickRuntime({
 	const existingChunkedOnClick = documentRef.getElementById(
 		"gemini-chunked-content",
 	);
-	
+
 	const batch = await loadChunkBatchModule();
 	const precheckResult = await batch?.runEnhancementPrechecksRuntime?.({
 		existingChunkedOnClick,

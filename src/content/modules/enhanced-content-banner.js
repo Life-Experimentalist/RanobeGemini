@@ -46,9 +46,10 @@ export function createEnhancedBannerRuntime({
 		modelName !== "AI" ? ` (${modelName})` : ""
 	}${cacheLabel}`;
 
-	const largeExpansionWarning = percentChange > 200
-		? `<div class="rg-large-expansion-warning" style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">⚠️ Very large expansion (+${Math.abs(percentChange)}%). Content may be unusually long. <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button></div>`
-		: "";
+	const largeExpansionWarning =
+		percentChange > 200
+			? `<div class="rg-large-expansion-warning" style="margin-top:6px;padding:6px 10px;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#fca5a5;">⚠️ Very large expansion (+${Math.abs(percentChange)}%). Content may be unusually long. <button class="rg-force-show-enhanced-btn" style="margin-left:8px;padding:2px 8px;background:#374151;color:#e5e7eb;border:1px solid #6b7280;border-radius:4px;cursor:pointer;font-size:11px;">Show Enhanced</button></div>`
+			: "";
 
 	const banner = documentRef.createElement("div");
 	banner.className = "gemini-enhanced-banner";
