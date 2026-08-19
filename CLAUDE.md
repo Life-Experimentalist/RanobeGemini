@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ranobe Gemini is a cross-browser (Firefox/Chromium/Edge) extension that enhances web novel reading using AI. It is local-first: no backend, user-owned API keys, optional user-owned cloud sync. Current version: 5.0.0. Last stable packaged release: v4.6.0 (Chromium unpacked at `releases/RanobeGemini_v4.6.0_chromium/`).
+Ranobe Gemini is a cross-browser (Firefox/Chromium/Edge) extension that enhances web novel reading using AI. It is local-first: no backend, user-owned API keys, optional user-owned cloud sync. The current version is whatever `package.json` says — do not restate it here, it goes stale. v5.0.0 is packaged in `releases/`; work since that tag is under "Unreleased" in `docs/release/CHANGELOG.md`.
 
 **Use PowerShell exclusively** — this is a Windows environment. Always use `npm run` scripts, never call `dev/*.js` scripts directly.
 
@@ -71,7 +71,9 @@ npm run publish           # Write commit history + full package + source zip
 
 ## Roadmap Authority
 
-`docs/overview/TECHNICAL_ROADMAP.md` is the authoritative technical roadmap. Active phases are **10** (content orchestrator thinning), **11** (UI/filter refactor), and **15** (maintenance/security). Queued: 12 (swipe navigation), 13 (storage adapters).
+`docs/overview/TECHNICAL_ROADMAP.md` is the authoritative technical roadmap. Phases 0–15 are all complete as of v5.0.0 — check the phase tables there rather than trusting a summary here.
+
+The active work is `docs/development/PRODUCTION_READINESS_AUDIT.md`, which tracks every open finding with a severity and a resolution note. Read it before starting anything: a finding marked RESOLVED records what was actually done and why, and several original findings turned out to be wrong on investigation — those are corrected in place rather than deleted, so the document is also a record of what was checked.
 
 When resuming roadmap work, use prompts in `.github/prompts/`:
 - `get-to-work.prompt.md` — continuous autonomous multi-phase loop

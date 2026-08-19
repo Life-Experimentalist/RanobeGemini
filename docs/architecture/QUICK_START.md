@@ -133,20 +133,18 @@ class MyHandler extends BaseWebsiteHandler {
 
 **Location**: `src/content/modules/`
 
-**Current Module**:
-- `library-integration.js`: Injects "Add to Library" button, handles clicks, triggers metadata fetching
-
 **How It Works**:
 
 ```javascript
-// In content.js, when handler detected:
-import { initializeModules } from "./modules/index.js";
-
-const results = await initializeModules(handler, handlerDomain, handlerType);
-
-// All modules initialize automatically, independently
-// Each module can fail without affecting others
+// In content.js, at the point the module is needed:
+const url = browser.runtime.getURL("content/modules/ui-controls.js");
+const controls = await import(url);
 ```
+
+Each module is loaded on demand and can fail without taking the rest of the
+content script down. There is no registry to register with — `content.js` is
+injected as a classic script, so the dynamic `import()` with an extension URL is
+what makes module loading work at all.
 
 ---
 

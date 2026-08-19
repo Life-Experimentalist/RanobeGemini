@@ -32,7 +32,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ### Adding New Website Support
 
-We welcome additions of new website support! Please refer to our [Adding New Websites Guide](docs/ADDING_NEW_WEBSITES.md) for detailed instructions. In summary:
+We welcome additions of new website support! Please refer to our [Adding New Websites Guide](docs/guides/ADDING_NEW_WEBSITES.md) for detailed instructions. In summary:
 
 1. Create a new handler class extending `BaseWebsiteHandler`
 2. Add the handler to `domain-constants.js`
@@ -80,10 +80,13 @@ RanobesGemini/
 │   ├── utils/            # Utility modules
 │   │   └── website-handlers/  # Site-specific handlers
 │   ├── config/           # Configuration
-│   └── manifest.json     # Extension manifest
+│   ├── manifest-firefox.json    # Firefox manifest (edit this, not dist/)
+│   └── manifest-chromium.json   # Chromium/Edge manifest
 ├── dev/                  # Build scripts
 ├── docs/                 # Documentation
-└── releases/            # Release builds
+├── tests/                # node --test suites and HTML fixtures
+├── dist/                 # Build output (gitignored)
+└── releases/             # Packaged zips (gitignored; published as Release assets)
 ```
 
 ## Coding Guidelines
@@ -144,11 +147,27 @@ Before submitting a PR, verify:
 
 Releases are managed by project maintainers:
 
-1. Update version in `package.json` and `manifest.json`
-2. Update `docs/CHANGELOG.md`
-3. Run `npm run package` to create release build
-4. Create GitHub release with changelog
-5. Upload packaged extension
+1. Update the version in `package.json`. That is the only place it lives — the
+   build stamps it into both manifests, so do not edit `src/manifest-firefox.json`
+   or `src/manifest-chromium.json` by hand.
+2. Move the "Unreleased" section of `docs/release/CHANGELOG.md` under the new
+   version, and write `docs/release/RELEASE_NOTES_<version>.md` (long-form note
+   plus a short quick-summary in the same file).
+3. Run `npm run publish` — writes the commit history, builds and zips both
+   store packages, and builds the AMO source archive.
+4. Push the `vX.Y.Z` tag. `.github/workflows/publish-addons.yml` takes it from
+   there: it runs the CI gate, rebuilds the packages, submits them to AMO and
+   the Chrome Web Store, and attaches the zips to the GitHub Release.
+
+**Where the zips live.** `releases/` is a local build output and is gitignored —
+the zips are *not* committed. Every published build is a GitHub Release asset,
+which is outside git object storage, has a stable public download URL, and never
+expires. Nothing about a release requires a commit containing a binary.
+
+To back-fill assets for older versions still sitting in a local `releases/`
+folder, `npm run release:archive` prints the plan and changes nothing. Add
+`-- --yes` to actually create the tags and releases — that is public and
+irreversible, so read the plan first.
 
 ## Questions?
 

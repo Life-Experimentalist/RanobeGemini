@@ -1,9 +1,9 @@
 # RanobeGemini Architecture Documentation
 
-> **Index:** <!-- TO BE FILLED -->
+> Applies to the 5.x line. The authoritative version number is the one in
+> `package.json` — it is not repeated here, because a copy of it in a document
+> nobody remembers to bump is worse than no copy at all.
 
-**Version:** 4.6.0
-**Last Updated:** 2026-03-25
 **Maintainer:** VKrishna04
 
 ---
@@ -47,12 +47,18 @@
 	- [Performance and Security](#performance-and-security)
 		- [Performance Considerations](#performance-considerations)
 		- [Security Considerations](#security-considerations)
+- [Data Flows](./DATA_FLOWS.md) — storage fan-out, message routing, chunking, OAuth
 
 ---
 
 ## Overview
 
-RanobeGemini is a Firefox extension (v3.0.0) that enhances web novel reading experiences using Google's Gemini AI. The extension features a modular architecture with dynamic handler registration, progressive content processing, and a comprehensive novel library system.
+RanobeGemini is a cross-browser extension (Firefox, Chromium, Edge) that enhances web novel reading using the AI provider of the reader's choice — Gemini, any OpenAI-compatible endpoint, or a local Ollama instance. The extension features a modular architecture with dynamic handler registration, progressive content processing, and a comprehensive novel library system.
+
+For the four subsystems whose control flow crosses a module registry, a message
+channel, or a network boundary — storage sync fan-out, background message
+routing, the chunking pipeline, and the OAuth flows — see
+[DATA_FLOWS.md](./DATA_FLOWS.md).
 
 ### Core Capabilities
 

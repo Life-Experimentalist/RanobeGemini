@@ -1,5 +1,8 @@
 # Novels Tab & Library Backup System - Implementation Summary
 
+> **Historical record — February 2026.** Not maintained; does not describe the
+> current code. See [`README.md`](./README.md) in this directory.
+
 ## Overview
 
 Complete redesign of the Novels tab and new library backup/restore system with smart data merging.

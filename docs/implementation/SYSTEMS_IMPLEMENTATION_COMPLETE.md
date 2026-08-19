@@ -1,5 +1,8 @@
 # Implementation Summary: Metadata & Settings Modularization
 
+> **Historical record.** A session summary, not maintained documentation. See
+> [`README.md`](./README.md) in this directory.
+
 **Date**: February 20, 2026
 **Session**: Metadata Fetching, Handler Settings, and Script Modularization
 **Status**: ✅ Complete - All core systems implemented and documented

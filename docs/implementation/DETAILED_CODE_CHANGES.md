@@ -1,5 +1,10 @@
 # 📝 Detailed Code Changes Summary
 
+> **Historical record — March 2026.** This describes changes as they were made in
+> one session; it is not maintained and does not describe the current code. See
+> [`README.md`](./README.md) in this directory for where the current
+> documentation lives.
+
 This document lists every change made to implement Google Drive backup functionality.
 
 ## Table of Contents

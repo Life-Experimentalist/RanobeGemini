@@ -1,5 +1,8 @@
 # 🎉 Complete Implementation Summary
 
+> **Historical record — February 2026.** Not maintained; does not describe the
+> current code. See [`README.md`](./README.md) in this directory.
+
 ## What You're Getting
 
 A **production-ready Google Drive backup system** for Ranobe Gemini, similar to WhatsApp's backup functionality.
