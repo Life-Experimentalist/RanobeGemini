@@ -1,3 +1,10 @@
 User-agent: *
 Allow: /
+
+# Neither of these is a page anyone should land on from a search result.
+# oauth-redirect.html only makes sense as a redirect target mid-sign-in, and
+# offline.html is the service worker's fallback shell.
+Disallow: /oauth-redirect.html
+Disallow: /offline.html
+
 Sitemap: https://ranobe.vkrishna04.me/sitemap.xml

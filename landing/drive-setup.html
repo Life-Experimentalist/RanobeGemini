@@ -6,16 +6,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Ranobe Gemini | Google Drive Setup</title>
 		<meta name="description"
-			content="Easy Google Drive backup & sync setup for Ranobe Gemini. Secure, encrypted, automatic backups for your novel library." />
+			content="Set up Google Drive backup and sync for Ranobe Gemini. Backups go to your own Drive over OAuth2 with PKCE, scoped so the extension can only touch the files it created." />
 		<link rel="canonical" href="https://ranobe.vkrishna04.me/drive-setup.html" />
 		<meta name="theme-color" content="#0b1628" />
 		<link rel="icon"
-			href="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+			href="assets/favicon-32.png"
 			sizes="32x32" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
-			rel="stylesheet" />
+		<link rel="stylesheet" href="./assets/fonts/fonts.css" />
 		<link rel="stylesheet" href="./styles.css" />
 		<link rel="stylesheet" href="./styles-drive.css" />
 	</head>
@@ -26,7 +23,7 @@
 		<header class="topbar">
 			<div class="brand">
 				<img class="logo-img"
-					src="https://raw.githubusercontent.com/Life-Experimentalist/RanobeGemini/refs/heads/main/src/icons/icon.png"
+					src="assets/logo-96.png"
 					alt="Ranobe Gemini" />
 				<div class="meta">
 					<div>
@@ -51,7 +48,7 @@
 				<a href="./architecture.html">Architecture</a>
 				<a href="./novel-status.html">Novel Status</a>
 				<a href="./content-styles.html">Styles</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()" title="Access your reading library">📚
+				<a href="#" data-open-library title="Access your reading library">📚
 					Library</a>
 				<a href="./privacy.html">Privacy</a>
 				<a class="ghost" href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
@@ -65,8 +62,8 @@
 					<p class="eyebrow">Secure backup & restore</p>
 					<h1>🔐 Google Drive Backup</h1>
 					<p class="lede">
-						Automatic backup of your novel library to Google Drive. Secure, encrypted, and always accessible
-						from any device.
+						Automatic backup of your novel library to your own Google Drive — reachable from any
+						device you sign in on, and going nowhere near a server of ours, because we do not run one.
 					</p>
 					<div class="cta-row">
 						<a class="btn primary" href="#getting-started">
@@ -107,9 +104,10 @@
 							once, backup forever.</p>
 					</div>
 					<div class="feature-box">
-						<h4>🔐 Secure & Private</h4>
-						<p>Uses OAuth2 (PKCE flow). Your data is encrypted and stored only in your personal Google
-							Drive. We cannot see it.</p>
+						<h4>🔐 Scoped & Private</h4>
+						<p>Uses OAuth2 with PKCE, and asks only for the <code>drive.file</code> scope — the
+							extension can read and delete the backup files it created, and nothing else in your
+							Drive. The backups land in your account; we have no server that could see them.</p>
 					</div>
 					<div class="feature-box">
 						<h4>⚡ One-Click Restore</h4>
@@ -146,8 +144,8 @@
 						<div class="timeline-marker">🔒</div>
 						<div class="timeline-text">
 							<strong>Data Privacy</strong>
-							<p>Your backups stored only in your Google Drive. Zero access from Ranobe Gemini servers.
-							</p>
+							<p>Your backups live only in your Google Drive. There are no Ranobe Gemini servers
+								to have access in the first place.</p>
 						</div>
 					</div>
 					<div class="timeline-item">
@@ -339,9 +337,17 @@
 
 					<div class="faq-box">
 						<strong>🔐 Is my data safe?</strong>
-						<p><span class="status-indicator"></span>Yes. Data is stored in your personal Google Drive,
-							encrypted in transit (HTTPS), and requires OAuth2 authorization to access. Even the
-							extension developers cannot see your data.</p>
+						<p><span class="status-indicator"></span>It is stored in your personal Google Drive, sent
+							over HTTPS, and reachable only with the OAuth2 token you granted. We cannot see it —
+							there is no Ranobe Gemini server for it to pass through. One thing to be clear about:
+							by default the backup file is <strong>plain JSON</strong>. Anyone who can open your
+							Google Drive can read it, and Google can too.</p>
+						<p>If that matters for what you read, turn on <strong>Library → Settings → Local Backups
+								→ Encrypt backup files</strong>. That wraps exported files and cloud backups in
+							AES-GCM-256 with a key generated on your machine and never sent anywhere. It is off by
+							default and it is a real trade: lose the recovery code and the backup is gone, because
+							there is nobody who can reset it for you. Native browser sync stays unencrypted — it
+							writes to the browser's own sync store, which already holds the key.</p>
 					</div>
 
 					<div class="faq-box">
@@ -455,7 +461,7 @@
 							href="https://microsoftedge.microsoft.com/addons/detail/ranobe-gemini/agbhdkiciomjlifhlfbjanpnhhokaimn"
 							target="_blank" rel="noreferrer">Get for Edge</a>
 						<a class="btn secondary" href="./install-guide.html">Install on Other Browsers</a>
-						<button class="btn ghost" type="button" onclick="openLibrarySettings()">Open Library</button>
+						<button class="btn ghost" type="button" data-open-library>Open Library</button>
 					</div>
 				</div>
 			</section>
@@ -473,7 +479,7 @@
 				<a href="./content-styles.html">Content Styles</a>
 				<a href="./privacy.html">Privacy</a>
 				<a href="./terms.html">Terms</a>
-				<a href="javascript:void(0)" onclick="openLibrarySettings()">Library</a>
+				<a href="#" data-open-library>Library</a>
 				<a href="https://github.com/Life-Experimentalist/RanobeGemini" target="_blank"
 					rel="noreferrer">GitHub</a>
 			</div>
@@ -484,17 +490,7 @@
 		<script src="./nav.js" defer></script>
 		<script src="./version.js"></script>
 		<script src="./drive-setup.js"></script>
-		<script>
-			function openLibrarySettings() {
-				if (typeof chrome !== 'undefined' && chrome.runtime) {
-					chrome.runtime.sendMessage({ action: 'openLibrary' });
-				} else if (typeof browser !== 'undefined' && browser.runtime) {
-					browser.runtime.sendMessage({ action: 'openLibrary' });
-				} else {
-					alert('📚 Library is built into the Ranobe Gemini extension.\n\nInstall from Firefox or Edge to access your reading library, novel status, and content filter settings.\n\nhttps://github.com/Life-Experimentalist/RanobeGemini');
-				}
-			}
-		</script>
+		<script src="./open-library.js" defer></script>
 	</body>
 
 </html>

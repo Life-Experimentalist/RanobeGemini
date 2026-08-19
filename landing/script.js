@@ -335,16 +335,58 @@ let detectedExtensionVersion = null;
 let deferredInstallPrompt = null;
 let hasReloadedForSwUpdate = false;
 
-const EXTENSION_IDS = {
-	chromium: [
-		...BROWSERS.map((b) => b.extensionId).filter(Boolean),
-		...(window.RG_EXTENSION_IDS?.chromium || []),
-	],
-	firefox: [
-		BROWSERS.find((b) => b.name === "Firefox")?.extensionId,
-		...(window.RG_EXTENSION_IDS?.firefox || []),
-	].filter(Boolean),
-};
+/**
+ * Detection and "open library" both go through the extension's content-script
+ * bridge (`content/landing-bridge.js`), which runs on this origin.
+ *
+ * The page used to guess the extension ID from a hard-coded list and probe
+ * `chrome-extension://<id>/library/library.html` from hidden iframes. That was
+ * unreliable (IDs differ per store listing and per unpacked install), noisy in
+ * the console, and needed `externally_connectable` — which Gecko ignores for web
+ * pages, so Firefox users were never detected at all.
+ */
+const BRIDGE_CHANNEL = "ranobe-gemini";
+let bridgeRequestId = 0;
+
+/** The bridge writes the installed version here at document_start. */
+function bridgeInstalledVersion() {
+	return document.documentElement.dataset.ranobeGemini || "";
+}
+
+function callBridge(op, timeoutMs = 3000) {
+	return new Promise((resolve, reject) => {
+		const id = `${BRIDGE_CHANNEL}:${bridgeRequestId++}`;
+
+		const timer = setTimeout(() => {
+			window.removeEventListener("message", onMessage);
+			reject(new Error("The extension did not respond."));
+		}, timeoutMs);
+
+		function onMessage(event) {
+			if (event.source !== window) return;
+			if (event.origin !== window.location.origin) return;
+			const data = event.data;
+			if (!data || data.channel !== BRIDGE_CHANNEL) return;
+			if (data.direction !== "from-extension") return;
+			if (data.id !== id) return;
+
+			clearTimeout(timer);
+			window.removeEventListener("message", onMessage);
+			resolve(data);
+		}
+
+		window.addEventListener("message", onMessage);
+		window.postMessage(
+			{
+				channel: BRIDGE_CHANNEL,
+				direction: "to-extension",
+				id,
+				op,
+			},
+			window.location.origin,
+		);
+	});
+}
 
 function showLibraryButton() {
 	if (!libraryBtn) return;
@@ -374,16 +416,6 @@ function updateLibraryButton() {
 		return;
 	}
 	showLibraryButton();
-}
-
-function getExtensionMessageRuntime() {
-	if (window.chrome?.runtime?.sendMessage) {
-		return window.chrome.runtime;
-	}
-	if (window.browser?.runtime?.sendMessage) {
-		return window.browser.runtime;
-	}
-	return null;
 }
 
 function updatePwaNote(message) {
@@ -502,197 +534,90 @@ async function initPwaSupport() {
 	);
 }
 
-function pingExtension() {
-	return new Promise((resolve) => {
-		const runtimeApi = getExtensionMessageRuntime();
-		if (!runtimeApi) {
-			resolve(false);
-			return;
-		}
+/**
+ * Ask the bridge whether the extension is installed, and cache what it says.
+ * Returns true when the extension answered.
+ */
+async function pingExtension() {
+	if (!bridgeInstalledVersion()) return false;
 
-		let settled = false;
-		const candidateIds = [
-			...new Set(EXTENSION_IDS.chromium.concat(EXTENSION_IDS.firefox)),
-		];
-
-		const tryNext = async (index) => {
-			if (settled) return;
-			if (index >= candidateIds.length) {
-				resolve(false);
-				return;
-			}
-
-			const extensionId = candidateIds[index];
-			if (!extensionId) {
-				return tryNext(index + 1);
-			}
-
-			try {
-				const response = await runtimeApi.sendMessage(extensionId, {
-					type: "EXTERNAL_PING",
-					pageUrl: window.location.href,
-				});
-				if (!settled && response?.installed) {
-					settled = true;
-					extensionDetected = true;
-					detectedExtensionVersion = response.version || null;
-					libraryUrl = response.libraryUrl || response.url || null;
-					updateLibraryButton();
-					resolve(true);
-					return;
-				}
-			} catch (_err) {
-				// Try the next candidate ID.
-			}
-
-			return tryNext(index + 1);
-		};
-
-		tryNext(0);
-	});
-}
-
-function probeExtensionById(extensionId) {
-	return new Promise((resolve) => {
-		const iframe = document.createElement("iframe");
-		iframe.style.display = "none";
-		iframe.referrerPolicy = "no-referrer";
-		iframe.src = `chrome-extension://${extensionId}/library/library.html`;
-		let done = false;
-
-		const cleanup = () => {
-			if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-		};
-
-		iframe.onload = () => {
-			if (done) return;
-			done = true;
-			cleanup();
-			resolve({ found: true, url: iframe.src });
-		};
-
-		iframe.onerror = () => {
-			if (done) return;
-			done = true;
-			cleanup();
-			resolve({ found: false });
-		};
-
-		setTimeout(() => {
-			if (done) return;
-			done = true;
-			cleanup();
-			resolve({ found: false });
-		}, 1200);
-
-		document.body.appendChild(iframe);
-	});
+	try {
+		const reply = await callBridge('ping');
+		if (!reply.installed) return false;
+		extensionDetected = true;
+		detectedExtensionVersion = reply.version || null;
+		libraryUrl = reply.libraryUrl || null;
+		updateLibraryButton();
+		return true;
+	} catch (_err) {
+		// The attribute was present but the bridge did not answer — treat the
+		// extension as absent rather than showing a button that cannot work.
+		return false;
+	}
 }
 
 async function detectExtension() {
 	hideLibraryButton();
 	if (libraryNote) {
-		libraryNote.textContent = "Checking for installed extension...";
+		libraryNote.textContent = 'Checking for installed extension...';
 	}
 
-	const pinged = await pingExtension();
-	if (pinged) {
-		extensionDetected = true;
-		updateLibraryButton();
+	if (await pingExtension()) {
 		updateCtaLibraryButton();
 		return;
 	}
 
-	for (const id of EXTENSION_IDS.chromium) {
-		if (!id) continue;
-		// eslint-disable-next-line no-await-in-loop
-		const result = await probeExtensionById(id);
-		if (result?.found) {
-			extensionDetected = true;
-			libraryUrl = result.url;
-			updateLibraryButton();
-			updateCtaLibraryButton();
-			return;
-		}
-	}
-
 	if (libraryNote) {
 		libraryNote.textContent =
-			"Install the extension, then reload this page to open the library directly.";
+			'Install the extension, then reload this page to open the library directly.';
 	}
 }
 
-// Detect browser type
-function detectBrowser() {
-	const userAgent = navigator.userAgent.toLowerCase();
-	if (/firefox/.test(userAgent)) return "firefox";
-	if (/edg/.test(userAgent)) return "edge";
-	if (/chrome/.test(userAgent)) return "chrome";
-	return "unknown";
-}
-
-// Build library URL based on browser
-function buildLibraryUrl() {
-	// This helper returns a cached runtime-discovered URL first when available.
-	// Fallback browser-based construction is only used when cache is empty.
-	if (libraryUrl) {
-		return libraryUrl;
-	}
-
-	const browser = detectBrowser();
-
-	if (browser === "firefox") {
-		const fallbackFirefoxId = EXTENSION_IDS.firefox[0];
-		if (fallbackFirefoxId) {
-			return `moz-extension://${fallbackFirefoxId}/library/library.html`;
+/**
+ * Open the library through the extension. The bridge does it via the background
+ * script, so the page never needs an extension URL of its own.
+ */
+async function openLibraryViaExtension() {
+	try {
+		const reply = await callBridge('openLibrary');
+		if (reply.success) return true;
+		throw new Error(reply.error || 'The extension could not open the library.');
+	} catch (error) {
+		if (libraryUrl) {
+			// Fall back to the URL the bridge reported at ping time.
+			window.open(libraryUrl, '_blank', 'noopener,noreferrer');
+			return true;
 		}
-	} else if (browser === "edge" || browser === "chrome") {
-		// Try to use detected extension ID from BROWSERS array
-		const edgeBrowser = BROWSERS.find((b) => b.name === "Edge");
-		if (edgeBrowser?.extensionId) {
-			return `chrome-extension://${edgeBrowser.extensionId}/library/library.html`;
-		}
+		if (libraryNote) libraryNote.textContent = error.message;
+		return false;
 	}
-
-	return null;
 }
 
 libraryBtn?.addEventListener("click", async () => {
 	if (extensionDetected) {
-		const target = buildLibraryUrl();
-		if (target) {
-			window.open(target, "_blank", "noopener,noreferrer");
-		} else {
-			alert(
-				"Could not determine extension URL. Please open the library from the extension popup.",
-			);
-		}
+		await openLibraryViaExtension();
 		return;
 	}
 
 	const detected = await pingExtension();
-	if (!detected) {
-		if (libraryNote) {
-			libraryNote.textContent =
-				"Install the extension, then reload to unlock the Library button.";
-		}
-		const browsersSection = document.getElementById("browsers");
-		browsersSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+	if (detected) {
+		await openLibraryViaExtension();
+		return;
 	}
+
+	if (libraryNote) {
+		libraryNote.textContent =
+			"Install the extension, then reload to unlock the Library button.";
+	}
+	const browsersSection = document.getElementById("browsers");
+	browsersSection?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // Also handle CTA library button
 const ctaLibraryBtn = document.getElementById("cta-library-btn");
 if (ctaLibraryBtn) {
 	ctaLibraryBtn.addEventListener("click", () => {
-		const target = buildLibraryUrl();
-		if (target) {
-			window.open(target, "_blank", "noopener,noreferrer");
-		} else {
-			alert(
-				"Could not determine extension URL. Please open the library from the extension popup.",
-			);
-		}
+		openLibraryViaExtension();
 	});
 }
 

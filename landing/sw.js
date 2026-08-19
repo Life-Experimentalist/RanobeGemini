@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v4";
 const CACHE_NAME = `rg-landing-pwa-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `rg-landing-runtime-${CACHE_VERSION}`;
 const OFFLINE_URL = "./offline.html";
@@ -14,6 +14,17 @@ const CORE_ASSETS = [
 	"./version.js",
 	"./manifest.webmanifest",
 	"./assets/og-card.svg",
+	"./assets/favicon-32.png",
+	"./assets/logo-96.png",
+	// Self-hosted Space Grotesk. Only the `latin` subsets are precached — they
+	// cover the entire site's copy, and `latin-ext` is left to the runtime cache
+	// so the install payload stays small. `addAll` is all-or-nothing, so nothing
+	// speculative belongs in this list.
+	"./assets/fonts/fonts.css",
+	"./assets/fonts/spacegrotesk-400-latin.woff2",
+	"./assets/fonts/spacegrotesk-500-latin.woff2",
+	"./assets/fonts/spacegrotesk-600-latin.woff2",
+	"./assets/fonts/spacegrotesk-700-latin.woff2",
 ];
 
 self.addEventListener("install", (event) => {
@@ -34,8 +45,10 @@ self.addEventListener("activate", (event) => {
 					keys
 						.filter(
 							(key) =>
-								key.startsWith("rg-landing-pwa-") &&
-								key !== CACHE_NAME,
+								(key.startsWith("rg-landing-pwa-") ||
+									key.startsWith("rg-landing-runtime-")) &&
+								key !== CACHE_NAME &&
+								key !== RUNTIME_CACHE,
 						)
 						.map((key) => caches.delete(key)),
 				),
