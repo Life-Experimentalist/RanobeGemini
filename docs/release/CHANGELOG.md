@@ -4,6 +4,7 @@
 
 - [Changelog](#changelog)
   - [Unreleased](#unreleased)
+  - [5.1.0 - 2026-08-12](#510---2026-08-12)
   - [5.0.0 - 2026-06-03](#500---2026-06-03)
   - [4.6.0 - 2026-03-25](#460---2026-03-25)
     - [Highlights](#highlights)
@@ -140,6 +141,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ---
 
 ## Unreleased
+
+Nothing yet.
+
+---
+
+## [5.1.0](RELEASE_NOTES_5.1.0.md) - 2026-08-12
 
 Work since the 5.0.0 tag, from a full production-readiness audit. Findings and
 their resolutions are recorded in

@@ -1,15 +1,21 @@
 {
 	"manifest_version": 3,
 	"name": "Ranobe Gemini",
-	"version": "5.0.0",
+	"version": "5.1.0",
 	"description": "Enhances reading experience for web novels using Gemini AI",
 	"browser_specific_settings": {
 		"gecko": {
 			"id": "{33b0347d-8e94-40d6-a169-249716997cc6}",
 			"strict_min_version": "112.0",
 			"data_collection_permissions": {
-				"required": ["browsingActivity", "websiteContent"],
-				"optional": ["authenticationInfo", "technicalAndInteraction"]
+				"required": [
+					"browsingActivity",
+					"websiteContent"
+				],
+				"optional": [
+					"authenticationInfo",
+					"technicalAndInteraction"
+				]
 			}
 		},
 		"gecko_android": {
@@ -135,7 +141,9 @@
 		]
 	},
 	"background": {
-		"scripts": ["background/background.js"],
+		"scripts": [
+			"background/background.js"
+		],
 		"type": "module"
 	},
 	"content_scripts": [
@@ -155,7 +163,10 @@
 				"*://*.scribblehub.com/*",
 				"*://*.webnovel.com/*"
 			],
-			"js": ["lib/browser-polyfill.min.js", "content/content.js"],
+			"js": [
+				"lib/browser-polyfill.min.js",
+				"content/content.js"
+			],
 			"css": [
 				"content/content.css",
 				"content/gemini-styles.css",
@@ -164,8 +175,13 @@
 			"run_at": "document_idle"
 		},
 		{
-			"matches": ["https://ranobe.vkrishna04.me/*"],
-			"js": ["lib/browser-polyfill.min.js", "content/landing-bridge.js"],
+			"matches": [
+				"https://ranobe.vkrishna04.me/*"
+			],
+			"js": [
+				"lib/browser-polyfill.min.js",
+				"content/landing-bridge.js"
+			],
 			"run_at": "document_start"
 		}
 	],

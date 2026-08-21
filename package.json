@@ -1,6 +1,6 @@
 {
 	"name": "ranobe-gemini",
-	"version": "5.0.0",
+	"version": "5.1.0",
 	"description": "Local-first browser extension that enhances web novel and fanfiction reading with the AI provider of your choice",
 	"scripts": {
 		"build": "node dev/build.js",
