@@ -1,0 +1,32 @@
+{
+	"$schema": "https://vkrishna04.me/schemas/project-manifest.schema.json",
+	"manifestVersion": 2,
+	"tagline": "AI reading companion for web novels and fanfiction.",
+	"summary": "A local-first browser extension that improves the readability of machine-translated web novels, summarises long chapters in place, and tracks a reading library across several sites. It works with Gemini, any OpenAI-compatible endpoint, or a local Ollama model.",
+	"status": "active",
+	"icon": "SiGooglegemini",
+	"readme": true,
+	"technologies": [
+		"JavaScript",
+		"Manifest V3",
+		"Gemini API",
+		"Ollama"
+	],
+	"tags": [
+		"browser-extension",
+		"ai",
+		"web-novels",
+		"local-first",
+		"summarization"
+	],
+	"highlights": [
+		"Bring your own provider: Gemini, any OpenAI-compatible endpoint, or a local Ollama model that keeps every word on the machine.",
+		"Works across ranobes.top, fanfiction.net, Archive of Our Own and scribblehub.com rather than a single site.",
+		"Tracks novels in a shelf-aware library with reading status, characters, relationships, genres and tags.",
+		"Telemetry is opt-in, asked for on first Library open, and records anonymous event counts only — no chapter text, reading history, API keys or tokens."
+	],
+	"links": {
+		"repo": "https://github.com/Life-Experimentalist/RanobeGemini",
+		"live": "https://ranobe.vkrishna04.me"
+	}
+}
